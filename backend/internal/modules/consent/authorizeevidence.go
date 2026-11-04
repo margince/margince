@@ -364,29 +364,41 @@ var (
 // a retraction ends it (RetractQualifyingEvent, and the acquisition request's
 // own retraction). occurred_at is caller-stated, so a future date does not count.
 func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope) (bool, error) {
+	_, found, err := latestRequest(ctx, tx, subject, scope)
+	return found, err
+}
+
+// latestRequest is requestOnRecord with the date of the newest request in
+// scope, which a quote puts against a marketing objection.
+func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope) (time.Time, bool, error) {
 	if subject.Kind != entityContact {
 		// Both tables are keyed on contact_id; a lead holds neither.
-		return false, nil
+		return time.Time{}, false, nil
 	}
-	var found bool
+	var newest *time.Time
 	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM contact_acquisition_evidence e
+		SELECT max(asked_at) FROM (
+			SELECT coalesce(e.occurred_at, e.captured_at) AS asked_at
+			  FROM contact_acquisition_evidence e
 			 WHERE e.contact_id = $1::uuid
 			   AND e.kind = ANY($4::text[])
 			   AND coalesce(e.occurred_at, e.captured_at) <= $2
 			   AND e.request_retracted_at IS NULL
-		) OR EXISTS (
-			SELECT 1 FROM consent_qualifying_event q
+			UNION ALL
+			SELECT q.occurred_at
+			  FROM consent_qualifying_event q
 			 WHERE q.contact_id = $1::uuid
 			   AND q.kind = ANY($3::text[])
 			   AND q.occurred_at <= $2
 			   AND q.retracted_at IS NULL
 			   AND (q.asks_for_quote OR NOT $5)
-		)`, subject.ID, time.Now().Add(clockSkewAllowance),
-		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly).Scan(&found)
+		) requests`, subject.ID, time.Now().Add(clockSkewAllowance),
+		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly).Scan(&newest)
 	if err != nil {
-		return false, fmt.Errorf("consent: read what this contact asked for: %w", err)
+		return time.Time{}, false, fmt.Errorf("consent: read what this contact asked for: %w", err)
 	}
-	return found, nil
+	if newest == nil {
+		return time.Time{}, false, nil
+	}
+	return *newest, true, nil
 }

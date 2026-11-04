@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -112,6 +113,8 @@ func nullableText(s string) *string {
 type liveStop struct {
 	Kind      string
 	PurposeID *ids.UUID
+	// RecordedAt is when the newest row of this kind and purpose was recorded.
+	RecordedAt time.Time
 }
 
 // stopKinds names the reason codes a set of stops carries, with the purpose
@@ -155,15 +158,16 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// purpose — neither known here. applySuppression decides that, after
 	// resolution.
 	//
-	// DISTINCT now spans (kind, purpose_id): two narrow rows for the same kind
-	// but different purposes are two different stops, and collapsing them
-	// would silently drop one of them.
+	// One row per (kind, purpose_id): two narrow rows for the same kind but
+	// different purposes are two different stops, and collapsing them would
+	// silently drop one of them. The newest recorded_at of each is kept.
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT kind, purpose_id FROM communication_suppression
+		SELECT kind, purpose_id, max(recorded_at) FROM communication_suppression
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))`,
+		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))
+		 GROUP BY kind, purpose_id`,
 		contactID, r.Email)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
@@ -173,10 +177,11 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	for rows.Next() {
 		var kind string
 		var purposeID *ids.UUID
-		if err := rows.Scan(&kind, &purposeID); err != nil {
+		var recordedAt time.Time
+		if err := rows.Scan(&kind, &purposeID, &recordedAt); err != nil {
 			return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 		}
-		stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID})
+		stops = append(stops, liveStop{Kind: reasonForSuppressionKind(kind), PurposeID: purposeID, RecordedAt: recordedAt})
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)

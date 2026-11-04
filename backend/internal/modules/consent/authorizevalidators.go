@@ -240,14 +240,14 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 // offer, and it needs no newsletter consent. Correspondence alone is not a
 // request for a quote; a reply in the enquiry's own thread is a reply.
 //
-// The request arm is the weaker ground, so a marketing objection still binds
-// it (MarketingStopsBind).
+// The request arm is the weaker ground, so a marketing objection recorded
+// after the request binds it (MarketingStopsBind).
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	res, err := quoteOnDeal(ctx, tx, req, subject)
 	if err != nil || res.Supported {
 		return res, err
 	}
-	asked, err := requestOnRecord(ctx, tx, subject, quoteRequests)
+	askedAt, asked, err := latestRequest(ctx, tx, subject, quoteRequests)
 	if err != nil || !asked {
 		return res, err
 	}
@@ -256,6 +256,7 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 		Basis:              commsauthz.BasisPrecontractRequest,
 		Supported:          true,
 		MarketingStopsBind: true,
+		RequestedAt:        askedAt,
 	}, nil
 }
 

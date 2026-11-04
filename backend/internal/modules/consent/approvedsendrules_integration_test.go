@@ -185,23 +185,80 @@ func TestACallbackOrAnEnquirySupportsAFollowUp(t *testing.T) {
 	}
 }
 
-// A quote resting on a request alone, with no deal or offer behind it, is still
-// stopped by a broad marketing objection. A narrow one names a marketing list
-// the quote is not on.
+// suppressAt records one live suppression against the env's contact, dated
+// when the person said it.
+func (e *resolveEnv) suppressAt(t *testing.T, kind string, at time.Time) {
+	t.Helper()
+	if _, err := e.owner.Exec(e.ctx, `
+		INSERT INTO communication_suppression
+		    (contact_id, kind, source, captured_by, decided_by_level, recorded_at)
+		VALUES ($1, $2, 'test', 'human:x', 'subject', $3)`, e.contact, kind, at); err != nil {
+		t.Fatalf("recording the %s: %v", kind, err)
+	}
+}
+
+// A quote resting on a request alone, to somebody who opted out of marketing
+// after asking, is refused with its own reason. Nobody sends past it, an admin
+// included; the rep confirms with the person first.
 //
 // Mutation: drop objectionBindsResolution from decideResolved and the quote is
 // allowed past the objection.
-func TestAMarketingObjectionBindsAQuoteWithNoDealBehindIt(t *testing.T) {
+func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
 	e := setupResolve(t)
-	e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour), true)
-	e.suppress(t, "marketing_objection")
+	now := clocktest.Now(t)
+	e.recordRequest(t, now.Add(-48*time.Hour), true)
+	e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
 
 	d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryPrecontractQuote})
-	if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonObjection {
-		t.Fatalf("decision = %s %q, want a refusal for the marketing objection", d.Verdict, d.ReasonCode)
+	if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonOptedOutAfterRequest {
+		t.Fatalf("decision = %s %q, want a refusal for the opt-out after the request", d.Verdict, d.ReasonCode)
 	}
-	if d.Resolved != commsauthz.CategoryPrecontractQuote {
-		t.Errorf("resolved %q, want the quote it is", d.Resolved)
+	if d.Resolved != commsauthz.CategoryPrecontractQuote || d.Suppression != commsauthz.ReasonObjection {
+		t.Errorf("resolved %q under %q, want the quote it is under the objection", d.Resolved, d.Suppression)
+	}
+	if (commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception answers the opt-out after the request")
+	}
+}
+
+// A request newer than the opt-out carries the quote: the person asked again
+// after they opted out, or the rep confirmed with them and recorded it.
+//
+// Mutation: make objectionBindsResolution ignore RequestedAt and both cases are
+// refused.
+func TestARequestNewerThanTheOptOutCarriesTheQuote(t *testing.T) {
+	for name, record := range map[string]func(e *resolveEnv, now time.Time){
+		"recorded by the rep": func(e *resolveEnv, now time.Time) { e.recordRequest(t, now.Add(-time.Hour), true) },
+		"recorded at acquiring": func(e *resolveEnv, now time.Time) {
+			e.acquisition(t, "requested_quote_or_meeting", now.Add(-time.Hour))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			now := clocktest.Now(t)
+			e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
+			record(e, now)
+
+			d := e.decide(t, commsauthz.Request{Context: commsauthz.CategoryPrecontractQuote})
+			if d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryPrecontractQuote {
+				t.Fatalf("decision = %s/%s %q, want the quote allowed on the newer request", d.Verdict, d.Resolved, d.ReasonCode)
+			}
+		})
+	}
+}
+
+// The objection still binds marketing to the person whose newer request
+// carries a quote. The request reaches the quote and nothing else.
+func TestANewerQuoteRequestDoesNotLiftTheObjectionForMarketing(t *testing.T) {
+	e := setupResolve(t)
+	now := clocktest.Now(t)
+	e.seedPurpose(t, "newsletter", "marketing")
+	e.suppressAt(t, "marketing_objection", now.Add(-24*time.Hour))
+	e.recordRequest(t, now.Add(-time.Hour), true)
+
+	d := e.decide(t, commsauthz.Request{LegacyPurposeKey: "newsletter"})
+	if d.Verdict != commsauthz.VerdictDeny || d.ReasonCode != commsauthz.ReasonObjection {
+		t.Fatalf("decision = %s %q, want marketing refused for the objection", d.Verdict, d.ReasonCode)
 	}
 }
 

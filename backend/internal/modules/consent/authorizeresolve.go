@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -57,9 +58,11 @@ type resolution struct {
 	// for it — and so would turn an unchecked id into an authorization the
 	// sender could not have obtained themselves.
 	EvidenceChecked bool
-	// MarketingStopsBind says a broad marketing objection binds this
-	// resolution. It is set on a quote that rests on a recorded request alone.
+	// MarketingStopsBind says a broad marketing objection recorded at or after
+	// RequestedAt binds this resolution. It is set on a quote that rests on a
+	// recorded request alone, and RequestedAt is that request's date.
 	MarketingStopsBind bool
+	RequestedAt        time.Time
 }
 
 // resolveCategory works out what this message is for one recipient.

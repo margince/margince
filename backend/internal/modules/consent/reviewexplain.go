@@ -42,6 +42,10 @@ var refusalFacts = map[string]string{
 	commsauthz.ReasonClaimContradictsResolution: "this message says it is one kind of message and the " +
 		"record reads it as another; send it with the kind that fits",
 	commsauthz.ReasonNoEvidence: "nothing on record supports this message yet",
+	commsauthz.ReasonOptedOutAfterRequest: "this contact opted out of marketing after asking for this " +
+		"quote; confirm with them that they still want it, and record their new request",
+	commsauthz.ReasonMarketingConsentRequired: "marketing to this recipient needs their prior consent " +
+		"under the rules of their country, and nothing stands in for it",
 }
 
 // refusalNextMove says what may still be done about a refusal, read from

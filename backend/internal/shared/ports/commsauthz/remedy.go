@@ -40,13 +40,20 @@ var remedies = map[string][]Remedy{
 	ReasonRestricted:       {},
 	ReasonSubjectRequest:   {},
 	ReasonConsentWithdrawn: {},
+	// A request recorded after the objection lifts it, which is the rep
+	// confirming with the person, not anybody sending past it.
+	ReasonOptedOutAfterRequest: {},
+	// Prior consent is the only route where the recipient's country says so
+	// (messaging.Rules.ConsentOnly), and the advertising ceiling of such a
+	// country clears with time. Nobody sends past either.
+	ReasonMarketingConsentRequired: {},
+	ReasonFrequencyCapReached:      {},
 
-	// A dead mailbox, an unconfirmed opt-in, a rolling cap and an unresolvable
-	// recipient: only an admin may send past these.
-	ReasonHardBounce:          {RemedyAdminException},
-	ReasonUnconfirmedDOI:      {RemedyAdminException},
-	ReasonFrequencyCapReached: {RemedyAdminException},
-	ReasonNoSubject:           {RemedyAdminException},
+	// A dead mailbox, an unconfirmed opt-in and an unresolvable recipient:
+	// only an admin may send past these.
+	ReasonHardBounce:     {RemedyAdminException},
+	ReasonUnconfirmedDOI: {RemedyAdminException},
+	ReasonNoSubject:      {RemedyAdminException},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},
