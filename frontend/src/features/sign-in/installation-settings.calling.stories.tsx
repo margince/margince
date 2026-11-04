@@ -70,12 +70,13 @@ const FULL: InstallationSettings = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
+  forecast_forward_measure: "likely",
   timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   base_currency_locked: false,
   individual_performance: true,
   forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
   ...ALL_ON,
 };
 

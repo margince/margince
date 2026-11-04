@@ -36,6 +36,9 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := carryMissingParticipantsTx(ctx, tx, duplicate, survivor); err != nil {
 		return err
 	}
+	if err := carryMeetingDocumentLinksTx(ctx, tx, duplicate, survivor); err != nil {
+		return err
+	}
 	p := storekit.NewPatch()
 	p.Set("archived_at", nil, s.now().UTC())
 	lock, err := storekit.LockRow(ctx, tx, "activity", duplicate.UUID, storekit.LiveOnly)
@@ -53,6 +56,52 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	archived := crmcontracts.PublicEventActivityArchived{}
 	archived.Imported, archived.ImportRunId = storekit.ImportMark(ctx)
 	return storekit.EmitEvent(ctx, tx, auditID, duplicate.UUID, archived)
+}
+
+// meetingDocumentSource starts the identity of a meeting's notes-document link
+// row, followed by the meeting's id. Capture writes the rows under it
+// (capture.meetingDocumentSystem); the spelling is shared by convention, since
+// neither module imports the other.
+const meetingDocumentSource = "meeting:"
+
+// carryMeetingDocumentLinksTx moves the copy's notes and transcript links to the
+// survivor, re-keyed under the survivor's id so a later sync of either calendar
+// finds them there. A document the survivor already holds stays with the copy,
+// which is archived. Each move is audited with the meeting it left, and the
+// survivor announces the documents it gained.
+func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
+	rows, err := tx.Query(ctx, `
+		UPDATE attachment d
+		   SET entity_id = $2::uuid, activity_id = $2::uuid, external_source_id = $3 || $2::uuid::text
+		 WHERE d.entity_type = 'activity' AND d.entity_id = $1::uuid AND d.category = '`+categoryLink+`'
+		   AND d.archived_at IS NULL AND d.external_source_id = $3 || $1::uuid::text
+		   AND NOT EXISTS (SELECT 1 FROM attachment s
+		                    WHERE s.external_source_id = $3 || $2::uuid::text AND s.external_part_id = d.external_part_id)
+		RETURNING d.id`, duplicate, survivor, meetingDocumentSource)
+	if err != nil {
+		return fmt.Errorf("activities: moving a meeting copy's document links: %w", err)
+	}
+	moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("activities: moving a meeting copy's document links: %w", err)
+	}
+	if len(moved) == 0 {
+		return nil
+	}
+	for _, id := range moved {
+		if _, err := storekit.Audit(ctx, tx, "update", "attachment", id,
+			map[string]any{"entity_id": duplicate.String()}, map[string]any{"entity_id": survivor.String()}); err != nil {
+			return fmt.Errorf("activities: auditing a moved document link: %w", err)
+		}
+	}
+	// The survivor gained documents: announced on it, as a later sync that
+	// finds new notes announces them.
+	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "activity", survivor.UUID,
+		map[string]any{"meeting_documents_added": len(moved)}, map[string]any{"folded_from": duplicate.String()})
+	if err != nil {
+		return fmt.Errorf("activities: auditing the documents a meeting copy handed on: %w", err)
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, survivor.UUID, crmcontracts.PublicEventActivityUpdated{})
 }
 
 // carryMissingParticipantsTx copies onto the survivor each party of the copy

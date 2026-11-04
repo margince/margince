@@ -14,7 +14,6 @@ import {
 type Comparison = NonNullable<
   ReportingEvaluation["metrics"][number]["target_comparison"]
 >;
-type Qualified = NonNullable<Comparison["qualified"]>;
 
 /**
  * Where this fiscal quarter's expected landing stands against its sales
@@ -96,47 +95,7 @@ function ComparedFigures({
           remaining: amount(comparison.remaining),
         })}
       />
-      <QualifiedCard
-        qualified={comparison.qualified}
-        amount={amount}
-        locale={locale}
-      />
     </StatStrip>
-  );
-}
-
-function QualifiedCard({
-  qualified,
-  amount,
-  locale,
-}: Readonly<{
-  qualified?: Qualified;
-  amount: (value: number | undefined) => string;
-  locale: Locale;
-}>) {
-  const t = useT();
-  if (!qualified || qualified.status === "not_enforced") {
-    return (
-      <StatCard
-        label={t("reporting.compare.coverageQualified")}
-        value={t("reporting.compare.qualifiedOff")}
-        detail={t("reporting.compare.qualifiedOffBasis")}
-      />
-    );
-  }
-  return (
-    <StatCard
-      label={t("reporting.compare.coverageQualified")}
-      value={coverageValue(
-        qualified.coverage,
-        qualified.status === "target_reached",
-        t,
-        locale,
-      )}
-      detail={t("reporting.compare.qualifiedBasis", {
-        open: amount(qualified.open_pipeline),
-      })}
-    />
   );
 }
 

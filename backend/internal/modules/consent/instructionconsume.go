@@ -45,6 +45,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // ExecutionAuthority names why a message was allowed to leave.
@@ -67,6 +68,9 @@ type LiveInstruction struct {
 	// Empty on a decision written before this was recorded, and an absent
 	// fingerprint is nothing to disagree with rather than a mismatch.
 	Acknowledged []byte
+	// GivenByAdmin says an admin gave the exception, so it may answer a refusal
+	// only an admin may (DecisionSet.ExceptionMayAnswer).
+	GivenByAdmin bool
 }
 
 // InstructionStaleError refuses an instruction that no longer describes the
@@ -113,7 +117,7 @@ func (e *InstructionStaleError) FieldFault() (field, code, message string) {
 func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (LiveInstruction, error) {
 	var out LiveInstruction
 	err := tx.QueryRow(ctx, `
-		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording
+		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording, i.given_by_admin
 		  FROM communication_instruction i
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
@@ -122,7 +126,7 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
 		   FOR UPDATE OF i`, intentID).
-		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged)
+		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
 	}
@@ -243,7 +247,8 @@ func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([
 //
 // THREE ANSWERS, and the caller needs to tell them apart:
 //
-//	(zero, nil)     nothing decided this; the refusal stands as it always did
+//	(zero, nil)     nothing decided this, or the decision does not answer every
+//	                refusal in set; the refusal stands as it always did
 //	(id,   nil)     a named human's decision has been spent on this delivery
 //	(zero, err)     somebody decided and the decision no longer fits the message
 //
@@ -251,7 +256,7 @@ func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([
 // refusal exactly where it was: no suppression lifted, no consent written, the
 // decision rows still reading deny.
 func (g *Gate) AuthorizeDirectedExecutionTx(
-	ctx context.Context, tx pgx.Tx, intentID, deliveryID ids.UUID, wording [32]byte,
+	ctx context.Context, tx pgx.Tx, intentID, deliveryID ids.UUID, wording [32]byte, set commsauthz.DecisionSet,
 ) (ids.UUID, error) {
 	if intentID.IsZero() {
 		// Not a resumed message, so there is no review and no decision. Every
@@ -266,6 +271,11 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 		// A held message being resumed with nobody having decided anything —
 		// a rep pressing Resume on their own refusal, say. The engine refuses
 		// it again, which is the right answer.
+		return ids.UUID{}, nil
+	}
+	// A stop recorded since the decision, or a refusal beyond the authority of
+	// whoever gave it: the decision stays unspent and the refusal stands.
+	if !set.ExceptionMayAnswer(inst.GivenByAdmin) {
 		return ids.UUID{}, nil
 	}
 	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording); err != nil {

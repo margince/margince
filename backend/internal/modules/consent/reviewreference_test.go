@@ -22,7 +22,7 @@ func TestARefusalNamesEachRefusedRecipientWithItsOwnReason(t *testing.T) {
 		Actions:  []string{"overrule"},
 		Refusals: []RefusedRecipient{
 			{Address: "ana@example.test", ReasonCode: commsauthz.ReasonObjection, Category: "marketing", SubjectID: ids.NewV7().String()},
-			{Address: "ben@example.test", ReasonCode: commsauthz.ReasonNoEvidence, Category: "active_deal_followup", CanBeOverruled: true},
+			{Address: "ben@example.test", ReasonCode: commsauthz.ReasonNoEvidence, Category: "requested_followup", RequestedCategory: "active_deal_followup", CanBeOverruled: true},
 			{Address: "cy@example.test", ReasonCode: commsauthz.ReasonNoSubject},
 		},
 	}
@@ -30,7 +30,7 @@ func TestARefusalNamesEachRefusedRecipientWithItsOwnReason(t *testing.T) {
 	got := refusal.FaultReference()["refusals"]
 	want := []map[string]any{
 		{"address": "ana@example.test", "reason_code": "marketing_objection", "category": "marketing", "can_be_overruled": false},
-		{"address": "ben@example.test", "reason_code": "no_compatible_evidence", "category": "active_deal_followup", "can_be_overruled": true},
+		{"address": "ben@example.test", "reason_code": "no_compatible_evidence", "category": "requested_followup", "requested_category": "active_deal_followup", "can_be_overruled": true},
 		{"address": "cy@example.test", "reason_code": "recipient_resolves_to_no_single_subject", "can_be_overruled": false},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -72,5 +72,23 @@ func TestOnlyTheRecipientsThatStoppedTheSendAreNamed(t *testing.T) {
 	want := []string{"enforced@example.test overrulable=true", "objected@example.test overrulable=false", "unproven@example.test overrulable=true"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("blocking refusals = %v, want %v; a deny under observe did not stop the send", got, want)
+	}
+}
+
+// A refused claim keeps both readings on the way to the sender: what the
+// engine resolved and what the sender picked. The composer names the deal a
+// follow-up needs from the second, because an unproven claim never resolves.
+func TestABlockingRefusalCarriesTheSendersOwnClaim(t *testing.T) {
+	set := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{{
+		Recipient: connector.Recipient{Email: "ben@example.test"}, Verdict: commsauthz.VerdictReview,
+		ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce,
+		Requested: commsauthz.CategoryActiveDealFollowup, Resolved: commsauthz.CategoryRequestedFollowup,
+	}}}
+	got := BlockingRefusals(set)
+	if len(got) != 1 {
+		t.Fatalf("blocking refusals = %v, want one", got)
+	}
+	if got[0].RequestedCategory != "active_deal_followup" || got[0].Category != "requested_followup" {
+		t.Errorf("refusal = %+v, want requested active_deal_followup beside resolved requested_followup", got[0])
 	}
 }

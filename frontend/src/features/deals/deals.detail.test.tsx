@@ -405,6 +405,30 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
   });
 
+  it("says the probability the new stage set, in place of the bare move", async () => {
+    const d = deal({ id: "x", version: 7, stage_id: "s1" });
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([d], {
+        single: d,
+        probabilitySet: {
+          win_probability: 60,
+          stage_name: "Proposal",
+          note: "Probability set to 60% by the stage Proposal.",
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealScreen id="x" />);
+
+    await user.click(await screen.findByRole("button", { name: "Proposal" }));
+
+    expect(
+      await screen.findByText("Probability set to 60% by the stage Proposal"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Moved to Proposal")).toBeNull();
+  });
+
   // The deal's tags ride in the context rail, beside the seats, the deal room
   // and the mail card. A contact and a company draw theirs in the same column,
   // the details pane every record page draws.

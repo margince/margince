@@ -93,10 +93,10 @@ func assessmentForecastMetricCells(evaluation crmcontracts.ReportingEvaluation, 
 
 func assessmentBasis(basis string, words langcopy.Spoken) string {
 	switch basis {
-	case "commit_evidence":
-		return words.Say(langcopy.Phrase{En: "Won sales plus confirmed commitments", De: "Gewonnener Umsatz plus bestätigte Zusagen", Vi: "Doanh số đã thắng cộng cam kết đã xác nhận"})
-	case "qualified_commit_evidence":
-		return words.Say(langcopy.Phrase{En: "Won sales plus qualified confirmed commitments", De: "Gewonnener Umsatz plus qualifizierte bestätigte Zusagen", Vi: "Doanh số đã thắng cộng cam kết đủ điều kiện đã xác nhận"})
+	case "likely":
+		return words.Say(langcopy.Phrase{En: "Won sales plus Likely deals", De: "Gewonnener Umsatz plus wahrscheinliche Deals", Vi: "Doanh số đã thắng cộng các thương vụ có khả năng cao"})
+	case "qualified_likely":
+		return words.Say(langcopy.Phrase{En: "Won sales plus qualified Likely deals", De: "Gewonnener Umsatz plus qualifizierte wahrscheinliche Deals", Vi: "Doanh số đã thắng cộng các thương vụ có khả năng cao đủ điều kiện"})
 	case "manager_call":
 		return words.Say(assessmentForecastLabels["call"])
 	default:

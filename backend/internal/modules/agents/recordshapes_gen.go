@@ -25,7 +25,7 @@ var createRecordShapes = map[string]string{
 var updateRecordShapes = map[string]string{
 	"contact":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, convert_lead_ids?: [uuid], emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], relationship_mark?: \"vendor_marketing\", social?: object, title?: string, visibility?: \"workspace\"|\"owner\"}",
 	"company":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, assess_against_entity_id?: uuid, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], email?: email, industry?: string, legal_name?: string, lifecycle?: \"unknown\"|\"target\"|\"prospect\"|\"opportunity\"|\"onboarding\"|\"live\"|\"customer\"|\"former_customer\"|\"disqualified\", linkedin_url?: string, owner_id?: uuid, parent_company_id?: uuid, phone?: string, relationship_types?: [\"customer\"|\"partner\"|\"supplier\"|\"investor\"|\"portfolio_company\"|\"competitor\"|\"other\"], size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", visibility?: \"workspace\"|\"owner\"}",
-	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, forecast_category?: \"commit\"|\"best_case\"|\"pipeline\"|\"omitted\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD}",
+	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD, win_probability?: integer}",
 	"lead":           "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, industry?: string, origin?: string, origin_detail?: string, owner_id?: uuid, partner_company_id?: uuid, phone?: string, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
 	"activity":       "{assignee_id?: uuid, body?: string, call_outcome?: \"reached\"|\"not_reached\"|\"voicemail\"|\"call_back_later\"|\"put_through\", due_at?: rfc3339, due_has_time?: boolean, is_done?: boolean, meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, occurred_precision?: \"instant\"|\"day\", remind_at?: rfc3339, subject?: string}",
 	"project":        "{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
@@ -53,6 +53,8 @@ var createWithheldFields = map[string][]string{}
 const activityKindEnum = `["email","call","meeting","note","task","message"]`
 
 const activityLinkEntityTypeEnum = `["contact","company","deal","lead","project"]`
+
+const activityMeetingStatusEnum = `["booked","held","no_show","canceled"]`
 
 // listRecordFilters is the CONTRACT half of what list_records may be asked to
 // filter by, per record_type: each list operation's OWN declared query
@@ -110,7 +112,6 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "company_id", Type: "string"},
 		{Name: "country", Type: "string"},
 		{Name: "currency", Type: "string"},
-		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
 		{Name: "include_archived", Type: "boolean"},
 		{Name: "list_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
@@ -132,6 +133,8 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "unassigned", Type: "boolean"},
 		{Name: "value_max", Type: "integer"},
 		{Name: "value_min", Type: "integer"},
+		{Name: "win_probability_max", Type: "integer"},
+		{Name: "win_probability_min", Type: "integer"},
 	},
 	"lead": {
 		{Name: "ai_written", Type: "boolean"},

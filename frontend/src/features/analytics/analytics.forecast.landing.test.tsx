@@ -27,7 +27,7 @@ function draw(node: ReactNode) {
 
 const landing = (over: Partial<Landing> = {}): Landing => ({
   amount_minor: 900_00,
-  measure: "commit_evidence",
+  measure: "likely",
   won_minor: 400_00,
   remaining_minor: 500_00,
   ...over,
@@ -51,7 +51,7 @@ describe("the projected landing", () => {
 
     // One label over every measure, with the basis leading the detail.
     expect(screen.getByText("Landing")).toBeTruthy();
-    expect(screen.getByText("Won + confirmed commit")).toBeTruthy();
+    expect(screen.getByText("Won + Likely deals")).toBeTruthy();
     expect(
       screen.getByText(`${money(400_00)} won + ${money(500_00)} to come`),
     ).toBeTruthy();

@@ -40,6 +40,8 @@ type InstallationSettings struct {
 	CallZalo     bool
 	// The switches of settingsindividualperformance.go and its forecast sibling.
 	IndividualPerformance, ForecastSelfCorrecting bool
+	// ForecastLikelyThreshold is the probability from which a deal is Likely.
+	ForecastLikelyThreshold int
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
 	// DeadWorkBannerHours is how far back the maintenance banner looks before
@@ -111,6 +113,7 @@ type InstallationPatch struct {
 	CallZalo                  *bool
 	IndividualPerformance     *bool
 	ForecastSelfCorrecting    *bool
+	ForecastLikelyThreshold   *int
 	// Country selects the jurisdiction pack. "" selects none. A change runs
 	// the store's country-change hook in the same transaction.
 	Country *string
@@ -119,52 +122,6 @@ type InstallationPatch struct {
 	Operations OperationPatch
 	// AgentAllowances is the sparse patch of the agent allowances.
 	AgentAllowances AgentAllowancePatch
-}
-
-// pendingWrite is one field of a sparse patch, already reduced to the setting
-// it writes, its JSON, and the write itself. `raw` nil means the field was
-// absent and nothing is written.
-type pendingWrite struct {
-	key  string
-	raw  []byte
-	save func(ctx context.Context, tx pgx.Tx, s *InstallationSettingsStore) error
-}
-
-// encodePatchField reduces one patch field to a pendingWrite, encoding it here
-// where its type is still known rather than handing the loop an `any`.
-//
-// Generic over the field's own type, which is what keeps the write typed: the
-// installation's fields are strings except the fiscal start month, and a loop
-// carrying `any` would accept a value of any type at all — including, silently,
-// a nil typed pointer, which is NOT equal to nil once it is inside an
-// interface.
-func encodePatchField[T any](entry settings.Definition, value *T) (pendingWrite, error) {
-	if value == nil {
-		return pendingWrite{key: entry.Key()}, nil
-	}
-	raw, err := json.Marshal(*value)
-	if err != nil {
-		return pendingWrite{}, fmt.Errorf("identity: encoding %s: %w", entry.Key(), err)
-	}
-	return pendingWrite{key: entry.Key(), raw: raw, save: func(ctx context.Context, tx pgx.Tx, s *InstallationSettingsStore) error {
-		return s.settings.SetRawTx(ctx, tx, entry.Key(), raw)
-	}}, nil
-}
-
-// encodeStoredField is encodePatchField for a setting in the configuration
-// registry, whose save refuses a value a boot source sets.
-func encodeStoredField[T any](setting *config.Setting[T], value *T) (pendingWrite, error) {
-	if value == nil {
-		return pendingWrite{key: setting.Key()}, nil
-	}
-	raw, err := json.Marshal(*value)
-	if err != nil {
-		return pendingWrite{}, fmt.Errorf("identity: encoding %s: %w", setting.Key(), err)
-	}
-	next := *value
-	return pendingWrite{key: setting.Key(), raw: raw, save: func(ctx context.Context, tx pgx.Tx, s *InstallationSettingsStore) error {
-		return config.SaveTx(ctx, s.config, tx, setting, next)
-	}}, nil
 }
 
 // InstallationSettingsStore reads and patches the installation settings.
@@ -286,7 +243,7 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 		AgentAllowances:      allowances,
 	}
 	for _, read := range []func(context.Context, *InstallationSettings) error{
-		s.readCallMessengers, s.readIndividualPerformance, s.readForecastSelfCorrecting,
+		s.readCallMessengers, s.readIndividualPerformance, s.readForecastSelfCorrecting, s.readForecastLikelyThreshold,
 	} {
 		if err := read(ctx, &out); err != nil {
 			return InstallationSettings{}, err
@@ -399,7 +356,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 		return nil, err
 	}
 	fields := []pendingWrite{name, zone, currency, language, fiscal, bannerHours, tokenTTL, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA, groupRoleMap, country, dynamic, metadataDocuments}
-	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites, in.forecastSelfCorrectingWrites} {
+	for _, group := range []func() ([]pendingWrite, error){in.Operations.writes, in.AgentAllowances.writes, in.callMessengerWrites, in.individualPerformanceWrites, in.forecastSelfCorrectingWrites, in.forecastLikelyThresholdWrites} {
 		writes, err := group()
 		if err != nil {
 			return nil, err

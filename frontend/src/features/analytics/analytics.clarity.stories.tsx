@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { formatAnalyticsMoneyOrAbsent } from "../../format/format";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -14,7 +13,6 @@ import { AccountCoverageView } from "./analytics.accounts";
 import { CloseMonthTable } from "./analytics.closemonth";
 import { ForecastAnswer } from "./analytics.forecast.answer";
 import { ForecastDeals } from "./analytics.forecast.deals";
-import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import {
   overviewCatalog,
   SELF,
@@ -62,10 +60,14 @@ const readings: components["schemas"]["ForecastReadings"] = {
   period_start: "2026-10-01",
   period_end: "2026-12-31",
   scope_kind: "workspace",
-  qualification_mode: "off",
   won_minor: 42000000,
   evidence_minor: 34000000,
-  best_case_minor: 60000000,
+  likely_threshold: 90,
+  by_source: {
+    stage: { open_minor: 136000000, weighted_minor: 68000000 },
+    human: { open_minor: 0, weighted_minor: 0 },
+    margince: { open_minor: 0, weighted_minor: 0 },
+  },
   open_minor: 136000000,
   weighted_minor: 68000000,
   eligible_count: 18,
@@ -84,23 +86,12 @@ const readings: components["schemas"]["ForecastReadings"] = {
       in_open: true,
       in_won: false,
       in_evidence: true,
-      in_best_case: true,
+      probability_source: "stage",
       applied_probability: 60,
       chance_in_use: 60,
       signals: [],
     },
   ],
-  qualified: {
-    evidence_minor: 34000000,
-    best_case_minor: 60000000,
-    weighted_minor: 68000000,
-    excluded_minor: 1000000,
-    unsupported_minor: 0,
-    unknown_minor: 1000000,
-    excluded_count: 1,
-    unsupported_count: 0,
-    unknown_count: 1,
-  },
 };
 const check: components["schemas"]["InputCheck"] = {
   id: "check",
@@ -220,14 +211,6 @@ export const ForecastExplanation: Story = {
 };
 export const ForecastRecords: Story = {
   render: () => <ForecastDeals scope={scope} period="quarter" />,
-};
-export const QualifiedForecast: Story = {
-  render: () => (
-    <QualifiedAnswer
-      readings={readings}
-      money={(value) => formatAnalyticsMoneyOrAbsent(value, "EUR", "en")}
-    />
-  ),
 };
 export const InitiativeProgress: Story = {
   render: () => (

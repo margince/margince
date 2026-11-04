@@ -226,37 +226,37 @@ describe("the seat's own readings when the report answers with nothing", () => {
   });
 });
 
-// Five tiles partition the whole pipeline into named buckets, and "which deals
-// are in commit" is the first question anyone asks of one. The door is what
-// makes the figure a way in rather than a dead end.
+// Five tiles partition the open pipeline into probability bands, and "which
+// deals are in this band" is the first question anyone asks of one. The door is
+// what makes the figure a way in rather than a dead end.
 describe("a forecast tile's door", () => {
-  it("opens the deals the category holds", () => {
+  it("opens the deals the band holds", () => {
     render(
       <ForecastTile
-        label="Commit"
+        label="60 to 89%"
         amountMinor={120000}
         currency="EUR"
         locale="en"
-        dealsUrl="#/deals?forecast_category=commit"
+        dealsUrl="#/deals?win_probability=60..89"
       />,
     );
 
     const door = screen.getByRole("link", { name: en["stat.open"] });
-    expect(door.getAttribute("href")).toBe("/#/deals?forecast_category=commit");
+    expect(door.getAttribute("href")).toBe("/#/deals?win_probability=60..89");
   });
 
   // Through the strip, because the decision that matters is the strip's. It
-  // picks which categories get an address at all. A tile handed no url draws no
+  // picks which bands get an address at all. A tile handed no url draws no
   // door whatever the reason, so testing the tile alone would pass against a
-  // strip that addressed every category.
-  it("is drawn for a filterable category and withheld from a derived one", () => {
+  // strip that addressed every band.
+  it("is drawn for every known band and withheld from one the server added", () => {
     render(
       <ForecastStrip
         baseCurrency="EUR"
         locale="en"
         rows={[
-          { forecast_category: "commit", raw_minor: 120000, deal_count: 2 },
-          { forecast_category: "slipped", raw_minor: 90000, deal_count: 1 },
+          { win_probability_band: "60_89", raw_minor: 120000, deal_count: 2 },
+          { win_probability_band: "95_plus", raw_minor: 90000, deal_count: 1 },
         ]}
       />,
     );
@@ -265,15 +265,16 @@ describe("a forecast tile's door", () => {
       .getAllByRole("link", { name: en["stat.open"] })
       .map((door) => door.getAttribute("href"));
 
-    // The four the wire's union holds, and `slipped` is absent. The strip draws
-    // a slot per category whether a row came back for it or not. A category
-    // with no figure still has somewhere to go.
+    // A slot per known band whether a row came back for it or not. The
+    // unknown band keeps its money on screen with no door.
     expect(doors).toEqual([
-      "/#/deals?forecast_category=commit",
-      "/#/deals?forecast_category=best_case",
-      "/#/deals?forecast_category=pipeline",
-      "/#/deals?forecast_category=omitted",
+      "/#/deals?win_probability=90..100",
+      "/#/deals?win_probability=60..89",
+      "/#/deals?win_probability=30..59",
+      "/#/deals?win_probability=1..29",
+      "/#/deals?win_probability=0..0",
     ]);
+    expect(screen.getByText("95_plus")).toBeTruthy();
   });
 
   // A tile whose set no query parameter names draws none. A door onto a wider
@@ -282,7 +283,7 @@ describe("a forecast tile's door", () => {
   it("is absent on a tile with nowhere to go", () => {
     render(
       <ForecastTile
-        label="Slipped"
+        label="95_plus"
         amountMinor={120000}
         currency="EUR"
         locale="en"

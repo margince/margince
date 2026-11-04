@@ -5,6 +5,7 @@ package magic
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -256,7 +257,7 @@ func TestALineFromACompleteReadStatesItsCountFlat(t *testing.T) {
 }
 
 func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing.T) {
-	row := auditRow("system:close-date", `{"forecast_category":"commit"}`, `{"forecast_category":"best_case"}`,
+	row := auditRow("system:close-date", `{"win_probability_override":90}`, `{"win_probability_override":45}`,
 		`{"close_date_correction":"downgrade_and_review","basis":"Restricted correspondence"}`, whenStaged)
 	row.EntityType = typeDeal
 	line, _, ok := lineOf(unmasked(t), row)
@@ -264,7 +265,7 @@ func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing
 		t.Fatalf("forecast reason = %+v, admitted = %v", line.Reason, ok)
 	}
 	changes := changesOf(row)
-	if len(changes) != 1 || changes[0].Field != "forecast_category" || changes[0].Before != "commit" || changes[0].After != "best_case" {
+	if len(changes) != 1 || changes[0].Field != "win_probability_override" || fmt.Sprint(changes[0].Before) != "90" || fmt.Sprint(changes[0].After) != "45" {
 		t.Fatalf("forecast changes = %+v", changes)
 	}
 }
@@ -274,7 +275,7 @@ func TestUnknownForecastEvidenceKeepsTheActualFieldChange(t *testing.T) {
 		`{"close_date_correction":true}`,
 		`{"close_date_correction":"unknown_action"}`,
 	} {
-		row := auditRow("system:close-date", `{"forecast_category":"commit"}`, `{"forecast_category":"best_case"}`, evidence, whenStaged)
+		row := auditRow("system:close-date", `{"win_probability_override":90}`, `{"win_probability_override":45}`, evidence, whenStaged)
 		row.EntityType = typeDeal
 		line, _, ok := lineOf(unmasked(t), row)
 		if !ok || line.Summary.Key != "magic.action.fields_changed" || line.Reason != nil {

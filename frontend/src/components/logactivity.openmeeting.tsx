@@ -390,6 +390,8 @@ export async function recordOnMeeting(
         version: meeting.version,
         status: "held",
         ...(managed ? {} : { body: appendedNotes(meeting.body, draft.body) }),
+        // The fields typed on the form describe the meeting they record.
+        custom: draft.custom,
       },
       t,
     );
@@ -398,7 +400,12 @@ export async function recordOnMeeting(
   if (managed && !record.note) {
     // The calendar keeps the meeting's own notes, so the typed ones become a
     // note. No follow_up_task on it: the task's source would be the note.
-    await post("note", { ...draft, kind: "note", followUp: undefined });
+    await post("note", {
+      ...draft,
+      kind: "note",
+      followUp: undefined,
+      custom: undefined,
+    });
     record.note = true;
   }
   if (draft.followUp && !record.followUp) {

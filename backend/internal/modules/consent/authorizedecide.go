@@ -79,12 +79,38 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// resolved on a thread or a live deal has no purpose for a narrow stop to
 	// match, so nil is the purpose it will still have when applySuppression
 	// asks — the same answer, not a guess standing in for one.
-	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) {
+	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) &&
+		!objectionBindsResolution(res, stops) {
 		if err := recordBasis(ctx, tx, subject, res, req, packRulesFor(subject.Country)); err != nil {
 			return resolution{}, err
 		}
 	}
 	return res, nil
+}
+
+// objectionBindsResolution reports whether a broad marketing objection binds a
+// resolution that asked for it (resolution.MarketingStopsBind). A narrow one
+// names a marketing purpose, which a quote does not have.
+func objectionBindsResolution(res resolution, stops []liveStop) bool {
+	if !res.MarketingStopsBind {
+		return false
+	}
+	for _, s := range stops {
+		if s.Kind == commsauthz.ReasonObjection && s.PurposeID == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// denyByObjection is the refusal objectionBindsResolution asks for, recorded
+// the way applySuppression records an objection.
+func denyByObjection(d commsauthz.Decision, res resolution) commsauthz.Decision {
+	d.Resolved = res.Category
+	d.Verdict = commsauthz.VerdictDeny
+	d.ReasonCode = commsauthz.ReasonObjection
+	d.Suppression = commsauthz.ReasonObjection
+	return d
 }
 
 // allowOn stamps a decision with a resolution the record bore out.
@@ -205,6 +231,9 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		d, denied = putClaimToEvidence(d, req.Context, res.Category)
 		if denied {
 			return d, nil, nil
+		}
+		if objectionBindsResolution(res, stops) {
+			return denyByObjection(d, res), nil, nil
 		}
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read contact_consent, so this is

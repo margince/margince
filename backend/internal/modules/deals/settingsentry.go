@@ -104,6 +104,22 @@ var LegalReviewEnabled = config.DefineStored(config.Spec[bool]{
 	MachineryApplied: true, // the advance gate reads it for whoever moves the deal
 })
 
+// SilentCloseDays is how many days without word from the customer Margince
+// waits before it closes an open deal as lost. Each owner can switch the close
+// off for their own deals; this is the installation's threshold for everyone.
+var SilentCloseDays = config.DefineStored(config.Spec[int]{
+	Key:     "deals.silent_close_days",
+	Env:     "MARGINCE_DEALS_SILENT_CLOSE_DAYS",
+	Type:    config.Int,
+	Default: config.Some(120),
+	Min:     config.Some(StalledThresholdDays),
+	Max:     config.Some(730),
+	Doc:     "Days without word from the customer after which Margince closes an open deal as lost.",
+}, config.Store{
+	RBACObject: maintenanceObject, AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the nightly check reads it; no request carries it
+})
+
 // settingsAuditVerb is the audit action every deals settings change records.
 const settingsAuditVerb = "update"
 
@@ -119,5 +135,5 @@ func SetLegalReviewEnabled(ctx context.Context, cfg *config.Config, on bool) err
 
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return []config.Any{StageAutopilotEnabled, MaintenanceWritesEnabled, LegalReviewEnabled}
+	return []config.Any{StageAutopilotEnabled, MaintenanceWritesEnabled, LegalReviewEnabled, SilentCloseDays}
 }

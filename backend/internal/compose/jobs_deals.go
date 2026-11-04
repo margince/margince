@@ -53,6 +53,9 @@ func (FollowUpReconcileArgs) FleetWide() {}
 type closeDateSweepWorker struct {
 	pool      *pgxpool.Pool
 	corrector *deals.CloseDateCorrector
+	// closer runs after the dates are corrected, in the same nightly pass, and
+	// closes the deals the customer stopped answering.
+	closer silentDealCloser
 }
 
 func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
@@ -72,7 +75,11 @@ const closeDateSweepActor = "system:close-date"
 func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	wsCtx = principal.SystemActing(wsCtx, closeDateSweepActor)
-	return jobs.FaultContext(ctx, w.corrector.SweepWorkspace(wsCtx))
+	if err := w.corrector.SweepWorkspace(wsCtx); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	_, err := w.closer.CloseWorkspace(wsCtx)
+	return jobs.FaultContext(ctx, err)
 }
 
 // followUpReconcileWorker runs the overnight pass for every live workspace.

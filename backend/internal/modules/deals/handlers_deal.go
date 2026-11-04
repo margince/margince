@@ -74,10 +74,6 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		s := string(*params.Status)
 		in.Status = &s
 	}
-	if params.ForecastCategory != nil {
-		category := string(*params.ForecastCategory)
-		in.ForecastCategory = &category
-	}
 	if params.CommercialMotion != nil {
 		motion := string(*params.CommercialMotion)
 		in.CommercialMotion = &motion
@@ -90,6 +86,7 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 	in.RangeFilters = RangeFilters{
 		CloseFrom: dayArg(params.CloseFrom), CloseTo: dayArg(params.CloseTo),
 		ValueMin: params.ValueMin, ValueMax: params.ValueMax,
+		WinProbabilityMin: params.WinProbabilityMin, WinProbabilityMax: params.WinProbabilityMax,
 		Currency: params.Currency, Country: params.Country,
 	}
 	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
@@ -188,12 +185,17 @@ func (h Handlers) AdvanceDeal(w http.ResponseWriter, r *http.Request, id crmcont
 		writeStoreErr(w, r, err)
 		return
 	}
-	deal, err := h.store.AdvanceDeal(r.Context(), pathID[ids.DealKind](id), in)
+	advanced, err := h.store.AdvanceDeal(r.Context(), pathID[ids.DealKind](id), in)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, deal)
+	wire, err := advanced.Wire()
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
 // CorrectDealCloseDay moves a closed deal's close day. The store refuses an

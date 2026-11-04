@@ -60,16 +60,9 @@ export function OutlookPanel({
       minor: (o) => o.won_minor,
     },
     {
-      key: "commit",
-      label: t("brief.weekly.outlook.commit"),
-      minor: (o) => o.commit_minor,
-    },
-    {
-      key: "best",
-      label: t("brief.weekly.outlook.bestCase"),
-      // A reader adding best case to commit would count the overlap twice.
-      basis: t("brief.weekly.outlook.bestCaseDetail"),
-      minor: (o) => o.best_case_minor,
+      key: "likely",
+      label: t("brief.weekly.outlook.likely"),
+      minor: (o) => o.likely_minor,
     },
     {
       key: "weighted",
@@ -81,10 +74,9 @@ export function OutlookPanel({
           {
             key: "landing",
             label: t("brief.weekly.outlook.landing"),
-            // The measure it was read under, frozen with the week.
-            basis: measure
-              ? t(`brief.weekly.outlook.measure.${measure}`)
-              : undefined,
+            // The measure it was read under, frozen with the week. A week
+            // frozen under a retired measure shows its number unlabelled.
+            basis: measureLabel(measure, t),
             minor: (o: Outlook) => o.closing_landing_minor,
           },
         ]
@@ -190,4 +182,23 @@ function BridgePanel({
       reconciliationWarning={t("brief.weekly.bridge.reconcile")}
     />
   );
+}
+
+const MEASURE_LABELS = {
+  likely: "brief.weekly.outlook.measure.likely",
+  weighted: "brief.weekly.outlook.measure.weighted",
+  manager_call: "brief.weekly.outlook.measure.manager_call",
+} as const;
+
+function labelled(measure: string): measure is keyof typeof MEASURE_LABELS {
+  return Object.hasOwn(MEASURE_LABELS, measure);
+}
+
+function measureLabel(
+  measure: Outlook["forward_measure"],
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  return measure !== undefined && labelled(measure)
+    ? t(MEASURE_LABELS[measure])
+    : undefined;
 }

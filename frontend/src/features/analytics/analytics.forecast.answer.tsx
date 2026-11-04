@@ -9,6 +9,7 @@ import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatDateAbbrev,
+  formatPercent,
 } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
@@ -19,13 +20,12 @@ import {
   rangeOf,
   SufficiencyCard,
 } from "./analytics.forecast.landing";
-import { QualifiedAnswer } from "./analytics.forecast.qualified";
 import type { ForecastPeriod } from "./forecast.queries";
 import "./analytics.css";
 
 type Readings = components["schemas"]["ForecastReadings"];
 
-// Compare the period forecast with won sales plus confirmed committed deals.
+// Compare the period forecast with won sales plus the Likely deals.
 function callDetail(
   call: NonNullable<Readings["current_call"]>,
   readings: Readings,
@@ -85,12 +85,7 @@ export function ForecastAnswer({
     );
   const call = readings.current_call;
   const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
-  // What best case adds on top of the evidence it contains. Never below zero:
-  // a superset smaller than its subset is a server fault, shown as nothing added.
-  const bestCaseAdds = Math.max(
-    0,
-    readings.best_case_minor - readings.evidence_minor,
-  );
+  const threshold = formatPercent(readings.likely_threshold / 100, locale);
 
   return (
     <>
@@ -112,11 +107,9 @@ export function ForecastAnswer({
                   evidence: money(readings.won_minor + readings.evidence_minor),
                 })}
           </p>
-          {/* The same answer as one shape: what is banked, what is committed
-              with a date, what best case adds, and the call across them. The
-              three are DISJOINT on the server — evidence and best case count
-              open deals only, and best case contains evidence — so they are
-              laid end to end, and best case contributes only what it adds. */}
+          {/* The same answer as one shape: what is banked, what is Likely, and
+              the call across them. The two are DISJOINT on the server, since
+              Likely counts open deals only, so they are laid end to end. */}
           <SegmentBar
             label={t("forecast.makeup")}
             parts={[
@@ -128,15 +121,9 @@ export function ForecastAnswer({
               },
               {
                 key: "evidence",
-                label: t("forecast.evidence"),
+                label: t("forecast.likely"),
                 value: readings.evidence_minor,
                 amount: slot(readings.evidence_minor),
-              },
-              {
-                key: "bestCase",
-                label: t("forecast.bestCaseAdds"),
-                value: bestCaseAdds,
-                amount: slot(bestCaseAdds),
               },
             ]}
             marker={
@@ -157,9 +144,36 @@ export function ForecastAnswer({
                 ` ${t("forecast.callHistoryUnavailable")}`}
             </p>
           )}
-          <QualifiedAnswer readings={readings} money={money} />
         </PanelBody>
       </Panel>
+
+      {/* The two readings of the open deals. Weighted is not a segment above:
+          it counts the Likely deals too, at their probability. */}
+      <StatStrip>
+        <StatCard
+          narrow="row"
+          label={t("forecast.likely")}
+          value={slot(readings.evidence_minor)}
+          detail={t("forecast.likely.help", { threshold })}
+        />
+        <StatCard
+          narrow="row"
+          label={t("forecast.weighted")}
+          value={slot(readings.weighted_minor)}
+          detail={
+            <>
+              <span>{t("forecast.weighted.help")}</span>
+              <span>
+                {t("forecast.bySource", {
+                  stage: money(readings.by_source.stage.weighted_minor),
+                  human: money(readings.by_source.human.weighted_minor),
+                  margince: money(readings.by_source.margince.weighted_minor),
+                })}
+              </span>
+            </>
+          }
+        />
+      </StatStrip>
 
       {/* An unpriced deal is a real deal contributing zero money, so the gap
           between eligible and priced is stated beside the total rather than

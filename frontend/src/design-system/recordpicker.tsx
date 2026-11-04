@@ -7,7 +7,7 @@ import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern. MergeAction
-// (components/merge.tsx) draws it; AddRelationshipAction (features/records/relationships.tsx)
+// (components/merge.tsx) draws it; AddRelationshipAction (components/relationships.tsx)
 // still holds its own copy.
 //
 // It is now PUBLISHED to the extension tier (surface/design-system.ts), which

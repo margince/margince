@@ -23,12 +23,12 @@ You need the permission to manage users. A role that may only read the page sees
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### What if the invitation email did not arrive?
-If the mail server refuses the invitation email, the colleague's row in **Settings → Members** shows **Invitation email failed**.
+You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**.
 1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
 2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
-3. The note "Invitation sent again to {name}" confirms it. The mark goes away once the new email has gone out.
-Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
-Also called: invite failed, invitation not received, resend invite.
+3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.
+**Resend invitation** shows only when Margince can send email. Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
+Also called: invite failed, invitation not received, invitation expired, resend invite.
 
 ### How do I change someone's role or make someone an admin?
 To change a colleague's role in Margince, open **Settings → Members** and press the role on their row.
