@@ -84,7 +84,7 @@ func TestAConfirmedChatScreenshotLandsAsOneMessageWithTheImageAttached(t *testin
 		t.Fatalf("File: %v", err)
 	}
 	if n := f.env.WsCount(t, `SELECT count(*) FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'contact' AND l.entity_id = $2
+		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $2
 		 WHERE a.id = $1 AND a.kind = 'message' AND a.channel_provider = 'whatsapp' AND a.body = $3`,
 		filed, f.contact, chatScreenshotText); n != 1 {
 		t.Fatal("the chat is not one whatsapp message on the contact carrying the read text")
