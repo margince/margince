@@ -17324,6 +17324,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "provider.profile.landingTitle": "Antwort erhalten",
   "provider.profile.landing": "Wird im Datensatz gespeichert…",
   "provider.profile.lookupRefused": "Abfrage nicht ausgeführt",
+  "provider.profile.lookupNotYours":
+    "Du kannst diesen Kontakt nicht bearbeiten und ihn deshalb nicht nachschlagen. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "provider.profile.completed": "Gefunden",
   "provider.profile.noMatch": "Der Anbieter hat keine Daten zu diesem Kontakt.",
   "provider.profile.stale":

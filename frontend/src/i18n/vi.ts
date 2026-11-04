@@ -16859,6 +16859,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "provider.profile.landingTitle": "Đã nhận phản hồi",
   "provider.profile.landing": "Đang lưu vào hồ sơ…",
   "provider.profile.lookupRefused": "Không thể chạy tra cứu",
+  "provider.profile.lookupNotYours":
+    "Bạn không có quyền sửa liên hệ này nên không thể tra cứu. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "provider.profile.completed": "Đã tìm thấy",
   "provider.profile.noMatch": "Nhà cung cấp không có dữ liệu cho liên hệ này.",
   "provider.profile.stale":
