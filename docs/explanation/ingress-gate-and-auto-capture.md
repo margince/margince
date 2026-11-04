@@ -337,9 +337,11 @@ A privacy hold on a contact ends when nothing holds it any more. That happens wh
 verdict answers `ordinary` or the owner shares the thread. The same contact then opens to the workspace,
 with its ID and its mail. Every check that kept it private is asked again first:
 
-- Every message whose thread kept the contact private must have stopped holding it. That covers a
-  colleague's mailbox, a legal hold and a marked subject, not only the thread that just cleared.
-- A sender question still open, or an erased address, keeps the contact private.
+- Every live message with any of the contact's addresses must have stopped holding it. That covers a
+  colleague's mailbox, a legal hold and a marked subject. It also covers a held conversation that
+  started after the sender was judged.
+- Every address of the contact must have been judged a business contact, and nothing else. A
+  sender question still open, an erased address or any other answer keeps the contact private.
 - A contact a user made private stays private, and so does a contact with no record of why it is
   private.
 - Mail the owner wrote to an address that never answered keeps the contact private for that reason

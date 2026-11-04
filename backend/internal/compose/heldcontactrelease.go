@@ -16,7 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sync"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -46,20 +46,45 @@ const (
 	releaseRenarrowed
 )
 
-// releaseHeldContactTx ends contact id's confidentiality hold when the ledger
-// proves it may end, on the caller's transaction.
+// heldEvidence is capture's half of the release test, handed to contacts.
+var heldEvidence = contacts.HeldEvidence{
+	EveryAddress: capture.ReleasableAddressSQL,
+	SomeAddress:  capture.WithheldAddressSQL,
+}
+
+// releaseHeldContactTx ends contact id's confidentiality hold when the
+// evidence proves it may end, on the caller's transaction.
 //
-// Every piece of evidence is read after the contact row is locked. Then
-// contactStaysTheOwners' rule picks the workspace or outbound_no_answer, as it
-// would have for a thread that never held.
+// It takes the hold locks of the contact's addresses first, then the contact
+// row, and reads every piece of evidence after both. An address that changed in
+// between keeps the contact for the next pass. Then contactStaysTheOwners'
+// rule picks the workspace or outbound_no_answer.
 func releaseHeldContactTx(ctx context.Context, tx pgx.Tx, store *contacts.Store, id ids.ContactID) (heldContactRelease, error) {
+	emails, err := contacts.ContactAddressesTx(ctx, tx, id)
+	if err != nil {
+		return releaseKept, err
+	}
+	if err := capture.LockHoldEvidenceTx(ctx, tx, emails); err != nil {
+		return releaseKept, err
+	}
 	held, ok, err := contacts.LockConfidentialityHeldTx(ctx, tx, id)
 	if err != nil || !ok {
 		return releaseNotHeld, err
 	}
-	next, kept, err := heldContactNextReason(ctx, tx, held.Emails)
-	if err != nil || kept {
+	if !slices.Equal(held.Emails, emails) {
+		return releaseKept, nil
+	}
+	releasable, err := contacts.ConfidentialityReleasableTx(ctx, tx, id, heldEvidence)
+	if err != nil || !releasable {
 		return releaseKept, err
+	}
+	var next contacts.NarrowingReason
+	unanswered, err := capture.WithheldUnansweredOutboundTx(ctx, tx, emails)
+	if err != nil {
+		return releaseKept, err
+	}
+	if unanswered {
+		next = contacts.NarrowedOutboundNoAnswer
 	}
 	moved, err := store.EndConfidentialityHoldTx(ctx, tx, id, next)
 	if err != nil || !moved {
@@ -69,43 +94,6 @@ func releaseHeldContactTx(ctx context.Context, tx pgx.Tx, store *contacts.Store,
 		return releaseRenarrowed, nil
 	}
 	return releasePublished, publishReleasedSenderTx(ctx, tx, store, held)
-}
-
-// heldContactNextReason answers what a held contact becomes: "" for the
-// workspace, NarrowedOutboundNoAnswer, or kept when the hold has not ended.
-func heldContactNextReason(ctx context.Context, tx pgx.Tx, emails []string) (contacts.NarrowingReason, bool, error) {
-	standings, err := capture.SenderStandingsTx(ctx, tx, emails)
-	if err != nil {
-		return "", true, err
-	}
-	withheld, unanswered := 0, false
-	for _, s := range standings {
-		if s.OpenQuestion() {
-			return "", true, nil
-		}
-		if !s.WithheldContact() {
-			continue
-		}
-		withheld++
-		stillHeld, err := capture.ThreadHoldsItsCounterparty(ctx, tx, s.ActivityID)
-		if err != nil || stillHeld {
-			return "", true, err
-		}
-		if s.Outbound {
-			answered, err := capture.AddressAnsweredTx(ctx, tx, s.Email)
-			if err != nil {
-				return "", true, err
-			}
-			unanswered = unanswered || !answered
-		}
-	}
-	if withheld == 0 {
-		return "", true, nil
-	}
-	if unanswered {
-		return contacts.NarrowedOutboundNoAnswer, false, nil
-	}
-	return "", false, nil
 }
 
 // publishReleasedSenderTx does what a publishing `contact` verdict does next.
@@ -128,8 +116,8 @@ const (
 	// heldContactLiveBound bounds the contacts one cleared thread releases while
 	// its verdict is applied. The reconciling pass releases the rest.
 	heldContactLiveBound = 20
-	// heldContactSweepSenders bounds the addresses one reconciling pass reads.
-	heldContactSweepSenders = 50
+	// heldContactSweepContacts bounds the contacts one reconciling pass releases.
+	heldContactSweepContacts = 50
 )
 
 // heldContactReleaser runs releases on their own transactions, each as the
@@ -139,17 +127,11 @@ type heldContactReleaser struct {
 	pool     *pgxpool.Pool
 	contacts *contacts.Store
 	log      *slog.Logger
-	// after is where each workspace's reconciling pass goes on from. In memory:
-	// a restarted worker starts its walk over, which costs a pass and loses
-	// nothing, because every release re-reads its evidence.
-	mu    sync.Mutex
-	after map[ids.UUID]string
 }
 
 func newHeldContactReleaser(pool *pgxpool.Pool, log *slog.Logger) *heldContactReleaser {
 	return &heldContactReleaser{
 		pool: pool, contacts: newCounterpartyStore(pool), log: log,
-		after: map[ids.UUID]string{},
 	}
 }
 
@@ -192,39 +174,22 @@ func (r *heldContactReleaser) releaseOne(ctx context.Context, id ids.ContactID) 
 	return out, nil
 }
 
-// reconcileWorkspace releases the held contacts of the next page of withheld
-// senders nothing holds any more, in the workspace bound in ctx. It returns how
-// many contacts changed.
+// reconcileWorkspace releases the next page of held contacts whose hold has
+// ended, in the workspace bound in ctx. It returns how many changed.
 func (r *heldContactReleaser) reconcileWorkspace(ctx context.Context) (int, error) {
-	workspace, ok := principal.WorkspaceID(ctx)
-	if !ok {
+	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return 0, errors.New("confidentiality: releasing held contacts requires a workspace-bound context")
 	}
 	ctx = principal.SystemActing(ctx, confidentialityActor)
-	r.mu.Lock()
-	after := r.after[workspace]
-	r.mu.Unlock()
 	var held []ids.ContactID
-	var senders []string
 	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var err error
-		senders, err = capture.ReleasableWithheldSendersTx(ctx, tx, after, heldContactSweepSenders)
-		if err != nil {
-			return err
-		}
-		held, err = contacts.ConfidentialityHeldByEmailTx(ctx, tx, senders, heldContactSweepSenders)
+		held, err = contacts.ReleasableConfidentialityHeldTx(ctx, tx, heldEvidence, heldContactSweepContacts)
 		return err
 	})
 	if err != nil {
 		return 0, fmt.Errorf("confidentiality: listing held contacts nothing holds: %w", err)
 	}
-	next := ""
-	if len(senders) == heldContactSweepSenders {
-		next = senders[len(senders)-1]
-	}
-	r.mu.Lock()
-	r.after[workspace] = next
-	r.mu.Unlock()
 	changed := 0
 	var failed []error
 	for _, id := range held {

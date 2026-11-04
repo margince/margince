@@ -609,6 +609,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `idx_capture_pending_counterparty_activity`: `btree (activity_id)`
 - `idx_capture_pending_counterparty_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
 - `idx_capture_pending_counterparty_live`: `unique, btree (email) WHERE (status = ANY (ARRAY['pending', 'unsure']))`
+- `idx_capture_pending_counterparty_noise`: `btree (email) WHERE (status = 'noise')`
 - `idx_capture_pending_counterparty_owner`: `btree (owner_id)`
 - `idx_capture_pending_counterparty_suppressed`: `unique, btree (email) WHERE (status = 'suppressed')`
 

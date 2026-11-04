@@ -244,6 +244,9 @@ func (e *ConfidentialityVerdictEngine) apply(
 ) error {
 	won := false
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := capture.LockThreadHoldTx(ctx, tx, row.ThreadKey); err != nil {
+			return err
+		}
 		seen, err := threadAddressesTx(ctx, tx, row)
 		if err != nil {
 			return err
@@ -442,6 +445,9 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 	// fails at the first audited write.
 	wsCtx := e.workspaceCtx(ctx)
 	err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		if err := capture.LockThreadHoldTx(wsCtx, tx, t.ThreadKey); err != nil {
+			return err
+		}
 		// Re-read under the lock: the sweep has no claim, so the answer this
 		// pass applies must be the one the row still holds rather than the one
 		// the listing read.

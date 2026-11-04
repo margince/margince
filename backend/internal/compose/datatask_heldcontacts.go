@@ -20,8 +20,8 @@ import (
 // same release on each held one. A contact some hold still covers stays held.
 func heldContactsDataTask(pool *pgxpool.Pool) datatask.Task {
 	return datatask.Task{
-		ID: "core/1793766966_release_ended_contact_holds", Version: 1,
-		Title: "Releasing contacts whose confidentiality hold ended", Requires: []string{"core/1793766965"},
+		ID: "core/1793773916_release_ended_contact_holds", Version: 1,
+		Title: "Releasing contacts whose confidentiality hold ended", Requires: []string{"core/1793773915"},
 		Steps: []datatask.Step{{
 			Name: "release_ended_contact_holds", Limit: 50, MinLimit: 5,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

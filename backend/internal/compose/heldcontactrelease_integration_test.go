@@ -11,11 +11,14 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -24,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // heldExchange is one message on a thread whose confidentiality question is
@@ -266,4 +270,149 @@ func TestAnOwnersShareReleasesTheContactTheThreadHeld(t *testing.T) {
 	}
 
 	requirePublished(t, e, email)
+}
+
+// A confidential thread that arrives after the address was judged gets no
+// ledger row of its own. It still holds the contact when the first thread clears.
+func TestConfidentialMailAfterASettledVerdictKeepsTheContactHeld(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "einkauf@latehold.example"
+	first := seedHeldExchange(t, e, email, "thr-late-a")
+	judge(t, e, email, capture.KindContact, first.activity)
+	late := seedHeldThreadMail(t, e, "thr-late-b", email, "Vertraulich")
+	seedThreadQuestion(t, e, "thr-late-b", late)
+
+	runConfidentiality(t, e, first.question, confidentialityOrdinary, 0.95)
+	reconcileHeldContacts(t, e)
+
+	requireNarrowed(t, e, email, contacts.NarrowedConfidentialityHold)
+}
+
+// seedSettledDisposition plants a settled ledger row for an address, as a
+// verdict for that address leaves one.
+func seedSettledDisposition(t *testing.T, e *integration.Env, email, status string, kind *string, activity ids.UUID) {
+	t.Helper()
+	e.WsExec(t, `INSERT INTO capture_pending_counterparty (email, domain, activity_id, owner_id, status, kind, resolved_at)
+		VALUES ($1, 'second.example', $2, $3, $4, $5, now())`, email, activity, e.Rep1, status, kind)
+}
+
+// A contact with a second address is released only when that address is a
+// proven business contact too. Any other answer about it keeps the hold.
+func TestASecondAddressWithAnyOtherAnswerKeepsTheContactHeld(t *testing.T) {
+	kind := func(k string) *string { return &k }
+	cases := []struct {
+		name, status string
+		kind         *string
+		published    bool
+	}{
+		{"contact", "real", kind(capture.KindContact), true},
+		{"personal", "real", kind("personal"), false},
+		{"advisor", "real", kind(capture.KindAdvisor), false},
+		{"rejected", "rejected", kind(capture.KindContact), false},
+		{"unknown kind", "real", nil, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupWithOwnMailbox(t)
+			const email, second = "einkauf@twoaddresses.example", "privat@second.example"
+			held := seedHeldExchange(t, e, email, "thr-two-addr")
+			judge(t, e, email, capture.KindContact, held.activity)
+			id := ids.From[ids.ContactKind](heldContactID(t, e, email))
+			if _, err := e.Contacts.UpdateContact(purgeCtx(e, e.Rep1), id, contacts.UpdateContactInput{Emails: []contacts.ContactEmailInput{
+				{Email: email, EmailType: "work", IsPrimary: true}, {Email: second, EmailType: "work", Position: 1},
+			}}); err != nil {
+				t.Fatalf("adding the second address: %v", err)
+			}
+			seedSettledDisposition(t, e, second, c.status, c.kind, seedThreadedMail(t, e, second, "Hallo", "inbound", "thr-second"))
+
+			runConfidentiality(t, e, held.question, confidentialityOrdinary, 0.95)
+			reconcileHeldContacts(t, e)
+
+			if visibility, _ := contactVisibility(t, e, email); (visibility == "workspace") != c.published {
+				t.Errorf("with a %s answer on the second address the contact is %q", c.name, visibility)
+			}
+		})
+	}
+}
+
+// releaseUnder runs one release with a short lock wait, as the reconciling pass
+// would, and returns its error.
+func releaseUnder(e *integration.Env, email string, id ids.ContactID) error {
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
+	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '300ms'`); err != nil {
+			return err
+		}
+		_, err := releaseHeldContactTx(ctx, tx, newCounterpartyStore(e.Pool), id)
+		return err
+	})
+}
+
+func isLockTimeout(err error) bool {
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	return ok && pgErr.Code == "55P03"
+}
+
+// An owner holding the thread again while a release runs: the release waits
+// for the owner, then reads the hold.
+func TestAReleaseWaitsForAnOwnerHoldingTheThreadAgain(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "einkauf@rehold.example"
+	held := seedHeldExchange(t, e, email, "thr-rehold")
+	judge(t, e, email, capture.KindContact, held.activity)
+	clearedWithoutRelease(t, e, email, held)
+	id := ids.From[ids.ContactKind](heldContactID(t, e, email))
+	owner := purgeCtx(e, e.Rep1)
+
+	err := database.WithWorkspaceTx(owner, e.Pool, func(tx pgx.Tx) error {
+		if err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).DecideAsOwner(owner, tx, "thr-rehold", false); err != nil {
+			return err
+		}
+		if err := releaseUnder(e, email, id); !isLockTimeout(err) {
+			t.Errorf("a release during the owner's re-hold returned %v, want a lock wait", err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("holding the thread again: %v", err)
+	}
+	reconcileHeldContacts(t, e)
+
+	requireNarrowed(t, e, email, contacts.NarrowedConfidentialityHold)
+}
+
+// New mail from the address while a release runs waits for the release. So it
+// never falls between what the release read and what it wrote.
+func TestNewMailFromTheAddressWaitsForARunningRelease(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	const email = "einkauf@newmail.example"
+	held := seedHeldExchange(t, e, email, "thr-newmail")
+	judge(t, e, email, capture.KindContact, held.activity)
+	clearedWithoutRelease(t, e, email, held)
+	id := ids.From[ids.ContactKind](heldContactID(t, e, email))
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
+
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if _, err := releaseHeldContactTx(ctx, tx, newCounterpartyStore(e.Pool), id); err != nil {
+			return err
+		}
+		waiting, cancel := context.WithTimeout(mailboxOwnerCtx(e, e.Rep1), 500*time.Millisecond)
+		defer cancel()
+		_, err := newCaptureSink(e.Pool, CaptureConfig{}).Upsert(waiting, connector.NormalizedRecord{
+			EntityType:   "activity",
+			NaturalKey:   connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: "newmail-during-release"},
+			Counterparty: connector.Counterparty{Email: email, Domain: "newmail.example", Direction: connector.DirectionInbound},
+			Fields:       capture.ActivityFields{Kind: "email", Subject: "Vertraulich", Body: "Anbei.", Direction: connector.DirectionInbound},
+			ThreadKey:    "thr-newmail-b",
+			Addresses:    []string{email, "a@authz.test"},
+			Source:       "gmail:newmail-during-release", CapturedBy: "connector:gmail",
+		})
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("a capture during a release returned %v, want it to wait for the release", err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("running the release: %v", err)
+	}
 }

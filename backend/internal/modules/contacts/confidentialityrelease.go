@@ -49,9 +49,10 @@ type ConfidentialityHeldContact struct {
 // held for confidentiality alone. ok is false for any other contact, which the
 // release leaves as it is.
 //
-// The release takes this row lock before it reads the ledger. The reply
-// promotion and the verdict's ensure lock the same row first. So two writers
-// over one contact queue, and the second re-reads what the first wrote.
+// The release takes this row lock after the hold locks of the contact's
+// addresses (capture.LockHoldEvidenceTx), the order capture's writers take
+// them in. The reply promotion and the verdict's ensure lock the same row, so
+// two writers over one contact queue and the second re-reads the first.
 func LockConfidentialityHeldTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (ConfidentialityHeldContact, bool, error) {
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return ConfidentialityHeldContact{}, false, err
@@ -67,18 +68,85 @@ func LockConfidentialityHeldTx(ctx context.Context, tx pgx.Tx, id ids.ContactID)
 	if err != nil {
 		return ConfidentialityHeldContact{}, false, fmt.Errorf("contacts: locking a contact held for confidentiality: %w", err)
 	}
+	emails, err := ContactAddressesTx(ctx, tx, id)
+	if err != nil {
+		return ConfidentialityHeldContact{}, false, err
+	}
+	return ConfidentialityHeldContact{ID: id, Emails: emails}, true, nil
+}
+
+// HeldEvidence is capture's half of whether a confidentiality hold has ended,
+// as SQL tests over an address column. Compose hands it in, so this module
+// names none of capture's tables.
+type HeldEvidence struct {
+	// EveryAddress must hold for each live address of the contact.
+	EveryAddress func(column string) string
+	// SomeAddress must hold for at least one of them.
+	SomeAddress func(column string) string
+}
+
+// releasableSQL is the test that contact p is held for confidentiality alone
+// and that ev says its hold has ended.
+func releasableSQL(ev HeldEvidence) string {
+	return `(` + confidentialityHeldSQL() + `
+		AND EXISTS (SELECT 1 FROM contact_email se
+		             WHERE se.contact_id = p.id AND se.archived_at IS NULL AND ` + ev.SomeAddress("se.email") + `)
+		AND NOT EXISTS (SELECT 1 FROM contact_email ee
+		                 WHERE ee.contact_id = p.id AND ee.archived_at IS NULL
+		                   AND NOT ` + ev.EveryAddress("ee.email") + `))`
+}
+
+// ConfidentialityReleasableTx reports whether contact id may leave its hold.
+func ConfidentialityReleasableTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, ev HeldEvidence) (bool, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return false, err
+	}
+	var releasable bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact p WHERE p.id = $1 AND `+releasableSQL(ev)+`)`,
+		id).Scan(&releasable)
+	if err != nil {
+		return false, fmt.Errorf("contacts: reading whether a held contact may be released: %w", err)
+	}
+	return releasable, nil
+}
+
+// ReleasableConfidentialityHeldTx lists up to limit contacts that may leave
+// their hold, in id order. A contact leaves the list once released, so a pass
+// needs no position of its own.
+func ReleasableConfidentialityHeldTx(ctx context.Context, tx pgx.Tx, ev HeldEvidence, limit int) ([]ids.ContactID, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `SELECT p.id FROM contact p WHERE `+releasableSQL(ev)+` ORDER BY p.id LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: listing held contacts that may be released: %w", err)
+	}
+	held, err := pgx.CollectRows(rows, pgx.RowTo[ids.ContactID])
+	if err != nil {
+		return nil, fmt.Errorf("contacts: listing held contacts that may be released: %w", err)
+	}
+	return held, nil
+}
+
+// ContactAddressesTx reads a contact's live addresses in order, without a
+// lock. The release takes the hold locks of these addresses before it locks
+// the contact.
+func ContactAddressesTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) ([]string, error) {
+	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT email FROM contact_email
 		 WHERE contact_id = $1 AND archived_at IS NULL
 		 ORDER BY email`, id)
 	if err != nil {
-		return ConfidentialityHeldContact{}, false, fmt.Errorf("contacts: reading a held contact's addresses: %w", err)
+		return nil, fmt.Errorf("contacts: reading a contact's addresses: %w", err)
 	}
 	emails, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil {
-		return ConfidentialityHeldContact{}, false, fmt.Errorf("contacts: reading a held contact's addresses: %w", err)
+		return nil, fmt.Errorf("contacts: reading a contact's addresses: %w", err)
 	}
-	return ConfidentialityHeldContact{ID: id, Emails: emails}, true, nil
+	return emails, nil
 }
 
 // ConfidentialityHeldByEmailTx lists up to limit contacts held for
