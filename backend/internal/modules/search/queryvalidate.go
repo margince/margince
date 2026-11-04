@@ -145,15 +145,23 @@ func checkSimilarity(similarTo string) []apperrors.FieldRefusal {
 // vocabulary happened to be formed by adding an s: the day one was not, the
 // hop resolved in the vocabulary and then narrowed to nothing, which refuses a
 // name the schema document publishes.
+//
+// A role-named hop reads the same two sources its name was formed from: the
+// role's declared target for a forward `partner_company`, and the plural
+// before the role for an inverse `deals_by_partner_company`.
 func hopTargets(plan Plan) []string {
 	if plan.Traverse == nil {
 		return nil
 	}
+	name, _, _ := strings.Cut(plan.Traverse.Relation, inverseRoleSeparator)
 	var targets []string
 	for entity := range contractRecords {
-		if plan.Traverse.Relation == entity || plan.Traverse.Relation == pluralRelationName(entity) {
+		if name == entity || name == pluralRelationName(entity) {
 			targets = append(targets, entity)
 		}
+	}
+	if target, roleNamed := roleNamedReferences[name+relationSuffix]; roleNamed && !slices.Contains(targets, target) {
+		targets = append(targets, target)
 	}
 	return targets
 }
