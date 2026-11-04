@@ -12,6 +12,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -148,15 +149,17 @@ func (h connectorHandlers) completeExtOAuth(
 // longer holds the grant to connect an integration. Minutes of vendor UI pass
 // between the connect and here, and the grant is the whole workspace's.
 func (h connectorHandlers) liveAdminContext(ctx context.Context, st connectState) (context.Context, error) {
-	if err := h.requireLiveGrantor(ctx, st); err != nil {
-		return nil, err
-	}
-	rbac, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User)
+	rbac, seat, err := h.liveGrantorAuthority(ctx, st)
 	if err != nil {
 		return nil, err
 	}
+	// The grant is a write over the whole workspace, so a read seat is refused
+	// whatever its role says.
+	if !seat.CanMutate() {
+		return nil, fmt.Errorf("extension oauth callback: a read seat cannot connect an integration: %w", apperrors.ErrPermissionDenied)
+	}
 	actor, _ := principal.Actor(ctx)
-	actor.Permissions = rbac.Permissions
+	actor.Permissions, actor.SeatType = rbac.Permissions, seat
 	ctx = principal.WithActor(ctx, actor)
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionCreate); err != nil {
 		return nil, err

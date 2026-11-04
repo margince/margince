@@ -355,6 +355,72 @@ it("offers no import for an IMAP mailbox", async () => {
   expect(previews).toEqual([]);
 });
 
+// The server refuses every connect for a role or seat that cannot capture.
+// So the account names what is missing in place of each connect verb.
+describe("a live mailbox whose member cannot capture", () => {
+  const refused = (missing: "contact" | "seat") => ({
+    allowed: false,
+    reason: "role_cannot_capture",
+    missing,
+  });
+  const rows = [
+    row("gmail", { backfill: { state: "done" } }),
+    row("gcal", { scopes: ["read"] }),
+  ];
+
+  it.each([
+    ["contact" as const, en["connectors.roleCannotCapture.contact"]],
+    ["seat" as const, en["connectors.roleCannotCapture.seat"]],
+  ])(
+    "offers no reconnect when %s is missing, and names it",
+    async (missing, says) => {
+      stub({
+        "GET /connectors": () =>
+          jsonResponse({ data: rows, seat_capture: refused(missing) }),
+      });
+      renderConnectAct();
+
+      expect(await screen.findByText(says)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Reconnect" })).toBeNull();
+    },
+  );
+
+  it.each([
+    ["contact" as const, en["connectors.roleCannotCapture.contact"]],
+    ["seat" as const, en["connectors.roleCannotCapture.seat"]],
+  ])(
+    "offers no calendar connect when %s is missing, and names it",
+    async (missing, says) => {
+      stub({
+        "GET /connectors": () =>
+          jsonResponse({
+            data: [row("gmail", { backfill: { state: "done" } })],
+            seat_capture: refused(missing),
+          }),
+      });
+      renderConnectAct();
+
+      expect(await screen.findByText(says)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Connect calendar" }),
+      ).toBeNull();
+    },
+  );
+
+  it("keeps both verbs for a member who may capture", async () => {
+    stub({
+      "GET /connectors": () =>
+        jsonResponse({ data: rows, seat_capture: { allowed: true } }),
+    });
+    renderConnectAct();
+
+    expect(
+      await screen.findByRole("button", { name: "Reconnect" }),
+    ).toBeEnabled();
+    expect(screen.queryByText(en["connectors.roleCannotCapture"])).toBeNull();
+  });
+});
+
 // LinkedIn lives beside mail on the same screen: saving or skipping it never
 // touches the mail flow, and nothing is authorized. It is a row whose ask
 // opens in a dialog of its own.

@@ -10,3 +10,14 @@ export const CAPTURE_CONCERNS: Readonly<Record<Kind, MessageKey>> = {
   sync_stalled: "captureConcern.stalled",
   capture_silent: "captureConcern.silent",
 };
+
+/** The words for one concern. A sync refused for the member's role is a role
+ *  to change, not a mailbox to mend, so it names that cause instead. */
+export function concernKey(
+  concern: Kind,
+  errorClass: string | null | undefined,
+): MessageKey {
+  return errorClass === "forbidden"
+    ? "captureConcern.roleCannotCapture"
+    : CAPTURE_CONCERNS[concern];
+}

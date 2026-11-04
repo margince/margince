@@ -33,8 +33,9 @@ export function InlineChoice({
   options: readonly SelectOption[];
   canEdit: boolean;
   readOnlyReason?: string;
-  // What the dialog says about its options, such as a roster that failed.
-  hint?: string;
+  // What the dialog says about its options, such as a roster that failed. As a
+  // function of the draft, it speaks about the option picked.
+  hint?: string | ((draft: string) => string | undefined);
   render: (value: string) => ReactNode;
   // Resolves once stored; a throw is the refusal, shown on the field with
   // the reader's choice kept.

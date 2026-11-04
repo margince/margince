@@ -160,8 +160,10 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 			return err
 		}
 		var err error
-		updated, err = applyRoleObjectGrant(ctx, tx, actor, roleKey, object, grant, ifVersion)
-		return err
+		if updated, err = applyRoleObjectGrant(ctx, tx, actor, roleKey, object, grant, ifVersion); err != nil {
+			return err
+		}
+		return s.recheckRoleHoldersTx(ctx, tx, roleKey)
 	})
 	if err != nil {
 		return roleRow{}, err

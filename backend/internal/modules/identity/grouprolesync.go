@@ -128,6 +128,9 @@ func (s *Service) grantMappedRoles(ctx context.Context, tx pgx.Tx, userID ids.Us
 	if len(granted) == 0 {
 		return nil
 	}
+	if err := s.recheckMailboxesTx(ctx, tx, []ids.UUID{userID.UUID}); err != nil {
+		return err
+	}
 	return auditMappedGrants(ctx, tx, userID, before, granted)
 }
 
