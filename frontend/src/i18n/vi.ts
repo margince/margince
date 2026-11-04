@@ -5078,6 +5078,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tags.createNamed": "Tạo thẻ {name}",
   "tags.shortlistInstead": "Thay vào đó, thêm vào danh sách chọn tay",
   "tags.manage": "Quản lý thẻ",
+  "tags.createdNotApplied":
+    "Đã tạo {name} nhưng chưa thêm vào bản ghi này: {reason} Chọn thẻ trong danh sách để thêm lại.",
   "tags.whoAdds":
     "Cần thêm thẻ? Quản trị viên hoặc thành viên Vận hành có thể thêm trong Cài đặt → Thẻ.",
   "tags.noMatch":

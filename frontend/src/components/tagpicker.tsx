@@ -3,9 +3,7 @@
 
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
-import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import {
   ListPopover,
   type ListPopoverOption,
@@ -15,19 +13,16 @@ import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { useListsAvailable } from "../lib/lists.queries";
 import { problemMessageOf } from "../lib/problem";
-import { routeHash } from "../lib/router";
-import { settingsHref } from "../lib/settingsrouting";
 import type { RecordTag, TaggableType } from "../lib/tags.queries";
 import {
   useApplyTag,
-  useCreateTag,
+  useCreateOrFindTag,
   useTagVocabulary,
 } from "../lib/tags.queries";
 import { AddToShortlistDialog } from "./addtoshortlist";
 import type { PickedTag } from "./bulktag";
 import "./tagpicker.css";
-
-const TAGS_SETTINGS_HREF = routeHash(settingsHref("tags"));
+import { CreateTagWay, TagListFooter } from "./tagwayforward";
 
 /**
  * The add-tag verb: pick a word the workspace already has.
@@ -63,15 +58,26 @@ export function AddTagPicker({
   // visits never open it.
   const vocabulary = useTagVocabulary(open);
   const apply = useApplyTag(entityType, entityID);
-  const create = useCreateTag();
+  const create = useCreateOrFindTag();
   const canCreate = useCan("tag", "create");
   const listsOn = useListsAvailable();
   const canMakeList = useCan("list", "create");
   const canShortlist = listsOn && canMakeList;
   // The name a new Shortlist opens with, once the reader takes that way out.
   const [shortlistName, setShortlistName] = useState<string | null>(null);
+  // The word this picker created and then failed to put on the record. The
+  // two writes are separate, so the reader is told the tag exists now.
+  const [unapplied, setUnapplied] = useState<string | null>(null);
   const writing = apply.isPending || create.isPending;
   const failure = create.error ?? apply.error;
+  const failureText = failure
+    ? unapplied
+      ? t("tags.createdNotApplied", {
+          name: unapplied,
+          reason: problemMessageOf(failure, t),
+        })
+      : problemMessageOf(failure, t)
+    : undefined;
 
   const applied = useMemo(
     () => new Set(current.map((tag) => tag.tag_id)),
@@ -94,21 +100,20 @@ export function AddTagPicker({
     [vocabulary.data, applied, t],
   );
 
-  // Coin the word, then put it on this record. A refused apply leaves the new
-  // word in the vocabulary, where the list now offers it.
+  // Coin the word, or find it when a stale list offered Create for a word that
+  // exists, then put it on this record. A refused apply leaves the word in
+  // the vocabulary, where the list now offers it to pick again.
   const createAndApply = (name: string, done: () => void) =>
-    create.mutate(
-      { name },
-      {
-        onSuccess: (tag) =>
-          apply.mutate(tag.id, {
-            onSuccess: () => {
-              done();
-              onApplied?.({ id: tag.id, name: tag.name });
-            },
-          }),
-      },
-    );
+    create.mutate(name, {
+      onSuccess: (tag) =>
+        apply.mutate(tag.id, {
+          onSuccess: () => {
+            done();
+            onApplied?.({ id: tag.id, name: tag.name });
+          },
+          onError: () => setUnapplied(tag.name),
+        }),
+    });
 
   return (
     <>
@@ -131,6 +136,7 @@ export function AddTagPicker({
           if (!writing) {
             apply.reset();
             create.reset();
+            setUnapplied(null);
           }
         }}
         options={vocabulary.isError ? [] : options}
@@ -146,14 +152,11 @@ export function AddTagPicker({
             ? undefined
             : (term, done) =>
                 canCreate ? (
-                  <Button
-                    className="tagpicker-way"
-                    variant="secondary"
+                  <CreateTagWay
+                    term={term}
                     disabled={writing}
-                    onClick={() => createAndApply(term, done)}
-                  >
-                    <Plus aria-hidden /> {t("tags.createNamed", { name: term })}
-                  </Button>
+                    onCreate={() => createAndApply(term, done)}
+                  />
                 ) : (
                   canShortlist && (
                     <Button
@@ -170,33 +173,21 @@ export function AddTagPicker({
                 )
         }
         pending={writing}
-        error={failure ? problemMessageOf(failure, t) : undefined}
-        onPick={(option, done) =>
+        error={failureText}
+        onPick={(option, done) => {
+          setUnapplied(null);
           apply.mutate(option.id, {
             onSuccess: () => {
               done();
               onApplied?.({ id: option.id, name: option.name });
             },
-          })
-        }
+          });
+        }}
         footer={
-          <>
-            {/* The catalog was cut. Say so, because a reader who cannot find a
-                word in a SHORT list concludes the workspace lacks it and asks
-                an admin to coin the duplicate this picker exists to prevent. */}
-            {vocabulary.data?.truncated && (
-              <Callout kind="standing" title={t("tags.catalogTruncatedTitle")}>
-                {t("tags.catalogTruncated")}
-              </Callout>
-            )}
-            <p className="tagpicker-foot t-caption">
-              {canCreate ? (
-                <AppLink href={TAGS_SETTINGS_HREF}>{t("tags.manage")}</AppLink>
-              ) : (
-                t("tags.whoAdds")
-              )}
-            </p>
-          </>
+          <TagListFooter
+            canCreate={canCreate}
+            truncated={vocabulary.data?.truncated ?? false}
+          />
         }
       />
       {shortlistName !== null && (

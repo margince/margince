@@ -5170,6 +5170,8 @@ export const en = {
   "tags.createNamed": "Create tag {name}",
   "tags.shortlistInstead": "Add to a Shortlist instead",
   "tags.manage": "Manage tags",
+  "tags.createdNotApplied":
+    "{name} was created but not added to this record: {reason} Pick it in the list to add it again.",
   "tags.whoAdds":
     "Need another tag? An administrator or operations user can add one in Settings → Tags.",
   "tags.noMatch":

@@ -50,7 +50,6 @@ function mount({
     // A seat that reads the vocabulary and may coin nothing, unless the case
     // says otherwise.
     "GET /me": meRoute({ tag: ["read"] }, { roles: ["rep"] }),
-    ...routes,
     "GET /tags": () =>
       jsonResponse({
         data: [
@@ -63,6 +62,7 @@ function mount({
       applied.push(body);
       return apply();
     },
+    ...routes,
   });
   render(
     <StoryProviders>
@@ -215,6 +215,97 @@ describe("the add-tag picker", () => {
 
   // The vocabulary is governed. A seat that may coin a word is offered to,
   // right where it found the word missing, and the word lands on the record.
+  // The list was read before a colleague coined the same word, so it still
+  // offers Create. The server refuses the duplicate, and the picker puts the
+  // existing word on the record instead of showing the refusal.
+  it("applies the existing tag when a stale list offered to create it", async () => {
+    const user = userEvent.setup();
+    const appliedExisting: unknown[] = [];
+    let reads = 0;
+    mount({
+      routes: {
+        "GET /me": meRoute({ tag: ["read", "create"] }, { roles: ["admin"] }),
+        "GET /tags": () => {
+          reads++;
+          const coined =
+            reads > 1
+              ? [{ id: "t-old", workspace_id: "w", name: "spring campaign" }]
+              : [];
+          return jsonResponse({
+            data: [
+              { id: "t-1", workspace_id: "w", name: "Key Account" },
+              ...coined,
+            ],
+            page: { has_more: false, next_cursor: null },
+          });
+        },
+        "POST /tags": () =>
+          jsonResponse(
+            { title: "Conflict", detail: "A tag with that name exists." },
+            409,
+          ),
+        "POST /tags/t-old/apply": (body) => {
+          appliedExisting.push(body);
+          return new Response(null, { status: 204 });
+        },
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    await user.click(
+      panel.getByRole("button", {
+        name: en["tags.createNamed"].replace("{name}", "Spring campaign"),
+      }),
+    );
+
+    await waitFor(() =>
+      expect(appliedExisting).toEqual([
+        { entity_type: "company", entity_id: COMPANY },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // Creating and applying are two writes. When the second is refused, the
+  // reader is told the tag now exists, and can pick it to try again.
+  it("says the tag was created when putting it on the record is refused", async () => {
+    const user = userEvent.setup();
+    mount({
+      routes: {
+        "GET /me": meRoute({ tag: ["read", "create"] }, { roles: ["admin"] }),
+        "POST /tags": () =>
+          jsonResponse(
+            { id: "t-new", workspace_id: "w", name: "Spring campaign" },
+            201,
+          ),
+        "POST /tags/t-new/apply": () =>
+          jsonResponse(
+            { title: "Forbidden", detail: "This record is locked." },
+            403,
+          ),
+      },
+    });
+    const panel = await openPicker(user);
+    await panel.findByRole("option", { name: "Key Account" });
+
+    await user.type(panel.getByRole("combobox"), "Spring campaign");
+    await user.click(
+      panel.getByRole("button", {
+        name: en["tags.createNamed"].replace("{name}", "Spring campaign"),
+      }),
+    );
+
+    const alert = await panel.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      en["tags.createdNotApplied"]
+        .replace("{name}", "Spring campaign")
+        .replace("{reason}", "This record is locked."),
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("creates and applies a missing word in one step for a seat that may create tags", async () => {
     const user = userEvent.setup();
     const created: unknown[] = [];
