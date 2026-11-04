@@ -48,6 +48,7 @@ import {
   contactHref,
   employerOf,
   itemTitle,
+  partyName,
   phrasedReasons,
   readerTask,
   reasonText,
@@ -66,12 +67,7 @@ export function taskName(
   locale: Locale,
 ): string {
   const mail = item.email_summary;
-  // The row's contact may be another party filed under the message, so
-  // it names the reply only when it is the sender.
-  const sender =
-    item.contact && mail?.counterparty_contact_id === item.contact.id
-      ? item.contact.label
-      : (mail?.counterparty ?? item.contact?.label);
+  const sender = partyName(item);
   // A message waiting on the reader is named by the move it asks for.
   if (mail?.move === "needs_reply" && sender && mail.subject)
     return t("brief.task.reply", { name: sender, subject: mail.subject });
@@ -101,7 +97,7 @@ export function taskLine(
   // The reader's own pin is the queue's reason, not the day's.
   const reason = phrasedReasons(item, false)
     .filter((entry) => entry.kind !== "pinned")
-    .map((entry) => reasonText(entry, t, locale, zone))
+    .map((entry) => reasonText(entry, t, locale, zone, partyName(item)))
     .find((text) => text !== null);
   return briefContextTitle(item) ?? reason ?? (item.detail || null);
 }

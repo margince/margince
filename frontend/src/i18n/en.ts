@@ -18049,7 +18049,8 @@ export const en = {
     "Nothing was sent after this meeting. Send the attendees a follow-up.",
   "worklist.ask.batch":
     "Several routine decisions that read alike are grouped here. Review them together.",
-  "worklist.consequence.buyer_waits": "The buyer keeps waiting.",
+  "worklist.consequence.buyer_waits": "They keep waiting.",
+  "worklist.consequence.buyer_waits.named": "{name} keeps waiting.",
   "worklist.consequence.promise_breaks": "A commitment is broken.",
   "worklist.consequence.deal_drifts": "The deal keeps drifting.",
   "worklist.consequence.deal_slips_past_close":
@@ -18318,7 +18319,8 @@ export const en = {
   "worklist.because.pinned": "pinned by you",
   "worklist.because.reminder_due": "your reminder is due",
   "worklist.because.non_buyer_request": "not established as customer work",
-  "worklist.because.buyer_wrote_last": "buyer wrote last",
+  "worklist.because.buyer_wrote_last": "they wrote last",
+  "worklist.because.buyer_wrote_last.named": "{name} wrote last",
   "worklist.because.waiting_days": "waiting",
   "worklist.because.waiting_days.value_one": "waiting {value} day",
   "worklist.because.waiting_days.value_other": "waiting {value} days",

@@ -23,6 +23,7 @@ import type { Worklist, WorklistItem } from "./worklisttypes";
 
 export {
   dealFactsText,
+  partyName,
   phrasedReasons,
   reasonText,
   whenText,

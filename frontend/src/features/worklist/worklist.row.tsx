@@ -14,6 +14,7 @@ import {
   briefSubjectLabel,
   dealFactsText,
   itemTitle,
+  partyName,
   phrasedReasons,
   readerTask,
   reasonText,
@@ -174,7 +175,7 @@ export function WorklistRow({
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   const reasons = phrasedReasons(item, when !== null)
-    .map((reason) => reasonText(reason, t, locale, zone))
+    .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   const said = [...new Set(reasons)].filter(
     (reason) => reason !== detail && reason !== item.verdict?.line,

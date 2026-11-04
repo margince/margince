@@ -135,13 +135,28 @@ export function phrasedReasons(
   );
 }
 
-// One fact behind an item's rank.
+/**
+ * Who the row is with, by name: the message's sender when the row's contact
+ * is not that sender, else the contact.
+ */
+export function partyName(item: WorklistItem): string | undefined {
+  const mail = item.email_summary;
+  if (item.contact && mail?.counterparty_contact_id === item.contact.id)
+    return item.contact.label;
+  return mail?.counterparty ?? item.contact?.label ?? undefined;
+}
+
+// One fact behind an item's rank. A reason about the other side names them
+// when the row knows who they are.
 export function reasonText(
   reason: WorklistReason,
   t: T,
   locale: Locale,
   zone: string,
+  party: string | undefined,
 ): string | null {
+  if (reason.kind === "buyer_wrote_last" && party)
+    return t("worklist.because.buyer_wrote_last.named", { name: party });
   if (!known(reason.kind)) {
     // A reason this build has no sentence for is DROPPED, not printed as its
     // own key. The row keeps its other reasons and says one thing less.

@@ -18209,7 +18209,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nach diesem Termin wurde nichts gesendet. Sende den Teilnehmenden ein Follow-up.",
   "worklist.ask.batch":
     "Hier sind mehrere ähnliche Routineentscheidungen gebündelt. Prüfe sie gemeinsam.",
-  "worklist.consequence.buyer_waits": "Die Käuferseite wartet weiter.",
+  "worklist.consequence.buyer_waits": "Sie warten weiter.",
+  "worklist.consequence.buyer_waits.named": "{name} wartet weiter.",
   "worklist.consequence.promise_breaks": "Eine Zusage wird nicht eingehalten.",
   "worklist.consequence.deal_drifts": "Der Deal gerät weiter ins Stocken.",
   "worklist.consequence.deal_slips_past_close":
@@ -18485,8 +18486,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.because.pinned": "von dir angeheftet",
   "worklist.because.reminder_due": "deine Erinnerung ist fällig",
   "worklist.because.non_buyer_request": "nicht als Kundenanliegen bestätigt",
-  "worklist.because.buyer_wrote_last":
-    "die Käuferseite hat zuletzt geschrieben",
+  "worklist.because.buyer_wrote_last": "sie haben zuletzt geschrieben",
+  "worklist.because.buyer_wrote_last.named": "{name} hat zuletzt geschrieben",
   "worklist.because.waiting_days": "wartet",
   "worklist.because.waiting_days.value_one": "wartet seit {value} Tag",
   "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",

@@ -10,7 +10,7 @@
 import { Panel, PanelBody } from "../../design-system/panel";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { reasonText } from "../../lib/worklistcopy";
+import { partyName, reasonText } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
@@ -55,7 +55,7 @@ export function WorklistWhy({
           {item.consequence !== "none" && (
             <p className="worklist-why-if">
               <span className="t-caption">{t("worklist.why.consequence")}</span>{" "}
-              {t(`worklist.consequence.${item.consequence}`)}
+              {consequenceText(item.consequence, partyName(item), t)}
             </p>
           )}
           {answer && <RowVerbs item={item} />}
@@ -92,7 +92,18 @@ function whyReasons(
 ): string[] {
   // A reason said twice is read once, and the text is then its own key.
   const said = item.because
-    .map((reason) => reasonText(reason, t, locale, zone))
+    .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((text): text is string => text !== null);
   return [...new Set(said)];
+}
+
+// The cost of waiting names who waits, when the row knows them.
+function consequenceText(
+  consequence: Exclude<WorklistItem["consequence"], "none">,
+  party: string | undefined,
+  t: Translator,
+): string {
+  if (consequence === "buyer_waits" && party)
+    return t("worklist.consequence.buyer_waits.named", { name: party });
+  return t(`worklist.consequence.${consequence}`);
 }

@@ -7,12 +7,14 @@ import { describe, expect, it } from "vitest";
 import { viewerZone } from "../format/timezone";
 import type { Translator } from "../i18n";
 import { translate } from "../i18n";
+import { waitingEmailRow } from "../testing/brief.fixtures";
 import {
   itemTitle,
   KNOWN_SOURCES,
   moveHref,
   moveLabel,
   moveOpensComposer,
+  partyName,
   reasonText,
   sourceName,
   sourceUnavailableText,
@@ -210,13 +212,42 @@ describe("the verbs the row can and cannot take a reader to", () => {
 // A row waiting one day said "waiting 1 days". quiet_days carries the exact
 // same day-count value shape through the exact same reasonText path, so it
 // gets the exact same fix rather than a patch on one string.
+describe("reasonText — the other side by name", () => {
+  const wroteLast: WorklistReason = { kind: "buyer_wrote_last" };
+
+  it("names the contact who wrote last", () => {
+    expect(reasonText(wroteLast, t, "en", zone, "Sonya Beck")).toBe(
+      "Sonya Beck wrote last",
+    );
+  });
+
+  it("says they when the row knows no name", () => {
+    expect(reasonText(wroteLast, t, "en", zone, undefined)).toBe(
+      "they wrote last",
+    );
+  });
+
+  it("takes the sender over another contact filed under the message", () => {
+    const waiting = waitingEmailRow();
+    const mail = waiting.email_summary;
+    if (!mail) throw new Error("the waiting row carries its message");
+    const row: WorklistItem = {
+      ...waiting,
+      contact: { id: "contact-ida", label: "Ida Roth" },
+      email_summary: { ...mail, counterparty: "Lena Wolf" },
+    };
+    expect(partyName(row)).toBe("Lena Wolf");
+    expect(partyName(waitingEmailRow())).toBe("Sonya Beck");
+  });
+});
+
 describe("reasonText — day-count plural", () => {
   it("uses the singular day form for a one-day wait", () => {
     const reason: WorklistReason = {
       kind: "waiting_days",
       value: { kind: "days", days: 1 },
     };
-    expect(reasonText(reason, t, "en", zone)).toBe("waiting 1 day");
+    expect(reasonText(reason, t, "en", zone, undefined)).toBe("waiting 1 day");
   });
 
   it("uses the plural day form otherwise", () => {
@@ -224,7 +255,7 @@ describe("reasonText — day-count plural", () => {
       kind: "waiting_days",
       value: { kind: "days", days: 5 },
     };
-    expect(reasonText(reason, t, "en", zone)).toBe("waiting 5 days");
+    expect(reasonText(reason, t, "en", zone, undefined)).toBe("waiting 5 days");
   });
 
   it("pluralizes the sibling quiet_days reason the same way", () => {
@@ -236,8 +267,10 @@ describe("reasonText — day-count plural", () => {
       kind: "quiet_days",
       value: { kind: "days", days: 14 },
     };
-    expect(reasonText(one, t, "en", zone)).toBe("quiet for 1 day");
-    expect(reasonText(many, t, "en", zone)).toBe("quiet for 14 days");
+    expect(reasonText(one, t, "en", zone, undefined)).toBe("quiet for 1 day");
+    expect(reasonText(many, t, "en", zone, undefined)).toBe(
+      "quiet for 14 days",
+    );
   });
 });
 
@@ -255,7 +288,7 @@ describe("reasonText — the lead's own deadline", () => {
       kind: "response_due_soon",
       value: { kind: "date", date: "2026-09-03T14:30:00Z" },
     };
-    const got = reasonText(reason, t, "en", zone);
+    const got = reasonText(reason, t, "en", zone, undefined);
     expect(got).not.toBeNull();
     // The formatted moment, not the raw ISO string: valueText renders it in the
     // reader's locale and zone, and asserting the literal would pin a format
@@ -266,7 +299,7 @@ describe("reasonText — the lead's own deadline", () => {
 
   it("falls back to the plain phrase when no deadline travelled", () => {
     const reason: WorklistReason = { kind: "response_due_soon" };
-    expect(reasonText(reason, t, "en", zone)).toBe("reply due soon");
+    expect(reasonText(reason, t, "en", zone, undefined)).toBe("reply due soon");
   });
 });
 
@@ -282,10 +315,10 @@ describe("reasonText — a thread's earlier requests", () => {
       kind: "earlier_requests",
       value: { kind: "count", count: 2 },
     };
-    expect(reasonText(one, t, "en", zone)).toBe(
+    expect(reasonText(one, t, "en", zone, undefined)).toBe(
       "1 earlier request in this thread",
     );
-    expect(reasonText(two, t, "en", zone)).toBe(
+    expect(reasonText(two, t, "en", zone, undefined)).toBe(
       "2 earlier requests in this thread",
     );
   });
@@ -295,7 +328,9 @@ describe("reasonText — a thread's earlier requests", () => {
       kind: "first_asked",
       value: { kind: "date", date: "2026-09-03T14:30:00Z" },
     };
-    expect(reasonText(reason, t, "en", zone)).toMatch(/^first asked .*2026/);
+    expect(reasonText(reason, t, "en", zone, undefined)).toMatch(
+      /^first asked .*2026/,
+    );
   });
 });
 
