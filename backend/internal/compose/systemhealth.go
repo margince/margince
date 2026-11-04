@@ -59,10 +59,10 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	admitted := auth.Require(ctx, healthReadObject, principal.ActionRead) == nil ||
-		auth.Require(ctx, "data_task", principal.ActionRead) == nil ||
-		auth.Require(ctx, "embedding_reindex", principal.ActionRead) == nil ||
-		auth.Require(ctx, "installation_settings", principal.ActionUpdate) == nil
+	admitted := auth.Allows(ctx, healthReadObject, principal.ActionRead) ||
+		auth.Allows(ctx, "data_task", principal.ActionRead) ||
+		auth.Allows(ctx, "embedding_reindex", principal.ActionRead) ||
+		auth.Allows(ctx, "installation_settings", principal.ActionUpdate)
 	if !admitted {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return
@@ -70,7 +70,7 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(ctx, healthReadTimeout)
 	defer cancel()
 	out := composeHealth(ctx, s.healthReads(), utcNow)
-	if s.originProbe != nil && auth.Require(ctx, healthReadObject, principal.ActionRead) == nil {
+	if s.originProbe != nil && auth.Allows(ctx, healthReadObject, principal.ActionRead) {
 		origin := s.originProbe.Snapshot()
 		out.PublicOrigin = &crmcontracts.PublicOriginStatus{Origin: origin.Origin, Reachable: origin.Reachable, CheckedAt: origin.CheckedAt}
 		if origin.Detail != "" {

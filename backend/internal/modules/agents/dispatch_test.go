@@ -279,7 +279,7 @@ func TestToolListAdvertisesOnlyWhatTheCallersScopesAdmit(t *testing.T) {
 
 	agentCtx := func(scopes ...principal.Scope) context.Context {
 		return principal.WithActor(context.Background(), principal.Principal{
-			Type: principal.PrincipalAgent, ID: "agent:night", Scopes: principal.NewScopeSet(scopes...),
+			Type: principal.PrincipalAgent, ID: "agent:night", SeatType: principal.SeatFull, Permissions: everyRecordedGrant(), Scopes: principal.NewScopeSet(scopes...),
 		})
 	}
 

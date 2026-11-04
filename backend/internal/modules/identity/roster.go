@@ -259,7 +259,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	if err := auth.RequireMember(ctx); err != nil {
 		return RosterPage{}, err
 	}
-	mayManage := auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	mayManage := auth.Allows(ctx, objectUserAdmin, principal.ActionRead)
 	plain, filtered := listUsersQuery, listUsersFilteredQuery
 	switch {
 	case mayManage && in.IncludeInactive:
@@ -313,7 +313,7 @@ func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
 // withholdActivity clears last-active wherever the caller could not list the member's sessions:
 // no human caller, no user_admin read, or a target beyond ListUserSessions' ceiling.
 func withholdActivity(ctx context.Context, actor *Identity, rows []userRow, grants map[ids.UUID]seatGrants) {
-	mayList := actor != nil && auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	mayList := actor != nil && auth.Allows(ctx, objectUserAdmin, principal.ActionRead)
 	for i := range rows {
 		if !mayList || callerOutranks(*actor, grants[rows[i].ID], reachDenial) != nil {
 			rows[i].LastActiveAt = nil

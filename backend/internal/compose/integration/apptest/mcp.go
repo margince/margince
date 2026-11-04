@@ -109,24 +109,48 @@ func (c *MCPClient) Initialize(t *testing.T, protocolVersion string) string {
 // returns them.
 func (c *MCPClient) ListTools(t *testing.T) []string {
 	t.Helper()
+	listed := c.ListedTools(t)
+	names := make([]string, len(listed))
+	for i, tool := range listed {
+		names[i] = tool.Name
+	}
+	return names
+}
+
+// ListedTool is one tools/list entry as a client reads it.
+type ListedTool struct {
+	Name        string
+	Description string
+	InputSchema json.RawMessage
+}
+
+// ListedTools lists the tools this credential is served, with what it is told
+// about each, in the order the server returns them.
+func (c *MCPClient) ListedTools(t *testing.T) []ListedTool {
+	t.Helper()
 	result := c.rpc(t, "tools/list", nil)
 	raw, ok := result["tools"].([]any)
 	if !ok {
 		t.Fatalf("tools/list carries no tools array: %v", result)
 	}
-	names := make([]string, 0, len(raw))
+	tools := make([]ListedTool, 0, len(raw))
 	for _, entry := range raw {
 		tool, ok := entry.(map[string]any)
 		if !ok {
 			t.Fatalf("tools/list entry is not an object: %v", entry)
 		}
-		name, ok := tool["name"].(string)
-		if !ok || name == "" {
+		name, _ := tool["name"].(string)
+		if name == "" {
 			t.Fatalf("tools/list entry carries no name: %v", tool)
 		}
-		names = append(names, name)
+		description, _ := tool["description"].(string)
+		schema, err := json.Marshal(tool["inputSchema"])
+		if err != nil {
+			t.Fatalf("%s's input schema does not encode: %v", name, err)
+		}
+		tools = append(tools, ListedTool{Name: name, Description: description, InputSchema: schema})
 	}
-	return names
+	return tools
 }
 
 // Call invokes one tool and returns what came back, refusal included. It is the

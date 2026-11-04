@@ -61,9 +61,9 @@ type importHandlers struct {
 	uploadLimit int64
 	// queue enqueues an attempt's job; nil is a role that queues no import work.
 	queue *importEnqueuer
-	// previewWait, when set, replaces how long preview_import waits for its
-	// test's report. Only the test harness sets it.
-	previewWait agents.RegistryOption
+	// registryForTest are tool registry options only the integration harness
+	// sets, such as how long preview_import waits for its test's report.
+	registryForTest []agents.RegistryOption
 }
 
 // UploadImportSource stores a file, describes it (IEM-WIRE-8) and opens its

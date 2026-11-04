@@ -123,7 +123,7 @@ func (h Handlers) enforcementState(ctx context.Context) (crmcontracts.ForecastAs
 	// The preview counts every open deal, so only the admin who may switch sees
 	// it. A reader in a narrower scope would learn counts they cannot open.
 	if h.preview != nil && state == crmcontracts.ForecastAssuranceEnforcementStateObserving &&
-		auth.RequireAdmin(ctx) == nil {
+		auth.AdminGranted(ctx) {
 		preview, err := h.preview(ctx)
 		if err != nil {
 			return out, err

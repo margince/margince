@@ -116,7 +116,7 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 	// the screen can hide the action rather than render a button whose save
 	// returns 403 — the shape the review called out as advertising an action
 	// the backend will reject.
-	maySubmit := auth.Require(ctx, objectForecast, principal.ActionCreate) == nil
+	maySubmit := auth.Allows(ctx, objectForecast, principal.ActionCreate)
 
 	defaultScope := scopeToWire(def)
 	markAssertable(ctx, p, &defaultScope)

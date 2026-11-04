@@ -26,7 +26,7 @@ import (
 // the test stack leaves off. Each is the fake another integration test starts,
 // so a call the installation serves reaches its gate here too. The job queue
 // only inserts, and the Google calendar answers from memory.
-func toolRoleApp(t *testing.T) *twoDoors {
+func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *twoDoors {
 	t.Helper()
 	jobs, embeddings := insertOnlyRunner(t), embedReindexRouter(t, "tool-role-embed")
 	models, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(ai.NewFakeClient()), ai.WithoutResultCache())
@@ -49,7 +49,7 @@ func toolRoleApp(t *testing.T) *twoDoors {
 	previous := http.DefaultTransport
 	http.DefaultTransport = calendar
 	t.Cleanup(func() { http.DefaultTransport = previous })
-	d := newTwoDoorsWith(t, "tool-role-matrix", []compose.Option{
+	d := newTwoDoorsWith(t, slug, append([]compose.Option{
 		compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
@@ -59,7 +59,7 @@ func toolRoleApp(t *testing.T) *twoDoors {
 		compose.WithAssuranceRun(jobs), compose.WithKnowledgeIngest(jobs), compose.WithCaptureTrace(true),
 		compose.WithChannelSurface(), compose.WithListsEnabled(true), compose.WithVatChecking(jobs),
 		compose.WithProvider(providers, vault, jobs),
-	}, "read", "write", "send", "draft", "enrich")
+	}, more...), "read", "write", "send", "draft", "enrich")
 	// The VAT queue binds the stores compose builds anywhere in the process.
 	t.Cleanup(func() { compose.BindVatChecking(nil) })
 	// Boot binds the embedding model an installation runs; the harness does not boot.

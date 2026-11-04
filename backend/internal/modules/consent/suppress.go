@@ -216,7 +216,7 @@ func levelFor(ctx context.Context, kind string) commsauthz.AuthorityLevel {
 // LevelUser. That is deliberate and matches the RBAC defaults, where ops and
 // admin are separated by exactly this gate — see LevelAdmin's own comment.
 func authorityOf(ctx context.Context) commsauthz.AuthorityLevel {
-	if auth.RequireAdmin(ctx) == nil {
+	if auth.AdminGranted(ctx) {
 		return commsauthz.LevelAdmin
 	}
 	return commsauthz.LevelUser

@@ -209,10 +209,7 @@ func companySeeders(s sweepSeed) map[string]func() string {
 		// Seeded as a call takes it, so as whichever role is being swept; only
 		// the admin uploads the company's own logo.
 		"anchor_logo": func() string {
-			swept := s.ownerScalar(`SELECT r.key FROM role r JOIN role_assignment a ON a.role_id = r.id
-				JOIN app_user u ON u.id = a.user_id WHERE u.email = $1`, toolRoleUser)
-			assignRoleTo(s.t, s.e, toolRoleUser, "admin")
-			defer assignRoleTo(s.t, s.e, toolRoleUser, swept)
+			defer s.asRoles("admin")()
 			upload(s, "/v1/company/logo")
 			upload(s, "/v1/company/logo/icon")
 			var company struct {

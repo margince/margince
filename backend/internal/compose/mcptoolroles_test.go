@@ -14,6 +14,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 var updateMCPToolRolesPage = flag.Bool("update-mcp-tool-roles-page", false,
@@ -26,6 +29,7 @@ type toolRolesDoc struct {
 	Rows    []struct {
 		Tool            string            `json:"tool"`
 		Action          string            `json:"action"`
+		Verb            string            `json:"verb"`
 		Allowed         []string          `json:"allowed_for"`
 		Refused         []string          `json:"refused_for"`
 		Unproven        []string          `json:"unproven_for"`
@@ -90,7 +94,7 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 
 func TestTheToolRolePageIsTheMatrix(t *testing.T) {
 	page := filepath.Join(mcpDocsDir, "mcp-tool-roles.md")
-	rendered := renderToolRoles(readToolRoles(t))
+	rendered := renderToolRoles(readToolRoles(t), readToolChecks(t))
 	if *updateMCPToolRolesPage {
 		if err := os.WriteFile(page, rendered, 0o600); err != nil {
 			t.Fatal(err)
@@ -136,11 +140,43 @@ Regenerate from the repository root, then from ` + "`backend/`" + `:
     UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished
     go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page
 
+A tool that reaches no verdict is fixed as [prove-a-tool-in-the-role-matrix.md](../how-to/prove-a-tool-in-the-role-matrix.md) says.
+
 ## The matrix
 
 `
 
-func renderToolRoles(doc toolRolesDoc) []byte {
+// readToolChecks is the table the binary embeds, which tools/list narrows by.
+func readToolChecks(t *testing.T) agents.ToolChecksFile {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "modules", "agents", "toolchecks.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var table agents.ToolChecksFile
+	if err := json.Unmarshal(raw, &table); err != nil {
+		t.Fatal(err)
+	}
+	return table
+}
+
+// everyMeasuredGrant holds the admin role key and every grant the table names,
+// so a listing under it is narrowed by nothing the table measured.
+func everyMeasuredGrant(t *testing.T) principal.Permissions {
+	t.Helper()
+	perms := principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{}}
+	all := principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
+	for _, row := range readToolChecks(t).Verbs {
+		for _, name := range row.Checks {
+			if object, _, ok := strings.Cut(name, "."); ok {
+				perms.Objects[object] = all
+			}
+		}
+	}
+	return perms
+}
+
+func renderToolRoles(doc toolRolesDoc, checks agents.ToolChecksFile) []byte {
 	var b bytes.Buffer
 	b.WriteString(toolRolesPageHead)
 	b.WriteString("> " + doc.Note + "\n")
@@ -162,7 +198,34 @@ func renderToolRoles(doc toolRolesDoc) []byte {
 	}
 	renderStopReasons(&b, doc)
 	renderColleagueRecord(&b, doc)
+	renderToolChecks(&b, doc, checks)
 	return b.Bytes()
+}
+
+// renderToolChecks lists what each swept verb's admin call was asked, which is
+// what tools/list holds a passport's user to.
+func renderToolChecks(b *bytes.Buffer, doc toolRolesDoc, checks agents.ToolChecksFile) {
+	b.WriteString("\n## What each call needs\n\n" +
+		"tools/list offers a passport a tool, or a router's action, only when its user holds every check below. " +
+		"The checks come from [the tool checks table](../../backend/internal/modules/agents/toolchecks.json), " +
+		"which the same test writes:\n\n> " + checks.Note + "\n\n")
+	b.WriteString("A check is `object.action`, or `object.a|b` for any one of them. `*.action` is the action on any " +
+		"object, `admin` is the admin role key, and `scope:team` is a row scope at least that wide. **Measured** is `complete` where the admin call ran. It is `partial` " +
+		"where the call stopped first, so only the checks before the stop are known. It is `none` where the call never " +
+		"reached the verb: such a call stays offered, and the gate decides it.\n\n")
+	b.WriteString("| Call | Verb | Checks | Measured |\n|---|---|---|---|\n")
+	for _, row := range doc.Rows {
+		measured, needs := "none", ""
+		if verb, ok := checks.Verbs[row.Verb]; ok {
+			measured = map[bool]string{true: "complete", false: "partial"}[verb.Complete]
+			names := make([]string, len(verb.Checks))
+			for i, name := range verb.Checks {
+				names[i] = "`" + name + "`"
+			}
+			needs = strings.Join(names, " ")
+		}
+		fmt.Fprintf(b, "| `%s` | `%s` | %s | %s |\n", strings.TrimSuffix(row.Tool+"."+row.Action, "."), row.Verb, needs, measured)
+	}
 }
 
 // renderStopReasons counts why the unproven cells stopped, for the admin

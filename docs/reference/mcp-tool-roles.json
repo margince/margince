@@ -22,6 +22,7 @@
       "tool": "annotate_brief",
       "verb": "annotate_brief",
       "allowed_for": [
+        "admin",
         "management",
         "manager",
         "ops",
@@ -29,12 +30,7 @@
         "rep"
       ],
       "refused_for": [],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "archive_record",
@@ -94,24 +90,17 @@
       "tool": "change_access",
       "action": "assign",
       "verb": "create_record_assignment",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -174,7 +163,8 @@
       "action": "create_record_role",
       "verb": "create_record_role",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -182,12 +172,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_access",
@@ -241,7 +226,9 @@
       "tool": "change_access",
       "action": "hand_over_work",
       "verb": "hand_over_user_work",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -249,20 +236,13 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "validation"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_access",
       "action": "offer_ownership",
       "verb": "offer_ownership_transfer",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -270,14 +250,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -287,7 +261,9 @@
       "tool": "change_access",
       "action": "reactivate_member",
       "verb": "reactivate_user",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -295,18 +271,15 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_access",
       "action": "remove_member",
       "verb": "remove_workspace_member",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -314,12 +287,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "other"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_access",
@@ -368,51 +336,37 @@
       "tool": "change_access",
       "action": "share",
       "verb": "share_record",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_access",
       "action": "unshare",
       "verb": "revoke_record_share",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_access",
@@ -434,24 +388,17 @@
       "tool": "change_access",
       "action": "update_member",
       "verb": "update_member",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
-        "admin",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
         "management",
         "manager",
         "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "refused",
-        "management": "refused",
-        "manager": "refused",
-        "ops": "refused",
-        "read_only": "refused",
-        "rep": "refused"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_access",
@@ -489,9 +436,7 @@
       "tool": "change_access",
       "action": "withdraw_ownership_offer",
       "verb": "withdraw_ownership_offer",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -499,26 +444,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_access",
       "action": "withdraw_ownership_request",
       "verb": "withdraw_ownership_request",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -526,41 +463,28 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_activities",
       "action": "accept_document_fields",
       "verb": "accept_attachment_extraction",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
@@ -573,13 +497,10 @@
         "ops",
         "rep"
       ],
-      "refused_for": [],
-      "unproven_for": [
+      "refused_for": [
         "read_only"
       ],
-      "unproven_reasons": {
-        "read_only": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
@@ -620,24 +541,17 @@
       "tool": "change_activities",
       "action": "cancel_send",
       "verb": "cancel_scheduled_send",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
@@ -679,47 +593,33 @@
       "tool": "change_activities",
       "action": "discard_draft",
       "verb": "discard_mail_draft",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
       "action": "hide_document",
       "verb": "hide_deal_document",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -760,55 +660,39 @@
       "tool": "change_activities",
       "action": "read_document_fields",
       "verb": "read_attachment_for_fields",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
       "action": "read_transcript",
       "verb": "read_transcript_for_next_steps",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
       "action": "ready",
       "verb": "confirm_meeting_ready",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -816,14 +700,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
@@ -885,55 +763,43 @@
       "tool": "change_activities",
       "action": "reschedule_send",
       "verb": "reschedule_scheduled_send",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
       "action": "save_draft",
       "verb": "save_mail_draft",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_activities",
       "action": "set_aside",
       "verb": "set_activity_disposition",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -941,14 +807,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
@@ -977,59 +837,42 @@
         "ops",
         "rep"
       ],
-      "refused_for": [],
-      "unproven_for": [
+      "refused_for": [
         "read_only"
       ],
-      "unproven_reasons": {
-        "read_only": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
       "action": "set_thread_audience",
       "verb": "set_thread_audience",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_activities",
       "action": "show_document",
       "verb": "unhide_deal_document",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -1055,9 +898,7 @@
       "tool": "change_activities",
       "action": "unready",
       "verb": "undo_meeting_ready",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1065,95 +906,66 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "accept_applied_change",
       "verb": "accept_applied_deal_change",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_attention",
       "action": "accept_deal_suggestion",
       "verb": "accept_deal_suggestion",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "accept_tag_suggestion",
       "verb": "accept_tag_suggestion",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "acknowledge_failed_approval",
       "verb": "acknowledge_approval_failure",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1161,14 +973,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
@@ -1190,22 +996,19 @@
       "tool": "change_attention",
       "action": "answer_teammate",
       "verb": "answer_weekly_plan_commitment",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops"
+      ],
       "refused_for": [
         "read_only"
       ],
       "unproven_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
         "rep"
       ],
       "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
         "rep": "not_found"
       }
     },
@@ -1229,9 +1032,7 @@
       "tool": "change_attention",
       "action": "brief_item_done",
       "verb": "mark_brief_item_acted",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1239,22 +1040,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "dismiss_brief_item",
       "verb": "mark_brief_item_dismissed",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1262,22 +1055,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "dismiss_company_suggestion",
       "verb": "dismiss_company_suggestion",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1285,17 +1070,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -1321,9 +1100,7 @@
       "tool": "change_attention",
       "action": "dismiss_deal_move",
       "verb": "dismiss_deal_move",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1331,49 +1108,34 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_attention",
       "action": "dismiss_deal_suggestion",
       "verb": "dismiss_deal_suggestion",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "dismiss_nudge",
       "verb": "dismiss_relationship_nudge",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1381,26 +1143,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_attention",
       "action": "dismiss_nudges",
       "verb": "dismiss_relationship_nudges",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1408,37 +1162,28 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
+      "refused_for": [],
+      "unproven_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_attention",
       "action": "dismiss_tag_suggestion",
       "verb": "dismiss_tag_suggestion",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
@@ -1475,9 +1220,7 @@
       "tool": "change_attention",
       "action": "mark_notice_read",
       "verb": "mark_notice_read",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1485,22 +1228,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "mark_rows_done",
       "verb": "mark_worklist_rows_done",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1508,22 +1243,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "pin_row",
       "verb": "pin_worklist_row",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1531,45 +1258,30 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "raise_notice",
       "verb": "raise_notice",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
-        "manager",
+        "manager"
+      ],
+      "refused_for": [
         "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "refused",
-        "management": "refused",
-        "manager": "refused",
-        "ops": "refused",
-        "read_only": "refused",
-        "rep": "refused"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "reopen_rows",
       "verb": "reopen_worklist_rows",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1577,22 +1289,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
+      "refused_for": [],
+      "unproven_for": [],
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_attention",
       "action": "restore_company_suggestion",
       "verb": "restore_company_suggestion",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1600,26 +1308,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_attention",
       "action": "restore_contact_moment",
       "verb": "restore_contact_moment",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1627,26 +1327,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_attention",
       "action": "restore_deal_move",
       "verb": "restore_deal_move",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1654,17 +1346,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -1722,9 +1408,7 @@
       "tool": "change_attention",
       "action": "snooze_brief_item",
       "verb": "snooze_brief_item",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1732,14 +1416,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
@@ -1761,9 +1439,7 @@
       "tool": "change_attention",
       "action": "unpin_row",
       "verb": "unpin_worklist_row",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1771,22 +1447,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_attention",
       "action": "unsnooze_brief_item",
       "verb": "unsnooze_brief_item",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -1794,82 +1462,55 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_lists",
       "verb": "change_lists",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "accept_offer",
       "verb": "accept_offer",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "add_room_document",
       "verb": "add_deal_room_document",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
@@ -1975,69 +1616,49 @@
       "tool": "change_offers",
       "action": "regenerate_offer",
       "verb": "regenerate_offer",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "reject_offer",
       "verb": "reject_offer",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "remove_room_document",
       "verb": "remove_deal_room_document",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only",
-        "rep"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found"
-      }
+      "refused_for": [
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
@@ -2075,93 +1696,65 @@
       "tool": "change_offers",
       "action": "resolve_room_thread",
       "verb": "resolve_deal_room_thread",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "resume_room",
       "verb": "resume_deal_room",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "conflict",
-        "management": "conflict",
-        "manager": "conflict",
-        "ops": "conflict",
-        "rep": "conflict"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "revoke_room_participant",
       "verb": "revoke_deal_room_participant",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "send_offer",
       "verb": "send_offer",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
@@ -2251,68 +1844,51 @@
       "tool": "change_offers",
       "action": "update_room_document",
       "verb": "update_deal_room_document",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_offers",
       "action": "update_room_participant",
       "verb": "update_deal_room_participant",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_record_parts",
       "verb": "change_record_parts",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
+      "colleague_record": {
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
@@ -2371,24 +1947,17 @@
       "tool": "change_relationships",
       "action": "check_vat",
       "verb": "request_company_vat_check",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -2398,55 +1967,39 @@
       "tool": "change_relationships",
       "action": "complete_intro_request",
       "verb": "complete_intro_request",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "conflict",
-        "management": "conflict",
-        "manager": "conflict",
-        "ops": "conflict",
-        "rep": "conflict"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_relationships",
       "action": "decide_intro_request",
       "verb": "decide_intro_request",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "refused",
-        "management": "refused",
-        "manager": "refused",
-        "ops": "refused",
-        "read_only": "refused",
-        "rep": "refused"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_relationships",
       "action": "draft_intro_note",
       "verb": "draft_intro_note",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -2454,26 +2007,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_relationships",
       "action": "draft_intro_request",
       "verb": "draft_intro_request",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -2481,95 +2026,68 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_relationships",
       "action": "link_contacts",
       "verb": "link_company_contacts",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_relationships",
       "action": "record_introduction",
       "verb": "record_introduction",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_relationships",
       "action": "record_promise",
       "verb": "record_conversation_claim",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -2599,27 +2117,20 @@
       "tool": "change_relationships",
       "action": "restore_profile_field",
       "verb": "restore_contact_profile_field",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -2646,69 +2157,49 @@
       "tool": "change_relationships",
       "action": "settle_promise",
       "verb": "settle_conversation_claim",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_relationships",
       "action": "take_over_promise",
       "verb": "take_over_conversation_claim",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_reports",
       "action": "draft",
       "verb": "draft_report",
-      "allowed_for": [],
-      "refused_for": [
-        "ops",
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
-        "management",
+        "management"
+      ],
+      "refused_for": [
         "manager",
+        "ops",
+        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "rep": "validation"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
@@ -2741,21 +2232,19 @@
         "rep"
       ],
       "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
+        "admin": "refused",
+        "management": "refused",
+        "manager": "refused",
+        "ops": "refused",
+        "read_only": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_settings",
       "action": "ask_site_read",
       "verb": "message_anchor_company_site_read",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -2763,44 +2252,32 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
       "action": "confirm_site_read",
       "verb": "confirm_anchor_company_site_read",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
-        "admin",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
         "management",
         "manager",
         "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
       "action": "create_acquisition_source",
       "verb": "create_acquisition_source",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -2808,19 +2285,15 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
       "action": "create_disqualify_reason",
       "verb": "create_lead_disqualify_reason",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -2828,19 +2301,15 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
       "action": "create_lead_origin",
       "verb": "create_lead_origin",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -2848,19 +2317,15 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
       "action": "create_lead_source",
       "verb": "create_lead_source",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -2868,12 +2333,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
@@ -2896,7 +2356,8 @@
       "action": "create_loss_reason",
       "verb": "create_loss_reason",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -2904,12 +2365,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
@@ -3074,24 +2530,17 @@
       "tool": "change_settings",
       "action": "save_own_company",
       "verb": "put_anchor_company",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
-        "admin",
+      "allowed_for": [
+        "admin"
+      ],
+      "refused_for": [
         "management",
         "manager",
         "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_settings",
@@ -3257,42 +2706,33 @@
       "tool": "change_settings",
       "action": "update_review_template",
       "verb": "update_activity_review_template",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
       "refused_for": [
         "management",
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "ops": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_state",
       "action": "accept_partner_lead",
       "verb": "accept_partner_lead",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
       "refused_for": [
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "management",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "ops": "validation"
-      },
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3302,51 +2742,37 @@
       "tool": "change_state",
       "action": "clear_lead_signal",
       "verb": "clear_lead_manual_signal",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
+        "ops"
+      ],
+      "refused_for": [
         "manager",
-        "ops",
+        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_state",
       "action": "correct_close_day",
       "verb": "correct_deal_close_day",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3356,7 +2782,9 @@
       "tool": "change_state",
       "action": "decide_legal_review",
       "verb": "decide_legal_review",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -3364,33 +2792,23 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_state",
       "action": "demote",
       "verb": "demote_lead",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
       "refused_for": [
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "management",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "ops": "internal"
-      },
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3420,22 +2838,17 @@
       "tool": "change_state",
       "action": "link_lead_company",
       "verb": "link_lead_company",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
       "refused_for": [
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "management",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "ops": "validation"
-      },
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3445,7 +2858,9 @@
       "tool": "change_state",
       "action": "merge_member_accounts",
       "verb": "merge_members",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -3453,38 +2868,26 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_state",
       "action": "move_deal",
       "verb": "progress_deal",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
@@ -3511,22 +2914,17 @@
       "tool": "change_state",
       "action": "promote",
       "verb": "promote_lead",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
       "refused_for": [
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "management",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "ops": "validation"
-      },
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3536,51 +2934,37 @@
       "tool": "change_state",
       "action": "propose_deal_roles",
       "verb": "propose_deal_roles",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "unsupported",
-        "rep": "unsupported"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_state",
       "action": "publish_contact",
       "verb": "publish_captured_contact",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "not_found",
         "rep": "not_found"
@@ -3610,22 +2994,17 @@
       "tool": "change_state",
       "action": "reopen_lead",
       "verb": "reopen_lead",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "management",
+        "ops"
+      ],
       "refused_for": [
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "management",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "conflict",
-        "management": "conflict",
-        "ops": "conflict"
-      },
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3635,51 +3014,37 @@
       "tool": "change_state",
       "action": "request_legal_review",
       "verb": "request_legal_review",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_state",
       "action": "revert_stage",
       "verb": "revert_stage_progression",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3689,78 +3054,57 @@
       "tool": "change_state",
       "action": "review_outcome",
       "verb": "create_deal_outcome_review",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "change_state",
       "action": "set_lead_signal",
       "verb": "set_lead_manual_signal",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
+        "ops"
+      ],
+      "refused_for": [
         "manager",
-        "ops",
+        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "change_state",
       "action": "set_up_partner",
       "verb": "set_up_partner",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "other",
-        "management": "other",
-        "manager": "other",
-        "ops": "other",
-        "rep": "other"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
         "manager": "refused",
         "rep": "refused"
@@ -3770,24 +3114,17 @@
       "tool": "change_state",
       "action": "withdraw_legal_review",
       "verb": "withdraw_legal_review",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "change_tags",
@@ -3830,7 +3167,8 @@
       "action": "create",
       "verb": "create_tag",
       "allowed_for": [
-        "admin"
+        "admin",
+        "ops"
       ],
       "refused_for": [
         "management",
@@ -3838,12 +3176,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "ops"
-      ],
-      "unproven_reasons": {
-        "ops": "conflict"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_tags",
@@ -3885,21 +3218,17 @@
       "tool": "change_tags",
       "action": "restore",
       "verb": "restore_tag",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
       "refused_for": [
         "management",
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "ops": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "change_tags",
@@ -3934,21 +3263,17 @@
     {
       "tool": "commit_import",
       "verb": "commit_import",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
       "refused_for": [
         "management",
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "ops": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "create_record",
@@ -3969,46 +3294,38 @@
       "tool": "decide_approvals",
       "action": "bundle",
       "verb": "decide_approval_bundle",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
+      "refused_for": [],
+      "unproven_for": [
+        "read_only"
+      ],
       "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
+        "read_only": "not_found"
       }
     },
     {
       "tool": "decide_approvals",
       "action": "one",
       "verb": "decide_approval",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
+      "refused_for": [],
+      "unproven_for": [
+        "read_only"
+      ],
       "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
+        "read_only": "not_found"
       }
     },
     {
@@ -4049,27 +3366,23 @@
     {
       "tool": "enrich",
       "verb": "enrich",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
+      "refused_for": [],
+      "unproven_for": [
+        "read_only"
+      ],
       "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
+        "read_only": "other"
       },
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "other",
+        "rep": "other"
       }
     },
     {
@@ -4121,9 +3434,7 @@
       "tool": "find_records",
       "action": "query",
       "verb": "query_workspace",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4131,14 +3442,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "find_records",
@@ -4222,9 +3527,7 @@
       "tool": "read_analytics",
       "action": "compose",
       "verb": "compose_analytics_report",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4232,22 +3535,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_analytics",
       "action": "query",
       "verb": "run_analytics_query",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4255,35 +3550,25 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_approval",
       "verb": "read_approval",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
+      "refused_for": [],
+      "unproven_for": [
+        "read_only"
+      ],
       "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
+        "read_only": "not_found"
       }
     },
     {
@@ -4336,6 +3621,7 @@
       "action": "brief",
       "verb": "read_brief",
       "allowed_for": [
+        "admin",
         "management",
         "manager",
         "ops",
@@ -4343,12 +3629,7 @@
         "rep"
       ],
       "refused_for": [],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_context",
@@ -4392,9 +3673,7 @@
       "tool": "read_details",
       "action": "activity_pipeline",
       "verb": "read_activity_pipeline_trace",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4402,22 +3681,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "capture_triage",
       "verb": "get_company_capture_triage",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4425,17 +3696,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "internal",
-        "rep": "internal"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -4514,9 +3779,7 @@
       "tool": "read_details",
       "action": "company_logo",
       "verb": "get_company_logo",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4524,26 +3787,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "read_details",
       "action": "company_logo_icon",
       "verb": "get_company_logo_icon",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4551,17 +3806,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -4640,9 +3889,7 @@
       "tool": "read_details",
       "action": "deal_legal_reviews",
       "verb": "list_deal_legal_reviews",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4650,17 +3897,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -4701,9 +3942,7 @@
       "tool": "read_details",
       "action": "deal_suggestion",
       "verb": "get_deal_suggestion",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4711,14 +3950,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -4739,9 +3972,7 @@
       "tool": "read_details",
       "action": "document_extraction",
       "verb": "get_attachment_extraction",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4749,14 +3980,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -4781,9 +4006,7 @@
       "tool": "read_details",
       "action": "enrichment_run",
       "verb": "get_contact_enrichment_run",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4791,26 +4014,18 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "unsupported",
-        "rep": "unsupported"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "read_details",
       "action": "evidence",
       "verb": "get_claim_evidence",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4818,17 +4033,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -4877,32 +4086,23 @@
       "tool": "read_details",
       "action": "forecast_assurance_preview",
       "verb": "preview_forecast_assurance",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
-        "ops",
+        "ops"
+      ],
+      "refused_for": [
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "forecast_share_csv",
       "verb": "export_forecast_share",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4910,22 +4110,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "forecast_shared_reading",
       "verb": "open_forecast_share",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -4933,14 +4125,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5027,44 +4213,33 @@
       "tool": "read_details",
       "action": "hidden_backlog_rows",
       "verb": "get_hidden_backlog_rows",
-      "allowed_for": [],
-      "refused_for": [
-        "rep"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "read_only"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation"
-      }
+      "refused_for": [
+        "rep"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "import_problems",
       "verb": "download_import_problems",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
       "refused_for": [
         "management",
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "ops": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5105,9 +4280,7 @@
       "tool": "read_details",
       "action": "knowledge_document",
       "verb": "download_corpus_document",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5115,22 +4288,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "latest_weekly_review",
       "verb": "get_latest_weekly_review",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5138,14 +4303,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5208,9 +4367,7 @@
       "tool": "read_details",
       "action": "legal_entity_logo",
       "verb": "get_legal_entity_logo",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5218,20 +4375,16 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "legal_review",
       "verb": "get_legal_review",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -5239,18 +4392,15 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "legal_reviews",
       "verb": "list_legal_reviews",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -5258,12 +4408,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5303,9 +4448,7 @@
       "tool": "read_details",
       "action": "magic_line_records",
       "verb": "get_magic_line_records",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5313,22 +4456,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "mail_draft",
       "verb": "get_mail_draft",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5336,41 +4471,24 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
-      "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "meeting_availability",
       "verb": "get_meeting_availability",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5426,9 +4544,7 @@
       "tool": "read_details",
       "action": "offer_pdf",
       "verb": "download_offer_pdf",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5436,14 +4552,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5468,9 +4578,7 @@
       "tool": "read_details",
       "action": "ownership_offer",
       "verb": "get_ownership_offer",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5478,17 +4586,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -5514,9 +4616,7 @@
       "tool": "read_details",
       "action": "ownership_request",
       "verb": "get_ownership_request",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5524,17 +4624,11 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      },
+      "refused_for": [],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "not_found",
-        "rep": "not_found"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
@@ -5591,9 +4685,7 @@
       "tool": "read_details",
       "action": "scheduled_send",
       "verb": "get_scheduled_send",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5601,14 +4693,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5629,32 +4715,23 @@
       "tool": "read_details",
       "action": "scheduling_calendars",
       "verb": "get_scheduling_calendars",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "tag_suggestion",
       "verb": "get_tag_suggestion",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5662,14 +4739,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_details",
@@ -5707,45 +4778,34 @@
       "tool": "read_details",
       "action": "team_weekly_review",
       "verb": "get_team_weekly_review",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
-        "manager",
+        "manager"
+      ],
+      "refused_for": [
         "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_details",
       "action": "teammate_weekly_plan",
       "verb": "get_teammate_weekly_plan",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
+        "read_only"
+      ],
+      "refused_for": [],
+      "unproven_for": [
         "rep"
       ],
       "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
         "rep": "not_found"
       }
     },
@@ -5817,29 +4877,23 @@
       "tool": "read_forecast",
       "action": "input_sources",
       "verb": "data_coverage",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
       "refused_for": [
         "management",
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "ops": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_forecast",
       "action": "input_summary",
       "verb": "forecast_input_checks",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5847,22 +4901,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_forecast",
       "action": "movement",
       "verb": "forecast_movement",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5870,14 +4916,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_forecast",
@@ -5914,28 +4954,22 @@
       "tool": "read_import",
       "action": "report",
       "verb": "read_import_report",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
       "refused_for": [
         "management",
         "manager",
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin",
-        "ops"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "ops": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_lists",
       "verb": "read_lists",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -5943,14 +4977,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_project",
@@ -6099,9 +5127,7 @@
       "tool": "read_reports",
       "action": "evidence",
       "verb": "search_report_evidence",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6109,22 +5135,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_reports",
       "action": "question_card_answer",
       "verb": "answer_reporting_question_card",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6132,14 +5150,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_reports",
@@ -6156,21 +5168,19 @@
         "rep"
       ],
       "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
+        "admin": "refused",
+        "management": "refused",
+        "manager": "refused",
+        "ops": "refused",
+        "read_only": "refused",
+        "rep": "refused"
       }
     },
     {
       "tool": "read_reports",
       "action": "report_run",
       "verb": "get_report_run",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6178,14 +5188,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_reports",
@@ -6561,24 +5565,17 @@
       "tool": "read_workspace",
       "action": "ai_task_flow",
       "verb": "get_ai_task_flow",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
+        "ops"
+      ],
+      "refused_for": [
         "manager",
-        "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "read_only": "validation",
-        "rep": "validation"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -6693,9 +5690,7 @@
       "tool": "read_workspace",
       "action": "anchor_company_site_read",
       "verb": "get_anchor_company_site_read",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6703,14 +5698,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -6732,9 +5721,7 @@
       "tool": "read_workspace",
       "action": "automation_runs",
       "verb": "list_automation_runs",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6742,14 +5729,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -6801,9 +5782,7 @@
       "tool": "read_workspace",
       "action": "capture_trace_pipeline",
       "verb": "read_capture_trace_pipeline",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6811,22 +5790,14 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
       "action": "channel_connections",
       "verb": "list_channel_connections",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -6834,14 +5805,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -6903,12 +5868,12 @@
         "rep"
       ],
       "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
+        "admin": "refused",
+        "management": "refused",
+        "manager": "refused",
+        "ops": "refused",
+        "read_only": "refused",
+        "rep": "refused"
       }
     },
     {
@@ -6926,12 +5891,12 @@
         "rep"
       ],
       "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
+        "admin": "refused",
+        "management": "refused",
+        "manager": "refused",
+        "ops": "refused",
+        "read_only": "refused",
+        "rep": "refused"
       }
     },
     {
@@ -7058,70 +6023,49 @@
       "tool": "read_workspace",
       "action": "embed_reindex_identities",
       "verb": "embed_reindex_identities",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
+        "ops"
+      ],
+      "refused_for": [
         "management",
         "manager",
-        "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
       "action": "embed_reindex_preview",
       "verb": "embed_reindex_preview",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
+        "ops"
+      ],
+      "refused_for": [
         "management",
         "manager",
-        "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
       "action": "embed_reindex_status",
       "verb": "embed_reindex_status",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
+        "ops"
+      ],
+      "refused_for": [
         "management",
         "manager",
-        "ops",
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -7331,7 +6275,9 @@
       "tool": "read_workspace",
       "action": "member_retirement",
       "verb": "preview_member_retirement",
-      "allowed_for": [],
+      "allowed_for": [
+        "admin"
+      ],
       "refused_for": [
         "management",
         "manager",
@@ -7339,12 +6285,7 @@
         "read_only",
         "rep"
       ],
-      "unproven_for": [
-        "admin"
-      ],
-      "unproven_reasons": {
-        "admin": "not_found"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -7365,9 +6306,7 @@
       "tool": "read_workspace",
       "action": "my_capture_activity",
       "verb": "list_my_capture_activity",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -7375,14 +6314,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -7448,9 +6381,7 @@
       "tool": "read_workspace",
       "action": "provider_connections",
       "verb": "list_provider_connections",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -7458,14 +6389,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "unsupported",
-        "management": "unsupported",
-        "manager": "unsupported",
-        "ops": "unsupported",
-        "read_only": "unsupported",
-        "rep": "unsupported"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -7625,9 +6550,7 @@
       "tool": "read_workspace",
       "action": "voice_build",
       "verb": "get_voice_build",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
@@ -7635,14 +6558,8 @@
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [],
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -7783,24 +6700,17 @@
       "tool": "read_workspace",
       "action": "workspace_capture_activity",
       "verb": "list_workspace_capture_activity",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
-        "ops",
+        "ops"
+      ],
+      "refused_for": [
         "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "internal",
-        "management": "internal",
-        "manager": "internal",
-        "ops": "internal",
-        "read_only": "internal",
-        "rep": "internal"
-      }
+      "unproven_for": []
     },
     {
       "tool": "read_workspace",
@@ -7821,24 +6731,17 @@
       "tool": "resolve_duplicates",
       "action": "dismiss",
       "verb": "decide_duplicate",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "read_only": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "resolve_duplicates",
@@ -8012,74 +6915,53 @@
       "tool": "schedule_meeting",
       "action": "invite",
       "verb": "invite_meeting",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "refused",
-        "management": "refused",
-        "manager": "refused",
-        "ops": "refused",
-        "read_only": "refused",
-        "rep": "refused"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "send_outbound",
       "action": "change_invitation",
       "verb": "change_meeting_invitation",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "send_outbound",
       "action": "chat_reply",
       "verb": "send_message",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "send_outbound",
@@ -8101,74 +6983,53 @@
       "tool": "send_outbound",
       "action": "deal_room_resend",
       "verb": "resend_deal_room_invitation",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "not_found",
-        "management": "not_found",
-        "manager": "not_found",
-        "ops": "not_found",
-        "rep": "not_found"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "send_outbound",
       "action": "email_new",
       "verb": "send_company_email",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "validation",
-        "rep": "validation"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {
       "tool": "send_outbound",
       "action": "email_reply",
       "verb": "send_email",
-      "allowed_for": [],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "validation",
-        "management": "validation",
-        "manager": "validation",
-        "ops": "validation",
-        "rep": "validation"
-      }
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": []
     },
     {
       "tool": "send_outbound",
@@ -8190,27 +7051,20 @@
       "tool": "send_outbound",
       "action": "meeting_proposal",
       "verb": "create_meeting_proposal",
-      "allowed_for": [],
-      "refused_for": [],
-      "unproven_for": [
+      "allowed_for": [
         "admin",
         "management",
         "manager",
         "ops",
-        "read_only",
         "rep"
       ],
-      "unproven_reasons": {
-        "admin": "refused",
-        "management": "refused",
-        "manager": "refused",
-        "ops": "refused",
-        "read_only": "refused",
-        "rep": "refused"
-      },
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [],
       "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
+        "manager": "ran",
+        "rep": "ran"
       }
     },
     {

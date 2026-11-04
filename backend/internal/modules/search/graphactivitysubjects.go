@@ -399,7 +399,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 func rankSubjects(ctx context.Context, tx pgx.Tx, candidates []activitySubject) ([]activitySubject, error) {
 	out := make([]activitySubject, 0, len(candidates))
 	for _, subject := range foldSubjects(candidates) {
-		if auth.Require(ctx, subject.entityType, principal.ActionRead) != nil {
+		if !auth.Allows(ctx, subject.entityType, principal.ActionRead) {
 			continue
 		}
 		visible, err := auth.VisibleTo(ctx, tx, subject.entityType, subject.id)

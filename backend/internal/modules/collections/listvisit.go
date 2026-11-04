@@ -217,7 +217,7 @@ func (s *Store) joinedSinceVisit(ctx context.Context, l listRow) ([]ids.UUID, er
 // its arguments are registered only when its SQL is used.
 func observedVisibleClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
 	visible := "FALSE"
-	if auth.Require(ctx, entityType, principal.ActionRead) == nil {
+	if auth.Allows(ctx, entityType, principal.ActionRead) {
 		scope, err := recordScope(ctx, entityType, "e", arg)
 		if err != nil {
 			return "", err

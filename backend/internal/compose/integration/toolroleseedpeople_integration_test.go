@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -163,7 +164,7 @@ func introAsk(s sweepSeed, active func(role string, teams ...string) string) str
 // shares the admin's password, as no route sets another seat's.
 func (s sweepSeed) asColleague(user string) sweepSeed {
 	s.t.Helper()
-	s.ownerExec(`UPDATE app_user SET password_hash = (SELECT password_hash FROM app_user WHERE email = $1) WHERE id = $2`, toolRoleUser, user)
+	s.ownerExec(`UPDATE app_user SET password_hash = (SELECT password_hash FROM app_user WHERE id = $1) WHERE id = $2`, sessionUserID(s.t, s.e), user)
 	transport, ok := s.e.Client.Transport.(*http.Transport)
 	jar, err := cookiejar.New(nil)
 	if !ok || err != nil {
@@ -176,6 +177,21 @@ func (s sweepSeed) asColleague(user string) sweepSeed {
 	return s
 }
 
+// asRoles gives the signed-in user these roles for a seed, and answers the
+// undo that gives back the roles they held.
+func (s sweepSeed) asRoles(keys ...string) func() {
+	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
+		WHERE a.team_id IS NULL AND a.user_id = $1`, sessionUserID(s.t, s.e))
+	s.setRoles(keys)
+	return func() { s.setRoles(strings.Split(held, ",")) }
+}
+
+func (s sweepSeed) setRoles(keys []string) {
+	user := sessionUserID(s.t, s.e)
+	s.ownerExec(`DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = $1`, user)
+	s.ownerExec(`INSERT INTO role_assignment (user_id, role_id) SELECT $1, id FROM role WHERE key = ANY($2)`, user, keys)
+}
+
 // accessSeeders make the shares and ownership asks the access calls act on.
 func accessSeeders(s sweepSeed) map[string]func() string {
 	return map[string]func() string{
@@ -185,8 +201,10 @@ func accessSeeders(s sweepSeed) map[string]func() string {
 				"subject_id": s.create["user"](), "access": "read",
 			})
 		},
+		// Only the owner offers a record, so the admin owns this one whichever
+		// owner the pass seeds for.
 		"offered_company": func() string {
-			company := s.create["company"]()
+			company := s.post("/v1/companies", AnyMap{"display_name": uniqueName(), "source": "manual", "owner_id": sessionUserID(s.t, s.e)})
 			s.call("POST", "/v1/records/company/"+company+"/ownership-offer", AnyMap{"to_id": s.create["user"]()}, nil, nil)
 			return company
 		},
@@ -194,8 +212,7 @@ func accessSeeders(s sweepSeed) map[string]func() string {
 		// the ask is filed on a colleague's company while the admin is a rep.
 		"requested_company": func() string {
 			company := s.post("/v1/companies", AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
-			assignRoleTo(s.t, s.e, toolRoleUser, "rep")
-			defer assignRoleTo(s.t, s.e, toolRoleUser, "admin")
+			defer s.asRoles("rep")()
 			s.call("POST", "/v1/records/company/"+company+"/ownership-request", AnyMap{}, nil, nil)
 			return company
 		},

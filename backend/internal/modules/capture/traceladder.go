@@ -225,5 +225,5 @@ func (s *TraceStore) readRungs(ctx context.Context, tx pgx.Tx, a traceAnchor) ([
 // rather than re-decided, so the drawer and the list it opens from cannot
 // disagree about who may see a shared channel.
 func holdsSharedChannelGrant(ctx context.Context) bool {
-	return auth.Require(ctx, traceObject, principal.ActionRead) == nil
+	return auth.Allows(ctx, traceObject, principal.ActionRead)
 }

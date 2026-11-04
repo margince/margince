@@ -483,14 +483,15 @@ func servedSurface(t *testing.T) *agents.Registry {
 // recorder answers 500 before the dispatcher is ever reached.
 func toolsListDescriptions(t *testing.T, registry *agents.Registry) map[string]string {
 	t.Helper()
-	// Every scope, because tools/list is scope-filtered: a caller holding less
-	// would be served a shorter listing, and the comparison would silently skip
-	// whatever it could not see.
+	// Every scope, a full seat and every measured grant: tools/list is filtered
+	// by all three. A caller holding less is served a shorter listing, and the
+	// comparison would silently skip whatever it could not see.
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:descriptions", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeDraft,
 			principal.ScopeWrite, principal.ScopeSend, principal.ScopeEnrich),
+		SeatType: principal.SeatFull, Permissions: everyMeasuredGrant(t),
 	})
 	handler := agents.NewHTTPHandler(registry,
 		func(*http.Request) (context.Context, error) { return ctx, nil },

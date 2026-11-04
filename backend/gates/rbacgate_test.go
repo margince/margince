@@ -776,6 +776,7 @@ var authDecisionsByRatification = map[string]string{
 	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
 	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
 	"WritableBy":       "the write half of the same question",
+	"Allows":           "Require read as a boolean, recording nothing: its callers withhold what the caller lacks, by the same decision Require refuses on",
 }
 
 // TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate

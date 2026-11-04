@@ -16,8 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,6 +56,13 @@ func refuseBuyer(p principal.Principal, what string) error {
 // policy must grant the action on the object type. The system principal
 // (workspace provisioning) is trusted by construction and has no role.
 func Require(ctx context.Context, object string, action principal.Action) error {
+	noteCheck(ctx, Check{Object: object, Actions: []principal.Action{action}})
+	return probe(ctx, object, action)
+}
+
+// probe is Require recording nothing. A branch uses it, because its refusal is
+// not the call's answer, and a recorded check hides a tool from its lacker.
+func probe(ctx context.Context, object string, action principal.Action) error {
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return err
@@ -65,10 +70,7 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 	if err := refuseBuyer(p, object+"."+string(action)); err != nil {
 		return err
 	}
-	if p.Type == principal.PrincipalSystem {
-		return nil
-	}
-	if !p.Permissions.Allows(object, action) {
+	if !(Check{Object: object, Actions: []principal.Action{action}}).HeldBy(p) {
 		return fmt.Errorf("%s.%s: %w", object, action, apperrors.ErrPermissionDenied)
 	}
 	return nil
@@ -81,11 +83,10 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 // grant auto-confirms a match, a read-only grant degrades it to a suggestion —
 // so the answer must be a boolean and not an error.
 //
-// It IS Require, read as a boolean, so the gate and the branch cannot answer
-// one question two ways — a condition added to Require reaches every branch
-// that asks this.
+// It is Require read as a boolean, so the gate and the branch cannot answer
+// one question two ways. It records nothing, since a branch is no requirement.
 func Allows(ctx context.Context, object string, action principal.Action) bool {
-	return Require(ctx, object, action) == nil
+	return probe(ctx, object, action) == nil
 }
 
 // RequireAny admits when the actor holds ANY of the listed actions on the
@@ -102,17 +103,12 @@ func RequireAny(ctx context.Context, object string, actions ...principal.Action)
 	if err := refuseBuyer(p, object); err != nil {
 		return err
 	}
-	if p.Type == principal.PrincipalSystem {
+	c := Check{Object: object, Actions: actions}
+	noteCheck(ctx, c)
+	if c.HeldBy(p) {
 		return nil
 	}
-	verbs := make([]string, len(actions))
-	for i, a := range actions {
-		if p.Permissions.Allows(object, a) {
-			return nil
-		}
-		verbs[i] = string(a)
-	}
-	return fmt.Errorf("%s.%s: %w", object, strings.Join(verbs, "|"), apperrors.ErrPermissionDenied)
+	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
 }
 
 // RequireAnyObject admits when the actor holds the action on AT LEAST ONE
@@ -140,15 +136,12 @@ func RequireAnyObject(ctx context.Context, action principal.Action) error {
 	if err := refuseBuyer(p, string(action)); err != nil {
 		return err
 	}
-	if p.Type == principal.PrincipalSystem {
+	c := Check{Object: anyObject, Actions: []principal.Action{action}}
+	noteCheck(ctx, c)
+	if c.HeldBy(p) {
 		return nil
 	}
-	for object := range p.Permissions.Objects {
-		if p.Permissions.Allows(object, action) {
-			return nil
-		}
-	}
-	return fmt.Errorf("*.%s: %w", action, apperrors.ErrPermissionDenied)
+	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
 }
 
 // UpsertAction names the grant an upsert actually demands once it knows
@@ -445,6 +438,7 @@ func RequireCoach(ctx context.Context) error {
 	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
 		return err
 	}
+	noteCheck(ctx, Check{Object: objTeamLead, Actions: []principal.Action{principal.ActionCreate}})
 	if !leads(p, principal.ActionCreate) {
 		return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
 	}
@@ -455,7 +449,7 @@ func RequireCoach(ctx context.Context) error {
 // Leading is a human's act, done by them or by their agent. A connector, or
 // passportless work, leads nobody on its own.
 func leads(p principal.Principal, action principal.Action) bool {
-	return p.HumanOrItsAgent() && p.Permissions.Allows(objTeamLead, action)
+	return p.HumanOrItsAgent() && (Check{Object: objTeamLead, Actions: []principal.Action{action}}).HeldBy(p)
 }
 
 // RequireAdmin admits only a principal carrying the workspace "admin" role.
@@ -471,11 +465,33 @@ func RequireAdmin(ctx context.Context) error {
 	if err := refuseBuyer(p, "admin-only operation"); err != nil {
 		return err
 	}
-	if p.Type == principal.PrincipalSystem {
-		return nil
-	}
-	if slices.Contains(p.Permissions.RoleKeys, roleAdmin) {
+	c := Check{Admin: true}
+	noteCheck(ctx, c)
+	if c.HeldBy(p) {
 		return nil
 	}
 	return fmt.Errorf("admin-only operation: %w", apperrors.ErrPermissionDenied)
+}
+
+// AdminGranted is RequireAdmin read as a boolean, for a branch that widens an
+// answer rather than refusing one. Like Allows it records nothing.
+func AdminGranted(ctx context.Context) bool {
+	p, ok := principal.Actor(ctx)
+	return ok && Check{Admin: true}.HeldBy(p)
+}
+
+// RequireRowScope admits a caller whose row scope is at least as wide as
+// least. It guards a view of colleagues' work, such as a team board, which an
+// own-scope seat may not open at all.
+func RequireRowScope(ctx context.Context, least principal.RowScope) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	c := Check{RowScope: least}
+	noteCheck(ctx, c)
+	if c.HeldBy(p) {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
 }

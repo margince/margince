@@ -206,7 +206,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 	// who may SEE the queue of refusals. An installation can hand somebody the
 	// reviewer's view without thereby letting them override anything, and
 	// gating a read on the write grant would take that choice away.
-	decider := auth.Require(ctx, entityCommunicationException, principal.ActionRead) == nil
+	decider := auth.Allows(ctx, entityCommunicationException, principal.ActionRead)
 	if seat.IsZero() && !decider {
 		return Review{}, apperrors.ErrNotFound
 	}

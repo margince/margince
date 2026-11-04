@@ -151,7 +151,7 @@ func keepsAnAdmin(target memberTarget) bool {
 // checks above RBAC for every mutating method.
 func callerMay(ctx context.Context, actor Identity, action memberAction) bool {
 	return principal.SeatType(actor.SeatType).CanMutate() &&
-		auth.Require(ctx, objectUserAdmin, action.verb()) == nil
+		auth.Allows(ctx, objectUserAdmin, action.verb())
 }
 
 // alreadyDeactivated reports a member deactivating changes nothing for.

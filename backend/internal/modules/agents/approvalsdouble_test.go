@@ -78,8 +78,8 @@ func nativeRecord(rec datasource.Record) datasource.Record {
 func agentCtx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
-		Scopes: principal.NewScopeSet(principal.ScopeWrite),
+		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull,
+		Scopes: principal.NewScopeSet(principal.ScopeWrite), Permissions: everyRecordedGrant(),
 	})
 }
 

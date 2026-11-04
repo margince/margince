@@ -25,7 +25,7 @@ const (
 	toolRoleCallsPerPassport = 80
 	// unprovenCeiling is how many cells may reach no verdict and the sweep
 	// still pass. It only goes down, and at zero every new cell is proven.
-	unprovenCeiling = 171
+	unprovenCeiling = 43
 )
 
 // TestTheToolRoleMatrixIsPublished measures, for every seeded role, which tools
@@ -34,7 +34,8 @@ const (
 // so neither is a second list. A cell holds what the gate says, not what the seed
 // document claims.
 func TestTheToolRoleMatrixIsPublished(t *testing.T) {
-	d := toolRoleApp(t)
+	recorded := newToolCheckRecorder()
+	d := toolRoleApp(t, "tool-role-matrix", compose.WithToolChecksRecordedForTest(recorded.note))
 	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())
 	if len(calls) == 0 {
 		t.Fatal("the registry serves no tool, so this measured nothing")
@@ -46,6 +47,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	}
 
 	verdicts := map[string]toolRoleVerdicts{}
+	measured := toolChecksMeasure{}
 	for _, role := range roles {
 		assignRoleTo(t, d.e, toolRoleUser, "admin")
 		clients := passportClients(t, d.e, role.key, 1+len(calls)/toolRoleCallsPerPassport)
@@ -59,6 +61,9 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 			if got.IsError && isBudgetRefusal(got.Text) {
 				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.key, got.Text)
 			}
+			if role.key == "admin" {
+				measured.add(call.verb, recorded, got)
+			}
 			row := verdicts[call.row]
 			row.record(role.key, got)
 			verdicts[call.row] = row
@@ -70,6 +75,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	holdTheMeasurementHasTeeth(t, roles, len(calls), verdicts)
 	doc := toolRolesDocument(roles, calls, verdicts, colleague)
 	holdTheUnprovenRatchet(t, doc)
+	holdTheToolChecksTable(t, measured.provenBy(roles, calls, verdicts))
 	rendered, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
 		t.Fatal(err)

@@ -27,53 +27,55 @@ Regenerate from the repository root, then from `backend/`:
     UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished
     go test ./internal/compose/ -run TestTheToolRolePageIsTheMatrix -update-mcp-tool-roles-page
 
+A tool that reaches no verdict is fixed as [prove-a-tool-in-the-role-matrix.md](../how-to/prove-a-tool-in-the-role-matrix.md) says.
+
 ## The matrix
 
 | Tool | admin | management | manager | ops | read_only | rep | Actions some role is refused |
 |---|---|---|---|---|---|---|---|
-| `annotate_brief` | ? | ✓ | ✓ | ✓ | ✓ | ✓ |  |
+| `annotate_brief` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
 | `archive_record` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |  |
 | `bulk_update_records` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |  |
-| `change_access` | 12✓ 11? | 3✓ 12✗ 8? | 3✓ 12✗ 8? | 4✓ 10✗ 9? | 18✗ 5? | 3✓ 12✗ 8? | <details><summary>18</summary>`add_team_member` (management, manager, ops, read_only, rep) `assign` (read_only) `assign_legal_entity` (management, manager, ops, read_only, rep) `change_role` (management, manager, ops, read_only, rep) `claim_record` (read_only) `create_record_role` (management, manager, read_only, rep) `create_team` (management, manager, ops, read_only, rep) `deactivate_member` (management, manager, ops, read_only, rep) `end_assignment` (read_only) `hand_over_work` (management, manager, ops, read_only, rep) `reactivate_member` (management, manager, ops, read_only, rep) `remove_member` (management, manager, ops, read_only, rep) `remove_team_member` (management, manager, ops, read_only, rep) `request_ownership` (read_only) `share` (read_only) `update_assignment` (read_only) `update_record_role` (management, manager, read_only, rep) `update_team` (management, manager, ops, read_only, rep)</details> |
-| `change_activities` | 13✓ 13? | 13✓ 13? | 13✓ 13? | 13✓ 13? | 2✓ 15✗ 9? | 13✓ 13? | <details><summary>15</summary>`attach` (read_only) `cancel_send` (read_only) `check_new_send` (read_only) `check_send` (read_only) `discard_draft` (read_only) `hide_document` (read_only) `log` (read_only) `relink` (read_only) `relink_many` (read_only) `request_document_access` (read_only) `save_draft` (read_only) `set_audience` (read_only) `set_thread_audience` (read_only) `show_document` (read_only) `task` (read_only)</details> |
-| `change_attention` | 9✓ 24? | 9✓ 24? | 9✓ 24? | 9✓ 24? | 3✓ 9✗ 21? | 9✓ 24? | <details><summary>9</summary>`accept_deal_suggestion` (read_only) `add_commitment` (read_only) `answer_teammate` (read_only) `ask_for_help` (read_only) `dismiss_deal_suggestion` (read_only) `edit_commitment` (read_only) `set_commitment_state` (read_only) `set_weekly_plan` (read_only) `start_weekly_plan` (read_only)</details> |
-| `change_lists` | ? | ? | ? | ? | ? | ? |  |
-| `change_offers` | 13✓ 11? | 13✓ 11? | 13✓ 11? | 13✓ 11? | 24✗ | 11✓ 3✗ 10? | <details><summary>24</summary>`accept_offer` (read_only) `add_room_document` (read_only) `archive_contract` (read_only, rep) `archive_room` (read_only, rep) `cancel_contract` (read_only) `close_room` (read_only) `pause_room` (read_only) `record_contract` (read_only) `regenerate_offer` (read_only) `reject_offer` (read_only) `remove_room_document` (read_only, rep) `render_offer` (read_only) `renew_contract` (read_only) `resolve_room_thread` (read_only) `resume_room` (read_only) `revoke_room_participant` (read_only) `send_offer` (read_only) `set_contract_status` (read_only) `set_deal_products` (read_only) `set_room_expiry` (read_only) `update_contract` (read_only) `update_room` (read_only) `update_room_document` (read_only) `update_room_participant` (read_only)</details> |
-| `change_record_parts` | ? | ? | ? | ? | ? | ? |  |
-| `change_relationships` | 5✓ 11? | 4✓ 1✗ 11? | 4✓ 1✗ 11? | 4✓ 1✗ 11? | 13✗ 3? | 4✓ 1✗ 11? | <details><summary>13</summary>`apply_employment_import` (read_only) `backfill_employment_import` (management, manager, ops, read_only, rep) `cancel_intro_request` (read_only) `check_vat` (read_only) `complete_intro_request` (read_only) `link_contacts` (read_only) `record_introduction` (read_only) `record_promise` (read_only) `request_intro` (read_only) `restore_profile_field` (read_only) `save_research` (read_only) `settle_promise` (read_only) `take_over_promise` (read_only)</details> |
-| `change_reports` | ? | ? | ? | ✗ | ✗ | ? | <details><summary>1</summary>`draft` (ops, read_only)</details> |
-| `change_settings` | 27✓ 5? | 3✓ 25✗ 4? | 3✓ 25✗ 4? | 14✓ 8✗ 10? | 1✓ 27✗ 4? | 3✓ 25✗ 4? | <details><summary>27</summary>`archive_legal_entity` (management, manager, ops, read_only, rep) `create_acquisition_source` (management, manager, read_only, rep) `create_disqualify_reason` (management, manager, read_only, rep) `create_lead_origin` (management, manager, read_only, rep) `create_lead_source` (management, manager, read_only, rep) `create_legal_entity` (management, manager, ops, read_only, rep) `create_loss_reason` (management, manager, read_only, rep) `decide_legacy_loss_reason` (management, manager, read_only, rep) `delete_disqualify_reason` (management, manager, read_only, rep) `delete_lead_origin` (management, manager, read_only, rep) `delete_lead_source` (management, manager, read_only, rep) `remove_legal_entity_logo` (management, manager, ops, read_only, rep) `remove_own_logo` (management, manager, ops, read_only, rep) `remove_own_logo_icon` (management, manager, ops, read_only, rep) `save_booking_alias` (read_only) `save_booking_page` (read_only) `update_acquisition_source` (management, manager, read_only, rep) `update_disqualify_reason` (management, manager, read_only, rep) `update_duplicate_settings` (management, manager, ops, read_only, rep) `update_follow_up_settings` (management, manager, read_only, rep) `update_lead_origin` (management, manager, read_only, rep) `update_lead_settings` (management, manager, read_only, rep) `update_lead_source` (management, manager, read_only, rep) `update_legal_entity` (management, manager, ops, read_only, rep) `update_legal_review_settings` (management, manager, ops, read_only, rep) `update_loss_reason` (management, manager, read_only, rep) `update_review_template` (management, manager, read_only, rep)</details> |
-| `change_state` | 3✓ 18? | 3✓ 2✗ 16? | 1✓ 9✗ 11? | 3✓ 2✗ 16? | 18✗ 3? | 1✓ 9✗ 11? | <details><summary>18</summary>`accept_partner_lead` (manager, read_only, rep) `clear_lead_signal` (read_only) `correct_close_day` (read_only) `decide_legal_review` (management, manager, ops, read_only, rep) `demote` (manager, read_only, rep) `disqualify` (manager, read_only, rep) `link_lead_company` (manager, read_only, rep) `merge_member_accounts` (management, manager, ops, read_only, rep) `move_project` (read_only) `promote` (manager, read_only, rep) `publish_contact` (read_only) `qualify` (manager, read_only, rep) `reopen_lead` (manager, read_only, rep) `request_legal_review` (read_only) `revert_stage` (read_only) `set_lead_signal` (read_only) `set_up_partner` (read_only) `withdraw_legal_review` (read_only)</details> |
-| `change_tags` | 6✓ 1? | 2✓ 5✗ | 2✓ 5✗ | 5✓ 2? | 7✗ | 2✓ 5✗ | <details><summary>7</summary>`apply` (read_only) `archive` (management, manager, read_only, rep) `create` (management, manager, read_only, rep) `merge` (management, manager, read_only, rep) `remove` (read_only) `restore` (management, manager, read_only, rep) `update` (management, manager, read_only, rep)</details> |
+| `change_access` | 22✓ 1? | 9✓ 13✗ 1? | 9✓ 13✗ 1? | 11✓ 11✗ 1? | 3✓ 20✗ | 9✓ 13✗ 1? | <details><summary>20</summary>`add_team_member` (management, manager, ops, read_only, rep) `assign` (read_only) `assign_legal_entity` (management, manager, ops, read_only, rep) `change_role` (management, manager, ops, read_only, rep) `claim_record` (read_only) `create_record_role` (management, manager, read_only, rep) `create_team` (management, manager, ops, read_only, rep) `deactivate_member` (management, manager, ops, read_only, rep) `end_assignment` (read_only) `hand_over_work` (management, manager, ops, read_only, rep) `reactivate_member` (management, manager, ops, read_only, rep) `remove_member` (management, manager, ops, read_only, rep) `remove_team_member` (management, manager, ops, read_only, rep) `request_ownership` (read_only) `share` (read_only) `unshare` (read_only) `update_assignment` (read_only) `update_member` (management, manager, ops, read_only, rep) `update_record_role` (management, manager, read_only, rep) `update_team` (management, manager, ops, read_only, rep)</details> |
+| `change_activities` | 26✓ | 26✓ | 26✓ | 26✓ | 5✓ 21✗ | 26✓ | <details><summary>21</summary>`accept_document_fields` (read_only) `archive_document` (read_only) `attach` (read_only) `cancel_send` (read_only) `check_new_send` (read_only) `check_send` (read_only) `discard_draft` (read_only) `hide_document` (read_only) `log` (read_only) `read_document_fields` (read_only) `read_transcript` (read_only) `relink` (read_only) `relink_many` (read_only) `request_document_access` (read_only) `reschedule_send` (read_only) `save_draft` (read_only) `set_audience` (read_only) `set_document_details` (read_only) `set_thread_audience` (read_only) `show_document` (read_only) `task` (read_only)</details> |
+| `change_attention` | 33✓ | 33✓ | 33✓ | 32✓ 1✗ | 20✓ 13✗ | 31✓ 1✗ 1? | <details><summary>13</summary>`accept_applied_change` (read_only) `accept_deal_suggestion` (read_only) `accept_tag_suggestion` (read_only) `add_commitment` (read_only) `answer_teammate` (read_only) `ask_for_help` (read_only) `dismiss_deal_suggestion` (read_only) `dismiss_tag_suggestion` (read_only) `edit_commitment` (read_only) `raise_notice` (ops, read_only, rep) `set_commitment_state` (read_only) `set_weekly_plan` (read_only) `start_weekly_plan` (read_only)</details> |
+| `change_lists` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |  |
+| `change_offers` | 24✓ | 24✓ | 24✓ | 24✓ | 24✗ | 21✓ 3✗ | <details><summary>24</summary>`accept_offer` (read_only) `add_room_document` (read_only) `archive_contract` (read_only, rep) `archive_room` (read_only, rep) `cancel_contract` (read_only) `close_room` (read_only) `pause_room` (read_only) `record_contract` (read_only) `regenerate_offer` (read_only) `reject_offer` (read_only) `remove_room_document` (read_only, rep) `render_offer` (read_only) `renew_contract` (read_only) `resolve_room_thread` (read_only) `resume_room` (read_only) `revoke_room_participant` (read_only) `send_offer` (read_only) `set_contract_status` (read_only) `set_deal_products` (read_only) `set_room_expiry` (read_only) `update_contract` (read_only) `update_room` (read_only) `update_room_document` (read_only) `update_room_participant` (read_only)</details> |
+| `change_record_parts` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |  |
+| `change_relationships` | 16✓ | 15✓ 1✗ | 15✓ 1✗ | 15✓ 1✗ | 2✓ 14✗ | 15✓ 1✗ | <details><summary>14</summary>`apply_employment_import` (read_only) `backfill_employment_import` (management, manager, ops, read_only, rep) `cancel_intro_request` (read_only) `check_vat` (read_only) `complete_intro_request` (read_only) `decide_intro_request` (read_only) `link_contacts` (read_only) `record_introduction` (read_only) `record_promise` (read_only) `request_intro` (read_only) `restore_profile_field` (read_only) `save_research` (read_only) `settle_promise` (read_only) `take_over_promise` (read_only)</details> |
+| `change_reports` | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | <details><summary>1</summary>`draft` (manager, ops, read_only, rep)</details> |
+| `change_settings` | 31✓ 1? | 4✓ 27✗ 1? | 4✓ 27✗ 1? | 21✓ 10✗ 1? | 2✓ 29✗ 1? | 4✓ 27✗ 1? | <details><summary>29</summary>`archive_legal_entity` (management, manager, ops, read_only, rep) `confirm_site_read` (management, manager, ops, read_only, rep) `create_acquisition_source` (management, manager, read_only, rep) `create_disqualify_reason` (management, manager, read_only, rep) `create_lead_origin` (management, manager, read_only, rep) `create_lead_source` (management, manager, read_only, rep) `create_legal_entity` (management, manager, ops, read_only, rep) `create_loss_reason` (management, manager, read_only, rep) `decide_legacy_loss_reason` (management, manager, read_only, rep) `delete_disqualify_reason` (management, manager, read_only, rep) `delete_lead_origin` (management, manager, read_only, rep) `delete_lead_source` (management, manager, read_only, rep) `remove_legal_entity_logo` (management, manager, ops, read_only, rep) `remove_own_logo` (management, manager, ops, read_only, rep) `remove_own_logo_icon` (management, manager, ops, read_only, rep) `save_booking_alias` (read_only) `save_booking_page` (read_only) `save_own_company` (management, manager, ops, read_only, rep) `update_acquisition_source` (management, manager, read_only, rep) `update_disqualify_reason` (management, manager, read_only, rep) `update_duplicate_settings` (management, manager, ops, read_only, rep) `update_follow_up_settings` (management, manager, read_only, rep) `update_lead_origin` (management, manager, read_only, rep) `update_lead_settings` (management, manager, read_only, rep) `update_lead_source` (management, manager, read_only, rep) `update_legal_entity` (management, manager, ops, read_only, rep) `update_legal_review_settings` (management, manager, ops, read_only, rep) `update_loss_reason` (management, manager, read_only, rep) `update_review_template` (management, manager, read_only, rep)</details> |
+| `change_state` | 21✓ | 19✓ 2✗ | 10✓ 11✗ | 19✓ 2✗ | 21✗ | 10✓ 11✗ | <details><summary>21</summary>`accept_partner_lead` (manager, read_only, rep) `clear_lead_signal` (manager, read_only, rep) `correct_close_day` (read_only) `decide_legal_review` (management, manager, ops, read_only, rep) `demote` (manager, read_only, rep) `disqualify` (manager, read_only, rep) `link_lead_company` (manager, read_only, rep) `merge_member_accounts` (management, manager, ops, read_only, rep) `move_deal` (read_only) `move_project` (read_only) `promote` (manager, read_only, rep) `propose_deal_roles` (read_only) `publish_contact` (read_only) `qualify` (manager, read_only, rep) `reopen_lead` (manager, read_only, rep) `request_legal_review` (read_only) `revert_stage` (read_only) `review_outcome` (read_only) `set_lead_signal` (manager, read_only, rep) `set_up_partner` (read_only) `withdraw_legal_review` (read_only)</details> |
+| `change_tags` | 7✓ | 2✓ 5✗ | 2✓ 5✗ | 7✓ | 7✗ | 2✓ 5✗ | <details><summary>7</summary>`apply` (read_only) `archive` (management, manager, read_only, rep) `create` (management, manager, read_only, rep) `merge` (management, manager, read_only, rep) `remove` (read_only) `restore` (management, manager, read_only, rep) `update` (management, manager, read_only, rep)</details> |
 | `check_availability` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
-| `commit_import` | ? | ✗ | ✗ | ? | ✗ | ✗ |  |
+| `commit_import` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |  |
 | `create_record` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |  |
-| `decide_approvals` | 2? | 2? | 2? | 2? | 2? | 2? |  |
+| `decide_approvals` | 2✓ | 2✓ | 2✓ | 2✓ | 2? | 2✓ |  |
 | `draft_outbound` | 2✓ | 2✓ | 2✓ | 2✓ | 1✓ 1✗ | 2✓ | <details><summary>1</summary>`one_message` (read_only)</details> |
-| `enrich` | ? | ? | ? | ? | ? | ? |  |
-| `find_records` | 4✓ 1? | 4✓ 1? | 4✓ 1? | 4✓ 1? | 4✓ 1? | 4✓ 1? |  |
+| `enrich` | ✓ | ✓ | ✓ | ✓ | ? | ✓ |  |
+| `find_records` | 5✓ | 5✓ | 5✓ | 5✓ | 5✓ | 5✓ |  |
 | `list_approvals` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
 | `list_documents` | 2✓ | 2✓ | 2✓ | 2✓ | 2✓ | 2✓ |  |
 | `preview_import` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |  |
-| `read_analytics` | 2? | 2? | 2? | 2? | 2? | 2? |  |
-| `read_approval` | ? | ? | ? | ? | ? | ? |  |
+| `read_analytics` | 2✓ | 2✓ | 2✓ | 2✓ | 2✓ | 2✓ |  |
+| `read_approval` | ✓ | ✓ | ✓ | ✓ | ? | ✓ |  |
 | `read_attention` | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ |  |
-| `read_context` | 2✓ 1? | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ |  |
-| `read_details` | 39✓ 31? | 38✓ 4✗ 28? | 38✓ 4✗ 28? | 39✓ 2✗ 29? | 36✓ 6✗ 28? | 33✓ 10✗ 27? | <details><summary>11</summary>`forecast_shares` (read_only, rep) `hidden_backlog` (rep) `hidden_backlog_rows` (rep) `import_problems` (management, manager, read_only, rep) `import_template` (management, manager, read_only, rep) `legal_review` (management, manager, ops, read_only, rep) `legal_reviews` (management, manager, ops, read_only, rep) `meeting_proposals` (read_only) `response_metrics` (rep) `team_board` (rep) `team_exceptions` (rep)</details> |
-| `read_forecast` | 2✓ 3? | 2✓ 1✗ 2? | 2✓ 1✗ 2? | 2✓ 3? | 2✓ 1✗ 2? | 2✓ 1✗ 2? | <details><summary>1</summary>`input_sources` (management, manager, read_only, rep)</details> |
-| `read_import` | 1✓ 1? | 2✗ | 2✗ | 1✓ 1? | 2✗ | 2✗ | <details><summary>2</summary>`format` (management, manager, read_only, rep) `report` (management, manager, read_only, rep)</details> |
-| `read_lists` | ? | ? | ? | ? | ? | ? |  |
+| `read_context` | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ |  |
+| `read_details` | 69✓ 1? | 65✓ 4✗ 1? | 65✓ 4✗ 1? | 66✓ 3✗ 1? | 59✓ 10✗ 1? | 56✓ 12✗ 2? | <details><summary>15</summary>`forecast_assurance_preview` (read_only, rep) `forecast_shares` (read_only, rep) `hidden_backlog` (rep) `hidden_backlog_rows` (rep) `import_problems` (management, manager, read_only, rep) `import_template` (management, manager, read_only, rep) `legal_review` (management, manager, ops, read_only, rep) `legal_reviews` (management, manager, ops, read_only, rep) `meeting_availability` (read_only) `meeting_proposals` (read_only) `response_metrics` (rep) `scheduling_calendars` (read_only) `team_board` (rep) `team_exceptions` (rep) `team_weekly_review` (ops, read_only, rep)</details> |
+| `read_forecast` | 5✓ | 4✓ 1✗ | 4✓ 1✗ | 5✓ | 4✓ 1✗ | 4✓ 1✗ | <details><summary>1</summary>`input_sources` (management, manager, read_only, rep)</details> |
+| `read_import` | 2✓ | 2✗ | 2✗ | 2✓ | 2✗ | 2✗ | <details><summary>2</summary>`format` (management, manager, read_only, rep) `report` (management, manager, read_only, rep)</details> |
+| `read_lists` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
 | `read_project` | 2✓ | 2✓ | 2✓ | 2✓ | 2✓ | 2✓ |  |
 | `read_record` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
 | `read_relationships` | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ |  |
-| `read_reports` | 13✓ 4? | 13✓ 4? | 13✓ 4? | 13✓ 4? | 13✓ 4? | 13✓ 4? |  |
+| `read_reports` | 16✓ 1? | 16✓ 1? | 16✓ 1? | 16✓ 1? | 16✓ 1? | 16✓ 1? |  |
 | `read_tags` | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ | 3✓ |  |
 | `read_view` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
-| `read_workspace` | 68✓ 16? | 54✓ 16✗ 14? | 47✓ 23✗ 14? | 64✓ 5✗ 15? | 47✓ 23✗ 14? | 47✓ 23✗ 14? | <details><summary>23</summary>`ai_budget` (manager, read_only, rep) `ai_call_stats` (manager, read_only, rep) `ai_health` (manager, read_only, rep) `ai_profile` (management, manager, read_only, rep) `ai_provider_health` (manager, read_only, rep) `ai_routing_schema` (management, manager, read_only, rep) `ai_status` (manager, read_only, rep) `ai_task_overrides` (management, manager, read_only, rep) `ai_usage` (manager, read_only, rep) `ai_usage_summary` (manager, read_only, rep) `anchor_company` (management, manager, ops, read_only, rep) `assignable_roles` (management, manager, ops, read_only, rep) `available_models` (management, manager, read_only, rep) `extension_settings` (management, manager, read_only, rep) `extensions` (management, manager, read_only, rep) `import_runs` (management, manager, read_only, rep) `legacy_loss_reasons` (management, manager, read_only, rep) `member` (management, manager, ops, read_only, rep) `member_retirement` (management, manager, ops, read_only, rep) `provider_locations` (management, manager, read_only, rep) `retention_policies` (management, manager, read_only, rep) `roles` (management, manager, read_only, rep) `user_handover` (management, manager, ops, read_only, rep)</details> |
-| `resolve_duplicates` | 1✓ 1? | 1✓ 1? | 1✓ 1? | 1✓ 1? | 1✗ 1? | 1✓ 1? | <details><summary>1</summary>`merge` (read_only)</details> |
+| `read_workspace` | 81✓ 3? | 63✓ 19✗ 2? | 55✓ 27✗ 2? | 76✓ 5✗ 3? | 54✓ 28✗ 2? | 54✓ 28✗ 2? | <details><summary>28</summary>`ai_budget` (manager, read_only, rep) `ai_call_stats` (manager, read_only, rep) `ai_health` (manager, read_only, rep) `ai_profile` (management, manager, read_only, rep) `ai_provider_health` (manager, read_only, rep) `ai_routing_schema` (management, manager, read_only, rep) `ai_status` (manager, read_only, rep) `ai_task_flow` (manager, read_only, rep) `ai_task_overrides` (management, manager, read_only, rep) `ai_usage` (manager, read_only, rep) `ai_usage_summary` (manager, read_only, rep) `anchor_company` (management, manager, ops, read_only, rep) `assignable_roles` (management, manager, ops, read_only, rep) `available_models` (management, manager, read_only, rep) `embed_reindex_identities` (management, manager, read_only, rep) `embed_reindex_preview` (management, manager, read_only, rep) `embed_reindex_status` (management, manager, read_only, rep) `extension_settings` (management, manager, read_only, rep) `extensions` (management, manager, read_only, rep) `import_runs` (management, manager, read_only, rep) `legacy_loss_reasons` (management, manager, read_only, rep) `member` (management, manager, ops, read_only, rep) `member_retirement` (management, manager, ops, read_only, rep) `provider_locations` (management, manager, read_only, rep) `retention_policies` (management, manager, read_only, rep) `roles` (management, manager, read_only, rep) `user_handover` (management, manager, ops, read_only, rep) `workspace_capture_activity` (read_only, rep)</details> |
+| `resolve_duplicates` | 2✓ | 2✓ | 2✓ | 2✓ | 2✗ | 2✓ | <details><summary>2</summary>`dismiss` (read_only) `merge` (read_only)</details> |
 | `run_research` | 8✓ | 8✓ | 8✓ | 8✓ | 8✓ | 8✓ |  |
-| `schedule_meeting` | ? | ? | ? | ? | ? | ? |  |
-| `send_outbound` | 4✓ 6? | 2✓ 2✗ 6? | 2✓ 2✗ 6? | 3✓ 1✗ 6? | 1✓ 8✗ 1? | 2✓ 2✗ 6? | <details><summary>8</summary>`change_invitation` (read_only) `chat_reply` (read_only) `deal_room_invite` (read_only) `deal_room_resend` (read_only) `email_new` (read_only) `email_reply` (read_only) `invite_member` (management, manager, ops, read_only, rep) `signature_template` (management, manager, read_only, rep)</details> |
+| `schedule_meeting` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | <details><summary>1</summary>`invite` (read_only)</details> |
+| `send_outbound` | 10✓ | 8✓ 2✗ | 8✓ 2✗ | 9✓ 1✗ | 1✓ 9✗ | 8✓ 2✗ | <details><summary>9</summary>`change_invitation` (read_only) `chat_reply` (read_only) `deal_room_invite` (read_only) `deal_room_resend` (read_only) `email_new` (read_only) `email_reply` (read_only) `invite_member` (management, manager, ops, read_only, rep) `meeting_proposal` (read_only) `signature_template` (management, manager, read_only, rep)</details> |
 | `update_record` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |  |
 | `whoami` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |  |
 
@@ -83,19 +85,456 @@ A cell is proven only where the admin passes the same call, so the admin column 
 
 | Reason | Meaning | admin | Every role |
 |---|---|---|---|
-| `conflict` | The record is not in the state the call needs. | 5 | 26 |
-| `internal` | The server failed, or answered 503 for a service the test stack does not start. | 9 | 51 |
-| `not_found` | No such record: a kind the sweep does not seed, or a record it does not relate. | 82 | 405 |
-| `other` | Any other answer. | 2 | 6 |
-| `refused` | The admin was refused too, so the refusal is about the record, not the role. | 6 | 36 |
-| `unsupported` | The installation does not offer the service the call needs. | 15 | 90 |
-| `validation` | An argument was refused: a value the filler cannot make. | 52 | 280 |
+| `conflict` | The record is not in the state the call needs. | 1 | 5 |
+| `internal` | The server failed, or answered 503 for a service the test stack does not start. | 0 | 0 |
+| `not_found` | No such record: a kind the sweep does not seed, or a record it does not relate. | 1 | 7 |
+| `other` | Any other answer. | 0 | 1 |
+| `refused` | The admin was refused too, so the refusal is about the record, not the role. | 5 | 30 |
+| `unsupported` | The installation does not offer the service the call needs. | 0 | 0 |
+| `validation` | An argument was refused: a value the filler cannot make. | 0 | 0 |
 
 ## A colleague's record
 
 Each role below reads fewer rows than all. Every granted seat reads a company, contact, deal, lead or project, so a call may run; the test fails when one changes the colleague's record: its version, update time, archive or owner.
 
-| Role | internal | not_found | ran | refused | unsupported | validation | Calls that ran |
-|---|---|---|---|---|---|---|---|
-| manager | 1 | 14 | 45 | 32 | 2 | 15 | <details><summary>45</summary>`bulk_update_records` `change_access.request_ownership` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_attention.dismiss_contact_moment` `change_attention.restore_nudge` `change_offers.record_contract` `change_relationships.request_intro` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_profile_fields` `read_details.deal_products` `read_details.dossier` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_tags.record` `run_research.ask_about_company` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact`</details> |
-| rep | 1 | 14 | 44 | 33 | 2 | 15 | <details><summary>44</summary>`change_access.request_ownership` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_attention.dismiss_contact_moment` `change_attention.restore_nudge` `change_offers.record_contract` `change_relationships.request_intro` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_profile_fields` `read_details.deal_products` `read_details.dossier` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_tags.record` `run_research.ask_about_company` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact`</details> |
+| Role | not_found | other | ran | refused | Calls that ran |
+|---|---|---|---|---|---|
+| manager | 1 | 1 | 73 | 37 | <details><summary>73</summary>`bulk_update_records` `change_access.request_ownership` `change_access.withdraw_ownership_offer` `change_access.withdraw_ownership_request` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_activities.save_draft` `change_attention.dismiss_company_suggestion` `change_attention.dismiss_contact_moment` `change_attention.dismiss_deal_move` `change_attention.dismiss_nudge` `change_attention.dismiss_nudges` `change_attention.reopen_rows` `change_attention.restore_company_suggestion` `change_attention.restore_contact_moment` `change_attention.restore_deal_move` `change_attention.restore_nudge` `change_offers.record_contract` `change_relationships.draft_intro_note` `change_relationships.draft_intro_request` `change_relationships.link_contacts` `change_relationships.record_introduction` `change_relationships.request_intro` `change_relationships.restore_profile_field` `change_state.review_outcome` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.capture_triage` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_logo` `read_details.company_logo_icon` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_profile_fields` `read_details.deal_legal_reviews` `read_details.deal_products` `read_details.dossier` `read_details.enrichment_run` `read_details.evidence` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.ownership_offer` `read_details.ownership_request` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_tags.record` `run_research.ask_about_company` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact` `schedule_meeting.invite` `send_outbound.email_new` `send_outbound.meeting_proposal`</details> |
+| rep | 1 | 1 | 72 | 38 | <details><summary>72</summary>`change_access.request_ownership` `change_access.withdraw_ownership_offer` `change_access.withdraw_ownership_request` `change_activities.check_new_send` `change_activities.relink` `change_activities.relink_many` `change_activities.save_draft` `change_attention.dismiss_company_suggestion` `change_attention.dismiss_contact_moment` `change_attention.dismiss_deal_move` `change_attention.dismiss_nudge` `change_attention.dismiss_nudges` `change_attention.reopen_rows` `change_attention.restore_company_suggestion` `change_attention.restore_contact_moment` `change_attention.restore_deal_move` `change_attention.restore_nudge` `change_offers.record_contract` `change_relationships.draft_intro_note` `change_relationships.draft_intro_request` `change_relationships.link_contacts` `change_relationships.record_introduction` `change_relationships.request_intro` `change_relationships.restore_profile_field` `change_state.review_outcome` `draft_outbound.one_message` `list_documents.list` `read_context.catch_up` `read_context.meeting` `read_details.capture_triage` `read_details.company_brief` `read_details.company_contracts` `read_details.company_linkedin_reach` `read_details.company_logo` `read_details.company_logo_icon` `read_details.company_scan` `read_details.contact_brief` `read_details.contact_profile_fields` `read_details.deal_legal_reviews` `read_details.deal_products` `read_details.dossier` `read_details.enrichment_run` `read_details.evidence` `read_details.growth_fit` `read_details.intro_requests` `read_details.lead_promotion_preview` `read_details.lead_score` `read_details.lead_signals` `read_details.link_candidates` `read_details.meeting_proposals` `read_details.offered_values` `read_details.ownership_offer` `read_details.ownership_request` `read_details.relationship_nudge` `read_details.win_evidence` `read_project.handoff` `read_project.overview` `read_record` `read_relationships.company_id` `read_relationships.contact_id` `read_relationships.deal_id` `read_tags.record` `run_research.ask_about_company` `run_research.refresh_company_brief` `run_research.refresh_contact_brief` `run_research.refresh_dossier` `run_research.refresh_growth_fit` `run_research.refresh_scan` `run_research.research_contact` `schedule_meeting.invite` `send_outbound.email_new` `send_outbound.meeting_proposal`</details> |
+
+## What each call needs
+
+tools/list offers a passport a tool, or a router's action, only when its user holds every check below. The checks come from [the tool checks table](../../backend/internal/modules/agents/toolchecks.json), which the same test writes:
+
+> Generated by TestTheToolRoleMatrixIsPublished (backend/internal/compose/integration). Each verb lists the authority checks its admin call was asked. A check stays only while no seeded role that lacks it got past it. The complete flag is false where the call stopped for a reason that is not a role. A tools/list offers an agent a verb only when its user holds every check. Do not edit by hand.
+
+A check is `object.action`, or `object.a|b` for any one of them. `*.action` is the action on any object, `admin` is the admin role key, and `scope:team` is a row scope at least that wide. **Measured** is `complete` where the admin call ran. It is `partial` where the call stopped first, so only the checks before the stop are known. It is `none` where the call never reached the verb: such a call stays offered, and the gate decides it.
+
+| Call | Verb | Checks | Measured |
+|---|---|---|---|
+| `annotate_brief` | `annotate_brief` | `deal.read` | complete |
+| `archive_record` | `archive_record` | `company.delete` | complete |
+| `bulk_update_records` | `bulk_update_records` | `company.delete` `company.read` | complete |
+| `change_access.add_team_member` | `add_team_member` | `team_admin.update` | complete |
+| `change_access.assign` | `create_record_assignment` | `company.read` `company.update` | complete |
+| `change_access.assign_legal_entity` | `assign_legal_entity_member` | `legal_entity.update` `user_admin.update` | complete |
+| `change_access.change_role` | `change_user_role` | `user_admin.read|create|update|delete` `user_admin.update` | complete |
+| `change_access.claim_record` | `claim_record` | `company.update` | complete |
+| `change_access.create_record_role` | `create_record_role` | `custom_field.create` | complete |
+| `change_access.create_team` | `create_team` | `team_admin.create` | complete |
+| `change_access.deactivate_member` | `deactivate_user` | `user_admin.delete` `user_admin.read|create|update|delete` | complete |
+| `change_access.end_assignment` | `archive_record_assignment` | `company.update` | complete |
+| `change_access.hand_over_work` | `hand_over_user_work` | `activity.read` `activity.update` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `project.update` `user_admin.update` | complete |
+| `change_access.offer_ownership` | `offer_ownership_transfer` | `activity.read` `deal.read` `installation_settings.read` | complete |
+| `change_access.reactivate_member` | `reactivate_user` | `user_admin.delete` `user_admin.read|create|update|delete` | complete |
+| `change_access.remove_member` | `remove_workspace_member` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `signal.delete` `user_admin.delete` `user_admin.read` `user_admin.update` | complete |
+| `change_access.remove_team_member` | `remove_team_member` | `team_admin.update` | complete |
+| `change_access.request_ownership` | `request_ownership_transfer` | `company.read` `company.update` | partial |
+| `change_access.share` | `share_record` | `company.update` | complete |
+| `change_access.unshare` | `revoke_record_share` | `company.update` | complete |
+| `change_access.update_assignment` | `update_record_assignment` | `company.read` `company.update` | complete |
+| `change_access.update_member` | `update_member` | `user_admin.update` | complete |
+| `change_access.update_record_role` | `update_record_role` | `custom_field.update` | complete |
+| `change_access.update_team` | `update_team` | `team_admin.update` | complete |
+| `change_access.withdraw_ownership_offer` | `withdraw_ownership_offer` |  | complete |
+| `change_access.withdraw_ownership_request` | `withdraw_ownership_request` |  | complete |
+| `change_activities.accept_document_fields` | `accept_attachment_extraction` | `company.read` `deal.read` `deal.update` `project.read` | complete |
+| `change_activities.archive_document` | `delete_attachment` | `company.update` | complete |
+| `change_activities.attach` | `attach_document` | `company.update` | complete |
+| `change_activities.bring_back` | `clear_activity_disposition` | `activity.read` | complete |
+| `change_activities.cancel_send` | `cancel_scheduled_send` | `activity.read` `activity.update` | complete |
+| `change_activities.check_new_send` | `preview_account_send_authorization` | `activity.create` | complete |
+| `change_activities.check_send` | `preview_send_authorization` | `activity.create` `activity.read` | complete |
+| `change_activities.discard_draft` | `discard_mail_draft` | `activity.create` | complete |
+| `change_activities.hide_document` | `hide_deal_document` | `activity.read` `company.read` `contact.read` `deal.read` `deal.update` | complete |
+| `change_activities.log` | `log_activity` | `activity.create` `activity.read` | complete |
+| `change_activities.preview_sign_off` | `preview_email_sign_off` |  | complete |
+| `change_activities.read_document_fields` | `read_attachment_for_fields` | `deal.update` | complete |
+| `change_activities.read_transcript` | `read_transcript_for_next_steps` | `activity.create` `activity.read` | complete |
+| `change_activities.ready` | `confirm_meeting_ready` | `activity.read` | complete |
+| `change_activities.relink` | `relink_activity` | `activity.read` `activity.update` `installation_settings.read` | complete |
+| `change_activities.relink_many` | `relink_activities` | `activity.update` | complete |
+| `change_activities.request_document_access` | `request_attachment_access` | `activity.create` `activity.read` `company.read` | complete |
+| `change_activities.reschedule_send` | `reschedule_scheduled_send` | `activity.read` `activity.update` | complete |
+| `change_activities.save_draft` | `save_mail_draft` | `activity.create` | complete |
+| `change_activities.set_aside` | `set_activity_disposition` | `activity.read` | complete |
+| `change_activities.set_audience` | `set_activity_audience` | `activity.read` `activity.update` | complete |
+| `change_activities.set_document_details` | `update_attachment_metadata` | `company.update` | complete |
+| `change_activities.set_thread_audience` | `set_thread_audience` | `activity.update` | complete |
+| `change_activities.show_document` | `unhide_deal_document` | `activity.read` `company.read` `contact.read` `deal.read` `deal.update` | complete |
+| `change_activities.task` | `create_task` | `activity.create` `activity.read` | complete |
+| `change_activities.unready` | `undo_meeting_ready` | `activity.read` | complete |
+| `change_attention.accept_applied_change` | `accept_applied_deal_change` | `deal.update` | complete |
+| `change_attention.accept_deal_suggestion` | `accept_deal_suggestion` | `company.read` `deal.create` `deal.read` `pipeline.read` `project.read` | complete |
+| `change_attention.accept_tag_suggestion` | `accept_tag_suggestion` | `contact.update` `tag.read` | complete |
+| `change_attention.acknowledge_failed_approval` | `acknowledge_approval_failure` |  | complete |
+| `change_attention.add_commitment` | `add_weekly_plan_commitment` | `weekly_plan.update` | complete |
+| `change_attention.answer_teammate` | `answer_weekly_plan_commitment` | `weekly_plan.update` | complete |
+| `change_attention.ask_for_help` | `ask_for_weekly_plan_help` | `weekly_plan.update` | complete |
+| `change_attention.brief_item_done` | `mark_brief_item_acted` | `activity.read` `deal.read` | complete |
+| `change_attention.dismiss_brief_item` | `mark_brief_item_dismissed` | `activity.read` `deal.read` | complete |
+| `change_attention.dismiss_company_suggestion` | `dismiss_company_suggestion` | `activity.read` `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `change_attention.dismiss_contact_moment` | `dismiss_contact_moment` | `contact.read` | complete |
+| `change_attention.dismiss_deal_move` | `dismiss_deal_move` | `deal.read` | complete |
+| `change_attention.dismiss_deal_suggestion` | `dismiss_deal_suggestion` | `company.read` `deal.create` `deal.read` | complete |
+| `change_attention.dismiss_nudge` | `dismiss_relationship_nudge` | `contact.read` | complete |
+| `change_attention.dismiss_nudges` | `dismiss_relationship_nudges` | `contact.read` | complete |
+| `change_attention.dismiss_tag_suggestion` | `dismiss_tag_suggestion` | `contact.update` `tag.read` | complete |
+| `change_attention.edit_commitment` | `edit_weekly_plan_commitment` | `weekly_plan.update` | complete |
+| `change_attention.mark_all_notices_read` | `mark_all_notices_read` |  | complete |
+| `change_attention.mark_notice_read` | `mark_notice_read` |  | complete |
+| `change_attention.mark_rows_done` | `mark_worklist_rows_done` | `activity.read` `automation.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `introduction.read` `lead.read` `project.read` `relationship.read` `weekly_plan.read` | complete |
+| `change_attention.pin_row` | `pin_worklist_row` | `activity.read` | complete |
+| `change_attention.raise_notice` | `raise_notice` | `team_lead.create` | complete |
+| `change_attention.reopen_rows` | `reopen_worklist_rows` |  | complete |
+| `change_attention.restore_company_suggestion` | `restore_company_suggestion` | `company.read` | complete |
+| `change_attention.restore_contact_moment` | `restore_contact_moment` | `contact.read` | complete |
+| `change_attention.restore_deal_move` | `restore_deal_move` | `deal.read` | complete |
+| `change_attention.restore_nudge` | `restore_relationship_nudge` | `contact.read` | complete |
+| `change_attention.set_commitment_state` | `set_weekly_plan_commitment_state` | `weekly_plan.update` | complete |
+| `change_attention.set_weekly_plan` | `set_weekly_plan_contract` | `installation_settings.read` `weekly_plan.update` | complete |
+| `change_attention.snooze_brief_item` | `snooze_brief_item` | `activity.read` `deal.read` | complete |
+| `change_attention.start_weekly_plan` | `start_weekly_plan` | `weekly_plan.create` | complete |
+| `change_attention.unpin_row` | `unpin_worklist_row` | `activity.read` | complete |
+| `change_attention.unsnooze_brief_item` | `unsnooze_brief_item` | `activity.read` `deal.read` | complete |
+| `change_lists` | `change_lists` | `company.read` `list.create` `list.read` | complete |
+| `change_offers.accept_offer` | `accept_offer` | `company.read` `deal.update` `offer.update` | complete |
+| `change_offers.add_room_document` | `add_deal_room_document` | `deal_room.create` | complete |
+| `change_offers.archive_contract` | `archive_contract` | `contract.delete` | complete |
+| `change_offers.archive_room` | `archive_deal_room` | `deal_room.delete` | complete |
+| `change_offers.cancel_contract` | `cancel_contract` | `company.read` `contract.update` `deal.read` `project.read` | complete |
+| `change_offers.close_room` | `close_deal_room` | `deal_room.update` | complete |
+| `change_offers.pause_room` | `pause_deal_room` | `deal_room.update` | complete |
+| `change_offers.record_contract` | `create_contract` | `company.read` `contract.create` `deal.read` `project.read` | complete |
+| `change_offers.regenerate_offer` | `regenerate_offer` | `company.read` `offer.create` `offer.update` | complete |
+| `change_offers.reject_offer` | `reject_offer` | `company.read` `offer.update` | complete |
+| `change_offers.remove_room_document` | `remove_deal_room_document` | `deal_room.delete` | complete |
+| `change_offers.render_offer` | `render_offer` | `company.read` `installation_settings.read` `offer.read` `offer.update` | complete |
+| `change_offers.renew_contract` | `renew_contract` | `company.read` `contract.create` `contract.update` `deal.read` `project.read` | complete |
+| `change_offers.resolve_room_thread` | `resolve_deal_room_thread` | `deal_room.update` | complete |
+| `change_offers.resume_room` | `resume_deal_room` | `deal_room.update` | complete |
+| `change_offers.revoke_room_participant` | `revoke_deal_room_participant` | `deal_room.update` | complete |
+| `change_offers.send_offer` | `send_offer` | `company.read` `installation_settings.read` `offer.update` | complete |
+| `change_offers.set_contract_status` | `change_contract_status` | `company.read` `contract.update` `deal.read` `project.read` | complete |
+| `change_offers.set_deal_products` | `replace_deal_products` | `deal.read` `deal.update` `product.read` | complete |
+| `change_offers.set_room_expiry` | `set_deal_room_expiry` | `deal_room.update` | complete |
+| `change_offers.update_contract` | `update_contract` | `company.read` `contract.update` `deal.read` `project.read` | complete |
+| `change_offers.update_room` | `update_deal_room` | `deal_room.update` | complete |
+| `change_offers.update_room_document` | `update_deal_room_document` | `deal_room.update` | complete |
+| `change_offers.update_room_participant` | `update_deal_room_participant` | `deal_room.update` | complete |
+| `change_record_parts` | `change_record_parts` | `company.update` | complete |
+| `change_relationships.apply_employment_import` | `apply_contact_employment_import` | `company.read` `contact.read` `contact.update` `relationship.create` `relationship.read` | complete |
+| `change_relationships.backfill_employment_import` | `backfill_employment_import` | `admin` | complete |
+| `change_relationships.cancel_intro_request` | `cancel_intro_request` | `introduction.read` `introduction.update` | complete |
+| `change_relationships.check_vat` | `request_company_vat_check` | `company.update` | complete |
+| `change_relationships.complete_intro_request` | `complete_intro_request` | `introduction.read` `introduction.update` | complete |
+| `change_relationships.decide_intro_request` | `decide_intro_request` | `introduction.read` `introduction.update` | complete |
+| `change_relationships.draft_intro_note` | `draft_intro_note` | `activity.read` `contact.read` `relationship.read` | complete |
+| `change_relationships.draft_intro_request` | `draft_intro_request` | `activity.read` `company.read` `contact.read` `relationship.read` | complete |
+| `change_relationships.link_contacts` | `link_company_contacts` | `company.read` `contact.read` `contact.update` `relationship.create` `relationship.read` | complete |
+| `change_relationships.record_introduction` | `record_introduction` | `contact.read` `introduction.create` `introduction.read` | complete |
+| `change_relationships.record_promise` | `record_conversation_claim` | `contact.update` | complete |
+| `change_relationships.request_intro` | `create_intro_request` | `contact.read` `introduction.create` `introduction.read` | complete |
+| `change_relationships.restore_profile_field` | `restore_contact_profile_field` | `contact.update` | complete |
+| `change_relationships.save_research` | `save_contact_research` | `contact.update` | complete |
+| `change_relationships.settle_promise` | `settle_conversation_claim` | `contact.update` | complete |
+| `change_relationships.take_over_promise` | `take_over_conversation_claim` | `activity.create` `activity.read` `contact.read` | complete |
+| `change_reports.draft` | `draft_report` | `installation_settings.read` `report_definition.create` `report_definition.read` | complete |
+| `change_settings.archive_legal_entity` | `archive_legal_entity` | `legal_entity.delete` | complete |
+| `change_settings.ask_company_setup` | `message_onboarding_company` |  | partial |
+| `change_settings.ask_site_read` | `message_anchor_company_site_read` | `company.read` | complete |
+| `change_settings.confirm_site_read` | `confirm_anchor_company_site_read` | `admin` | complete |
+| `change_settings.create_acquisition_source` | `create_acquisition_source` | `custom_field.create` | complete |
+| `change_settings.create_disqualify_reason` | `create_lead_disqualify_reason` | `custom_field.create` `lead.read` | complete |
+| `change_settings.create_lead_origin` | `create_lead_origin` | `custom_field.create` `lead.read` | complete |
+| `change_settings.create_lead_source` | `create_lead_source` | `custom_field.create` `lead.read` | complete |
+| `change_settings.create_legal_entity` | `create_legal_entity` | `legal_entity.create` | complete |
+| `change_settings.create_loss_reason` | `create_loss_reason` | `custom_field.create` | complete |
+| `change_settings.decide_legacy_loss_reason` | `decide_legacy_loss_reason` | `custom_field.update` | complete |
+| `change_settings.delete_disqualify_reason` | `delete_lead_disqualify_reason` | `custom_field.delete` `lead.read` | complete |
+| `change_settings.delete_lead_origin` | `delete_lead_origin` | `custom_field.delete` `lead.read` | complete |
+| `change_settings.delete_lead_source` | `delete_lead_source` | `custom_field.delete` `lead.read` | complete |
+| `change_settings.remove_legal_entity_logo` | `delete_legal_entity_logo` | `legal_entity.read` `legal_entity.update` | complete |
+| `change_settings.remove_own_logo` | `delete_anchor_company_logo` | `admin` `company.update` | complete |
+| `change_settings.remove_own_logo_icon` | `delete_anchor_company_logo_icon` | `admin` `company.update` | complete |
+| `change_settings.save_booking_alias` | `put_scheduling_alias` | `activity.create` | complete |
+| `change_settings.save_booking_page` | `put_scheduling_profile` | `activity.create` | complete |
+| `change_settings.save_my_linkedin` | `save_my_linked_in_account` |  | complete |
+| `change_settings.save_own_company` | `put_anchor_company` | `admin` | complete |
+| `change_settings.update_acquisition_source` | `update_acquisition_source` | `custom_field.update` | complete |
+| `change_settings.update_disqualify_reason` | `update_lead_disqualify_reason` | `custom_field.update` `lead.read` | complete |
+| `change_settings.update_duplicate_settings` | `update_contact_case_settings` | `admin` `installation_settings.update` | complete |
+| `change_settings.update_follow_up_settings` | `update_follow_up_settings` | `installation_settings.update` | complete |
+| `change_settings.update_lead_origin` | `update_lead_origin` | `custom_field.update` `lead.read` | complete |
+| `change_settings.update_lead_settings` | `update_lead_settings` | `custom_field.read` `custom_field.update` | complete |
+| `change_settings.update_lead_source` | `update_lead_source` | `custom_field.update` `lead.read` | complete |
+| `change_settings.update_legal_entity` | `update_legal_entity` | `legal_entity.update` | complete |
+| `change_settings.update_legal_review_settings` | `update_legal_review_settings` | `admin` `installation_settings.update` | complete |
+| `change_settings.update_loss_reason` | `update_loss_reason` | `custom_field.update` | complete |
+| `change_settings.update_review_template` | `update_activity_review_template` | `custom_field.update` | complete |
+| `change_state.accept_partner_lead` | `accept_partner_lead` | `company.read` `lead.update` `partner.update` | complete |
+| `change_state.clear_lead_signal` | `clear_lead_manual_signal` | `lead.update` | complete |
+| `change_state.correct_close_day` | `correct_deal_close_day` | `company.read` `deal.update` `installation_settings.read` `project.read` | complete |
+| `change_state.decide_legal_review` | `decide_legal_review` | `legal_review.read` `legal_review.update` | complete |
+| `change_state.demote` | `demote_lead` | `contact.update` `lead.update` | complete |
+| `change_state.disqualify` | `disqualify_lead` | `lead.delete` | complete |
+| `change_state.link_lead_company` | `link_lead_company` | `company.read` `lead.update` | complete |
+| `change_state.merge_member_accounts` | `merge_members` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `signal.update` `user_admin.delete` `user_admin.read` `user_admin.update` | complete |
+| `change_state.move_deal` | `progress_deal` | `company.read` `deal.read` `deal.update` `installation_settings.read` `project.read` | complete |
+| `change_state.move_project` | `advance_project_phase` | `company.read` `project.update` `relationship.read` | complete |
+| `change_state.promote` | `promote_lead` | `company.create` `company.read` `contact.create` `contact.read` `lead.update` `relationship.read` | complete |
+| `change_state.propose_deal_roles` | `propose_deal_roles` | `contact.read` `deal.read` `deal.update` `relationship.create` `relationship.read` | complete |
+| `change_state.publish_contact` | `publish_captured_contact` | `contact.update` | complete |
+| `change_state.qualify` | `qualify_lead` | `lead.read` `lead.update` | complete |
+| `change_state.reopen_lead` | `reopen_lead` | `lead.delete` `lead.update` | complete |
+| `change_state.request_legal_review` | `request_legal_review` | `activity.read` `company.read` `contact.read` `deal.read` `deal.update` `installation_settings.read` `offer.read` `project.read` | complete |
+| `change_state.revert_stage` | `revert_stage_progression` | `company.read` `deal.update` `installation_settings.read` `project.read` | complete |
+| `change_state.review_outcome` | `create_deal_outcome_review` | `activity.create` `activity.read` `deal.read` | complete |
+| `change_state.set_lead_signal` | `set_lead_manual_signal` | `lead.update` | complete |
+| `change_state.set_up_partner` | `set_up_partner` | `company.read` `company.update` `partner.read` | complete |
+| `change_state.withdraw_legal_review` | `withdraw_legal_review` | `deal.update` | complete |
+| `change_tags.apply` | `apply_tag` | `company.update` `tag.read` | complete |
+| `change_tags.archive` | `archive_tag` | `tag.delete` | complete |
+| `change_tags.create` | `create_tag` | `tag.create` | complete |
+| `change_tags.merge` | `merge_tags` | `tag.update` | complete |
+| `change_tags.remove` | `remove_tag` | `company.update` `tag.read` | complete |
+| `change_tags.restore` | `restore_tag` | `tag.update` | complete |
+| `change_tags.update` | `update_tag` | `tag.update` | complete |
+| `check_availability` | `check_availability` | `activity.read` | complete |
+| `commit_import` | `commit_import` | `company.create` `custom_field.read` `import_run.read` `import_run.update` | complete |
+| `create_record` | `create_record` | `company.create` `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `decide_approvals.bundle` | `decide_approval_bundle` | `company.read` `company.update` | complete |
+| `decide_approvals.one` | `decide_approval` | `company.read` `company.update` | complete |
+| `draft_outbound.one_message` | `draft_email` | `activity.create` `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` | complete |
+| `draft_outbound.slipping_deals` | `draft_follow_ups_for` | `company.read` `deal.read` `installation_settings.read` `project.read` | complete |
+| `enrich` | `enrich` | `company.read` `company.update` | complete |
+| `find_records.identify` | `resolve_entities` | `company.read` | complete |
+| `find_records.list` | `list_records` | `company.read` `contact.read` `relationship.read` | complete |
+| `find_records.meaning` | `search_context` | `activity.read` `company.read` | complete |
+| `find_records.query` | `query_workspace` | `company.read` `deal.read` `project.read` | complete |
+| `find_records.search` | `search_records` | `company.read` `contact.read` `relationship.read` | complete |
+| `list_approvals` | `list_approvals` | `company.read` | complete |
+| `list_documents.download` | `download_attachment` | `company.read` | complete |
+| `list_documents.list` | `list_record_documents` | `activity.read` `company.read` `contact.read` `deal.read` | complete |
+| `preview_import` | `preview_import` | `custom_field.read` `import_run.create` `import_run.read` `import_run.update` | complete |
+| `read_analytics.compose` | `compose_analytics_report` |  | complete |
+| `read_analytics.query` | `run_analytics_query` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` | complete |
+| `read_approval` | `read_approval` | `company.read` `company.update` `installation_settings.read` | complete |
+| `read_attention.at_risk` | `at_risk_relationships` | `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` | complete |
+| `read_attention.commitments` | `review_commitments` | `activity.read` `contact.read` | complete |
+| `read_attention.slipping` | `whats_slipping_this_week` | `company.read` `deal.read` `installation_settings.read` `project.read` | complete |
+| `read_context.brief` | `read_brief` | `activity.read` `deal.read` | complete |
+| `read_context.catch_up` | `catch_me_up_on` | `company.read` | complete |
+| `read_context.meeting` | `prep_for_meeting` | `company.read` | complete |
+| `read_details.activity_pipeline` | `read_activity_pipeline_trace` | `activity.read` | complete |
+| `read_details.capture_triage` | `get_company_capture_triage` | `company.read` | complete |
+| `read_details.company_brief` | `get_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `list.read` `project.read` `relationship.read` `tag.read` | complete |
+| `read_details.company_contracts` | `list_company_contracts` | `company.read` `contract.read` `deal.read` `project.read` | complete |
+| `read_details.company_for_address` | `get_company_for_address` | `company.read` | complete |
+| `read_details.company_linkedin_reach` | `get_company_linked_in_reach` | `company.read` | complete |
+| `read_details.company_logo` | `get_company_logo` | `company.read` | complete |
+| `read_details.company_logo_icon` | `get_company_logo_icon` | `company.read` | complete |
+| `read_details.company_scan` | `get_company_scan` | `installation_settings.read` | complete |
+| `read_details.contact_brief` | `get_contact_brief` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` | complete |
+| `read_details.contact_profile_fields` | `get_contact_profile_fields` | `contact.read` | complete |
+| `read_details.contract` | `get_contract` | `company.read` `contract.read` `deal.read` `project.read` | complete |
+| `read_details.deal_legal_reviews` | `list_deal_legal_reviews` | `deal.read` | complete |
+| `read_details.deal_products` | `list_deal_products` | `deal.read` `product.read` | complete |
+| `read_details.deal_room_brief` | `get_deal_room_brief` | `deal_room.read` `installation_settings.read` | complete |
+| `read_details.deal_suggestion` | `get_deal_suggestion` | `company.read` `deal.read` | complete |
+| `read_details.deal_suggestions` | `list_deal_suggestions` | `company.read` `deal.read` | complete |
+| `read_details.document_extraction` | `get_attachment_extraction` | `deal.read` | complete |
+| `read_details.dossier` | `get_company_dossier` | `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `read_details.enrichment_run` | `get_contact_enrichment_run` | `contact.read` | complete |
+| `read_details.evidence` | `get_claim_evidence` | `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `read_details.field_history` | `get_field_history` |  | partial |
+| `read_details.forecast_assurance_enforcement` | `get_forecast_assurance_enforcement` | `deal.read` `forecast.read` `installation_settings.read` | complete |
+| `read_details.forecast_assurance_preview` | `preview_forecast_assurance` | `activity.read` `company.read` `forecast.create` `forecast.read` `signal.read` | complete |
+| `read_details.forecast_share_csv` | `export_forecast_share` | `forecast.read` | complete |
+| `read_details.forecast_shared_reading` | `open_forecast_share` | `forecast.read` | complete |
+| `read_details.forecast_shares` | `list_forecast_shares` | `forecast.create` `forecast.read` | complete |
+| `read_details.forecast_stage_chances` | `get_forecast_stage_chances` | `forecast.read` `installation_settings.read` | complete |
+| `read_details.growth_fit` | `get_company_growth_fit` | `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `read_details.handled_for_you` | `get_handled_for_you` | `deal.read` | complete |
+| `read_details.hidden_backlog` | `get_hidden_backlog` | `activity.read` `scope:team` | complete |
+| `read_details.hidden_backlog_rows` | `get_hidden_backlog_rows` | `activity.read` `company.read` `contact.read` `scope:team` | complete |
+| `read_details.import_problems` | `download_import_problems` | `import_run.read` | complete |
+| `read_details.import_template` | `download_import_template` | `custom_field.read` `deal.read` `import_run.read` `installation_settings.read` `pipeline.read` | complete |
+| `read_details.intro_requests` | `list_intro_requests` | `introduction.read` | complete |
+| `read_details.knowledge_document` | `download_corpus_document` | `knowledge_document.read` | complete |
+| `read_details.latest_weekly_review` | `get_latest_weekly_review` | `deal.read` | complete |
+| `read_details.lead_promotion_preview` | `preview_lead_promotion` | `deal.read` `lead.read` | complete |
+| `read_details.lead_score` | `explain_lead_score` | `lead.read` | complete |
+| `read_details.lead_signals` | `list_lead_manual_signals` | `lead.read` | complete |
+| `read_details.legal_entity_logo` | `get_legal_entity_logo` | `legal_entity.read` | complete |
+| `read_details.legal_review` | `get_legal_review` | `company.read` `deal.read` `legal_review.read` | complete |
+| `read_details.legal_reviews` | `list_legal_reviews` | `company.read` `deal.read` `legal_review.read` | complete |
+| `read_details.link_candidates` | `list_company_link_candidates` | `company.read` `contact.read` `relationship.read` | complete |
+| `read_details.magic` | `get_magic` | `activity.read` `automation.read` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `relationship.read` | complete |
+| `read_details.magic_line_records` | `get_magic_line_records` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `relationship.read` | complete |
+| `read_details.mail_draft` | `get_mail_draft` | `activity.read` | complete |
+| `read_details.meeting_availability` | `get_meeting_availability` | `activity.create` `activity.read` | complete |
+| `read_details.meeting_proposals` | `list_meeting_proposals` | `activity.create` `activity.read` `contact.read` | complete |
+| `read_details.my_linkedin_reach` | `get_my_linked_in_reach` | `company.read` | complete |
+| `read_details.notices` | `list_notices` |  | complete |
+| `read_details.offer_pdf` | `download_offer_pdf` | `company.read` `offer.read` | complete |
+| `read_details.offered_values` | `list_company_offered_values` | `company.read` | complete |
+| `read_details.ownership_offer` | `get_ownership_offer` |  | complete |
+| `read_details.ownership_offer_candidates` | `list_ownership_offer_candidates` |  | complete |
+| `read_details.ownership_request` | `get_ownership_request` |  | complete |
+| `read_details.project_filing` | `get_activity_project_filing` | `activity.read` | complete |
+| `read_details.relationship_nudge` | `get_relationship_nudge` | `contact.read` | complete |
+| `read_details.response_metrics` | `get_response_metrics` | `activity.read` `deal.read` `installation_settings.read` `scope:team` | complete |
+| `read_details.scheduled_send` | `get_scheduled_send` | `activity.read` | complete |
+| `read_details.scheduled_sends` | `list_scheduled_sends` | `activity.read` | complete |
+| `read_details.scheduling_calendars` | `get_scheduling_calendars` | `activity.create` | complete |
+| `read_details.tag_suggestion` | `get_tag_suggestion` | `tag.read` | complete |
+| `read_details.team_board` | `get_team_board` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `scope:team` | complete |
+| `read_details.team_exceptions` | `get_team_exceptions` | `activity.read` `automation.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `introduction.read` `lead.read` `project.read` `relationship.read` `scope:team` `tag.read` | complete |
+| `read_details.team_weekly_review` | `get_team_weekly_review` | `company.read` `deal.read` | complete |
+| `read_details.teammate_weekly_plan` | `get_teammate_weekly_plan` | `installation_settings.read` `weekly_plan.read` | complete |
+| `read_details.weekly_plan` | `get_current_weekly_plan` | `installation_settings.read` `weekly_plan.read` | complete |
+| `read_details.weekly_reviews` | `list_weekly_reviews` | `deal.read` | complete |
+| `read_details.win_evidence` | `get_deal_win_evidence` | `deal.read` | complete |
+| `read_forecast.input_exceptions` | `list_input_checks` | `company.read` `deal.read` `forecast.read` | complete |
+| `read_forecast.input_sources` | `data_coverage` | `data_coverage.read` `forecast.read` | complete |
+| `read_forecast.input_summary` | `forecast_input_checks` | `forecast.read` | complete |
+| `read_forecast.movement` | `forecast_movement` | `forecast.read` | complete |
+| `read_forecast.readings` | `forecast_readings` | `forecast.read` `installation_settings.read` | complete |
+| `read_import.format` | `describe_import_format` | `custom_field.read` `import_run.read` `installation_settings.read` | complete |
+| `read_import.report` | `read_import_report` | `import_run.read` | complete |
+| `read_lists` | `read_lists` | `company.read` `list.read` | complete |
+| `read_project.handoff` | `prepare_handoff` | `activity.read` `company.read` `contact.read` `deal.read` `project.read` `relationship.read` | complete |
+| `read_project.overview` | `read_project_360` | `activity.read` `company.read` `contact.read` `contract.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` | complete |
+| `read_record` | `read_record` | `company.read` `contact.read` `relationship.read` | complete |
+| `read_relationships.company_id` | `intro_path_to` | `company.read` `contact.read` `relationship.read` | complete |
+| `read_relationships.contact_id` | `who_knows` | `contact.read` | complete |
+| `read_relationships.deal_id` | `company_coverage` | `contact.read` `deal.read` `installation_settings.read` `relationship.read` | complete |
+| `read_reports.analytics_context` | `get_analytics_context` | `forecast.read` `installation_settings.read` | complete |
+| `read_reports.analytics_schema` | `get_analytics_schema` | `activity.read` `deal.read` `lead.read` `project.read` | complete |
+| `read_reports.evidence` | `search_report_evidence` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` | complete |
+| `read_reports.question_card_answer` | `answer_reporting_question_card` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` | complete |
+| `read_reports.reader_preview` | `preview_reporting_report_as_role` |  | partial |
+| `read_reports.report_run` | `get_report_run` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` | complete |
+| `read_reports.report_runs` | `list_report_runs` | `activity.read` `deal.read` `lead.read` `project.read` | complete |
+| `read_reports.run` | `run_report` | `activity.read` `installation_settings.read` `project.read` | complete |
+| `read_reports.sales_decisions` | `list_sales_decisions` | `activity.read` | complete |
+| `read_reports.sales_initiative` | `get_sales_initiative` | `sales_initiative.read` | complete |
+| `read_reports.sales_initiative_members` | `list_sales_initiative_members` | `sales_initiative.read` | complete |
+| `read_reports.sales_initiatives` | `list_sales_initiatives` | `sales_initiative.read` | complete |
+| `read_reports.sdr_handoffs` | `list_sdr_waiting_handoffs` | `lead.read` | complete |
+| `read_reports.sdr_meetings` | `list_sdr_upcoming_meetings` | `installation_settings.read` | complete |
+| `read_reports.sdr_summary` | `get_sdr_summary` | `installation_settings.read` | complete |
+| `read_reports.sdr_team` | `get_sdr_team_review` | `installation_settings.read` `lead.read` `sales_target.read` | complete |
+| `read_reports.standard` | `read_reporting` | `installation_settings.read` `report_definition.read` | complete |
+| `read_tags.get` | `get_tag` | `company.read` `contact.read` `deal.read` `lead.read` `tag.read` | complete |
+| `read_tags.list` | `list_tags` | `tag.read` | complete |
+| `read_tags.record` | `get_record_tags` | `company.read` | complete |
+| `read_view` | `read_view` | `custom_field.read` `deal.read` | complete |
+| `read_workspace.actions` | `describe_router_actions` |  | complete |
+| `read_workspace.agent_tools` | `list_agent_tools` |  | complete |
+| `read_workspace.ai_budget` | `get_ai_budget` | `ai_budget.read` | complete |
+| `read_workspace.ai_call_stats` | `get_ai_call_stats` | `ai_diagnostics.read` | complete |
+| `read_workspace.ai_health` | `get_ai_health` | `ai_diagnostics.read` | complete |
+| `read_workspace.ai_profile` | `get_ai_profile` | `automation.update` | complete |
+| `read_workspace.ai_provider_health` | `get_ai_provider_health` | `ai_diagnostics.read` | complete |
+| `read_workspace.ai_routing_schema` | `get_ai_routing_schema` | `ai_routing.read` | complete |
+| `read_workspace.ai_status` | `get_ai_status` | `ai_budget.read` `ai_diagnostics.read` | complete |
+| `read_workspace.ai_task_flow` | `get_ai_task_flow` | `ai_diagnostics.read` | complete |
+| `read_workspace.ai_task_overrides` | `get_ai_task_overrides` | `ai_routing.read` | complete |
+| `read_workspace.ai_usage` | `get_ai_usage` | `ai_diagnostics.read` | complete |
+| `read_workspace.ai_usage_summary` | `get_ai_usage_summary` | `ai_diagnostics.read` | complete |
+| `read_workspace.analytics` | `describe_analytics_vocabulary` | `activity.read` `deal.read` `lead.read` `project.read` | complete |
+| `read_workspace.anchor_company` | `get_anchor_company` | `admin` | complete |
+| `read_workspace.anchor_company_context` | `get_anchor_company_context` | `company.read` | complete |
+| `read_workspace.anchor_company_context_capabilities` | `get_anchor_company_context_capabilities` |  | complete |
+| `read_workspace.anchor_company_site_read` | `get_anchor_company_site_read` | `company.read` | complete |
+| `read_workspace.assignable_roles` | `list_assignable_roles` | `user_admin.create|update` | complete |
+| `read_workspace.automation_runs` | `list_automation_runs` | `automation.read` | complete |
+| `read_workspace.available_models` | `list_available_models` | `ai_routing.read` | complete |
+| `read_workspace.blocked_domains` | `list_blocked_domains` | `company.read` | complete |
+| `read_workspace.capture_exclusions` | `list_capture_exclusions` |  | complete |
+| `read_workspace.capture_trace_pipeline` | `read_capture_trace_pipeline` |  | complete |
+| `read_workspace.channel_connections` | `list_channel_connections` | `channel_connection.read` | complete |
+| `read_workspace.channel_providers` | `list_channel_providers` |  | complete |
+| `read_workspace.colleagues` | `list_colleagues` |  | complete |
+| `read_workspace.confirm_submissions` | `list_confirm_submissions` | `contact.read` | complete |
+| `read_workspace.connector_containers` | `list_connector_containers` |  | partial |
+| `read_workspace.connectors` | `list_connectors` |  | partial |
+| `read_workspace.consumer_mail_baseline` | `list_consumer_mail_baseline` | `capture_settings.read` | complete |
+| `read_workspace.consumer_mail_domains` | `list_consumer_mail_domains` | `capture_settings.read` | complete |
+| `read_workspace.contact_case_settings` | `get_contact_case_settings` | `installation_settings.read` | complete |
+| `read_workspace.controller_particulars` | `get_controller_particulars` | `installation_settings.read` | complete |
+| `read_workspace.corpora` | `list_corpora` | `knowledge_corpus.read` | complete |
+| `read_workspace.corpus` | `read_corpus` | `knowledge_corpus.read` | complete |
+| `read_workspace.corpus_documents` | `list_corpus_documents` | `knowledge_document.read` | complete |
+| `read_workspace.domain_questions` | `list_domain_questions` | `activity.read` `company.read` | complete |
+| `read_workspace.embed_reindex_identities` | `embed_reindex_identities` | `embedding_reindex.read` | complete |
+| `read_workspace.embed_reindex_preview` | `embed_reindex_preview` | `embedding_reindex.read` | complete |
+| `read_workspace.embed_reindex_status` | `embed_reindex_status` | `embedding_reindex.read` | complete |
+| `read_workspace.extension_settings` | `get_extension_settings` | `extension_access.read` | partial |
+| `read_workspace.extensions` | `list_extensions` | `extension_access.read` | complete |
+| `read_workspace.finance_source` | `get_finance_source` | `integrations.read` | complete |
+| `read_workspace.finance_source_customers` | `list_finance_source_customers` | `integrations.read` | complete |
+| `read_workspace.import_runs` | `list_import_runs` | `import_run.read` | complete |
+| `read_workspace.lead_signal_catalog` | `get_lead_signal_catalog` |  | complete |
+| `read_workspace.legacy_loss_reasons` | `list_legacy_loss_reasons` | `custom_field.update` `deal.read` | complete |
+| `read_workspace.legal_entities` | `list_legal_entities` | `legal_entity.read` | complete |
+| `read_workspace.legal_entity` | `get_legal_entity` | `legal_entity.read` | complete |
+| `read_workspace.legal_entity_members` | `list_legal_entity_members` | `legal_entity.read` | complete |
+| `read_workspace.legal_review_settings` | `get_legal_review_settings` | `installation_settings.read` | complete |
+| `read_workspace.list_filters` | `describe_list_filters` |  | complete |
+| `read_workspace.member` | `get_member` | `user_admin.read|create|update|delete` | complete |
+| `read_workspace.member_retirement` | `preview_member_retirement` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `user_admin.delete` `user_admin.read` `user_admin.update` | complete |
+| `read_workspace.my_ai_activity` | `get_my_ai_activity` |  | complete |
+| `read_workspace.my_capture_activity` | `list_my_capture_activity` |  | complete |
+| `read_workspace.my_email_signature` | `get_my_email_signature` |  | complete |
+| `read_workspace.my_linkedin` | `get_my_linked_in_account` |  | complete |
+| `read_workspace.notification_preferences` | `list_notification_preferences` |  | complete |
+| `read_workspace.pipelines` | `list_pipelines` | `deal.read` `pipeline.read` | complete |
+| `read_workspace.provider_connections` | `list_provider_connections` | `integrations.read` | complete |
+| `read_workspace.provider_locations` | `list_provider_locations` | `ai_routing.read` | complete |
+| `read_workspace.query` | `describe_query_vocabulary` |  | complete |
+| `read_workspace.record_fields` | `describe_record_fields` |  | complete |
+| `read_workspace.report_blocks` | `describe_report_blocks` |  | complete |
+| `read_workspace.report_vocabulary` | `describe_report_vocabulary` |  | complete |
+| `read_workspace.retention_policies` | `list_retention_policies` | `retention_policy.read` | complete |
+| `read_workspace.roles` | `list_roles` | `role_admin.read` | complete |
+| `read_workspace.saved_view` | `get_saved_view` | `saved_view.read` | complete |
+| `read_workspace.saved_views` | `list_saved_views` | `saved_view.read` | complete |
+| `read_workspace.user_handover` | `get_user_handover` | `activity.read` `company.read` `contact.read` `deal.read` `lead.read` `project.read` `user_admin.update` | complete |
+| `read_workspace.voice_build` | `get_voice_build` | `voice_profile.read` | complete |
+| `read_workspace.voice_corpus_sources` | `list_voice_corpus_sources` | `voice_profile.read` | complete |
+| `read_workspace.voice_learning_summary` | `get_voice_learning_summary` | `voice_profile.read` | complete |
+| `read_workspace.voice_profile` | `get_voice_profile` | `voice_profile.read` | complete |
+| `read_workspace.voice_profile_deltas` | `list_voice_profile_deltas` | `voice_profile.read` | complete |
+| `read_workspace.voice_profile_versions` | `list_voice_profile_versions` | `voice_profile.read` | complete |
+| `read_workspace.voice_profiles` | `list_voice_profiles` | `voice_profile.read` | complete |
+| `read_workspace.web_form` | `get_web_form` | `integrations.read` | complete |
+| `read_workspace.web_forms` | `list_web_forms` | `integrations.read` | complete |
+| `read_workspace.worklist` | `get_worklist` | `activity.read` `automation.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `introduction.read` `lead.read` `project.read` `relationship.read` `weekly_plan.read` | complete |
+| `read_workspace.workspace_capture_activity` | `list_workspace_capture_activity` | `capture_trace.read` | complete |
+| `read_workspace.workspace_email_domains` | `list_workspace_email_domains` | `capture_settings.read` | complete |
+| `resolve_duplicates.dismiss` | `decide_duplicate` | `company.read` `company.update` | complete |
+| `resolve_duplicates.merge` | `merge_records` | `company.update` | complete |
+| `run_research.ask_about_company` | `ask_about_company` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `list.read` `project.read` `relationship.read` `tag.read` | complete |
+| `run_research.generate_brief` | `generate_morning_brief` | `activity.read` `deal.read` | complete |
+| `run_research.refresh_company_brief` | `regenerate_company_brief` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `list.read` `project.read` `relationship.read` `tag.read` | complete |
+| `run_research.refresh_contact_brief` | `regenerate_contact_brief` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` | complete |
+| `run_research.refresh_dossier` | `refresh_company_dossier` | `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `run_research.refresh_growth_fit` | `refresh_company_growth_fit` | `company.read` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `run_research.refresh_scan` | `ensure_company_scan` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `list.read` `partner.read` `project.read` `relationship.read` `tag.read` | complete |
+| `run_research.research_contact` | `run_contact_research` | `activity.read` `company.read` `contact.read` `deal.read` `installation_settings.read` `project.read` `relationship.read` | complete |
+| `schedule_meeting.invite` | `invite_meeting` | `activity.create` `activity.read` `company.read` `contact.read` `relationship.read` | complete |
+| `send_outbound.change_invitation` | `change_meeting_invitation` | `activity.create` `activity.read` `activity.update` | complete |
+| `send_outbound.chat_reply` | `send_message` | `activity.create` `activity.read` | complete |
+| `send_outbound.deal_room_invite` | `invite_deal_room_participant` | `deal_room.update` | complete |
+| `send_outbound.deal_room_resend` | `resend_deal_room_invitation` | `deal_room.update` | complete |
+| `send_outbound.email_new` | `send_company_email` | `activity.create` `activity.read` `company.read` `contact.read` `deal.read` `project.read` | complete |
+| `send_outbound.email_reply` | `send_email` | `activity.create` `activity.read` | complete |
+| `send_outbound.invite_member` | `invite_user` | `user_admin.create` `user_admin.read|create|update|delete` | complete |
+| `send_outbound.meeting_proposal` | `create_meeting_proposal` | `activity.create` `activity.read` | complete |
+| `send_outbound.my_signature` | `save_my_email_signature` |  | complete |
+| `send_outbound.signature_template` | `save_email_signature_template` | `installation_settings.update` | complete |
+| `update_record` | `update_record` | `company.read` `company.update` `contact.read` `installation_settings.read` `relationship.read` | complete |
+| `whoami` | `whoami` | `installation_settings.read` | complete |

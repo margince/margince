@@ -50,9 +50,11 @@ func dispatcherWith(provider mcp.ResourceProvider) *Dispatcher {
 // empty surface for the wrong reason.
 func agentHolding(scopes ...principal.Scope) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
-		Type:   principal.PrincipalAgent,
-		ID:     "agent:test",
-		Scopes: principal.NewScopeSet(scopes...),
+		Type:        principal.PrincipalAgent,
+		ID:          "agent:test",
+		SeatType:    principal.SeatFull,
+		Permissions: everyRecordedGrant(),
+		Scopes:      principal.NewScopeSet(scopes...),
 	})
 }
 

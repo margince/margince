@@ -461,7 +461,7 @@ func TestTheScopeFilteredCatalogRefusesToBeStored(t *testing.T) {
 		authenticate := func(*http.Request) (context.Context, error) {
 			ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 			return principal.WithActor(ctx, principal.Principal{
-				Type: principal.PrincipalAgent, ID: "agent:catalog", OnBehalfOf: ids.NewV7(),
+				Type: principal.PrincipalAgent, ID: "agent:catalog", OnBehalfOf: ids.NewV7(), SeatType: principal.SeatFull, Permissions: everyRecordedGrant(),
 				Scopes: principal.NewScopeSet(scopes...),
 			}), nil
 		}
