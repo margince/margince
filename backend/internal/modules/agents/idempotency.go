@@ -222,12 +222,25 @@ func (r *Registry) refuseUnkeyableCall(spec mcp.ToolSpec) error {
 				"omit it and check whether the first attempt took effect before repeating the call",
 			spec.Name, idempotencyKeyArg)}
 	}
+	if r.routeServedTool(spec.Name) {
+		return &BadArgsError{Cause: fmt.Errorf(
+			"%s runs its REST route, whose answer this surface cannot hand back as recorded, so it does "+
+				"not offer `%s`; omit it and read the record before repeating the call",
+			spec.Name, idempotencyKeyArg)}
+	}
 	if r.claims == nil {
 		return &BadArgsError{Cause: fmt.Errorf(
 			"this surface cannot make %s safe to retry, so `%s` is refused rather than ignored; "+
 				"omit it and treat the call as at-most-once yourself", spec.Name, idempotencyKeyArg)}
 	}
 	return nil
+}
+
+// routeServedTool reads back what registration recorded about a route verb.
+func (r *Registry) routeServedTool(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.routeServed[name]
 }
 
 // unitOwnedTool reads back what registration recorded about who shipped a tool.

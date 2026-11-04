@@ -172,6 +172,13 @@ type ModelPath struct {
 	// floor: a sentence has no deterministic reading, so its endpoint answers
 	// 409 without a lane rather than guessing one.
 	NlSearch completer
+	// ReportInterpret writes the Sales review's assessment over measured
+	// figures. Its floor is the page's own deterministic summary, so a role
+	// without this lane still answers the panel.
+	ReportInterpret completer
+	// ReportSetup reads a description into an initiative or a custom report
+	// proposal. It has no floor: without it the drawers hide the ask.
+	ReportSetup completer
 	// VoiceBuild is the durable Voice DNA build lane: the builder pass and
 	// its evaluation drafts ride the same task label and budget.
 	VoiceBuild completer
@@ -328,6 +335,8 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		AccountScan:                   brain(ai.TaskAccountScan),
 		ProposeRoles:                  brain(ai.TaskProposeRoles),
 		NlSearch:                      brain(ai.TaskNlSearch),
+		ReportInterpret:               brain(ai.TaskReportInterpret),
+		ReportSetup:                   brain(ai.TaskReportSetup),
 		CorpusAsk:                     brain(ai.TaskCorpusAsk),
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),

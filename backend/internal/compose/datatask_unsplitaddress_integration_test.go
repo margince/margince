@@ -62,7 +62,7 @@ func TestTheUnsplitAddressTaskSplitsThroughTheExecutorAndReplaysSafely(t *testin
 		}
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = ANY($1)
-		AND after ->> 'address_city' = 'Example City'`, []ids.UUID{first, second}); got != 2 {
+		AND action = 'update' AND after ->> 'address_city' = 'Example City'`, []ids.UUID{first, second}); got != 2 {
 		t.Errorf("split audit rows = %d, want one per company", got)
 	}
 

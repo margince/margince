@@ -16,13 +16,9 @@ export type ClaimableRecordType = ListedRecordType;
 // company's: an ownerless record of every claimable kind needs this same door,
 // and the one that lived beside CompanyOwnerControl was reused by nothing for
 // exactly as long as it looked like company code.
-export function useClaimRecord(
-  recordType: ClaimableRecordType,
-  id: string,
-  version: number | undefined,
-) {
+export function useClaimRecord(recordType: ClaimableRecordType, id: string) {
   const queryClient = useQueryClient();
-  return async () => {
+  return async (version: number | undefined) => {
     unwrap(
       await api.POST("/records/{record_type}/{id}/claim", {
         params: {

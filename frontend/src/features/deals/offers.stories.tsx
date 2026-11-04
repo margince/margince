@@ -25,6 +25,7 @@ const consultingLine = {
   unit_price_minor: 10000,
   discount_pct: 0,
   tax_rate: 19,
+  tax_category: "standard",
   line_net_minor: 100000,
   line_tax_minor: 19000,
   line_total_minor: 119000,

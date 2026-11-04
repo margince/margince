@@ -42,7 +42,7 @@ type summaryCopy struct {
 	// Correspondence. Addresses, subjects and bodies pass through, quoted where
 	// the sentence quotes them.
 	sendEmail, cc, sendSubject, sendMessage, draftReply, accountSend, accountSendFiled, booking,
-	bookingHost, bookingLinks, noSubject, relinkActivity, relinkActivities string
+	bookingHost, bookingLinks, hostNamed, noSubject, relinkActivity, relinkActivities string
 
 	// Imports. The counts are the report's; the record type reads as a noun.
 	importPreview, importCommit, importCreate, importUpdate, importUnchanged, importSkip,
@@ -117,6 +117,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Book %q from %s to %s",
 		bookingHost:         " on %s's calendar",
 		bookingLinks:        ", attached to %d record(s)",
+		hostNamed:           "%s (entered address)",
 		noSubject:           "(no subject)",
 		relinkActivity:      "Re-associate activity %s to %s %s",
 		relinkActivities:    "Re-associate %d activities to %s %s",
@@ -195,6 +196,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Termin buchen: %q von %s bis %s",
 		bookingHost:         " im Kalender von %s",
 		bookingLinks:        ", verknüpfte Datensätze: %d",
+		hostNamed:           "%s (eingegebene Adresse)",
 		noSubject:           "(kein Betreff)",
 		relinkActivity:      "Aktivität %s neu zuordnen: %s %s",
 		relinkActivities:    "%d Aktivitäten neu zuordnen: %s %s",
@@ -273,6 +275,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Đặt lịch %q từ %s đến %s",
 		bookingHost:         " trên lịch của %s",
 		bookingLinks:        ", gắn với %d bản ghi",
+		hostNamed:           "%s (địa chỉ được nhập)",
 		noSubject:           "(không có tiêu đề)",
 		relinkActivity:      "Liên kết lại hoạt động %s với %s %s",
 		relinkActivities:    "Liên kết lại %d hoạt động với %s %s",

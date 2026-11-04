@@ -183,6 +183,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [agent-tool-budget.md](reference/agent-tool-budget.md): what the tool list of each agent costs a
   model. Generated.
 - [ai-certification.md](reference/ai-certification.md): which AI features each model passed. Generated.
+- [mcp-tool-roles.md](reference/mcp-tool-roles.md): which role can use which MCP tool, measured by a test. Generated.
 - [mcp-tool-coverage.md](reference/mcp-tool-coverage.md): which MCP tools the tests use, and how they
   score. Generated.
 - [rbac-matrix.md](reference/rbac-matrix.md): what each role may do to each kind of record. Generated.
@@ -342,6 +343,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [install-on-a-server.md](how-to/install-on-a-server.md): run a release on one Linux server, from its
+  files.
 - [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
   where each value comes from.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when

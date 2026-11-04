@@ -456,7 +456,7 @@ func TestApplyResolvedHumanFactsWritesAuditableValues(t *testing.T) {
 		t.Fatalf("applied = %#v, SQL calls = %d", applied, len(tx.calls))
 	}
 	// args[4] is value_key: the write's arguments are (companyID, category, field,
-	// value, value_key, by) since ADR-0091 §8 phase D took the leading workspace.
+	// value, value_key, by, source).
 	if got := tx.calls[1].args[4]; got != NormalizeFactValueKey("New Customer") {
 		t.Fatalf("multi-value key = %v, want normalized custom value", got)
 	}
@@ -506,4 +506,29 @@ func (tx *recordingSiteReadTx) Exec(_ context.Context, _ string, args ...any) (p
 		return pgconn.CommandTag{}, errors.New("forced database failure")
 	}
 	return pgconn.NewCommandTag("UPDATE 1"), nil
+}
+
+func TestAnAgentsResolvedFactNamesTheAgent(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent})
+	tx := &recordingSiteReadTx{}
+	applied, err := applyResolvedHumanFacts(ctx, tx, ids.New[ids.CompanyKind](), "agent:test", []resolvedHumanFact{{
+		proposal: DeepReadFact{Category: "company", Field: "employee_range"},
+		value:    "51-200",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := tx.calls[1].args[6]; got != CompanySourceAgent {
+		t.Fatalf("written source = %v, want %q", got, CompanySourceAgent)
+	}
+	if got := applied[0][auditKeySource]; got != CompanySourceAgent {
+		t.Fatalf("audit source = %v, want %q", got, CompanySourceAgent)
+	}
+}
+
+func TestASiteReadTreatsAnAgentsValueAsAConflictToDecide(t *testing.T) {
+	got := classifySiteReadValue(fieldIndustry, "field", "Software", "Manufacturing", CompanySourceAgent, true)
+	if got.Classification != siteReadComparisonHumanConflict {
+		t.Fatalf("classification = %q, want %q", got.Classification, siteReadComparisonHumanConflict)
+	}
 }

@@ -227,8 +227,8 @@ func (s *Service) cardAndTimeline(
 		}
 		return card, factActivities(f), nil
 	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly && humanCacheOwner(ctx))
-	if !humanCacheOwner(ctx) {
+	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly && mayWriteTheCard(ctx))
+	if !mayWriteTheCard(ctx) {
 		return card, factActivities(f), nil
 	}
 	if laneFailed {
@@ -475,12 +475,6 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 			apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
-}
-
-// An agent with different evidence must not replace the human's cached briefing.
-func humanCacheOwner(ctx context.Context) bool {
-	actor, ok := principal.Actor(ctx)
-	return ok && actor.Type == principal.PrincipalHuman
 }
 
 func (s *Service) gatherLastExchange(ctx context.Context, dealID ids.DealID, f *facts) error {

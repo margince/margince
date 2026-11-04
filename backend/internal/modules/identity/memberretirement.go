@@ -91,6 +91,9 @@ type retirementPreviewOptions struct{ merge, lock bool }
 
 func (s *Service) retirementPreviewTx(ctx context.Context, tx pgx.Tx, actor Identity, source ids.UserID, target *ids.UUID, options retirementPreviewOptions) (crmcontracts.MemberRetirementPreview, error) {
 	merge, lock := options.merge, options.lock
+	if err := refuseAgentRetirementReach(ctx, tx, source, target); err != nil {
+		return crmcontracts.MemberRetirementPreview{}, err
+	}
 	out := crmcontracts.MemberRetirementPreview{Blockers: []crmcontracts.MemberRetirementBlocker{}, Consequences: []crmcontracts.MemberRetirementConsequence{"source_signed_out", "original_attribution"}}
 	if merge {
 		out.Consequences = append(out.Consequences, "connectors_reconnect", "survivor_access")
@@ -221,6 +224,18 @@ func checkRetirementReplay(ctx context.Context, tx pgx.Tx, source ids.UserID, ta
 		return nil
 	}
 	return apperrors.ErrConflict
+}
+
+// refuseAgentRetirementReach holds a preview to the limits the removal it
+// previews meets, since the preview is what a confirmation is staged from.
+func refuseAgentRetirementReach(ctx context.Context, tx pgx.Tx, source ids.UserID, target *ids.UUID) error {
+	if err := refuseAgentMemberReach(ctx, tx, source); err != nil {
+		return err
+	}
+	if target == nil {
+		return nil
+	}
+	return RefuseAgentOwnReceiver(ctx, *target)
 }
 
 func readRetirementSource(ctx context.Context, tx pgx.Tx, actor Identity, source ids.UserID, lock bool) (retirementMember, error) {

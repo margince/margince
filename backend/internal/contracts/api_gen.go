@@ -190,6 +190,27 @@ func (e AccessPreviewRowScope) Valid() bool {
 	}
 }
 
+// Defines values for AccountCoverageView.
+const (
+	AccountCoverageViewSilent         AccountCoverageView = "silent"
+	AccountCoverageViewSingleThreaded AccountCoverageView = "single_threaded"
+	AccountCoverageViewUntouched      AccountCoverageView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the AccountCoverageView enum.
+func (e AccountCoverageView) Valid() bool {
+	switch e {
+	case AccountCoverageViewSilent:
+		return true
+	case AccountCoverageViewSingleThreaded:
+		return true
+	case AccountCoverageViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AccountDraftReasonKind.
 const (
 	AccountDraftReasonKindCommitment   AccountDraftReasonKind = "commitment"
@@ -884,6 +905,8 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
+	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
 	AiActivityKindSignalExtract                 AiActivityKind = "signal_extract"
 	AiActivityKindSiteExtract                   AiActivityKind = "site_extract"
@@ -942,6 +965,10 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindReportInterpret:
+		return true
+	case AiActivityKindReportSetup:
 		return true
 	case AiActivityKindRequestSettlement:
 		return true
@@ -1462,6 +1489,8 @@ const (
 	AiTaskOwedVerdict                   AiTask = "owed_verdict"
 	AiTaskProposeRoles                  AiTask = "propose_roles"
 	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskReportInterpret               AiTask = "report_interpret"
+	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
 	AiTaskSignalExtract                 AiTask = "signal_extract"
 	AiTaskSiteExtract                   AiTask = "site_extract"
@@ -1517,6 +1546,10 @@ func (e AiTask) Valid() bool {
 	case AiTaskProposeRoles:
 		return true
 	case AiTaskRateExtract:
+		return true
+	case AiTaskReportInterpret:
+		return true
+	case AiTaskReportSetup:
 		return true
 	case AiTaskRequestSettlement:
 		return true
@@ -9148,6 +9181,27 @@ func (e CreateProductRequestComponentKind) Valid() bool {
 	}
 }
 
+// Defines values for CreateProductRequestTaxCategory.
+const (
+	CreateProductRequestTaxCategoryExempt   CreateProductRequestTaxCategory = "exempt"
+	CreateProductRequestTaxCategoryReduced  CreateProductRequestTaxCategory = "reduced"
+	CreateProductRequestTaxCategoryStandard CreateProductRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the CreateProductRequestTaxCategory enum.
+func (e CreateProductRequestTaxCategory) Valid() bool {
+	switch e {
+	case CreateProductRequestTaxCategoryExempt:
+		return true
+	case CreateProductRequestTaxCategoryReduced:
+		return true
+	case CreateProductRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRecordGrantRequestAccess.
 const (
 	CreateRecordGrantRequestAccessRead  CreateRecordGrantRequestAccess = "read"
@@ -10258,6 +10312,96 @@ func (e DealSuggestionEvidenceKind) Valid() bool {
 	}
 }
 
+// Defines values for DealViabilityDisposition.
+const (
+	DealViabilityDispositionNone        DealViabilityDisposition = "none"
+	DealViabilityDispositionOpenReview  DealViabilityDisposition = "open_review"
+	DealViabilityDispositionOverride    DealViabilityDisposition = "override"
+	DealViabilityDispositionUnsupported DealViabilityDisposition = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityDisposition enum.
+func (e DealViabilityDisposition) Valid() bool {
+	switch e {
+	case DealViabilityDispositionNone:
+		return true
+	case DealViabilityDispositionOpenReview:
+		return true
+	case DealViabilityDispositionOverride:
+		return true
+	case DealViabilityDispositionUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityQualification.
+const (
+	DealViabilityQualificationClosed      DealViabilityQualification = "closed"
+	DealViabilityQualificationEligible    DealViabilityQualification = "eligible"
+	DealViabilityQualificationExcluded    DealViabilityQualification = "excluded"
+	DealViabilityQualificationUnknown     DealViabilityQualification = "unknown"
+	DealViabilityQualificationUnsupported DealViabilityQualification = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityQualification enum.
+func (e DealViabilityQualification) Valid() bool {
+	switch e {
+	case DealViabilityQualificationClosed:
+		return true
+	case DealViabilityQualificationEligible:
+		return true
+	case DealViabilityQualificationExcluded:
+		return true
+	case DealViabilityQualificationUnknown:
+		return true
+	case DealViabilityQualificationUnsupported:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityQualificationMode.
+const (
+	DealViabilityQualificationModeEnforcing DealViabilityQualificationMode = "enforcing"
+	DealViabilityQualificationModeOff       DealViabilityQualificationMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityQualificationMode enum.
+func (e DealViabilityQualificationMode) Valid() bool {
+	switch e {
+	case DealViabilityQualificationModeEnforcing:
+		return true
+	case DealViabilityQualificationModeOff:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealViabilityReviewDeliveryState.
+const (
+	DealViabilityReviewDeliveryStateDelivered DealViabilityReviewDeliveryState = "delivered"
+	DealViabilityReviewDeliveryStateFailed    DealViabilityReviewDeliveryState = "failed"
+	DealViabilityReviewDeliveryStatePending   DealViabilityReviewDeliveryState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the DealViabilityReviewDeliveryState enum.
+func (e DealViabilityReviewDeliveryState) Valid() bool {
+	switch e {
+	case DealViabilityReviewDeliveryStateDelivered:
+		return true
+	case DealViabilityReviewDeliveryStateFailed:
+		return true
+	case DealViabilityReviewDeliveryStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DecideCommissionRequestDecision.
 const (
 	DecideCommissionRequestDecisionApprove DecideCommissionRequestDecision = "approve"
@@ -10420,6 +10564,45 @@ func (e DismissDealSuggestionRequestReason) Valid() bool {
 	case DismissDealSuggestionRequestReasonOther:
 		return true
 	case DismissDealSuggestionRequestReasonWrongCompany:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DomainQuestionContextSiteRead.
+const (
+	DomainQuestionContextSiteReadRead   DomainQuestionContextSiteRead = "read"
+	DomainQuestionContextSiteReadUnread DomainQuestionContextSiteRead = "unread"
+)
+
+// Valid indicates whether the value is a known member of the DomainQuestionContextSiteRead enum.
+func (e DomainQuestionContextSiteRead) Valid() bool {
+	switch e {
+	case DomainQuestionContextSiteReadRead:
+		return true
+	case DomainQuestionContextSiteReadUnread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DomainQuestionSuggestionBasis.
+const (
+	DomainQuestionSuggestionBasisContactEmployer DomainQuestionSuggestionBasis = "contact_employer"
+	DomainQuestionSuggestionBasisNameTwin        DomainQuestionSuggestionBasis = "name_twin"
+	DomainQuestionSuggestionBasisRedirectTarget  DomainQuestionSuggestionBasis = "redirect_target"
+)
+
+// Valid indicates whether the value is a known member of the DomainQuestionSuggestionBasis enum.
+func (e DomainQuestionSuggestionBasis) Valid() bool {
+	switch e {
+	case DomainQuestionSuggestionBasisContactEmployer:
+		return true
+	case DomainQuestionSuggestionBasisNameTwin:
+		return true
+	case DomainQuestionSuggestionBasisRedirectTarget:
 		return true
 	default:
 		return false
@@ -11547,8 +11730,9 @@ func (e ForecastContributionExclusionReason) Valid() bool {
 
 // Defines values for ForecastLandingCaveat.
 const (
-	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
-	ForecastLandingCaveatLandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatCallAbsent           ForecastLandingCaveat = "call_absent"
+	ForecastLandingCaveatLandingCaveatCallBelowActual      ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatQualifiedUnavailable ForecastLandingCaveat = "qualified_unavailable"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
@@ -11558,6 +11742,8 @@ func (e ForecastLandingCaveat) Valid() bool {
 		return true
 	case ForecastLandingCaveatLandingCaveatCallBelowActual:
 		return true
+	case ForecastLandingCaveatLandingCaveatQualifiedUnavailable:
+		return true
 	default:
 		return false
 	}
@@ -11565,9 +11751,11 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureCommitEvidence ForecastLandingMeasure = "commit_evidence"
-	ForecastLandingMeasureForwardMeasureManagerCall    ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureWeighted       ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureCommitEvidence          ForecastLandingMeasure = "commit_evidence"
+	ForecastLandingMeasureForwardMeasureManagerCall             ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence ForecastLandingMeasure = "qualified_commit_evidence"
+	ForecastLandingMeasureForwardMeasureQualifiedWeighted       ForecastLandingMeasure = "qualified_weighted"
+	ForecastLandingMeasureForwardMeasureWeighted                ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
@@ -11576,6 +11764,10 @@ func (e ForecastLandingMeasure) Valid() bool {
 	case ForecastLandingMeasureForwardMeasureCommitEvidence:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
 	case ForecastLandingMeasureForwardMeasureWeighted:
 		return true
@@ -11586,10 +11778,13 @@ func (e ForecastLandingMeasure) Valid() bool {
 
 // Defines values for ForecastMovementReading.
 const (
-	ForecastMovementReadingBestCase ForecastMovementReading = "best_case"
-	ForecastMovementReadingEvidence ForecastMovementReading = "evidence"
-	ForecastMovementReadingOpen     ForecastMovementReading = "open"
-	ForecastMovementReadingWeighted ForecastMovementReading = "weighted"
+	ForecastMovementReadingBestCase          ForecastMovementReading = "best_case"
+	ForecastMovementReadingEvidence          ForecastMovementReading = "evidence"
+	ForecastMovementReadingOpen              ForecastMovementReading = "open"
+	ForecastMovementReadingQualifiedBestCase ForecastMovementReading = "qualified_best_case"
+	ForecastMovementReadingQualifiedEvidence ForecastMovementReading = "qualified_evidence"
+	ForecastMovementReadingQualifiedWeighted ForecastMovementReading = "qualified_weighted"
+	ForecastMovementReadingWeighted          ForecastMovementReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastMovementReading enum.
@@ -11600,6 +11795,12 @@ func (e ForecastMovementReading) Valid() bool {
 	case ForecastMovementReadingEvidence:
 		return true
 	case ForecastMovementReadingOpen:
+		return true
+	case ForecastMovementReadingQualifiedBestCase:
+		return true
+	case ForecastMovementReadingQualifiedEvidence:
+		return true
+	case ForecastMovementReadingQualifiedWeighted:
 		return true
 	case ForecastMovementReadingWeighted:
 		return true
@@ -11613,13 +11814,16 @@ const (
 	ForecastMovementBucketNameAmount             ForecastMovementBucketName = "amount"
 	ForecastMovementBucketNameCategory           ForecastMovementBucketName = "category"
 	ForecastMovementBucketNameDefinition         ForecastMovementBucketName = "definition"
+	ForecastMovementBucketNameExcluded           ForecastMovementBucketName = "excluded"
 	ForecastMovementBucketNameFx                 ForecastMovementBucketName = "fx"
 	ForecastMovementBucketNameLost               ForecastMovementBucketName = "lost"
 	ForecastMovementBucketNameModel              ForecastMovementBucketName = "model"
 	ForecastMovementBucketNameNew                ForecastMovementBucketName = "new"
+	ForecastMovementBucketNameNotChecked         ForecastMovementBucketName = "not_checked"
 	ForecastMovementBucketNamePulledIn           ForecastMovementBucketName = "pulled_in"
 	ForecastMovementBucketNamePushedOut          ForecastMovementBucketName = "pushed_out"
 	ForecastMovementBucketNameRecordChanged      ForecastMovementBucketName = "record_changed"
+	ForecastMovementBucketNameReinstated         ForecastMovementBucketName = "reinstated"
 	ForecastMovementBucketNameReopenedOrArchived ForecastMovementBucketName = "reopened_or_archived"
 	ForecastMovementBucketNameStageWeight        ForecastMovementBucketName = "stage_weight"
 	ForecastMovementBucketNameWon                ForecastMovementBucketName = "won"
@@ -11634,6 +11838,8 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameDefinition:
 		return true
+	case ForecastMovementBucketNameExcluded:
+		return true
 	case ForecastMovementBucketNameFx:
 		return true
 	case ForecastMovementBucketNameLost:
@@ -11642,11 +11848,15 @@ func (e ForecastMovementBucketName) Valid() bool {
 		return true
 	case ForecastMovementBucketNameNew:
 		return true
+	case ForecastMovementBucketNameNotChecked:
+		return true
 	case ForecastMovementBucketNamePulledIn:
 		return true
 	case ForecastMovementBucketNamePushedOut:
 		return true
 	case ForecastMovementBucketNameRecordChanged:
+		return true
+	case ForecastMovementBucketNameReinstated:
 		return true
 	case ForecastMovementBucketNameReopenedOrArchived:
 		return true
@@ -11701,6 +11911,24 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastReadingsQualificationMode.
+const (
+	ForecastReadingsQualificationModeEnforcing ForecastReadingsQualificationMode = "enforcing"
+	ForecastReadingsQualificationModeOff       ForecastReadingsQualificationMode = "off"
+)
+
+// Valid indicates whether the value is a known member of the ForecastReadingsQualificationMode enum.
+func (e ForecastReadingsQualificationMode) Valid() bool {
+	switch e {
+	case ForecastReadingsQualificationModeEnforcing:
+		return true
+	case ForecastReadingsQualificationModeOff:
 		return true
 	default:
 		return false
@@ -13347,9 +13575,11 @@ func (e InstallationSettingsDateFormat) Valid() bool {
 
 // Defines values for InstallationSettingsForecastForwardMeasure.
 const (
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence InstallationSettingsForecastForwardMeasure = "commit_evidence"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall    InstallationSettingsForecastForwardMeasure = "manager_call"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted       InstallationSettingsForecastForwardMeasure = "weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence          InstallationSettingsForecastForwardMeasure = "commit_evidence"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall             InstallationSettingsForecastForwardMeasure = "manager_call"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence InstallationSettingsForecastForwardMeasure = "qualified_commit_evidence"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted       InstallationSettingsForecastForwardMeasure = "qualified_weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted                InstallationSettingsForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSettingsForecastForwardMeasure enum.
@@ -13358,6 +13588,10 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
+		return true
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence:
+		return true
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted:
 		return true
@@ -15076,6 +15310,24 @@ func (e MeetingBriefSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for MeetingInvitationAttentionReason.
+const (
+	MeetingInvitationAttentionReasonCalendarDisconnected MeetingInvitationAttentionReason = "calendar_disconnected"
+	MeetingInvitationAttentionReasonDeliveryFailed       MeetingInvitationAttentionReason = "delivery_failed"
+)
+
+// Valid indicates whether the value is a known member of the MeetingInvitationAttentionReason enum.
+func (e MeetingInvitationAttentionReason) Valid() bool {
+	switch e {
+	case MeetingInvitationAttentionReasonCalendarDisconnected:
+		return true
+	case MeetingInvitationAttentionReasonDeliveryFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MeetingInvitationProvider.
 const (
 	MeetingInvitationProviderGcal     MeetingInvitationProvider = "gcal"
@@ -15313,6 +15565,33 @@ func (e MeetingPreparationState) Valid() bool {
 	case MeetingPreparationStateNeedsReview:
 		return true
 	case MeetingPreparationStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingRecordLinkEntityType.
+const (
+	MeetingRecordLinkEntityTypeCompany MeetingRecordLinkEntityType = "company"
+	MeetingRecordLinkEntityTypeContact MeetingRecordLinkEntityType = "contact"
+	MeetingRecordLinkEntityTypeDeal    MeetingRecordLinkEntityType = "deal"
+	MeetingRecordLinkEntityTypeLead    MeetingRecordLinkEntityType = "lead"
+	MeetingRecordLinkEntityTypeProject MeetingRecordLinkEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the MeetingRecordLinkEntityType enum.
+func (e MeetingRecordLinkEntityType) Valid() bool {
+	switch e {
+	case MeetingRecordLinkEntityTypeCompany:
+		return true
+	case MeetingRecordLinkEntityTypeContact:
+		return true
+	case MeetingRecordLinkEntityTypeDeal:
+		return true
+	case MeetingRecordLinkEntityTypeLead:
+		return true
+	case MeetingRecordLinkEntityTypeProject:
 		return true
 	default:
 		return false
@@ -15994,6 +16273,27 @@ func (e OfferLineItemBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for OfferLineItemTaxCategory.
+const (
+	OfferLineItemTaxCategoryExempt   OfferLineItemTaxCategory = "exempt"
+	OfferLineItemTaxCategoryReduced  OfferLineItemTaxCategory = "reduced"
+	OfferLineItemTaxCategoryStandard OfferLineItemTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemTaxCategory enum.
+func (e OfferLineItemTaxCategory) Valid() bool {
+	switch e {
+	case OfferLineItemTaxCategoryExempt:
+		return true
+	case OfferLineItemTaxCategoryReduced:
+		return true
+	case OfferLineItemTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferLineItemInputBillingIntervalMonths.
 const (
 	OfferLineItemInputBillingIntervalMonthsN1  OfferLineItemInputBillingIntervalMonths = 1
@@ -16030,6 +16330,27 @@ func (e OfferLineItemInputBillingModel) Valid() bool {
 	case OfferLineItemInputBillingModelOneTime:
 		return true
 	case OfferLineItemInputBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferLineItemInputTaxCategory.
+const (
+	OfferLineItemInputTaxCategoryExempt   OfferLineItemInputTaxCategory = "exempt"
+	OfferLineItemInputTaxCategoryReduced  OfferLineItemInputTaxCategory = "reduced"
+	OfferLineItemInputTaxCategoryStandard OfferLineItemInputTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the OfferLineItemInputTaxCategory enum.
+func (e OfferLineItemInputTaxCategory) Valid() bool {
+	switch e {
+	case OfferLineItemInputTaxCategoryExempt:
+		return true
+	case OfferLineItemInputTaxCategoryReduced:
+		return true
+	case OfferLineItemInputTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -16729,6 +17050,27 @@ func (e ProductComponentKind) Valid() bool {
 	case ProductComponentKindOther:
 		return true
 	case ProductComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProductTaxCategory.
+const (
+	ProductTaxCategoryExempt   ProductTaxCategory = "exempt"
+	ProductTaxCategoryReduced  ProductTaxCategory = "reduced"
+	ProductTaxCategoryStandard ProductTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the ProductTaxCategory enum.
+func (e ProductTaxCategory) Valid() bool {
+	switch e {
+	case ProductTaxCategoryExempt:
+		return true
+	case ProductTaxCategoryReduced:
+		return true
+	case ProductTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -17641,6 +17983,24 @@ func (e RecordTagAssignerKind) Valid() bool {
 	}
 }
 
+// Defines values for RecordTaxRateRequestCategory.
+const (
+	RecordTaxRateRequestCategoryReduced  RecordTaxRateRequestCategory = "reduced"
+	RecordTaxRateRequestCategoryStandard RecordTaxRateRequestCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the RecordTaxRateRequestCategory enum.
+func (e RecordTaxRateRequestCategory) Valid() bool {
+	switch e {
+	case RecordTaxRateRequestCategoryReduced:
+		return true
+	case RecordTaxRateRequestCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordViewAckEntityType.
 const (
 	RecordViewAckEntityTypeCompany RecordViewAckEntityType = "company"
@@ -18025,6 +18385,132 @@ func (e ReportScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for ReportSetupProposalSite.
+const (
+	ReportSetupProposalSiteCustomReportSetup ReportSetupProposalSite = "custom_report_setup"
+	ReportSetupProposalSiteInitiativeSetup   ReportSetupProposalSite = "initiative_setup"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupProposalSite enum.
+func (e ReportSetupProposalSite) Valid() bool {
+	switch e {
+	case ReportSetupProposalSiteCustomReportSetup:
+		return true
+	case ReportSetupProposalSiteInitiativeSetup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupRequestSite.
+const (
+	ReportSetupRequestSiteCustomReportSetup ReportSetupRequestSite = "custom_report_setup"
+	ReportSetupRequestSiteInitiativeSetup   ReportSetupRequestSite = "initiative_setup"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupRequestSite enum.
+func (e ReportSetupRequestSite) Valid() bool {
+	switch e {
+	case ReportSetupRequestSiteCustomReportSetup:
+		return true
+	case ReportSetupRequestSiteInitiativeSetup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupSelectionPeriod.
+const (
+	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
+	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
+	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupSelectionPeriod enum.
+func (e ReportSetupSelectionPeriod) Valid() bool {
+	switch e {
+	case ReportSetupSelectionPeriodLastMonth:
+		return true
+	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodThisMonth:
+		return true
+	case ReportSetupSelectionPeriodThisQuarter:
+		return true
+	case ReportSetupSelectionPeriodThisWeek:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupSourceField.
+const (
+	ReportSetupSourceFieldChart       ReportSetupSourceField = "chart"
+	ReportSetupSourceFieldCountry     ReportSetupSourceField = "country"
+	ReportSetupSourceFieldDeadline    ReportSetupSourceField = "deadline"
+	ReportSetupSourceFieldIndustry    ReportSetupSourceField = "industry"
+	ReportSetupSourceFieldMetric      ReportSetupSourceField = "metric"
+	ReportSetupSourceFieldName        ReportSetupSourceField = "name"
+	ReportSetupSourceFieldObjective   ReportSetupSourceField = "objective"
+	ReportSetupSourceFieldPeriod      ReportSetupSourceField = "period"
+	ReportSetupSourceFieldProduct     ReportSetupSourceField = "product"
+	ReportSetupSourceFieldTargetValue ReportSetupSourceField = "target_value"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupSourceField enum.
+func (e ReportSetupSourceField) Valid() bool {
+	switch e {
+	case ReportSetupSourceFieldChart:
+		return true
+	case ReportSetupSourceFieldCountry:
+		return true
+	case ReportSetupSourceFieldDeadline:
+		return true
+	case ReportSetupSourceFieldIndustry:
+		return true
+	case ReportSetupSourceFieldMetric:
+		return true
+	case ReportSetupSourceFieldName:
+		return true
+	case ReportSetupSourceFieldObjective:
+		return true
+	case ReportSetupSourceFieldPeriod:
+		return true
+	case ReportSetupSourceFieldProduct:
+		return true
+	case ReportSetupSourceFieldTargetValue:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReportSetupUnsupportedCode.
+const (
+	ReportSetupUnsupportedCodeNotExpressible ReportSetupUnsupportedCode = "not_expressible"
+	ReportSetupUnsupportedCodeNotOffered     ReportSetupUnsupportedCode = "not_offered"
+	ReportSetupUnsupportedCodeUnknownValue   ReportSetupUnsupportedCode = "unknown_value"
+)
+
+// Valid indicates whether the value is a known member of the ReportSetupUnsupportedCode enum.
+func (e ReportSetupUnsupportedCode) Valid() bool {
+	switch e {
+	case ReportSetupUnsupportedCodeNotExpressible:
+		return true
+	case ReportSetupUnsupportedCodeNotOffered:
+		return true
+	case ReportSetupUnsupportedCodeUnknownValue:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReportingBlockKind.
 const (
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
@@ -18291,6 +18777,7 @@ const (
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
+	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -18329,6 +18816,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadsCreated:
 		return true
 	case ReportingMetricIDLeadsPromoted:
+		return true
+	case ReportingMetricIDLeadsQualified:
 		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
@@ -18624,9 +19113,11 @@ func (e ReportingStatus) Valid() bool {
 
 // Defines values for ReportingTargetComparisonBasis.
 const (
-	ReportingTargetComparisonBasisCommitEvidence ReportingTargetComparisonBasis = "commit_evidence"
-	ReportingTargetComparisonBasisManagerCall    ReportingTargetComparisonBasis = "manager_call"
-	ReportingTargetComparisonBasisWeighted       ReportingTargetComparisonBasis = "weighted"
+	ReportingTargetComparisonBasisCommitEvidence          ReportingTargetComparisonBasis = "commit_evidence"
+	ReportingTargetComparisonBasisManagerCall             ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisQualifiedCommitEvidence ReportingTargetComparisonBasis = "qualified_commit_evidence"
+	ReportingTargetComparisonBasisQualifiedWeighted       ReportingTargetComparisonBasis = "qualified_weighted"
+	ReportingTargetComparisonBasisWeighted                ReportingTargetComparisonBasis = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
@@ -18635,6 +19126,10 @@ func (e ReportingTargetComparisonBasis) Valid() bool {
 	case ReportingTargetComparisonBasisCommitEvidence:
 		return true
 	case ReportingTargetComparisonBasisManagerCall:
+		return true
+	case ReportingTargetComparisonBasisQualifiedCommitEvidence:
+		return true
+	case ReportingTargetComparisonBasisQualifiedWeighted:
 		return true
 	case ReportingTargetComparisonBasisWeighted:
 		return true
@@ -19024,6 +19519,69 @@ func (e RunReportRequestAggregatesFn) Valid() bool {
 	}
 }
 
+// Defines values for SalesAssessmentConfidence.
+const (
+	SalesAssessmentConfidenceHigh   SalesAssessmentConfidence = "high"
+	SalesAssessmentConfidenceLow    SalesAssessmentConfidence = "low"
+	SalesAssessmentConfidenceMedium SalesAssessmentConfidence = "medium"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentConfidence enum.
+func (e SalesAssessmentConfidence) Valid() bool {
+	switch e {
+	case SalesAssessmentConfidenceHigh:
+		return true
+	case SalesAssessmentConfidenceLow:
+		return true
+	case SalesAssessmentConfidenceMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentSentenceKind.
+const (
+	SalesAssessmentSentenceKindClaim       SalesAssessmentSentenceKind = "claim"
+	SalesAssessmentSentenceKindHypothesis  SalesAssessmentSentenceKind = "hypothesis"
+	SalesAssessmentSentenceKindObservation SalesAssessmentSentenceKind = "observation"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentSentenceKind enum.
+func (e SalesAssessmentSentenceKind) Valid() bool {
+	switch e {
+	case SalesAssessmentSentenceKindClaim:
+		return true
+	case SalesAssessmentSentenceKindHypothesis:
+		return true
+	case SalesAssessmentSentenceKindObservation:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SalesAssessmentView.
+const (
+	SalesAssessmentViewProspecting SalesAssessmentView = "prospecting"
+	SalesAssessmentViewSales       SalesAssessmentView = "sales"
+	SalesAssessmentViewTeam        SalesAssessmentView = "team"
+)
+
+// Valid indicates whether the value is a known member of the SalesAssessmentView enum.
+func (e SalesAssessmentView) Valid() bool {
+	switch e {
+	case SalesAssessmentViewProspecting:
+		return true
+	case SalesAssessmentViewSales:
+		return true
+	case SalesAssessmentViewTeam:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesDecisionStatus.
 const (
 	SalesDecisionStatusDone SalesDecisionStatus = "done"
@@ -19312,6 +19870,30 @@ func (e ScheduledSendStatus) Valid() bool {
 	}
 }
 
+// Defines values for SchedulingProfileBlocker.
+const (
+	SchedulingProfileBlockerCalendarReadOnly    SchedulingProfileBlocker = "calendar_read_only"
+	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
+	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
+	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
+func (e SchedulingProfileBlocker) Valid() bool {
+	switch e {
+	case SchedulingProfileBlockerCalendarReadOnly:
+		return true
+	case SchedulingProfileBlockerCalendarUnavailable:
+		return true
+	case SchedulingProfileBlockerNoCalendar:
+		return true
+	case SchedulingProfileBlockerNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SchedulingProfileProvider.
 const (
 	SchedulingProfileProviderEmpty    SchedulingProfileProvider = ""
@@ -19410,13 +19992,16 @@ func (e SdrSummaryWorkflow) Valid() bool {
 
 // Defines values for SdrTeamMemberTargetsMetric.
 const (
-	SdrTeamMemberTargetsMetricLeadsPromoted SdrTeamMemberTargetsMetric = "leads_promoted"
+	SdrTeamMemberTargetsMetricLeadsPromoted  SdrTeamMemberTargetsMetric = "leads_promoted"
+	SdrTeamMemberTargetsMetricLeadsQualified SdrTeamMemberTargetsMetric = "leads_qualified"
 )
 
 // Valid indicates whether the value is a known member of the SdrTeamMemberTargetsMetric enum.
 func (e SdrTeamMemberTargetsMetric) Valid() bool {
 	switch e {
 	case SdrTeamMemberTargetsMetricLeadsPromoted:
+		return true
+	case SdrTeamMemberTargetsMetricLeadsQualified:
 		return true
 	default:
 		return false
@@ -19432,6 +20017,21 @@ const (
 func (e SdrTeamReviewMembershipBasis) Valid() bool {
 	switch e {
 	case SdrTeamReviewMembershipBasisCurrent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SdrTeamReviewQualificationBasis.
+const (
+	SdrTeamReviewQualificationBasisFirstQualification SdrTeamReviewQualificationBasis = "first_qualification"
+)
+
+// Valid indicates whether the value is a known member of the SdrTeamReviewQualificationBasis enum.
+func (e SdrTeamReviewQualificationBasis) Valid() bool {
+	switch e {
+	case SdrTeamReviewQualificationBasisFirstQualification:
 		return true
 	default:
 		return false
@@ -20983,6 +21583,24 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TaxRateCategory.
+const (
+	TaxRateCategoryReduced  TaxRateCategory = "reduced"
+	TaxRateCategoryStandard TaxRateCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the TaxRateCategory enum.
+func (e TaxRateCategory) Valid() bool {
+	switch e {
+	case TaxRateCategoryReduced:
+		return true
+	case TaxRateCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TeamBoardMemberActivation.
 const (
 	TeamBoardMemberActivationActive  TeamBoardMemberActivation = "active"
@@ -21849,9 +22467,11 @@ func (e UpdateInstallationSettingsRequestDateFormat) Valid() bool {
 
 // Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
 const (
-	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
-	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall    UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
-	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence          UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall             UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_commit_evidence"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted                UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestForecastForwardMeasure enum.
@@ -21860,6 +22480,10 @@ func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
 	case UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence:
+		return true
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureWeighted:
 		return true
@@ -21973,6 +22597,27 @@ func (e UpdateOfferLineItemRequestBillingModel) Valid() bool {
 	}
 }
 
+// Defines values for UpdateOfferLineItemRequestTaxCategory.
+const (
+	UpdateOfferLineItemRequestTaxCategoryExempt   UpdateOfferLineItemRequestTaxCategory = "exempt"
+	UpdateOfferLineItemRequestTaxCategoryReduced  UpdateOfferLineItemRequestTaxCategory = "reduced"
+	UpdateOfferLineItemRequestTaxCategoryStandard UpdateOfferLineItemRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateOfferLineItemRequestTaxCategory enum.
+func (e UpdateOfferLineItemRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateOfferLineItemRequestTaxCategoryExempt:
+		return true
+	case UpdateOfferLineItemRequestTaxCategoryReduced:
+		return true
+	case UpdateOfferLineItemRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateProductRequestBillingIntervalMonths.
 const (
 	UpdateProductRequestBillingIntervalMonthsN1  UpdateProductRequestBillingIntervalMonths = 1
@@ -22033,6 +22678,27 @@ func (e UpdateProductRequestComponentKind) Valid() bool {
 	case UpdateProductRequestComponentKindOther:
 		return true
 	case UpdateProductRequestComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateProductRequestTaxCategory.
+const (
+	UpdateProductRequestTaxCategoryExempt   UpdateProductRequestTaxCategory = "exempt"
+	UpdateProductRequestTaxCategoryReduced  UpdateProductRequestTaxCategory = "reduced"
+	UpdateProductRequestTaxCategoryStandard UpdateProductRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateProductRequestTaxCategory enum.
+func (e UpdateProductRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateProductRequestTaxCategoryExempt:
+		return true
+	case UpdateProductRequestTaxCategoryReduced:
+		return true
+	case UpdateProductRequestTaxCategoryStandard:
 		return true
 	default:
 		return false
@@ -22359,6 +23025,7 @@ const (
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
 	UserAllowedActionsRemove            UserAllowedActions = "remove"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
+	UserAllowedActionsResendInvite      UserAllowedActions = "resend_invite"
 )
 
 // Valid indicates whether the value is a known member of the UserAllowedActions enum.
@@ -22381,6 +23048,29 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsRemove:
 		return true
 	case UserAllowedActionsRemoveMfa:
+		return true
+	case UserAllowedActionsResendInvite:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserInviteEmailState.
+const (
+	UserInviteEmailStateFailed  UserInviteEmailState = "failed"
+	UserInviteEmailStateSending UserInviteEmailState = "sending"
+	UserInviteEmailStateSent    UserInviteEmailState = "sent"
+)
+
+// Valid indicates whether the value is a known member of the UserInviteEmailState enum.
+func (e UserInviteEmailState) Valid() bool {
+	switch e {
+	case UserInviteEmailStateFailed:
+		return true
+	case UserInviteEmailStateSending:
+		return true
+	case UserInviteEmailStateSent:
 		return true
 	default:
 		return false
@@ -23352,12 +24042,15 @@ func (e WeeklyReviewLearningsState) Valid() bool {
 
 // Defines values for WeeklyReviewMovementBar.
 const (
-	WeeklyReviewMovementBarWeeklyBarAdvanced WeeklyReviewMovementBar = "advanced"
-	WeeklyReviewMovementBarWeeklyBarCreated  WeeklyReviewMovementBar = "created"
-	WeeklyReviewMovementBarWeeklyBarLost     WeeklyReviewMovementBar = "lost"
-	WeeklyReviewMovementBarWeeklyBarOther    WeeklyReviewMovementBar = "other"
-	WeeklyReviewMovementBarWeeklyBarSlipped  WeeklyReviewMovementBar = "slipped"
-	WeeklyReviewMovementBarWeeklyBarWon      WeeklyReviewMovementBar = "won"
+	WeeklyReviewMovementBarWeeklyBarAdvanced   WeeklyReviewMovementBar = "advanced"
+	WeeklyReviewMovementBarWeeklyBarCreated    WeeklyReviewMovementBar = "created"
+	WeeklyReviewMovementBarWeeklyBarExcluded   WeeklyReviewMovementBar = "excluded"
+	WeeklyReviewMovementBarWeeklyBarLost       WeeklyReviewMovementBar = "lost"
+	WeeklyReviewMovementBarWeeklyBarNotChecked WeeklyReviewMovementBar = "not_checked"
+	WeeklyReviewMovementBarWeeklyBarOther      WeeklyReviewMovementBar = "other"
+	WeeklyReviewMovementBarWeeklyBarReinstated WeeklyReviewMovementBar = "reinstated"
+	WeeklyReviewMovementBarWeeklyBarSlipped    WeeklyReviewMovementBar = "slipped"
+	WeeklyReviewMovementBarWeeklyBarWon        WeeklyReviewMovementBar = "won"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewMovementBar enum.
@@ -23367,9 +24060,15 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 		return true
 	case WeeklyReviewMovementBarWeeklyBarCreated:
 		return true
+	case WeeklyReviewMovementBarWeeklyBarExcluded:
+		return true
 	case WeeklyReviewMovementBarWeeklyBarLost:
 		return true
+	case WeeklyReviewMovementBarWeeklyBarNotChecked:
+		return true
 	case WeeklyReviewMovementBarWeeklyBarOther:
+		return true
+	case WeeklyReviewMovementBarWeeklyBarReinstated:
 		return true
 	case WeeklyReviewMovementBarWeeklyBarSlipped:
 		return true
@@ -23382,9 +24081,11 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 
 // Defines values for WeeklyReviewOutlookForwardMeasure.
 const (
-	WeeklyReviewOutlookForwardMeasureCommitEvidence WeeklyReviewOutlookForwardMeasure = "commit_evidence"
-	WeeklyReviewOutlookForwardMeasureManagerCall    WeeklyReviewOutlookForwardMeasure = "manager_call"
-	WeeklyReviewOutlookForwardMeasureWeighted       WeeklyReviewOutlookForwardMeasure = "weighted"
+	WeeklyReviewOutlookForwardMeasureCommitEvidence          WeeklyReviewOutlookForwardMeasure = "commit_evidence"
+	WeeklyReviewOutlookForwardMeasureManagerCall             WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence WeeklyReviewOutlookForwardMeasure = "qualified_commit_evidence"
+	WeeklyReviewOutlookForwardMeasureQualifiedWeighted       WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
+	WeeklyReviewOutlookForwardMeasureWeighted                WeeklyReviewOutlookForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
@@ -23393,6 +24094,10 @@ func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
 	case WeeklyReviewOutlookForwardMeasureCommitEvidence:
 		return true
 	case WeeklyReviewOutlookForwardMeasureManagerCall:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence:
+		return true
+	case WeeklyReviewOutlookForwardMeasureQualifiedWeighted:
 		return true
 	case WeeklyReviewOutlookForwardMeasureWeighted:
 		return true
@@ -24096,6 +24801,7 @@ const (
 	WorklistItemSourceConversationClaim   WorklistItemSource = "conversation_claim"
 	WorklistItemSourceCustomerWaiting     WorklistItemSource = "customer_waiting"
 	WorklistItemSourceDealAtRisk          WorklistItemSource = "deal_at_risk"
+	WorklistItemSourceDealReview          WorklistItemSource = "deal_review"
 	WorklistItemSourceDealSuggestion      WorklistItemSource = "deal_suggestion"
 	WorklistItemSourceDedupeCandidate     WorklistItemSource = "dedupe_candidate"
 	WorklistItemSourceDomainQuestion      WorklistItemSource = "domain_question"
@@ -24141,6 +24847,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceCustomerWaiting:
 		return true
 	case WorklistItemSourceDealAtRisk:
+		return true
+	case WorklistItemSourceDealReview:
 		return true
 	case WorklistItemSourceDealSuggestion:
 		return true
@@ -24270,6 +24978,7 @@ const (
 	WorklistReachSourceConversationClaim   WorklistReachSource = "conversation_claim"
 	WorklistReachSourceCustomerWaiting     WorklistReachSource = "customer_waiting"
 	WorklistReachSourceDealAtRisk          WorklistReachSource = "deal_at_risk"
+	WorklistReachSourceDealReview          WorklistReachSource = "deal_review"
 	WorklistReachSourceDealSuggestion      WorklistReachSource = "deal_suggestion"
 	WorklistReachSourceDedupeCandidate     WorklistReachSource = "dedupe_candidate"
 	WorklistReachSourceDomainQuestion      WorklistReachSource = "domain_question"
@@ -24315,6 +25024,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceCustomerWaiting:
 		return true
 	case WorklistReachSourceDealAtRisk:
+		return true
+	case WorklistReachSourceDealReview:
 		return true
 	case WorklistReachSourceDealSuggestion:
 		return true
@@ -25048,6 +25759,48 @@ func (e GetAiTaskFlowParamsWindow) Valid() bool {
 	}
 }
 
+// Defines values for GetAccountCoverageParamsScopeKind.
+const (
+	GetAccountCoverageParamsScopeKindOwner     GetAccountCoverageParamsScopeKind = "owner"
+	GetAccountCoverageParamsScopeKindTeam      GetAccountCoverageParamsScopeKind = "team"
+	GetAccountCoverageParamsScopeKindWorkspace GetAccountCoverageParamsScopeKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsScopeKind enum.
+func (e GetAccountCoverageParamsScopeKind) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsScopeKindOwner:
+		return true
+	case GetAccountCoverageParamsScopeKindTeam:
+		return true
+	case GetAccountCoverageParamsScopeKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetAccountCoverageParamsView.
+const (
+	GetAccountCoverageParamsViewSilent         GetAccountCoverageParamsView = "silent"
+	GetAccountCoverageParamsViewSingleThreaded GetAccountCoverageParamsView = "single_threaded"
+	GetAccountCoverageParamsViewUntouched      GetAccountCoverageParamsView = "untouched"
+)
+
+// Valid indicates whether the value is a known member of the GetAccountCoverageParamsView enum.
+func (e GetAccountCoverageParamsView) Valid() bool {
+	switch e {
+	case GetAccountCoverageParamsViewSilent:
+		return true
+	case GetAccountCoverageParamsViewSingleThreaded:
+		return true
+	case GetAccountCoverageParamsViewUntouched:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListSalesDecisionsParamsStatus.
 const (
 	ListSalesDecisionsParamsStatusDone ListSalesDecisionsParamsStatus = "done"
@@ -25654,33 +26407,6 @@ func (e GetAvailability200JSONResponseBodyCalendarBacking) Valid() bool {
 	case GetAvailability200JSONResponseBodyCalendarBackingNone:
 		return true
 	case GetAvailability200JSONResponseBodyCalendarBackingUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for BookMeetingJSONBodyLinksEntityType.
-const (
-	BookMeetingJSONBodyLinksEntityTypeCompany BookMeetingJSONBodyLinksEntityType = "company"
-	BookMeetingJSONBodyLinksEntityTypeContact BookMeetingJSONBodyLinksEntityType = "contact"
-	BookMeetingJSONBodyLinksEntityTypeDeal    BookMeetingJSONBodyLinksEntityType = "deal"
-	BookMeetingJSONBodyLinksEntityTypeLead    BookMeetingJSONBodyLinksEntityType = "lead"
-	BookMeetingJSONBodyLinksEntityTypeProject BookMeetingJSONBodyLinksEntityType = "project"
-)
-
-// Valid indicates whether the value is a known member of the BookMeetingJSONBodyLinksEntityType enum.
-func (e BookMeetingJSONBodyLinksEntityType) Valid() bool {
-	switch e {
-	case BookMeetingJSONBodyLinksEntityTypeCompany:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeContact:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeDeal:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeLead:
-		return true
-	case BookMeetingJSONBodyLinksEntityTypeProject:
 		return true
 	default:
 		return false
@@ -26847,10 +27573,13 @@ func (e ListForecastCallsParamsScopeKind) Valid() bool {
 
 // Defines values for GetForecastMovementParamsReading.
 const (
-	GetForecastMovementParamsReadingBestCase GetForecastMovementParamsReading = "best_case"
-	GetForecastMovementParamsReadingEvidence GetForecastMovementParamsReading = "evidence"
-	GetForecastMovementParamsReadingOpen     GetForecastMovementParamsReading = "open"
-	GetForecastMovementParamsReadingWeighted GetForecastMovementParamsReading = "weighted"
+	GetForecastMovementParamsReadingBestCase          GetForecastMovementParamsReading = "best_case"
+	GetForecastMovementParamsReadingEvidence          GetForecastMovementParamsReading = "evidence"
+	GetForecastMovementParamsReadingOpen              GetForecastMovementParamsReading = "open"
+	GetForecastMovementParamsReadingQualifiedBestCase GetForecastMovementParamsReading = "qualified_best_case"
+	GetForecastMovementParamsReadingQualifiedEvidence GetForecastMovementParamsReading = "qualified_evidence"
+	GetForecastMovementParamsReadingQualifiedWeighted GetForecastMovementParamsReading = "qualified_weighted"
+	GetForecastMovementParamsReadingWeighted          GetForecastMovementParamsReading = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
@@ -26861,6 +27590,12 @@ func (e GetForecastMovementParamsReading) Valid() bool {
 	case GetForecastMovementParamsReadingEvidence:
 		return true
 	case GetForecastMovementParamsReadingOpen:
+		return true
+	case GetForecastMovementParamsReadingQualifiedBestCase:
+		return true
+	case GetForecastMovementParamsReadingQualifiedEvidence:
+		return true
+	case GetForecastMovementParamsReadingQualifiedWeighted:
 		return true
 	case GetForecastMovementParamsReadingWeighted:
 		return true
@@ -27316,6 +28051,30 @@ func (e ListPartnersParamsCertStatus) Valid() bool {
 	case ListPartnersParamsCertStatusCertified:
 		return true
 	case ListPartnersParamsCertStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListProductsParamsTaxCategory.
+const (
+	ListProductsParamsTaxCategoryExempt       ListProductsParamsTaxCategory = "exempt"
+	ListProductsParamsTaxCategoryReduced      ListProductsParamsTaxCategory = "reduced"
+	ListProductsParamsTaxCategoryStandard     ListProductsParamsTaxCategory = "standard"
+	ListProductsParamsTaxCategoryUnclassified ListProductsParamsTaxCategory = "unclassified"
+)
+
+// Valid indicates whether the value is a known member of the ListProductsParamsTaxCategory enum.
+func (e ListProductsParamsTaxCategory) Valid() bool {
+	switch e {
+	case ListProductsParamsTaxCategoryExempt:
+		return true
+	case ListProductsParamsTaxCategoryReduced:
+		return true
+	case ListProductsParamsTaxCategoryStandard:
+		return true
+	case ListProductsParamsTaxCategoryUnclassified:
 		return true
 	default:
 		return false
@@ -28129,6 +28888,97 @@ type AccessPreviewMemberStatus string
 
 // AccessPreviewRowScope defines model for AccessPreview.RowScope.
 type AccessPreviewRowScope string
+
+// AccountCoverage defines model for AccountCoverage.
+type AccountCoverage struct {
+	// ActivityReadable False when the reader may not read activity: the two account views are then empty and uncounted.
+	ActivityReadable  bool                  `json:"activity_readable"`
+	AsOf              time.Time             `json:"as_of"`
+	Counts            AccountCoverageCounts `json:"counts"`
+	FrameworkRevision int64                 `json:"framework_revision"`
+	Rows              []AccountCoverageRow  `json:"rows"`
+
+	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
+	Scope AnalyticsScope `json:"scope"`
+
+	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	Thresholds AccountCoverageThresholds `json:"thresholds"`
+
+	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
+	Truncated *bool               `json:"truncated,omitempty"`
+	View      AccountCoverageView `json:"view"`
+
+	// Withheld Deals of the view whose committee the reader could not read whole, left out rather than judged.
+	Withheld *int `json:"withheld,omitempty"`
+}
+
+// AccountCoverageView defines model for AccountCoverage.View.
+type AccountCoverageView string
+
+// AccountCoverageAccount defines model for AccountCoverageAccount.
+type AccountCoverageAccount struct {
+	Id      openapi_types.UUID  `json:"id"`
+	Name    string              `json:"name"`
+	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
+}
+
+// AccountCoverageCounts defines model for AccountCoverageCounts.
+type AccountCoverageCounts struct {
+	Silent         *int `json:"silent,omitempty"`
+	SingleThreaded int  `json:"single_threaded"`
+	Untouched      *int `json:"untouched,omitempty"`
+}
+
+// AccountCoverageDeal defines model for AccountCoverageDeal.
+type AccountCoverageDeal struct {
+	AmountMinor       *int64              `json:"amount_minor,omitempty"`
+	ClosedAt          *time.Time          `json:"closed_at,omitempty"`
+	Currency          *string             `json:"currency,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	Id                openapi_types.UUID  `json:"id"`
+	Name              string              `json:"name"`
+	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	Stage             *string             `json:"stage,omitempty"`
+}
+
+// AccountCoverageRow defines model for AccountCoverageRow.
+type AccountCoverageRow struct {
+	Company AccountCoverageAccount `json:"company"`
+
+	// DaysSilent Days since the newest exchange either way, or since the won deal closed when there was none.
+	DaysSilent *int                 `json:"days_silent,omitempty"`
+	Deal       *AccountCoverageDeal `json:"deal,omitempty"`
+
+	// EngagedSeats Contacts engaged on the deal, for a single-threaded row.
+	EngagedSeats *int       `json:"engaged_seats,omitempty"`
+	LastInbound  *time.Time `json:"last_inbound,omitempty"`
+	LastOutbound *time.Time `json:"last_outbound,omitempty"`
+
+	// NamedSeats Contacts named on the deal, engaged or not.
+	NamedSeats *int `json:"named_seats,omitempty"`
+
+	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
+
+	// OpenDeals Open deals on the account, for an untouched row.
+	OpenDeals *int                 `json:"open_deals,omitempty"`
+	WonDeal   *AccountCoverageDeal `json:"won_deal,omitempty"`
+}
+
+// AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+type AccountCoverageThresholds struct {
+	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty"`
+
+	// SilentDays A won account with no exchange within this many days is silent. Default 30.
+	SilentDays *int `json:"silent_days,omitempty"`
+
+	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
+	UntouchedDays *int `json:"untouched_days,omitempty"`
+
+	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
+	WonWithinDays *int `json:"won_within_days,omitempty"`
+}
 
 // AccountDraftReason One thing the draft was written from, named so the reader can check it rather than
 // take the draft on trust. Structured rather than a phrase, because the composer
@@ -31307,6 +32157,18 @@ type AssuranceFreshness struct {
 // AssuranceFreshnessState `out_of_date` when any input changed after the check read it. Its verdict and findings stay as the check left them until the next run. `unknown` when no check has run since changes were first tracked: run the check again to learn whether anything changed.
 type AssuranceFreshnessState string
 
+// AssuranceReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+type AssuranceReviewDeliveries struct {
+	// Delivered Reviews that have their task, including a task somebody already completed while the review stays open.
+	Delivered int `json:"delivered"`
+
+	// Failed Reviews whose task could not be delivered after every retry.
+	Failed int `json:"failed"`
+
+	// Pending Reviews whose task is queued or retrying.
+	Pending int `json:"pending"`
+}
+
 // AssuranceRunAccepted The pass is enqueued. Its findings appear when it lands.
 type AssuranceRunAccepted struct {
 	Status AssuranceRunAcceptedStatus `json:"status"`
@@ -32127,6 +32989,11 @@ type AttentionItem struct {
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
 
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -32220,7 +33087,7 @@ type AttentionItem struct {
 	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
 	ReminderDue *bool `json:"reminder_due,omitempty"`
 
-	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve.
+	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
@@ -40874,10 +41741,11 @@ type CreateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -40912,11 +41780,18 @@ type CreateLossReasonRequest struct {
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
-	BuyerCompanyId *openapi_types.UUID   `json:"buyer_company_id,omitempty"`
-	Currency       string                `json:"currency"`
-	IntroText      *string               `json:"intro_text,omitempty"`
-	LineItems      *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source         string                `json:"source"`
+	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
+	Currency       string              `json:"currency"`
+	IntroText      *string             `json:"intro_text,omitempty"`
+
+	// Language The language new lines take product names in. Unset is the entity's, else the template's.
+	Language *string `json:"language,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. Defaults to the entity the author works for;
+	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
+	Source        string                `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -41020,6 +41895,9 @@ type CreateProductRequest struct {
 	Sku            *string  `json:"sku,omitempty"`
 	Source         string   `json:"source"`
 
+	// TaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
+	TaxCategory *CreateProductRequestTaxCategory `json:"tax_category,omitempty"`
+
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
 	Unit           *string `json:"unit,omitempty"`
 	UnitPriceMinor int64   `json:"unit_price_minor"`
@@ -41033,6 +41911,9 @@ type CreateProductRequestBillingModel string
 
 // CreateProductRequestComponentKind What kind of value the product is. Omit or send null to leave it unclassified.
 type CreateProductRequestComponentKind string
+
+// CreateProductRequestTaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
+type CreateProductRequestTaxCategory string
 
 // CreateProjectHealthAssessmentRequest defines model for CreateProjectHealthAssessmentRequest.
 type CreateProjectHealthAssessmentRequest struct {
@@ -42599,6 +43480,86 @@ type DealSuggestionListResponse struct {
 	Page PageInfo         `json:"page"`
 }
 
+// DealViability defines model for DealViability.
+type DealViability struct {
+	// AssessedAt When the input check last assessed the deal; null when it never did.
+	AssessedAt *time.Time `json:"assessed_at,omitempty"`
+
+	// CloseDateOverdue True when the expected close date is before today in the installation's zone.
+	CloseDateOverdue     bool `json:"close_date_overdue"`
+	CloseDateProvisional bool `json:"close_date_provisional"`
+
+	// Complete Whether the deal was judged on its current evidence under the current policy.
+	Complete *bool              `json:"complete,omitempty"`
+	DealId   openapi_types.UUID `json:"deal_id"`
+
+	// Disposition The review standing the qualification rests on.
+	Disposition       *DealViabilityDisposition `json:"disposition,omitempty"`
+	ExpectedCloseDate *openapi_types.Date       `json:"expected_close_date,omitempty"`
+	PolicyVersion     *string                   `json:"policy_version,omitempty"`
+
+	// Qualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+	Qualification DealViabilityQualification `json:"qualification"`
+
+	// QualificationMode Whether the installation's qualified forecast applies `qualification`.
+	QualificationMode DealViabilityQualificationMode `json:"qualification_mode"`
+
+	// Receipt The input check's last answer about the deal. Absent when it never assessed it.
+	Receipt *DealViabilityReceipt `json:"receipt,omitempty"`
+
+	// Review The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+	Review *DealViabilityReview `json:"review,omitempty"`
+
+	// StageProbability The baseline chance, the deal's stage probability.
+	StageProbability int `json:"stage_probability"`
+}
+
+// DealViabilityDisposition The review standing the qualification rests on.
+type DealViabilityDisposition string
+
+// DealViabilityQualification The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
+type DealViabilityQualification string
+
+// DealViabilityQualificationMode Whether the installation's qualified forecast applies `qualification`.
+type DealViabilityQualificationMode string
+
+// DealViabilityReceipt The input check's last answer about the deal. Absent when it never assessed it.
+type DealViabilityReceipt struct {
+	// Current Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`.
+	Current bool `json:"current"`
+
+	// Outcome The check's outcome, such as `eligible` or `unsupported`.
+	Outcome string `json:"outcome"`
+
+	// PolicyVersion The viability policy the check applied.
+	PolicyVersion string `json:"policy_version"`
+
+	// Reasons The reason codes the check recorded.
+	Reasons    []string  `json:"reasons"`
+	ValidUntil time.Time `json:"valid_until"`
+}
+
+// DealViabilityReview The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done.
+type DealViabilityReview struct {
+	// DeliveryState How far handing the review to a task got; null before a pass queued it.
+	DeliveryState *DealViabilityReviewDeliveryState `json:"delivery_state,omitempty"`
+	Episode       int                               `json:"episode"`
+	Id            openapi_types.UUID                `json:"id"`
+	OpenedAt      time.Time                         `json:"opened_at"`
+
+	// Task The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+	Task *DealViabilityTask `json:"task,omitempty"`
+}
+
+// DealViabilityReviewDeliveryState How far handing the review to a task got; null before a pass queued it.
+type DealViabilityReviewDeliveryState string
+
+// DealViabilityTask The task the review was delivered as. Absent until delivered, or when the reader may not see it.
+type DealViabilityTask struct {
+	Done bool               `json:"done"`
+	Id   openapi_types.UUID `json:"id"`
+}
+
 // DealWinEvidence defines model for DealWinEvidence.
 type DealWinEvidence struct {
 	// HasSignedContract True when the deal has a contract that left draft, with a signing date and a
@@ -42864,11 +43825,16 @@ type DisqualifyLeadRequest struct {
 
 // DomainQuestion defines model for DomainQuestion.
 type DomainQuestion struct {
-	AskedAt      time.Time  `json:"asked_at"`
-	Deferred     bool       `json:"deferred"`
-	Domain       string     `json:"domain"`
-	EffectiveUrl *string    `json:"effective_url,omitempty"`
-	EvidenceAt   *time.Time `json:"evidence_at,omitempty"`
+	AskedAt  time.Time `json:"asked_at"`
+	Deferred bool      `json:"deferred"`
+	Domain   string    `json:"domain"`
+
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+	EffectiveUrl  *string                `json:"effective_url,omitempty"`
+	EvidenceAt    *time.Time             `json:"evidence_at,omitempty"`
 
 	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
 	Note          *string   `json:"note,omitempty"`
@@ -42876,11 +43842,70 @@ type DomainQuestion struct {
 	RedirectChain *[]string `json:"redirect_chain,omitempty"`
 }
 
+// DomainQuestionContact defines model for DomainQuestionContact.
+type DomainQuestionContact struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
+// DomainQuestionContext Whose mail raised a company question, and which existing company the evidence points
+// at. Every contact and company named here passed the reader's own row scope; a sender the
+// reader may not see is counted in `contact_count` and never named.
+type DomainQuestionContext struct {
+	// ContactCount How many contacts sent the mail behind the question, seen or not.
+	ContactCount int `json:"contact_count"`
+
+	// Contacts Up to three senders of the question's mail the reader may see, newest mail first.
+	Contacts []DomainQuestionContact `json:"contacts"`
+
+	// HiddenSenders True when contacts sent the mail but the reader may see none of them.
+	HiddenSenders bool `json:"hidden_senders"`
+
+	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
+	// live contact with an address on the domain, less workspace seats and anyone who already
+	// holds a primary employment. Those keep the employer they have.
+	LinkedContactCount int `json:"linked_contact_count"`
+
+	// OriginActivityId The newest mail behind the question, which the reader may read.
+	OriginActivityId *openapi_types.UUID `json:"origin_activity_id,omitempty"`
+
+	// SenderAddress The From address of the newest mail behind the question, which the reader may read.
+	SenderAddress *string `json:"sender_address,omitempty"`
+
+	// SiteRead Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+	SiteRead *DomainQuestionContextSiteRead `json:"site_read,omitempty"`
+
+	// SuggestedCompany An existing company the evidence points at. Sent only when exactly one live company the
+	// reader may see qualifies. Nothing is linked until the reader confirms it with
+	// `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+	SuggestedCompany *DomainQuestionSuggestion `json:"suggested_company,omitempty"`
+}
+
+// DomainQuestionContextSiteRead Sent for an `unevidenced` question only. `unread` means no read of the site succeeded; `read` means the site was read and named no company.
+type DomainQuestionContextSiteRead string
+
 // DomainQuestionPage defines model for DomainQuestionPage.
 type DomainQuestionPage struct {
 	Data []DomainQuestion `json:"data"`
 	Page PageInfo         `json:"page"`
 }
+
+// DomainQuestionSuggestion An existing company the evidence points at. Sent only when exactly one live company the
+// reader may see qualifies. Nothing is linked until the reader confirms it with
+// `POST /capture/domain-questions/{domain}/keep` and its `company_id`.
+type DomainQuestionSuggestion struct {
+	// Basis - `name_twin`: an existing company has exactly the name the site states.
+	// - `redirect_target`: the site redirects to a domain this company already owns.
+	// - `contact_employer`: a sender already has this company as their current employer.
+	Basis DomainQuestionSuggestionBasis `json:"basis"`
+	Id    openapi_types.UUID            `json:"id"`
+	Name  string                        `json:"name"`
+}
+
+// DomainQuestionSuggestionBasis - `name_twin`: an existing company has exactly the name the site states.
+// - `redirect_target`: the site redirects to a domain this company already owns.
+// - `contact_employer`: a sender already has this company as their current employer.
+type DomainQuestionSuggestionBasis string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
 type DraftSteering struct {
@@ -43186,8 +44211,9 @@ type EmailSignature struct {
 	// Phone The member's phone number, filled into the workspace template's `{phone}`.
 	Phone string `json:"phone"`
 
-	// TemplateActive The workspace has a signature template. Every send this member makes then signs
-	// with the template, filled in with their name, title and phone, instead of `body`, unless effective personal `html` is set.
+	// TemplateActive The member's mail has a signature template: their legal entity's own, or else the
+	// workspace's. Every send this member makes then signs with that template, filled in
+	// with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
@@ -43222,8 +44248,10 @@ type EmailSignatureTemplate struct {
 	Locks *SettingLocks `json:"locks,omitempty"`
 
 	// Template The workspace's signature layout as HTML, with the placeholders `{name}`, `{title}`,
-	// `{phone}` and `{logo}`. `{logo}` embeds the workspace's own company logo, sized for
-	// mail, in the message itself. A send keeps paragraphs, line breaks, bold, italic, underline, links
+	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
+	// sender works for, sized for mail, in the message itself; the default entity's logo is
+	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
+	// imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
 	// and spans with a colour and a pixel size, and drops everything else. Empty means
 	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
@@ -44087,7 +45115,10 @@ type ForecastAssurance struct {
 
 	// Readiness What the run entitles a reader to conclude. `checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other says we could not look.
 	Readiness *ForecastAssuranceReadiness `json:"readiness,omitempty"`
-	RunId     openapi_types.UUID          `json:"run_id"`
+
+	// ReviewDeliveries The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check.
+	ReviewDeliveries AssuranceReviewDeliveries `json:"review_deliveries"`
+	RunId            openapi_types.UUID        `json:"run_id"`
 
 	// Sources Every source the run tried, and how far it reached into each.
 	Sources []ForecastAssuranceSource `json:"sources"`
@@ -44235,10 +45266,10 @@ type ForecastLanding struct {
 	// AmountMinor The projection itself, in the installation's base currency.
 	AmountMinor int64 `json:"amount_minor"`
 
-	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
-	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
 	Measure ForecastLandingMeasure `json:"measure"`
 
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
@@ -44251,10 +45282,10 @@ type ForecastLanding struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
 type ForecastLandingCaveat string
 
-// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`.
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
 type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
@@ -44277,11 +45308,11 @@ type ForecastMovementBucket struct {
 	AmountMinor int64 `json:"amount_minor"`
 	DealCount   int   `json:"deal_count"`
 
-	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+	// Name `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
 	Name ForecastMovementBucketName `json:"name"`
 }
 
-// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since.
+// ForecastMovementBucketName `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
 type ForecastMovementBucketName string
 
 // ForecastMovementDeal defines model for ForecastMovementDeal.
@@ -44362,6 +45393,9 @@ type ForecastReadings struct {
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
 	PricedCount int `json:"priced_count"`
 
+	// QualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+	QualificationMode ForecastReadingsQualificationMode `json:"qualification_mode"`
+
 	// Qualified The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
 	// A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
 	Qualified *ForecastQualifiedReadings `json:"qualified,omitempty"`
@@ -44401,6 +45435,9 @@ type ForecastReadings struct {
 	// WonMinor Deals whose ACTUAL close instant fell in this period, by its local days. Not the expected date: a deal expected in March and won in April is April's.
 	WonMinor int64 `json:"won_minor"`
 }
+
+// ForecastReadingsQualificationMode Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
+type ForecastReadingsQualificationMode string
 
 // ForecastReadingsScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 type ForecastReadingsScopeKind string
@@ -46333,11 +47370,18 @@ type InstallationSettings struct {
 	// something by it, and one that commits everything does not — their weighted number
 	// is the honest one.
 	//
-	// `commit_evidence` is the default and the strictest: committed deals whose close
-	// date somebody confirmed, a provisional date being a guess that stays out.
+	// `commit_evidence` is the strictest baseline: committed deals whose close date
+	// somebody confirmed, a provisional date being a guess that stays out.
+	// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+	// the deals the customer still supports (the `qualified` block on `GET /forecast`).
 	// `manager_call` takes the authored call as the whole period's landing and is not
 	// added to what is already won; with no current call the read falls back to
 	// `commit_evidence` and says so in the landing's `caveat`.
+	//
+	// With no measure saved, the landing uses `qualified_commit_evidence` while the
+	// installation enforces viability reviews and `commit_evidence` otherwise; this field
+	// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+	// client shows an unknown value by its name.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
@@ -46424,11 +47468,18 @@ type InstallationSettingsDateFormat string
 // something by it, and one that commits everything does not — their weighted number
 // is the honest one.
 //
-// `commit_evidence` is the default and the strictest: committed deals whose close
-// date somebody confirmed, a provisional date being a guess that stays out.
+// `commit_evidence` is the strictest baseline: committed deals whose close date
+// somebody confirmed, a provisional date being a guess that stays out.
+// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
+// the deals the customer still supports (the `qualified` block on `GET /forecast`).
 // `manager_call` takes the authored call as the whole period's landing and is not
 // added to what is already won; with no current call the read falls back to
 // `commit_evidence` and says so in the landing's `caveat`.
+//
+// With no measure saved, the landing uses `qualified_commit_evidence` while the
+// installation enforces viability reviews and `commit_evidence` otherwise; this field
+// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+// client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
 
 // InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
@@ -46693,6 +47744,20 @@ type InviteDealRoomParticipantRequest struct {
 	Email      openapi_types.Email            `json:"email"`
 	FullName   string                         `json:"full_name"`
 	Source     string                         `json:"source"`
+}
+
+// InviteEmailHandoff What became of an invitation email at the time of the answer, as on the Deal Room invite.
+type InviteEmailHandoff struct {
+	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
+	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
+	// refuses the address is reported a moment later as the member's
+	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	Queued bool `json:"queued"`
+
+	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
+	// set-password link can be mailed at all. False means the admin passes the link on by
+	// hand (`issueUserPasswordLink`).
+	Sendable bool `json:"sendable"`
 }
 
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
@@ -47863,8 +48928,14 @@ type LegalEntity struct {
 	RegisterCourt *string `json:"register_court,omitempty"`
 
 	// RegisterNumber The entity's commercial register number.
-	RegisterNumber *string   `json:"register_number,omitempty"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	RegisterNumber *string `json:"register_number,omitempty"`
+
+	// SignatureTemplate The mail signature layout of a sender assigned to this entity, with the placeholders
+	// of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
+	// workspace's template. Always null on the default entity, which signs with the
+	// workspace's template (`/email-signature-template`).
+	SignatureTemplate *string   `json:"signature_template,omitempty"`
+	UpdatedAt         time.Time `json:"updated_at"`
 
 	// VatId The entity's VAT identification number.
 	VatId   *string `json:"vat_id,omitempty"`
@@ -49328,11 +50399,16 @@ type MeetingGuest struct {
 
 // MeetingInvitation defines model for MeetingInvitation.
 type MeetingInvitation struct {
-	CalendarUrl     *string            `json:"calendar_url,omitempty"`
-	End             time.Time          `json:"end"`
-	Id              openapi_types.UUID `json:"id"`
-	Location        string             `json:"location"`
-	ManagementToken *string            `json:"management_token,omitempty"`
+	// AttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+	// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+	// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+	// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+	AttentionReason *MeetingInvitationAttentionReason `json:"attention_reason,omitempty"`
+	CalendarUrl     *string                           `json:"calendar_url,omitempty"`
+	End             time.Time                         `json:"end"`
+	Id              openapi_types.UUID                `json:"id"`
+	Location        string                            `json:"location"`
+	ManagementToken *string                           `json:"management_token,omitempty"`
 
 	// Provider The calendar provider that holds the event. Omitted on guest reads.
 	Provider       *MeetingInvitationProvider       `json:"provider,omitempty"`
@@ -49348,6 +50424,12 @@ type MeetingInvitation struct {
 	// VideoUrl The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one.
 	VideoUrl *string `json:"video_url,omitempty"`
 }
+
+// MeetingInvitationAttentionReason Why a `needs_attention` invitation waits. `calendar_disconnected`: the host's calendar refused
+// Margince, so every queued invitation of that host and calendar was paused; they go out again on
+// their own once the calendar is reconnected with write access. `delivery_failed`: this one
+// invitation failed its last attempt; retry it. Absent when the reason is unknown and on guest reads.
+type MeetingInvitationAttentionReason string
 
 // MeetingInvitationProvider The calendar provider that holds the event. Omitted on guest reads.
 type MeetingInvitationProvider string
@@ -49372,12 +50454,21 @@ type MeetingInvitationChangeAction string
 // MeetingInvitationRequest defines model for MeetingInvitationRequest.
 type MeetingInvitationRequest struct {
 	AttendeeEmail openapi_types.Email `json:"attendee_email"`
-	ContactId     openapi_types.UUID  `json:"contact_id"`
-	Description   string              `json:"description"`
-	End           time.Time           `json:"end"`
-	Location      string              `json:"location"`
-	Start         time.Time           `json:"start"`
-	Subject       string              `json:"subject"`
+
+	// AttendeeEmails Further attendees beside `attendee_email`, all on the one calendar event (25 in total).
+	// Each address is resolved to a contact, a colleague or a lead the host can see; an
+	// address matching nobody is invited as named by the host. Contacts and leads must hold
+	// transactional consent; colleagues and host-named addresses are not asked.
+	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
+	ContactId      openapi_types.UUID     `json:"contact_id"`
+	Description    string                 `json:"description"`
+	End            time.Time              `json:"end"`
+
+	// Links Further records to file the meeting on, beside the invitee.
+	Links    *[]MeetingRecordLink `json:"links,omitempty"`
+	Location string               `json:"location"`
+	Start    time.Time            `json:"start"`
+	Subject  string               `json:"subject"`
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
@@ -49682,6 +50773,15 @@ type MeetingReadyRequest struct {
 	// undo sends the revision it confirmed, and takes back only that confirmation.
 	PreparationRevision string `json:"preparation_revision"`
 }
+
+// MeetingRecordLink defines model for MeetingRecordLink.
+type MeetingRecordLink struct {
+	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
+}
+
+// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
@@ -50577,9 +51677,26 @@ type Offer struct {
 	Id         openapi_types.UUID `json:"id"`
 	IntroText  *string            `json:"intro_text,omitempty"`
 
-	// IssuerSnapshot Seller legal block captured at send time.
+	// IssuerSnapshot Seller legal block captured at send time, so a later change to the legal entity
+	// leaves the sent document as it was. Keys: `workspace_name` (the issuer name the
+	// document prints), `base_currency`, and, on an offer sent since offers name their
+	// legal entity, `legal_entity_id`, `display_name`, `legal_name`, `address` (`line1`,
+	// `line2`, `postal_code`, `city`, `region`), `country`, `vat_id`, `register_court`,
+	// `register_number`, `bank_account_holder`, `iban`, `bic` and `logo_object_key`. A key
+	// the entity has no value for is absent.
 	IssuerSnapshot *map[string]interface{} `json:"issuer_snapshot,omitempty"`
-	LineItems      *[]OfferLineItem        `json:"line_items,omitempty"`
+
+	// Language The language the offer's new lines take product names in (ISO 639-1). It defaults to
+	// the issuing legal entity's `default_language`, else the language of the offer's
+	// template. Null on an offer created before offers had one: its lines take
+	// `Product.name`. The template's own fixed labels follow the template, not this.
+	Language *string `json:"language,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer: its name, address, VAT ID, bank details and
+	// logo are printed on the PDF. Null on an offer created before offers named one, which
+	// is issued by the default entity.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
 	// NetMinor Σ line nets; derived, never client-set.
 	NetMinor *int64 `json:"net_minor,omitempty"`
@@ -50661,7 +51778,10 @@ type OfferLineItem struct {
 	// Quantity Up to 3 decimal places (numeric 14,3); must be > 0.
 	Quantity float64 `json:"quantity"`
 
-	// TaxRate Percent, up to 2 decimal places.
+	// TaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+	TaxCategory *OfferLineItemTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate Percent, up to 2 decimal places. On a line with a `tax_category`, the rate the tax rate sheet holds for that category in the country of the offer's legal entity: today's on a draft, the send day's once sent.
 	TaxRate float64 `json:"tax_rate"`
 	Unit    string  `json:"unit"`
 
@@ -50681,6 +51801,9 @@ type OfferLineItemBillingIntervalMonths int
 
 // OfferLineItemBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type OfferLineItemBillingModel string
+
+// OfferLineItemTaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
+type OfferLineItemTaxCategory string
 
 // OfferLineItemInput One line to add. With `product_id`, description/unit/unit_price_minor/tax_rate default
 // from the product (a SNAPSHOT — later product edits never touch the line); without it,
@@ -50702,8 +51825,13 @@ type OfferLineItemInput struct {
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 
 	// Quantity > 0, up to 3 decimal places.
-	Quantity float64  `json:"quantity"`
-	TaxRate  *float64 `json:"tax_rate,omitempty"`
+	Quantity float64 `json:"quantity"`
+
+	// TaxCategory Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+	TaxCategory *OfferLineItemInputTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. The line then has no tax category and keeps this rate. Refused together with `tax_category` (422 `tax_rate_and_category`).
+	TaxRate *float64 `json:"tax_rate,omitempty"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`.
 	Unit           *string `json:"unit,omitempty"`
@@ -50715,6 +51843,9 @@ type OfferLineItemInputBillingIntervalMonths int
 
 // OfferLineItemInputBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type OfferLineItemInputBillingModel string
+
+// OfferLineItemInputTaxCategory Take the rate from the tax rate sheet, for the country of the offer's legal entity, else the installation's. Omitted with no `tax_rate`, the line takes its product's category; an unclassified product hands over its `default_tax_rate`. A category with no rate on the sheet is refused (422 `tax_rate_missing`).
+type OfferLineItemInputTaxCategory string
 
 // OfferListResponse defines model for OfferListResponse.
 type OfferListResponse struct {
@@ -51721,6 +52852,9 @@ type Product struct {
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
+	// TaxCategory Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.
+	TaxCategory *ProductTaxCategory `json:"tax_category,omitempty"`
+
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only.
 	Unit string `json:"unit"`
 
@@ -51745,10 +52879,29 @@ type ProductBillingModel string
 // ProductComponentKind What kind of value the product is, which the commercial mix report groups won value by. Null means nobody has classified it.
 type ProductComponentKind string
 
+// ProductTaxCategory Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. Null means nobody has classified it, and its lines take `default_tax_rate`.
+type ProductTaxCategory string
+
 // ProductListResponse defines model for ProductListResponse.
 type ProductListResponse struct {
 	Data []Product `json:"data"`
 	Page PageInfo  `json:"page"`
+}
+
+// ProductTranslation defines model for ProductTranslation.
+type ProductTranslation struct {
+	Description *string `json:"description,omitempty"`
+
+	// Language ISO 639-1, lower case.
+	Language  string    `json:"language"`
+	Name      string    `json:"name"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Version   int64     `json:"version"`
+}
+
+// ProductTranslationListResponse defines model for ProductTranslationListResponse.
+type ProductTranslationListResponse struct {
+	Data []ProductTranslation `json:"data"`
 }
 
 // ProgressDealRequest What `progress_deal` takes besides the deal, which the path names.
@@ -52652,6 +53805,10 @@ type PublicMeetingProposal struct {
 		End   time.Time `json:"end"`
 		Start time.Time `json:"start"`
 	} `json:"options"`
+
+	// Profile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+	// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+	// `video_app`), so the guest learns nothing about the calendar behind the page.
 	Profile PublicSchedulingProfile `json:"profile"`
 	Used    bool                    `json:"used"`
 }
@@ -52673,7 +53830,9 @@ type PublicOriginStatus struct {
 	Reachable *bool `json:"reachable,omitempty"`
 }
 
-// PublicSchedulingProfile defines model for PublicSchedulingProfile.
+// PublicSchedulingProfile A guest's view of a booking page. A paused page names its host and says `paused: true`;
+// every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
+// `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
 	CompanyName     string `json:"company_name"`
 	DurationMinutes int    `json:"duration_minutes"`
@@ -52683,7 +53842,10 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
-	Title   string  `json:"title"`
+
+	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
+	Paused bool   `json:"paused"`
+	Title  string `json:"title"`
 
 	// VideoApp Present when new meetings get a video call link from the host's calendar.
 	VideoApp *PublicSchedulingProfileVideoApp `json:"video_app,omitempty"`
@@ -52718,6 +53880,13 @@ type PutOnboardingStateRequestSourceMode string
 
 // PutOnboardingStateRequestStep Where the setup stands. `basis` is the installation's reporting basis — base currency and reporting timezone — asked of the creator once the company is confirmed, before any step about the contact answering. `invite` is the question asked next: whether the contact setting the installation up will also work in it, which is what decides whether the `voice` and `connect` steps are walked now or by the first colleague they invite. `team` is where a creator who will not work in it invites that colleague. A member's route begins at `voice`: the company and its basis are already settled, so their steps are the personal ones alone. `results` is kept for rows written before the invite existed; a client treats it as the connect step being next.
 type PutOnboardingStateRequestStep string
+
+// PutProductTranslationRequest defines model for PutProductTranslationRequest.
+type PutProductTranslationRequest struct {
+	// Description Left out or empty, the language has a name and no description.
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
 // default pipeline's first open stage; a pipeline alone takes its first open stage; a
@@ -53370,6 +54539,19 @@ type RecordTagsResponse struct {
 	Data     []RecordTag `json:"data"`
 	Withheld bool        `json:"withheld"`
 }
+
+// RecordTaxRateRequest defines model for RecordTaxRateRequest.
+type RecordTaxRateRequest struct {
+	Category RecordTaxRateRequestCategory `json:"category"`
+	Country  string                       `json:"country"`
+
+	// Rate Percent, for example "19" or "7.70".
+	Rate      string             `json:"rate"`
+	ValidFrom openapi_types.Date `json:"valid_from"`
+}
+
+// RecordTaxRateRequestCategory defines model for RecordTaxRateRequest.Category.
+type RecordTaxRateRequestCategory string
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -54055,6 +55237,94 @@ type ReportScope struct {
 // ReportScopeKind defines model for ReportScope.Kind.
 type ReportScopeKind string
 
+// ReportSetupObjective defines model for ReportSetupObjective.
+type ReportSetupObjective struct {
+	Deadline    *openapi_types.Date `json:"deadline,omitempty"`
+	Metric      ReportingMetricID   `json:"metric"`
+	TargetValue *int64              `json:"target_value,omitempty"`
+}
+
+// ReportSetupProposal defines model for ReportSetupProposal.
+type ReportSetupProposal struct {
+	// Clarifications What the words leave open, as questions to the reader.
+	Clarifications []string `json:"clarifications"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+	ModelUsed   *string   `json:"model_used,omitempty"`
+
+	// Name A name the words suggest.
+	Name      *string               `json:"name,omitempty"`
+	Objective *ReportSetupObjective `json:"objective,omitempty"`
+
+	// Selection The part of a reporting selection the words named. Absent means the words said nothing about it.
+	Selection ReportSetupSelection    `json:"selection"`
+	Site      ReportSetupProposalSite `json:"site"`
+
+	// Sources The phrase each resolved field came from.
+	Sources     []ReportSetupSource      `json:"sources"`
+	Unsupported []ReportSetupUnsupported `json:"unsupported"`
+}
+
+// ReportSetupProposalSite defines model for ReportSetupProposal.Site.
+type ReportSetupProposalSite string
+
+// ReportSetupRequest defines model for ReportSetupRequest.
+type ReportSetupRequest struct {
+	// Description What the reader typed. Only this and the catalog reach the model.
+	Description string `json:"description"`
+
+	// Site Which drawer asks: a sales initiative's goal or a custom report.
+	Site ReportSetupRequestSite `json:"site"`
+}
+
+// ReportSetupRequestSite Which drawer asks: a sales initiative's goal or a custom report.
+type ReportSetupRequestSite string
+
+// ReportSetupSelection The part of a reporting selection the words named. Absent means the words said nothing about it.
+type ReportSetupSelection struct {
+	Blocks    *[]ReportingBlockKind       `json:"blocks,omitempty"`
+	Country   *ReportingCountry           `json:"country,omitempty"`
+	Industry  *ReportingIndustry          `json:"industry,omitempty"`
+	Metrics   *[]ReportingMetricID        `json:"metrics,omitempty"`
+	Period    *ReportSetupSelectionPeriod `json:"period,omitempty"`
+	ProductId *ReportingProductId         `json:"product_id,omitempty"`
+}
+
+// ReportSetupSelectionPeriod defines model for ReportSetupSelection.Period.
+type ReportSetupSelectionPeriod string
+
+// ReportSetupSource defines model for ReportSetupSource.
+type ReportSetupSource struct {
+	Field ReportSetupSourceField `json:"field"`
+
+	// Label The value's name as the reader sees it.
+	Label *string `json:"label,omitempty"`
+
+	// Phrase The words it was read from.
+	Phrase string `json:"phrase"`
+
+	// Value The resolved id, or the value as proposed.
+	Value string `json:"value"`
+}
+
+// ReportSetupSourceField defines model for ReportSetupSource.Field.
+type ReportSetupSourceField string
+
+// ReportSetupUnsupported defines model for ReportSetupUnsupported.
+type ReportSetupUnsupported struct {
+	// Code `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+	Code   ReportSetupUnsupportedCode `json:"code"`
+	Phrase string                     `json:"phrase"`
+	Reason string                     `json:"reason"`
+}
+
+// ReportSetupUnsupportedCode `not_expressible` is a phrase the model found nothing for; `unknown_value` a value the catalog does not hold; `not_offered` a field, chart or objective this drawer cannot take.
+type ReportSetupUnsupportedCode string
+
 // ReportVocabulary What `describe_report_vocabulary` answers.
 type ReportVocabulary struct {
 	Vocabulary map[string]interface{} `json:"vocabulary"`
@@ -54137,6 +55407,8 @@ type ReportingCardQuestion struct {
 
 // ReportingCatalog defines model for ReportingCatalog.
 type ReportingCatalog struct {
+	AssessmentViews *[]SalesAssessmentView `json:"assessment_views,omitempty"`
+
 	// EditionRetentionDays How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
 	EditionRetentionDays *int                        `json:"edition_retention_days,omitempty"`
 	Metrics              []ReportingMetricDefinition `json:"metrics"`
@@ -54329,11 +55601,12 @@ type ReportingEditionQuestionStatus string
 
 // ReportingEvaluation defines model for ReportingEvaluation.
 type ReportingEvaluation struct {
-	Charts        []ReportingChart   `json:"charts"`
-	Context       ReportingContext   `json:"context"`
-	EvaluationKey string             `json:"evaluation_key"`
-	Metrics       []ReportingMetric  `json:"metrics"`
-	Selection     ReportingSelection `json:"selection"`
+	Charts          []ReportingChart           `json:"charts"`
+	Context         ReportingContext           `json:"context"`
+	EvaluationKey   string                     `json:"evaluation_key"`
+	Metrics         []ReportingMetric          `json:"metrics"`
+	OverviewActions *[]ReportingOverviewAction `json:"overview_actions,omitempty"`
+	Selection       ReportingSelection         `json:"selection"`
 }
 
 // ReportingEvidence defines model for ReportingEvidence.
@@ -54398,6 +55671,9 @@ type ReportingExecutionList struct {
 // landing's uncertainty, and it omits the deals counted by `eligible_count` minus
 // `priced_count` and by `fx_missing_count`.
 type ReportingForecastBasis struct {
+	// CallAt Submission time of the compatible manager call.
+	CallAt *time.Time `json:"call_at,omitempty"`
+
 	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
@@ -54413,6 +55689,9 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
+	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
 
 	// Period The fiscal quarter the landing and the range project, half-open.
 	Period ReportingWindow `json:"period"`
@@ -54431,6 +55710,8 @@ type ReportingFramework struct {
 
 // ReportingFrameworkInput defines model for ReportingFrameworkInput.
 type ReportingFrameworkInput struct {
+	// AccountCoverage What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	AccountCoverage *AccountCoverageThresholds      `json:"account_coverage,omitempty"`
 	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
 	Qualification   []ReportingQualification        `json:"qualification"`
 	Reason          string                          `json:"reason"`
@@ -54522,6 +55803,14 @@ type ReportingMetricDefinitionTemporalBasis string
 
 // ReportingMetricID defines model for ReportingMetricID.
 type ReportingMetricID string
+
+// ReportingOverviewAction An application-supplied action over the exact records named by its evidence reference.
+type ReportingOverviewAction struct {
+	Count    int                  `json:"count"`
+	Evidence ReportingEvidenceRef `json:"evidence"`
+	Id       string               `json:"id"`
+	Label    string               `json:"label"`
+}
 
 // ReportingPeriodBasis The calendar a kept question's period filters keep their dates in.
 type ReportingPeriodBasis struct {
@@ -55320,6 +56609,36 @@ type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 }
 
+// RouterActions The actions of one MCP router whose actions run REST routes.
+type RouterActions struct {
+	Actions []struct {
+		// Action The value the router's action argument takes.
+		Action string `json:"action"`
+
+		// AskUserFirst Whether the app asks its user to confirm it first.
+		AskUserFirst *bool `json:"ask_user_first,omitempty"`
+
+		// Body The JSON schema of its body argument.
+		Body *map[string]interface{} `json:"body,omitempty"`
+
+		// Does The route's summary.
+		Does string `json:"does"`
+
+		// Ids The path ids the action takes as arguments.
+		Ids *[]string `json:"ids,omitempty"`
+
+		// IfVersion Whether it takes if_version: the version you last read.
+		IfVersion *bool `json:"if_version,omitempty"`
+
+		// Query The query parameters it takes as arguments.
+		Query *[]string `json:"query,omitempty"`
+
+		// Route The method and route, for example POST /v1/record-grants.
+		Route string `json:"route"`
+	} `json:"actions"`
+	Router string `json:"router"`
+}
+
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
 // assignment — who applied it, when — comes from the record's own tags read, because a
 // page of fifty rows does not need fifty assignments to draw a chip.
@@ -55364,6 +56683,85 @@ type RunReportRequest struct {
 
 // RunReportRequestAggregatesFn `median` and `p75` answer NULL below a five-value sample floor rather than a number. A median over three deals is one deal's value wearing a statistic's name, and a reader comparing groups of different sizes would take the smallest group's outlier for its norm. The row still arrives with its count, so a blank beside n=3 has told the reader something true.
 type RunReportRequestAggregatesFn string
+
+// SalesAssessment defines model for SalesAssessment.
+type SalesAssessment struct {
+	// ActionIds Prioritized identifiers from the evaluation's overview_actions. No generated destinations or counts.
+	ActionIds *[]string `json:"action_ids,omitempty"`
+
+	// Cells The figures the sentences may cite, as the model read them.
+	Cells      []SalesAssessmentCell      `json:"cells"`
+	Confidence *SalesAssessmentConfidence `json:"confidence,omitempty"`
+
+	// Decisions How many recorded decisions the model read.
+	Decisions int `json:"decisions"`
+
+	// EvaluationKey The evaluation the assessment read.
+	EvaluationKey string    `json:"evaluation_key"`
+	GeneratedAt   time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy  WrittenBy                `json:"generated_by"`
+	ModelUsed    *string                  `json:"model_used,omitempty"`
+	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
+
+	// Paragraphs Connected evidence-cited prose. Sentences retains a bounded projection for older clients.
+	Paragraphs *[]SalesAssessmentParagraph `json:"paragraphs,omitempty"`
+	Sentences  []SalesAssessmentSentence   `json:"sentences"`
+}
+
+// SalesAssessmentConfidence defines model for SalesAssessment.Confidence.
+type SalesAssessmentConfidence string
+
+// SalesAssessmentCell defines model for SalesAssessmentCell.
+type SalesAssessmentCell struct {
+	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
+	Id    string `json:"id"`
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
+// SalesAssessmentDecision defines model for SalesAssessmentDecision.
+type SalesAssessmentDecision struct {
+	DealId  openapi_types.UUID `json:"deal_id"`
+	OwnerId openapi_types.UUID `json:"owner_id"`
+	Text    string             `json:"text"`
+}
+
+// SalesAssessmentParagraph defines model for SalesAssessmentParagraph.
+type SalesAssessmentParagraph = []SalesAssessmentSentence
+
+// SalesAssessmentRequest defines model for SalesAssessmentRequest.
+type SalesAssessmentRequest struct {
+	// Receipt Binds the explanation to the displayed evaluation and refuses changed inputs.
+	Receipt *struct {
+		At                time.Time `json:"at"`
+		FrameworkRevision int64     `json:"framework_revision"`
+		Key               string    `json:"key"`
+	} `json:"receipt,omitempty"`
+
+	// Refresh Ask the model again, whatever is kept.
+	Refresh   *bool                `json:"refresh,omitempty"`
+	Selection ReportingSelection   `json:"selection"`
+	View      *SalesAssessmentView `json:"view,omitempty"`
+}
+
+// SalesAssessmentSentence defines model for SalesAssessmentSentence.
+type SalesAssessmentSentence struct {
+	// Cells The cell ids the sentence rests on.
+	Cells []string                    `json:"cells"`
+	Kind  SalesAssessmentSentenceKind `json:"kind"`
+	Text  string                      `json:"text"`
+}
+
+// SalesAssessmentSentenceKind defines model for SalesAssessmentSentence.Kind.
+type SalesAssessmentSentenceKind string
+
+// SalesAssessmentView defines model for SalesAssessmentView.
+type SalesAssessmentView string
 
 // SalesDecision A decision recorded from a sales review. It is a task on its deal; this is the task read as a decision.
 type SalesDecision struct {
@@ -55782,10 +57180,16 @@ type SchedulingAliasRequest struct {
 // SchedulingProfile defines model for SchedulingProfile.
 type SchedulingProfile struct {
 	// Alias The host's live friendly address under `/book/`, absent when none is set. Change it with `PUT /scheduling/profile/alias`.
-	Alias             *string   `json:"alias,omitempty"`
-	BlockingCalendars *[]string `json:"blocking_calendars,omitempty"`
-	BufferMinutes     int       `json:"buffer_minutes"`
-	CalendarId        string    `json:"calendar_id"`
+	Alias *string `json:"alias,omitempty"`
+
+	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+	// the page names no calendar (a page saved before the profile existed reads this way).
+	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+	// the connection is gone or refused. Answered on the host's own profile read only.
+	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
+	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
+	BufferMinutes     int                       `json:"buffer_minutes"`
+	CalendarId        string                    `json:"calendar_id"`
 
 	// CompanyName The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	CompanyName     *string `json:"company_name,omitempty"`
@@ -55814,6 +57218,12 @@ type SchedulingProfile struct {
 	// VideoCall Add a video call link from the connected calendar (Google Meet or Microsoft Teams) to new meetings. Absent means on.
 	VideoCall *bool `json:"video_call,omitempty"`
 }
+
+// SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
+// the page names no calendar (a page saved before the profile existed reads this way).
+// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
+// the connection is gone or refused. Answered on the host's own profile read only.
+type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
@@ -55959,9 +57369,10 @@ type SdrTeamMeetings struct {
 
 // SdrTeamMember One member's figures. `submitted`, `accepted`, `rejected`, `recycled` and `waiting` are absent when `withheld_figures` names `handoffs`, and present otherwise, a zero included.
 type SdrTeamMember struct {
-	Accepted *int               `json:"accepted,omitempty"`
-	Id       openapi_types.UUID `json:"id"`
-	Label    string             `json:"label"`
+	Accepted    *int                 `json:"accepted,omitempty"`
+	EventTarget *SdrTeamMemberTarget `json:"event_target,omitempty"`
+	Id          openapi_types.UUID   `json:"id"`
+	Label       string               `json:"label"`
 
 	// MeetingsHeld Held meetings credited to this member. A meeting several members attended counts for each. Absent when the seat may not read activities, as `meetings` is.
 	MeetingsHeld *int `json:"meetings_held,omitempty"`
@@ -55969,12 +57380,15 @@ type SdrTeamMember struct {
 	// OldestWaitingSince When this member's longest current wait began. Absent with nothing waiting.
 	OldestWaitingSince *time.Time `json:"oldest_waiting_since,omitempty"`
 
-	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the Leads qualified reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
-	Qualified *int                 `json:"qualified,omitempty"`
-	Recycled  *int                 `json:"recycled,omitempty"`
-	Rejected  *int                 `json:"rejected,omitempty"`
-	Submitted *int                 `json:"submitted,omitempty"`
-	Target    *SdrTeamMemberTarget `json:"target,omitempty"`
+	// Qualified Leads that arrived in the period (by `created_at`, up to `observed_through`), are owned by this member now, and were qualified into a deal by `as_of`. It is the arrival-cohort reading's rule, so a reassigned lead counts for its new owner and an unowned lead for nobody. Absent when `withheld_figures` names `leads` or `qualified`.
+	Qualified *int `json:"qualified,omitempty"`
+
+	// QualifiedEvents First qualifications in the period credited to the owner at qualification. Counts attributed events only; qualification_unattributed identifies partial history.
+	QualifiedEvents *int                 `json:"qualified_events,omitempty"`
+	Recycled        *int                 `json:"recycled,omitempty"`
+	Rejected        *int                 `json:"rejected,omitempty"`
+	Submitted       *int                 `json:"submitted,omitempty"`
+	Target          *SdrTeamMemberTarget `json:"target,omitempty"`
 
 	// Unanswered Leads that wrote in during the period (by when they were routed, else created), are owned by this member now, are still open and had no first reply by `as_of`: the Leads still waiting for a reply reading's rule. Absent when `withheld_figures` names `leads` or `unanswered`.
 	Unanswered *int `json:"unanswered,omitempty"`
@@ -56009,6 +57423,9 @@ type SdrTeamReview struct {
 	Interval ReportingWindow  `json:"interval"`
 	Meetings *SdrTeamMeetings `json:"meetings,omitempty"`
 
+	// MemberEventTargets Monthly targets for first qualification events, separate from arrival-cohort targets.
+	MemberEventTargets *SdrTeamMemberTargets `json:"member_event_targets,omitempty"`
+
 	// MemberTargets What each member's `target` is held against. Present in qualification mode when the reader may read targets. A target is a monthly figure, so it is never held against a week.
 	MemberTargets *SdrTeamMemberTargets `json:"member_targets,omitempty"`
 	Members       []SdrTeamMember       `json:"members"`
@@ -56024,6 +57441,15 @@ type SdrTeamReview struct {
 
 	// ObservedThrough The earlier of `interval.end_at` and `as_of`. Nothing after it is counted.
 	ObservedThrough time.Time `json:"observed_through"`
+
+	// QualificationBasis Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+	QualificationBasis *SdrTeamReviewQualificationBasis `json:"qualification_basis,omitempty"`
+
+	// QualificationTargetUnattributed First qualifications in the target month whose historical owner was not recorded.
+	QualificationTargetUnattributed *int `json:"qualification_target_unattributed,omitempty"`
+
+	// QualificationUnattributed First qualifications in the period whose historical owner was not recorded. Member figures cover only the attributed events.
+	QualificationUnattributed *int `json:"qualification_unattributed,omitempty"`
 
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
@@ -56043,6 +57469,9 @@ type SdrTeamReview struct {
 
 // SdrTeamReviewMembershipBasis Whose work a team's figures hold. `current`: the team's members today, for every event in the period. No history of team membership is kept, so a member who left takes their past work with them and one who joined brings theirs.
 type SdrTeamReviewMembershipBasis string
+
+// SdrTeamReviewQualificationBasis Identifies qualification-event member fields. Absent on servers that supply arrival-cohort figures only.
+type SdrTeamReviewQualificationBasis string
 
 // SdrTeamReviewWithheldFigures defines model for SdrTeamReview.WithheldFigures.
 type SdrTeamReviewWithheldFigures string
@@ -57998,6 +59427,35 @@ type TaskReminderClaimRequest struct {
 	RemindAt time.Time `json:"remind_at"`
 }
 
+// TaxRate defines model for TaxRate.
+type TaxRate struct {
+	Category TaxRateCategory `json:"category"`
+
+	// Country Lower-case ISO 3166-1 alpha-2.
+	Country   string             `json:"country"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Rate Percent with two decimals, for example "19.00".
+	Rate      string             `json:"rate"`
+	ValidFrom openapi_types.Date `json:"valid_from"`
+}
+
+// TaxRateCategory defines model for TaxRate.Category.
+type TaxRateCategory string
+
+// TaxRateListResponse defines model for TaxRateListResponse.
+type TaxRateListResponse struct {
+	Data []TaxRate `json:"data"`
+}
+
+// TaxRateRecorded defines model for TaxRateRecorded.
+type TaxRateRecorded struct {
+	// ClassifiedProducts How many unclassified products this rate put in its category. Only the first rate of a category of the installation's own country classifies any.
+	ClassifiedProducts int     `json:"classified_products"`
+	Rate               TaxRate `json:"rate"`
+}
+
 // Team Mirrors the `team` table.
 type Team struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -59641,10 +61099,11 @@ type UpdateLegalEntityRequest struct {
 	// The default entity's offering is the company profile, so these stay null there and a write to
 	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
 	// has a name, an `offer_summary` and an `icp`.
-	Offering       *LegalEntityOffering `json:"offering,omitempty"`
-	RegisterCourt  *string              `json:"register_court,omitempty"`
-	RegisterNumber *string              `json:"register_number,omitempty"`
-	VatId          *string              `json:"vat_id,omitempty"`
+	Offering          *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt     *string              `json:"register_court,omitempty"`
+	RegisterNumber    *string              `json:"register_number,omitempty"`
+	SignatureTemplate *string              `json:"signature_template,omitempty"`
+	VatId             *string              `json:"vat_id,omitempty"`
 }
 
 // UpdateListRequest defines model for UpdateListRequest.
@@ -59699,9 +61158,14 @@ type UpdateOfferLineItemRequest struct {
 	DiscountPct  *float64                                `json:"discount_pct,omitempty"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount  *int     `json:"interval_count,omitempty"`
-	Position       *int     `json:"position,omitempty"`
-	Quantity       *float64 `json:"quantity,omitempty"`
+	IntervalCount *int     `json:"interval_count,omitempty"`
+	Position      *int     `json:"position,omitempty"`
+	Quantity      *float64 `json:"quantity,omitempty"`
+
+	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. It drops the line's tax category, so the send leaves the rate alone.
 	TaxRate        *float64 `json:"tax_rate,omitempty"`
 	Unit           *string  `json:"unit,omitempty"`
 	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty"`
@@ -59713,6 +61177,9 @@ type UpdateOfferLineItemRequestBillingIntervalMonths int
 // UpdateOfferLineItemRequestBillingModel Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.
 type UpdateOfferLineItemRequestBillingModel string
 
+// UpdateOfferLineItemRequestTaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
+type UpdateOfferLineItemRequestTaxCategory string
+
 // UpdateOfferRequest Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
 type UpdateOfferRequest struct {
 	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
@@ -59723,11 +61190,17 @@ type UpdateOfferRequest struct {
 	// Remove the lines and re-enter them in the new currency, or start a new offer in it.
 	// Changing the currency on a draft with no priced lines is free, and re-sending the
 	// currency the offer already holds is not a change.
-	Currency   *string             `json:"currency,omitempty"`
-	IntroText  *string             `json:"intro_text,omitempty"`
-	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
-	TermsText  *string             `json:"terms_text,omitempty"`
-	ValidUntil *openapi_types.Date `json:"valid_until,omitempty"`
+	Currency  *string `json:"currency,omitempty"`
+	IntroText *string `json:"intro_text,omitempty"`
+
+	// Language The language lines added from now on take product names in. Lines already on the offer keep theirs.
+	Language *string `json:"language,omitempty"`
+
+	// LegalEntityId The legal entity that issues the offer. An unknown or archived entity is refused as 422.
+	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
+	TemplateId    *openapi_types.UUID `json:"template_id,omitempty"`
+	TermsText     *string             `json:"terms_text,omitempty"`
+	ValidUntil    *openapi_types.Date `json:"valid_until,omitempty"`
 }
 
 // UpdateOfferTemplateRequest Full replace via PUT (unlike updateProduct's merge-PATCH) — every writable field must be supplied; omitting one resets it, it is not left unchanged.
@@ -59775,8 +61248,11 @@ type UpdateProductRequest struct {
 	Description    *string                            `json:"description,omitempty"`
 	Name           *string                            `json:"name,omitempty"`
 	Sku            *string                            `json:"sku,omitempty"`
-	Unit           *string                            `json:"unit,omitempty"`
-	UnitPriceMinor *int64                             `json:"unit_price_minor,omitempty"`
+
+	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
+	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
+	Unit           *string                          `json:"unit,omitempty"`
+	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty"`
 }
 
 // UpdateProductRequestBillingIntervalMonths How many months one billing period spans. Required with `recurring`, refused otherwise.
@@ -59787,6 +61263,9 @@ type UpdateProductRequestBillingModel string
 
 // UpdateProductRequestComponentKind What kind of value the product is. Omit to leave it unchanged; send null to say nobody has classified it.
 type UpdateProductRequestComponentKind string
+
+// UpdateProductRequestTaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
+type UpdateProductRequestTaxCategory string
 
 // UpdateProjectRequest Note `phase` is absent by design — it moves only through advanceProjectPhase.
 // `key` is absent for a different reason: the server mints it from the name and
@@ -60052,7 +61531,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -60068,6 +61547,12 @@ type User struct {
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
+
+	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
+	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
+
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
 	IsAgent bool `json:"is_agent"`
@@ -60103,6 +61588,9 @@ type User struct {
 
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
+
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
 // Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -61266,8 +62754,11 @@ type WeeklyReviewLearningsState string
 
 // WeeklyReviewMovement One bar of the movement bridge, and the deals behind it.
 type WeeklyReviewMovement struct {
-	// Bar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+	// Bar Which move this is. Folded from the forecast engine's movement buckets, whose
 	// grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+	// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+	// qualified measure: a deal that left or rejoined the qualified number on its viability
+	// review alone, or left because its review status became unknown. The set can grow.
 	//
 	// `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 	// reprice, a category move and a stage move each go both ways, and reading the cause
@@ -61288,8 +62779,11 @@ type WeeklyReviewMovement struct {
 	Drivers *[]WeeklyReviewDriver `json:"drivers,omitempty"`
 }
 
-// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's twelve movement buckets, whose
+// WeeklyReviewMovementBar Which move this is. Folded from the forecast engine's movement buckets, whose
 // grain is right for diagnosing a quarter and too fine for a weekly retrospective.
+// `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
+// qualified measure: a deal that left or rejoined the qualified number on its viability
+// review alone, or left because its review status became unknown. The set can grow.
 //
 // `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
 // reprice, a category move and a stage move each go both ways, and reading the cause
@@ -62450,6 +63944,11 @@ type WorklistItem struct {
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
 
+	// DomainContext Whose mail raised a company question, and which existing company the evidence points
+	// at. Every contact and company named here passed the reader's own row scope; a sender the
+	// reader may not see is counted in `contact_count` and never named.
+	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
+
 	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
@@ -62587,6 +64086,11 @@ type WorklistItem struct {
 
 	// Source Which producer raised it, and therefore which endpoint its verbs go to.
 	//
+	// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+	// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+	// into it, and it stays while the review is open, even once its task is done. It offers
+	// only `open`; the review is answered on the deal.
+	//
 	// `batch` is the one that names no single record: it stands for a GROUP of
 	// routine decisions that read alike, so a hundred of them cost the reader one
 	// row rather than a hundred. Its own facts ride in `batch`.
@@ -62713,6 +64217,11 @@ type WorklistItemDueGroup string
 type WorklistItemPrimaryAction string
 
 // WorklistItemSource Which producer raised it, and therefore which endpoint its verbs go to.
+//
+// `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
+// the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
+// into it, and it stays while the review is open, even once its task is done. It offers
+// only `open`; the review is answered on the deal.
 //
 // `batch` is the one that names no single record: it stands for a GROUP of
 // routine decisions that read alike, so a hundred of them cost the reader one
@@ -64008,6 +65517,19 @@ type GetAiUsageParams struct {
 	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
 }
 
+// GetAccountCoverageParams defines parameters for GetAccountCoverage.
+type GetAccountCoverageParams struct {
+	ScopeKind *GetAccountCoverageParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId   *openapi_types.UUID                `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	View      *GetAccountCoverageParamsView      `form:"view,omitempty" json:"view,omitempty"`
+}
+
+// GetAccountCoverageParamsScopeKind defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsScopeKind string
+
+// GetAccountCoverageParamsView defines parameters for GetAccountCoverage.
+type GetAccountCoverageParamsView string
+
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
 	DealId *openapi_types.UUID             `form:"deal_id,omitempty" json:"deal_id,omitempty"`
@@ -64646,10 +66168,12 @@ type GetAvailability200JSONResponseBodyCalendarBacking string
 
 // BookMeetingJSONBody defines parameters for BookMeeting.
 type BookMeetingJSONBody struct {
-	// AttendeeEmails Who the meeting is with. **Accepted and not delivered to**: nothing in this
-	// build emails these addresses or adds them to a calendar event, and the
-	// created activity does not carry them either. Supply them for the caller's
-	// own record of intent, and tell the attendee yourself.
+	// AttendeeEmails Who the meeting is with. Every address is an attendee on the queued calendar
+	// event. Each address is resolved to a contact, a
+	// colleague or a lead the host can see; an address matching nobody is invited as
+	// named by the host. Contacts and leads must hold transactional consent;
+	// colleagues and host-named addresses are not asked. At most 25 attendees in
+	// total.
 	AttendeeEmails *[]openapi_types.Email `json:"attendee_emails,omitempty"`
 
 	// Consent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -64663,14 +66187,11 @@ type BookMeetingJSONBody struct {
 	// required: a meeting belonging to no record appears on no timeline and is one
 	// nobody will find again, which is the same reason `SendCompanyEmailRequest`
 	// carries the bound. Each one is row-scope probed and written as its own row,
-	// so the list is bounded at 25 — the same bound the `book_meeting` tool applies
-	// before it stages.
-	Links []struct {
-		EntityId   openapi_types.UUID                 `json:"entity_id"`
-		EntityType BookMeetingJSONBodyLinksEntityType `json:"entity_type"`
-	} `json:"links"`
-	Start   time.Time `json:"start"`
-	Subject *string   `json:"subject,omitempty"`
+	// so the list is bounded at 25. The first `contact` link (else the first `lead`
+	// link) is the invitee the meeting is filed on.
+	Links   []MeetingRecordLink `json:"links"`
+	Start   time.Time           `json:"start"`
+	Subject *string             `json:"subject,omitempty"`
 }
 
 // BookMeetingParams defines parameters for BookMeeting.
@@ -64695,18 +66216,7 @@ type BookMeetingParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-
-	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
-	// answer named. MCP takes the same id as `approval_id`. The server checks it against the
-	// stored approval: same tool, same diff hash, same staging passport, decided as approved,
-	// not yet used, and within 15 minutes of the decision. Anything else is refused with
-	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
-	// human's direct call is itself the approval.
-	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
-
-// BookMeetingJSONBodyLinksEntityType defines parameters for BookMeeting.
-type BookMeetingJSONBodyLinksEntityType string
 
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
@@ -64808,6 +66318,9 @@ type ListDomainQuestionsParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Domain Return only the question about this domain; normalized to its registrable form.
+	Domain *string `form:"domain,omitempty" json:"domain,omitempty"`
 }
 
 // KeepDomainQuestionJSONBody defines parameters for KeepDomainQuestion.
@@ -67465,7 +68978,7 @@ type GetForecastMovementParams struct {
 	// To The closing snapshot.
 	To openapi_types.UUID `form:"to" json:"to"`
 
-	// Reading Which of the four money answers this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total.
+	// Reading Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`.
 	Reading *GetForecastMovementParamsReading `form:"reading,omitempty" json:"reading,omitempty"`
 }
 
@@ -68988,7 +70501,13 @@ type ListProductsParams struct {
 
 	// Q Case-insensitive name/SKU substring match.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// TaxCategory Only products in this tax category; `unclassified` lists those nobody has classified yet.
+	TaxCategory *ListProductsParamsTaxCategory `form:"tax_category,omitempty" json:"tax_category,omitempty"`
 }
+
+// ListProductsParamsTaxCategory defines parameters for ListProducts.
+type ListProductsParamsTaxCategory string
 
 // CreateProductParams defines parameters for CreateProduct.
 type CreateProductParams struct {
@@ -70024,6 +71543,12 @@ type SetRoleObjectGrantParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// DescribeRouterActionsParams defines parameters for DescribeRouterActions.
+type DescribeRouterActionsParams struct {
+	// Router The router whose actions to describe.
+	Router string `form:"router" json:"router"`
+}
+
 // ListScheduledSendsParams defines parameters for ListScheduledSends.
 type ListScheduledSendsParams struct {
 	// Status Omit for every state; supply one to filter.
@@ -70464,6 +71989,12 @@ type CreateTaskParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ListTaxRatesParams defines parameters for ListTaxRates.
+type ListTaxRatesParams struct {
+	// Country ISO 3166-1 alpha-2.
+	Country *string `form:"country,omitempty" json:"country,omitempty"`
 }
 
 // ListTeamsParams defines parameters for ListTeams.
@@ -71355,6 +72886,9 @@ type ReplaceAiTaskOverridesJSONRequestBody = AiTaskOverrides
 // PreviewAiTaskOverridesJSONRequestBody defines body for PreviewAiTaskOverrides for application/json ContentType.
 type PreviewAiTaskOverridesJSONRequestBody = AiTaskOverrides
 
+// AssessSalesReviewJSONRequestBody defines body for AssessSalesReview for application/json ContentType.
+type AssessSalesReviewJSONRequestBody = SalesAssessmentRequest
+
 // RecordSalesDecisionJSONRequestBody defines body for RecordSalesDecision for application/json ContentType.
 type RecordSalesDecisionJSONRequestBody = SalesDecisionInput
 
@@ -71405,6 +72939,9 @@ type SearchReportEvidenceJSONRequestBody = ReportEvidenceSearchRequest
 
 // UpdateReportingScheduleJSONRequestBody defines body for UpdateReportingSchedule for application/json ContentType.
 type UpdateReportingScheduleJSONRequestBody = ReportingScheduleInput
+
+// ProposeReportSetupJSONRequestBody defines body for ProposeReportSetup for application/json ContentType.
+type ProposeReportSetupJSONRequestBody = ReportSetupRequest
 
 // CreateReportingTargetJSONRequestBody defines body for CreateReportingTarget for application/json ContentType.
 type CreateReportingTargetJSONRequestBody = ReportingTargetInput
@@ -72141,6 +73678,9 @@ type CreateProductJSONRequestBody = CreateProductRequest
 // UpdateProductJSONRequestBody defines body for UpdateProduct for application/json ContentType.
 type UpdateProductJSONRequestBody = UpdateProductRequest
 
+// PutProductTranslationJSONRequestBody defines body for PutProductTranslation for application/json ContentType.
+type PutProductTranslationJSONRequestBody = PutProductTranslationRequest
+
 // CreateProjectJSONRequestBody defines body for CreateProject for application/json ContentType.
 type CreateProjectJSONRequestBody = CreateProjectRequest
 
@@ -72335,6 +73875,9 @@ type MergeTagsJSONRequestBody = MergeTagsRequest
 
 // CreateTaskJSONRequestBody defines body for CreateTask for application/json ContentType.
 type CreateTaskJSONRequestBody = CreateTaskRequest
+
+// RecordTaxRateJSONRequestBody defines body for RecordTaxRate for application/json ContentType.
+type RecordTaxRateJSONRequestBody = RecordTaxRateRequest
 
 // CreateTeamJSONRequestBody defines body for CreateTeam for application/json ContentType.
 type CreateTeamJSONRequestBody = CreateTeamRequest
@@ -80203,6 +81746,22 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "issuer_snapshot")
 	}
 
+	if raw, found := object["language"]; found {
+		err = json.Unmarshal(raw, &a.Language)
+		if err != nil {
+			return fmt.Errorf("error reading 'language': %w", err)
+		}
+		delete(object, "language")
+	}
+
+	if raw, found := object["legal_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.LegalEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_entity_id': %w", err)
+		}
+		delete(object, "legal_entity_id")
+	}
+
 	if raw, found := object["line_items"]; found {
 		err = json.Unmarshal(raw, &a.LineItems)
 		if err != nil {
@@ -80448,6 +82007,20 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Language != nil {
+		object["language"], err = json.Marshal(a.Language)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'language': %w", err)
+		}
+	}
+
+	if a.LegalEntityId != nil {
+		object["legal_entity_id"], err = json.Marshal(a.LegalEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_entity_id': %w", err)
+		}
+	}
+
 	if a.LineItems != nil {
 		object["line_items"], err = json.Marshal(a.LineItems)
 		if err != nil {
@@ -80678,6 +82251,14 @@ func (a *Product) UnmarshalJSON(b []byte) error {
 		delete(object, "source")
 	}
 
+	if raw, found := object["tax_category"]; found {
+		err = json.Unmarshal(raw, &a.TaxCategory)
+		if err != nil {
+			return fmt.Errorf("error reading 'tax_category': %w", err)
+		}
+		delete(object, "tax_category")
+	}
+
 	if raw, found := object["unit"]; found {
 		err = json.Unmarshal(raw, &a.Unit)
 		if err != nil {
@@ -80809,6 +82390,13 @@ func (a Product) MarshalJSON() ([]byte, error) {
 	object["source"], err = json.Marshal(a.Source)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.TaxCategory != nil {
+		object["tax_category"], err = json.Marshal(a.TaxCategory)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tax_category': %w", err)
+		}
 	}
 
 	object["unit"], err = json.Marshal(a.Unit)
@@ -83988,7 +85576,7 @@ type ServerInterface interface {
 	// Update an activity (e.g. complete a task).
 	// (PATCH /activities/{id})
 	UpdateActivity(w http.ResponseWriter, r *http.Request, id Id, params UpdateActivityParams)
-	// Limit (or re-open) who may read this activity's content.
+	// Limit (or re-open) who may see this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
 	// Pick the message back up — the undo behind every set-aside verb.
@@ -84033,7 +85621,7 @@ type ServerInterface interface {
 	// Reply on a captured messaging-channel conversation — runs directly, consent-gated.
 	// (POST /activities/{id}/send-message)
 	SendMessage(w http.ResponseWriter, r *http.Request, id Id, params SendMessageParams)
-	// Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
+	// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 	// (POST /activities/{id}/transcript-proposals)
 	ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this transcript, so one that ended after the rep navigated away is still visible.
@@ -84204,6 +85792,19 @@ type ServerInterface interface {
 	// What AI cost this month so far, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
+	// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+	// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+	// facts behind its verdict. Counts for every view come with each answer; rows come for
+	// the view asked for. The thresholds are the framework's, and the answer prints them.
+	// (GET /analytics/account-coverage)
+	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
+	// The Sales review's assessment of one selection: a few sentences on what the measured
+	// figures show, each citing the cells it rests on, and one next decision on a deal the
+	// reader may see. Written by the model and kept per reader until the figures or the
+	// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+	// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+	// (POST /analytics/assessment)
+	AssessSalesReview(w http.ResponseWriter, r *http.Request)
 	// Which population this caller measures by default, and which they may choose.
 	// (GET /analytics/context)
 	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
@@ -84334,7 +85935,7 @@ type ServerInterface interface {
 	// The records behind one cell of a question card.
 	// (POST /analytics/reports/{id}/questions/{card_id}/explain)
 	ExplainReportingQuestionCard(w http.ResponseWriter, r *http.Request, id Id, cardId string, params ExplainReportingQuestionCardParams)
-	// Evaluate a saved report as a seat holding one role would read it. Human-only.
+	// Evaluate a saved report as a seat holding one role would see it.
 	// (GET /analytics/reports/{id}/reader-preview)
 	PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams)
 	// List reporting report revisions
@@ -84379,6 +85980,13 @@ type ServerInterface interface {
 	// How a team's handoffs ended and what still waits, for coaching.
 	// (GET /analytics/sdr-team)
 	GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams)
+	// A sales initiative or a custom report proposed from a description in plain words:
+	// the filters, metrics and charts the words name, resolved against what the reader may
+	// use, with the phrase each came from, the questions the words leave open and the phrases
+	// nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+	// a model it answers 409 `ai_not_configured`.
+	// (POST /analytics/setup-proposal)
+	ProposeReportSetup(w http.ResponseWriter, r *http.Request)
 	// List reporting targets
 	// (GET /analytics/targets)
 	ListReportingTargets(w http.ResponseWriter, r *http.Request, params ListReportingTargetsParams)
@@ -84442,7 +86050,7 @@ type ServerInterface interface {
 	// The newest reading of this attachment — its progress, what it grounded, and what it honestly omitted.
 	// (GET /attachments/{id}/extraction)
 	GetAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
-	// Read this attached document for the deal facts it states — a background reading that ends in staged, evidence-carrying fields.
+	// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 	// (POST /attachments/{id}/extraction)
 	ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id)
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
@@ -84523,7 +86131,7 @@ type ServerInterface interface {
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
-	// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+	// Book a meeting at a chosen slot and queue its calendar invitation.
 	// (POST /bookings)
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// The acting rep's latest Morning-Brief run (the on-open read-model re-read; never re-ranks).
@@ -84868,7 +86476,7 @@ type ServerInterface interface {
 	// This is not a company — archive it and refuse its domain as one (admin/ops).
 	// (POST /companies/{id}/reject)
 	RejectCompany(w http.ResponseWriter, r *http.Request, id Id, params RejectCompanyParams)
-	// What this account needs, as the model last read it for this reader.
+	// What this account needs, as the model last judged it for this reader.
 	// (GET /companies/{id}/scan)
 	GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id)
 	// Make sure this reader's scan of the account is current, reading it again only when the account changed.
@@ -84907,7 +86515,7 @@ type ServerInterface interface {
 	// The installation's own company (the anchor company).
 	// (GET /company)
 	GetAnchorCompany(w http.ResponseWriter, r *http.Request)
-	// Save the installation's own company — the human's confirm-first write.
+	// Save the installation's own company.
 	// (PUT /company)
 	PutAnchorCompany(w http.ResponseWriter, r *http.Request)
 	// Which company types installed extensions add beside core's own.
@@ -85393,6 +87001,9 @@ type ServerInterface interface {
 	// Where the deal stands, what could lose it, and the one thing to do next.
 	// (GET /deals/{id}/status)
 	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
+	// Whether the customer still supports this deal, and the review behind the answer.
+	// (GET /deals/{id}/viability)
+	GetDealViability(w http.ResponseWriter, r *http.Request, id Id)
 	// Whether the deal has the signed agreement a win rests on.
 	// (GET /deals/{id}/win-evidence)
 	GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id)
@@ -85474,7 +87085,7 @@ type ServerInterface interface {
 	// Start an admin's consent to an extension unit's OAuth app.
 	// (POST /ext-oauth/{provider}/connect)
 	ConnectExtOauth(w http.ResponseWriter, r *http.Request, provider ExtOAuthProvider)
-	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
+	// List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
 	// Read what the core does with a unit's feed. Needs the extension_access read grant.
@@ -85801,13 +87412,13 @@ type ServerInterface interface {
 	// Link a lead to a company.
 	// (POST /leads/{id}/link-company)
 	LinkLeadCompany(w http.ResponseWriter, r *http.Request, id Id)
-	// List current and superseded human-provided qualification signals.
+	// List current and superseded manual qualification signals.
 	// (GET /leads/{id}/manual-signals)
 	ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id)
-	// Enter or replace a human-provided scoring factor (S-E13.6).
+	// Enter or replace a manual scoring factor.
 	// (PUT /leads/{id}/manual-signals)
 	SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id)
-	// Withdraw a human-provided scoring factor.
+	// Withdraw a manual scoring factor.
 	// (DELETE /leads/{id}/manual-signals/{factor})
 	ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor)
 	// Accept a lead for the partner that referred it.
@@ -86209,6 +87820,15 @@ type ServerInterface interface {
 	// Update a product (partial). Existing offer lines keep their price snapshot.
 	// (PATCH /products/{id})
 	UpdateProduct(w http.ResponseWriter, r *http.Request, id Id, params UpdateProductParams)
+	// The product's name and description in further languages.
+	// (GET /products/{id}/translations)
+	ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove the product's text in one language.
+	// (DELETE /products/{id}/translations/{language})
+	DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
+	// Set the product's name and description in one language.
+	// (PUT /products/{id}/translations/{language})
+	PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string)
 	// List projects (live by default; cursor-paginated).
 	// (GET /projects)
 	ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams)
@@ -86371,10 +87991,10 @@ type ServerInterface interface {
 	// List manual per-record grants, filtered by record or by subject (ADR-0039).
 	// (GET /record-grants)
 	ListRecordGrants(w http.ResponseWriter, r *http.Request, params ListRecordGrantsParams)
-	// Share one record with a user or team (human-only).
+	// Share one record with a user or team.
 	// (POST /record-grants)
 	CreateRecordGrant(w http.ResponseWriter, r *http.Request, params CreateRecordGrantParams)
-	// Revoke a manual record grant (human-only).
+	// Revoke a manual record grant.
 	// (DELETE /record-grants/{id})
 	RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams)
 	// Which kinds of record installed extensions add beside core's own.
@@ -86488,7 +88108,7 @@ type ServerInterface interface {
 	// Set the installation's retention posture (admin/ops).
 	// (PATCH /retention/settings)
 	UpdateRetentionSettings(w http.ResponseWriter, r *http.Request)
-	// List the workspace's roles with their object grants and row scope. Human-only.
+	// List the workspace's roles with their object grants and row scope.
 	// (GET /roles)
 	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
 	// Create a role by copying an existing one. Human-only.
@@ -86506,6 +88126,9 @@ type ServerInterface interface {
 	// Restore an archived role. Human-only.
 	// (POST /roles/{key}/restore)
 	RestoreRole(w http.ResponseWriter, r *http.Request, key string)
+	// What each action of one MCP router takes, as its own route defines it.
+	// (GET /router-actions)
+	DescribeRouterActions(w http.ResponseWriter, r *http.Request, params DescribeRouterActionsParams)
 	// The caller's own messages waiting to be sent.
 	// (GET /scheduled-sends)
 	ListScheduledSends(w http.ResponseWriter, r *http.Request, params ListScheduledSendsParams)
@@ -86659,6 +88282,12 @@ type ServerInterface interface {
 	// Create a task — a commitment with an owner, on the records it is about.
 	// (POST /tasks)
 	CreateTask(w http.ResponseWriter, r *http.Request, params CreateTaskParams)
+	// The tax rate sheet, every recorded rate, newest first within each country and category.
+	// (GET /tax-rates)
+	ListTaxRates(w http.ResponseWriter, r *http.Request, params ListTaxRatesParams)
+	// Record a standard or reduced tax rate for a country from a day on.
+	// (POST /tax-rates)
+	RecordTaxRate(w http.ResponseWriter, r *http.Request)
 	// List workspace teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
@@ -86677,7 +88306,7 @@ type ServerInterface interface {
 	// List workspace members (roster) — cursor-paginated. Read-only.
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
-	// Invite a new member. Admin-only, human-only.
+	// Invite a new member. Admin-only.
 	// (POST /users)
 	InviteUser(w http.ResponseWriter, r *http.Request)
 	// What a seat with this role and these teams will see and may do.
@@ -86707,13 +88336,13 @@ type ServerInterface interface {
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
-	// Deactivate a member and revoke their live access. Admin-only, human-only.
+	// Deactivate a member and revoke their live access. Admin-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
-	// Count the live records a member still owns. Member administration, human-only.
+	// Count the live records a member still owns.
 	// (GET /users/{id}/handover)
 	GetUserHandover(w http.ResponseWriter, r *http.Request, id Id)
-	// Move every live record a member owns to a colleague. Member administration, human-only.
+	// Move every live record a member owns to a colleague. Member administration.
 	// (POST /users/{id}/handover)
 	HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams)
 	// Merge a duplicate into the selected surviving member.
@@ -86725,16 +88354,19 @@ type ServerInterface interface {
 	// Mint a single-use set-password link for a member. Admin-only, human-only.
 	// (POST /users/{id}/password-link)
 	IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, id Id)
-	// Reactivate a deactivated member. Admin-only, human-only.
+	// Reactivate a deactivated member. Admin-only.
 	// (POST /users/{id}/reactivate)
 	ReactivateUser(w http.ResponseWriter, r *http.Request, id Id)
 	// Retire an account while preserving historical attribution.
 	// (POST /users/{id}/remove)
 	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
+	// Mail an invited member a new set-password link. Admin-only, human-only.
+	// (POST /users/{id}/resend-invite)
+	ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id)
 	// Preview removing a member or merging them into another account.
 	// (GET /users/{id}/retirement-preview)
 	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
-	// Set a member's system role. Admin-only, human-only.
+	// Set a member's system role. Admin-only.
 	// (PATCH /users/{id}/role)
 	ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id)
 	// The sessions open under a member's account. Admin-only, human-only.
@@ -87034,7 +88666,7 @@ func (_ Unimplemented) UpdateActivity(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Limit (or re-open) who may read this activity's content.
+// Limit (or re-open) who may see this activity's content.
 // (PATCH /activities/{id}/audience)
 func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -87124,7 +88756,7 @@ func (_ Unimplemented) SendMessage(w http.ResponseWriter, r *http.Request, id Id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read this meeting transcript for the next steps it states — a background reading that ends in staged 🟡 proposals.
+// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 // (POST /activities/{id}/transcript-proposals)
 func (_ Unimplemented) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -87466,6 +89098,25 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The accounts at risk in one population: single-threaded deals, accounts in pipeline
+// nobody has exchanged a word with, and won accounts gone silent. Each row carries the
+// facts behind its verdict. Counts for every view come with each answer; rows come for
+// the view asked for. The thresholds are the framework's, and the answer prints them.
+// (GET /analytics/account-coverage)
+func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The Sales review's assessment of one selection: a few sentences on what the measured
+// figures show, each citing the cells it rests on, and one next decision on a deal the
+// reader may see. Written by the model and kept per reader until the figures or the
+// recorded decisions move; without a model, or when the model's reply cannot be grounded,
+// it answers no sentences and `generated_by` says so, and the page shows its own summary.
+// (POST /analytics/assessment)
+func (_ Unimplemented) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Which population this caller measures by default, and which they may choose.
 // (GET /analytics/context)
 func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
@@ -87725,7 +89376,7 @@ func (_ Unimplemented) ExplainReportingQuestionCard(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Evaluate a saved report as a seat holding one role would read it. Human-only.
+// Evaluate a saved report as a seat holding one role would see it.
 // (GET /analytics/reports/{id}/reader-preview)
 func (_ Unimplemented) PreviewReportingReportAsRole(w http.ResponseWriter, r *http.Request, id Id, params PreviewReportingReportAsRoleParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -87812,6 +89463,16 @@ func (_ Unimplemented) ListSdrUpcomingMeetings(w http.ResponseWriter, r *http.Re
 // How a team's handoffs ended and what still waits, for coaching.
 // (GET /analytics/sdr-team)
 func (_ Unimplemented) GetSdrTeamReview(w http.ResponseWriter, r *http.Request, params GetSdrTeamReviewParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A sales initiative or a custom report proposed from a description in plain words:
+// the filters, metrics and charts the words name, resolved against what the reader may
+// use, with the phrase each came from, the questions the words leave open and the phrases
+// nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
+// a model it answers 409 `ai_not_configured`.
+// (POST /analytics/setup-proposal)
+func (_ Unimplemented) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -87941,7 +89602,7 @@ func (_ Unimplemented) GetAttachmentExtraction(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read this attached document for the deal facts it states — a background reading that ends in staged, evidence-carrying fields.
+// Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields.
 // (POST /attachments/{id}/extraction)
 func (_ Unimplemented) ReadAttachmentForFields(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -88103,7 +89764,7 @@ func (_ Unimplemented) GetAvailability(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Book a meeting at a chosen slot — runs directly (the `book_meeting` MCP verb).
+// Book a meeting at a chosen slot and queue its calendar invitation.
 // (POST /bookings)
 func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -88793,7 +90454,7 @@ func (_ Unimplemented) RejectCompany(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What this account needs, as the model last read it for this reader.
+// What this account needs, as the model last judged it for this reader.
 // (GET /companies/{id}/scan)
 func (_ Unimplemented) GetCompanyScan(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -88871,7 +90532,7 @@ func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Save the installation's own company — the human's confirm-first write.
+// Save the installation's own company.
 // (PUT /company)
 func (_ Unimplemented) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -89843,6 +91504,12 @@ func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Whether the customer still supports this deal, and the review behind the answer.
+// (GET /deals/{id}/viability)
+func (_ Unimplemented) GetDealViability(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Whether the deal has the signed agreement a win rests on.
 // (GET /deals/{id}/win-evidence)
 func (_ Unimplemented) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id) {
@@ -90005,7 +91672,7 @@ func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
+// List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -90659,19 +92326,19 @@ func (_ Unimplemented) LinkLeadCompany(w http.ResponseWriter, r *http.Request, i
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List current and superseded human-provided qualification signals.
+// List current and superseded manual qualification signals.
 // (GET /leads/{id}/manual-signals)
 func (_ Unimplemented) ListLeadManualSignals(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Enter or replace a human-provided scoring factor (S-E13.6).
+// Enter or replace a manual scoring factor.
 // (PUT /leads/{id}/manual-signals)
 func (_ Unimplemented) SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Withdraw a human-provided scoring factor.
+// Withdraw a manual scoring factor.
 // (DELETE /leads/{id}/manual-signals/{factor})
 func (_ Unimplemented) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id Id, factor LeadManualSignalFactor) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -91475,6 +93142,24 @@ func (_ Unimplemented) UpdateProduct(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The product's name and description in further languages.
+// (GET /products/{id}/translations)
+func (_ Unimplemented) ListProductTranslations(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the product's text in one language.
+// (DELETE /products/{id}/translations/{language})
+func (_ Unimplemented) DeleteProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the product's name and description in one language.
+// (PUT /products/{id}/translations/{language})
+func (_ Unimplemented) PutProductTranslation(w http.ResponseWriter, r *http.Request, id Id, language string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List projects (live by default; cursor-paginated).
 // (GET /projects)
 func (_ Unimplemented) ListProjects(w http.ResponseWriter, r *http.Request, params ListProjectsParams) {
@@ -91799,13 +93484,13 @@ func (_ Unimplemented) ListRecordGrants(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Share one record with a user or team (human-only).
+// Share one record with a user or team.
 // (POST /record-grants)
 func (_ Unimplemented) CreateRecordGrant(w http.ResponseWriter, r *http.Request, params CreateRecordGrantParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Revoke a manual record grant (human-only).
+// Revoke a manual record grant.
 // (DELETE /record-grants/{id})
 func (_ Unimplemented) RevokeRecordGrant(w http.ResponseWriter, r *http.Request, id Id, params RevokeRecordGrantParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92033,7 +93718,7 @@ func (_ Unimplemented) UpdateRetentionSettings(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the workspace's roles with their object grants and row scope. Human-only.
+// List the workspace's roles with their object grants and row scope.
 // (GET /roles)
 func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92066,6 +93751,12 @@ func (_ Unimplemented) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request
 // Restore an archived role. Human-only.
 // (POST /roles/{key}/restore)
 func (_ Unimplemented) RestoreRole(w http.ResponseWriter, r *http.Request, key string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What each action of one MCP router takes, as its own route defines it.
+// (GET /router-actions)
+func (_ Unimplemented) DescribeRouterActions(w http.ResponseWriter, r *http.Request, params DescribeRouterActionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92375,6 +94066,18 @@ func (_ Unimplemented) CreateTask(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The tax rate sheet, every recorded rate, newest first within each country and category.
+// (GET /tax-rates)
+func (_ Unimplemented) ListTaxRates(w http.ResponseWriter, r *http.Request, params ListTaxRatesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a standard or reduced tax rate for a country from a day on.
+// (POST /tax-rates)
+func (_ Unimplemented) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List workspace teams — cursor-paginated. Read-only.
 // (GET /teams)
 func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams) {
@@ -92411,7 +94114,7 @@ func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Invite a new member. Admin-only, human-only.
+// Invite a new member. Admin-only.
 // (POST /users)
 func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92471,19 +94174,19 @@ func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Deactivate a member and revoke their live access. Admin-only, human-only.
+// Deactivate a member and revoke their live access. Admin-only.
 // (POST /users/{id}/deactivate)
 func (_ Unimplemented) DeactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Count the live records a member still owns. Member administration, human-only.
+// Count the live records a member still owns.
 // (GET /users/{id}/handover)
 func (_ Unimplemented) GetUserHandover(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Move every live record a member owns to a colleague. Member administration, human-only.
+// Move every live record a member owns to a colleague. Member administration.
 // (POST /users/{id}/handover)
 func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92507,7 +94210,7 @@ func (_ Unimplemented) IssueUserPasswordLink(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Reactivate a deactivated member. Admin-only, human-only.
+// Reactivate a deactivated member. Admin-only.
 // (POST /users/{id}/reactivate)
 func (_ Unimplemented) ReactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92519,13 +94222,19 @@ func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id I
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Mail an invited member a new set-password link. Admin-only, human-only.
+// (POST /users/{id}/resend-invite)
+func (_ Unimplemented) ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Preview removing a member or merging them into another account.
 // (GET /users/{id}/retirement-preview)
 func (_ Unimplemented) PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set a member's system role. Admin-only, human-only.
+// Set a member's system role. Admin-only.
 // (PATCH /users/{id}/role)
 func (_ Unimplemented) ChangeUserRole(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -92984,6 +94693,8 @@ func (siw *ServerInterfaceWrapper) CreateAcquisitionSource(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -93039,6 +94750,8 @@ func (siw *ServerInterfaceWrapper) UpdateAcquisitionSource(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -93404,6 +95117,8 @@ func (siw *ServerInterfaceWrapper) UpdateFollowUpSettings(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -93587,6 +95302,8 @@ func (siw *ServerInterfaceWrapper) SetThreadAudience(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -93789,6 +95506,8 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -93845,6 +95564,8 @@ func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -93892,6 +95613,8 @@ func (siw *ServerInterfaceWrapper) SetActivityDisposition(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -94059,6 +95782,8 @@ func (siw *ServerInterfaceWrapper) ReadActivityPipelineTrace(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -94090,6 +95815,8 @@ func (siw *ServerInterfaceWrapper) GetActivityProjectFiling(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -94375,6 +96102,8 @@ func (siw *ServerInterfaceWrapper) PreviewSendAuthorization(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -94483,6 +96212,8 @@ func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -94614,6 +96345,8 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95012,6 +96745,8 @@ func (siw *ServerInterfaceWrapper) ListAgentTools(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95241,6 +96976,8 @@ func (siw *ServerInterfaceWrapper) ListAvailableModels(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95316,6 +97053,8 @@ func (siw *ServerInterfaceWrapper) GetAiBudget(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95378,6 +97117,8 @@ func (siw *ServerInterfaceWrapper) GetAiCallStats(w http.ResponseWriter, r *http
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95482,6 +97223,8 @@ func (siw *ServerInterfaceWrapper) GetAiTaskFlow(w http.ResponseWriter, r *http.
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95766,6 +97509,8 @@ func (siw *ServerInterfaceWrapper) GetAiHealth(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95826,6 +97571,8 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -95845,6 +97592,8 @@ func (siw *ServerInterfaceWrapper) GetAiProfile(w http.ResponseWriter, r *http.R
 func (siw *ServerInterfaceWrapper) GetAiProviderHealth(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -95994,6 +97743,8 @@ func (siw *ServerInterfaceWrapper) ListProviderLocations(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96106,6 +97857,8 @@ func (siw *ServerInterfaceWrapper) GetAiRoutingSchema(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96126,6 +97879,8 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96145,6 +97900,8 @@ func (siw *ServerInterfaceWrapper) GetAiStatus(w http.ResponseWriter, r *http.Re
 func (siw *ServerInterfaceWrapper) GetAiTaskOverrides(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -96209,6 +97966,8 @@ func (siw *ServerInterfaceWrapper) GetAiUsage(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96258,6 +98017,8 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -96273,10 +98034,97 @@ func (siw *ServerInterfaceWrapper) GetAiUsageSummary(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// GetAccountCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetAccountCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAccountCoverageParams
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "view" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "view", r.URL.Query(), &params.View, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "view"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "view", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAccountCoverage(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AssessSalesReview operation middleware
+func (siw *ServerInterfaceWrapper) AssessSalesReview(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AssessSalesReview(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetAnalyticsContext operation middleware
 func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -96322,6 +98170,8 @@ func (siw *ServerInterfaceWrapper) ListSalesDecisions(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -97610,6 +99460,8 @@ func (siw *ServerInterfaceWrapper) ListSalesInitiatives(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -97677,6 +99529,8 @@ func (siw *ServerInterfaceWrapper) GetSalesInitiative(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -97821,6 +99675,8 @@ func (siw *ServerInterfaceWrapper) ListSalesInitiativeMembers(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -98652,6 +100508,8 @@ func (siw *ServerInterfaceWrapper) AnswerReportingQuestionCard(w http.ResponseWr
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -98756,6 +100614,8 @@ func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseW
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -98976,6 +100836,8 @@ func (siw *ServerInterfaceWrapper) ListReportRuns(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -99049,6 +100911,8 @@ func (siw *ServerInterfaceWrapper) GetReportRun(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -99196,6 +101060,8 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsSchema(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -99218,6 +101084,8 @@ func (siw *ServerInterfaceWrapper) GetSdrSummary(w http.ResponseWriter, r *http.
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -99270,6 +101138,8 @@ func (siw *ServerInterfaceWrapper) ListSdrWaitingHandoffs(w http.ResponseWriter,
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -99361,6 +101231,8 @@ func (siw *ServerInterfaceWrapper) ListSdrUpcomingMeetings(w http.ResponseWriter
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -99466,6 +101338,8 @@ func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -99514,6 +101388,26 @@ func (siw *ServerInterfaceWrapper) GetSdrTeamReview(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSdrTeamReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ProposeReportSetup operation middleware
+func (siw *ServerInterfaceWrapper) ProposeReportSetup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ProposeReportSetup(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -100068,6 +101962,8 @@ func (siw *ServerInterfaceWrapper) AcknowledgeApprovalFailure(w http.ResponseWri
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100134,6 +102030,8 @@ func (siw *ServerInterfaceWrapper) ArchiveRecordAssignment(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100165,6 +102063,8 @@ func (siw *ServerInterfaceWrapper) UpdateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100338,6 +102238,8 @@ func (siw *ServerInterfaceWrapper) DeleteAttachment(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100369,6 +102271,8 @@ func (siw *ServerInterfaceWrapper) DownloadAttachment(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100402,6 +102306,8 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100433,6 +102339,8 @@ func (siw *ServerInterfaceWrapper) ReadAttachmentForFields(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -100466,6 +102374,8 @@ func (siw *ServerInterfaceWrapper) AcceptAttachmentExtraction(w http.ResponseWri
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100498,6 +102408,8 @@ func (siw *ServerInterfaceWrapper) UpdateAttachmentMetadata(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -100529,6 +102441,8 @@ func (siw *ServerInterfaceWrapper) RequestAttachmentAccess(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101211,6 +103125,8 @@ func (siw *ServerInterfaceWrapper) ListAutomationRuns(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101409,8 +103325,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101436,25 +103350,6 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 		}
 
 		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	// ------------- Optional header parameter "X-Approval-Token" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Approval-Token")]; found {
-		var XApprovalToken ApprovalToken
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Approval-Token", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "X-Approval-Token", valueList[0], &XApprovalToken, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Approval-Token", Err: err})
-			return
-		}
-
-		params.XApprovalToken = &XApprovalToken
 
 	}
 
@@ -101495,6 +103390,8 @@ func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101550,6 +103447,8 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemActed(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101581,6 +103480,8 @@ func (siw *ServerInterfaceWrapper) MarkBriefItemDismissed(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101614,6 +103515,8 @@ func (siw *ServerInterfaceWrapper) SnoozeBriefItem(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101645,6 +103548,8 @@ func (siw *ServerInterfaceWrapper) UnsnoozeBriefItem(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -101866,6 +103771,8 @@ func (siw *ServerInterfaceWrapper) ListMyCaptureActivity(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101918,6 +103825,8 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceCaptureActivity(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -101966,6 +103875,8 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceCaptureActivity(w http.ResponseW
 func (siw *ServerInterfaceWrapper) ListBlockedDomains(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -102042,6 +103953,8 @@ func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102077,6 +103990,8 @@ func (siw *ServerInterfaceWrapper) ListConsumerMailBaseline(w http.ResponseWrite
 func (siw *ServerInterfaceWrapper) ListConsumerMailDomains(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -102265,6 +104180,8 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102294,6 +104211,19 @@ func (siw *ServerInterfaceWrapper) ListDomainQuestions(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "domain" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "domain", r.URL.Query(), &params.Domain, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "domain"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
 		}
 		return
 	}
@@ -102410,6 +104340,8 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceEmailDomains(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102481,6 +104413,8 @@ func (siw *ServerInterfaceWrapper) DeleteWorkspaceEmailDomain(w http.ResponseWri
 func (siw *ServerInterfaceWrapper) ListCaptureExclusions(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -102862,6 +104796,8 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -102974,6 +104910,8 @@ func (siw *ServerInterfaceWrapper) CatchUpOnRecord(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -103113,6 +105051,8 @@ func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -103144,6 +105084,8 @@ func (siw *ServerInterfaceWrapper) TakeOverConversationClaim(w http.ResponseWrit
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -103991,6 +105933,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyForAddress(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104319,6 +106263,8 @@ func (siw *ServerInterfaceWrapper) AskAboutCompany(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104350,6 +106296,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyBrief(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -104399,6 +106347,8 @@ func (siw *ServerInterfaceWrapper) RegenerateCompanyBrief(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104446,6 +106396,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyCaptureTriage(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -104580,6 +106532,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyContracts(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -104851,6 +106805,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyDossier(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -104882,6 +106838,8 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyDossier(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -104998,6 +106956,8 @@ func (siw *ServerInterfaceWrapper) GetClaimEvidence(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -105525,6 +107485,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyGrowthFit(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105556,6 +107518,8 @@ func (siw *ServerInterfaceWrapper) RefreshCompanyGrowthFit(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -105712,6 +107676,8 @@ func (siw *ServerInterfaceWrapper) DraftIntroRequest(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105744,6 +107710,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyLinkCandidates(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105775,6 +107743,8 @@ func (siw *ServerInterfaceWrapper) LinkCompanyContacts(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -105832,6 +107802,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLinkedInReach(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105864,6 +107836,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogo(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -105895,6 +107869,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogoIcon(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106023,6 +107999,8 @@ func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106542,6 +108520,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyScan(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106573,6 +108553,8 @@ func (siw *ServerInterfaceWrapper) EnsureCompanyScan(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106717,6 +108699,8 @@ func (siw *ServerInterfaceWrapper) RestoreCompanySuggestion(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106764,6 +108748,8 @@ func (siw *ServerInterfaceWrapper) DismissCompanySuggestion(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -106899,6 +108885,8 @@ func (siw *ServerInterfaceWrapper) RequestCompanyVatCheck(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106951,6 +108939,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -106970,6 +108960,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107014,6 +109006,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContext(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107050,6 +109044,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContextCapabilities(w http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107069,6 +109065,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanyContextCapabilities(w http.Re
 func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogo(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107109,6 +109107,8 @@ func (siw *ServerInterfaceWrapper) UploadAnchorCompanyLogo(w http.ResponseWriter
 func (siw *ServerInterfaceWrapper) DeleteAnchorCompanyLogoIcon(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107209,6 +109209,8 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompanySiteRead(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107240,6 +109242,8 @@ func (siw *ServerInterfaceWrapper) ConfirmAnchorCompanySiteRead(w http.ResponseW
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107329,6 +109333,8 @@ func (siw *ServerInterfaceWrapper) MessageAnchorCompanySiteRead(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -107351,6 +109357,8 @@ func (siw *ServerInterfaceWrapper) ListConfirmSubmissions(w http.ResponseWriter,
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107458,6 +109466,8 @@ func (siw *ServerInterfaceWrapper) ResolveConfirmSubmission(w http.ResponseWrite
 func (siw *ServerInterfaceWrapper) ListConnectors(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -107718,6 +109728,8 @@ func (siw *ServerInterfaceWrapper) ListConnectorContainers(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -108278,6 +110290,8 @@ func (siw *ServerInterfaceWrapper) DismissRelationshipNudges(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108657,6 +110671,8 @@ func (siw *ServerInterfaceWrapper) GetContactBrief(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108689,6 +110705,8 @@ func (siw *ServerInterfaceWrapper) RegenerateContactBrief(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -108720,6 +110738,8 @@ func (siw *ServerInterfaceWrapper) RecordConversationClaim(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109364,6 +111384,8 @@ func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109461,6 +111483,8 @@ func (siw *ServerInterfaceWrapper) GetContactEnrichmentRun(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109527,6 +111551,8 @@ func (siw *ServerInterfaceWrapper) DraftIntroNote(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109558,6 +111584,8 @@ func (siw *ServerInterfaceWrapper) ListIntroRequests(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109591,6 +111619,8 @@ func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109622,6 +111652,8 @@ func (siw *ServerInterfaceWrapper) RecordIntroduction(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109732,6 +111764,8 @@ func (siw *ServerInterfaceWrapper) RestoreContactMoment(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109792,6 +111826,8 @@ func (siw *ServerInterfaceWrapper) DismissContactMoment(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109859,6 +111895,8 @@ func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109890,6 +111928,8 @@ func (siw *ServerInterfaceWrapper) GetRelationshipNudge(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109923,6 +111963,8 @@ func (siw *ServerInterfaceWrapper) DismissRelationshipNudge(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -109954,6 +111996,8 @@ func (siw *ServerInterfaceWrapper) GetContactProfileFields(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -109995,6 +112039,8 @@ func (siw *ServerInterfaceWrapper) RestoreContactProfileField(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -110044,6 +112090,8 @@ func (siw *ServerInterfaceWrapper) PublishCapturedContact(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110076,6 +112124,8 @@ func (siw *ServerInterfaceWrapper) RunContactResearch(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110107,6 +112157,8 @@ func (siw *ServerInterfaceWrapper) SaveContactResearch(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -110264,6 +112316,8 @@ func (siw *ServerInterfaceWrapper) CreateContract(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110320,6 +112374,8 @@ func (siw *ServerInterfaceWrapper) ArchiveContract(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110352,6 +112408,8 @@ func (siw *ServerInterfaceWrapper) GetContract(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110383,6 +112441,8 @@ func (siw *ServerInterfaceWrapper) UpdateContract(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -110440,6 +112500,8 @@ func (siw *ServerInterfaceWrapper) CancelContract(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110496,6 +112558,8 @@ func (siw *ServerInterfaceWrapper) RenewContract(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -110551,6 +112615,8 @@ func (siw *ServerInterfaceWrapper) ChangeContractStatus(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111365,6 +113431,8 @@ func (siw *ServerInterfaceWrapper) ArchiveDealRoom(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111455,6 +113523,8 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111511,6 +113581,8 @@ func (siw *ServerInterfaceWrapper) GetDealRoomBrief(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111542,6 +113614,8 @@ func (siw *ServerInterfaceWrapper) CloseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111609,6 +113683,8 @@ func (siw *ServerInterfaceWrapper) AddDealRoomDocument(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111649,6 +113725,8 @@ func (siw *ServerInterfaceWrapper) RemoveDealRoomDocument(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111715,6 +113793,8 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomDocument(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111770,6 +113850,8 @@ func (siw *ServerInterfaceWrapper) SetDealRoomExpiry(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111877,6 +113959,8 @@ func (siw *ServerInterfaceWrapper) InviteDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -111917,6 +114001,8 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoomParticipant(w http.ResponseWrit
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -111959,6 +114045,8 @@ func (siw *ServerInterfaceWrapper) ResendDealRoomInvitation(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112000,6 +114088,8 @@ func (siw *ServerInterfaceWrapper) RevokeDealRoomParticipant(w http.ResponseWrit
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112031,6 +114121,8 @@ func (siw *ServerInterfaceWrapper) PauseDealRoom(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -112095,6 +114187,8 @@ func (siw *ServerInterfaceWrapper) ResumeDealRoom(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -112264,6 +114358,8 @@ func (siw *ServerInterfaceWrapper) ResolveDealRoomThread(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112286,6 +114382,8 @@ func (siw *ServerInterfaceWrapper) ListDealSuggestions(w http.ResponseWriter, r 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -112426,6 +114524,8 @@ func (siw *ServerInterfaceWrapper) GetDealSuggestion(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -112457,6 +114557,8 @@ func (siw *ServerInterfaceWrapper) AcceptDealSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -112513,6 +114615,8 @@ func (siw *ServerInterfaceWrapper) DismissDealSuggestion(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113481,6 +115585,8 @@ func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113540,6 +115646,8 @@ func (siw *ServerInterfaceWrapper) CorrectDealCloseDay(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113763,6 +115871,8 @@ func (siw *ServerInterfaceWrapper) UnhideDealDocument(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113804,6 +115914,8 @@ func (siw *ServerInterfaceWrapper) HideDealDocument(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113835,6 +115947,8 @@ func (siw *ServerInterfaceWrapper) ListDealLegalReviews(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113868,6 +115982,8 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -113899,6 +116015,8 @@ func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -113947,6 +116065,8 @@ func (siw *ServerInterfaceWrapper) DismissDealMove(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -114148,6 +116268,8 @@ func (siw *ServerInterfaceWrapper) CreateDealOutcomeReview(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -114180,6 +116302,8 @@ func (siw *ServerInterfaceWrapper) ListDealProducts(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -114211,6 +116335,8 @@ func (siw *ServerInterfaceWrapper) ReplaceDealProducts(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -114321,6 +116447,8 @@ func (siw *ServerInterfaceWrapper) ProposeDealRoles(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -114395,6 +116523,8 @@ func (siw *ServerInterfaceWrapper) RevertStageProgression(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -114558,6 +116688,40 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealViability operation middleware
+func (siw *ServerInterfaceWrapper) GetDealViability(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealViability(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetDealWinEvidence operation middleware
 func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
 
@@ -114574,6 +116738,8 @@ func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -114946,6 +117112,8 @@ func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -114965,6 +117133,8 @@ func (siw *ServerInterfaceWrapper) GetContactCaseSettings(w http.ResponseWriter,
 func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115046,6 +117216,8 @@ func (siw *ServerInterfaceWrapper) GetEmailSignatureTemplate(w http.ResponseWrit
 func (siw *ServerInterfaceWrapper) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115135,6 +117307,8 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115154,6 +117328,8 @@ func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.Respon
 func (siw *ServerInterfaceWrapper) PreviewEmailSignOff(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115195,6 +117371,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115214,6 +117392,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexIdentities(w http.ResponseWriter,
 func (siw *ServerInterfaceWrapper) EmbedReindexPreview(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115235,6 +117415,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115254,6 +117436,8 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115437,6 +117621,8 @@ func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115468,6 +117654,8 @@ func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115523,6 +117711,8 @@ func (siw *ServerInterfaceWrapper) GetFieldHistory(w http.ResponseWriter, r *htt
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -115726,6 +117916,8 @@ func (siw *ServerInterfaceWrapper) GetFinanceSource(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -115768,6 +117960,8 @@ func (siw *ServerInterfaceWrapper) ListFinanceSourceCustomers(w http.ResponseWri
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116017,6 +118211,8 @@ func (siw *ServerInterfaceWrapper) GetForecastAssuranceEnforcement(w http.Respon
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116206,6 +118402,8 @@ func (siw *ServerInterfaceWrapper) WaitInputCheck(w http.ResponseWriter, r *http
 func (siw *ServerInterfaceWrapper) PreviewForecastAssurance(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116426,6 +118624,8 @@ func (siw *ServerInterfaceWrapper) OpenForecastShare(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116458,6 +118658,8 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -116477,6 +118679,8 @@ func (siw *ServerInterfaceWrapper) ExportForecastShare(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) ListForecastShares(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116549,6 +118753,8 @@ func (siw *ServerInterfaceWrapper) RevokeForecastShare(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) GetForecastStageChances(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116671,6 +118877,8 @@ func (siw *ServerInterfaceWrapper) ListImportRuns(w http.ResponseWriter, r *http
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116816,6 +119024,8 @@ func (siw *ServerInterfaceWrapper) UploadImportSource(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -116980,6 +119190,8 @@ func (siw *ServerInterfaceWrapper) DownloadImportProblems(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117663,6 +119875,8 @@ func (siw *ServerInterfaceWrapper) CancelIntroRequest(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -117694,6 +119908,8 @@ func (siw *ServerInterfaceWrapper) CompleteIntroRequest(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117727,6 +119943,8 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -117746,6 +119964,8 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117830,6 +120050,8 @@ func (siw *ServerInterfaceWrapper) ReadCorpus(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -117927,6 +120149,8 @@ func (siw *ServerInterfaceWrapper) ListCorpusDocuments(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118023,6 +120247,8 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118067,6 +120293,8 @@ func (siw *ServerInterfaceWrapper) CreateLeadDisqualifyReason(w http.ResponseWri
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118124,6 +120352,8 @@ func (siw *ServerInterfaceWrapper) DeleteLeadDisqualifyReason(w http.ResponseWri
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118155,6 +120385,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadDisqualifyReason(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118225,6 +120457,8 @@ func (siw *ServerInterfaceWrapper) CreateLeadOrigin(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118281,6 +120515,8 @@ func (siw *ServerInterfaceWrapper) DeleteLeadOrigin(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118312,6 +120548,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadOrigin(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118357,6 +120595,8 @@ func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118401,6 +120641,8 @@ func (siw *ServerInterfaceWrapper) CreateLeadSource(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118458,6 +120700,8 @@ func (siw *ServerInterfaceWrapper) DeleteLeadSource(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -118489,6 +120733,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadSource(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -118965,6 +121211,8 @@ func (siw *ServerInterfaceWrapper) UpdateLeadSettings(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119266,6 +121514,8 @@ func (siw *ServerInterfaceWrapper) LinkLeadCompany(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119298,6 +121548,8 @@ func (siw *ServerInterfaceWrapper) ListLeadManualSignals(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119329,6 +121581,8 @@ func (siw *ServerInterfaceWrapper) SetLeadManualSignal(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119371,6 +121625,8 @@ func (siw *ServerInterfaceWrapper) ClearLeadManualSignal(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119402,6 +121658,8 @@ func (siw *ServerInterfaceWrapper) AcceptPartnerLead(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119535,6 +121793,8 @@ func (siw *ServerInterfaceWrapper) PreviewLeadPromotion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119674,6 +121934,8 @@ func (siw *ServerInterfaceWrapper) ReopenLead(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119729,6 +121991,8 @@ func (siw *ServerInterfaceWrapper) ExplainLeadScore(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119795,6 +122059,8 @@ func (siw *ServerInterfaceWrapper) ListLegalEntities(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119831,6 +122097,8 @@ func (siw *ServerInterfaceWrapper) CreateLegalEntity(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119863,6 +122131,8 @@ func (siw *ServerInterfaceWrapper) GetLegalEntity(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -119894,6 +122164,8 @@ func (siw *ServerInterfaceWrapper) UpdateLegalEntity(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -119951,6 +122223,8 @@ func (siw *ServerInterfaceWrapper) ArchiveLegalEntity(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120006,6 +122280,8 @@ func (siw *ServerInterfaceWrapper) DeleteLegalEntityLogo(w http.ResponseWriter, 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120119,6 +122395,8 @@ func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120150,6 +122428,8 @@ func (siw *ServerInterfaceWrapper) ListLegalEntityMembers(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120183,6 +122463,8 @@ func (siw *ServerInterfaceWrapper) AssignLegalEntityMember(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120205,6 +122487,8 @@ func (siw *ServerInterfaceWrapper) ListLegalReviews(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120268,6 +122552,8 @@ func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120287,6 +122573,8 @@ func (siw *ServerInterfaceWrapper) GetLegalReviewSettings(w http.ResponseWriter,
 func (siw *ServerInterfaceWrapper) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -120320,6 +122608,8 @@ func (siw *ServerInterfaceWrapper) GetLegalReview(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120352,6 +122642,8 @@ func (siw *ServerInterfaceWrapper) DecideLegalReview(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -120383,6 +122675,8 @@ func (siw *ServerInterfaceWrapper) WithdrawLegalReview(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121016,6 +123310,8 @@ func (siw *ServerInterfaceWrapper) CreateLossReason(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121062,6 +123358,8 @@ func (siw *ServerInterfaceWrapper) ListLegacyLossReasons(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121131,6 +123429,8 @@ func (siw *ServerInterfaceWrapper) DecideLegacyLossReason(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121187,6 +123487,8 @@ func (siw *ServerInterfaceWrapper) UpdateLossReason(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121233,6 +123535,8 @@ func (siw *ServerInterfaceWrapper) GetMagic(w http.ResponseWriter, r *http.Reque
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121294,6 +123598,8 @@ func (siw *ServerInterfaceWrapper) GetMagicLineRecords(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121360,6 +123666,8 @@ func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121411,6 +123719,8 @@ func (siw *ServerInterfaceWrapper) SaveMailDraft(w http.ResponseWriter, r *http.
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121467,6 +123777,8 @@ func (siw *ServerInterfaceWrapper) DiscardMailDraft(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121562,6 +123874,8 @@ func (siw *ServerInterfaceWrapper) GetMyAiActivity(w http.ResponseWriter, r *htt
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121699,6 +124013,8 @@ func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121718,6 +124034,8 @@ func (siw *ServerInterfaceWrapper) GetMyEmailSignature(w http.ResponseWriter, r 
 func (siw *ServerInterfaceWrapper) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121759,6 +124077,8 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -121778,6 +124098,8 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInAccount(w http.ResponseWriter, r
 func (siw *ServerInterfaceWrapper) SaveMyLinkedInAccount(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121821,6 +124143,8 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -121957,6 +124281,8 @@ func (siw *ServerInterfaceWrapper) ConfirmMyTotp(w http.ResponseWriter, r *http.
 func (siw *ServerInterfaceWrapper) ListNotificationPreferences(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122186,6 +124512,8 @@ func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -122235,6 +124563,8 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -122254,6 +124584,8 @@ func (siw *ServerInterfaceWrapper) RaiseNotice(w http.ResponseWriter, r *http.Re
 func (siw *ServerInterfaceWrapper) MarkAllNoticesRead(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122286,6 +124618,8 @@ func (siw *ServerInterfaceWrapper) MarkNoticeRead(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -122832,6 +125166,8 @@ func (siw *ServerInterfaceWrapper) AcceptOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123008,6 +125344,8 @@ func (siw *ServerInterfaceWrapper) DownloadOfferPdf(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123039,6 +125377,8 @@ func (siw *ServerInterfaceWrapper) RegenerateOffer(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123096,6 +125436,8 @@ func (siw *ServerInterfaceWrapper) RejectOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123152,6 +125494,8 @@ func (siw *ServerInterfaceWrapper) RenderOffer(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -123207,6 +125551,8 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -123270,6 +125616,8 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 func (siw *ServerInterfaceWrapper) MessageOnboardingCompany(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -124168,6 +126516,8 @@ func (siw *ServerInterfaceWrapper) GetControllerParticulars(w http.ResponseWrite
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -124620,6 +126970,19 @@ func (siw *ServerInterfaceWrapper) ListProducts(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// ------------- Optional query parameter "tax_category" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tax_category", r.URL.Query(), &params.TaxCategory, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tax_category"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tax_category", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListProducts(w, r, params)
 	}))
@@ -124821,6 +127184,120 @@ func (siw *ServerInterfaceWrapper) UpdateProduct(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateProduct(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListProductTranslations operation middleware
+func (siw *ServerInterfaceWrapper) ListProductTranslations(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListProductTranslations(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) DeleteProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteProductTranslation(w, r, id, language)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutProductTranslation operation middleware
+func (siw *ServerInterfaceWrapper) PutProductTranslation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "language" -------------
+	var language string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "language", chi.URLParam(r, "language"), &language, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "language", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutProductTranslation(w, r, id, language)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125959,6 +128436,8 @@ func (siw *ServerInterfaceWrapper) RemoveProjectStakeholder(w http.ResponseWrite
 func (siw *ServerInterfaceWrapper) ListProviderConnections(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -127201,6 +129680,8 @@ func (siw *ServerInterfaceWrapper) CreateRecordGrant(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -127256,6 +129737,8 @@ func (siw *ServerInterfaceWrapper) RevokeRecordGrant(w http.ResponseWriter, r *h
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -127346,6 +129829,8 @@ func (siw *ServerInterfaceWrapper) CreateRecordRole(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -127401,6 +129886,8 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -127771,6 +130258,8 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -127836,6 +130325,8 @@ func (siw *ServerInterfaceWrapper) WithdrawOwnershipOffer(w http.ResponseWriter,
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -127877,6 +130368,8 @@ func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -127917,6 +130410,8 @@ func (siw *ServerInterfaceWrapper) OfferOwnershipTransfer(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -127983,6 +130478,8 @@ func (siw *ServerInterfaceWrapper) ListOwnershipOfferCandidates(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -128023,6 +130520,8 @@ func (siw *ServerInterfaceWrapper) WithdrawOwnershipRequest(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -128065,6 +130564,8 @@ func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -128105,6 +130606,8 @@ func (siw *ServerInterfaceWrapper) RequestOwnershipTransfer(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -128213,6 +130716,8 @@ func (siw *ServerInterfaceWrapper) CreateRecordAssignment(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -128650,6 +131155,8 @@ func (siw *ServerInterfaceWrapper) ExplainReport(w http.ResponseWriter, r *http.
 func (siw *ServerInterfaceWrapper) ListRetentionPolicies(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129144,6 +131651,8 @@ func (siw *ServerInterfaceWrapper) ListRoles(w http.ResponseWriter, r *http.Requ
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129380,6 +131889,47 @@ func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// DescribeRouterActions operation middleware
+func (siw *ServerInterfaceWrapper) DescribeRouterActions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DescribeRouterActionsParams
+
+	// ------------- Required query parameter "router" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "router", r.URL.Query(), &params.Router, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "router"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "router", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DescribeRouterActions(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListScheduledSends operation middleware
 func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *http.Request) {
 
@@ -129387,6 +131937,8 @@ func (siw *ServerInterfaceWrapper) ListScheduledSends(w http.ResponseWriter, r *
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129436,6 +131988,8 @@ func (siw *ServerInterfaceWrapper) GetScheduledSend(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129467,6 +132021,8 @@ func (siw *ServerInterfaceWrapper) RescheduleScheduledSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129524,6 +132080,8 @@ func (siw *ServerInterfaceWrapper) CancelScheduledSend(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129546,6 +132104,8 @@ func (siw *ServerInterfaceWrapper) GetSchedulingCalendars(w http.ResponseWriter,
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129697,6 +132257,8 @@ func (siw *ServerInterfaceWrapper) ChangeMeetingInvitation(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129728,6 +132290,8 @@ func (siw *ServerInterfaceWrapper) GetMeetingAvailability(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129800,6 +132364,8 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -129819,6 +132385,8 @@ func (siw *ServerInterfaceWrapper) PutSchedulingProfile(w http.ResponseWriter, r
 func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129842,6 +132410,8 @@ func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -129881,6 +132451,8 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131167,6 +133739,8 @@ func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131199,6 +133773,8 @@ func (siw *ServerInterfaceWrapper) AcceptTagSuggestion(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131230,6 +133806,8 @@ func (siw *ServerInterfaceWrapper) DismissTagSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131599,6 +134177,8 @@ func (siw *ServerInterfaceWrapper) RestoreTag(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131654,6 +134234,65 @@ func (siw *ServerInterfaceWrapper) CreateTask(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateTask(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListTaxRates operation middleware
+func (siw *ServerInterfaceWrapper) ListTaxRates(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTaxRatesParams
+
+	// ------------- Optional query parameter "country" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "country", r.URL.Query(), &params.Country, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "country"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "country", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListTaxRates(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordTaxRate operation middleware
+func (siw *ServerInterfaceWrapper) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordTaxRate(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -131735,6 +134374,8 @@ func (siw *ServerInterfaceWrapper) CreateTeam(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131766,6 +134407,8 @@ func (siw *ServerInterfaceWrapper) UpdateTeam(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131808,6 +134451,8 @@ func (siw *ServerInterfaceWrapper) RemoveTeamMember(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -131848,6 +134493,8 @@ func (siw *ServerInterfaceWrapper) AddTeamMember(w http.ResponseWriter, r *http.
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -131962,6 +134609,8 @@ func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132033,6 +134682,8 @@ func (siw *ServerInterfaceWrapper) PreviewAccess(w http.ResponseWriter, r *http.
 func (siw *ServerInterfaceWrapper) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -132179,6 +134830,8 @@ func (siw *ServerInterfaceWrapper) GetMember(w http.ResponseWriter, r *http.Requ
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132210,6 +134863,8 @@ func (siw *ServerInterfaceWrapper) UpdateMember(w http.ResponseWriter, r *http.R
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -132275,6 +134930,8 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132307,6 +134964,8 @@ func (siw *ServerInterfaceWrapper) GetUserHandover(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132338,6 +134997,8 @@ func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *ht
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -132536,6 +135197,8 @@ func (siw *ServerInterfaceWrapper) ReactivateUser(w http.ResponseWriter, r *http
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132568,12 +135231,46 @@ func (siw *ServerInterfaceWrapper) RemoveMember(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RemoveMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResendUserInvite operation middleware
+func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResendUserInvite(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132662,6 +135359,8 @@ func (siw *ServerInterfaceWrapper) ChangeUserRole(w http.ResponseWriter, r *http
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -132758,6 +135457,8 @@ func (siw *ServerInterfaceWrapper) ListSavedViews(w http.ResponseWriter, r *http
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -132872,6 +135573,8 @@ func (siw *ServerInterfaceWrapper) GetSavedView(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -132947,6 +135650,8 @@ func (siw *ServerInterfaceWrapper) UpdateSavedView(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) ListVoiceProfiles(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133082,6 +135787,8 @@ func (siw *ServerInterfaceWrapper) GetVoiceProfile(w http.ResponseWriter, r *htt
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133236,6 +135943,8 @@ func (siw *ServerInterfaceWrapper) GetVoiceBuild(w http.ResponseWriter, r *http.
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133342,6 +136051,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfileDeltas(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133460,6 +136171,8 @@ func (siw *ServerInterfaceWrapper) GetVoiceLearningSummary(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -133491,6 +136204,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceCorpusSources(w http.ResponseWriter,
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -133741,6 +136456,8 @@ func (siw *ServerInterfaceWrapper) ListVoiceProfileVersions(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134027,6 +136744,8 @@ func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.R
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134126,6 +136845,8 @@ func (siw *ServerInterfaceWrapper) GetWebForm(w http.ResponseWriter, r *http.Req
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134568,6 +137289,8 @@ func (siw *ServerInterfaceWrapper) AddWeeklyPlanCommitment(w http.ResponseWriter
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134599,6 +137322,8 @@ func (siw *ServerInterfaceWrapper) EditWeeklyPlanCommitment(w http.ResponseWrite
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134632,6 +137357,8 @@ func (siw *ServerInterfaceWrapper) AskForWeeklyPlanHelp(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134663,6 +137390,8 @@ func (siw *ServerInterfaceWrapper) AnswerWeeklyPlanCommitment(w http.ResponseWri
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134696,6 +137425,8 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134715,6 +137446,8 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134736,6 +137469,8 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134755,6 +137490,8 @@ func (siw *ServerInterfaceWrapper) StartWeeklyPlan(w http.ResponseWriter, r *htt
 func (siw *ServerInterfaceWrapper) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134788,6 +137525,8 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -134807,6 +137546,8 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134830,6 +137571,8 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134869,6 +137612,8 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -134943,6 +137688,8 @@ func (siw *ServerInterfaceWrapper) GetWorklist(w http.ResponseWriter, r *http.Re
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135058,6 +137805,8 @@ func (siw *ServerInterfaceWrapper) MarkWorklistRowsDone(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135078,6 +137827,8 @@ func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135097,6 +137848,8 @@ func (siw *ServerInterfaceWrapper) ReopenWorklistRows(w http.ResponseWriter, r *
 func (siw *ServerInterfaceWrapper) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135120,6 +137873,8 @@ func (siw *ServerInterfaceWrapper) GetHandledForYou(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135157,6 +137912,8 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklog(w http.ResponseWriter, r *ht
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135189,6 +137946,8 @@ func (siw *ServerInterfaceWrapper) GetHiddenBacklogRows(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135211,6 +137970,8 @@ func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *ht
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135260,6 +138021,8 @@ func (siw *ServerInterfaceWrapper) UnpinWorklistRow(w http.ResponseWriter, r *ht
 func (siw *ServerInterfaceWrapper) PinWorklistRow(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135420,6 +138183,8 @@ func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -135458,6 +138223,8 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 	_ = err
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -135884,6 +138651,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/ai/usage/summary", wrapper.GetAiUsageSummary)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/account-coverage", wrapper.GetAccountCoverage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/assessment", wrapper.AssessSalesReview)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/context", wrapper.GetAnalyticsContext)
 	})
 	r.Group(func(r chi.Router) {
@@ -136056,6 +138829,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/sdr-team", wrapper.GetSdrTeamReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/analytics/setup-proposal", wrapper.ProposeReportSetup)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/targets", wrapper.ListReportingTargets)
@@ -137072,6 +139848,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/viability", wrapper.GetDealViability)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/win-evidence", wrapper.GetDealWinEvidence)
 	})
 	r.Group(func(r chi.Router) {
@@ -137888,6 +140667,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/products/{id}", wrapper.UpdateProduct)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/products/{id}/translations", wrapper.ListProductTranslations)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/products/{id}/translations/{language}", wrapper.DeleteProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/products/{id}/translations/{language}", wrapper.PutProductTranslation)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects", wrapper.ListProjects)
 	})
 	r.Group(func(r chi.Router) {
@@ -138185,6 +140973,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/roles/{key}/restore", wrapper.RestoreRole)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/router-actions", wrapper.DescribeRouterActions)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduled-sends", wrapper.ListScheduledSends)
 	})
 	r.Group(func(r chi.Router) {
@@ -138338,6 +141129,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/tasks", wrapper.CreateTask)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/tax-rates", wrapper.ListTaxRates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/tax-rates", wrapper.RecordTaxRate)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/teams", wrapper.ListTeams)
 	})
 	r.Group(func(r chi.Router) {
@@ -138408,6 +141205,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/remove", wrapper.RemoveMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/resend-invite", wrapper.ResendUserInvite)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/retirement-preview", wrapper.PreviewMemberRetirement)

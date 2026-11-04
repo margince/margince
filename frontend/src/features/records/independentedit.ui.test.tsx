@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import {
   company,
@@ -142,12 +143,16 @@ it("saves Customer tier when a background logo update changed the company versio
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "Profile" }));
   await user.click(
-    await screen.findByRole("button", { name: "Change Customer tier" }),
+    await screen.findByRole("button", { name: /^Change Customer tier/ }),
   );
   current = { ...original, version: 2, logo_url: "new-logo" };
-  await user.click(
-    await screen.findByRole("option", { name: "Growth Client" }),
+  const dialog = await screen.findByRole("dialog", { name: "Customer tier" });
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: "Customer tier" }),
+    "Growth Client",
   );
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
   // Two round-trips, not one: the first PATCH is refused as version skew, the
   // screen refetches the record and retries on the version it came back with.
   // waitFor's one-second default is a machine-speed assumption about that
@@ -186,12 +191,13 @@ it("saves a contact's title across an unrelated update without resending their e
     return jsonResponse(current);
   });
   render(<ContactDetails contact={anna} />);
-  fireEvent.click(await screen.findByRole("button", { name: "Change Title" }));
-  fireEvent.change(await screen.findByLabelText("Title"), {
+  fireEvent.click(await screen.findByRole("button", { name: /^Change Title/ }));
+  const dialog = await screen.findByRole("dialog", { name: "Title" });
+  fireEvent.change(within(dialog).getByLabelText("Title"), {
     target: { value: "New title" },
   });
   current = { ...anna, version: 2, full_name: "Updated name" };
-  fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(patches).toHaveLength(2));
   expect(patches).toEqual([
     { body: { title: "New title" }, version: "1" },
@@ -232,13 +238,14 @@ it("saves a deal's name across an unrelated update using the fresh version", asy
   // The drawer's own field; the page's head renames the deal too.
   const drawer = await screen.findByRole("dialog");
   fireEvent.click(
-    await within(drawer).findByRole("button", { name: "Change Deal name" }),
+    await within(drawer).findByRole("button", { name: /^Change Deal name/ }),
   );
-  fireEvent.change(within(drawer).getByLabelText("Deal name"), {
+  const rename = await screen.findByRole("dialog", { name: "Deal name" });
+  fireEvent.change(within(rename).getByLabelText("Deal name"), {
     target: { value: "Renamed deal" },
   });
   current = { ...original, version: 5, description: "Updated description" };
-  fireEvent.keyDown(within(drawer).getByRole("textbox"), { key: "Enter" });
+  fireEvent.click(within(rename).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(patches).toHaveLength(2));
   expect(patches).toEqual([
     { body: { name: "Renamed deal" }, version: "4" },

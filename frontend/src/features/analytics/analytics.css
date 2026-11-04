@@ -184,27 +184,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-}
-
-/* The summary's sentences, one per line, each opening what it rests on. */
-.analytics-decision {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.analytics-decision-link {
-  text-align: start;
-  white-space: normal;
-}
-.analytics-composition {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-4);
+  gap: var(--gapActions);
 }
 
 /* All open pipeline, the secondary reading over the stock charts. */
@@ -212,8 +192,7 @@
   margin: 0;
 }
 
-/* Sales review's lead row: the outcome and its trend, and the three readings
-   stacked beside them. Under 1100px the readings go under the lead. */
+/* Personal outcomes and the work awaiting the reader share the first row. */
 .analytics-lead {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
@@ -231,4 +210,28 @@
   .analytics-lead {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* The assessment's sentences: one reading per row, its kind first. */
+.assessment-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--gapActions);
+}
+
+.assessment-lines > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  align-items: baseline;
+}
+
+.analytics-outlook-prose {
+  max-width: 75ch;
+}
+
+.analytics-outlook-prose > p + p {
+  margin-block-start: var(--paragraphSpacing);
 }

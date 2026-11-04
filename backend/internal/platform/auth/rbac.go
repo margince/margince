@@ -230,6 +230,20 @@ func RequireHumanOrAgentScope(ctx context.Context, scope principal.Scope) error 
 	return RequireHuman(ctx)
 }
 
+// RequireHumanOrItsAgent is RequireHuman that also admits an agent working on
+// a colleague's passport. Unlike RequireHumanOrAgentScope it refuses
+// passportless automatic work, which acts for nobody.
+func RequireHumanOrItsAgent(ctx context.Context) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if p.ActsAsItsUser() {
+		return nil
+	}
+	return RequireHuman(ctx)
+}
+
 // RequireMember admits any SEATED principal and refuses everyone else. It is
 // the gate for a read whose whole boundary is membership: the roster and the
 // colleague list answer "who works here", which every seat may ask and nobody
@@ -460,10 +474,10 @@ func RequireCoach(ctx context.Context) error {
 }
 
 // leads reports whether a human seat holds the team-lead grant for this act.
-// Leading is a human's act: an agent or connector holding the grant through
-// its human leads nobody on its own.
+// Leading is a human's act, done by them or by their agent. A connector, or
+// passportless work, leads nobody on its own.
 func leads(p principal.Principal, action principal.Action) bool {
-	return p.Type == principal.PrincipalHuman && p.Permissions.Allows(objTeamLead, action)
+	return p.HumanOrItsAgent() && p.Permissions.Allows(objTeamLead, action)
 }
 
 // RequireAdmin admits only a principal carrying the workspace "admin" role.

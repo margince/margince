@@ -49,10 +49,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
+	if err := start(ctx, os.Args[1:], os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, config.RoleWorker.Refusal(err))
 		os.Exit(1)
 	}
+}
+
+// start is --version when args ask for it, and the boot otherwise.
+func start(ctx context.Context, args []string, stdout io.Writer) error {
+	if buildinfo.AsksForVersion(args) {
+		_, err := fmt.Fprintln(stdout, buildinfo.VersionLine("margince-worker"))
+		return err
+	}
+	return run(ctx, args, stdout)
 }
 
 // run is the worker's boot sequence — the debug subcommands, flags,

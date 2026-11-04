@@ -1,0 +1,43 @@
+name: initiative_setup_asks_about_a_target_the_words_leave_open
+task: report_setup
+site: initiative_setup
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# The words name an industry and a goal but no target and no deadline, and
+# ask for something the catalog cannot hold. The proposal resolves what it
+# can, asks for the rest, and names back the phrase it cannot express.
+fixture:
+  description: "More qualified opportunities with manufacturing companies, and only the ones our partner sourced."
+  today: "2026-11-03"
+  lang: en
+  products:
+    - {label: linden, name: "Linden press line"}
+  catalog:
+    industries:
+      - {id: manufacturing, label: Manufacturing}
+      - {id: software, label: Software}
+    periods: [this_month, this_quarter]
+    metrics:
+      - {id: bookings_won, label: "Sales won", charts: [bookings_trend]}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities", charts: []}
+    charts:
+      - {id: bookings_trend, label: bookings_trend}
+    objectives:
+      - {id: bookings_won, label: "Sales won"}
+      - {id: qualified_opportunities_created, label: "Qualified opportunities"}
+expect:
+  outcome: accepted
+  answer:
+    industry: manufacturing
+    objective: qualified_opportunities_created
+    unsupported: 1
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the proposal resolves the industry to manufacturing and the
+    objective to qualified opportunities, names no product and no country,
+    asks in a clarification for the target or the deadline the words left
+    open, and names back "only the ones our partner sourced" as a phrase no
+    filter here expresses. A made-up target or deadline fails the scenario.

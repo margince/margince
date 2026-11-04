@@ -83,14 +83,18 @@ var noticeClasses = []string{
 // vcardstagereview.go — and a module may not import compose, so this map is
 // where the two meet. A kind missing from it is refused by ClassFor rather than
 // delivered under whatever the fallback happened to be.
+// KindMeetingInvitationAttention tells a host an invitation of theirs waits for them.
+const KindMeetingInvitationAttention = "meeting_invitation_attention"
+
 var classByKind = map[string]string{
-	"data_task_failed":        classSystem,
-	"automation":              classAutomation,
-	"lead_sla":                classLeadSLA,
-	"capture_backlog_stalled": classCapture,
-	"vcard_staging_failed":    classSystem,
-	KindApprovalPending:       ClassApprovalPending,
-	KindExtension:             classSystem,
+	"data_task_failed":             classSystem,
+	"automation":                   classAutomation,
+	"lead_sla":                     classLeadSLA,
+	"capture_backlog_stalled":      classCapture,
+	"vcard_staging_failed":         classSystem,
+	KindMeetingInvitationAttention: classSystem,
+	KindApprovalPending:            ClassApprovalPending,
+	KindExtension:                  classSystem,
 	// The answer to a colleague's own request to be handed a record.
 	"ownership_request_accepted":  classSystem,
 	"ownership_request_declined":  classSystem,
@@ -176,7 +180,7 @@ func (s *Store) MyNotificationPreferences(ctx context.Context) ([]Preference, er
 // and answers their WHOLE set, so a screen rendering one row per class cannot
 // take a stale copy of the others from its own memory.
 func (s *Store) SaveNotificationPreference(ctx context.Context, class, delivery string) ([]Preference, error) {
-	human, err := actingSeat(ctx, "changing your notification settings")
+	human, err := deliverySeat(ctx, "changing your notification settings")
 	if err != nil {
 		return nil, err
 	}
@@ -295,16 +299,21 @@ func preferenceIdentity(human ids.UUID) string {
 
 // actingSeat is the acting human, named by the act for the refusal message.
 //
-// The CONTACT and not merely a user id: an agent or system principal can carry
-// a human's id, and an agent acting under its grantor's authority must not
-// decide what reaches its grantor, nor read or settle what already has — the
-// same ruling identity's delivery settings make, for the same inbox.
-//
-// One gate for the whole module: reading a notice, settling one, settling them
-// all and deciding where a class is delivered ask the same question of the same
-// principal, and five inline copies of it would drift the first time the answer
-// moved.
+// The CONTACT and not merely a user id: a system principal can carry a human's
+// id. Automatic work must not read or settle what reached a human; their agent
+// may.
 func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
+		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
+	}
+	return actor.UserID, nil
+}
+
+// deliverySeat is actingSeat for deciding what reaches a human, which only that
+// human does. An agent choosing that would decide what its grantor hears about
+// the agent. Identity's delivery settings make the same ruling.
+func deliverySeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
 		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)

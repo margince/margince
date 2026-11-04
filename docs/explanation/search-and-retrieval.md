@@ -395,6 +395,28 @@ projection, which has its own rules for how it stays current; see
 | Agent access | `/v1/search` is a 🟢 `search_records` read under a passport; the context walk and all three reindex endpoints are `x-agent-access: human-only` |
 | Settings (embed binding, `dimensions`, reindex endpoints, provider notes) | [../reference/configuration.md](../reference/configuration.md) |
 
+## Query plan hops
+
+A query plan may take one hop from the record it searches to a related record. The hops are derived;
+nobody keeps a list of them.
+
+- **A column naming a record is a hop.** `deal.company_id` names a company, so a deal has the
+  hop `company`. `deal.owner_id` names a user, which search does not read, so it is no hop.
+- **A role column hops under its role.** `deal.partner_company_id` gives the hop `partner_company`,
+  and `company.parent_company_id` gives `parent_company`. Which record such a column names is
+  declared once, in `roleNamedReferences` (`queryreferencescope.go`). The same entry guards a filter
+  on that column. `TestEveryQueryableReferenceResolvesToItsRecordType` holds it against the schema.
+- **Every hop also runs back.** The way back is named for the record that holds the column: company
+  has `deals`. A role column adds its role, so company also has `deals_by_partner_company` and
+  `companies_by_parent_company`. Two columns into one record so never share a name.
+- **A merge pointer is no hop.** The record that carries `merged_into_id` is archived, and a hop reads
+  live records only.
+- **Contacts and activities hop through a link table.** A contact's companies come from employment
+  rows in `relationship`, and an activity's records from `activity_link` (`queryjoins.go`).
+
+`TestEveryPublishedReferenceIsAHopInBothDirections` fails when a reference the contract publishes has
+no hop each way, or when two hops on one record share a name.
+
 ## Short rules
 
 - **A search hit is a read.** Authority is built into the query, never a filter on its results. So

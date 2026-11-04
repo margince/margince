@@ -71,14 +71,15 @@ type TeamMember struct {
 // bounded read here keeps: a truncation nobody is told about reads exactly like
 // a complete answer.
 func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error) {
-	// Refuses an agent seat and a Deal Room buyer. The seated-identity check
-	// follows for the principals RequireHuman admits without a place on the
-	// chart — a background pass has no team to enumerate.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Refuses automatic work with no passport and a Deal Room buyer; an agent
+	// reads its user's roster. The seated-identity check follows for the
+	// principals admitted without a place on the chart: a background pass has
+	// no team to enumerate.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, false, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return nil, false, apperrors.ErrPermissionDenied
 	}
 	me := ids.From[ids.UserKind](actor.UserID)
@@ -146,11 +147,11 @@ func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool
 // Not part of LiveTeammatesOfCaller: that roster draws the board and decides
 // whose queue a lead may open, and a departed colleague has neither.
 func (s *Service) FormerTeammatesOfCaller(ctx context.Context) ([]ids.UUID, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}
 	var former []ids.UUID

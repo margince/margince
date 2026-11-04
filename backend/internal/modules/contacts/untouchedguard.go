@@ -20,7 +20,6 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -54,11 +53,10 @@ func ReleasingSourceKey() WriteOption {
 	return func(o *writeOptions) { o.releaseSourceKey = true }
 }
 
-// NotTouchedByHumanSince refuses the write when a HUMAN has acted on the record
-// since `at`. What counts as acting is any human-actor audit row on the entity,
-// not narrowly an update: somebody who independently archived an imported row
-// is exactly the case this protects, and a narrower filter would reverse their
-// act too.
+// NotTouchedByHumanSince refuses the write when a user or their agent has acted
+// on the record since `at`. Acting is any such audit row on the entity, not
+// only an update. A narrower filter would reverse the act of somebody who
+// archived an imported row themselves.
 func NotTouchedByHumanSince(at time.Time) WriteOption {
 	return func(o *writeOptions) { o.untouchedSince = &at }
 }
@@ -163,14 +161,15 @@ func refuseIfHumanTouched(
 }
 
 // ColleagueWorkedOnSince reports whether a colleague has acted on the record
-// since the audit entry `after`, written at `since`: a human audit row on the
-// record itself, on a record a human merged into it, a correction a human
-// ruled about it, or a link it is an end of, or a tag or list membership a
-// human gave it — archiving the record retires all of them. Tags and lists are
-// asked without a time: every caller's entry made the record or brought it
-// back, and a human tag on it is work a colleague did on it either way. A human's undo of
-// some other change is not work on the record, so a reversal does not count,
-// and neither does a row this transaction wrote itself.
+// since the audit entry `after`, written at `since`. A colleague is a user or
+// their agent. Their work is an audit row on the record or on a record merged
+// into it. A correction ruled about it counts, and so does a link it is an end
+// of. A tag or list
+// membership they gave it counts too. Archiving the record retires all of them.
+// Tags and lists are asked without a time, since every caller's entry made the
+// record or brought it back. A colleague's undo of some other change is not work
+// on the record. Neither is a row this transaction wrote itself. A tag names the user
+// behind its agent and no passport, so a named user is what counts there.
 //
 // "Since" is asked of the audit id as well as the time. A row's occurred_at is
 // when its transaction STARTED, so a colleague whose save began before the
@@ -181,7 +180,7 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM audit_log a
-			 WHERE a.actor_type = 'human' AND (a.occurred_at > $3 OR ($6::uuid IS NOT NULL AND a.id > $6))
+			 WHERE (a.occurred_at > $3 OR ($6::uuid IS NOT NULL AND a.id > $6))
 			   AND a.occurred_at <> now()
 			   AND NOT (coalesce(a.evidence, '{}'::jsonb) ? $4)
 			   AND ((a.entity_type = $1 AND a.entity_id = $2)
@@ -191,13 +190,14 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 			        OR (a.entity_type = $5 AND a.entity_id IN (
 			              SELECT r.id FROM relationship r
 			               WHERE $2 IN (r.contact_id, r.counterparty_contact_id, r.company_id,
-			                            r.counterparty_company_id, r.deal_id, r.project_id)))))
+			                            r.counterparty_company_id, r.deal_id, r.project_id))))
+			   AND `+storekit.AuditForAUser("a")+`)
 		    OR EXISTS (
 			SELECT 1 FROM taggable g
-			 WHERE g.entity_type = $1 AND g.entity_id = $2 AND g.assigned_by_kind = 'human')
+			 WHERE g.entity_type = $1 AND g.entity_id = $2 AND (g.assigned_by_kind = 'human' OR (g.assigned_by_kind = 'agent' AND g.assigned_by IS NOT NULL)))
 		    OR EXISTS (
 			SELECT 1 FROM list_member m
-			 WHERE m.entity_type = $1 AND m.entity_id = $2 AND m.added_by LIKE 'human:%')`,
+			 WHERE m.entity_type = $1 AND m.entity_id = $2 AND `+storekit.StampForAUserSQL("m.added_by")+`)`,
 		entityType, id, since, storekit.EvidenceKeyUndidAuditLog, tableRelationship, entryOrNone(after)).Scan(&worked); err != nil {
 		return false, fmt.Errorf("checking whether a colleague worked on this %s: %w", entityType, err)
 	}
@@ -205,22 +205,22 @@ func ColleagueWorkedOnSince(ctx context.Context, tx pgx.Tx, entityType string, i
 }
 
 // ArchiveDroppedColleagueWork reports whether the newest archive of the record
-// deleted a tag or a list membership a human gave it. Asked after an archive in
-// its own transaction, it sees exactly what that archive took down — a tag a
-// colleague added while the decision was being made included, which a check
-// of the live rows can no longer see once the archive has deleted them.
+// deleted a tag or a list membership a user or their agent gave it. Asked after
+// an archive in its own transaction, it sees what that archive took
+// down. That includes a tag added while the decision was being made, which a
+// check of the live rows can no longer see.
 func ArchiveDroppedColleagueWork(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) (bool, error) {
 	archive, err := storekit.LatestArchive(ctx, tx, entityType, id)
 	if err != nil {
 		return false, err
 	}
 	for _, m := range archive.Cascade.Memberships {
-		if strings.HasPrefix(m.AddedBy, "human:") {
+		if storekit.StampIsForAUser(m.AddedBy) {
 			return true, nil
 		}
 	}
 	for _, tag := range archive.Cascade.Tags {
-		if tag.AssignedByKind != nil && *tag.AssignedByKind == "human" {
+		if tag.AssignedByKind != nil && (*tag.AssignedByKind == "human" || (*tag.AssignedByKind == "agent" && tag.AssignedBy != nil)) {
 			return true, nil
 		}
 	}

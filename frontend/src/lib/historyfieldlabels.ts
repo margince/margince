@@ -24,6 +24,10 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["address", "history.field.address"],
   ["amount_minor", "history.field.amount_minor"],
   ["expected_arr_minor", "history.field.expected_arr_minor"],
+  [
+    "extension_relationship_types",
+    "history.field.extension_relationship_types",
+  ],
   ["assignee_id", "history.field.assignee_id"],
   ["body", "history.field.body"],
   ["candidate_company_key", "history.field.candidate_company_key"],
@@ -114,6 +118,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["proposal_status", "history.field.proposal_status"],
   ["reminder_status", "history.field.reminder_status"],
   ["invitation_status", "history.field.invitation_status"],
+  ["attendees", "history.field.attendees"],
   ["admission", "history.field.admission"],
   ["admission_reason", "history.field.admission_reason"],
   ["admission_reason_code", "history.field.admission_reason_code"],

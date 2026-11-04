@@ -63,10 +63,11 @@ const SALES: View = {
   optional: (url) =>
     path(url) === "/v1/forecast/assurance/exceptions" ||
     path(url) === "/v1/analytics/decisions" ||
+    path(url) === "/v1/analytics/assessment" ||
     (path(url) === "/v1/analytics/evaluate" &&
       (isMovement(url) || isChartRead(url))),
-  // The movement read, the chart read and the decisions list.
-  inFlight: 3,
+  // The movement read, the chart read, the decisions list and the assessment.
+  inFlight: 4,
 };
 
 // Sales review's chart read: the board's charts with the metrics they belong to.

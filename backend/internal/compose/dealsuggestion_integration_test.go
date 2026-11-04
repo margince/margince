@@ -39,7 +39,7 @@ func (e *scoutEnv) rep(user ids.UUID, team ids.UUID) context.Context {
 
 // decider is the deals store with the acceptance effects the server wires.
 func (e *scoutEnv) decider() *deals.Store {
-	return e.Deals.WithClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
+	return e.Deals.SetClock(func() time.Time { return e.now }).WithSuggestionEffects(dealSuggestionEffects{})
 }
 
 // onlySuggestion answers the company's one suggestion as the reader sees it.
@@ -225,7 +225,7 @@ func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) 
 		if shown := e.suggestions(reader, t, acme); len(shown) != 0 {
 			t.Errorf("%s who may not read one meeting is shown %d suggestions", name, len(shown))
 		}
-		if n, err := e.Deals.CountOpenSuggestions(reader); err != nil || n != 0 {
+		if n, err := e.Deals.CountOpenSuggestions(reader, deals.SuggestionQuery{}); err != nil || n != 0 {
 			t.Errorf("%s counts %d open suggestions (err %v), want 0", name, n, err)
 		}
 		if _, err := e.decider().DismissSuggestion(reader, e.onlySuggestion(rep1, t, acme).ID); !errors.Is(err, apperrors.ErrNotFound) {

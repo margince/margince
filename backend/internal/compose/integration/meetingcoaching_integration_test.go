@@ -222,9 +222,8 @@ func TestALeadAloneInTheRoomIsNotCoached(t *testing.T) {
 	}
 }
 
-// An agent inherits its human's seat and is refused by RequireCoach, which
-// admits only a human. It still gets the brief.
-func TestAnAgentActingForALeadIsNotCoached(t *testing.T) {
+// An agent on a lead's passport acts as that lead, so it gets what they get.
+func TestAnAgentActingForALeadGetsTheCoaching(t *testing.T) {
 	e := Setup(t)
 	meeting := coachingRoom(t, e, e.Rep2)
 	ctx := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, coachPerms())
@@ -232,8 +231,8 @@ func TestAnAgentActingForALeadIsNotCoached(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an agent was refused the brief: %v", err)
 	}
-	if brief.Plan != nil && brief.Plan.ManagerCoaching != nil {
-		t.Error("an agent was handed the coaching layer")
+	if brief.Plan == nil || brief.Plan.ManagerCoaching == nil {
+		t.Error("the lead's agent was not given the coaching layer its lead gets")
 	}
 }
 

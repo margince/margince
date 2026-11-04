@@ -21,9 +21,23 @@ type MemberAction = NonNullable<User["allowed_actions"]>[number];
 
 const MEMBERS_KEY = ["users-admin", "all"] as const;
 
+// How often the roster is read again while an invitation mail is on its way.
+// The relay answers after the invite does, and its refusal must reach the row.
+export const MAIL_POLL_MS = 2_000;
+
+export function rosterPollInterval(
+  members: readonly Pick<User, "invite_email_state">[] | undefined,
+): number | false {
+  const onItsWay = members?.some(
+    (member) => member.invite_email_state === "sending",
+  );
+  return onItsWay ? MAIL_POLL_MS : false;
+}
+
 export function useMembers() {
-  return useQuery({
+  return useQuery<User[]>({
     queryKey: MEMBERS_KEY,
+    refetchInterval: (query) => rosterPollInterval(query.state.data),
     queryFn: async ({ signal }): Promise<User[]> => {
       const members: User[] = [];
       const seen = new Set<string>();

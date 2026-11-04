@@ -137,6 +137,20 @@ To read a report, a user needs access to the report and access to the numbers un
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
+## How do I read the sales review?
+
+**Sales review** opens with sales won, the forecast, its modelled range and pipeline due this quarter. The forecast names its basis. A manager call keeps its date, and the target comparison uses the same scope and period.
+
+**Quarter outlook** explains the measured figures in connected paragraphs. **View supporting records** opens the evidence, and **Refresh assessment** asks again. A suggested decision can fill in the deal and owner when you choose **Record decision**.
+
+The figures and actions remain available without AI text. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
+
+## Can I describe a report or an initiative in words?
+
+Yes. In the custom report window, write under **What would you like to understand?** and choose **Suggest filters and charts**. In a new initiative, write under **Describe the initiative** and choose **Suggest the goal**. Margince reads your words against what you may choose: a product, an industry, a company address, a date range, the figures and the graphs.
+
+The proposal shows the words each value came from. It lists the questions your words leave open, and the parts it could not use. **Use proposal** puts the proposed values into the fields, over what you had chosen; a name you typed stays. Nothing is saved until you save. Without an AI model, the button says so and you choose by hand.
+
 ## How do I record a decision from a review?
 
 Under **Decisions from the last review** on the sales review, choose **Record decision**. Name the decision, the deal, the owner and the review date, and say what result you expect. Confirming writes a task on the deal for that owner. Recording the same open decision on the same deal again returns that task. **Review decisions** under **More** shows the same list.
