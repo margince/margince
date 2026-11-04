@@ -81,9 +81,11 @@ neither.
   connection, waited, and then got one. It rises before latency does, which is
   what makes it an early reading rather than a fault count.
   `margince_pgxpool_acquire_canceled_total` is the one whose callers gave up.
-- `go_goroutines`: a count that only grows is a leak, and it grows for a while
-  before anything else notices. The runtime section writes it under the
-  standard name rather than a `margince_` one.
+- `go_goroutines`: growth that does not come back down is a leak, and it grows
+  for a while before anything else notices. Boot and a rise in load both raise
+  the count on their own, so watch for a level that never returns rather than
+  for any climb. The runtime section writes it under the standard name rather
+  than a `margince_` one.
 
 The full set is whatever the writers register, so read those rather than a list
 here: `backend/internal/platform/httpserver/metrics.go` names the sections in
