@@ -68,6 +68,7 @@ var contactGate = objectGate{
 // grants do not cover â so a read projecting r.contact_id with the contact
 // joined for liveness and row scope has taken the grant its payload sits behind.
 var predicateContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/search/graphedgetargets.go:liveContactSQL":                      "whether the contact an edge names is archived, so an edge fold skips it. The contact appears only inside NOT EXISTS; nothing is selected, and removing the condition could only fold more edges for readers already gated on the graph",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx":          "An existence-only uniqueness check suppresses already registered addresses from a content-authorized suggestion. No contact identity or field leaves it, including when a different owner holds the existing contact.",
 	"internal/modules/contacts/unknownemploymentrepair.go:unknownEmploymentCandidate": "contact liveness only narrows a system employment repair and its relationship-authorized estimate; no contact identity or field is returned",
 	"internal/modules/capture/privatesenderclause.go:PrivateSenderClause":             "the reconnect lane's exclusion: `contact` appears only inside NOT EXISTS, to ask whether the row carries a relationship mark. Nothing is selected, and removing the condition could only show more rows in a lane the caller is already gated on",
@@ -94,6 +95,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/consent/confirmresolve.go:ResolveConfirmToken":                  "resolves a confirm link to the subject it was minted for. Same public edge, same bearer token, and the token is the authority",
 	"internal/modules/consent/confirmtoken.go:spendConfirmTokenTx":                    "consumes that token exactly once, so a replayed link cannot submit twice. An UPDATE on the token, with the contact joined for liveness",
 	"internal/modules/consent/confirmtoken.go:subjectOfConfirmTokenTx":                "names the subject a spent token acted for, inside the submit's own transaction",
+	"internal/modules/consent/ruleselectors.go:contactCountryCandidates":              "the marketing rule selector: the address country of a recipient the caller already named picks which country's messaging rules judge the send. What leaves is a pack choice and the pack code a decision records, never a contact field",
 	"internal/modules/consent/gate.go:resolveContact":                                 "resolves an address the CALLER ALREADY NAMED as a send recipient to the one live contact behind it, so a consent grant can be looked up against a subject. What leaves is authorized or not, and why",
 	"internal/modules/consent/suppress.go:survivingSubject":                           "`coalesce(merged_into_id, id)` — follows a merged-away contact to the record that survived, so a public stop request lands on the right subject. One id, on the public unsubscribe edge",
 	"internal/modules/consent/withdrawalmint.go:bindWithdrawalSubject":                "stamps the subject a one-click unsubscribe link acts for, resolved from the address the send is going TO. Ambiguity leaves the credential unbound rather than stamping one subject's id on another's opt-out link; nothing about the contact reaches the recipient",
@@ -212,6 +214,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/technicaladdressrepair.go:technicalCandidatePage":    "one page of contact ids, versions and live addresses for the technical-address correction, never returned to a reader. Its one caller is RetireTechnicalAddressContactsTx, which asks auth.RequireSystem and auth.Require(ctx, \"contact\", delete) first",
 	"internal/modules/activities/meetingresource.go:calendarResourceParticipantSQL": "a resource-address predicate that returns no contact fields. Its callers pass contact scope: MeetingCounterparties gates its joined contact, outsidePartyClause supplies readableContactScope, and HeldMeetingCounterparties is the system's company walk",
 
 	"internal/modules/activities/meetingwith.go:colleagueParticipantSQL":         "whether a meeting participant with no address is a colleague, through its contact's live addresses. Only a boolean leaves it. Every caller passes the contact scope: MeetingCounterparties already scoped the participant's contact after auth.Require(contact, read), outsidePartyClause passes readableContactScope, and HeldMeetingCounterparties is Deal Scout's company walk that names no contact",

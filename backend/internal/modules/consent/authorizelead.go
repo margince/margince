@@ -111,7 +111,7 @@ func purposeRowFor(ctx context.Context, tx pgx.Tx, purposeKey string) (PurposeRo
 // honest answer, and it is the one shape here that must not become an allow,
 // because no suppression, objection or consent state can be read for a subject
 // nobody identified.
-func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase) (commsauthz.Decision, error) {
+func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
 	leadID, found, err := resolveLead(ctx, tx, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
@@ -145,7 +145,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	// an earlier version applied it at three separate returns and the third was
 	// a hand-inlined partial copy that set Suppression without consulting the
 	// rule.
-	decided, sendPurpose, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, stops)
+	decided, sendPurpose, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, stops, country)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -168,7 +168,7 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 // purpose this send resolved to — nil on the evidence arm, set once the
 // purpose-key arm below has read one off the record — for the same reason
 // decideResolved returns it on the contact path.
-func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, stops []liveStop, country RecipientCountry) (commsauthz.Decision, *ids.UUID, error) {
 	purposeKey := req.LegacyPurposeKey
 
 	// The evidence arms, before any purpose key is consulted, through the same
@@ -182,7 +182,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	res, err := g.resolveAndRecord(ctx, tx, req, subjectRef{
 		Kind: entityLead, ID: leadID, Address: address,
-		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
 	}, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
@@ -199,7 +199,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		stopped, err := withdrawalCovers(ctx, tx,
 			subjectRef{
 				Kind: entityLead, ID: leadID, Address: address,
-				ChannelProvider: channelProvider, ChannelUserID: channelUserID,
+				ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
 			}, res.Category)
 		if err != nil {
 			return commsauthz.Decision{}, nil, err

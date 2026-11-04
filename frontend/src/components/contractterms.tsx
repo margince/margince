@@ -1,27 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
-import { formatDate, formatMoney, formatNumber } from "../../format/format";
-import { monthlyEquivalent } from "../../format/recurring";
-import { type Locale, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import type { components } from "../api/schema";
+import { formatMoney, formatNumber } from "../format/format";
+import { monthlyEquivalent } from "../format/recurring";
+import { type Locale, useLocale, useT } from "../i18n";
 
 type Contract = components["schemas"]["Contract"];
 
 /**
- * The two terms an agreement carries that no read surface showed until now:
- * how long the customer has to pay, and what the agreement is worth per year.
- *
- * Both write fine from the contract form and the renewal form, and neither
- * appeared anywhere afterwards — a reader could record a payment term and then
- * had no way to see it again without reopening the form that wrote it.
- *
- * Drawn as caption siblings rather than as a block, because both hosts render
- * an agreement as one quiet line under its name (the company's contracts panel
- * and the project's contracts card), and a block would break that line in two.
- * Each half renders only when it has something to say, so an agreement with
- * neither recorded is unchanged.
+ * How long the customer has to pay, and what the agreement is worth per year.
+ * The company's Contracts panel and the project's Contracts card both draw
+ * this, so the line reads the same on both pages. Caption siblings, not a
+ * block: each host shows an agreement as one line under its name.
  */
 export function ContractTerms({ contract }: Readonly<{ contract: Contract }>) {
   const { locale } = useLocale();
@@ -31,6 +22,20 @@ export function ContractTerms({ contract }: Readonly<{ contract: Contract }>) {
       <ContractArr contract={contract} locale={locale} />
     </>
   );
+}
+
+/** Whether `ContractTerms` draws anything, for a host that leaves out an empty line. */
+export function hasContractTerms(contract: Contract): boolean {
+  return contract.payment_term_days != null || pricedArr(contract) != null;
+}
+
+// An annual figure is shown only with the currency that prices it.
+function pricedArr(
+  contract: Contract,
+): { arr: number; currency: string } | null {
+  const arr = contract.arr_minor;
+  const currency = contract.currency;
+  return arr == null || !currency ? null : { arr, currency };
 }
 
 /**
@@ -78,11 +83,11 @@ function ContractArr({
   locale,
 }: Readonly<{ contract: Contract; locale: Locale }>) {
   const t = useT();
-  const arr = contract.arr_minor;
-  const currency = contract.currency;
-  if (arr == null || !currency) {
+  const priced = pricedArr(contract);
+  if (!priced) {
     return null;
   }
+  const { arr, currency } = priced;
   const monthly = arr > 0 ? monthlyEquivalent(arr) : null;
   return (
     <span className="t-caption">
@@ -95,27 +100,6 @@ function ContractArr({
           })}
         </>
       )}
-    </span>
-  );
-}
-
-// The term as the two dates that bound it. Absent dates say so in words: a
-// blank column reads as "not loaded", and an agreement whose term nobody
-// recorded is a real and common state — it is entered from an invoice as
-// often as from the paper.
-export function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const on = (date: string) => formatDate(date, locale, recordZone);
-  if (!contract.starts_on && !contract.ends_on) {
-    return <span>{t("contracts.noTerm")}</span>;
-  }
-  return (
-    <span className="rec-term-dates">
-      {contract.starts_on ? on(contract.starts_on) : t("contracts.openStart")}
-      {" – "}
-      {contract.ends_on ? on(contract.ends_on) : t("contracts.openEnd")}
     </span>
   );
 }

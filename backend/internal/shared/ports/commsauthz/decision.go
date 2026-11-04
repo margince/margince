@@ -123,6 +123,11 @@ type Request struct {
 	// transmit phase compares against, so a field missing from one side is a
 	// field neither side can notice changing.
 	HTMLBody string
+	// OmitsAdvertisingDuties says the caller composed this body without the
+	// marketing-only disclosures and the unsubscribe surface. Staging refuses
+	// it when a recipient resolves to marketing. False makes no claim, for a
+	// caller that composes no such footer.
+	OmitsAdvertisingDuties bool
 }
 
 // Decision is the engine's answer about ONE recipient at ONE phase.
@@ -192,6 +197,19 @@ func (s DecisionSet) Allowed() bool {
 		}
 	}
 	return true
+}
+
+// AdvertisesToASubject reports whether the engine reads the message as
+// marketing to a recipient it identified. One body reaches every recipient, so
+// it then owes the advertising duties. An address no record answers for is
+// refused for want of a subject, never advertised to.
+func (s DecisionSet) AdvertisesToASubject() bool {
+	for _, d := range s.Decisions {
+		if d.SubjectKind != "" && d.Resolved == CategoryMarketing {
+			return true
+		}
+	}
+	return false
 }
 
 // AllowedByOverride returns this decision flipped to allow, naming the override

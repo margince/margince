@@ -19,12 +19,15 @@ package consent
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -47,8 +50,21 @@ type DisclosureLine struct {
 // somebody has to close, while the second is fine.
 func (d DisclosureLine) Missing() bool { return d.Text == "" }
 
-// Disclosures answers what a message of this category must disclose, opening
-// its own transaction.
+// DisclosureQuery names the message whose disclosures are asked about.
+type DisclosureQuery struct {
+	// Category decides which obligations apply: a pack may mark a disclosure
+	// MarketingOnly.
+	Category commsauthz.Category
+	// Recipients are the addresses the one body goes to. Each one's country
+	// adds the marketing obligations of their own pack.
+	Recipients []string
+	// Sender is the user the message goes out for; zero sends for the
+	// installation's default legal entity.
+	Sender ids.UUID
+}
+
+// Disclosures answers what this message must disclose, opening its own
+// transaction. The sender is the acting principal's user.
 //
 // The send path composes a body without a transaction of its own to hand in —
 // the unsubscribe linker beside it has the same shape — so this is the door the
@@ -56,16 +72,17 @@ func (d DisclosureLine) Missing() bool { return d.Text == "" }
 // holding a transaction uses.
 //
 // A scheduled fire DOES hold one while it prepares, so this opens a second. What
-// it reads is a settings row and an in-process pack registry, neither of which
-// the outer transaction writes — so the nested read sees committed state, which
-// is what it wants.
+// it reads is committed record and settings state and an in-process pack
+// registry, none of which the outer transaction writes.
 func (s *Store) Disclosures(
-	ctx context.Context, category commsauthz.Category,
+	ctx context.Context, category commsauthz.Category, recipients []string,
 ) ([]DisclosureLine, error) {
 	var out []DisclosureLine
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = s.DisclosuresFor(ctx, tx, category)
+		out, err = s.DisclosuresFor(ctx, tx, DisclosureQuery{
+			Category: category, Recipients: recipients, Sender: senderOf(ctx),
+		})
 		return err
 	})
 	return out, err
@@ -74,22 +91,34 @@ func (s *Store) Disclosures(
 // DisclosuresFor answers what this message must disclose, and whether the
 // installation can say it.
 //
-// The CATEGORY decides which obligations apply: a pack may mark a disclosure
-// MarketingOnly, which §7(3) UWG does for the objection route — it binds every
-// advertising message rather than only the first contact. A transactional
-// message carries the identity and the privacy contact and not that one.
+// Two selectors meet here. Who the controller is and who answers about the
+// data are data protection, owed under the sending entity's pack. How to
+// object and who advertises are marketing rules, owed under each recipient's
+// pack. One body goes to all recipients, so it carries every recipient's.
 //
 // Answers an empty slice where no pack applies. That is not a claim that
-// nothing is owed; it is the same answer applicableRules gives for an
-// installation whose country is unknown, and the caller treats it the same way.
+// nothing is owed; it is the baseline, and the caller treats it the same way.
 func (s *Store) DisclosuresFor(
-	ctx context.Context, tx pgx.Tx, category commsauthz.Category,
+	ctx context.Context, tx pgx.Tx, q DisclosureQuery,
 ) ([]DisclosureLine, error) {
-	rules, _, found, err := s.applicableRules(ctx, tx)
-	if err != nil || !found {
+	senderCountry, err := s.dataProtectionCountryTx(ctx, tx, q.Sender)
+	if err != nil {
 		return nil, err
 	}
-	if len(rules.Disclosures) == 0 {
+	var owed []messagingrules.Disclosure
+	if senderRules, _, found := applicableRules(senderCountry); found {
+		owed = appendOwed(owed, senderRules.Disclosures, true)
+	}
+	for _, address := range q.Recipients {
+		country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
+		if err != nil {
+			return nil, err
+		}
+		if rules, _, found := applicableRules(country.Code); found {
+			owed = appendOwed(owed, rules.Disclosures, false)
+		}
+	}
+	if len(owed) == 0 {
 		return nil, nil
 	}
 	// StoredApplyTx, not StoredValTx: the particulars must reach whoever composes the
@@ -105,13 +134,12 @@ func (s *Store) DisclosuresFor(
 	// usually an older caller with a legacy purpose key, and putting an
 	// objection route under what may be an invoice is the error that reads as
 	// an invitation to stop receiving invoices.
-	marketing := category == commsauthz.CategoryMarketing
-	out := make([]DisclosureLine, 0, len(rules.Disclosures))
-	for _, d := range rules.Disclosures {
-		// MarketingOnly is the pack's own narrowing and is honoured rather
-		// than folded away: an installation in Germany owes the objection
-		// route on advertising and not on an invoice, and rendering it on both
-		// would put an unsubscribe line under a payment reminder.
+	marketing := q.Category == commsauthz.CategoryMarketing
+	out := make([]DisclosureLine, 0, len(owed))
+	for _, d := range owed {
+		// MarketingOnly is the pack's own narrowing. The objection route is
+		// owed on advertising and not on an invoice, where it would read as an
+		// unsubscribe line under a payment reminder.
 		if d.MarketingOnly && !marketing {
 			continue
 		}
@@ -121,6 +149,33 @@ func (s *Store) DisclosuresFor(
 		})
 	}
 	return out, nil
+}
+
+// appendOwed adds the declared disclosures of one selector's pack: the
+// data-protection kinds from the sender's, the rest from a recipient's. A kind
+// already owed is not owed twice; a MarketingOnly copy yields to one that binds
+// every message.
+func appendOwed(owed, declared []messagingrules.Disclosure, dataProtection bool) []messagingrules.Disclosure {
+	for _, d := range declared {
+		if dataProtectionDisclosure(d.Kind) != dataProtection {
+			continue
+		}
+		i := slices.IndexFunc(owed, func(o messagingrules.Disclosure) bool { return o.Kind == d.Kind })
+		switch {
+		case i < 0:
+			owed = append(owed, d)
+		case !d.MarketingOnly:
+			owed[i].MarketingOnly = false
+		}
+	}
+	return owed
+}
+
+// dataProtectionDisclosure reports whether a kind discharges a data-protection
+// duty (who the controller is, who answers about the data) rather than a
+// marketing one.
+func dataProtectionDisclosure(kind messagingrules.DisclosureKind) bool {
+	return kind == messagingrules.ControllerIdentity || kind == messagingrules.PrivacyContact
 }
 
 // particularFor answers which stated particular meets an obligation.
