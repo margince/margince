@@ -60,9 +60,9 @@ const (
 	emailTypeWork    = "work"
 )
 
-// ErrCounterpartySuppressed marks an erased address (A13): deletion sticks,
-// the counterparty is not re-created. The capture pipeline counts it as a
-// deliberate skip.
+// ErrCounterpartySuppressed marks an address that names no counterparty: an
+// erased one (A13), where deletion sticks, or a technical one. Neither is
+// re-created. The capture pipeline counts it as a skip, not a fault.
 var ErrCounterpartySuppressed = errors.New("contacts: counterparty address is on the erasure suppression list")
 
 // EnsureCounterpartyInput is one captured message's counterparty.
@@ -198,6 +198,12 @@ func (s *Store) ensureCapturedCounterparty(ctx context.Context, tx pgx.Tx, in En
 	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
 	if in.Email == "" {
 		return EnsureCounterpartyResult{}, errors.New("contacts: a counterparty needs an email")
+	}
+	// A technical address names no one, so it gains no contact, link or
+	// employer, even where a contact for it already exists. The mail and its
+	// real counterparties are stored as before.
+	if refuseMachineAddress(in.Email) != nil {
+		return EnsureCounterpartyResult{}, ErrCounterpartySuppressed
 	}
 	var res EnsureCounterpartyResult
 	suppressed, err := storekit.EmailSuppressed(ctx, tx, in.Email)
