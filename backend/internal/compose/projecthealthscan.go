@@ -110,23 +110,21 @@ type ProjectHealthPass struct {
 	Failed     int
 }
 
-// healthCandidate is one in-flight project and what the quiet rule says of it.
+// healthCandidate is one project the listing found in flight. The listing only
+// chooses whom to look at: the store reads the evidence again under the lock.
 type healthCandidate struct {
 	ProjectID ids.ProjectID
 	Name      string
-	OwnerID   *ids.UUID
-	Quiet     bool
 }
 
 // RunWorkspace judges every in-flight project of one workspace, each in a
 // transaction of its own, so one project's failure leaves the others written.
 func (s *ProjectHealthScan) RunWorkspace(ctx context.Context, workspace ids.UUID) (ProjectHealthPass, error) {
 	wsCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), projectHealthActor)
-	now := s.now()
 	var candidates []healthCandidate
 	if err := database.WithWorkspaceTx(wsCtx, s.pool, func(tx pgx.Tx) error {
 		var err error
-		candidates, err = scanHealthCandidates(wsCtx, tx, now)
+		candidates, err = scanHealthCandidates(wsCtx, tx)
 		return err
 	}); err != nil {
 		return ProjectHealthPass{}, err
@@ -134,7 +132,7 @@ func (s *ProjectHealthScan) RunWorkspace(ctx context.Context, workspace ids.UUID
 	pass := ProjectHealthPass{Considered: len(candidates)}
 	var failures []error
 	for _, candidate := range candidates {
-		outcome, err := s.judge(wsCtx, candidate, now)
+		outcome, err := s.judge(wsCtx, candidate)
 		if err != nil {
 			pass.Failed++
 			failures = append(failures, fmt.Errorf("project %s: %w", candidate.ProjectID, err))
@@ -145,20 +143,19 @@ func (s *ProjectHealthScan) RunWorkspace(ctx context.Context, workspace ids.UUID
 			pass.Written++
 		case projects.AIHealthHeldByUser:
 			pass.HeldByUser++
-		case projects.AIHealthUnchanged:
+		case projects.AIHealthUnchanged, projects.AIHealthNotInFlight:
 		}
 	}
 	return pass, errors.Join(failures...)
 }
 
-func scanHealthCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]healthCandidate, error) {
+func scanHealthCandidates(ctx context.Context, tx pgx.Tx) ([]healthCandidate, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT p.id, p.name, p.owner_id, `+projects.ProjectQuietSQL("p", "$1", 2)+`
+		SELECT p.id, p.name
 		  FROM project p
 		 WHERE p.archived_at IS NULL
 		   AND `+projects.ProjectInFlightSQL("p")+`
-		 ORDER BY p.id`,
-		now, projects.DefaultProjectQuietDays)
+		 ORDER BY p.id`)
 	if err != nil {
 		return nil, fmt.Errorf("scan projects for a health reading: %w", err)
 	}
@@ -167,7 +164,7 @@ func scanHealthCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]heal
 	for rows.Next() {
 		var found healthCandidate
 		var id ids.UUID
-		if err := rows.Scan(&id, &found.Name, &found.OwnerID, &found.Quiet); err != nil {
+		if err := rows.Scan(&id, &found.Name); err != nil {
 			return nil, err
 		}
 		found.ProjectID = ids.From[ids.ProjectKind](id)
@@ -176,35 +173,38 @@ func scanHealthCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]heal
 	return out, rows.Err()
 }
 
-// judge writes one project's reading and, when it landed and the project has an
-// owner, the owner's notice in the same transaction. A project with no owner
-// gets the reading and no notice: nobody else is told in their place.
-func (s *ProjectHealthScan) judge(ctx context.Context, candidate healthCandidate, now time.Time) (projects.AIHealthOutcome, error) {
+// judge writes one project's reading and, when it landed, tells the owner the
+// store read under the lock, in the same transaction. A project whose owner
+// was cleared or has left gets the reading and no notice: nobody else is told
+// in their place.
+func (s *ProjectHealthScan) judge(ctx context.Context, candidate healthCandidate) (projects.AIHealthOutcome, error) {
 	var outcome projects.AIHealthOutcome
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		overdue, err := s.hasOverdueTask(ctx, tx, candidate.ProjectID, now)
-		if err != nil {
-			return err
-		}
-		finding := projectHealthFinding{Quiet: candidate.Quiet, Overdue: overdue}
 		words := projectHealthCopyFor(identity.BaseLanguageForRecord(ctx, tx))
-		reason := finding.reason(words)
-		written, result, err := s.projects.RecordAIHealthTx(ctx, tx, projects.RecordAIHealthInput{
-			ProjectID: candidate.ProjectID, State: finding.state(), Note: reason,
-		})
-		outcome = result
-		if err != nil || result != projects.AIHealthWritten || candidate.OwnerID == nil {
+		var finding projectHealthFinding
+		result, err := s.projects.RecordAIHealthTx(ctx, tx, candidate.ProjectID,
+			func(ctx context.Context, tx pgx.Tx, evidence projects.AIHealthEvidence) (projects.AIHealthJudgement, error) {
+				overdue, err := s.hasOverdueTask(ctx, tx, candidate.ProjectID, s.now())
+				if err != nil {
+					return projects.AIHealthJudgement{}, err
+				}
+				finding = projectHealthFinding{Quiet: evidence.Quiet, Overdue: overdue}
+				return projects.AIHealthJudgement{State: finding.state(), Note: finding.reason(words)}, nil
+			})
+		outcome = result.Outcome
+		owner := result.Evidence.Owner
+		if err != nil || result.Outcome != projects.AIHealthWritten || owner == nil {
 			return err
 		}
 		_, err = s.notices.CreateTx(ctx, tx, notices.NewNotice{
-			Recipient: ids.From[ids.UserKind](*candidate.OwnerID),
+			Recipient: ids.From[ids.UserKind](*owner),
 			Kind:      notices.KindProjectHealthAI,
 			// The name is cut, not the subject: the store caps the subject, and
 			// a long name would push the state word off its end.
 			Subject: fmt.Sprintf(words.noticeSubject,
 				textcut.Runes(candidate.Name, projectHealthNameBound), words.state(finding.state())),
-			Body:      reason + " " + words.noticeUndo,
-			DedupeKey: fmt.Sprintf("%s:%s", notices.KindProjectHealthAI, written.Id),
+			Body:      finding.reason(words) + " " + words.noticeUndo,
+			DedupeKey: fmt.Sprintf("%s:%s", notices.KindProjectHealthAI, result.Assessment.Id),
 			Target:    notices.Target{Type: string(datasource.RecordProject), ID: candidate.ProjectID.UUID},
 		})
 		return err

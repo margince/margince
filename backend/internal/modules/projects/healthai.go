@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AIHealthOutcome says what the health job's reading did.
@@ -39,54 +40,94 @@ const (
 	// AIHealthUnchanged wrote nothing: the reading would say what already
 	// stands.
 	AIHealthUnchanged
+	// AIHealthNotInFlight wrote nothing: the project was closed, moved back or
+	// archived since the job listed it.
+	AIHealthNotInFlight
 )
 
-// RecordAIHealthInput is the health job's reading of one project.
-type RecordAIHealthInput struct {
-	ProjectID ids.ProjectID
-	State     crmcontracts.ProjectHealthState
+// AIHealthEvidence is what the store reads of a project under its lock, for
+// the health job to judge from. It is read after the lock. So the job sees any
+// activity, phase move or owner change since it listed the project.
+type AIHealthEvidence struct {
+	// InFlight is the project's phase under ProjectInFlightSQL.
+	InFlight bool
+	// Quiet is ProjectQuietSQL at the store's clock.
+	Quiet bool
+	// Owner is the project's owner while they are a live member, else nil.
+	Owner *ids.UUID
+}
+
+// AIHealthJudgement is the health job's reading of the evidence.
+type AIHealthJudgement struct {
+	State crmcontracts.ProjectHealthState
 	// Note is the one-sentence reason the owner is shown.
 	Note string
 }
 
-// RecordAIHealthTx appends the health job's reading inside the caller's
-// transaction, unless a user's reading or the standing state says not to.
-// The assessment is the zero value unless the outcome is AIHealthWritten.
+// AIHealthJudge turns the evidence into a reading, inside the same
+// transaction and under the same lock.
+type AIHealthJudge func(context.Context, pgx.Tx, AIHealthEvidence) (AIHealthJudgement, error)
+
+// AIHealthResult is what one call of RecordAIHealthTx did. Assessment is the
+// zero value unless Outcome is AIHealthWritten.
+type AIHealthResult struct {
+	Assessment crmcontracts.ProjectHealthAssessment
+	Outcome    AIHealthOutcome
+	// Evidence is what the judgement was made from, owner included.
+	Evidence AIHealthEvidence
+}
+
+// RecordAIHealthTx appends the health job's reading of one project inside the
+// caller's transaction. It writes nothing when the project left flight, or when
+// a user's reading or the standing state says not to.
 func (s *Store) RecordAIHealthTx(
-	ctx context.Context, tx pgx.Tx, in RecordAIHealthInput,
-) (crmcontracts.ProjectHealthAssessment, AIHealthOutcome, error) {
+	ctx context.Context, tx pgx.Tx, id ids.ProjectID, judge AIHealthJudge,
+) (AIHealthResult, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
-		return crmcontracts.ProjectHealthAssessment{}, 0, err
-	}
-	note, err := checkHealthJudgement(in.State, &in.Note)
-	if err != nil {
-		return crmcontracts.ProjectHealthAssessment{}, 0, err
+		return AIHealthResult{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return crmcontracts.ProjectHealthAssessment{}, 0, err
+		return AIHealthResult{}, err
 	}
-	// The lock comes before the standing is read. A user's reading
-	// committing between the read and the insert would otherwise be
-	// overwritten by a job that never saw it.
-	if err := auth.HoldWritableLive(ctx, tx, projectObject, in.ProjectID.UUID); err != nil {
-		return crmcontracts.ProjectHealthAssessment{}, 0, err
+	// The lock comes before anything is read. A user's reading, a filed
+	// activity or a phase move committing before the insert would otherwise
+	// be overwritten by a job that never saw it.
+	if err := auth.HoldWritableLive(ctx, tx, projectObject, id.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			// Archived since the job listed it: nothing to judge.
+			return AIHealthResult{Outcome: AIHealthNotInFlight}, nil
+		}
+		return AIHealthResult{}, err
 	}
-	standing, err := s.readAIHealthStanding(ctx, tx, in.ProjectID)
+	standing, err := s.readAIHealthStanding(ctx, tx, id)
 	if err != nil {
-		return crmcontracts.ProjectHealthAssessment{}, 0, err
+		return AIHealthResult{}, err
 	}
-	if outcome := standing.decide(in.State); outcome != AIHealthWritten {
-		return crmcontracts.ProjectHealthAssessment{}, outcome, nil
+	result := AIHealthResult{Evidence: standing.Evidence}
+	if !standing.Evidence.InFlight {
+		result.Outcome = AIHealthNotInFlight
+		return result, nil
 	}
-	out, err := insertHealthRow(ctx, tx, healthRow{
-		ProjectID: in.ProjectID, State: in.State, Note: note, AssessedAt: s.clock(),
+	judged, err := judge(ctx, tx, standing.Evidence)
+	if err != nil {
+		return AIHealthResult{}, err
+	}
+	note, err := checkHealthJudgement(judged.State, &judged.Note)
+	if err != nil {
+		return AIHealthResult{}, err
+	}
+	if result.Outcome = standing.decide(judged.State); result.Outcome != AIHealthWritten {
+		return result, nil
+	}
+	result.Assessment, err = insertHealthRow(ctx, tx, healthRow{
+		ProjectID: id, State: judged.State, Note: note, AssessedAt: s.clock(),
 		Source: sourceAI, CapturedBy: by,
 	})
 	if err != nil {
-		return crmcontracts.ProjectHealthAssessment{}, 0, err
+		return AIHealthResult{}, err
 	}
-	return out, AIHealthWritten, nil
+	return result, nil
 }
 
 // aiHealthStanding is what the health job's reading is weighed against.
@@ -99,6 +140,7 @@ type aiHealthStanding struct {
 	// ActiveAt is the instant the quiet rule measures from: the last filed
 	// activity, or the project's creation.
 	ActiveAt time.Time
+	Evidence AIHealthEvidence
 }
 
 // decide answers whether the health job may append a reading of proposed.
@@ -127,9 +169,14 @@ func (s *Store) readAIHealthStanding(
 	err := tx.QueryRow(ctx, `
 		SELECT `+ProjectQuietAnchorSQL("p")+`,
 		       (SELECT max(h.assessed_at) FROM project_health_assessment h
-		         WHERE h.project_id = p.id AND h.source <> '`+sourceAI+`')
+		         WHERE h.project_id = p.id AND h.source <> '`+sourceAI+`'),
+		       `+ProjectInFlightSQL("p")+`,
+		       `+ProjectQuietSQL("p", "$2", 3)+`,
+		       (SELECT u.id FROM app_user u WHERE u.id = p.owner_id AND `+workforce.LiveMemberSQL("u")+`)
 		FROM project p
-		WHERE p.id = $1`, id).Scan(&standing.ActiveAt, &standing.UserSaidAt)
+		WHERE p.id = $1`, id, s.clock(), DefaultProjectQuietDays).Scan(
+		&standing.ActiveAt, &standing.UserSaidAt,
+		&standing.Evidence.InFlight, &standing.Evidence.Quiet, &standing.Evidence.Owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return aiHealthStanding{}, apperrors.ErrNotFound
 	}
@@ -168,6 +215,16 @@ func (s *Store) UndoAIHealth(
 			return err
 		}
 		if target.Source != sourceAI {
+			return apperrors.ErrConflict
+		}
+		// Only the reading that stands. Undoing an older AI reading under a
+		// newer one would change nothing the owner sees. The history would
+		// then record a withdrawal of a reading nobody had in front of them.
+		current, err := s.CurrentHealthTx(ctx, tx, projectID)
+		if err != nil {
+			return err
+		}
+		if current == nil || ids.UUID(current.Id) != assessmentID {
 			return apperrors.ErrConflict
 		}
 		row := healthRow{

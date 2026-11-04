@@ -984,7 +984,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/projects/{id}/advance":                                        {Op: "advanceProjectPhase", Access: "tool", Tool: "advance_project_phase", RecordType: "project", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/projects/{id}/health-assessments":                             {Op: "createProjectHealthAssessment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
 	"POST /v1/projects/{id}/health-assessments/{assessment_id}/corrections": {Op: "correctProjectHealthAssessment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
-	"POST /v1/projects/{id}/health-assessments/{assessment_id}/undo":        {Op: "undoProjectHealthAssessment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "pending"},
+	"POST /v1/projects/{id}/health-assessments/{assessment_id}/undo":        {Op: "undoProjectHealthAssessment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: "", HumanOnlyReason: "security"},
 	"POST /v1/public/booking/{host_slug}":                                   {Op: "bookPublicMeeting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/confirm/{token}":                                       {Op: "submitConfirmDetails", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/public/forms/{form_key}":                                      {Op: "submitWebForm", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

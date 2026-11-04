@@ -7724,9 +7724,9 @@ paths:
     post:
       tags: [Projects]
       operationId: undoProjectHealthAssessment
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      security: [ { cookieAuth: [] } ]   # human session only — taking back an AI judgement is the owner's own act, never an agent's
       x-agent-access: human-only
-      x-human-only-reason: pending
+      x-human-only-reason: security
       summary: Undo a reading the health job wrote.
       description: |
         Appends a successor with source `undo` that supersedes the AI reading. The reading that
