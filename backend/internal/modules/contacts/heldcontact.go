@@ -233,7 +233,7 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 			`SELECT contact_id FROM contact_email
 			  WHERE email = ANY($1::text[]) AND archived_at IS NULL AND contact_id <> $2
 			  ORDER BY created_at, id LIMIT 1`,
-			storekit.EmailSpellings(e.Email), self.UUID).Scan(&existing)
+			storekit.EmailLookups(e.Email), self.UUID).Scan(&existing)
 		if errors.Is(err, pgx.ErrNoRows) {
 			continue
 		}

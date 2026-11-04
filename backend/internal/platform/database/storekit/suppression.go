@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -69,7 +70,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 		return result, nil
 	}
 	hashes := make([]string, 0, len(emails))
-	for _, spelled := range emailSpellingsOf(emails) {
+	for _, spelled := range EmailLookups(emails...) {
 		hashes = append(hashes, SuppressionHash(spelled))
 	}
 	args := []any{hashes}
@@ -87,7 +88,7 @@ func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[stri
 	}
 	// An address erased in one spelling of its domain is erased in the other.
 	for _, email := range emails {
-		for _, spelled := range EmailSpellings(email) {
+		for _, spelled := range EmailLookups(email) {
 			if held[SuppressionHash(spelled)] {
 				result[strings.ToLower(strings.TrimSpace(email))] = true
 			}
@@ -269,7 +270,7 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 	}
 	// Writers of either spelling of one mailbox share its identity lock.
 	for _, email := range emails {
-		hashes = append(hashes, SuppressionHash(email), SuppressionHash(IdentityEmail(email)))
+		hashes = append(hashes, SuppressionHash(email), SuppressionHash(mailidentity.FoldAddress(email)))
 	}
 	slices.Sort(hashes)
 	for _, hash := range slices.Compact(hashes) {

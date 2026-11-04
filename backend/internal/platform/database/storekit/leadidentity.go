@@ -22,10 +22,12 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -90,7 +92,7 @@ func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *Lead
 	if email == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `lead.email = ANY($1::text[])`, EmailSpellings(email), exclude, "email")
+	return liveLeadBy(ctx, tx, `lead.email = ANY($1::text[])`, EmailLookups(email), exclude, "email")
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
@@ -150,6 +152,23 @@ type IdentityHolders struct {
 	Leads    []ids.LeadID
 	Contacts []ids.ContactID
 	held     map[heldKey]bool
+	// typed are the holders of an address in the spelling it was asked in.
+	typed map[ids.UUID]bool
+}
+
+// PreferredLead is the lead a door files on: the oldest holding an address as
+// it was asked, else the oldest holding its other spelling. Each spelling of
+// one mailbox may already have a lead of its own. The zero id when none holds.
+func (h IdentityHolders) PreferredLead() ids.LeadID {
+	for _, lead := range h.Leads {
+		if h.typed[lead.UUID] {
+			return lead
+		}
+	}
+	if len(h.Leads) == 0 {
+		return ids.LeadID{}
+	}
+	return h.Leads[0]
 }
 
 // heldKey is one key a holder of one kind was found under.
@@ -166,12 +185,12 @@ const (
 
 // LeadHoldsEmail reports whether a live lead holds this address.
 func (h IdentityHolders) LeadHoldsEmail(email string) bool {
-	return h.held[heldKey{holderLead, laneEmail, IdentityEmail(email)}]
+	return h.held[heldKey{holderLead, laneEmail, mailidentity.FoldAddress(email)}]
 }
 
 // ContactHoldsEmail reports whether a live contact holds this address.
 func (h IdentityHolders) ContactHoldsEmail(email string) bool {
-	return h.held[heldKey{holderContact, laneEmail, IdentityEmail(email)}]
+	return h.held[heldKey{holderContact, laneEmail, mailidentity.FoldAddress(email)}]
 }
 
 // LeadHoldsLinkedIn reports whether a live lead holds this normalised profile URL.
@@ -230,22 +249,29 @@ const identityHoldersSQL = `
 // IdentityHoldersOf is the same question without the locks, for a writer that
 // already holds them and for a read that writes nothing.
 func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (IdentityHolders, error) {
-	out := IdentityHolders{Leads: []ids.LeadID{}, Contacts: []ids.ContactID{}, held: map[heldKey]bool{}}
+	out := IdentityHolders{Leads: []ids.LeadID{}, Contacts: []ids.ContactID{}, held: map[heldKey]bool{}, typed: map[ids.UUID]bool{}}
 	if len(keys.Emails) == 0 && len(keys.LinkedInURLs) == 0 {
 		return out, nil
 	}
 	// A key in one spelling finds a holder stored in the other.
-	rows, err := tx.Query(ctx, identityHoldersSQL, emailSpellingsOf(keys.Emails), keys.LinkedInURLs)
+	rows, err := tx.Query(ctx, identityHoldersSQL, EmailLookups(keys.Emails...), keys.LinkedInURLs)
 	if err != nil {
 		return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
 	}
 	defer rows.Close()
+	asked := map[string]bool{}
+	for _, email := range keys.Emails {
+		asked[strings.ToLower(strings.TrimSpace(email))] = true
+	}
 	for rows.Next() {
 		var found heldKey
 		var id ids.UUID
 		var createdAt time.Time
 		if err := rows.Scan(&found.holder, &found.lane, &id, &found.key, &createdAt); err != nil {
 			return IdentityHolders{}, fmt.Errorf("storekit: reading who holds these identity keys: %w", err)
+		}
+		if found.lane == laneEmail && asked[found.key] {
+			out.typed[id] = true
 		}
 		out.add(found, id)
 	}
@@ -257,7 +283,7 @@ func IdentityHoldersOf(ctx context.Context, tx pgx.Tx, keys IdentityKeys) (Ident
 
 func (h *IdentityHolders) add(found heldKey, id ids.UUID) {
 	if found.lane == laneEmail {
-		found.key = IdentityEmail(found.key)
+		found.key = mailidentity.FoldAddress(found.key)
 	}
 	h.held[found] = true
 	if found.holder == holderLead {

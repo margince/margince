@@ -154,21 +154,24 @@ func rivalOf(routed exactLane, later []exactLane) *LaneConflict {
 // exactContactByEmail is PO-F-1 tier 1. Every candidate email is checked;
 // the lowest contact id wins so a candidate colliding on two emails
 // against two contacts resolves the same way on every run.
+//
+// The other spelling of a domain, Unicode or punycode, is one mailbox too. A
+// contact holding the spelling as typed still comes first, so where each
+// spelling already has its own contact, mail lands on its own.
 func exactContactByEmail(ctx context.Context, tx pgx.Tx, emails []string) ([]ids.ContactID, error) {
 	if len(emails) == 0 {
 		return nil, nil
 	}
-	// Both spellings of a domain, so a Unicode address finds the contact
-	// stored under its punycode twin and the other way round.
-	var spellings []string
+	typed := make([]string, 0, len(emails))
 	for _, e := range emails {
-		spellings = append(spellings, storekit.EmailSpellings(e)...)
+		typed = append(typed, normalizeEmail(e))
 	}
 	return exactContactIDs(ctx, tx, `
-		SELECT DISTINCT contact_id FROM contact_email
+		SELECT contact_id FROM contact_email
 		WHERE email = ANY($1) AND archived_at IS NULL
-		ORDER BY contact_id
-		LIMIT 2`, spellings)
+		GROUP BY contact_id
+		ORDER BY bool_or(email = ANY($2)) DESC, contact_id
+		LIMIT 2`, storekit.EmailLookups(emails...), typed)
 }
 
 // exactContactIDs collects what one exact lane's keys reach: the distinct
