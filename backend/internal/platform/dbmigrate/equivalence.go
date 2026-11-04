@@ -66,7 +66,7 @@ var equivalentContent = map[string]map[string][]equivalence{
 			source:  "e96ba4f65cfffb7aad40b1eb7825602e8b2fb53015b2ab9d5f6511786de51b5c",
 		}},
 		// The applied half added the band CHECK validated, the current one `NOT VALID`;
-		// 1793780005 validates it, a no-op where it already is. The down half is unchanged.
+		// 1793783926 validates it, a no-op where it already is. The down half is unchanged.
 		"1793765139": {{
 			applied: "01cb044b9619fe806a7cf86fee9feeccd2c1c2687dc41362777538bb113e9649",
 			source:  "b6f75f1f2ece9b3ce25de15c04bdc2855fa75b516ba54f3403c91c0fb793df3a",
