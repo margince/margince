@@ -70,7 +70,7 @@ func (e *freshnessEnv) queuedRescans(t *testing.T) int {
 func TestAOneDealPassCannotClearAnotherDealsFindings(t *testing.T) {
 	e := setupFreshness(t)
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](e.healthy), deals.UpdateDealInput{
-		ForecastCategory: new("commit"),
+		WinProbability: new(95),
 	}); err != nil {
 		t.Fatalf("committing the other deal with no next step: %v", err)
 	}

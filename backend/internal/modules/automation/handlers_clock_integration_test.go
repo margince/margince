@@ -74,7 +74,7 @@ func (p *fakeCreateTaskProvider) Update(context.Context, datasource.UpdateInput)
 	panic("fakeCreateTaskProvider: Update not stubbed for this test")
 }
 
-func (p *fakeCreateTaskProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *fakeCreateTaskProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	panic("fakeCreateTaskProvider: AdvanceDeal not stubbed for this test")
 }
 

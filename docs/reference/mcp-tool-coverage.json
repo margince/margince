@@ -2353,7 +2353,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 2310,
+      "tokens": 2311,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us",
@@ -2384,7 +2384,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 1863,
+      "tokens": 1874,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"

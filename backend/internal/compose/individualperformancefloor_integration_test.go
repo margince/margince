@@ -115,7 +115,7 @@ func TestIndividualPerformanceOffWithholdsATypedQueryOverANestedTeamsParent(t *t
 	teams := e.seedNestedTeams(t)
 	amount := int64(100_000)
 	for _, owner := range []ids.UUID{teams.anna, teams.ben} {
-		e.seedOpenDeal(t, "Open", 20, &owner, &amount, nil)
+		e.seedOpenDeal(t, "Open", 20, &owner, &amount)
 	}
 	reader := e.forecastReader(e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll))
 	of := func(team ids.UUID) analyticsquery.Query {

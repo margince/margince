@@ -229,14 +229,14 @@ func forecastDealGroups(deals []forecasting.Deal) [][]ids.UUID {
 	owners, categories := []ids.UUID{}, []string{}
 	for _, deal := range deals {
 		if owner, err := ids.Parse(deal.Owner); err == nil {
-			owners, categories = append(owners, owner), append(categories, deal.Category)
+			owners, categories = append(owners, owner), append(categories, string(deal.Source))
 		}
 	}
 	return categoryGroups(owners, categories)
 }
 
 // categoryGroups is a forecast's figures by who makes them up: the whole set,
-// and each forecast category. owners and categories are parallel.
+// and each probability source. owners and categories are parallel.
 func categoryGroups(owners []ids.UUID, categories []string) [][]ids.UUID {
 	byCategory := map[string][]ids.UUID{}
 	for index, owner := range owners {
@@ -286,7 +286,7 @@ func requireFrozenShareMeasurable(ctx context.Context, tx pgx.Tx, scope forecast
 	owners, categories := []ids.UUID{}, []string{}
 	for _, row := range rows {
 		if row.Owner != nil {
-			owners, categories = append(owners, *row.Owner), append(categories, row.Category)
+			owners, categories = append(owners, *row.Owner), append(categories, row.ProbabilitySource)
 		}
 	}
 	if err := requireNoLoneColleague(ctx, tx, categoryGroups(owners, categories)); err != nil {

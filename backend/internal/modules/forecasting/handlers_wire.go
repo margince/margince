@@ -26,7 +26,8 @@ func ReadingsToWire(
 		ScopeKind:          crmcontracts.ForecastReadingsScopeKind(scope.Kind),
 		WonMinor:           in.WonMinor,
 		EvidenceMinor:      in.EvidenceMinor,
-		BestCaseMinor:      in.BestCaseMinor,
+		LikelyThreshold:    in.LikelyThreshold,
+		BySource:           bySourceToWire(in.BySource),
 		OpenMinor:          in.OpenMinor,
 		WeightedMinor:      in.WeightedMinor,
 		EligibleCount:      in.EligibleCount,
@@ -47,7 +48,7 @@ func ReadingsToWire(
 	}
 	if q := in.Qualified; q != nil {
 		out.Qualified = &crmcontracts.ForecastQualifiedReadings{
-			EvidenceMinor: q.EvidenceMinor, BestCaseMinor: q.BestCaseMinor, WeightedMinor: q.WeightedMinor,
+			EvidenceMinor: q.EvidenceMinor, WeightedMinor: q.WeightedMinor,
 			ExcludedMinor: q.ExcludedMinor, UnknownMinor: q.UnknownMinor,
 			ExcludedCount: q.ExcludedCount, UnknownCount: q.UnknownCount,
 			UnsupportedMinor: q.UnsupportedMinor, UnsupportedCount: q.UnsupportedCount,
@@ -55,6 +56,15 @@ func ReadingsToWire(
 		}
 	}
 	return out
+}
+
+// bySourceToWire renders the per-source totals; a source with no deal reads 0.
+func bySourceToWire(in map[ProbabilitySource]SourceTotal) crmcontracts.ForecastBySource {
+	total := func(source ProbabilitySource) crmcontracts.ForecastSourceTotal {
+		t := in[source]
+		return crmcontracts.ForecastSourceTotal{OpenMinor: t.OpenMinor, WeightedMinor: t.WeightedMinor}
+	}
+	return crmcontracts.ForecastBySource{Stage: total(SourceStage), Human: total(SourceHuman), Margince: total(SourceMargince)}
 }
 
 func callToWire(in Call) crmcontracts.ForecastCall {
@@ -173,15 +183,16 @@ func ContributionsToWire(in []Contribution) []crmcontracts.ForecastContribution 
 		row := crmcontracts.ForecastContribution{
 			DealId: openapi_types.UUID(dealID), DealName: c.Name, BaseMinor: c.BaseMinor,
 			WeightedMinor: c.WeightedMinor, InWon: c.InWon, InOpen: c.InOpen,
-			InEvidence: c.InEvidence, InBestCase: c.InBestCase,
+			InEvidence:       c.InEvidence,
 			TypedProbability: c.TypedProbability, ChanceInUse: c.StageProbability, EvidenceN: c.EvidenceN,
 			Signals: wireSignals(c.Signals), Effect: c.Effect,
 			AppliedProbability: AppliedProbability(c.StageProbability, c.Effect),
 		}
 		row.OwnerId = optionalWireID(c.Owner)
 		row.StageId = optionalWireID(c.StageID)
-		if c.Category != "" {
-			row.Category = &c.Category
+		if c.Source != "" {
+			source := crmcontracts.ForecastContributionProbabilitySource(c.Source)
+			row.ProbabilitySource = &source
 		}
 		if c.ExclusionReason != "" {
 			reason := crmcontracts.ForecastContributionExclusionReason(c.ExclusionReason)

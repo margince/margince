@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 190.7 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50144 |
+| Approx. wire tokens | 50132 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,8 +32,8 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 46.7 KB | 24% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 41.6 KB | 21% | Yes, every step |
+| Output schemas | 46.6 KB | 24% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 41.7 KB | 21% | Yes, every step |
 | Input schemas | 91.3 KB | 47% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.0 KB | 5% | Partly |
 | **Description + input schema** | **133.0 KB** | **69%** | **the recurring cost** |
@@ -83,7 +83,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1863 |
+| [`find_records`](#find_records) | Find records | yes |  | 1874 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
@@ -98,7 +98,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2310 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2311 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1008 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 1681 |
@@ -4299,9 +4299,6 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
         "entity_type": {
           "type": "string"
         },
-        "forecast_category": {
-          "type": "string"
-        },
         "from_contact_id": {
           "type": "string"
         },
@@ -4459,6 +4456,12 @@ happening on it. Keep each record's id and version, and next_cursor to read on.
           "type": "string"
         },
         "waiting_reply": {
+          "type": "string"
+        },
+        "win_probability_max": {
+          "type": "string"
+        },
+        "win_probability_min": {
           "type": "string"
         }
       },
@@ -8072,24 +8075,24 @@ own fields.
 
 ```text
 Read the forecast under the installation's fiscal calendar and base currency. readings: what a
-period is expected to close — `won`, `evidence`, `best_case`, `open` and `weighted` — and
+period is expected to close — `won`, `evidence` (Likely), `open` and `weighted` — and
 `snapshots`, the period's frozen states, newest first. movement: why the forecast changed between
 two snapshots, as named causes that sum to the whole difference. input_summary: whether the inputs
 are sound enough to quote, and how much of the pipeline last night's check reached.
 input_exceptions: the open input problems, most material first. input_sources: which connectors the
 check could read, and how far back. `won` counts deals by the day they ACTUALLY closed. `evidence`
-is committed pipeline whose close date somebody confirmed. `coverage_note` says what the totals
-leave out; quote it with any total. movement needs `from` then `to`, both from ONE readings answer's
-`snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is not the same
-answer: it says nothing of where the difference went. In movement, `definition` means the snapshots
-used different rules and `model` a re-scored probability: neither is sales movement.
-`checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other
-that nobody could look. An empty input_exceptions cannot be told from a clean pipeline;
-input_sources tells them apart, and needs a coverage grant sellers lack. read_reports and
-find_records with engine query also produce numbers, and neither is the forecast. For a board-pack
-section, use read_analytics: query with save, then compose. Quote `as_of`, `timezone` and
-`base_currency` with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000
-in EUR is EUR 31,000.
+is Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed.
+`coverage_note` says what the totals leave out; quote it with any total. movement needs `from` then
+`to`, both from ONE readings answer's `snapshots`; none listed means nothing was frozen yet. Reading
+twice and subtracting is not the same answer: it says nothing of where the difference went. In
+movement, `definition` means the snapshots used different rules and `model` a re-scored probability:
+neither is sales movement. `checks_incomplete` is not a worse `needs_review`: one says the pipeline
+has problems, the other that nobody could look. An empty input_exceptions cannot be told from a
+clean pipeline; input_sources tells them apart, and needs a coverage grant sellers lack.
+read_reports and find_records with engine query also produce numbers, and neither is the forecast.
+For a board-pack section, use read_analytics: query with save, then compose. Quote `as_of`,
+`timezone` and `base_currency` with the number. Every `_minor` figure is in minor units of
+`base_currency`: 3100000 in EUR is EUR 31,000.
 ```
 
 Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible to `model`.
@@ -8128,9 +8131,7 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         "open",
         "weighted",
         "evidence",
-        "best_case",
         "qualified_evidence",
-        "qualified_best_case",
         "qualified_weighted"
       ],
       "type": "string"
@@ -8188,9 +8189,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
         "base_currency": {
           "type": "string"
         },
-        "best_case_minor": {
-          "type": "integer"
-        },
         "buckets": {
           "items": {
             "properties": {
@@ -8228,9 +8226,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
               "base_minor": {
                 "type": "integer"
               },
-              "category": {
-                "type": "string"
-              },
               "chance_in_use": {
                 "type": "integer"
               },
@@ -8249,9 +8244,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
               "exclusion_reason": {
                 "type": "string"
               },
-              "in_best_case": {
-                "type": "boolean"
-              },
               "in_evidence": {
                 "type": "boolean"
               },
@@ -8262,6 +8254,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
                 "type": "boolean"
               },
               "owner_id": {
+                "type": "string"
+              },
+              "probability_source": {
                 "type": "string"
               },
               "signals": {
@@ -8308,7 +8303,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
               "chance_in_use",
               "deal_id",
               "deal_name",
-              "in_best_case",
               "in_evidence",
               "in_open",
               "in_won",
@@ -8563,6 +8557,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
           ],
           "type": "object"
         },
+        "likely_threshold": {
+          "type": "integer"
+        },
         "open_minor": {
           "type": "integer"
         },
@@ -8585,9 +8582,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
           "properties": {
             "amounts_partial": {
               "type": "boolean"
-            },
-            "best_case_minor": {
-              "type": "integer"
             },
             "evidence_minor": {
               "type": "integer"
@@ -8616,7 +8610,6 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
           },
           "required": [
             "amounts_partial",
-            "best_case_minor",
             "evidence_minor",
             "excluded_count",
             "excluded_minor",
@@ -9603,7 +9596,7 @@ evidence, and quote coverage with each number.
       "type": "object"
     },
     "report": {
-      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments), sum(open_commitments) grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced) grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by win_probability_band, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments), sum(open_commitments) grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor), sum(won_deal_value_minor), sum(open_deal_unpriced), sum(won_deal_unpriced) grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
       "enum": [
         "activities-by-kind",
         "deals-by-stage",

@@ -43,7 +43,6 @@ type QualifiedReadings struct {
 	// qualified counterpart of Readings.OpenMinor.
 	OpenMinor     int64
 	EvidenceMinor int64
-	BestCaseMinor int64
 	WeightedMinor int64
 	// The baseline open money left out, and how many deals carry it.
 	ExcludedMinor int64
@@ -106,7 +105,6 @@ func qualify(out *Readings, c Contribution, base int64) error {
 	}{
 		{&q.OpenMinor, base, c.Qualification == viability.QualificationEligible},
 		{&q.EvidenceMinor, base, c.InEvidence && c.Qualification == viability.QualificationEligible},
-		{&q.BestCaseMinor, base, c.InBestCase && c.Qualification == viability.QualificationEligible},
 		{&q.WeightedMinor, c.WeightedMinor, c.Qualification == viability.QualificationEligible},
 		{&q.ExcludedMinor, base, excluded(c.Qualification)},
 		{&q.UnsupportedMinor, base, c.Qualification == viability.QualificationUnsupported},

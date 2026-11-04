@@ -207,7 +207,7 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	}
 }
 
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
+func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
 	v, err := p.store.AdvanceDeal(ctx, ids.From[ids.DealKind](in.DealID), AdvanceDealInput{
 		WonWithoutContractReason: in.WonWithoutContractReason,
 		WonWithoutContractDetail: in.WonWithoutContractDetail,
@@ -216,7 +216,11 @@ func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInp
 		LostReasonCode:           in.LostReasonCode,
 		IfVersion:                in.IfVersion,
 	})
-	return ref(datasource.EntityDeal, v.Id), err
+	out := datasource.AdvanceDealResult{Ref: ref(datasource.EntityDeal, v.Id)}
+	if v.Probability != nil {
+		out.ProbabilityNote = v.Probability.Note
+	}
+	return out, err
 }
 
 // StageSemantic feeds the advance_deal tier resolver (interfaces.md

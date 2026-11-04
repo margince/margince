@@ -23,7 +23,7 @@ var searchRecordsCopy = toolCopy{
 
 var listRecordsCopy = toolCopy{
 	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
-		"pipeline, the leads one rep owns, a contact's timeline.",
+		"pipeline, a rep's leads, a contact's timeline.",
 	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
 		"the set continues past it.",
 	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +

@@ -285,7 +285,7 @@ func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	deal := e.seedOpenDeal(t, "Accepted from a lead", 55, &e.Rep1, nil, nil)
+	deal := e.seedOpenDeal(t, "Accepted from a lead", 55, &e.Rep1, nil)
 	if err := store.DecideHandoff(ctx, handoff, contacts.HandoffDecision{Status: contacts.HandoffAccepted, DealID: &deal}); err != nil {
 		t.Fatal(err)
 	}

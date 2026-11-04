@@ -1507,10 +1507,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.short": "Thấp hơn mục tiêu {target}",
   "reporting.compare.ahead": "Vượt mục tiêu {target}",
   "reporting.compare.gapBasis": "Kết quả dự kiến {landing}, theo {basis}",
-  "reporting.compare.basis.commit_evidence": "deal cam kết có bằng chứng",
+  "reporting.compare.basis.likely": "deal khả năng cao",
   "reporting.compare.basis.weighted": "pipeline có trọng số",
-  "reporting.compare.basis.qualified_commit_evidence":
-    "deal cam kết có bằng chứng được ủng hộ",
+  "reporting.compare.basis.qualified_likely": "deal khả năng cao được ủng hộ",
   "reporting.compare.basis.qualified_weighted":
     "pipeline có trọng số được ủng hộ",
   "reporting.compare.basis.manager_call": "ước tính của quản lý",
@@ -2078,7 +2077,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ngày chốt ước tính: {before} → {after} (cần xác nhận)",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
-  "home.receipt.forecast": "Đã đổi danh mục dự báo",
+  "home.receipt.forecast": "Đã đổi xác suất",
   "home.task.yours": "Việc cần làm của bạn: {action}",
   "home.change.unknown": "Không rõ ai đã thay đổi.",
   "home.change.stageUnknown": "Không rõ giai đoạn",
@@ -2221,7 +2220,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.week.lost_one": "Thua {count} deal.",
   "brief.week.lost_other": "Thua {count} deal.",
   "brief.row.details": "Chi tiết",
-  "worklist.deal.omitted": "không tính vào dự báo",
   "worklist.deal.provisional": "dự kiến chốt {date} (chưa xác nhận)",
   "brief.readings.riskBasis":
     "Giá trị danh nghĩa · không phải tổn thất dự kiến",
@@ -2584,6 +2582,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.filled": "Các trường được điền thêm",
   "history.field.guests_added": "Khách được thêm từ lịch",
   "history.field.guest_links_added": "Khách được liên kết từ lịch",
+  "history.field.meeting_documents_added":
+    "Ghi chú cuộc họp được liên kết từ lịch",
   "history.field.guests_retired": "Khách bị lịch xóa",
   "history.field.guest_answers_changed":
     "Phản hồi của khách được cập nhật từ lịch",
@@ -2620,8 +2620,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.ended_at": "Kết thúc",
   "history.field.expected_close_date": "Ngày chốt dự kiến",
   "history.field.first_name": "Tên",
-  "history.field.forecast_category": "Danh mục dự báo",
   "history.field.full_name": "Tên",
+  "history.field.win_probability": "Xác suất",
+  "history.field.win_probability_override": "Xác suất đặt cho deal",
+  "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",
   "history.field.fx_rate_to_base": "Tỷ giá",
   "history.field.industry": "Ngành",
@@ -5561,7 +5563,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.recordedBy": "Bên ghi nhận",
   "deal.companyWithheld": "Công ty bị ẩn",
   "deal.partnerWithheld": "Đối tác bị ẩn",
-  "deal.forecastCategory": "Danh mục dự báo",
   "deal.committee.title": "Nhóm quyết định mua",
   "deal.committee.legendEngaged": "Đang tương tác",
   "deal.committee.legendQuiet": "Chưa tương tác",
@@ -5572,10 +5573,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.strip.close.overdue_other": "quá hạn {days} ngày",
   "deal.strip.close.provisional": "tạm tính, chưa ai xác nhận",
   "deal.strip.close.waiting": "bên mua đề nghị chờ đến {date}",
-  "deal.forecast.commit": "Commit",
-  "deal.forecast.bestCase": "Best case",
-  "deal.forecast.pipeline": "pipeline",
-  "deal.forecast.omitted": "không tính vào dự báo",
   "deal.standing.dims": "Các chỉ số của deal",
   "deal.standing.momentum": "Đà tiến triển",
   "deal.standing.momentum.active": "Đang hoạt động",
@@ -5600,7 +5597,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.daysNow_other": "{count} ngày · hiện tại",
   "deal.standing.baseValue": "Giá trị theo tiền tệ gốc",
   "deal.standing.figure.probability": "Xác suất",
-  "deal.standing.figure.stageDefault": "mặc định của giai đoạn",
+  "deal.winProbability": "Xác suất",
+  "deal.winProbability.hint": "Để trống để dùng xác suất của giai đoạn.",
+  "deal.winProbability.invalid": "Nhập một số nguyên từ 0 đến 100.",
+  "deal.winProbability.source.stage": "theo giai đoạn",
+  "deal.winProbability.source.human": "đặt thủ công",
+  "deal.winProbability.source.margince": "do Margince hạ xuống",
+  "deal.winProbability.stageValue": "giai đoạn {percent}",
+  "deal.winProbability.setByStage":
+    "Giai đoạn {stage} đã đặt xác suất thành {percent}",
+  "deal.winProbability.band.90_plus": "Từ 90% trở lên",
+  "deal.winProbability.band.60_89": "60 đến 89%",
+  "deal.winProbability.band.30_59": "30 đến 59%",
+  "deal.winProbability.band.1_29": "1 đến 29%",
+  "deal.winProbability.band.zero": "0%",
   "field.unset": "Chưa có",
   "deal.standing.figure.offer": "Báo giá {number} · phiên bản {revision}",
   "deal.standing.figure.next": "Bước tiếp theo",
@@ -5916,12 +5926,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayHint":
     "Doanh thu theo kỳ sẽ theo ngày này, và tỷ giá được chốt lại cho ngày đó.",
   "deal.correctCloseDayConfirm": "Lưu ngày chốt",
-  "deal.fcCommit": "Commit",
-  "deal.fcBestCase": "Best case",
-  "deal.fcPipeline": "Pipeline",
-  "deal.fcOmitted": "Không tính",
-  "deal.fcSlipped": "Bị lùi",
-  "deal.fcUncategorised": "Chưa phân loại",
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Chỉ deal đình trệ",
@@ -5938,7 +5942,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.totalsNoTeamFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
   "deals.totalsNoRangeFilter":
-    "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo ngày chốt, giá trị, loại tiền hay quốc gia nên không hiển thị.",
+    "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo ngày chốt, giá trị, loại tiền, quốc gia hay khoảng xác suất ngoài các mức có sẵn nên không hiển thị.",
   "deals.filterCloseDate": "Ngày chốt",
   "deals.filterCloseDateAll": "Mọi ngày chốt",
   "deals.filterValue": "Giá trị",
@@ -5962,8 +5966,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.filterPriorityAll": "Mọi mức ưu tiên",
   "deals.filterAcquisition": "Nguồn",
   "deals.filterAcquisitionAll": "Mọi nguồn",
-  "deals.filterForecast": "Dự báo",
-  "deals.filterForecastAll": "Mọi danh mục dự báo",
+  "deals.filterProbability": "Xác suất",
+  "deals.filterProbabilityAll": "Mọi xác suất",
   "deals.filterStatus": "Trạng thái",
   "deals.filterStatusAll": "Mọi trạng thái",
   "deals.statusOpen": "Đang mở",
@@ -6352,16 +6356,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.quarter": "Quý này",
   "brief.weekly.outlook.none": "Chưa có số liệu dự báo cho giai đoạn này.",
   "brief.weekly.outlook.won": "Giá trị đã chốt",
-  "brief.weekly.outlook.commit": "Commit còn lại",
-  "brief.weekly.outlook.bestCase": "Best case",
-  "brief.weekly.outlook.bestCaseDetail": "Gồm Commit",
+  "brief.weekly.outlook.likely": "Khả năng cao",
   "brief.weekly.outlook.weighted": "Giá trị deal có trọng số",
   "brief.weekly.outlook.landing": "Kết quả dự kiến",
   "brief.weekly.outlook.open": "Mở dự báo",
-  "brief.weekly.outlook.measure.commit_evidence": "Theo bằng chứng Commit",
+  "brief.weekly.outlook.measure.likely": "Theo deal khả năng cao",
   "brief.weekly.outlook.measure.weighted": "Theo deal có trọng số",
-  "brief.weekly.outlook.measure.qualified_commit_evidence":
-    "Theo bằng chứng Commit được ủng hộ",
+  "brief.weekly.outlook.measure.qualified_likely":
+    "Theo deal khả năng cao được ủng hộ",
   "brief.weekly.outlook.measure.qualified_weighted":
     "Theo deal có trọng số được ủng hộ",
   "brief.weekly.outlook.measure.manager_call": "Theo nhận định của quản lý",
@@ -7756,7 +7758,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.days_in_stage": "Số ngày ở giai đoạn",
   "analytics.field.days_to_close": "Số ngày đến khi đóng",
   "analytics.field.direction": "Hướng",
-  "analytics.field.forecast_category": "Danh mục dự báo",
+  "analytics.field.win_probability_band": "Mức xác suất",
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
@@ -8114,7 +8116,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.qualifiedUnknown_other":
     "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
   "forecast.qualifiedAnswer":
-    "Deal đã chốt và Commit đã xác nhận mà khách hàng vẫn ủng hộ: {evidence}. Có trọng số: {weighted}.",
+    "Deal đã chốt và deal khả năng cao mà khách hàng vẫn ủng hộ: {evidence}. Có trọng số: {weighted}.",
   "review.enforcementLabel": "Chỉ tính deal được khách hàng ủng hộ",
   "review.enforcementHint":
     "Deal có khách hàng ngừng trả lời sẽ ra khỏi dòng các deal được khách hàng ủng hộ cho đến khi được xem xét. Các số liệu khác không đổi.",
@@ -8176,23 +8178,29 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.submit": "Lưu câu trả lời",
   "forecast.question": "Dự báo kỳ",
   "forecast.answerWithCall":
-    "Nhận định của quản lý: {call}. Deal đã chốt và deal Commit có ngày chốt đã xác nhận: {evidence}.",
+    "Nhận định của quản lý: {call}. Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.answerNoCall":
-    "Deal đã chốt và deal Commit có ngày chốt đã xác nhận: {evidence}. Quản lý chưa gửi nhận định.",
+    "Deal đã chốt và deal khả năng cao: {evidence}. Quản lý chưa gửi nhận định.",
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có giá. Deal chưa có giá không cộng thêm gì vào các tổng ở trên.",
   "forecast.currentCall": "Nhận định của quản lý",
   "forecast.currentCallDetailOver":
-    "Cập nhật {date} · cao hơn {gap} so với đã chốt + Commit đã xác nhận",
+    "Cập nhật {date} · cao hơn {gap} so với đã chốt + khả năng cao",
   "forecast.currentCallDetailUnder":
-    "Cập nhật {date} · thấp hơn {gap} so với đã chốt + Commit đã xác nhận",
+    "Cập nhật {date} · thấp hơn {gap} so với đã chốt + khả năng cao",
   "forecast.callHistoryUnavailable":
     "Dự báo này được chốt trước khi hệ thống lưu lại pipeline làm căn cứ, nên không thể biết điều gì đã thay đổi kể từ đó.",
   "forecast.currentCallDetailEven":
-    "Cập nhật {date} · bằng đã chốt + Commit đã xác nhận",
-  "forecast.evidence": "Commit · ngày đã xác nhận",
-  "forecast.bestCaseAdds": "Phần thêm từ Best case",
+    "Cập nhật {date} · bằng đã chốt + khả năng cao",
+  "forecast.likely": "Khả năng cao",
+  "forecast.likely.help":
+    "Deal đang mở từ {threshold} trở lên có ngày chốt đã xác nhận, tính đủ giá trị",
+  "forecast.weighted": "Có trọng số",
+  "forecast.weighted.help":
+    "Giá trị mỗi deal đang mở nhân với xác suất của deal",
+  "forecast.bySource":
+    "Theo giai đoạn {stage} · đặt thủ công {human} · Margince {margince}",
   "forecast.makeup": "Cơ cấu của kỳ",
   "forecast.alreadyWon": "Đã chốt",
   "forecast.updateCall": "Cập nhật dự báo",
@@ -8221,7 +8229,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.priced": "Có giá",
   "forecast.confirmed": "Đã xác nhận ngày chốt",
   "forecast.fxMissing": "Thiếu tỷ giá",
-  "analytics.reportForecast": "Danh mục dự báo",
+  "analytics.reportForecast": "Dự báo theo xác suất",
   "analytics.shareOfOpenPipeline": "Tỷ trọng pipeline theo loại tiền này",
   "analytics.reportPipelineByCloseMonth": "Pipeline đang mở theo tháng chốt",
   "analytics.closeMonth": "Tháng chốt",
@@ -14062,30 +14070,32 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.forwardMeasure": "Cơ sở tính dự kiến",
   "installationSettings.forwardMeasureHint":
     "Những deal đang mở mà số dự kiến cộng vào doanh số đã chốt.",
-  "installationSettings.forwardMeasure.commit_evidence":
-    "Bằng chứng Commit: chỉ ngày chốt đã xác nhận",
+  "installationSettings.forwardMeasure.likely":
+    "Khả năng cao: deal đạt ngưỡng khả năng cao trở lên, có ngày chốt đã xác nhận",
   "installationSettings.forwardMeasure.weighted":
-    "Có trọng số: mọi deal đang mở theo xác suất giai đoạn",
-  "installationSettings.forwardMeasure.qualified_commit_evidence":
-    "Bằng chứng Commit được ủng hộ: ngày chốt đã xác nhận mà khách hàng vẫn ủng hộ",
+    "Có trọng số: mọi deal đang mở theo xác suất của deal",
+  "installationSettings.forwardMeasure.qualified_likely":
+    "Khả năng cao được ủng hộ: deal khả năng cao mà khách hàng vẫn ủng hộ",
   "installationSettings.forwardMeasure.qualified_weighted":
-    "Có trọng số được ủng hộ: deal đang mở mà khách hàng vẫn ủng hộ, theo xác suất giai đoạn",
+    "Có trọng số được ủng hộ: deal đang mở mà khách hàng vẫn ủng hộ, theo xác suất của deal",
   "installationSettings.forwardMeasure.manager_call":
     "Nhận định của quản lý: con số đã nhập cho kỳ",
+  "installationSettings.likelyThreshold": "Ngưỡng khả năng cao",
+  "installationSettings.likelyThreshold.help":
+    "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",
-  "forecast.basis.commit_evidence": "Đã chốt + cam kết đã xác nhận",
+  "forecast.basis.likely": "Đã chốt + deal khả năng cao",
   "forecast.basis.weighted": "Đã chốt + deal mở theo trọng số",
-  "forecast.basis.qualified_commit_evidence":
-    "Đã chốt + cam kết đã xác nhận được ủng hộ",
+  "forecast.basis.qualified_likely": "Đã chốt + deal khả năng cao được ủng hộ",
   "forecast.basis.qualified_weighted": "Đã chốt + deal có trọng số được ủng hộ",
   "forecast.basis.manager_call": "Ước tính của quản lý",
   "forecast.basis.unknown": "Chưa ghi nhận cơ sở",
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
   "forecast.callNotAdded": "Ước tính của quản lý {call}, không cộng thêm",
   "forecast.recordsProject": "Riêng dữ liệu deal cho ra {amount}",
-  "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị cam kết",
+  "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị deal khả năng cao",
   "forecast.callBelowLine": "Thấp hơn {won} đã chốt, hiển thị như đã ghi",
   "forecast.model.quarter": "Kết quả quý theo mô hình",
   "forecast.model.month": "Kết quả tháng theo mô hình",
@@ -14104,10 +14114,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.model.basis":
     "Doanh số đã chốt cộng mỗi deal mở có giá trị trong kỳ này, thắng hoặc thua theo khả năng đang dùng qua nhiều lần chạy. 8 trên 10 kết quả mô hình nằm trong khoảng này. Khoảng này giả định các khả năng là đúng và không phải độ chính xác dự báo đã đo.",
   "forecast.landingRecordsDetail":
-    "Đã chốt cộng các deal Commit có ngày chốt đã xác nhận, chưa tính dự báo của quản lý",
+    "Đã chốt cộng các deal khả năng cao, chưa tính dự báo của quản lý",
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
   "forecast.landing.caveat.call_absent":
-    "Kỳ này chưa có nhận định nào, nên số này hiển thị bằng chứng Commit.",
+    "Kỳ này chưa có nhận định nào, nên số này hiển thị deal khả năng cao.",
   "forecast.landing.caveat.qualified_unavailable":
     "Việc đếm deal được ủng hộ đang tắt, nên số này hiển thị mọi deal.",
   "forecast.landing.caveat.call_below_actual":

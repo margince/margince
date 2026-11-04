@@ -6256,16 +6256,17 @@ paths:
         - name: status
           in: query
           schema: { type: string, enum: [open, won, lost] }
-        - name: forecast_category
+        - name: win_probability_min
           in: query
-          schema: { type: string, enum: [commit, best_case, pipeline, omitted] }
+          schema: { type: integer, minimum: 0, maximum: 100 }
           description: |
-            One of the forecast's named buckets. The same `deal.forecast_category` the forecast
-            reads, so a tile's figure and the list behind it are one answer rather than two
-            derivations that can disagree.
-
-            A deal carrying no category is in no bucket and is returned by none of the four —
-            the buckets partition the CATEGORISED pipeline, not the pipeline.
+            Deals whose win probability is at least this percent (inclusive). The same
+            `deal.win_probability` the forecast weights by: the deal's own probability where one
+            is set, else its stage's. A `win_probability_min` above `win_probability_max` is `422`.
+        - name: win_probability_max
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 100 }
+          description: Deals whose win probability is at most this percent (inclusive). See `win_probability_min`.
         - name: stalled
           in: query
           schema: { type: boolean }
@@ -6641,10 +6642,10 @@ paths:
                   status: won
       responses:
         '200':
-          description: The deal at its new stage.
+          description: The deal at its new stage, and the probability the move set.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Deal' }
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: RBAC denied, or a 🟡 transition attempted without an approval token.
@@ -27207,9 +27208,10 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Mail an invited member a new set-password link. Admin-only, human-only.
       description: |
-        For an invited member whose invitation email the relay refused, and only then: the live
-        link's `invite_email_state` must be `failed`. Mints a new single-use
-        set-password link exactly as `issueUserPasswordLink` does (it supersedes the old one,
+        For any invited human member, whatever became of the last invitation: a link that
+        expired, a mail that was sent or refused, or a member who was never mailed. Mints a new
+        single-use set-password link exactly as `issueUserPasswordLink` does (it supersedes any
+        older one,
         writes the same audit row and emits `user.password_link_issued`), then mails it instead
         of returning it. Shares that operation's rate limits per actor and per target. Nothing
         retries on its own: an admin sends again from the roster.
@@ -27229,8 +27231,6 @@ paths:
             Refused, with the reason distinguished by the problem `code`:
             `mail_unavailable` (this installation has no outbound relay or no link origin, so
             nothing can be mailed; `issueUserPasswordLink` is the way then),
-            `invite_email_not_failed` (the member's live link was never mailed, or its mail is
-            still `sending` or was `sent`; a resend would supersede a link that may still arrive),
             `member_not_invited`
             (the member has already set a password, or is suspended or deactivated), or
             `archived_role_held` (the member holds an archived role; an admin gives them a live
@@ -30395,10 +30395,10 @@ paths:
         `won` counts deals by the day they ACTUALLY closed, never by the day they were
         expected to: a deal expected in March and won in April belongs to April, and
         counting it in March reports money the quarter did not bring in. `evidence` is the
-        committed pipeline whose close dates somebody confirmed — a provisional date is a
-        guess, which is what that reading exists to exclude, though the deal stays in
-        `open`. `best_case` adds the best-case category. `weighted` applies each deal's
-        chance in use, with the strongest learned risk effect, rounded per deal. While
+        Likely reading: open deals at `likely_threshold` percent or more whose close dates
+        somebody confirmed, counted in full. A provisional date is a guess, which is what
+        that reading exists to exclude, though the deal stays in `open`. `weighted` applies
+        each deal's chance in use, with the strongest learned risk effect, rounded per deal. While
         `self_correcting` is true the chance in use is the stage's typed chance moved toward
         the outcomes of deals recorded entering that stage; with no such outcome, and while it
         is false, it is the typed chance.
@@ -30912,7 +30912,7 @@ paths:
           description: The closing snapshot.
         - name: reading
           in: query
-          schema: { type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted], default: open }
+          schema: { type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted], default: open }
           description: >-
             Which money answer this movement explains. A waterfall is drawn for ONE of them;
             mixing two adds figures that do not belong in one total. The `qualified_` readings
@@ -36713,7 +36713,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo, individual_performance, forecast_self_correcting]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo, individual_performance, forecast_self_correcting, forecast_likely_threshold]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
@@ -36775,6 +36775,13 @@ components:
             besides the reader do. Each reader keeps their own figures. The Team board, coaching
             moves, a lead's view of a named member's queue, the morning mail's team section and
             team weekly plans are not covered yet.
+        forecast_likely_threshold:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: |
+            The win probability, in percent, from which an open deal with a confirmed close date
+            counts in the Likely forecast. 90 by default.
         forecast_self_correcting:
           type: boolean
           description: |
@@ -36875,26 +36882,25 @@ components:
             asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
-          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
-          x-enum-varnames: [SettingsForwardMeasureCommitEvidence, SettingsForwardMeasureQualifiedCommitEvidence, SettingsForwardMeasureWeighted, SettingsForwardMeasureQualifiedWeighted, SettingsForwardMeasureManagerCall]
+          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          x-enum-varnames: [SettingsForwardMeasureLikely, SettingsForwardMeasureQualifiedLikely, SettingsForwardMeasureWeighted, SettingsForwardMeasureQualifiedWeighted, SettingsForwardMeasureManagerCall]
           description: |
             Which remaining-pipeline reading a projected landing is built from. A setting
             rather than a fixed choice, because it is a question about how this installation
-            SELLS rather than about the software: a team with a disciplined commit stage means
-            something by it, and one that commits everything does not — their weighted number
-            is the honest one.
+            SELLS rather than about the software: a team whose probabilities are honest at the
+            top means something by Likely, and one that rates everything high does not, so
+            their weighted number is the honest one.
 
-            `commit_evidence` is the strictest baseline: committed deals whose close date
-            somebody confirmed, a provisional date being a guess that stays out.
-            `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
-            the deals the customer still supports (the `qualified` block on `GET /forecast`).
-            `manager_call` takes the authored call as the whole period's landing and is not
-            added to what is already won; with no current call the read falls back to
-            `commit_evidence` and says so in the landing's `caveat`.
+            `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
+            percent or more whose close date somebody confirmed, a provisional date being a
+            guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
+            readings over the deals the customer still supports (the `qualified` block on
+            `GET /forecast`). `manager_call` takes the authored call as the whole period's
+            landing and is not added to what is already won; with no current call the read
+            falls back to `likely` and says so in the landing's `caveat`.
 
-            With no measure saved, the landing uses `qualified_commit_evidence` while the
-            installation enforces viability reviews and `commit_evidence` otherwise; this field
-            then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+            With no measure saved, the landing uses `qualified_likely` while the installation
+            enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
             client shows an unknown value by its name.
     UpdateInstallationSettingsRequest:
       type: object
@@ -36951,6 +36957,11 @@ components:
         forecast_self_correcting:
           type: boolean
           description: Let the forecast correct itself. Omit to leave it unchanged. Each change is audited.
+        forecast_likely_threshold:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: The probability from which a deal counts as Likely. Omit to leave it unchanged. Each change is audited.
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -37070,7 +37081,7 @@ components:
             asking for a hand until the rows retire.
         forecast_forward_measure:
           type: string
-          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
           description: |
             Which remaining-pipeline reading a projected landing is built from. Never frozen:
             it is applied on READ and stores nothing, so changing it re-computes every landing
@@ -49428,6 +49439,9 @@ components:
           type: string
           format: uuid
           description: The note logged on the deal, absent when the call carried none.
+        probability_note:
+          type: string
+          description: The probability the move set from the new stage, as one sentence. Absent when the move changed no stage.
     QualifyLeadRequest:
       type: object
       description: What `qualify_lead` takes besides the lead, which the path names.
@@ -51043,9 +51057,30 @@ components:
           type: [string, 'null']
           readOnly: true
           description: Required when the reason is `other`, which explains nothing on its own.
-        forecast_category: { type: [string, 'null'], enum: [null, commit, best_case, pipeline, omitted] }
+        win_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          readOnly: true
+          description: >-
+            The chance this deal is won, in percent: the deal's own probability where somebody set
+            one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving
+            the deal to another stage sets it back to that stage's probability.
+        win_probability_source:
+          type: string
+          enum: [stage, human, margince]
+          readOnly: true
+          description: >-
+            Where `win_probability` comes from: `stage` while the deal follows its stage, `human`
+            when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+        stage_win_probability:
+          type: integer
+          minimum: 0
+          maximum: 100
+          readOnly: true
+          description: The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
         expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
-        close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.' }
+        close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
@@ -51241,11 +51276,39 @@ components:
         lost_reason: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.' }
         fx_rate_to_base: { type: [string, 'null'], description: 'Refused 422 `set_by_advance`; the rate is frozen by the advance that closes the deal.' }
         fx_rate_date: { type: [string, 'null'], format: date, description: 'Refused 422 `set_by_advance`; dated by the advance that closes the deal.' }
-        forecast_category: { type: [string, 'null'], enum: [null, commit, best_case, pipeline, omitted] }
+        win_probability:
+          type: [integer, 'null']
+          minimum: 0
+          maximum: 100
+          description: >-
+            The deal's own win probability in percent. Null sets it back to the stage's
+            probability. Refused 422 `probability_fixed_when_closed` on a won or lost deal, whose
+            probability its stage fixes.
         expected_close_date: { type: [string, 'null'], format: date, description: 'On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.' }
         wait_until: { type: [string, 'null'], format: date }
       additionalProperties: true
       x-extension: true
+
+    DealAdvanced:
+      description: >-
+        The deal after a stage move. A move to another stage sets the deal's win probability back
+        to the new stage's, and `probability_set` says so; it is absent when the move changed no
+        stage.
+      allOf:
+        - $ref: '#/components/schemas/Deal'
+        - type: object
+          properties:
+            probability_set: { $ref: '#/components/schemas/DealProbabilitySet' }
+    DealProbabilitySet:
+      type: object
+      required: [win_probability, stage_name, note]
+      properties:
+        win_probability: { type: integer, minimum: 0, maximum: 100 }
+        stage_name: { type: string }
+        note:
+          type: string
+          description: The same fact as one English sentence, for a model or a log. A web client writes its own from the two fields.
+      additionalProperties: false
 
     CorrectDealCloseDayRequest:
       type: object
@@ -59186,7 +59249,7 @@ components:
         target: *id003
         basis:
           type: string
-          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
           description: The forward measure the landing was projected with.
         landing: *id003
         won: *id003
@@ -60102,7 +60165,7 @@ components:
             Whether the invitation email was handed to the sender. The send runs after the answer,
             so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
             refuses the address is reported a moment later as the member's
-            `invite_email_state` on the roster, where `resend_invite` is offered.
+            `invite_email_state` on the roster.
       additionalProperties: false
 
     User:
@@ -60203,8 +60266,7 @@ components:
           description: >
             What became of the email that carries this invited member's live set-password link.
             `sending` while the send runs; a client polls the roster until it settles. `sent` once
-            the relay took it, and `failed` once the relay refused it, where `resend_invite` is
-            offered. Null for an active member, for a link an admin issued and passed on by hand,
+            the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand,
             and for a send that never answered within a few minutes. Present only on the
             administration view. `resendUserInvite` mails a new link, which starts at `sending`.
         invite_email:
@@ -60227,8 +60289,8 @@ components:
             guard, an archived role still held, the licensed seat ceiling on reactivation,
             whether this installation can build a set-password link, and whether the member has
             a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member.
-            `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is
-            `failed` and this installation can send mail. Present on `listUsers`'s
+            `resend_invite` is `resendUserInvite`, offered for an invited human member when this
+            installation can send mail. Present on `listUsers`'s
             management view for a human caller only; absent means not computed, and a client
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
@@ -60731,9 +60793,10 @@ components:
         - scope_kind
         - won_minor
         - evidence_minor
-        - best_case_minor
         - open_minor
         - weighted_minor
+        - likely_threshold
+        - by_source
         - eligible_count
         - priced_count
         - confirmed_date_count
@@ -60776,9 +60839,15 @@ components:
           type: integer
           format: int64
           description: >-
-            Committed pipeline whose close date somebody confirmed. A provisional date is
-            a guess, so it is excluded here and included in open_minor.
-        best_case_minor: { type: integer, format: int64 }
+            Likely: open deals at `likely_threshold` percent or more whose close date somebody
+            confirmed, counted in full. A provisional date is a guess, so it is excluded here
+            and included in open_minor.
+        likely_threshold:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: The installation setting `forecast_likely_threshold` this read used.
+        by_source: { $ref: '#/components/schemas/ForecastBySource' }
         open_minor: { type: integer, format: int64 }
         weighted_minor:
           type: integer
@@ -60873,18 +60942,39 @@ components:
             Present only when asked for with `contributions=true`: the deals behind the won and
             open readings, ordered by deal id, limited to those the caller may read.
       additionalProperties: false
+    ForecastBySource:
+      type: object
+      description: >-
+        The open and weighted readings split by where each deal's probability comes from. The
+        three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`.
+      required: [stage, human, margince]
+      properties:
+        stage: { $ref: '#/components/schemas/ForecastSourceTotal' }
+        human: { $ref: '#/components/schemas/ForecastSourceTotal' }
+        margince: { $ref: '#/components/schemas/ForecastSourceTotal' }
+      additionalProperties: false
+    ForecastSourceTotal:
+      type: object
+      required: [open_minor, weighted_minor]
+      properties:
+        open_minor: { type: integer, format: int64 }
+        weighted_minor: { type: integer, format: int64 }
+      additionalProperties: false
     ForecastContribution:
       type: object
       description: >-
         One deal's part in the forecast: what it adds to each reading and the chance it is
         weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once.
-      required: [deal_id, deal_name, chance_in_use, applied_probability, weighted_minor, in_won, in_open, in_evidence, in_best_case, signals]
+      required: [deal_id, deal_name, chance_in_use, applied_probability, weighted_minor, in_won, in_open, in_evidence, signals]
       properties:
         deal_id: { type: string, format: uuid }
         deal_name: { type: string }
         owner_id: { type: string, format: uuid }
         stage_id: { type: string, format: uuid }
-        category: { type: string }
+        probability_source:
+          type: string
+          enum: [stage, human, margince]
+          description: Where the deal's probability came from. A probability set on the deal is used as it is, never moved by self-correction.
         base_minor:
           type: integer
           format: int64
@@ -60896,13 +60986,12 @@ components:
         weighted_minor: { type: integer, format: int64 }
         in_won: { type: boolean }
         in_open: { type: boolean }
-        in_evidence: { type: boolean }
-        in_best_case: { type: boolean }
+        in_evidence: { type: boolean, description: 'Whether the deal counts in the Likely reading.' }
         typed_probability:
           type: integer
           minimum: 0
           maximum: 100
-          description: The chance typed on the deal's stage, in percent.
+          description: The deal's own probability where one is set, else the chance typed on its stage, in percent.
         chance_in_use:
           type: integer
           minimum: 0
@@ -61091,7 +61180,6 @@ components:
         the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
       required:
         - evidence_minor
-        - best_case_minor
         - weighted_minor
         - excluded_minor
         - unknown_minor
@@ -61101,7 +61189,6 @@ components:
         - unsupported_count
       properties:
         evidence_minor: { type: integer, format: int64 }
-        best_case_minor: { type: integer, format: int64 }
         weighted_minor: { type: integer, format: int64 }
         excluded_minor:
           type: integer
@@ -61158,8 +61245,8 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
-          x-enum-varnames: [ForwardMeasureCommitEvidence, ForwardMeasureQualifiedCommitEvidence, ForwardMeasureWeighted, ForwardMeasureQualifiedWeighted, ForwardMeasureManagerCall]
+          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
+          x-enum-varnames: [ForwardMeasureLikely, ForwardMeasureQualifiedLikely, ForwardMeasureWeighted, ForwardMeasureQualifiedWeighted, ForwardMeasureManagerCall]
           description: >-
             Which reading the forward half was built from — the one ACTUALLY used, which
             is not always the one configured: a manager-call installation with no current
@@ -61648,7 +61735,7 @@ components:
         equals closing_minor, exactly.
       required: [reading, opening_minor, closing_minor, buckets, deals]
       properties:
-        reading: { type: string, enum: [open, weighted, evidence, best_case, qualified_evidence, qualified_best_case, qualified_weighted] }
+        reading: { type: string, enum: [open, weighted, evidence, qualified_evidence, qualified_weighted] }
         opening_minor: { type: integer, format: int64 }
         closing_minor: { type: integer, format: int64 }
         buckets:
@@ -71298,7 +71385,7 @@ components:
       description: |
         One horizon's landing as the week closed, frozen beside the review.
       required: [period_kind, period_start, period_end, base_currency, won_minor,
-                 commit_minor, best_case_minor, weighted_minor, movement]
+                 likely_minor, weighted_minor, movement]
       properties:
         period_kind:
           type: string
@@ -71325,7 +71412,7 @@ components:
           description: What the window was landing on when the week closed.
         forward_measure:
           type: string
-          enum: [commit_evidence, qualified_commit_evidence, weighted, qualified_weighted, manager_call]
+          enum: [likely, qualified_likely, weighted, qualified_weighted, manager_call]
           description: |
             Which measure the closing landing was built from, FROZEN. The installation setting can
             change, and a past week must keep saying what it was read under rather than silently
@@ -71335,11 +71422,10 @@ components:
             a period somebody is still working, and a retrospective reports what the pipeline
             said. Freezing an opinion as a measurement would make the record argue with itself.
         won_minor: { type: integer, format: int64 }
-        commit_minor: { type: integer, format: int64 }
-        best_case_minor:
+        likely_minor:
           type: integer
           format: int64
-          description: Inclusive of commit, which is what the label on the surface must say.
+          description: The Likely reading as the week closed.
         weighted_minor: { type: integer, format: int64 }
         base_currency: { type: string }
         movement:
@@ -72538,9 +72624,8 @@ components:
         reader's own language; a label composed server-side would not be.
       properties:
         close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }
-        forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage." }
-        win_probability: { type: [integer, 'null'], minimum: 0, maximum: 100, description: "The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`." }
+        win_probability: { type: [integer, 'null'], minimum: 0, maximum: 100, description: "The deal's win probability: its own where one is set, else its stage's. Never a weighting applied to `amount_minor`." }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         owner_id: { type: [string, 'null'], format: uuid }
@@ -75029,12 +75114,11 @@ components:
         `amount_minor` converted to the installation's base currency — the only figure by
         which two deals in different currencies may be compared. It is not weighted by
         `win_probability`: the two are independent facts, one the deal's own money and the
-        other a property of the stage it sits in, rather than one computed from the other.
+        other the chance it is won, rather than one computed from the other.
         A reader must not multiply them together expecting the product to equal a
         risk-adjusted figure the API does not compute.
       properties:
         close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }
-        forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }

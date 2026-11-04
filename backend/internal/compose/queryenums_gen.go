@@ -155,7 +155,6 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/deals": {
 		{Name: "commercial_motion", Values: []string{"new_business", "renewal", "upsell", "cross_sell", "expansion", "existing_business", "unset"}, Array: false, Explode: true},
-		{Name: "forecast_category", Values: []string{"commit", "best_case", "pipeline", "omitted"}, Array: false, Explode: true},
 		{Name: "partner_attribution", Values: []string{"sourced", "influenced"}, Array: false, Explode: true},
 		{Name: "priority", Values: []string{"low", "medium", "high", "unset"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"open", "won", "lost"}, Array: false, Explode: true},
@@ -193,7 +192,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope_kind", Values: []string{"workspace", "team", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/forecast/movement": {
-		{Name: "reading", Values: []string{"open", "weighted", "evidence", "best_case", "qualified_evidence", "qualified_best_case", "qualified_weighted"}, Array: false, Explode: true},
+		{Name: "reading", Values: []string{"open", "weighted", "evidence", "qualified_evidence", "qualified_weighted"}, Array: false, Explode: true},
 	},
 	"GET /v1/imports": {
 		{Name: "view", Values: []string{"history", "drafts"}, Array: false, Explode: true},
@@ -420,6 +419,8 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 		{Name: "value_max", Minimum: 0},
 		{Name: "value_min", Minimum: 0},
+		{Name: "win_probability_max", Minimum: 0},
+		{Name: "win_probability_min", Minimum: 0},
 	},
 	"GET /v1/deals/slipping": {
 		{Name: "limit", Minimum: 1},

@@ -1472,10 +1472,9 @@ export const en = {
   "reporting.compare.short": "Short of the {target} target",
   "reporting.compare.ahead": "Ahead of the {target} target",
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
-  "reporting.compare.basis.commit_evidence": "commit evidence",
+  "reporting.compare.basis.likely": "the Likely deals",
   "reporting.compare.basis.weighted": "the weighted pipeline",
-  "reporting.compare.basis.qualified_commit_evidence":
-    "supported commit evidence",
+  "reporting.compare.basis.qualified_likely": "the supported Likely deals",
   "reporting.compare.basis.qualified_weighted":
     "the supported weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
@@ -2045,7 +2044,7 @@ export const en = {
     "Estimated close date: {before} → {after} (needs confirmation)",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
-  "home.receipt.forecast": "Forecast category changed",
+  "home.receipt.forecast": "Probability changed",
   "home.task.yours": "Your task: {action}",
   "home.change.unknown": "Change author unknown.",
   "home.change.stageUnknown": "Unknown stage",
@@ -2187,7 +2186,6 @@ export const en = {
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",
-  "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} (unconfirmed)",
   "brief.readings.riskBasis": "Face value · not expected loss",
   "magic.action.forecast_changed": "Adjusted forecast",
@@ -2561,6 +2559,8 @@ export const en = {
   "history.field.filled": "Fields filled in",
   "history.field.guests_added": "Guests added from the calendar",
   "history.field.guest_links_added": "Guests linked from the calendar",
+  "history.field.meeting_documents_added":
+    "Meeting notes linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
   "history.field.guest_answers_changed":
     "Guest answers updated from the calendar",
@@ -2597,8 +2597,10 @@ export const en = {
   "history.field.ended_at": "Ended",
   "history.field.expected_close_date": "Expected close",
   "history.field.first_name": "First name",
-  "history.field.forecast_category": "Forecast category",
   "history.field.full_name": "Name",
+  "history.field.win_probability": "Probability",
+  "history.field.win_probability_override": "Probability set on the deal",
+  "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
   "history.field.fx_rate_to_base": "FX rate",
   "history.field.industry": "Industry",
@@ -5658,7 +5660,6 @@ export const en = {
   // and a form field carry no header to say it for them.
   "deal.companyWithheld": "Company withheld",
   "deal.partnerWithheld": "Partner withheld",
-  "deal.forecastCategory": "Forecast category",
   "deal.committee.title": "Buying committee",
   "deal.offers.rowTitle": "{number} · version {revision}",
   "deal.offers.rowSub": "Created {date} · net {net}",
@@ -5700,10 +5701,6 @@ export const en = {
   "deal.strip.close.overdue_other": "{days} days overdue",
   "deal.strip.close.provisional": "provisional, not confirmed by a human",
   "deal.strip.close.waiting": "buyer asked to wait until {date}",
-  "deal.forecast.commit": "commit",
-  "deal.forecast.bestCase": "best case",
-  "deal.forecast.pipeline": "pipeline",
-  "deal.forecast.omitted": "omitted from forecast",
   "deal.standing.dims": "Deal readings",
   "deal.standing.momentum": "Momentum",
   "deal.standing.momentum.active": "Active",
@@ -5727,7 +5724,20 @@ export const en = {
   "standing.daysNow_other": "{count} days · now",
   "deal.standing.baseValue": "Value in base currency",
   "deal.standing.figure.probability": "Probability",
-  "deal.standing.figure.stageDefault": "stage default",
+  "deal.winProbability": "Probability",
+  "deal.winProbability.hint": "Leave empty to use the stage’s probability.",
+  "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
+  "deal.winProbability.source.stage": "from the stage",
+  "deal.winProbability.source.human": "set by hand",
+  "deal.winProbability.source.margince": "lowered by Margince",
+  "deal.winProbability.stageValue": "stage {percent}",
+  "deal.winProbability.setByStage":
+    "Probability set to {percent} by the stage {stage}",
+  "deal.winProbability.band.90_plus": "90% or more",
+  "deal.winProbability.band.60_89": "60 to 89%",
+  "deal.winProbability.band.30_59": "30 to 59%",
+  "deal.winProbability.band.1_29": "1 to 29%",
+  "deal.winProbability.band.zero": "0%",
   "field.unset": "Not set",
   "deal.standing.figure.offer": "Offer {number} · version {revision}",
   "deal.standing.figure.next": "Next step",
@@ -6043,12 +6053,6 @@ export const en = {
   "deal.correctCloseDayHint":
     "Revenue by period follows this day, and the exchange rate is set again for it.",
   "deal.correctCloseDayConfirm": "Save close day",
-  "deal.fcCommit": "Commit",
-  "deal.fcBestCase": "Best case",
-  "deal.fcPipeline": "Pipeline",
-  "deal.fcOmitted": "Omitted",
-  "deal.fcSlipped": "Slipped",
-  "deal.fcUncategorised": "No category",
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
@@ -6069,7 +6073,7 @@ export const en = {
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
   "deals.totalsNoRangeFilter":
-    "Loaded deals only. The stage totals cannot narrow by close date, value, currency or country, so none is shown.",
+    "Loaded deals only. The stage totals cannot narrow by close date, value, currency, country or a probability range other than a band, so none is shown.",
   "deals.filterCloseDate": "Close date",
   "deals.filterCloseDateAll": "Any close date",
   "deals.filterValue": "Value",
@@ -6093,8 +6097,8 @@ export const en = {
   "deals.filterPriorityAll": "Any priority",
   "deals.filterAcquisition": "Source",
   "deals.filterAcquisitionAll": "Any source",
-  "deals.filterForecast": "Forecast",
-  "deals.filterForecastAll": "Any forecast category",
+  "deals.filterProbability": "Probability",
+  "deals.filterProbabilityAll": "Any probability",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Any status",
   "deals.statusOpen": "Open",
@@ -6505,16 +6509,14 @@ export const en = {
   "brief.weekly.outlook.none":
     "No forecast snapshot is available for this period.",
   "brief.weekly.outlook.won": "Won value",
-  "brief.weekly.outlook.commit": "Commit remaining",
-  "brief.weekly.outlook.bestCase": "Best case",
-  "brief.weekly.outlook.bestCaseDetail": "Includes commit",
+  "brief.weekly.outlook.likely": "Likely",
   "brief.weekly.outlook.weighted": "Weighted deal value",
   "brief.weekly.outlook.landing": "Projected landing",
   "brief.weekly.outlook.open": "Open the forecast",
-  "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
+  "brief.weekly.outlook.measure.likely": "From Likely deals",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
-  "brief.weekly.outlook.measure.qualified_commit_evidence":
-    "From supported commit evidence",
+  "brief.weekly.outlook.measure.qualified_likely":
+    "From supported Likely deals",
   "brief.weekly.outlook.measure.qualified_weighted":
     "From supported weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
@@ -7955,7 +7957,7 @@ export const en = {
   "analytics.field.days_in_stage": "Days in stage",
   "analytics.field.days_to_close": "Days to close",
   "analytics.field.direction": "Direction",
-  "analytics.field.forecast_category": "Forecast category",
+  "analytics.field.win_probability_band": "Probability band",
   "analytics.field.host_user_id": "Meeting host",
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
@@ -8313,7 +8315,7 @@ export const en = {
   "forecast.qualifiedUnknown_other":
     "{count} deals ({amount}) are not counted because the last check could not judge them.",
   "forecast.qualifiedAnswer":
-    "Won plus confirmed commits the customer still supports: {evidence}. Weighted: {weighted}.",
+    "Won plus Likely deals the customer still supports: {evidence}. Weighted: {weighted}.",
   "review.enforcementLabel": "Count only deals the customer supports",
   "review.enforcementHint":
     "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
@@ -8376,23 +8378,26 @@ export const en = {
   "review.submit": "Save answer",
   "forecast.question": "Period forecast",
   "forecast.answerWithCall":
-    "Manager forecast: {call}. Won plus committed deals with confirmed close dates: {evidence}.",
+    "Manager forecast: {call}. Won plus Likely deals: {evidence}.",
   "forecast.answerNoCall":
-    "Won plus committed deals with confirmed close dates: {evidence}. No manager forecast submitted.",
+    "Won plus Likely deals: {evidence}. No manager forecast submitted.",
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
   "forecast.currentCall": "Manager forecast",
-  "forecast.currentCallDetailOver":
-    "Updated {date} · {gap} above won + confirmed commits",
+  "forecast.currentCallDetailOver": "Updated {date} · {gap} above won + Likely",
   "forecast.currentCallDetailUnder":
-    "Updated {date} · {gap} below won + confirmed commits",
+    "Updated {date} · {gap} below won + Likely",
   "forecast.callHistoryUnavailable":
     "This call was made before calls kept the pipeline they were made against, so what moved since cannot be said.",
-  "forecast.currentCallDetailEven":
-    "Updated {date} · matches won + confirmed commits",
-  "forecast.evidence": "Committed · confirmed dates",
-  "forecast.bestCaseAdds": "Best-case addition",
+  "forecast.currentCallDetailEven": "Updated {date} · matches won + Likely",
+  "forecast.likely": "Likely",
+  "forecast.likely.help":
+    "Open deals at {threshold} or more with a confirmed close date, counted in full",
+  "forecast.weighted": "Weighted",
+  "forecast.weighted.help": "Each open deal’s value times its probability",
+  "forecast.bySource":
+    "From stages {stage} · set by hand {human} · Margince {margince}",
   "forecast.makeup": "How the period adds up",
   "forecast.alreadyWon": "Already won",
   "forecast.updateCall": "Update forecast",
@@ -8421,7 +8426,7 @@ export const en = {
   "forecast.priced": "Priced",
   "forecast.confirmed": "Close date confirmed",
   "forecast.fxMissing": "Exchange rate missing",
-  "analytics.reportForecast": "Forecast categories",
+  "analytics.reportForecast": "Forecast by probability",
   "analytics.shareOfOpenPipeline": "Share of pipeline in this currency",
   "analytics.reportPipelineByCloseMonth": "Open pipeline by close month",
   "analytics.closeMonth": "Close month",
@@ -14386,30 +14391,32 @@ export const en = {
   "installationSettings.forwardMeasure": "Projection basis",
   "installationSettings.forwardMeasureHint":
     "Which open deals the projection adds to won revenue.",
-  "installationSettings.forwardMeasure.commit_evidence":
-    "Commit evidence: confirmed close dates only",
+  "installationSettings.forwardMeasure.likely":
+    "Likely: deals at the Likely threshold or above, with confirmed close dates",
   "installationSettings.forwardMeasure.weighted":
-    "Weighted: every open deal at its stage probability",
-  "installationSettings.forwardMeasure.qualified_commit_evidence":
-    "Supported commit evidence: confirmed close dates the customer still supports",
+    "Weighted: every open deal at its probability",
+  "installationSettings.forwardMeasure.qualified_likely":
+    "Supported Likely: Likely deals the customer still supports",
   "installationSettings.forwardMeasure.qualified_weighted":
-    "Supported weighted: open deals the customer still supports, at their stage probability",
+    "Supported weighted: open deals the customer still supports, at their probability",
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
+  "installationSettings.likelyThreshold": "Likely threshold",
+  "installationSettings.likelyThreshold.help":
+    "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
-  "forecast.basis.commit_evidence": "Won + confirmed commit",
+  "forecast.basis.likely": "Won + Likely deals",
   "forecast.basis.weighted": "Won + weighted open deals",
-  "forecast.basis.qualified_commit_evidence":
-    "Won + supported confirmed commit",
+  "forecast.basis.qualified_likely": "Won + supported Likely deals",
   "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.manager_call": "Manager’s call",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
   "forecast.recordsProject": "Records alone project {amount}",
-  "forecast.callAbsentLine": "No call recorded, so commit is shown",
+  "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
   "forecast.model.month": "Modelled month finish",
@@ -14429,10 +14436,10 @@ export const en = {
   "forecast.model.basis":
     "Won money plus each priced open deal in this period, won or lost by its chance in use over many runs. 8 in 10 modelled outcomes fall in this range. It assumes the chances are right, and it is not a measured forecast accuracy.",
   "forecast.landingRecordsDetail":
-    "Won plus Commit deals with confirmed close dates, without the manager’s call",
+    "Won plus Likely deals, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
-    "No call recorded for this period, so this shows commit evidence.",
+    "No call recorded for this period, so this shows the Likely deals.",
   "forecast.landing.caveat.qualified_unavailable":
     "The count of supported deals is off, so this shows all deals.",
   "forecast.landing.caveat.call_below_actual":

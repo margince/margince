@@ -10048,30 +10048,6 @@ func (e DealCommercialMotion) Valid() bool {
 	}
 }
 
-// Defines values for DealForecastCategory.
-const (
-	DealForecastCategoryBestCase DealForecastCategory = "best_case"
-	DealForecastCategoryCommit   DealForecastCategory = "commit"
-	DealForecastCategoryOmitted  DealForecastCategory = "omitted"
-	DealForecastCategoryPipeline DealForecastCategory = "pipeline"
-)
-
-// Valid indicates whether the value is a known member of the DealForecastCategory enum.
-func (e DealForecastCategory) Valid() bool {
-	switch e {
-	case DealForecastCategoryBestCase:
-		return true
-	case DealForecastCategoryCommit:
-		return true
-	case DealForecastCategoryOmitted:
-		return true
-	case DealForecastCategoryPipeline:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for DealLostReasonBasis.
 const (
 	DealLostReasonBasisMapped   DealLostReasonBasis = "mapped"
@@ -10150,6 +10126,27 @@ func (e DealStatus) Valid() bool {
 	}
 }
 
+// Defines values for DealWinProbabilitySource.
+const (
+	DealWinProbabilitySourceHuman    DealWinProbabilitySource = "human"
+	DealWinProbabilitySourceMargince DealWinProbabilitySource = "margince"
+	DealWinProbabilitySourceStage    DealWinProbabilitySource = "stage"
+)
+
+// Valid indicates whether the value is a known member of the DealWinProbabilitySource enum.
+func (e DealWinProbabilitySource) Valid() bool {
+	switch e {
+	case DealWinProbabilitySourceHuman:
+		return true
+	case DealWinProbabilitySourceMargince:
+		return true
+	case DealWinProbabilitySourceStage:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealWonWithoutContractReason.
 const (
 	DealWonWithoutContractReasonImported       DealWonWithoutContractReason = "imported"
@@ -10171,6 +10168,162 @@ func (e DealWonWithoutContractReason) Valid() bool {
 	case DealWonWithoutContractReasonRenewalByEmail:
 		return true
 	case DealWonWithoutContractReasonVerbal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedCommercialMotion.
+const (
+	DealAdvancedCommercialMotionCrossSell        DealAdvancedCommercialMotion = "cross_sell"
+	DealAdvancedCommercialMotionExistingBusiness DealAdvancedCommercialMotion = "existing_business"
+	DealAdvancedCommercialMotionExpansion        DealAdvancedCommercialMotion = "expansion"
+	DealAdvancedCommercialMotionNewBusiness      DealAdvancedCommercialMotion = "new_business"
+	DealAdvancedCommercialMotionRenewal          DealAdvancedCommercialMotion = "renewal"
+	DealAdvancedCommercialMotionUpsell           DealAdvancedCommercialMotion = "upsell"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedCommercialMotion enum.
+func (e DealAdvancedCommercialMotion) Valid() bool {
+	switch e {
+	case DealAdvancedCommercialMotionCrossSell:
+		return true
+	case DealAdvancedCommercialMotionExistingBusiness:
+		return true
+	case DealAdvancedCommercialMotionExpansion:
+		return true
+	case DealAdvancedCommercialMotionNewBusiness:
+		return true
+	case DealAdvancedCommercialMotionRenewal:
+		return true
+	case DealAdvancedCommercialMotionUpsell:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedLostReasonBasis.
+const (
+	DealAdvancedLostReasonBasisMapped   DealAdvancedLostReasonBasis = "mapped"
+	DealAdvancedLostReasonBasisRecorded DealAdvancedLostReasonBasis = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedLostReasonBasis enum.
+func (e DealAdvancedLostReasonBasis) Valid() bool {
+	switch e {
+	case DealAdvancedLostReasonBasisMapped:
+		return true
+	case DealAdvancedLostReasonBasisRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedPartnerAttribution.
+const (
+	DealAdvancedPartnerAttributionInfluenced DealAdvancedPartnerAttribution = "influenced"
+	DealAdvancedPartnerAttributionSourced    DealAdvancedPartnerAttribution = "sourced"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedPartnerAttribution enum.
+func (e DealAdvancedPartnerAttribution) Valid() bool {
+	switch e {
+	case DealAdvancedPartnerAttributionInfluenced:
+		return true
+	case DealAdvancedPartnerAttributionSourced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedPriority.
+const (
+	DealAdvancedPriorityHigh   DealAdvancedPriority = "high"
+	DealAdvancedPriorityLow    DealAdvancedPriority = "low"
+	DealAdvancedPriorityMedium DealAdvancedPriority = "medium"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedPriority enum.
+func (e DealAdvancedPriority) Valid() bool {
+	switch e {
+	case DealAdvancedPriorityHigh:
+		return true
+	case DealAdvancedPriorityLow:
+		return true
+	case DealAdvancedPriorityMedium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedStatus.
+const (
+	DealAdvancedStatusLost DealAdvancedStatus = "lost"
+	DealAdvancedStatusOpen DealAdvancedStatus = "open"
+	DealAdvancedStatusWon  DealAdvancedStatus = "won"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedStatus enum.
+func (e DealAdvancedStatus) Valid() bool {
+	switch e {
+	case DealAdvancedStatusLost:
+		return true
+	case DealAdvancedStatusOpen:
+		return true
+	case DealAdvancedStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedWinProbabilitySource.
+const (
+	DealAdvancedWinProbabilitySourceHuman    DealAdvancedWinProbabilitySource = "human"
+	DealAdvancedWinProbabilitySourceMargince DealAdvancedWinProbabilitySource = "margince"
+	DealAdvancedWinProbabilitySourceStage    DealAdvancedWinProbabilitySource = "stage"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedWinProbabilitySource enum.
+func (e DealAdvancedWinProbabilitySource) Valid() bool {
+	switch e {
+	case DealAdvancedWinProbabilitySourceHuman:
+		return true
+	case DealAdvancedWinProbabilitySourceMargince:
+		return true
+	case DealAdvancedWinProbabilitySourceStage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealAdvancedWonWithoutContractReason.
+const (
+	DealAdvancedWonWithoutContractReasonImported       DealAdvancedWonWithoutContractReason = "imported"
+	DealAdvancedWonWithoutContractReasonOther          DealAdvancedWonWithoutContractReason = "other"
+	DealAdvancedWonWithoutContractReasonPurchaseOrder  DealAdvancedWonWithoutContractReason = "purchase_order"
+	DealAdvancedWonWithoutContractReasonRenewalByEmail DealAdvancedWonWithoutContractReason = "renewal_by_email"
+	DealAdvancedWonWithoutContractReasonVerbal         DealAdvancedWonWithoutContractReason = "verbal"
+)
+
+// Valid indicates whether the value is a known member of the DealAdvancedWonWithoutContractReason enum.
+func (e DealAdvancedWonWithoutContractReason) Valid() bool {
+	switch e {
+	case DealAdvancedWonWithoutContractReasonImported:
+		return true
+	case DealAdvancedWonWithoutContractReasonOther:
+		return true
+	case DealAdvancedWonWithoutContractReasonPurchaseOrder:
+		return true
+	case DealAdvancedWonWithoutContractReasonRenewalByEmail:
+		return true
+	case DealAdvancedWonWithoutContractReasonVerbal:
 		return true
 	default:
 		return false
@@ -11938,6 +12091,27 @@ func (e ForecastContributionExclusionReason) Valid() bool {
 	}
 }
 
+// Defines values for ForecastContributionProbabilitySource.
+const (
+	ForecastContributionProbabilitySourceHuman    ForecastContributionProbabilitySource = "human"
+	ForecastContributionProbabilitySourceMargince ForecastContributionProbabilitySource = "margince"
+	ForecastContributionProbabilitySourceStage    ForecastContributionProbabilitySource = "stage"
+)
+
+// Valid indicates whether the value is a known member of the ForecastContributionProbabilitySource enum.
+func (e ForecastContributionProbabilitySource) Valid() bool {
+	switch e {
+	case ForecastContributionProbabilitySourceHuman:
+		return true
+	case ForecastContributionProbabilitySourceMargince:
+		return true
+	case ForecastContributionProbabilitySourceStage:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent           ForecastLandingCaveat = "call_absent"
@@ -11961,21 +12135,21 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureCommitEvidence          ForecastLandingMeasure = "commit_evidence"
-	ForecastLandingMeasureForwardMeasureManagerCall             ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence ForecastLandingMeasure = "qualified_commit_evidence"
-	ForecastLandingMeasureForwardMeasureQualifiedWeighted       ForecastLandingMeasure = "qualified_weighted"
-	ForecastLandingMeasureForwardMeasureWeighted                ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureLikely            ForecastLandingMeasure = "likely"
+	ForecastLandingMeasureForwardMeasureManagerCall       ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureQualifiedLikely   ForecastLandingMeasure = "qualified_likely"
+	ForecastLandingMeasureForwardMeasureQualifiedWeighted ForecastLandingMeasure = "qualified_weighted"
+	ForecastLandingMeasureForwardMeasureWeighted          ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
 func (e ForecastLandingMeasure) Valid() bool {
 	switch e {
-	case ForecastLandingMeasureForwardMeasureCommitEvidence:
+	case ForecastLandingMeasureForwardMeasureLikely:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
 		return true
-	case ForecastLandingMeasureForwardMeasureQualifiedCommitEvidence:
+	case ForecastLandingMeasureForwardMeasureQualifiedLikely:
 		return true
 	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
@@ -11988,10 +12162,8 @@ func (e ForecastLandingMeasure) Valid() bool {
 
 // Defines values for ForecastMovementReading.
 const (
-	ForecastMovementReadingBestCase          ForecastMovementReading = "best_case"
 	ForecastMovementReadingEvidence          ForecastMovementReading = "evidence"
 	ForecastMovementReadingOpen              ForecastMovementReading = "open"
-	ForecastMovementReadingQualifiedBestCase ForecastMovementReading = "qualified_best_case"
 	ForecastMovementReadingQualifiedEvidence ForecastMovementReading = "qualified_evidence"
 	ForecastMovementReadingQualifiedWeighted ForecastMovementReading = "qualified_weighted"
 	ForecastMovementReadingWeighted          ForecastMovementReading = "weighted"
@@ -12000,13 +12172,9 @@ const (
 // Valid indicates whether the value is a known member of the ForecastMovementReading enum.
 func (e ForecastMovementReading) Valid() bool {
 	switch e {
-	case ForecastMovementReadingBestCase:
-		return true
 	case ForecastMovementReadingEvidence:
 		return true
 	case ForecastMovementReadingOpen:
-		return true
-	case ForecastMovementReadingQualifiedBestCase:
 		return true
 	case ForecastMovementReadingQualifiedEvidence:
 		return true
@@ -13785,21 +13953,21 @@ func (e InstallationSettingsDateFormat) Valid() bool {
 
 // Defines values for InstallationSettingsForecastForwardMeasure.
 const (
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence          InstallationSettingsForecastForwardMeasure = "commit_evidence"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall             InstallationSettingsForecastForwardMeasure = "manager_call"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence InstallationSettingsForecastForwardMeasure = "qualified_commit_evidence"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted       InstallationSettingsForecastForwardMeasure = "qualified_weighted"
-	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted                InstallationSettingsForecastForwardMeasure = "weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureLikely            InstallationSettingsForecastForwardMeasure = "likely"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall       InstallationSettingsForecastForwardMeasure = "manager_call"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedLikely   InstallationSettingsForecastForwardMeasure = "qualified_likely"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted InstallationSettingsForecastForwardMeasure = "qualified_weighted"
+	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted          InstallationSettingsForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the InstallationSettingsForecastForwardMeasure enum.
 func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	switch e {
-	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence:
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureLikely:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
 		return true
-	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedCommitEvidence:
+	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedLikely:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureQualifiedWeighted:
 		return true
@@ -19320,21 +19488,21 @@ func (e ReportingStatus) Valid() bool {
 
 // Defines values for ReportingTargetComparisonBasis.
 const (
-	ReportingTargetComparisonBasisCommitEvidence          ReportingTargetComparisonBasis = "commit_evidence"
-	ReportingTargetComparisonBasisManagerCall             ReportingTargetComparisonBasis = "manager_call"
-	ReportingTargetComparisonBasisQualifiedCommitEvidence ReportingTargetComparisonBasis = "qualified_commit_evidence"
-	ReportingTargetComparisonBasisQualifiedWeighted       ReportingTargetComparisonBasis = "qualified_weighted"
-	ReportingTargetComparisonBasisWeighted                ReportingTargetComparisonBasis = "weighted"
+	ReportingTargetComparisonBasisLikely            ReportingTargetComparisonBasis = "likely"
+	ReportingTargetComparisonBasisManagerCall       ReportingTargetComparisonBasis = "manager_call"
+	ReportingTargetComparisonBasisQualifiedLikely   ReportingTargetComparisonBasis = "qualified_likely"
+	ReportingTargetComparisonBasisQualifiedWeighted ReportingTargetComparisonBasis = "qualified_weighted"
+	ReportingTargetComparisonBasisWeighted          ReportingTargetComparisonBasis = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ReportingTargetComparisonBasis enum.
 func (e ReportingTargetComparisonBasis) Valid() bool {
 	switch e {
-	case ReportingTargetComparisonBasisCommitEvidence:
+	case ReportingTargetComparisonBasisLikely:
 		return true
 	case ReportingTargetComparisonBasisManagerCall:
 		return true
-	case ReportingTargetComparisonBasisQualifiedCommitEvidence:
+	case ReportingTargetComparisonBasisQualifiedLikely:
 		return true
 	case ReportingTargetComparisonBasisQualifiedWeighted:
 		return true
@@ -22627,30 +22795,6 @@ func (e UpdateDealRequestCommercialMotion) Valid() bool {
 	}
 }
 
-// Defines values for UpdateDealRequestForecastCategory.
-const (
-	UpdateDealRequestForecastCategoryBestCase UpdateDealRequestForecastCategory = "best_case"
-	UpdateDealRequestForecastCategoryCommit   UpdateDealRequestForecastCategory = "commit"
-	UpdateDealRequestForecastCategoryOmitted  UpdateDealRequestForecastCategory = "omitted"
-	UpdateDealRequestForecastCategoryPipeline UpdateDealRequestForecastCategory = "pipeline"
-)
-
-// Valid indicates whether the value is a known member of the UpdateDealRequestForecastCategory enum.
-func (e UpdateDealRequestForecastCategory) Valid() bool {
-	switch e {
-	case UpdateDealRequestForecastCategoryBestCase:
-		return true
-	case UpdateDealRequestForecastCategoryCommit:
-		return true
-	case UpdateDealRequestForecastCategoryOmitted:
-		return true
-	case UpdateDealRequestForecastCategoryPipeline:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for UpdateDealRequestPartnerAttribution.
 const (
 	UpdateDealRequestPartnerAttributionInfluenced UpdateDealRequestPartnerAttribution = "influenced"
@@ -22758,21 +22902,21 @@ func (e UpdateInstallationSettingsRequestDateFormat) Valid() bool {
 
 // Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
 const (
-	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence          UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
-	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall             UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
-	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_commit_evidence"
-	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted       UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_weighted"
-	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted                UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureLikely            UpdateInstallationSettingsRequestForecastForwardMeasure = "likely"
+	UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall       UpdateInstallationSettingsRequestForecastForwardMeasure = "manager_call"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedLikely   UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_likely"
+	UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted UpdateInstallationSettingsRequestForecastForwardMeasure = "qualified_weighted"
+	UpdateInstallationSettingsRequestForecastForwardMeasureWeighted          UpdateInstallationSettingsRequestForecastForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestForecastForwardMeasure enum.
 func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
 	switch e {
-	case UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence:
+	case UpdateInstallationSettingsRequestForecastForwardMeasureLikely:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
 		return true
-	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedCommitEvidence:
+	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedLikely:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureQualifiedWeighted:
 		return true
@@ -24342,21 +24486,21 @@ func (e WeeklyReviewMovementBar) Valid() bool {
 
 // Defines values for WeeklyReviewOutlookForwardMeasure.
 const (
-	WeeklyReviewOutlookForwardMeasureCommitEvidence          WeeklyReviewOutlookForwardMeasure = "commit_evidence"
-	WeeklyReviewOutlookForwardMeasureManagerCall             WeeklyReviewOutlookForwardMeasure = "manager_call"
-	WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence WeeklyReviewOutlookForwardMeasure = "qualified_commit_evidence"
-	WeeklyReviewOutlookForwardMeasureQualifiedWeighted       WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
-	WeeklyReviewOutlookForwardMeasureWeighted                WeeklyReviewOutlookForwardMeasure = "weighted"
+	WeeklyReviewOutlookForwardMeasureLikely            WeeklyReviewOutlookForwardMeasure = "likely"
+	WeeklyReviewOutlookForwardMeasureManagerCall       WeeklyReviewOutlookForwardMeasure = "manager_call"
+	WeeklyReviewOutlookForwardMeasureQualifiedLikely   WeeklyReviewOutlookForwardMeasure = "qualified_likely"
+	WeeklyReviewOutlookForwardMeasureQualifiedWeighted WeeklyReviewOutlookForwardMeasure = "qualified_weighted"
+	WeeklyReviewOutlookForwardMeasureWeighted          WeeklyReviewOutlookForwardMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the WeeklyReviewOutlookForwardMeasure enum.
 func (e WeeklyReviewOutlookForwardMeasure) Valid() bool {
 	switch e {
-	case WeeklyReviewOutlookForwardMeasureCommitEvidence:
+	case WeeklyReviewOutlookForwardMeasureLikely:
 		return true
 	case WeeklyReviewOutlookForwardMeasureManagerCall:
 		return true
-	case WeeklyReviewOutlookForwardMeasureQualifiedCommitEvidence:
+	case WeeklyReviewOutlookForwardMeasureQualifiedLikely:
 		return true
 	case WeeklyReviewOutlookForwardMeasureQualifiedWeighted:
 		return true
@@ -27427,30 +27571,6 @@ func (e ListDealsParamsStatus) Valid() bool {
 	}
 }
 
-// Defines values for ListDealsParamsForecastCategory.
-const (
-	ListDealsParamsForecastCategoryBestCase ListDealsParamsForecastCategory = "best_case"
-	ListDealsParamsForecastCategoryCommit   ListDealsParamsForecastCategory = "commit"
-	ListDealsParamsForecastCategoryOmitted  ListDealsParamsForecastCategory = "omitted"
-	ListDealsParamsForecastCategoryPipeline ListDealsParamsForecastCategory = "pipeline"
-)
-
-// Valid indicates whether the value is a known member of the ListDealsParamsForecastCategory enum.
-func (e ListDealsParamsForecastCategory) Valid() bool {
-	switch e {
-	case ListDealsParamsForecastCategoryBestCase:
-		return true
-	case ListDealsParamsForecastCategoryCommit:
-		return true
-	case ListDealsParamsForecastCategoryOmitted:
-		return true
-	case ListDealsParamsForecastCategoryPipeline:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ListDealsParamsPartnerAttribution.
 const (
 	ListDealsParamsPartnerAttributionInfluenced ListDealsParamsPartnerAttribution = "influenced"
@@ -27864,10 +27984,8 @@ func (e ListForecastCallsParamsScopeKind) Valid() bool {
 
 // Defines values for GetForecastMovementParamsReading.
 const (
-	GetForecastMovementParamsReadingBestCase          GetForecastMovementParamsReading = "best_case"
 	GetForecastMovementParamsReadingEvidence          GetForecastMovementParamsReading = "evidence"
 	GetForecastMovementParamsReadingOpen              GetForecastMovementParamsReading = "open"
-	GetForecastMovementParamsReadingQualifiedBestCase GetForecastMovementParamsReading = "qualified_best_case"
 	GetForecastMovementParamsReadingQualifiedEvidence GetForecastMovementParamsReading = "qualified_evidence"
 	GetForecastMovementParamsReadingQualifiedWeighted GetForecastMovementParamsReading = "qualified_weighted"
 	GetForecastMovementParamsReadingWeighted          GetForecastMovementParamsReading = "weighted"
@@ -27876,13 +27994,9 @@ const (
 // Valid indicates whether the value is a known member of the GetForecastMovementParamsReading enum.
 func (e GetForecastMovementParamsReading) Valid() bool {
 	switch e {
-	case GetForecastMovementParamsReadingBestCase:
-		return true
 	case GetForecastMovementParamsReadingEvidence:
 		return true
 	case GetForecastMovementParamsReadingOpen:
-		return true
-	case GetForecastMovementParamsReadingQualifiedBestCase:
 		return true
 	case GetForecastMovementParamsReadingQualifiedEvidence:
 		return true
@@ -33221,9 +33335,6 @@ type AttentionDealFacts struct {
 	CloseDateProvisional *bool   `json:"close_date_provisional,omitempty"`
 	Currency             *string `json:"currency,omitempty"`
 
-	// ForecastCategory The recorded forecast category, including omitted.
-	ForecastCategory *string `json:"forecast_category,omitempty"`
-
 	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
 	// the champion seat. There is no other value: `false` is NEVER sent, and absent
 	// is the answer in every case that is not that finding — a committee whose
@@ -33242,7 +33353,7 @@ type AttentionDealFacts struct {
 	// StageId The deal's current stage.
 	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
-	// WinProbability The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`.
+	// WinProbability The deal's win probability: its own where one is set, else its stage's. Never a weighting applied to `amount_minor`.
 	WinProbability *int `json:"win_probability,omitempty"`
 }
 
@@ -42876,7 +42987,7 @@ type Deal struct {
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string `json:"captured_by,omitempty"`
 
-	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.
+	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.
 	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
 	ClosedAt             *time.Time `json:"closed_at,omitempty"`
 
@@ -42906,9 +43017,8 @@ type Deal struct {
 	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
-	ExpectedCloseDate *openapi_types.Date   `json:"expected_close_date,omitempty"`
-	ForecastCategory  *DealForecastCategory `json:"forecast_category,omitempty"`
-	FxRateDate        *openapi_types.Date   `json:"fx_rate_date,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	FxRateDate        *openapi_types.Date `json:"fx_rate_date,omitempty"`
 
 	// FxRateToBase Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.
 	FxRateToBase *string            `json:"fx_rate_to_base,omitempty"`
@@ -42960,6 +43070,9 @@ type Deal struct {
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
 
+	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+
 	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
@@ -42975,6 +43088,12 @@ type Deal struct {
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
+	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	WinProbability *int `json:"win_probability,omitempty"`
+
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
+
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
 	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
 
@@ -42989,9 +43108,6 @@ type Deal struct {
 // DealCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 type DealCommercialMotion string
 
-// DealForecastCategory defines model for Deal.ForecastCategory.
-type DealForecastCategory string
-
 // DealLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
 type DealLostReasonBasis string
 
@@ -43004,8 +43120,171 @@ type DealPriority string
 // DealStatus defines model for Deal.Status.
 type DealStatus string
 
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+type DealWinProbabilitySource string
+
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
+
+// DealAdvanced defines model for DealAdvanced.
+type DealAdvanced struct {
+	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
+	ArrSourceOfferId *openapi_types.UUID `json:"arr_source_offer_id,omitempty"`
+
+	// Author Who created this deal in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
+
+	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.
+	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
+	ClosedAt             *time.Time `json:"closed_at,omitempty"`
+
+	// ClosingOccurrenceId Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.
+	ClosingOccurrenceId *openapi_types.UUID `json:"closing_occurrence_id,omitempty"`
+
+	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+	CommercialMotion *DealAdvancedCommercialMotion `json:"commercial_motion,omitempty"`
+
+	// CompanyId Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+	CreatedAt time.Time           `json:"created_at"`
+
+	// CreatedBy Who created the deal, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+	Currency  *string               `json:"currency,omitempty"`
+
+	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
+	Description *string `json:"description,omitempty"`
+
+	// ExpectedArrMinor Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.
+	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
+
+	// ExpectedCloseDate An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	FxRateDate        *openapi_types.Date `json:"fx_rate_date,omitempty"`
+
+	// FxRateToBase Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.
+	FxRateToBase *string            `json:"fx_rate_to_base,omitempty"`
+	Id           openapi_types.UUID `json:"id"`
+
+	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
+	ImportedFrom *string `json:"imported_from,omitempty"`
+
+	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	LastEmail *DealLastEmail `json:"last_email,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
+
+	// LostReason The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.
+	LostReason *string `json:"lost_reason,omitempty"`
+
+	// LostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+	LostReasonBasis *DealAdvancedLostReasonBasis `json:"lost_reason_basis,omitempty"`
+
+	// LostReasonCode The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
+
+	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
+	MaskedFields *[]string           `json:"masked_fields,omitempty"`
+	Name         string              `json:"name"`
+	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// PartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
+	PartnerAttribution *DealAdvancedPartnerAttribution `json:"partner_attribution,omitempty"`
+
+	// PartnerCompanyId Deal registration/attribution to a partner company. The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+	PartnerCompanyId *openapi_types.UUID `json:"partner_company_id,omitempty"`
+
+	// PipelineId The deal's pipeline. A zero/placeholder UUID here is forbidden (dangling FK).
+	PipelineId *openapi_types.UUID `json:"pipeline_id"`
+
+	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+	Priority       *DealAdvancedPriority `json:"priority,omitempty"`
+	ProbabilitySet *DealProbabilitySet   `json:"probability_set,omitempty"`
+
+	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
+	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
+	Raw       *map[string]interface{} `json:"raw,omitempty"`
+	Source    string                  `json:"source"`
+
+	// StageId The deal's current stage; must belong to pipeline_id.
+	StageId *openapi_types.UUID `json:"stage_id"`
+
+	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	Stalled   *bool              `json:"stalled,omitempty"`
+	Status    DealAdvancedStatus `json:"status"`
+	Tags      *[]RowTag          `json:"tags,omitempty"`
+	UpdatedAt time.Time          `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+
+	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
+	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	WinProbability *int `json:"win_probability,omitempty"`
+
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	WinProbabilitySource *DealAdvancedWinProbabilitySource `json:"win_probability_source,omitempty"`
+
+	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
+	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
+
+	// WonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
+	WonWithoutContractReason *DealAdvancedWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DealAdvancedCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+type DealAdvancedCommercialMotion string
+
+// DealAdvancedLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+type DealAdvancedLostReasonBasis string
+
+// DealAdvancedPartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
+type DealAdvancedPartnerAttribution string
+
+// DealAdvancedPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+type DealAdvancedPriority string
+
+// DealAdvancedStatus defines model for DealAdvanced.Status.
+type DealAdvancedStatus string
+
+// DealAdvancedWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+type DealAdvancedWinProbabilitySource string
+
+// DealAdvancedWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
+type DealAdvancedWonWithoutContractReason string
 
 // DealCommitment defines model for DealCommitment.
 type DealCommitment struct {
@@ -43219,6 +43498,14 @@ type DealNextBestActionEvidence struct {
 	// OccurredPrecision How to read `occurred_at`, from the activity it names. `day` means only its date is known, its UTC date, so a client draws no time. `instant` on a row with no such time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 	Text              string            `json:"text"`
+}
+
+// DealProbabilitySet defines model for DealProbabilitySet.
+type DealProbabilitySet struct {
+	// Note The same fact as one English sentence, for a model or a log. A web client writes its own from the two fields.
+	Note           string `json:"note"`
+	StageName      string `json:"stage_name"`
+	WinProbability int    `json:"win_probability"`
 }
 
 // DealProduct defines model for DealProduct.
@@ -45596,6 +45883,13 @@ type ForecastAssuranceSourceSource string
 // ForecastAssuranceSourceState defines model for ForecastAssuranceSource.State.
 type ForecastAssuranceSourceState string
 
+// ForecastBySource The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`.
+type ForecastBySource struct {
+	Human    ForecastSourceTotal `json:"human"`
+	Margince ForecastSourceTotal `json:"margince"`
+	Stage    ForecastSourceTotal `json:"stage"`
+}
+
 // ForecastCall defines model for ForecastCall.
 type ForecastCall struct {
 	AmountMinor int64              `json:"amount_minor"`
@@ -45628,8 +45922,7 @@ type ForecastContribution struct {
 	AppliedProbability int `json:"applied_probability"`
 
 	// BaseMinor The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
-	BaseMinor *int64  `json:"base_minor,omitempty"`
-	Category  *string `json:"category,omitempty"`
+	BaseMinor *int64 `json:"base_minor,omitempty"`
 
 	// ChanceInUse The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals.
 	ChanceInUse int                `json:"chance_in_use"`
@@ -45644,23 +45937,30 @@ type ForecastContribution struct {
 
 	// ExclusionReason Why a deal in the reading contributes no money.
 	ExclusionReason *ForecastContributionExclusionReason `json:"exclusion_reason,omitempty"`
-	InBestCase      bool                                 `json:"in_best_case"`
-	InEvidence      bool                                 `json:"in_evidence"`
-	InOpen          bool                                 `json:"in_open"`
-	InWon           bool                                 `json:"in_won"`
-	OwnerId         *openapi_types.UUID                  `json:"owner_id,omitempty"`
+
+	// InEvidence Whether the deal counts in the Likely reading.
+	InEvidence bool                `json:"in_evidence"`
+	InOpen     bool                `json:"in_open"`
+	InWon      bool                `json:"in_won"`
+	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// ProbabilitySource Where the deal's probability came from. A probability set on the deal is used as it is, never moved by self-correction.
+	ProbabilitySource *ForecastContributionProbabilitySource `json:"probability_source,omitempty"`
 
 	// Signals Risk signals on an open deal, with the facts the assessment found. Empty while self-correction is off.
 	Signals []ForecastRiskSignal `json:"signals"`
 	StageId *openapi_types.UUID  `json:"stage_id,omitempty"`
 
-	// TypedProbability The chance typed on the deal's stage, in percent.
+	// TypedProbability The deal's own probability where one is set, else the chance typed on its stage, in percent.
 	TypedProbability *int  `json:"typed_probability,omitempty"`
 	WeightedMinor    int64 `json:"weighted_minor"`
 }
 
 // ForecastContributionExclusionReason Why a deal in the reading contributes no money.
 type ForecastContributionExclusionReason string
+
+// ForecastContributionProbabilitySource Where the deal's probability came from. A probability set on the deal is used as it is, never moved by self-correction.
+type ForecastContributionProbabilitySource string
 
 // ForecastEnforcementPreview What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since.
 type ForecastEnforcementPreview struct {
@@ -45755,7 +46055,6 @@ type ForecastMovementDealCauses string
 type ForecastQualifiedReadings struct {
 	// AmountsPartial True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure.
 	AmountsPartial *bool `json:"amounts_partial,omitempty"`
-	BestCaseMinor  int64 `json:"best_case_minor"`
 	EvidenceMinor  int64 `json:"evidence_minor"`
 	ExcludedCount  int   `json:"excluded_count"`
 
@@ -45774,10 +46073,12 @@ type ForecastQualifiedReadings struct {
 
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
-	AsOf               time.Time `json:"as_of"`
-	BaseCurrency       string    `json:"base_currency"`
-	BestCaseMinor      int64     `json:"best_case_minor"`
-	ConfirmedDateCount int       `json:"confirmed_date_count"`
+	AsOf         time.Time `json:"as_of"`
+	BaseCurrency string    `json:"base_currency"`
+
+	// BySource The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`.
+	BySource           ForecastBySource `json:"by_source"`
+	ConfirmedDateCount int              `json:"confirmed_date_count"`
 
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
@@ -45789,7 +46090,7 @@ type ForecastReadings struct {
 	// EligibleCount Deals considered, priced or not.
 	EligibleCount int `json:"eligible_count"`
 
-	// EvidenceMinor Committed pipeline whose close date somebody confirmed. A provisional date is a guess, so it is excluded here and included in open_minor.
+	// EvidenceMinor Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full. A provisional date is a guess, so it is excluded here and included in open_minor.
 	EvidenceMinor int64 `json:"evidence_minor"`
 
 	// FxMissingCount Priced deals no rate could convert. Counted rather than silently totalled as zero, which would read as a smaller pipeline instead of an unconverted one.
@@ -45797,8 +46098,11 @@ type ForecastReadings struct {
 
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
-	Landing   *ForecastLanding `json:"landing,omitempty"`
-	OpenMinor int64            `json:"open_minor"`
+	Landing *ForecastLanding `json:"landing,omitempty"`
+
+	// LikelyThreshold The installation setting `forecast_likely_threshold` this read used.
+	LikelyThreshold int   `json:"likely_threshold"`
+	OpenMinor       int64 `json:"open_minor"`
 
 	// PeriodEnd The last day INSIDE the period, not an exclusive bound.
 	PeriodEnd   openapi_types.Date `json:"period_end"`
@@ -45902,6 +46206,12 @@ type ForecastSnapshotRef struct {
 
 // ForecastSnapshotRefTrigger Why it was taken.
 type ForecastSnapshotRefTrigger string
+
+// ForecastSourceTotal defines model for ForecastSourceTotal.
+type ForecastSourceTotal struct {
+	OpenMinor     int64 `json:"open_minor"`
+	WeightedMinor int64 `json:"weighted_minor"`
+}
 
 // ForecastStageChance defines model for ForecastStageChance.
 type ForecastStageChance struct {
@@ -47780,23 +48090,26 @@ type InstallationSettings struct {
 
 	// ForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
 	// rather than a fixed choice, because it is a question about how this installation
-	// SELLS rather than about the software: a team with a disciplined commit stage means
-	// something by it, and one that commits everything does not — their weighted number
-	// is the honest one.
+	// SELLS rather than about the software: a team whose probabilities are honest at the
+	// top means something by Likely, and one that rates everything high does not, so
+	// their weighted number is the honest one.
 	//
-	// `commit_evidence` is the strictest baseline: committed deals whose close date
-	// somebody confirmed, a provisional date being a guess that stays out.
-	// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
-	// the deals the customer still supports (the `qualified` block on `GET /forecast`).
-	// `manager_call` takes the authored call as the whole period's landing and is not
-	// added to what is already won; with no current call the read falls back to
-	// `commit_evidence` and says so in the landing's `caveat`.
+	// `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
+	// percent or more whose close date somebody confirmed, a provisional date being a
+	// guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
+	// readings over the deals the customer still supports (the `qualified` block on
+	// `GET /forecast`). `manager_call` takes the authored call as the whole period's
+	// landing and is not added to what is already won; with no current call the read
+	// falls back to `likely` and says so in the landing's `caveat`.
 	//
-	// With no measure saved, the landing uses `qualified_commit_evidence` while the
-	// installation enforces viability reviews and `commit_evidence` otherwise; this field
-	// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+	// With no measure saved, the landing uses `qualified_likely` while the installation
+	// enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
 	// client shows an unknown value by its name.
 	ForecastForwardMeasure InstallationSettingsForecastForwardMeasure `json:"forecast_forward_measure"`
+
+	// ForecastLikelyThreshold The win probability, in percent, from which an open deal with a confirmed close date
+	// counts in the Likely forecast. 90 by default.
+	ForecastLikelyThreshold int `json:"forecast_likely_threshold"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. On by default. On, each open stage's chance moves
 	// toward the outcomes of deals recorded entering it in the last two years, weighted
@@ -47878,21 +48191,20 @@ type InstallationSettingsDateFormat string
 
 // InstallationSettingsForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
 // rather than a fixed choice, because it is a question about how this installation
-// SELLS rather than about the software: a team with a disciplined commit stage means
-// something by it, and one that commits everything does not — their weighted number
-// is the honest one.
+// SELLS rather than about the software: a team whose probabilities are honest at the
+// top means something by Likely, and one that rates everything high does not, so
+// their weighted number is the honest one.
 //
-// `commit_evidence` is the strictest baseline: committed deals whose close date
-// somebody confirmed, a provisional date being a guess that stays out.
-// `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
-// the deals the customer still supports (the `qualified` block on `GET /forecast`).
-// `manager_call` takes the authored call as the whole period's landing and is not
-// added to what is already won; with no current call the read falls back to
-// `commit_evidence` and says so in the landing's `caveat`.
+// `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
+// percent or more whose close date somebody confirmed, a provisional date being a
+// guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
+// readings over the deals the customer still supports (the `qualified` block on
+// `GET /forecast`). `manager_call` takes the authored call as the whole period's
+// landing and is not added to what is already won; with no current call the read
+// falls back to `likely` and says so in the landing's `caveat`.
 //
-// With no measure saved, the landing uses `qualified_commit_evidence` while the
-// installation enforces viability reviews and `commit_evidence` otherwise; this field
-// then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+// With no measure saved, the landing uses `qualified_likely` while the installation
+// enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
 // client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
 
@@ -48165,7 +48477,7 @@ type InviteEmailHandoff struct {
 	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
 	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
 	// refuses the address is reported a moment later as the member's
-	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	// `invite_email_state` on the roster.
 	Queued bool `json:"queued"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
@@ -53364,6 +53676,9 @@ type ProgressDealResult struct {
 
 	// NoteActivityId The note logged on the deal, absent when the call carried none.
 	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+
+	// ProbabilityNote The probability the move set from the new stage, as one sentence. Absent when the move changed no stage.
+	ProbabilityNote *string `json:"probability_note,omitempty"`
 }
 
 // Project A project — the body of work a client relationship is made of. Mirrors the `project` table.
@@ -61078,8 +61393,7 @@ type UpdateDealRequest struct {
 	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
 
 	// ExpectedCloseDate On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
-	ExpectedCloseDate *openapi_types.Date                `json:"expected_close_date,omitempty"`
-	ForecastCategory  *UpdateDealRequestForecastCategory `json:"forecast_category,omitempty"`
+	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
 
 	// FxRateDate Refused 422 `set_by_advance`; dated by the advance that closes the deal.
 	FxRateDate *openapi_types.Date `json:"fx_rate_date,omitempty"`
@@ -61103,16 +61417,16 @@ type UpdateDealRequest struct {
 	ProjectId *openapi_types.UUID        `json:"project_id,omitempty"`
 
 	// Status Refused 422 `set_by_advance`: closing a deal is `POST /deals/{id}/advance`.
-	Status               *UpdateDealRequestStatus `json:"status,omitempty"`
-	WaitUntil            *openapi_types.Date      `json:"wait_until,omitempty"`
-	AdditionalProperties map[string]interface{}   `json:"-"`
+	Status    *UpdateDealRequestStatus `json:"status,omitempty"`
+	WaitUntil *openapi_types.Date      `json:"wait_until,omitempty"`
+
+	// WinProbability The deal's own win probability in percent. Null sets it back to the stage's probability. Refused 422 `probability_fixed_when_closed` on a won or lost deal, whose probability its stage fixes.
+	WinProbability       *int                   `json:"win_probability,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
 // UpdateDealRequestCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 type UpdateDealRequestCommercialMotion string
-
-// UpdateDealRequestForecastCategory defines model for UpdateDealRequest.ForecastCategory.
-type UpdateDealRequestForecastCategory string
 
 // UpdateDealRequestPartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
 type UpdateDealRequestPartnerAttribution string
@@ -61354,6 +61668,9 @@ type UpdateInstallationSettingsRequest struct {
 	// it is applied on READ and stores nothing, so changing it re-computes every landing
 	// at once and re-means no stored row.
 	ForecastForwardMeasure *UpdateInstallationSettingsRequestForecastForwardMeasure `json:"forecast_forward_measure,omitempty"`
+
+	// ForecastLikelyThreshold The probability from which a deal counts as Likely. Omit to leave it unchanged. Each change is audited.
+	ForecastLikelyThreshold *int `json:"forecast_likely_threshold,omitempty"`
 
 	// ForecastSelfCorrecting Let the forecast correct itself. Omit to leave it unchanged. Each change is audited.
 	ForecastSelfCorrecting *bool `json:"forecast_self_correcting,omitempty"`
@@ -62014,7 +62331,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -62037,7 +62354,7 @@ type User struct {
 	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
 	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
 
-	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
 	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
@@ -62078,7 +62395,7 @@ type User struct {
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
 
-// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
 type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
@@ -63296,12 +63613,8 @@ type WeeklyReviewMovementBar string
 type WeeklyReviewOutlook struct {
 	BaseCurrency string `json:"base_currency"`
 
-	// BestCaseMinor Inclusive of commit, which is what the label on the surface must say.
-	BestCaseMinor int64 `json:"best_case_minor"`
-
 	// ClosingLandingMinor What the window was landing on when the week closed.
 	ClosingLandingMinor *int64 `json:"closing_landing_minor,omitempty"`
-	CommitMinor         int64  `json:"commit_minor"`
 
 	// ForwardMeasure Which measure the closing landing was built from, FROZEN. The installation setting can
 	// change, and a past week must keep saying what it was read under rather than silently
@@ -63311,6 +63624,9 @@ type WeeklyReviewOutlook struct {
 	// a period somebody is still working, and a retrospective reports what the pipeline
 	// said. Freezing an opinion as a measurement would make the record argue with itself.
 	ForwardMeasure *WeeklyReviewOutlookForwardMeasure `json:"forward_measure,omitempty"`
+
+	// LikelyMinor The Likely reading as the week closed.
+	LikelyMinor int64 `json:"likely_minor"`
 
 	// Movement How the window got from its opening landing to its closing one, as signed bars.
 	//
@@ -64105,7 +64421,7 @@ type WorklistCountCategory string
 // `amount_minor` converted to the installation's base currency — the only figure by
 // which two deals in different currencies may be compared. It is not weighted by
 // `win_probability`: the two are independent facts, one the deal's own money and the
-// other a property of the stage it sits in, rather than one computed from the other.
+// other the chance it is won, rather than one computed from the other.
 // A reader must not multiply them together expecting the product to equal a
 // risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
@@ -64118,9 +64434,6 @@ type WorklistDealFacts struct {
 
 	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
 	ExpectedMinorBase *int64 `json:"expected_minor_base,omitempty"`
-
-	// ForecastCategory The recorded forecast category, including omitted.
-	ForecastCategory *string `json:"forecast_category,omitempty"`
 
 	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
 	// the champion seat — a deal drifting because nobody INSIDE is arguing for it,
@@ -64404,7 +64717,7 @@ type WorklistItem struct {
 	// `amount_minor` converted to the installation's base currency — the only figure by
 	// which two deals in different currencies may be compared. It is not weighted by
 	// `win_probability`: the two are independent facts, one the deal's own money and the
-	// other a property of the stage it sits in, rather than one computed from the other.
+	// other the chance it is won, rather than one computed from the other.
 	// A reader must not multiply them together expecting the product to equal a
 	// risk-adjusted figure the API does not compute.
 	Deal *WorklistDealFacts `json:"deal,omitempty"`
@@ -68893,13 +69206,13 @@ type ListDealsParams struct {
 	Q      *string                `form:"q,omitempty" json:"q,omitempty"`
 	Status *ListDealsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
 
-	// ForecastCategory One of the forecast's named buckets. The same `deal.forecast_category` the forecast
-	// reads, so a tile's figure and the list behind it are one answer rather than two
-	// derivations that can disagree.
-	//
-	// A deal carrying no category is in no bucket and is returned by none of the four —
-	// the buckets partition the CATEGORISED pipeline, not the pipeline.
-	ForecastCategory *ListDealsParamsForecastCategory `form:"forecast_category,omitempty" json:"forecast_category,omitempty"`
+	// WinProbabilityMin Deals whose win probability is at least this percent (inclusive). The same
+	// `deal.win_probability` the forecast weights by: the deal's own probability where one
+	// is set, else its stage's. A `win_probability_min` above `win_probability_max` is `422`.
+	WinProbabilityMin *int `form:"win_probability_min,omitempty" json:"win_probability_min,omitempty"`
+
+	// WinProbabilityMax Deals whose win probability is at most this percent (inclusive). See `win_probability_min`.
+	WinProbabilityMax *int `form:"win_probability_max,omitempty" json:"win_probability_max,omitempty"`
 
 	// Stalled Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead).
 	Stalled *bool `form:"stalled,omitempty" json:"stalled,omitempty"`
@@ -68979,9 +69292,6 @@ type ListDealsParams struct {
 
 // ListDealsParamsStatus defines parameters for ListDeals.
 type ListDealsParamsStatus string
-
-// ListDealsParamsForecastCategory defines parameters for ListDeals.
-type ListDealsParamsForecastCategory string
 
 // ListDealsParamsPartnerAttribution defines parameters for ListDeals.
 type ListDealsParamsPartnerAttribution string
@@ -79827,14 +80137,6 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "expected_close_date")
 	}
 
-	if raw, found := object["forecast_category"]; found {
-		err = json.Unmarshal(raw, &a.ForecastCategory)
-		if err != nil {
-			return fmt.Errorf("error reading 'forecast_category': %w", err)
-		}
-		delete(object, "forecast_category")
-	}
-
 	if raw, found := object["fx_rate_date"]; found {
 		err = json.Unmarshal(raw, &a.FxRateDate)
 		if err != nil {
@@ -80003,6 +80305,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "stage_id")
 	}
 
+	if raw, found := object["stage_win_probability"]; found {
+		err = json.Unmarshal(raw, &a.StageWinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_win_probability': %w", err)
+		}
+		delete(object, "stage_win_probability")
+	}
+
 	if raw, found := object["stalled"]; found {
 		err = json.Unmarshal(raw, &a.Stalled)
 		if err != nil {
@@ -80049,6 +80359,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'wait_until': %w", err)
 		}
 		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_probability"]; found {
+		err = json.Unmarshal(raw, &a.WinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability': %w", err)
+		}
+		delete(object, "win_probability")
+	}
+
+	if raw, found := object["win_probability_source"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySource)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_source': %w", err)
+		}
+		delete(object, "win_probability_source")
 	}
 
 	if raw, found := object["won_without_contract_detail"]; found {
@@ -80216,13 +80542,6 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	if a.ForecastCategory != nil {
-		object["forecast_category"], err = json.Marshal(a.ForecastCategory)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'forecast_category': %w", err)
-		}
-	}
-
 	if a.FxRateDate != nil {
 		object["fx_rate_date"], err = json.Marshal(a.FxRateDate)
 		if err != nil {
@@ -80360,6 +80679,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'stage_id': %w", err)
 	}
 
+	if a.StageWinProbability != nil {
+		object["stage_win_probability"], err = json.Marshal(a.StageWinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stage_win_probability': %w", err)
+		}
+	}
+
 	if a.Stalled != nil {
 		object["stalled"], err = json.Marshal(a.Stalled)
 		if err != nil {
@@ -80395,6 +80721,835 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinProbability != nil {
+		object["win_probability"], err = json.Marshal(a.WinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySource != nil {
+		object["win_probability_source"], err = json.Marshal(a.WinProbabilitySource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_source': %w", err)
+		}
+	}
+
+	if a.WonWithoutContractDetail != nil {
+		object["won_without_contract_detail"], err = json.Marshal(a.WonWithoutContractDetail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'won_without_contract_detail': %w", err)
+		}
+	}
+
+	if a.WonWithoutContractReason != nil {
+		object["won_without_contract_reason"], err = json.Marshal(a.WonWithoutContractReason)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'won_without_contract_reason': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for DealAdvanced. Returns the specified
+// element and whether it was found
+func (a DealAdvanced) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DealAdvanced
+func (a *DealAdvanced) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DealAdvanced to handle AdditionalProperties
+func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
+	if raw, found := object["amount_minor"]; found {
+		err = json.Unmarshal(raw, &a.AmountMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'amount_minor': %w", err)
+		}
+		delete(object, "amount_minor")
+	}
+
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
+	if raw, found := object["archived_at"]; found {
+		err = json.Unmarshal(raw, &a.ArchivedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'archived_at': %w", err)
+		}
+		delete(object, "archived_at")
+	}
+
+	if raw, found := object["arr_source_offer_id"]; found {
+		err = json.Unmarshal(raw, &a.ArrSourceOfferId)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_source_offer_id': %w", err)
+		}
+		delete(object, "arr_source_offer_id")
+	}
+
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
+	if raw, found := object["captured_by"]; found {
+		err = json.Unmarshal(raw, &a.CapturedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'captured_by': %w", err)
+		}
+		delete(object, "captured_by")
+	}
+
+	if raw, found := object["close_date_provisional"]; found {
+		err = json.Unmarshal(raw, &a.CloseDateProvisional)
+		if err != nil {
+			return fmt.Errorf("error reading 'close_date_provisional': %w", err)
+		}
+		delete(object, "close_date_provisional")
+	}
+
+	if raw, found := object["closed_at"]; found {
+		err = json.Unmarshal(raw, &a.ClosedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'closed_at': %w", err)
+		}
+		delete(object, "closed_at")
+	}
+
+	if raw, found := object["closing_occurrence_id"]; found {
+		err = json.Unmarshal(raw, &a.ClosingOccurrenceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'closing_occurrence_id': %w", err)
+		}
+		delete(object, "closing_occurrence_id")
+	}
+
+	if raw, found := object["commercial_motion"]; found {
+		err = json.Unmarshal(raw, &a.CommercialMotion)
+		if err != nil {
+			return fmt.Errorf("error reading 'commercial_motion': %w", err)
+		}
+		delete(object, "commercial_motion")
+	}
+
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["created_at"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_at': %w", err)
+		}
+		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
+	if raw, found := object["currency"]; found {
+		err = json.Unmarshal(raw, &a.Currency)
+		if err != nil {
+			return fmt.Errorf("error reading 'currency': %w", err)
+		}
+		delete(object, "currency")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
+	}
+
+	if raw, found := object["expected_arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_arr_minor': %w", err)
+		}
+		delete(object, "expected_arr_minor")
+	}
+
+	if raw, found := object["expected_close_date"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedCloseDate)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_close_date': %w", err)
+		}
+		delete(object, "expected_close_date")
+	}
+
+	if raw, found := object["fx_rate_date"]; found {
+		err = json.Unmarshal(raw, &a.FxRateDate)
+		if err != nil {
+			return fmt.Errorf("error reading 'fx_rate_date': %w", err)
+		}
+		delete(object, "fx_rate_date")
+	}
+
+	if raw, found := object["fx_rate_to_base"]; found {
+		err = json.Unmarshal(raw, &a.FxRateToBase)
+		if err != nil {
+			return fmt.Errorf("error reading 'fx_rate_to_base': %w", err)
+		}
+		delete(object, "fx_rate_to_base")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["imported_from"]; found {
+		err = json.Unmarshal(raw, &a.ImportedFrom)
+		if err != nil {
+			return fmt.Errorf("error reading 'imported_from': %w", err)
+		}
+		delete(object, "imported_from")
+	}
+
+	if raw, found := object["last_activity_at"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_at': %w", err)
+		}
+		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_email"]; found {
+		err = json.Unmarshal(raw, &a.LastEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_email': %w", err)
+		}
+		delete(object, "last_email")
+	}
+
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
+	if raw, found := object["lost_reason"]; found {
+		err = json.Unmarshal(raw, &a.LostReason)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason': %w", err)
+		}
+		delete(object, "lost_reason")
+	}
+
+	if raw, found := object["lost_reason_basis"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_basis': %w", err)
+		}
+		delete(object, "lost_reason_basis")
+	}
+
+	if raw, found := object["lost_reason_code"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_code': %w", err)
+		}
+		delete(object, "lost_reason_code")
+	}
+
+	if raw, found := object["masked_fields"]; found {
+		err = json.Unmarshal(raw, &a.MaskedFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'masked_fields': %w", err)
+		}
+		delete(object, "masked_fields")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["owner_id"]; found {
+		err = json.Unmarshal(raw, &a.OwnerId)
+		if err != nil {
+			return fmt.Errorf("error reading 'owner_id': %w", err)
+		}
+		delete(object, "owner_id")
+	}
+
+	if raw, found := object["partner_attribution"]; found {
+		err = json.Unmarshal(raw, &a.PartnerAttribution)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_attribution': %w", err)
+		}
+		delete(object, "partner_attribution")
+	}
+
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
+	if raw, found := object["pipeline_id"]; found {
+		err = json.Unmarshal(raw, &a.PipelineId)
+		if err != nil {
+			return fmt.Errorf("error reading 'pipeline_id': %w", err)
+		}
+		delete(object, "pipeline_id")
+	}
+
+	if raw, found := object["priority"]; found {
+		err = json.Unmarshal(raw, &a.Priority)
+		if err != nil {
+			return fmt.Errorf("error reading 'priority': %w", err)
+		}
+		delete(object, "priority")
+	}
+
+	if raw, found := object["probability_set"]; found {
+		err = json.Unmarshal(raw, &a.ProbabilitySet)
+		if err != nil {
+			return fmt.Errorf("error reading 'probability_set': %w", err)
+		}
+		delete(object, "probability_set")
+	}
+
+	if raw, found := object["project_id"]; found {
+		err = json.Unmarshal(raw, &a.ProjectId)
+		if err != nil {
+			return fmt.Errorf("error reading 'project_id': %w", err)
+		}
+		delete(object, "project_id")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["stage_id"]; found {
+		err = json.Unmarshal(raw, &a.StageId)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_id': %w", err)
+		}
+		delete(object, "stage_id")
+	}
+
+	if raw, found := object["stage_win_probability"]; found {
+		err = json.Unmarshal(raw, &a.StageWinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_win_probability': %w", err)
+		}
+		delete(object, "stage_win_probability")
+	}
+
+	if raw, found := object["stalled"]; found {
+		err = json.Unmarshal(raw, &a.Stalled)
+		if err != nil {
+			return fmt.Errorf("error reading 'stalled': %w", err)
+		}
+		delete(object, "stalled")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
+	if raw, found := object["updated_at"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updated_at': %w", err)
+		}
+		delete(object, "updated_at")
+	}
+
+	if raw, found := object["version"]; found {
+		err = json.Unmarshal(raw, &a.Version)
+		if err != nil {
+			return fmt.Errorf("error reading 'version': %w", err)
+		}
+		delete(object, "version")
+	}
+
+	if raw, found := object["wait_until"]; found {
+		err = json.Unmarshal(raw, &a.WaitUntil)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_until': %w", err)
+		}
+		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_probability"]; found {
+		err = json.Unmarshal(raw, &a.WinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability': %w", err)
+		}
+		delete(object, "win_probability")
+	}
+
+	if raw, found := object["win_probability_source"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySource)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_source': %w", err)
+		}
+		delete(object, "win_probability_source")
+	}
+
+	if raw, found := object["won_without_contract_detail"]; found {
+		err = json.Unmarshal(raw, &a.WonWithoutContractDetail)
+		if err != nil {
+			return fmt.Errorf("error reading 'won_without_contract_detail': %w", err)
+		}
+		delete(object, "won_without_contract_detail")
+	}
+
+	if raw, found := object["won_without_contract_reason"]; found {
+		err = json.Unmarshal(raw, &a.WonWithoutContractReason)
+		if err != nil {
+			return fmt.Errorf("error reading 'won_without_contract_reason': %w", err)
+		}
+		delete(object, "won_without_contract_reason")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DealAdvanced to handle AdditionalProperties
+func (a DealAdvanced) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AmountMinor != nil {
+		object["amount_minor"], err = json.Marshal(a.AmountMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
+	if a.ArchivedAt != nil {
+		object["archived_at"], err = json.Marshal(a.ArchivedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.ArrSourceOfferId != nil {
+		object["arr_source_offer_id"], err = json.Marshal(a.ArrSourceOfferId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_source_offer_id': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	object["captured_by"], err = json.Marshal(a.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.CloseDateProvisional != nil {
+		object["close_date_provisional"], err = json.Marshal(a.CloseDateProvisional)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'close_date_provisional': %w", err)
+		}
+	}
+
+	if a.ClosedAt != nil {
+		object["closed_at"], err = json.Marshal(a.ClosedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'closed_at': %w", err)
+		}
+	}
+
+	if a.ClosingOccurrenceId != nil {
+		object["closing_occurrence_id"], err = json.Marshal(a.ClosingOccurrenceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'closing_occurrence_id': %w", err)
+		}
+	}
+
+	if a.CommercialMotion != nil {
+		object["commercial_motion"], err = json.Marshal(a.CommercialMotion)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commercial_motion': %w", err)
+		}
+	}
+
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	object["created_at"], err = json.Marshal(a.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
+	if a.Currency != nil {
+		object["currency"], err = json.Marshal(a.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.ExpectedArrMinor != nil {
+		object["expected_arr_minor"], err = json.Marshal(a.ExpectedArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_arr_minor': %w", err)
+		}
+	}
+
+	if a.ExpectedCloseDate != nil {
+		object["expected_close_date"], err = json.Marshal(a.ExpectedCloseDate)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_close_date': %w", err)
+		}
+	}
+
+	if a.FxRateDate != nil {
+		object["fx_rate_date"], err = json.Marshal(a.FxRateDate)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'fx_rate_date': %w", err)
+		}
+	}
+
+	if a.FxRateToBase != nil {
+		object["fx_rate_to_base"], err = json.Marshal(a.FxRateToBase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'fx_rate_to_base': %w", err)
+		}
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImportedFrom != nil {
+		object["imported_from"], err = json.Marshal(a.ImportedFrom)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'imported_from': %w", err)
+		}
+	}
+
+	if a.LastActivityAt != nil {
+		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastEmail != nil {
+		object["last_email"], err = json.Marshal(a.LastEmail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LostReason != nil {
+		object["lost_reason"], err = json.Marshal(a.LostReason)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason': %w", err)
+		}
+	}
+
+	if a.LostReasonBasis != nil {
+		object["lost_reason_basis"], err = json.Marshal(a.LostReasonBasis)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_basis': %w", err)
+		}
+	}
+
+	if a.LostReasonCode != nil {
+		object["lost_reason_code"], err = json.Marshal(a.LostReasonCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_code': %w", err)
+		}
+	}
+
+	if a.MaskedFields != nil {
+		object["masked_fields"], err = json.Marshal(a.MaskedFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'masked_fields': %w", err)
+		}
+	}
+
+	object["name"], err = json.Marshal(a.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'name': %w", err)
+	}
+
+	if a.OwnerId != nil {
+		object["owner_id"], err = json.Marshal(a.OwnerId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerAttribution != nil {
+		object["partner_attribution"], err = json.Marshal(a.PartnerAttribution)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_attribution': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
+		}
+	}
+
+	object["pipeline_id"], err = json.Marshal(a.PipelineId)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'pipeline_id': %w", err)
+	}
+
+	if a.Priority != nil {
+		object["priority"], err = json.Marshal(a.Priority)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'priority': %w", err)
+		}
+	}
+
+	if a.ProbabilitySet != nil {
+		object["probability_set"], err = json.Marshal(a.ProbabilitySet)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'probability_set': %w", err)
+		}
+	}
+
+	if a.ProjectId != nil {
+		object["project_id"], err = json.Marshal(a.ProjectId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	object["stage_id"], err = json.Marshal(a.StageId)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'stage_id': %w", err)
+	}
+
+	if a.StageWinProbability != nil {
+		object["stage_win_probability"], err = json.Marshal(a.StageWinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stage_win_probability': %w", err)
+		}
+	}
+
+	if a.Stalled != nil {
+		object["stalled"], err = json.Marshal(a.Stalled)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stalled': %w", err)
+		}
+	}
+
+	object["status"], err = json.Marshal(a.Status)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
+	}
+
+	object["updated_at"], err = json.Marshal(a.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
+	}
+
+	if a.Version != nil {
+		object["version"], err = json.Marshal(a.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitUntil != nil {
+		object["wait_until"], err = json.Marshal(a.WaitUntil)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinProbability != nil {
+		object["win_probability"], err = json.Marshal(a.WinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySource != nil {
+		object["win_probability_source"], err = json.Marshal(a.WinProbabilitySource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_source': %w", err)
 		}
 	}
 
@@ -84823,14 +85978,6 @@ func (a *UpdateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "expected_close_date")
 	}
 
-	if raw, found := object["forecast_category"]; found {
-		err = json.Unmarshal(raw, &a.ForecastCategory)
-		if err != nil {
-			return fmt.Errorf("error reading 'forecast_category': %w", err)
-		}
-		delete(object, "forecast_category")
-	}
-
 	if raw, found := object["fx_rate_date"]; found {
 		err = json.Unmarshal(raw, &a.FxRateDate)
 		if err != nil {
@@ -84919,6 +86066,14 @@ func (a *UpdateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "wait_until")
 	}
 
+	if raw, found := object["win_probability"]; found {
+		err = json.Unmarshal(raw, &a.WinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability': %w", err)
+		}
+		delete(object, "win_probability")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -84991,13 +86146,6 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 		object["expected_close_date"], err = json.Marshal(a.ExpectedCloseDate)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'expected_close_date': %w", err)
-		}
-	}
-
-	if a.ForecastCategory != nil {
-		object["forecast_category"], err = json.Marshal(a.ForecastCategory)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'forecast_category': %w", err)
 		}
 	}
 
@@ -85075,6 +86223,13 @@ func (a UpdateDealRequest) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinProbability != nil {
+		object["win_probability"], err = json.Marshal(a.WinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
 		}
 	}
 
@@ -115588,15 +116743,28 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// ------------- Optional query parameter "forecast_category" -------------
+	// ------------- Optional query parameter "win_probability_min" -------------
 
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "forecast_category", r.URL.Query(), &params.ForecastCategory, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "win_probability_min", r.URL.Query(), &params.WinProbabilityMin, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
 	if err != nil {
 		var requiredError *runtime.RequiredParameterError
 		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "forecast_category"})
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "win_probability_min"})
 		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "forecast_category", Err: err})
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "win_probability_min", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "win_probability_max" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "win_probability_max", r.URL.Query(), &params.WinProbabilityMax, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "win_probability_max"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "win_probability_max", Err: err})
 		}
 		return
 	}

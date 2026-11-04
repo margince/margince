@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
+import { dealStatusFilter } from "../format/dealstatus";
 import { useNow } from "../format/now";
 import { dayInZone } from "../format/timezone";
 import type { MessageKey } from "../i18n/en";
@@ -11,10 +11,12 @@ import {
   type DayRange,
   narrowsByRange,
   rangeQueryParams,
+  WIN_PROBABILITY_DIAL,
 } from "./dealranges";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
+import { bandOfDial } from "./winprobabilitybands";
 
 /**
  * The pipeline a record belongs to, falling back to the default.
@@ -96,7 +98,6 @@ export function dealsQueryParams(f: DealFilters) {
     status: dealStatusFilter(filters.status),
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
-    forecast_category: forecastCategoryFilter(filters.forecast_category),
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
@@ -167,8 +168,8 @@ function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
   if (filters.company_id) out.company_id = filters.company_id;
   const status = dealStatusFilter(filters.status);
   if (status) out.status = status;
-  const forecast = forecastCategoryFilter(filters.forecast_category);
-  if (forecast) out.forecast_category = forecast;
+  const band = bandOfDial(filters[WIN_PROBABILITY_DIAL]);
+  if (band) out.win_probability_band = band.key;
   if (filters.partner_company_id)
     out.partner_company_id = filters.partner_company_id;
   if (filters.stalled === "true") out.stalled = true;
@@ -200,6 +201,11 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
     return "deals.totalsNoTeamFilter";
   }
   if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
+  // The report narrows by band only, so a range no band matches has no total.
+  const probability = f.filters[WIN_PROBABILITY_DIAL];
+  if (probability && !bandOfDial(probability)) {
+    return "deals.totalsNoRangeFilter";
+  }
   return undefined;
 }
 
