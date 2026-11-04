@@ -351,9 +351,6 @@ func TestADeliveryFilesTheFindingsOfTheNewestCheck(t *testing.T) {
 
 func TestAMoveWhoseRecordWasLostIsRecordedOnTheNextPass(t *testing.T) {
 	v := setupViability(t)
-	// A deal is judged on its owner's mailboxes, so each new owner needs one.
-	v.mailboxReadOnTime(t, v.Rep2)
-	v.mailboxReadOnTime(t, v.Rep3)
 	v.check(t)
 	task := v.reviewTask(t)
 	review := v.reviewOf(t, v.silent)
