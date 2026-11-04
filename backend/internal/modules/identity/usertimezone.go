@@ -3,11 +3,11 @@
 
 package identity
 
-// A person's own time zone.
+// A user's own time zone.
 //
-// One zone per person. Booking reads working hours on it, and mail sent to the
-// person is timed by it. The app stores the browser's zone on first sign-in as
-// a guess. A zone the person picks themselves is marked as chosen, and a later
+// One zone per user. Booking reads working hours on it, and mail sent to the
+// user is timed by it. The app stores the browser's zone on first sign-in as
+// a guess. A zone the user picks themselves is marked as chosen, and a later
 // browser guess does not replace it.
 
 import (
@@ -31,7 +31,7 @@ const (
 	// TimezoneFromBrowser is the app's guess from the browser. It is stored
 	// only while no zone is stored.
 	TimezoneFromBrowser TimezoneSource = "browser"
-	// TimezoneChosen is the person's own pick. It is always stored.
+	// TimezoneChosen is the user's own pick. It is always stored.
 	TimezoneChosen TimezoneSource = "chosen"
 
 	fieldTimezoneChosen = "timezone_chosen"
@@ -39,8 +39,8 @@ const (
 
 // SaveMyTimezone stores the CALLER's own time zone.
 //
-// Self-scoped from the authenticated principal. An agent acting for a person
-// may not change the zone that person reads in.
+// Self-scoped from the authenticated principal. An agent acting for a user
+// may not change the zone that user reads in.
 func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source TimezoneSource) (Seat, error) {
 	human, err := selfScoped(ctx)
 	if err != nil {
@@ -67,11 +67,11 @@ func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source Timezo
 	return seat, nil
 }
 
-// writeTimezoneTx is the one writer of a person's zone after their row exists.
+// writeTimezoneTx is the one writer of a user's zone after their row exists.
 // A browser guess over a stored zone, or the value already stored, writes
 // nothing.
 //
-// Held by: TestOneWriterSetsAPersonsTimezone (backend/gates/usertimezonewriters_test.go)
+// Held by: TestOneWriterSetsAUsersTimezone (backend/gates/usertimezonewriters_test.go)
 func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone string, source TimezoneSource) (Seat, error) {
 	seat := Seat{UserID: user}
 	var locale, before *string
@@ -115,7 +115,7 @@ func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone strin
 	return seat, nil
 }
 
-// timezoneImage renders one side of the audit's before/after pair. A person
+// timezoneImage renders one side of the audit's before/after pair. A user
 // with no stored zone carries JSON null, not "UTC".
 func timezoneImage(zone *string, chosen bool) map[string]any {
 	return map[string]any{fieldWorkTimezone: zone, fieldTimezoneChosen: chosen}

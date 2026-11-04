@@ -6,6 +6,8 @@ package compose
 import (
 	"context"
 	"errors"
+	"maps"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -84,6 +86,9 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 			facts[i].Scope = &scope
 		}
 	}
+	if err := enrichForecastEvidence(ctx, tx, facts); err != nil {
+		return nil, crmcontracts.ReportingCoverage{}, err
+	}
 	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
 }
 
@@ -114,6 +119,8 @@ func seenCall(amount int64, seen bool) *int64 {
 	return &amount
 }
 
+const forecastWonContext = "forecast_won"
+
 func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
 	out := []reporting.Fact{}
 	for _, contribution := range readings.Contributions {
@@ -127,7 +134,7 @@ func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasti
 		}
 		contexts := []string{}
 		if contribution.InWon {
-			contexts = append(contexts, "forecast_won")
+			contexts = append(contexts, forecastWonContext)
 		}
 		if contribution.InEvidence {
 			contexts = append(contexts, "forecast_supported")
@@ -135,9 +142,22 @@ func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasti
 		if contribution.InBestCase && !contribution.InEvidence {
 			contexts = append(contexts, "forecast_upside")
 		}
+		if contribution.InOpen {
+			contexts = append(contexts, "forecast_period_deals")
+			switch contribution.ExclusionReason {
+			case forecasting.ExcludedUnpriced:
+				contexts = append(contexts, "forecast_missing_amount")
+			case forecasting.ExcludedFxMissing:
+				contexts = append(contexts, "forecast_missing_fx")
+			}
+		}
 		for _, contextID := range contexts {
 			fact := reporting.Fact{Metric: reportingForecastLanding, ContextID: contextID, SourceType: string(recordTypeDeal), SourceID: id, OwnerID: owner, Money: contribution.BaseMinor}
-			fact.Row = crmcontracts.ReportingEvidenceRow{Key: contribution.DealID, Label: reporting.ExplanationCopy(frame).Say(reportingLabelWords.ForecastContribution), SourceId: ptrUUID(id), SourceType: &fact.SourceType, OwnerId: ptrUUID(owner)}
+			fact.Row = crmcontracts.ReportingEvidenceRow{Key: contribution.DealID, Label: forecastRecordLabel(frame, contribution.Name, contextID), SourceId: ptrUUID(id), SourceType: &fact.SourceType, OwnerId: ptrUUID(owner)}
+			if contextID != forecastWonContext {
+				fact.SetEvidenceDate(contribution.EffectiveClose)
+				fact.Row.OccurredPrecision = new(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
+			}
 			if contribution.BaseMinor != nil {
 				if *contribution.BaseMinor > reportingExactInteger || *contribution.BaseMinor < -reportingExactInteger {
 					return nil, errors.New("forecast exceeds exact reporting range")
@@ -155,7 +175,7 @@ func reportingForecastChart(out *reporting.Evaluation, chart crmcontracts.Report
 	chart.ContextId = objectForecast
 	chart.StateAt = &out.Result.Context.StateAt
 	chart.Interval = out.Result.Context.CloseInterval
-	for _, part := range []string{"forecast_won", "forecast_supported", "forecast_upside"} {
+	for _, part := range []string{forecastWonContext, "forecast_supported", "forecast_upside"} {
 		facts := metricFacts(out.Facts, chart.Metric, part)
 		value, _, _ := metricSum(facts)
 		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: part, Label: reporting.ExplanationCopy(out.Result.Context).Say(reportingForecastLabels[part]), Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: part}})
@@ -267,7 +287,7 @@ func forecastOperands(period forecasting.Period, readings forecasting.Readings, 
 		WonMinor: readings.WonMinor, OpenMinor: readings.OpenMinor, QualifiedOpenMinor: qualifiedOpen,
 		FxMissing: readings.FxMissingCount > 0, CallOverPipeline: callOverPipeline,
 		CallBelowWon: landing.Caveat == forecasting.CaveatCallBelowActual,
-		Operands:     crmcontracts.ReportingComparisonOperands{Won: ref("forecast_won"), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
+		Operands:     crmcontracts.ReportingComparisonOperands{Won: ref(forecastWonContext), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
 	}
 	if qualifiedOpen != nil {
 		qualified := ref(forecastQualifiedContext)
@@ -279,10 +299,18 @@ func forecastOperands(period forecasting.Period, readings forecasting.Readings, 
 // reportingForecastBasis is what the landing and its range rest on, in the shape
 // GET /forecast gives the landing.
 func reportingForecastBasis(period forecasting.Period, readings forecasting.Readings, landing forecasting.Landing, called *int64) *crmcontracts.ReportingForecastBasis {
+	open := int64(0)
+	for _, contribution := range readings.Contributions {
+		if contribution.InOpen {
+			open++
+		}
+	}
 	// A deal with no rate is priced but left out of every total.
 	included := int64(readings.PricedCount - readings.FxMissingCount)
 	return &crmcontracts.ReportingForecastBasis{
 		Landing:           forecasting.LandingToWire(landing),
+		OpenCount:         &open,
+		OpenEvidence:      &crmcontracts.ReportingEvidenceRef{Metric: reportingForecastLanding, ContextId: "forecast_period_deals"},
 		OpenPipelineMinor: &readings.OpenMinor,
 		Period:            crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
 		CallMinor:         called,
@@ -326,4 +354,66 @@ func guardForecastOperands(ctx context.Context, tx pgx.Tx, period forecasting.Pe
 		return nil
 	}
 	return err
+}
+
+func forecastRecordLabel(frame crmcontracts.ReportingContext, name, contextID string) string {
+	if name != "" {
+		return name
+	}
+	return reporting.ExplanationCopy(frame).Say(reportingForecastLabels[contextID])
+}
+
+func enrichForecastEvidence(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) error {
+	if !auth.ReadGranted(ctx, string(recordTypeDeal)) {
+		return nil
+	}
+	records := map[ids.UUID]bool{}
+	for _, fact := range facts {
+		if fact.SourceType == string(recordTypeDeal) {
+			records[fact.SourceID] = true
+		}
+	}
+	if len(records) == 0 {
+		return nil
+	}
+	var b reportingBindings
+	owner, err := auth.MaskedExpressionSQL(ctx, string(recordTypeDeal), fieldOwnerID, "d", "u.display_name", b.arg)
+	if err != nil {
+		return err
+	}
+	stage, err := auth.MaskedExpressionSQL(ctx, string(recordTypeDeal), "stage_id", "d", "s.name", b.arg)
+	if err != nil {
+		return err
+	}
+	scope, err := auth.ScopeClauseFor(ctx, string(recordTypeDeal), "d", b.arg)
+	if err != nil {
+		return err
+	}
+	if scope == "" {
+		scope = sqlUnnarrowed
+	}
+	rows, err := tx.Query(ctx, "SELECT d.id,COALESCE("+owner+",''),COALESCE("+stage+",'') FROM deal d LEFT JOIN app_user u ON u.id=d.owner_id LEFT JOIN stage s ON s.id=d.stage_id WHERE d.id=ANY("+b.add(slices.Collect(maps.Keys(records)))+") AND "+scope, b.values...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	labels := map[ids.UUID][2]string{}
+	for rows.Next() {
+		var id ids.UUID
+		var ownerLabel, stageLabel string
+		if err := rows.Scan(&id, &ownerLabel, &stageLabel); err != nil {
+			return err
+		}
+		labels[id] = [2]string{ownerLabel, stageLabel}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range facts {
+		if pair, ok := labels[facts[i].SourceID]; ok {
+			facts[i].OwnerLabel = pair[0]
+			facts[i].StageLabel = pair[1]
+		}
+	}
+	return nil
 }

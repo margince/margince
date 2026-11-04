@@ -42,6 +42,8 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		// happened. "Who recorded that the meeting was a no-show" is exactly the
 		// question the trail is read for.
 		"meeting_status": derefOrNil(a.MeetingStatus),
+		// How a call ended: writable on the patch, so the diff must see it.
+		fieldCallOutcome: derefOrNil(a.CallOutcome),
 	}
 }
 

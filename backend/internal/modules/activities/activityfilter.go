@@ -194,6 +194,10 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.Kind != nil {
 		where = append(where, kindPredicate(*in.Kind, arg))
 	}
+	if in.CallOutcome != nil {
+		// A marker, like the kind: it stays out of filtersOnContent.
+		where = append(where, sprintf("a.call_outcome = $%d", arg(*in.CallOutcome)))
+	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
 	}

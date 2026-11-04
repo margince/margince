@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -215,7 +215,7 @@ const SIGNATURES: Readonly<
     team: shows(/Most often: Wrong territory/),
   },
   trueZero: {
-    sales: shows("€0"),
+    sales: shows("0 EUR"),
     prospecting: async () => {
       await shows("No meetings recorded as held this week")();
       expect(screen.queryByText("Nothing needs you right now")).toBeNull();
@@ -251,7 +251,7 @@ const SIGNATURES: Readonly<
   tooFewObservations: {
     sales: shows("Pipeline due this quarter"),
     prospecting: async () => {
-      await shows("Too few")();
+      await shows("Too few answered leads to give a typical time.")();
       await shows("2 leads still waiting for a reply")();
     },
     team: async () => {
@@ -310,6 +310,8 @@ const SIGNATURES: Readonly<
   qualificationWorkflow: {
     prospecting: shows("Meetings to prepare"),
     team: async () => {
+      for (const label of await screen.findAllByText("Metric definitions"))
+        await userEvent.click(label);
       await shows(/does not use SDR handoffs/)();
       await shows("5 of 8")();
       await shows("No target")();

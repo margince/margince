@@ -46,8 +46,8 @@ func TestAContactWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing
 func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 	svc, ctx, userID := seatChoosingALanguage(t)
 
-	// The zone is the person's own time zone. An older client still sends it
-	// with the hours, and it lands there as the person's chosen zone.
+	// The zone is the user's own time zone. An older client still sends it
+	// with the hours, and it lands there as the user's chosen zone.
 	if _, err := svc.SaveMyTimezone(ctx, "Asia/Ho_Chi_Minh", TimezoneChosen); err != nil {
 		t.Fatalf("saving the time zone: %v", err)
 	}

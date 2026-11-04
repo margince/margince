@@ -232,7 +232,7 @@ function LanguageSettingRow() {
   );
 }
 
-// The person's own time zone. Times on screen, booking hours and mail sent to
+// The user's own time zone. Times on screen, booking hours and mail sent to
 // them follow it. Saving marks it as chosen, so a later browser guess never
 // replaces it.
 function TimeZoneSettingRow() {

@@ -35,11 +35,11 @@ func TestAutomaticNamesWhatSentARowNoHumanWrote(t *testing.T) {
 func TestAnAutomaticRowIsNoInteraction(t *testing.T) {
 	t.Parallel()
 	for _, kind := range AutomaticKinds() {
-		if InteractionCounts("email", "", kind) {
+		if InteractionCounts("email", "", "", kind) {
 			t.Errorf("a %s mail counts as an interaction", kind)
 		}
 	}
-	if !InteractionCounts("email", "", "") {
+	if !InteractionCounts("email", "", "", "") {
 		t.Error("a human's mail must count as an interaction")
 	}
 }
