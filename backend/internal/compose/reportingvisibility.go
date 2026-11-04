@@ -27,7 +27,7 @@ func factVisibilityKey(fact reporting.Fact) reportingVisibilityKey {
 	return reportingVisibilityKey{table: fact.SourceType, metric: fact.Metric, money: fact.SourceType == string(recordTypeDeal) && fact.Metric != reportingClosedWinRate && fact.Metric != reportingStageAge}
 }
 
-func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
+func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
 	if _, ok := principal.Actor(ctx); !ok {
 		return nil, false, apperrors.ErrPermissionDenied
 	}
@@ -35,10 +35,15 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, scope crmcon
 	if err != nil {
 		return nil, false, err
 	}
-	thin, err := populationBelowFloor(ctx, tx, scope, owners)
+	thin, err := frozenPopulationBelowFloor(ctx, tx, frame, owners)
 	if err != nil || thin {
 		return []reporting.Fact{}, thin, err
 	}
+	return a.visibleFacts(ctx, tx, owners, facts)
+}
+
+// visibleFacts narrows facts to the records and owners this reader may see.
+func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners reporting.MeasurableOwners, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
 	markOwnerWithheld(owners, facts)
 	facts, lone, err := withoutLoneColleagueMetrics(ctx, tx, facts)
 	if err != nil {

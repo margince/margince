@@ -275,6 +275,32 @@ func populationBelowFloor(ctx context.Context, tx pgx.Tx, scope crmcontracts.Rep
 	return thin[0], nil
 }
 
+// frozenPopulationBelowFloor is populationBelowFloor for a population frozen
+// in an edition. "My teams" is the capturer's teams, not the reader's, so it
+// is judged by the roster the edition kept. A roster that no longer matches
+// the population fingerprint taken with it cannot be trusted, and is withheld.
+func frozenPopulationBelowFloor(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, owners reporting.MeasurableOwners) (bool, error) {
+	if !owners.IndividualOff || frame.Scope.Kind != crmcontracts.ReportingScopeKindManagedTeams {
+		return populationBelowFloor(ctx, tx, frame.Scope, owners)
+	}
+	fingerprint, err := reportingPopulationFingerprint(frame.Scope, reportingMemberStrings(frame))
+	if err != nil {
+		return false, err
+	}
+	if fingerprint != frame.PopulationFingerprint {
+		return true, nil
+	}
+	roster := make([]ids.UUID, 0, len(frame.MemberIds))
+	for _, member := range frame.MemberIds {
+		roster = append(roster, ids.UUID(member))
+	}
+	thin, err := thinGroups(ctx, tx, [][]ids.UUID{roster})
+	if err != nil {
+		return false, err
+	}
+	return thin[0], nil
+}
+
 // populationMembers lists the seats a team or "My teams" total counts. counted
 // is false for an owner or company population, which the floor judges by its
 // contributors only.
