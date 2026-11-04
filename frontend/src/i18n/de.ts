@@ -2756,8 +2756,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Projekt",
   "history.field.qualifying_event": "Qualifizierendes Ereignis",
-  "history.field.qualifying_event_retracted": "Erfasster Austausch zurückgenommen",
-  "history.field.acquisition_request_retracted": "Anfrage aus der Herkunft zurückgenommen",
+  "history.field.qualifying_event_retracted":
+    "Erfasster Austausch zurückgenommen",
+  "history.field.acquisition_request_retracted":
+    "Anfrage aus der Herkunft zurückgenommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",

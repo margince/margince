@@ -2648,7 +2648,8 @@ export const en = {
   "history.field.project_id": "Project",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
-  "history.field.acquisition_request_retracted": "Acquisition request withdrawn",
+  "history.field.acquisition_request_retracted":
+    "Acquisition request withdrawn",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
