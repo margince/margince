@@ -799,8 +799,7 @@ export const en = {
   "approval.preview.meetingEnd": "End (UTC offset included)",
   "approval.preview.meetingHost": "Meeting host",
   "approval.preview.intendedAttendee": "Intended attendee (not notified)",
-  "approval.preview.hostNamedAttendee":
-    "Invited by address only (no consent check)",
+  "approval.preview.hostNamedAttendee": "Entered address",
   "approval.preview.htmlBody": "Formatted message",
   "approval.preview.correspondence":
     "Classify linked correspondence as business records.",

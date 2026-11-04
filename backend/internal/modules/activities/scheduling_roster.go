@@ -14,7 +14,6 @@ package activities
 import (
 	"context"
 	"net/mail"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -33,11 +32,11 @@ const fieldAttendeeEmails = "attendee_emails"
 func normalizedAttendees(addresses []string, skip ...string) ([]string, error) {
 	seen := make(map[string]bool, len(addresses)+len(skip))
 	for _, address := range skip {
-		seen[strings.ToLower(strings.TrimSpace(address))] = true
+		seen[connector.AttendeeAddress(address)] = true
 	}
 	out := make([]string, 0, len(addresses))
 	for _, raw := range addresses {
-		address := strings.ToLower(strings.TrimSpace(raw))
+		address := connector.AttendeeAddress(raw)
 		parsed, err := mail.ParseAddress(address)
 		if err != nil || parsed.Address != address {
 			return nil, &SchedulingArgumentError{Field: fieldAttendeeEmails, Code: faultInvalid, Message: "Enter a valid email address for every attendee"}
@@ -148,7 +147,10 @@ func stampInvitationAttendees(ctx context.Context, tx pgx.Tx, activityID ids.Act
 		case connector.AttendeeColleague:
 			err = insertParticipantRow(ctx, tx, activityID, "attendee", &id, nil, "", &name)
 		default:
-			err = insertParticipantRow(ctx, tx, activityID, "attendee", nil, nil, attendee.Address, &name)
+			// An address row is read without the lead's scope, so it carries
+			// no name even when the roster has one.
+			unnamed := ""
+			err = insertParticipantRow(ctx, tx, activityID, "attendee", nil, nil, attendee.Address, &unnamed)
 		}
 		if err != nil {
 			return err

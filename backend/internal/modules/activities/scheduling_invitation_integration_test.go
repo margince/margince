@@ -34,6 +34,9 @@ type invitationCalendar struct {
 	saved func()
 	// contacts are the addresses ResolveAttendees answers as a visible contact.
 	contacts map[string]ids.UUID
+	// leads are the addresses it answers as a visible lead, with a name, as a
+	// resolver that leaked one would.
+	leads map[string]ids.UUID
 	// invitees are the address each linked contact or lead is invited at.
 	invitees map[ids.UUID]string
 	// reconnectedAt is when the host last granted the calendar.
@@ -270,6 +273,10 @@ func (c *invitationCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, a
 	for _, address := range addresses {
 		if id, ok := c.contacts[address]; ok {
 			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, Name: "Contact " + address, AskConsent: true})
+			continue
+		}
+		if id, ok := c.leads[address]; ok {
+			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeLead, ID: id, Name: "Lead " + address, AskConsent: true})
 			continue
 		}
 		out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed})

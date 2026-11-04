@@ -23,10 +23,10 @@ func (r fixedRoster) InvitationRoster(context.Context, crmcontracts.MeetingInvit
 	return r, nil
 }
 
-// The approver reads every recipient, and an address no consent check clears
-// says so: the host typed it, and no record stands behind it. A host-named
-// address that a hidden contact still holds is checked, so it is not marked.
-func TestTheStagedInvitationMarksAnAddressNoConsentCheckClears(t *testing.T) {
+// The approver reads every recipient, and an address no record the host can
+// read stands behind is marked as entered. A hidden contact's address is marked
+// as an unknown one is, so the summary says nothing about hidden records.
+func TestTheStagedInvitationMarksEveryAddressNoVisibleRecordStandsBehind(t *testing.T) {
 	contact := ids.NewV7()
 	start := time.Date(2026, 8, 3, 9, 0, 0, 0, time.UTC)
 	further := []openapi_types.Email{"stranger@elsewhere.test", "hidden@buyer.test", "rep@ours.test"}
@@ -45,7 +45,7 @@ func TestTheStagedInvitationMarksAnAddressNoConsentCheckClears(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "→ buyer@buyer.test, stranger@elsewhere.test (no consent check), hidden@buyer.test, rep@ours.test ·"
+	want := "→ buyer@buyer.test, stranger@elsewhere.test (entered address), hidden@buyer.test (entered address), rep@ours.test ·"
 	if !strings.Contains(staged.Summary, want) {
 		t.Errorf("staged %q, want it to carry %q", staged.Summary, want)
 	}

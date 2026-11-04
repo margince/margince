@@ -46,7 +46,8 @@ func (c schedulingCalendar) ResolveAttendees(ctx context.Context, host ids.UserI
 		return nil, err
 	}
 	out := make([]connector.CalendarAttendee, 0, len(addresses))
-	for _, address := range addresses {
+	for _, typed := range addresses {
+		address := connector.AttendeeAddress(typed)
 		found, err := c.attendeeCandidates(ctx, hostCtx, address)
 		if err != nil {
 			return nil, err
@@ -77,13 +78,11 @@ func (c schedulingCalendar) resolveAttendee(hostCtx context.Context, address str
 		return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeColleague, ID: found.colleague, Name: found.colleagueName, AskConsent: held}, nil
 	}
 	for _, id := range found.leads {
-		lead, err := store.GetLead(hostCtx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
+		_, err := store.GetLead(hostCtx, ids.From[ids.LeadKind](id), storekit.LiveOnly)
 		if visible, err := hostSees(err); err != nil || visible {
-			name := ""
-			if lead.FullName != nil {
-				name = *lead.FullName
-			}
-			return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeLead, ID: id, Name: name, AskConsent: true}, err
+			// No name: a lead's participant row is an address row, which no
+			// lead scope guards for the meeting's other readers.
+			return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeLead, ID: id, AskConsent: true}, err
 		}
 	}
 	return connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed, AskConsent: held}, nil

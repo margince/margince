@@ -169,3 +169,24 @@ func (f bookingFixture) lastAppointment(t *testing.T) connector.CalendarAppointm
 	}
 	return appointment
 }
+
+// A lead attendee's row is an address row, read without the lead's scope, so
+// it carries no name even when the roster offers one.
+func TestALeadAttendeeRowCarriesNoName(t *testing.T) {
+	f := setupBooking(t)
+	contact := f.contactWithEmail(t, "guest@example.test")
+	f.calendar.leads = map[string]ids.UUID{"lead@example.test": ids.NewV7()}
+	in := f.booking(ActivityLinkInput{EntityType: linkEntityContact, EntityID: contact})
+	in.AttendeeEmails = []string{"lead@example.test"}
+	meeting, err := f.store.BookMeeting(f.ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var name *string
+	if err := f.e.owner.QueryRow(f.ctx, `SELECT display_name FROM activity_participant WHERE activity_id = $1 AND address = 'lead@example.test'`, meeting.Id).Scan(&name); err != nil {
+		t.Fatal(err)
+	}
+	if name == nil || *name != "" {
+		t.Errorf("the lead's row is named %v, want empty", name)
+	}
+}

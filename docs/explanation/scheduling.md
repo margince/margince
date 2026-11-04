@@ -131,8 +131,12 @@ Each further address is matched under the host's row scope. A contact comes firs
 colleague, then a lead. An address that matches none of them counts as typed by the host.
 
 The provider save matches it again. It asks the consent gate only about addresses a contact or lead
-holds. A colleague and an address no record holds get the invite without that check. The approval
-preview and the staged summary mark the second kind.
+holds. A colleague and an address no record holds get the invite without that check.
+
+The approval preview and the staged summary mark an address as typed when no record the host can
+read stands behind it. They mark it the same way when a hidden record holds it, so the marker tells
+the host nothing about records they cannot see. Only a contact's or colleague's row keeps a name: a
+lead's row is an address row that no lead scope guards.
 
 `/availability` without `reliable=true` stays a read of CRM data only, and the agent answer
 says so. No email or ICS file stands in when a provider write fails. So a failed write never turns

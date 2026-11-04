@@ -102,7 +102,8 @@ func invitationBooking(in crmcontracts.MeetingInvitationRequest) BookMeetingComm
 }
 
 // invitationRecipients lists the invitation's addresses, primary first. With
-// the resolved roster, an address no consent check clears says so.
+// the resolved roster, an address no visible record stands behind is marked as
+// entered. A hidden record holding it changes nothing.
 func (r invitationResolver) invitationRecipients(ctx context.Context, in crmcontracts.MeetingInvitationRequest) (string, error) {
 	recipients := []string{string(in.AttendeeEmail)}
 	if in.AttendeeEmails != nil {
@@ -120,7 +121,7 @@ func (r invitationResolver) invitationRecipients(ctx context.Context, in crmcont
 	said := summaryIn(ctx, r.booking.language)
 	marked := make([]string, 0, len(roster))
 	for _, attendee := range roster {
-		if attendee.Basis == connector.AttendeeHostNamed && !attendee.AskConsent {
+		if attendee.Basis == connector.AttendeeHostNamed {
 			marked = append(marked, fmt.Sprintf(said.hostNamed, attendee.Address))
 			continue
 		}

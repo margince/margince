@@ -5,6 +5,7 @@ package connector
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -77,6 +78,12 @@ const (
 	AttendeeHostNamed = "host_named"
 )
 
+// AttendeeAddress is an invited address as every reader compares it: trimmed
+// and lower-cased.
+func AttendeeAddress(raw string) string {
+	return strings.ToLower(strings.TrimSpace(raw))
+}
+
 // CalendarAttendee is one invited address and the record it resolved to.
 //
 //nolint:tagliatelle // stored inside meeting_invitation.appointment beside Go-default keys
@@ -84,8 +91,8 @@ type CalendarAttendee struct {
 	Address string   `json:"Address"`
 	Basis   string   `json:"Basis"`
 	ID      ids.UUID `json:"ID"`
-	// Name is what the resolved record calls the attendee, as the host may
-	// read it; empty for a host-named address.
+	// Name is what a resolved contact or colleague is called, as the host may
+	// read it; empty for a lead and for a host-named address.
 	Name string `json:"Name,omitempty"`
 	// AskConsent says the consent gate must clear this address before the
 	// provider sends. It holds for every contact and lead. It also holds for a
