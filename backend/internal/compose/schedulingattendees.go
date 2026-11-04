@@ -113,10 +113,10 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 	var found attendeeCandidates
 	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT 'contact', e.contact_id FROM contact_email e JOIN contact c ON c.id = e.contact_id
+			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)
-			UNION SELECT 'user', u.id FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
-			UNION SELECT 'lead', l.id FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
+			UNION SELECT 'user', u.id, u.display_name FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
+			UNION SELECT 'lead', l.id, '' FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
 			ORDER BY 1, 2`, args...)
 		if err != nil {
 			return err
