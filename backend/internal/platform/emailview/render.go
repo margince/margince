@@ -13,26 +13,34 @@ import (
 )
 
 // PresentationVersion pins queued markup independently of published wording.
-const PresentationVersion = 3
+const PresentationVersion = 4
 
 // Message holds approved words. Text remains the readable fallback verbatim.
 type Message struct {
 	Blocks            []Block
 	Title             string
 	Text              string
-	Brand             string
 	Language          string
 	Preheader         string
 	ActionPlaceholder string
 	Sections          []string
 }
 
+// Letterhead is who a mail comes from, drawn over its card. Name is the
+// installation's own company. LogoContentID, when set, names the inline image
+// part the send attaches, and the logo stands in for the name. Attribution is
+// a small line under either, the localized "Powered by Margince".
+type Letterhead struct {
+	Name          string
+	Attribution   string
+	LogoContentID string
+}
+
 // Render escapes all supplied text. Only standalone web destinations become links.
-func Render(message Message) string {
-	brand := strings.TrimSpace(message.Brand)
-	if brand == "" {
-		brand = "Margince"
-	}
+//
+// The letterhead is a parameter, not a field of the message, so that every
+// caller says who the mail comes from. An empty one draws "Margince".
+func Render(message Message, head Letterhead) string {
 	language := message.Language
 	if language == "" {
 		language = "en"
@@ -46,7 +54,7 @@ func Render(message Message) string {
 	} else {
 		main = renderText(message)
 	}
-	return document(language, message.Preheader, header(brand)+titleRow(message.Title, main)+footerRow(footer))
+	return document(language, message.Preheader, header(head)+titleRow(message.Title, main)+footerRow(footer))
 }
 
 func renderText(message Message) string {
@@ -78,13 +86,39 @@ func document(language, preheader, card string) string {
 		card + `</table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
 }
 
-// header is the wordmark that names who the mail comes from: a brand tile
-// with its initials beside the name, over a hairline.
-func header(brand string) string {
+// header names who the mail comes from, over a hairline: the company's logo
+// when the send attaches one, else a brand tile with its initials beside the
+// name. The attribution, when given, is a muted line under either.
+func header(head Letterhead) string {
+	name := strings.TrimSpace(head.Name)
+	if name == "" {
+		name = "Margince"
+	}
 	band := look{edge: borderSubtle}.attrs("padding:22px 32px;border-bottom:1px solid", "pad")
-	tile := `<td width="24" height="24" align="center" valign="middle"` + look{ink: textOnAccentControl, fill: accent}.attrs("width:24px;height:24px;border-radius:6px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(brand)) + `</td>`
-	return `<tr><td` + band + `><table role="presentation" cellspacing="0" cellpadding="0"><tr>` + tile +
-		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(brand) + `</td></tr></table></td></tr>`
+	mark := LetterheadName(name)
+	if head.LogoContentID != "" {
+		mark = letterheadLogo(name, head.LogoContentID)
+	}
+	if attribution := strings.TrimSpace(head.Attribution); attribution != "" {
+		mark += `<div` + look{ink: textSecondary}.attrs("margin-top:6px;font:"+bodySmall.font()) + `>` + html.EscapeString(attribution) + `</div>`
+	}
+	return `<tr><td` + band + `>` + mark + `</td></tr>`
+}
+
+// LetterheadName is the name-only letterhead: a brand tile with the name's
+// initials beside the name.
+func LetterheadName(name string) string {
+	tile := `<td width="24" height="24" align="center" valign="middle"` + look{ink: textOnAccentControl, fill: accent}.attrs("width:24px;height:24px;border-radius:6px;font:"+headingXXSmall.font()) + `>` + html.EscapeString(initials(name)) + `</td>`
+	return `<table role="presentation" cellspacing="0" cellpadding="0"><tr>` + tile +
+		`<td valign="middle"` + look{ink: textPrimary}.attrs("padding-left:10px;font:"+wordmark.font()) + `>` + html.EscapeString(name) + `</td></tr></table>`
+}
+
+// letterheadLogo is the company logo on a white plate. The plate carries no
+// role class, so the dark sheet leaves it white and a dark logo stays legible.
+// The name is the image's alt text, for a client that blocks images.
+func letterheadLogo(name, contentID string) string {
+	return `<div style="display:inline-block;background:#ffffff;border-radius:6px;padding:8px">` +
+		`<img src="cid:` + html.EscapeString(contentID) + `" alt="` + html.EscapeString(name) + `" width="150" style="display:block;max-width:150px;height:auto;border:0"></div>`
 }
 
 func titleRow(title, main string) string {

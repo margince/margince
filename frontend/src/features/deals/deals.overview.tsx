@@ -7,9 +7,9 @@ import {
   OverviewRow,
 } from "../../design-system/overviewcard";
 import { type Locale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { dealRoleLabel } from "../records/record360";
 import { DealApprovals } from "./deal360/dealapprovals";
 import { DealBrief } from "./deal360/dealbrief";
@@ -51,7 +51,7 @@ export function OffersPanel({
   onCreate: (currency: string) => void;
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const currencyReasonId = useId();
   // The sentence for an unpriced deal closes the card, so the link keeps its
   // place beside the title; the refused link points at it.
@@ -161,7 +161,7 @@ export function DealOverviewPane({
 }>) {
   const t = useT();
   const plural = usePlural();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deal, offers, coverage, activities, card } = inputs;
   // The task the bar names is not one of the others.
   const shown = (card?.next?.evidence ?? []).flatMap((row) =>

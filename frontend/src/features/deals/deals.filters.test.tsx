@@ -138,10 +138,9 @@ describe("DealsScreen filters", () => {
     );
   });
 
-  // The forecast's buckets, as a dial. Five tiles on the analytics page
-  // partition the pipeline into named buckets, and each needs a door to its
-  // deals. "Which deals are in commit" is the first question asked of one.
-  it("the forecast filter narrows the deals query to one bucket", async () => {
+  // The forecast's probability bands, as a dial. Each band tile on the
+  // analytics page needs a door to its deals.
+  it("the probability filter narrows the deals query to one band", async () => {
     const urls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -154,14 +153,20 @@ describe("DealsScreen filters", () => {
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
     const menu = screen.getByRole("group", { name: "Filter" });
     await userEvent.click(
-      within(menu).getByRole("button", { name: "Forecast" }),
+      within(menu).getByRole("button", { name: "Probability" }),
     );
-    await userEvent.click(within(menu).getByRole("radio", { name: "Commit" }));
+    await userEvent.click(
+      within(menu).getByRole("radio", { name: "60 to 89%" }),
+    );
 
     await waitFor(() =>
-      expect(urls.some((u) => u.includes("forecast_category=commit"))).toBe(
-        true,
-      ),
+      expect(
+        urls.some(
+          (u) =>
+            u.includes("win_probability_min=60") &&
+            u.includes("win_probability_max=89"),
+        ),
+      ).toBe(true),
     );
   });
 });

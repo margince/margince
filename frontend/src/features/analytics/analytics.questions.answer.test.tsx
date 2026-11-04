@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -83,8 +83,8 @@ describe("the answer table", () => {
     stubServer();
     renderAnswer();
     expect(await screen.findByText("Qualified")).toBeTruthy();
-    expect(screen.getByText("€862,000.00")).toBeTruthy();
-    expect(within(bodyRows()[2]).getByText(/\$125,000\.00/)).toBeTruthy();
+    expect(screen.getByText("862,000 EUR")).toBeTruthy();
+    expect(within(bodyRows()[2]).getByText("125,000 USD")).toBeTruthy();
     expect(within(bodyRows()[2]).getByText("Not set")).toBeTruthy();
   });
 
@@ -193,7 +193,7 @@ describe("a row's drill-down", () => {
       await screen.findByRole("button", { name: "Explain Not set, USD" }),
     );
     const dialog = await screen.findByRole("dialog");
-    await within(dialog).findByText("€42,000.00");
+    await within(dialog).findByText("42,000 EUR");
     expect(asked).toEqual([
       {
         url: expect.stringContaining("/analytics/explain"),

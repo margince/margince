@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { firstBookingSlot } from "../../testing/book.testkit";
 import { bookingFrame } from "./book.storykit";
@@ -33,7 +33,7 @@ function OpenTimes() {
       configured={profile.isSuccess}
       profile={profile.data}
       hours={hours}
-      zone={viewerZone()}
+      zone={browserZone()}
       onZone={() => undefined}
       duration={duration}
       onDuration={setDuration}

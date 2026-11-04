@@ -253,7 +253,7 @@ export const ACTIVITY_LINE: Readonly<
     "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
   ),
   report_interpret: notDisplayed(
-    "declared in api/ai-tasks.yaml and not built: no site runs it, so nothing reports it yet",
+    "passive Analytics interpretation reports progress inside its own panel",
   ),
 };
 

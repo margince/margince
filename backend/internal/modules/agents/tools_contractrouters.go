@@ -36,6 +36,14 @@ var contractRouters = []mcp.ToolSpec{
 		Name: "change_settings", Title: "Change how the workspace is set up",
 		Description: changeSettingsCopy.render(), Instead: changeSettingsCopy.Instead,
 	},
+	{
+		Name: "change_compliance", Title: "Record consent, stops, holds and privacy work",
+		Description: changeComplianceCopy.render(), Instead: changeComplianceCopy.Instead,
+	},
+	{
+		Name: "change_capture", Title: "Decide what comes into the CRM",
+		Description: changeCaptureCopy.render(), Instead: changeCaptureCopy.Instead,
+	},
 }
 
 // registerContractRouters lists each contract router the contract gave actions.

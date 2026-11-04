@@ -158,9 +158,10 @@ func (s *Service) issueSetPasswordToken(
 // the opposite order, so a redeem racing an issue could each hold what the
 // other waits for and one would die with `deadlock detected` — in the
 // forgot-password case, silently, since that mint runs detached from the
-// request. Holding no app_user row lock at all removes the cycle, and the
-// advisory lock still serializes issuers against each other, which a row lock
-// on a token that may not exist yet could never do.
+// request. An issuer that needs the member's row locks it only after the
+// tokens, in redemption's order, and the advisory lock still serializes
+// issuers against each other, which a row lock on a token that may not exist
+// yet could never do.
 func lockMemberForTokenIssue(ctx context.Context, tx pgx.Tx, userID ids.UserID) error {
 	// The key is NAMESPACED, as every other advisory lock in the tree is
 	// (`offer_number:`, `lead_routing:`, `customfields:`). pg_advisory_xact_lock
@@ -177,20 +178,28 @@ func lockMemberForTokenIssue(ctx context.Context, tx pgx.Tx, userID ids.UserID) 
 // then consumes the target's outstanding unused set-password tokens and
 // reports how many for the audit image.
 //
-// The member is read WITHOUT a row lock (see lockMemberForTokenIssue). A
-// deactivation committing between this check and the insert would leave a token
-// that redemption then refuses anyway, because redemption re-checks the same set
-// this admits — so the window costs a wasted link, never a usable one.
+// The status refuseTarget judges is read under the member's row lock, taken
+// after the outstanding tokens' locks: the order redemption takes them in. A
+// redemption already holding one of those tokens has committed by the time
+// both locks are ours, so an invitation it just accepted reads as active and
+// is refused. Read unlocked, it read invited and left a live link for an
+// active member.
 func supersedeSetPasswordTokens(
 	ctx context.Context, tx pgx.Tx, userID ids.UserID, refuseTarget targetRule,
 ) (int64, error) {
 	if err := lockMemberForTokenIssue(ctx, tx, userID); err != nil {
 		return 0, err
 	}
+	if _, err := tx.Exec(ctx,
+		`SELECT id FROM auth_token
+		 WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL
+		 FOR UPDATE`, userID); err != nil {
+		return 0, err
+	}
 	var status string
 	var isAgent bool
 	err := tx.QueryRow(ctx,
-		`SELECT status, is_agent FROM app_user WHERE id = $1 AND archived_at IS NULL`,
+		`SELECT status, is_agent FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
 		userID).Scan(&status, &isAgent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, apperrors.ErrNotFound

@@ -212,6 +212,9 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  AND %[5]s
 			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
+			  -- A call grounds a follow-up only when it reached somebody: a
+			  -- voicemail is no conversation to follow up on.
+			  AND (a.kind <> 'call' OR %[6]s)
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT 1
 		) ev ON true
@@ -223,7 +226,8 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		OpenNextStepSQL("d.id", "$3", current),
 		relstrength.MeetingCountsSQL("a"),
 		occurredday.BegunSQL("a", "$3"),
-		occurredday.FromSQL("a", "$1")), args, nil
+		occurredday.FromSQL("a", "$1"),
+		relstrength.CallCountsSQL("a")), args, nil
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {

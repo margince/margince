@@ -67,7 +67,8 @@ func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (
 
 // applyForecastChances sets each deal's typed chance, chance in use, evidence
 // count, risk signals and effect. Off, the typed chance stays the chance in use
-// and nothing else is set.
+// and nothing else is set. A probability set on the deal is used as it is:
+// self-correction moves only a probability that comes from the stage.
 func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceModel, at time.Time, in []forecasting.Deal) error {
 	for i := range in {
 		in[i].TypedProbability = new(in[i].StageProbability)
@@ -80,6 +81,9 @@ func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceMo
 		return err
 	}
 	for i := range in {
+		if in[i].Source != forecasting.SourceStage {
+			continue
+		}
 		evidence := model.Stages[in[i].StageID]
 		in[i].StageProbability = forecasting.ChanceInUse(*in[i].TypedProbability, evidence)
 		in[i].EvidenceN = new(evidence.Resolved)

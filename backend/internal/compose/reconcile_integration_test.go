@@ -967,3 +967,32 @@ func TestFollowUpProposalRespectsRowScope(t *testing.T) {
 		t.Errorf("owner confirm created %d tasks, want 1", got)
 	}
 }
+
+// A call that reached nobody is no conversation to follow up on: a deal whose
+// only call left a voicemail gets no proposal, and once a reached call lands,
+// the proposal is grounded on that one.
+func TestFollowUpReconcileGroundsOnlyOnACallThatReachedSomebody(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Rang, nobody there", e.pipeline, e.open, &e.Rep1)
+	voicemail := e.seedInteraction(t, deal, "call", "Rang the buyer", 2)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET call_outcome = 'voicemail' WHERE id = $1`, voicemail); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Fatalf("a voicemail grounded %d follow-up proposals, want none", got)
+	}
+
+	reached := e.seedInteraction(t, deal, "call", "Spoke to the buyer", 1)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET call_outcome = 'reached' WHERE id = $1`, reached); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if _, proposal := e.followUpApproval(t, deal); proposal.EvidenceActivityID.UUID != reached {
+		t.Errorf("the proposal is grounded on %s, want the reached call %s", proposal.EvidenceActivityID, reached)
+	}
+}

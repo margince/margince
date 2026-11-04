@@ -40,13 +40,14 @@ func (in SourceAssessment) validate() (NoticeDuty, bool, error) {
 	return duty, needsCase, nil
 }
 
-// AssessNoticeSource records a human source decision without changing the original evidence.
+// AssessNoticeSource records a source decision without changing the original
+// evidence. The audit row names an agent when one made it.
 func (s *Store) AssessNoticeSource(ctx context.Context, id ids.UUID, in SourceAssessment) (NoticeCase, error) {
 	if err := requireNoticeCaseUpdate(ctx); err != nil {
 		return NoticeCase{}, err
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
 		return NoticeCase{}, &ValidationError{Field: carrySourceArg, Reason: "a source assessment needs a signed-in privacy officer"}
 	}
 	in.Note = strings.TrimSpace(in.Note)

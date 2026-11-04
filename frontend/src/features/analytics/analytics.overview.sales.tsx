@@ -12,9 +12,9 @@ import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, type UrlParams, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
@@ -32,7 +32,8 @@ import {
   useInterventions,
 } from "./analytics.overview.interventions";
 import { SalesOverviewMetrics } from "./analytics.overview.metrics";
-import { metricOf, OverviewLinks } from "./analytics.overview.readings";
+import { useOverviewNavigation } from "./analytics.overview.navigation";
+import { metricOf } from "./analytics.overview.readings";
 import { SalesHeader } from "./analytics.overview.salesheader";
 import { OpenPipelineLine } from "./analytics.overview.salesreadings";
 import { SinceLastReview } from "./analytics.overview.since";
@@ -98,7 +99,7 @@ function SalesReviewBody({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
   const filters = useOverviewFilters(pipelines, "this_quarter");
   const { metrics, blocks } = viewRequest("sales", catalog, filters.period);
@@ -120,6 +121,10 @@ function SalesReviewBody({
   const asks = validDates && metrics.length > 0 && !pipelineGone;
   // The figures and the charts are two reads of one question, so a slow or
   // failed chart never holds back the figures or the actions.
+  useOverviewNavigation("sales", selection, {
+    start: filters.start,
+    end: filters.end,
+  });
   const query = useReportingEvaluation(selection, asks);
   const charts = useSalesCharts(selection, blocks, catalog, asks);
   const { evidence, evidenceFrom, openEvidence, closeEvidence } =
@@ -248,14 +253,6 @@ function SalesReviewBody({
         pipelineId={selection.pipeline_id}
         after={checks.state === "not_permitted" ? "ready" : checks.state}
       />
-      <OverviewLinks
-        dials={doors}
-        sections={[
-          { section: "forecast", label: t("analytics.sectionForecast") },
-          { section: "pipeline", label: t("analytics.sectionPipeline") },
-          { section: "performance", label: t("analytics.sectionPerformance") },
-        ]}
-      />
     </>
   );
 }
@@ -368,22 +365,16 @@ function QuarterNotes({
   if (metricOf(evaluation, "forecast_landing")?.target_comparison) return null;
   if (!offersLanding || period === "this_quarter") return null;
   return (
-    <Callout
-      tone="info"
-      kind="standing"
-      title={t("analytics.overview.quarterOnlyTitle")}
-      actions={
-        <Button
-          onClick={() =>
-            onApply({ ...evaluation.selection, period: "this_quarter" })
-          }
-        >
-          {t("reporting.compare.apply.period")}
-        </Button>
-      }
-    >
-      <p>{t("analytics.overview.quarterOnlyBody")}</p>
-    </Callout>
+    <p className="t-caption">
+      <Button
+        variant="link"
+        onClick={() =>
+          onApply({ ...evaluation.selection, period: "this_quarter" })
+        }
+      >
+        {t("reporting.compare.apply.period")}
+      </Button>
+    </p>
   );
 }
 

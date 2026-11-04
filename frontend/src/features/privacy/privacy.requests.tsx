@@ -23,7 +23,6 @@ import { Select, type SelectOption } from "../../design-system/select";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
@@ -44,6 +43,7 @@ import {
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import "./privacy.css";
 import { isUuid } from "../../lib/uuid";
+import { useViewerZone } from "../../lib/viewerzone";
 import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
@@ -90,7 +90,7 @@ export function DsrTable({
   const t = useT();
   const { locale } = useLocale();
   // A statutory deadline, read on the viewer's own calendar day.
-  const tz = viewerZone();
+  const tz = useViewerZone();
   const columns: DataTableColumn<DataSubjectRequest>[] = [
     {
       key: "subject",
@@ -352,7 +352,7 @@ function DsrFacts({
 }: Readonly<{ dsr: DataSubjectRequest; nowMs: number; canWork: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const tz = viewerZone();
+  const tz = useViewerZone();
   const facts: Fact[] = [
     {
       key: "subject",

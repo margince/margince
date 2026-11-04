@@ -115,8 +115,8 @@ func (seamProbeProvider) StageSemantic(context.Context, ids.UUID) (string, ids.U
 	return "", ids.UUID{}, errSeamReached
 }
 
-func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
-	return datasource.EntityRef{}, errSeamReached
+func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
+	return datasource.AdvanceDealResult{}, errSeamReached
 }
 
 // The RecordArchiverV2 half. It is on the SHARED stub rather than on the

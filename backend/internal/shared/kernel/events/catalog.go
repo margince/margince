@@ -73,6 +73,7 @@ var catalog = map[string]struct {
 	// about the installation, which names its own language in a setting and
 	// publishes nothing per reader.
 	"user_locale.changed":        {contactStreamEntity, 1},
+	"user_timezone.changed":      {contactStreamEntity, 1},
 	"user_display_name.changed":  {contactStreamEntity, 1},
 	"user_greeting_name.changed": {contactStreamEntity, 1},
 	// What a member wants DELIVERED rides the identity stream rather than the

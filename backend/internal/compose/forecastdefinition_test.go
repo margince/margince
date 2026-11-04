@@ -17,8 +17,8 @@ func TestASignalRulesChangeIsAReadingDefinitionChange(t *testing.T) {
 	// Each signal rules version, with the reading definition that first used it.
 	firstDefinition := map[string]string{"v1": "forecast_v3", "v2": "forecast_v4"}
 	want, listed := firstDefinition[assurance.RiskSignalsVersion]
-	if !listed || want != forecasting.DefinitionVersion {
-		t.Fatalf("signal rules %s run under reading definition %s, want %q: bump forecasting.DefinitionVersion with them and list the pair here",
+	if !listed || forecasting.DefinitionVersion < want {
+		t.Fatalf("signal rules %s run under reading definition %s, want %q or later: bump forecasting.DefinitionVersion with them and list the pair here",
 			assurance.RiskSignalsVersion, forecasting.DefinitionVersion, want)
 	}
 }

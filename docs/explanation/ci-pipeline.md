@@ -210,6 +210,10 @@ What follows from this:
   - Neither workflow proves itself on a schedule, since both only run by hand. The next user to start
     one finds a change that made it fail. So a PR that touches either is worth starting from its own branch
     before merging.
+- A **PR into `develop`** skips `integration`, `uat`, `live-boot`, `images` and `sonarcloud`. The
+  `full_lane` output of `changes` is false only there. The `develop` into `main` pull request runs
+  them under the usual path filters:
+  [land-through-develop.md](../how-to/land-through-develop.md).
 - **A draft PR runs nothing** until marked ready (`draft == false` guards every job). That is because the
   many agents push many commits while the work is not done.
 - `craft-residue` and `secret-scan` are the exceptions: both run on **every** change that is not a

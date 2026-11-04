@@ -109,7 +109,7 @@ func (k capturedFileKeeper) RecordWithheld(
 func (k capturedFileKeeper) RecordLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, links []capture.MailLink,
-) error {
+) (int, error) {
 	owned := make([]activities.CapturedLink, 0, len(links))
 	for _, link := range links {
 		owned = append(owned, activities.CapturedLink{URL: link.URL, Text: link.Text})

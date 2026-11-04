@@ -13,10 +13,10 @@ import { QueryStates } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./settings.stageautomation.css";
 
 type TransitionPolicy = components["schemas"]["TransitionPolicy"];
@@ -257,7 +257,7 @@ function SuspensionNote({ rule }: Readonly<{ rule: TransitionPolicy }>) {
   // The READER's zone. A suspension stamped at 23:40 UTC happened on a
   // different day for half the contacts who will read this. A date without a
   // zone shows one of them the wrong one.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <>
       <Badge tone="warning">{t("stageAutomation.suspended")}</Badge>{" "}

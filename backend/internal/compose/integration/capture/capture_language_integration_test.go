@@ -131,11 +131,7 @@ func emailWith(msgID, subject, body string) []byte {
 	}, "\r\n"))
 }
 
-// The label is read from the text, so editing the text retires it.
-//
-// A stored language that outlived the words it described would send a reply in
-// the language the message USED to be in — which is the same defect as the
-// corpus deciding, arriving by a slower route.
+// An edit replaces the original language label with that of the current text.
 func TestEditingAMessageRetiresItsRecordedLanguage(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
@@ -153,8 +149,8 @@ func TestEditingAMessageRetiresItsRecordedLanguage(t *testing.T) {
 		activities.UpdateActivityInput{Body: &german}); err != nil {
 		t.Fatalf("editing the message: %v", err)
 	}
-	if got := languageOf(t, e, activityID); got != "" {
-		t.Errorf("the edited message still records %q, which describes text that is gone", got)
+	if got := languageOf(t, e, activityID); got != "de" {
+		t.Errorf("the edited message records %q, want de for its current text", got)
 	}
 }
 

@@ -2,13 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { Button } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Disclosure } from "../../design-system/disclosure";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { forReader } from "../../format/collate";
-import { formatDuration, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDuration } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import type { ReportingMetricID } from "./reporting.model";
 import { reportingPeriodLabel } from "./reporting.model";
+import { useMetricNames } from "./reporting.queries";
 
 type Review = components["schemas"]["SdrTeamReview"];
 type Member = components["schemas"]["SdrTeamMember"];
@@ -33,7 +36,7 @@ function countColumn(
     align: "end",
     render: (row) => {
       const figure = value(row);
-      return figure == null ? "—" : formatNumber(figure, locale);
+      return figure == null ? "—" : formatAnalyticsNumber(figure, locale);
     },
   };
 }
@@ -71,8 +74,8 @@ function qualificationColumns(
     const target = arrival || !events ? row.target : row.event_target;
     if (!target) return t("analytics.team.noTarget");
     const text = t("analytics.team.targetOf", {
-      actual: formatNumber(target.actual, locale),
-      target: formatNumber(target.value, locale),
+      actual: formatAnalyticsNumber(target.actual, locale),
+      target: formatAnalyticsNumber(target.value, locale),
     });
     return !arrival &&
       events &&
@@ -93,7 +96,7 @@ function qualificationColumns(
             render: (row: Member) => {
               const value = events ? row.qualified_events : row.qualified;
               if (value == null) return t("analytics.readingUnavailable");
-              const count = formatNumber(value, locale);
+              const count = formatAnalyticsNumber(value, locale);
               return events && (review.qualification_unattributed ?? 0) > 0
                 ? t("analytics.team.atLeast", { value: count })
                 : count;
@@ -193,13 +196,13 @@ function useHandoffColumns(review: Review): DataTableColumn<Member>[] {
         if (row.waiting == null) return "";
         return row.oldest_waiting_since
           ? plural("analytics.team.waitingFor", row.waiting, {
-              count: formatNumber(row.waiting, locale),
+              count: formatAnalyticsNumber(row.waiting, locale),
               age: formatDuration(
                 asOf - Date.parse(row.oldest_waiting_since),
                 locale,
               ),
             })
-          : formatNumber(row.waiting, locale);
+          : formatAnalyticsNumber(row.waiting, locale);
       },
     },
   ];
@@ -274,11 +277,17 @@ function MemberVisibility({ review }: Readonly<{ review: Review }>) {
 export function MemberTable({
   review,
   zone,
-}: Readonly<{ review: Review; zone: string }>) {
+  onOpen,
+}: Readonly<{
+  review: Review;
+  zone: string;
+  onOpen?: (metric: ReportingMetricID, owner: string) => void;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const handoffColumns = useHandoffColumns(review);
+  const metricName = useMetricNames();
   if (review.members_withheld) {
     return <p className="t-caption">{t("analytics.team.membersWithheld")}</p>;
   }
@@ -304,7 +313,34 @@ export function MemberTable({
             grow: true,
             render: (row) => row.label,
           },
-          ...columns,
+          ...columns.map((column) => {
+            const metrics: Partial<Record<string, ReportingMetricID>> = {
+              qualified: eventQualifications(review)
+                ? "leads_qualified"
+                : "leads_promoted",
+              meetings: "meetings_held",
+              unanswered: "leads_awaiting_response",
+              accepted: "accepted_opportunities",
+            };
+            const metric = metrics[column.key];
+            return !metric || !onOpen
+              ? column
+              : {
+                  ...column,
+                  render: (row: Member) => (
+                    <Button
+                      variant="link"
+                      aria-label={t("analytics.team.memberRecords", {
+                        name: row.label,
+                        metric: metricName(metric),
+                      })}
+                      onClick={() => onOpen(metric, row.id)}
+                    >
+                      {column.render(row)}
+                    </Button>
+                  ),
+                };
+          }),
         ]}
       />
       <PanelBody>
@@ -324,7 +360,7 @@ export function MemberTable({
               "analytics.team.qualificationUnattributed",
               review.qualification_unattributed ?? 0,
               {
-                count: formatNumber(
+                count: formatAnalyticsNumber(
                   review.qualification_unattributed ?? 0,
                   locale,
                 ),

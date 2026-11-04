@@ -6,7 +6,11 @@ import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import type { SettingsPageId } from "../../lib/settingscatalog";
 import { readingsDay } from "../../testing/brief.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  FIXTURE_TIMEZONE,
+  type GrantSpec,
+  meFixture,
+} from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -135,7 +139,7 @@ const WORKING_HOURS: RouteMap = {
         start_time: "09:00",
         end_time: "17:00",
         days: [1, 2, 3, 4, 5],
-        timezone: meFixture().user.timezone,
+        timezone: FIXTURE_TIMEZONE,
       },
     }),
 };

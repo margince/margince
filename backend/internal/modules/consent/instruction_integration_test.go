@@ -77,8 +77,8 @@ func connectorCtx(ws, user ids.UUID) context.Context {
 	})
 }
 
-// agentCtx is an agent acting under a director's own grants. It must not be
-// able to mint the record that says a HUMAN decided.
+// agentCtx is an agent acting under a director's own grants, on no passport:
+// automatic work with no user who asked it.
 func agentCtx(ws, user ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -97,7 +97,7 @@ func agentCtx(ws, user ids.UUID) context.Context {
 // seedOpenReview writes a refused send for these tests to direct.
 func seedOpenReview(ctx context.Context, t *testing.T, e *channelConsentEnv) ids.UUID {
 	t.Helper()
-	return seedOpenReviewFor(ctx, t, e, "marketing_objection")
+	return seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
 }
 
 // seedOpenReviewFor opens a review refused for the given reason code.
@@ -114,10 +114,10 @@ func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, 
 	return id
 }
 
-// ONLY A HUMAN HOLDING THE GRANT DIRECTS A SEND. Three refusals and one
-// success, because each arm answers a different question about who this
+// Only a user holding the grant, or their agent, directs a send. Three refusals
+// and one success, because each arm answers a different question about who this
 // authority belongs to.
-func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
+func TestOnlyAUserHoldingTheGrantDirectsASend(t *testing.T) {
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -136,11 +136,9 @@ func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
 		t.Errorf("a rep directed a send: %v — the exception grant is its own authority", err)
 	}
 
-	// AN AGENT MAY NOT, even carrying the grant. The row asserts that a CONTACT
-	// took responsibility, and an agent minting it would make that assertion
-	// false while looking entirely correct.
+	// An agent on no passport may not, even carrying the grant: no user asked it.
 	if _, err := e.store.DirectSend(agentCtx(ws, user), review, valid); err == nil {
-		t.Error("an agent minted the record that says a human decided")
+		t.Error("an agent with no user behind it recorded a user's decision")
 	}
 
 	// A CONNECTOR MAY NOT EITHER, and this is the arm auth.RequireHuman does
@@ -192,7 +190,7 @@ func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
 		review).Scan(&state, &reason); err != nil {
 		t.Fatalf("reading the review: %v", err)
 	}
-	if state != "needs_repair" || reason != "marketing_objection" {
+	if state != "needs_repair" || reason != "no_marketing_consent" {
 		t.Errorf("the review now reads state=%q reason=%q — directing a send must leave the "+
 			"refusal exactly where it was", state, reason)
 	}
@@ -338,14 +336,13 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// Every sender may take the exception, but only an admin past a contact's own
-// stop. A rep holding the grant directs a send refused for want of marketing
-// consent. The rep is refused past an objection, a withdrawal, a restriction
-// and a subject request. An admin still directs past all of them.
+// Every sender may take the exception past missing marketing consent. Nobody
+// directs past a contact's own stop: not a rep holding the grant, and not an
+// admin.
 //
-// Mutation: drop the RemedyAdminException check in directableBy and the rep
-// cases below are allowed.
-func TestASenderDirectsPastMissingConsentButNotPastAContactsStop(t *testing.T) {
+// Mutation: give the four stops their admin exception back in remedies and the
+// admin cases below are allowed.
+func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	input := DirectInput{
@@ -360,8 +357,8 @@ func TestASenderDirectsPastMissingConsentButNotPastAContactsStop(t *testing.T) {
 		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("a rep directing past %s: err = %v, want permission denied", reason, err)
 		}
-		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, input); err != nil {
-			t.Errorf("an admin directing past %s: %v", reason, err)
+		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("an admin directing past %s: err = %v, want permission denied", reason, err)
 		}
 	}
 
@@ -372,4 +369,25 @@ func TestASenderDirectsPastMissingConsentButNotPastAContactsStop(t *testing.T) {
 	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, ErrDecisionAlreadyRecorded) {
 		t.Errorf("a second direction on the same review: err = %v, want the recorded decision to stand", err)
 	}
+	if byAdmin := givenByAdmin(ctx, t, e, review); byAdmin {
+		t.Error("a rep's direction is recorded as an admin's, so it would answer refusals only an admin may")
+	}
+	adminReview := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
+	if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), adminReview, input); err != nil {
+		t.Fatalf("an admin directing past missing marketing consent: %v", err)
+	}
+	if byAdmin := givenByAdmin(ctx, t, e, adminReview); !byAdmin {
+		t.Error("an admin's direction is not recorded as an admin's")
+	}
+}
+
+// givenByAdmin reads who the direction on this review was recorded as given by.
+func givenByAdmin(ctx context.Context, t *testing.T, e *channelConsentEnv, review ids.UUID) bool {
+	t.Helper()
+	var byAdmin bool
+	if err := e.owner.QueryRow(ctx,
+		`SELECT given_by_admin FROM communication_instruction WHERE review_id = $1`, review).Scan(&byAdmin); err != nil {
+		t.Fatalf("reading the direction: %v", err)
+	}
+	return byAdmin
 }

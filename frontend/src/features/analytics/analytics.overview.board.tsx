@@ -82,7 +82,12 @@ export function BoardChart({
   onEvidence: (reference: ReportingEvidenceRef) => void;
 }>) {
   const chart = chartOf(evaluation, kind);
-  if (!chart) return null;
+  if (
+    !chart ||
+    (chart.coverage.status === "no_data" &&
+      chart.points.every((point) => point.value == null || point.value === 0))
+  )
+    return null;
   return (
     <ChartPanel
       chart={chart}

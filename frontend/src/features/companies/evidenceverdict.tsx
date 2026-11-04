@@ -9,7 +9,7 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { factsKey } from "./companyfactspanel";
 import "./evidenceverdict.css";
 
@@ -163,7 +163,7 @@ export function EvidenceVerdict({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const [correcting, setCorrecting] = useState(false);
   const [draft, setDraft] = useState(claim.value);
@@ -210,7 +210,7 @@ export function EvidenceVerdict({
       <span className="evidence-verdict t-caption">
         {claim.verifiedAt
           ? t("evidence.confirmedAt", {
-              when: formatDateTime(claim.verifiedAt, locale, recordZone),
+              when: formatDateTime(claim.verifiedAt, locale, readerZone),
             })
           : t("evidence.humanSet")}
       </span>

@@ -25,7 +25,7 @@ function contribution(over: Record<string, unknown> = {}) {
     in_won: false,
     in_open: true,
     in_evidence: false,
-    in_best_case: false,
+    probability_source: "stage",
     typed_probability: 20,
     chance_in_use: 60,
     evidence_n: 20,
@@ -45,7 +45,12 @@ function serve(body: Record<string, unknown>) {
           scope_kind: "workspace",
           won_minor: 0,
           evidence_minor: 0,
-          best_case_minor: 0,
+          likely_threshold: 90,
+          by_source: {
+            stage: { open_minor: 1_000_000, weighted_minor: 600_000 },
+            human: { open_minor: 0, weighted_minor: 0 },
+            margince: { open_minor: 0, weighted_minor: 0 },
+          },
           open_minor: 1_000_000,
           weighted_minor: 600_000,
           eligible_count: 1,
@@ -149,7 +154,7 @@ describe("ForecastDeals", () => {
     });
     await openDeals();
     expect(
-      await screen.findByText("Weighted €210,000.00 from 2 open deals"),
+      await screen.findByText("Weighted 210,000 EUR from 2 open deals"),
     ).toBeTruthy();
   });
 
@@ -163,7 +168,7 @@ describe("ForecastDeals", () => {
     await openDeals();
     expect(
       await screen.findByText(
-        "Weighted €210,000.00, colleagues’ deals included",
+        "Weighted 210,000 EUR, colleagues’ deals included",
       ),
     ).toBeTruthy();
   });

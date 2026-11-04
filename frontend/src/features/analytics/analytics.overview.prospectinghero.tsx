@@ -6,7 +6,7 @@ import type { components } from "../../api/schema";
 import { Button, StatCard } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { StatStrip } from "../../design-system/statstrip";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { upcomingThrough } from "./analytics.outcomes.sdr";
 import {
@@ -57,8 +57,7 @@ function figureText(
   const state = readingState(metric);
   if (state === "withheld") return t("analytics.prospect.withheld");
   if (state === "failed") return t("analytics.prospect.failed");
-  if (metric?.coverage.status === "insufficient_sample")
-    return t("analytics.prospect.tooFew");
+  if (metric?.coverage.status === "insufficient_sample") return "—";
   return readingValue(metric, evaluation, t, locale);
 }
 
@@ -255,6 +254,23 @@ export function ProspectingReadings({
         opens="records"
         onOpen={response ? () => onEvidence(response.evidence) : undefined}
       />
+      {metricOf(evaluation, "leads_awaiting_response_now") && (
+        <StatCard
+          narrow="row"
+          label={metricName("leads_awaiting_response_now")}
+          value={figureText(
+            metricOf(evaluation, "leads_awaiting_response_now"),
+            evaluation,
+            t,
+            locale,
+          )}
+          opens="records"
+          onOpen={() => {
+            const metric = metricOf(evaluation, "leads_awaiting_response_now");
+            if (metric) onEvidence(metric.evidence);
+          }}
+        />
+      )}
       <UpcomingReading summary={summary} />
     </StatStrip>
   );
@@ -266,7 +282,7 @@ function unansweredText(
   evaluation: ReportingEvaluation,
   t: Translator,
   plural: ReturnType<typeof usePlural>,
-  locale: Parameters<typeof formatNumber>[1],
+  locale: Parameters<typeof formatAnalyticsNumber>[1],
 ): string {
   const waiting = metricOf(evaluation, "leads_awaiting_response");
   const state = readingState(waiting);
@@ -275,7 +291,7 @@ function unansweredText(
     return t("analytics.prospect.unansweredFailed");
   const count = waiting.value ?? 0;
   return plural("analytics.overview.stillWaiting", count, {
-    count: formatNumber(count, locale),
+    count: formatAnalyticsNumber(count, locale),
   });
 }
 
@@ -318,7 +334,7 @@ function UpcomingReading({
     <StatCard
       narrow="row"
       label={label}
-      value={formatNumber(data.upcoming_meetings, locale)}
+      value={formatAnalyticsNumber(data.upcoming_meetings, locale)}
       detail={upcomingThrough(window, t, locale)}
       onOpen={() => document.getElementById(UPCOMING_LIST_ID)?.focus()}
     />

@@ -16,13 +16,13 @@ import {
 } from "../../design-system/overviewcard";
 import { RecordCardList } from "../../design-system/recordcard";
 import { formatMoneyWhole, formatNumber } from "../../format/format";
-import { formatDayMonth } from "../../format/format.dates";
+import { formatDayMonth, formatDueCompact } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
 import { usePipelines } from "../../lib/pipelines.queries";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn } from "./company360";
 import { CompanyContactCard } from "./companycontactcard";
 import { LatestCard } from "./companyoverviewlatest";
@@ -157,7 +157,7 @@ function TaskRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const nameOf = recordNamesIn(view);
   const linked =
     (step.linked_deal_id && nameOf("deal", step.linked_deal_id)) ||
@@ -165,7 +165,9 @@ function TaskRow({
     undefined;
   const sub = [
     step.due_at &&
-      t("co.next.due", { when: formatDayMonth(step.due_at, locale, zone) }),
+      t("co.next.due", {
+        when: formatDueCompact(step.due_at, step.due_has_time, locale, zone),
+      }),
     linked && t("co.overview.for", { name: linked }),
   ]
     .filter(Boolean)
@@ -205,7 +207,7 @@ export function TaskStandingMark({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const standing = taskStanding(step, asOf, zone);
   switch (standing.kind) {
     case "late":
@@ -274,7 +276,7 @@ function DealItem({
 }: Readonly<{ deal: Extract<WorkRow, { kind: "deal" }>["deal"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const pipelines = usePipelines();
   const rank = stageRank(deal.stage_id, pipelines.data);
   const sub = [
@@ -318,7 +320,7 @@ function ProjectItem({
 }: Readonly<{ project: Extract<WorkRow, { kind: "project" }>["project"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const sub = [
     t("co.overview.project"),
     t(PHASE_LABEL[project.phase]),

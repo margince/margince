@@ -58,7 +58,7 @@ const kindInPerson = "in_person"
 // word is what stops the form and the store disagreeing about what was written.
 const KindRequestedBySubject = "requested_by_subject"
 
-// handRecordedKinds are the kinds a human may assert. Every other kind is
+// handRecordedKinds are the kinds a user or their agent may assert. Every other kind is
 // derived from records, and a hand-written one would be a second, unbacked
 // answer to a question the data already settles.
 //
@@ -104,6 +104,10 @@ type RecordQualifyingEventInput struct {
 	Kind       string
 	Note       string
 	OccurredAt time.Time
+	// AsksForQuote says the contact asked for a quote or an offer. Only a
+	// request the subject made may say so. Only such a request bears out a
+	// quote; a request to be called back does not.
+	AsksForQuote bool
 }
 
 // RecordInquiry records that this contact asked for a meeting themselves.
@@ -115,9 +119,9 @@ type RecordQualifyingEventInput struct {
 // the record.
 //
 // It is `captured` rather than `human`: nobody typed this claim, the door that
-// took the booking wrote it. The hand-recorded verbs beside it stay what
-// they are — a named human asserting something with no other evidence — and
-// keep their RequireHuman.
+// took the booking wrote it. The hand-recorded verbs beside it stay a named
+// user's assertion with no other evidence, made by them or the agent on their
+// passport. They keep their RequireHumanOrItsAgent.
 func (s *Store) RecordInquiry(
 	ctx context.Context, contactID ids.ContactID, activityID ids.UUID,
 ) error {
@@ -189,6 +193,11 @@ func (s *Store) RecordQualifyingEvent(
 				"recorded by hand; the rest are derived",
 		}
 	}
+	if in.AsksForQuote && in.Kind != KindRequestedBySubject {
+		return QualifyingEvent{}, &InvalidQualifyingEventError{
+			Field: "asks_for_quote", Reason: "only a request the contact made can ask for a quote",
+		}
+	}
 	note := strings.TrimSpace(in.Note)
 	if note == "" {
 		return QualifyingEvent{}, &InvalidQualifyingEventError{
@@ -216,11 +225,9 @@ func (s *Store) RecordQualifyingEvent(
 			Field: fieldOccurredAt, Reason: "an exchange you remember happened before now",
 		}
 	}
-	// Human-only HERE, not only on the route: an agent never asserts that a
-	// contact met somebody. The REST gate refuses the route today, and an
-	// in-process caller carrying an agent principal would otherwise reach this
-	// exported method with nothing between it and the row.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Here as well as on the route: automatic work never asserts that a contact
+	// met somebody, and an in-process caller would otherwise reach the row.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return QualifyingEvent{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -231,7 +238,7 @@ func (s *Store) RecordQualifyingEvent(
 		return QualifyingEvent{}, err
 	}
 
-	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt}
+	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt, AsksForQuote: in.AsksForQuote}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The row-scope probe first: this changes what may be SENT to a contact,
 		// which is a change to their record however little of the row it
@@ -247,20 +254,21 @@ func (s *Store) RecordQualifyingEvent(
 		//
 		// Matched on the contact, the moment and the words: two genuinely
 		// different exchanges with the same contact do not share all three.
-		var inserted bool
+		// A retracted row matches too, so replaying the request that recorded
+		// it answers the row as it stands and does not bring it back.
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
-				(contact_id, kind, note, occurred_at, source, captured_by)
-			SELECT $1, $2, $3, $4, 'human', $5
+				(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote)
+			SELECT $1, $2, $3, $4, $7, $5, $6
 			 WHERE NOT EXISTS (
 				SELECT 1 FROM consent_qualifying_event
 				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
-			RETURNING true`,
-			contactID, in.Kind, note, in.OccurredAt, by).Scan(&inserted); err != nil {
+			RETURNING id::text`,
+			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx)).Scan(&out.ID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				// Already on file. The caller's claim stands, and nothing was
-				// written twice — so there is nothing to audit either.
-				return nil
+				// Already on file. Nothing was written twice, so there is
+				// nothing to audit, and the answer is the standing row.
+				return standingExchange(ctx, tx, contactID, &out)
 			}
 			return fmt.Errorf("consent: recording the exchange: %w", err)
 		}
@@ -284,6 +292,81 @@ func (s *Store) RecordQualifyingEvent(
 		return QualifyingEvent{}, err
 	}
 	return out, nil
+}
+
+// standingExchange fills out with the row a retried record matched, retracted
+// or not.
+func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *QualifyingEvent) error {
+	if err := tx.QueryRow(ctx, `
+		SELECT id::text, asks_for_quote, retracted_at IS NOT NULL FROM consent_qualifying_event
+		 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4
+		 ORDER BY created_at LIMIT 1`, contactID, out.Kind, out.Note, out.OccurredAt).
+		Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
+		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
+	}
+	return nil
+}
+
+// RetractQualifyingEvent withdraws an exchange recorded by hand. The row stays
+// as the record of what was said and when it was taken back; no send and no
+// verdict reads it any more.
+//
+// Gated like recording, because it is the same statement taken back. A derived exchange is not retracted here: it stands on a record the
+// product holds, and archiving that record is what ends it.
+func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.ContactID, eventID ids.UUID) error {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.HoldWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+			return err
+		}
+		var kind string
+		var occurred time.Time
+		err := tx.QueryRow(ctx, `
+			UPDATE consent_qualifying_event
+			   SET retracted_at = now(), retracted_by = $3
+			 WHERE id = $1 AND contact_id = $2 AND kind = ANY($4::text[]) AND retracted_at IS NULL
+			RETURNING kind, occurred_at`, eventID, contactID, by, handRecordedKindList()).Scan(&kind, &occurred)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("consent: withdrawing the exchange: %w", err)
+		}
+		// Audit-only, as recording is: the public-event catalog has no type for
+		// a lawful basis, and the trail answers who withdrew what.
+		_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
+			"qualifying_event_retracted": kind,
+			fieldOccurredAt:              occurred.UTC().Format(time.RFC3339),
+		})
+		return err
+	})
+}
+
+// handRecordedKindList is handRecordedKinds as a statement argument.
+func handRecordedKindList() []string {
+	out := make([]string, 0, len(handRecordedKinds))
+	for kind := range handRecordedKinds {
+		out = append(out, kind)
+	}
+	return out
+}
+
+// handRecordedSource is the source column of a hand-recorded exchange. An agent's
+// row says so, because this row is the legal evidence and an agent was not there.
+func handRecordedSource(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return sourceKindAgent
+	}
+	return sourceKindHuman
 }
 
 // InvalidQualifyingEventError refuses a claim the record could not stand

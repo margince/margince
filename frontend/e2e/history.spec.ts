@@ -1,6 +1,6 @@
 import { expect, type Locator, test } from "@playwright/test";
+import { quarterSales } from "../src/features/analytics/analytics.overview.scenariodata";
 import { de } from "../src/i18n/de";
-import { reportingStoryEvaluation } from "../src/testing/reporting.fixtures";
 import { brandt } from "./mockapi/fixtures";
 import { page as companyPage } from "./mockapi/server";
 import { mockApi } from "./seed";
@@ -219,7 +219,11 @@ test("a section is an address, and Back steps between sections", async ({
     .getByRole("group", { name: "Analytics-Bereiche" })
     .getByRole("button", { name: "Pipeline", exact: true })
     .click();
-  await expect(page).toHaveURL(/#\/analytics\/pipeline$/);
+  await expect(page).toHaveURL(/#\/analytics\/pipeline\?/);
+  const question = new URLSearchParams(page.url().split("?")[1]);
+  expect(question.get("period")).toBe("this_quarter");
+  expect(question.get("scope")).toBe("workspace");
+  expect(question.get("pipeline")).toBe("pl");
 
   await page.goBack();
   await expect(page).toHaveURL(/#\/analytics$/);
@@ -241,30 +245,15 @@ test("Back from Forecast returns to Sales review's question, place and focused c
   await page.setViewportSize({ width: 1280, height: 360 });
   await page.route(/\/v1\/analytics\/evaluate/, (route) =>
     route.fulfill({
-      json: {
-        ...reportingStoryEvaluation,
-        metrics: [
-          ...reportingStoryEvaluation.metrics,
-          {
-            id: "forecast_landing",
-            version: "1",
-            unit: "EUR",
-            value: 76_000_000,
-            coverage: { status: "ok", withheld: false },
-            evidence: { metric: "forecast_landing", context_id: "interval" },
-          },
-        ],
-      },
+      json: quarterSales(),
     }),
   );
   await page.goto("/#/analytics/overview?overview=sales", {
     waitUntil: "networkidle",
   });
   const door = page
-    .locator("section.stat-card", {
-      hasText: de["forecast.landing"],
-    })
-    .locator("a.stat-card-open");
+    .getByRole("link", { name: de["stat.forecast"], exact: true })
+    .first();
   await door.scrollIntoViewIfNeeded();
   const before = await scrolledBy(door);
   const overview = page.url();

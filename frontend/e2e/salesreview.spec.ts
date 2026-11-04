@@ -1,43 +1,15 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { quarterSales } from "../src/features/analytics/analytics.overview.scenariodata";
 import { de } from "../src/i18n/de";
 import { meFixture } from "../src/testing/mefixture";
-import {
-  reportingStoryCatalog,
-  reportingStoryEvaluation,
-} from "../src/testing/reporting.fixtures";
+import { reportingStoryCatalog } from "../src/testing/reporting.fixtures";
 import { mockApi } from "./seed";
 
 // Compact readings precede a substantial outlook on desktop and phone.
 const VIEWPORT = { width: 1366, height: 768 };
 
 // A quarter with a target it is short of, built from the story evaluation.
-const QUARTER = {
-  ...reportingStoryEvaluation,
-  metrics: [
-    ...reportingStoryEvaluation.metrics.map((metric) =>
-      metric.id === "bookings_won" ? { ...metric, value: 42_000_000 } : metric,
-    ),
-    {
-      id: "forecast_landing" as const,
-      version: "1",
-      unit: "EUR",
-      value: 76_000_000,
-      coverage: { status: "ok" as const, withheld: false },
-      evidence: { metric: "forecast_landing" as const, context_id: "interval" },
-      target_comparison: {
-        status: "compared" as const,
-        target_metric: "bookings_won" as const,
-        target: 80_000_000,
-        landing: 76_000_000,
-        won: 42_000_000,
-        gap: 4_000_000,
-        remaining: 38_000_000,
-        open_pipeline: 136_000_000,
-        coverage: 3.58,
-      },
-    },
-  ],
-};
+const QUARTER = quarterSales();
 
 const finding = (id: string, type: string, deal: string, label: string) => ({
   id,
@@ -139,7 +111,14 @@ async function openSalesReview(page: Page, evaluation: unknown = QUARTER) {
             },
           ],
         ],
-        cells: [],
+        cells: [
+          {
+            id: "metric:bookings_won",
+            label: "Sales won",
+            value: "420000 EUR",
+            display: "420.000 EUR",
+          },
+        ],
         decisions: 0,
       },
     }),
@@ -174,7 +153,7 @@ async function inFirstScreen(what: string, element: Locator) {
   );
 }
 
-test("four compact readings precede a readable outlook at 1366×768", async ({
+test("four quarter readings precede a readable outlook at 1366×768", async ({
   page,
 }, testInfo) => {
   await openSalesReview(page);

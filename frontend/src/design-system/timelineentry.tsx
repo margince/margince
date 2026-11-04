@@ -423,6 +423,7 @@ const AUTOMATIC_LABEL: Record<AutomaticKind, MessageKey> = {
   calendar: "timeline.automatic.calendar",
   sending_system: "timeline.automatic.sending_system",
   product: "timeline.automatic.product",
+  bulk: "timeline.automatic.bulk",
 };
 
 export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {

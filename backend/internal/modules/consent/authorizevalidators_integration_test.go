@@ -638,8 +638,8 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	}
 }
 
-// A VOIDED INVOICE AUTHORIZES NOTHING. Neither does an archived one, an
-// archived offer, a draft one, or a quote on a deal that closed.
+// A voided invoice authorizes nothing, and neither does an archived one. The
+// offer cases are in quoteondeal_integration_test.go.
 //
 // Mutation: drop any one of the added clauses and its own row here fails.
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {

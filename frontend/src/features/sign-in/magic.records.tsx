@@ -22,7 +22,7 @@ import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
@@ -154,7 +154,7 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
         <RecordActions record={record} />
       </div>
       <time className="t-caption" dateTime={record.occurred_at}>
-        {formatDateTime(record.occurred_at, locale, viewerZone())}
+        {formatDateTime(record.occurred_at, locale, browserZone())}
       </time>
       <ChangeList changes={record.changes} />
     </li>

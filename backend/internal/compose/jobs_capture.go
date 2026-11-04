@@ -320,6 +320,13 @@ func (w *captureSyncWorker) Work(ctx context.Context, job *river.Job[CaptureSync
 		return jobs.FaultContext(ctx, err)
 	}
 	if err := w.registry.SyncOnce(wsCtx, conn); err != nil {
+		// A member whose role cannot capture is a setting an admin chose, not
+		// a fault, and it repeats on every tick until they change it.
+		if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
+			w.log.InfoContext(ctx, "capture connection sync refused for the member's role",
+				"connection", job.Args.ConnectionID, "provider", job.Args.Provider)
+			return nil
+		}
 		w.log.WarnContext(ctx, "capture connection sync failed", "connection", job.Args.ConnectionID,
 			"provider", job.Args.Provider, "err", err, rateLimitAttr(err))
 	}
