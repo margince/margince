@@ -53,7 +53,7 @@ func RenderMeetingBodyTx(ctx context.Context, tx pgx.Tx, r MeetingBodyRender) (b
 		return false, fmt.Errorf("activities: reading a meeting to render its description: %w", err)
 	}
 	var language *string
-	if detected := string(textlang.DetectFirst(r.Body, deref(subject))); detected != "" {
+	if detected := string(textlang.OfMessage(r.Body, deref(subject))); detected != "" {
 		language = &detected
 	}
 	tag, err := tx.Exec(ctx, `

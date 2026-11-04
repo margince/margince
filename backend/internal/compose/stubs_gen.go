@@ -115,6 +115,10 @@ func (stubs) UndoActivityProjectFiling(w nethttp.ResponseWriter, r *nethttp.Requ
 	httperr.NotImplemented(w, r, "UndoActivityProjectFiling")
 }
 
+func (stubs) RenderActivityForReader(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RenderActivityForReader")
+}
+
 func (stubs) RelinkActivity(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RelinkActivityParams) {
 	httperr.NotImplemented(w, r, "RelinkActivity")
 }
@@ -3117,6 +3121,10 @@ func (stubs) CreateProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.
 
 func (stubs) CorrectProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, assessmentId openapi_types.UUID, params crmcontracts.CorrectProjectHealthAssessmentParams) {
 	httperr.NotImplemented(w, r, "CorrectProjectHealthAssessment")
+}
+
+func (stubs) UndoProjectHealthAssessment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, assessmentId openapi_types.UUID, params crmcontracts.UndoProjectHealthAssessmentParams) {
+	httperr.NotImplemented(w, r, "UndoProjectHealthAssessment")
 }
 
 func (stubs) ListProjectStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

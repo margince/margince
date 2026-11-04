@@ -151,6 +151,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`pipeline.updated`](#pipelineupdated) | pipeline | 1 |
 | [`project.archived`](#projectarchived) | project | 1 |
 | [`project.created`](#projectcreated) | project | 1 |
+| [`project.health_assessed`](#projecthealth_assessed) | project | 1 |
 | [`project.phase_changed`](#projectphase_changed) | project | 1 |
 | [`project.updated`](#projectupdated) | project | 1 |
 | [`relationship_nudge.decided`](#relationship_nudgedecided) | contact | 1 |
@@ -1482,6 +1483,18 @@ Payload for project.created, a body of work was opened on a company.
 | `data.name` | string | yes | The project's name at creation. |
 | `data.owner_id` | string (uuid) | no |  |
 | `data.phase` | string | yes | Always `initiative`, a project is born at the head of the ladder. |
+
+### `project.health_assessed`
+
+Record: `project` · version 1
+
+Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user or the health job. The project row itself is not written, so no project.updated goes with it.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.assessment_id` | string (uuid) | yes | The appended reading. |
+| `data.source` | string | yes | human for a user, ai for the health job, undo for a user undoing an AI reading. |
+| `data.state` | string | yes | on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again. |
 
 ### `project.phase_changed`
 

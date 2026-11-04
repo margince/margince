@@ -7714,6 +7714,40 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /projects/{id}/health-assessments/{assessment_id}/undo:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: assessment_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Projects]
+      operationId: undoProjectHealthAssessment
+      security: [ { cookieAuth: [] } ]   # human session only — taking back an AI judgement is the owner's own act, never an agent's
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Undo a reading the health job wrote.
+      description: |
+        Appends a successor with source `undo` that supersedes the AI reading. The reading that
+        stood before it stands again; when there was none, the project reads as not judged. An
+        undo row never counts as the current reading, and it keeps the health job from judging
+        the project again until new activity is filed on it. Only a current AI reading can be
+        undone: a user's reading, an undo row and a reading already superseded are refused
+        with 409.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: The undo row.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProjectHealthAssessment' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /projects/{id}/stakeholders:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -9255,6 +9289,70 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/{id}/reader-rendering:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities, AI]
+      operationId: renderActivityForReader
+      # on-miss: text already in the reader's language, or past the limit, answers
+      # without a model call.
+      x-waits-on-model: on-miss
+      # Human-only: a reading aid for the member at the screen, paid from the
+      # workspace's model budget. An agent reads the original text through
+      # read_record and writes in any language itself.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: Show one note, mail or meeting in the reader's own language.
+      description: |
+        Writes what one note, email, meeting or call says in the reader's language, for that
+        reader alone. It is not a word-for-word translation: names, numbers, amounts, dates,
+        addresses, links, commitments and questions are kept exactly, and the phrasing is
+        what a native speaker of the target language would write. Nothing is stored: no
+        copy, no audit row and no event, and the AI call keeps no payload. The original stays
+        where it is, one click away in the client.
+
+        The target is `locale` when sent, else the language the reader chose for their seat,
+        else the installation's base language. A mail is rendered from its current message,
+        without the quoted history below it.
+
+        The source language is read from the text as it stands; the stored `language` label
+        decides only when the text cannot be placed. When the text is already in the target
+        language the answer is `unchanged: true` and the original text, with no model call.
+        That holds for a known source language equal to the target, and for an unknown one the
+        model judges to be in the target already.
+
+        Answers 404 for an activity the caller cannot read the content of: missing, outside
+        their scope, outside its audience, held under a retention obligation, archived, or of
+        a kind with no text (`task`, a row with neither subject nor body). The activity is read
+        again after the model answers, and one that stopped being readable or whose text or
+        version changed meanwhile answers 404 too. With no AI model it answers 409
+        `ai_not_configured`. Text past the limit the model can write back in one answer is 422
+        `too_long`, also when it is already in the target language. A model that was asked
+        and did not answer is 503 `assistant_unavailable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivityReaderRenderingRequest' }
+      responses:
+        '200':
+          description: The text in the reader's language, or the original marked unchanged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ActivityReaderRendering' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'The model was asked and did not answer (`code: assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /activities/{id}/pipeline:
     parameters:
@@ -14053,7 +14151,7 @@ paths:
       x-human-only-reason: pending
       summary: Count and sample what a filter would select, before it is saved (LVS-EXT-9).
       description: |
-        The match count and a bounded first page for a candidate filter tree —
+        The match count and one bounded page for a candidate filter tree —
         the filter a human is still editing, which nothing else in the contract
         can evaluate. The object list operations take flat scalar parameters and
         cannot express a tree; membership needs a stored list; and the filtered
@@ -14071,6 +14169,10 @@ paths:
         different numbers. `columns` and `rows` are the same projection the JSON
         filtered export writes for the same filter, so what you preview is what
         an export of it would contain.
+
+        Pages walk the matches in id order through `cursor` and `next_cursor`.
+        Every page applies the same row scope as the first, and carries the
+        same full `match_count`.
       requestBody:
         required: true
         content:
@@ -14078,7 +14180,7 @@ paths:
             schema: { $ref: '#/components/schemas/FilterPreviewRequest' }
       responses:
         '200':
-          description: The count and first page.
+          description: The count and one page.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/FilterPreview' }
@@ -39508,6 +39610,14 @@ components:
             How much of a mail's text Margince could decode. Absent when the content is
             withheld or the body was erased.
         thread_key: { type: [string, 'null'] }
+        language:
+          type: [string, 'null']
+          readOnly: true
+          enum: [de, en, vi, null]
+          description: |
+            The language the message is written in, as `Activity.language` records it. Null
+            when withheld, and when it could not be told. A client offers the reader's own
+            language beside a message in another one or in an unknown one.
         from:
           type: array
           items: { $ref: '#/components/schemas/EmailParty' }
@@ -42090,7 +42200,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system]
+      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
     NotificationDelivery:
       type: string
       description: |
@@ -51453,7 +51563,13 @@ components:
           description: >-
             When the judgement APPLIES, which is not when it was written: a lead catching up
             on Monday records Friday's reading, and the timeline shows it on Friday.
-        source: { type: string, readOnly: true, description: What recorded this assessment. }
+        source:
+          type: string
+          readOnly: true
+          description: >-
+            What recorded this assessment: `human` for a user, `ai` for the health job, which
+            judges from the project's quiet and overdue state and says why in `note`, and `undo`
+            for a user undoing an AI reading. An `undo` row never counts as the current reading.
         source_author:
           type: string
           readOnly: true
@@ -53086,9 +53202,10 @@ components:
           enum: [de, en, vi, null]
           description: >-
             What language this message is written in, read from its own text when it
-            was captured. Null on a message whose text was too short to tell, on
-            anything hand-logged, and on every row captured before this was recorded —
-            all of which mean "not known", never "not any of these".
+            was captured, or when a note, meeting or call was logged or its text edited.
+            Null on a message whose text was too short to tell, on a hand-logged email or
+            task, and on every row written before this was recorded — all of which mean
+            "not known", never "not any of these".
 
             A detector's observation, not a declaration by its author, and it describes
             the message rather than the contact: the same contact writes in two languages
@@ -57280,8 +57397,14 @@ components:
           maximum: 100
           default: 25
           description: |
-            How many rows to sample. The COUNT is unaffected by this — it is the
-            full match count for the caller, not the size of the page.
+            The page size. The COUNT is unaffected by this — it is the full match
+            count for the caller on every page, not the size of the page.
+        cursor:
+          type: string
+          maxLength: 2048
+          description: |
+            Opaque keyset cursor: a previous answer's `next_cursor`, to read the
+            page after it. Absent reads the first page.
 
     FilterPreview:
       type: object
@@ -57308,7 +57431,8 @@ components:
         rows:
           type: array
           description: |
-            Up to `limit` matching rows as column→value maps, ordered by id.
+            Up to `limit` matching rows as column→value maps, ordered by id,
+            after the request's `cursor` when it names one.
             Deliberately the export's projection rather than a shape invented for
             this screen: a preview that showed different columns than the export
             of the same filter would be a preview of something else.
@@ -57318,9 +57442,53 @@ components:
         truncated:
           type: boolean
           description: |
-            Whether `match_count` exceeds the rows returned — so a caller can say
-            "showing 25 of 812" without comparing lengths and guessing.
+            Whether more rows follow this page. It is true exactly when
+            `next_cursor` is set.
+        next_cursor:
+          type: [string, 'null']
+          description: Opaque cursor for the next page, or null if none.
 
+    ActivityReaderRenderingRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        locale:
+          type: string
+          enum: [en, de, vi]
+          description: |
+            The language to show the text in, normally the reader's interface language.
+            Absent means the language the reader chose for their seat, else the
+            installation's base language.
+    ActivityReaderRendering:
+      type: object
+      description: |
+        One activity's text in one reader's language, written for this reader and stored
+        nowhere.
+      required: [activity_id, target_language, unchanged, generated_at]
+      properties:
+        activity_id: { type: string, format: uuid }
+        source_language:
+          type: [string, 'null']
+          enum: [de, en, vi, null]
+          description: The language the original is written in, null when it could not be told.
+        target_language:
+          type: string
+          enum: [de, en, vi]
+        subject:
+          type: [string, 'null']
+          description: The subject in the target language, null when the activity has none.
+        body:
+          type: [string, 'null']
+          description: The text in the target language, null when the activity has none.
+        unchanged:
+          type: boolean
+          description: |
+            True when the original is already in the target language. `subject` and `body`
+            are then the original text.
+        model_used:
+          type: string
+          description: The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
+        generated_at: { type: string, format: date-time }
     FilterProposalRequest:
       type: object
       description: A list described in plain words, to be turned into filter clauses.
@@ -57339,7 +57507,8 @@ components:
           enum: [en, de, vi]
           description: |
             The reader's interface language, which the reasons in `unsupported` are
-            written in. Absent means the installation's base language.
+            written in. Absent means the language the reader chose for their seat, else the
+            installation's base language.
 
     FilterProposal:
       type: object
@@ -64336,6 +64505,7 @@ components:
         - owed_verdict
         - propose_roles
         - rate_extract
+        - reader_rendering
         - report_interpret
         - report_setup
         - request_settlement
@@ -64361,7 +64531,8 @@ components:
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
-         request_settlement, account_scan, tag_suggest, report_setup, report_interpret]
+         request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
+         reader_rendering]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
