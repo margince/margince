@@ -72,7 +72,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-48 columns · primary key `(id)` · referenced by 29 foreign keys
+47 columns · primary key `(id)` · referenced by 29 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -90,7 +90,6 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `expected_arr_minor` | `bigint` |  | Expected annual recurring revenue in minor units of `currency`. |
 | `expected_close_date` | `date` |  | An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run. |
-| `forecast_category` | `text` |  | One of `commit`, `best_case`, `pipeline`, `omitted`. |
 | `fx_rate_date` | `date` |  |  |
 | `fx_rate_to_base` | `numeric(20,10)` |  | Native→base, frozen at close (null while open). |
 | `last_activity_at` | `timestamp with time zone` |  | The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. |
@@ -150,7 +149,6 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_description_bounded`: `CHECK (((description IS NULL) OR (length(description) <= 20000)))`
 - `deal_expected_arr_minor_js_safe`: `CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))`
 - `deal_expected_arr_nonnegative`: `CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))`
-- `deal_forecast_category_check`: `CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit', 'best_case', 'pipeline', 'omitted']))))`
 - `deal_lost_reason`: `CHECK (((status <> 'lost') OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL)))`
 - `deal_lost_reason_basis_check`: `CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded', 'mapped'])))))`
 - `deal_lost_reason_code_only_when_lost`: `CHECK (((lost_reason_code IS NULL) OR (status = 'lost')))`

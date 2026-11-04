@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4220 |
+| Columns | 4219 |
 | Foreign keys | 584 |
 | Owning areas | 38 |
 
@@ -43,7 +43,7 @@ Ranked by how many foreign keys point at them.
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 35 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 71 | 43 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 48 | 29 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 47 | 29 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 18 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 12 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 9 |
@@ -277,7 +277,7 @@ erDiagram
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
-| [`deal`](deals.md#deal) | deals | 48 | 29 |
+| [`deal`](deals.md#deal) | deals | 47 | 29 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
 | [`deal_authorship_sweep_cursor`](deals.md#deal_authorship_sweep_cursor) | deals | 3 | 0 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |

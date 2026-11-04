@@ -3843,7 +3843,6 @@ public.deal.deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id)
 public.deal.deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000)))
 public.deal.deal_expected_arr_minor_js_safe CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))
 public.deal.deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))
-public.deal.deal_forecast_category_check CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit'::text, 'best_case'::text, 'pipeline'::text, 'omitted'::text]))))
 public.deal.deal_last_activity CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()
 public.deal.deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL)))
 public.deal.deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded'::text, 'mapped'::text])))))
@@ -3877,7 +3876,6 @@ public.deal.description text gen=- def=-
 public.deal.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal.expected_arr_minor bigint gen=- def=-
 public.deal.expected_close_date date gen=- def=-
-public.deal.forecast_category text gen=- def=-
 public.deal.fx_rate_date date gen=- def=-
 public.deal.fx_rate_to_base numeric(20,10) gen=- def=-
 public.deal.home_read_fence_deal_owner CREATE TRIGGER home_read_fence_deal_owner AFTER UPDATE ON public.deal FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
