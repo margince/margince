@@ -316,7 +316,7 @@ function namesTheMapping(
  * A zone lookup wearing a formatter's clothes.
  *
  * `Intl.DateTimeFormat().resolvedOptions()` constructs a formatter to ask it
- * which zone the runtime is in, and renders nothing. `viewerZone()` owns that
+ * which zone the runtime is in, and renders nothing. `browserZone()` owns that
  * question and `format/zone-by-purpose.test.ts` already gates it, so reporting
  * it here would put one rule in two homes and hand this gate a copy of that
  * one's forty exemptions.

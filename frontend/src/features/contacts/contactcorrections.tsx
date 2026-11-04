@@ -12,7 +12,7 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   recordProfileFieldVerdict,
   type ShownValue,
@@ -113,7 +113,7 @@ function EnrichedField({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(field.value);
   // WHAT THE EDITOR OPENED ON, held apart from `field`.
@@ -201,7 +201,7 @@ function EnrichedField({
             source: sourcePhrase(field.source, t),
             // The record's zone: when the machine read this is a fact about the
             // record, and the correction beside it is judged against that day.
-            when: formatDate(field.captured_at, locale, recordZone),
+            when: formatDate(field.captured_at, locale, readerZone),
           })}{" "}
           — “{field.evidence_snippet}”
         </p>

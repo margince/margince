@@ -13,8 +13,8 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { useUrlParams } from "../../lib/urlstate";
 import { useAnalyticsContext } from "./analytics.context";
 import { OVERVIEW_DIAL } from "./analytics.overview.choice";
@@ -43,7 +43,7 @@ export function useSalesInitiatives(enabled = true) {
 export function InitiativeReports() {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const [params] = useUrlParams();
   const catalog = useReportingCatalog();
   const context = useAnalyticsContext();
@@ -128,7 +128,7 @@ function initiativeSummary(
   initiative: SalesInitiative,
   t: ReturnType<typeof useT>,
   locale: ReturnType<typeof useLocale>["locale"],
-  zone: ReturnType<typeof useRecordZone>,
+  zone: ReturnType<typeof useCompanyZone>,
   unit: string | undefined,
   currency: string | undefined,
 ): string {

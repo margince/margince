@@ -11,7 +11,7 @@ import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   EvidenceSources,
   FoundMove,
@@ -212,7 +212,7 @@ export function useSuggestionsBody({
 } {
   const { locale } = useLocale();
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const client = useQueryClient();
   const notNow = useCompanySetAside(companyId);
   const write = useMutation({
@@ -305,7 +305,7 @@ export function useSuggestionsBody({
               suggestion.due_at,
               suggestion.due_precision ?? "instant",
               locale,
-              recordZone,
+              readerZone,
             )
           : undefined
       }

@@ -82,7 +82,9 @@ func (h Handlers) ListAssignableRoles(w http.ResponseWriter, r *http.Request) {
 	}
 	roles := make([]crmcontracts.AssignableRole, 0, len(rows))
 	for _, row := range rows {
-		roles = append(roles, crmcontracts.AssignableRole{Key: row.Key, Name: row.Name, IsSystem: row.IsSystem})
+		roles = append(roles, crmcontracts.AssignableRole{
+			Key: row.Key, Name: row.Name, IsSystem: row.IsSystem, CapturesMail: row.CapturesMail,
+		})
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssignableRoleDirectory{Roles: roles})

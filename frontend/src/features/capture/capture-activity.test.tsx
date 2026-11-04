@@ -16,7 +16,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -433,7 +433,7 @@ describe("capture activity", () => {
     // what the component renders in, and a test that pinned one would pass in
     // CI and fail on a laptop east of UTC.
     expect(note).toHaveTextContent(
-      formatDateTime("2026-08-15T22:21:00Z", "en", viewerZone()),
+      formatDateTime("2026-08-15T22:21:00Z", "en", browserZone()),
     );
   });
 

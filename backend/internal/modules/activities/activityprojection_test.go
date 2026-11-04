@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // epoch anchors the timestamp sentinels. Each column gets epoch plus its own
@@ -547,6 +548,8 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 		{"an invitation the reader may not open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, false, ""},
 		{"a notice the reader may open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, true, crmcontracts.ActivityAutomaticKindSendingSystem},
 		{"a notice the reader may not open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, false, ""},
+		{"a newsletter the reader may open", activityScan{kind: "email", origin: "human", bulkMailAttested: true}, true, crmcontracts.ActivityAutomaticKindBulk},
+		{"a newsletter the reader may not open", activityScan{kind: "email", origin: "human", bulkMailAttested: true}, false, ""},
 		{"the product's own mail, withheld", activityScan{kind: "email", origin: OriginSystemNotice}, false, crmcontracts.ActivityAutomaticKindProduct},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -562,6 +565,17 @@ func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
 				t.Fatalf("automatic_kind = %v, want %s", got, tc.want)
 			}
 		})
+	}
+}
+
+// automaticKindToWire converts without a check, so a kind the contract does
+// not list would reach a client as a value it cannot name.
+func TestEveryAutomaticKindIsAContractValue(t *testing.T) {
+	t.Parallel()
+	for _, kind := range relstrength.AutomaticKinds() {
+		if !crmcontracts.ActivityAutomaticKind(kind).Valid() {
+			t.Errorf("relstrength names %q, which automatic_kind in crm.yaml does not list", kind)
+		}
 	}
 }
 

@@ -5,8 +5,8 @@ import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
-import { useRecordZone } from "../../../lib/recordzone";
 import { shippedLabel } from "../../../lib/shippedlabels";
+import { useViewerZone } from "../../../lib/viewerzone";
 import {
   type OutcomeReview,
   templateForOutcome,
@@ -141,7 +141,7 @@ function ReviewCard({
 }: Readonly<{ review: OutcomeReview; earlier?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <div className="outcome-review">
       <div className="outcome-review-head">
@@ -153,7 +153,7 @@ function ReviewCard({
           )}
         </Badge>
         <span className="t-caption">
-          {formatDate(review.created_at, locale, recordZone)}
+          {formatDate(review.created_at, locale, readerZone)}
         </span>
         {earlier && (
           <span className="t-caption">{t("outcomeReview.earlierMark")}</span>

@@ -19,7 +19,6 @@ import {
   problemMessageOf,
   throwProblem,
 } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import type { Route } from "../lib/router";
 import {
   bestIdentifierMatch,
@@ -28,6 +27,7 @@ import {
   searchHitDestination,
   searchHitHasCard,
 } from "../lib/searchkinds";
+import { useViewerZone } from "../lib/viewerzone";
 import type { Command } from "./palette";
 
 type SearchResult = components["schemas"]["SearchResult"];
@@ -78,7 +78,7 @@ type SearchArm = Readonly<{
 export function useSearchCommands(query: string): SearchArm {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const typed = query.trim();
   const settled = useSettledValue(typed);
   // The typed floor hides a cleared box's hits at once (its fetch aborts a

@@ -15,8 +15,8 @@ import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { AssessmentPanel } from "./analytics.assessment";
 import { type AnalyticsScope, scopeKey } from "./analytics.context";
@@ -227,7 +227,7 @@ function TeamBody({
   const scope = handoffScope(team);
   const summary = useTeamSummary(scope, true);
   // The company's clock until the evaluation names the reporting zone.
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const zone = query.data?.context.timezone ?? recordZone;
   const readings = (
     handoffWorkflow ? HANDOFF_READINGS : QUALIFICATION_READINGS

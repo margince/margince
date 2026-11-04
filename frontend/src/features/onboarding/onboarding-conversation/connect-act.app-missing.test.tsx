@@ -321,3 +321,46 @@ describe("an administrator", () => {
     expect(assign).not.toHaveBeenCalled();
   });
 });
+
+describe("a role or seat that cannot capture", () => {
+  it.each([
+    {
+      missing: "contact" as const,
+      says: "Your role cannot create contacts, so Margince cannot capture your mail. Ask an admin to change your role.",
+    },
+    {
+      missing: "seat" as const,
+      says: "Your seat is read-only, so Margince cannot capture your mail. Ask an admin for a full seat.",
+    },
+  ])(
+    "offers no account when $missing is missing, names it, and keeps the way on",
+    async ({ missing, says }) => {
+      const refused = (["gmail", "graph", "imap"] as const).map((provider) => ({
+        provider,
+        reason: "role_cannot_capture" as const,
+      }));
+      stubWithSession(
+        {
+          "GET /connectors": () =>
+            jsonResponse({
+              data: [],
+              providers: refused,
+              seat_capture: {
+                allowed: false,
+                reason: "role_cannot_capture",
+                missing,
+              },
+            }),
+        },
+        {},
+      );
+      renderAct();
+
+      expect(await screen.findByText(says)).toBeInTheDocument();
+      expect(screen.queryByRole("radio")).toBeNull();
+      expect(
+        await screen.findByRole("button", { name: "Skip for now" }),
+      ).toBeInTheDocument();
+    },
+  );
+});

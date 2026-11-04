@@ -15,7 +15,6 @@ import {
   useT,
 } from "../../i18n";
 import { useSourceOpener } from "../../lib/opensource";
-import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
@@ -23,6 +22,7 @@ import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
 import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
 // The one thing next on a contact, as the bar at the top of its Overview. It is the
@@ -58,7 +58,7 @@ export function ContactToday({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const move = moment && actionableMoment(moment) ? moment : undefined;
   const named = recordsTheMoveNames(move);
   const tasks = (view.next_steps?.data ?? []).filter(
@@ -227,7 +227,7 @@ function TaskBar({
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <RecordNextBar
       title={task.subject ?? t("task.untitled")}

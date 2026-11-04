@@ -15,7 +15,7 @@ import {
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type OpenReceipt,
   SentenceList,
@@ -68,7 +68,7 @@ export function AskSection({
   const t = useT();
   const { locale } = useLocale();
   const [projectId, setProjectId] = useState("");
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const live = liveProjects(projects);
   useSoleProjectDefault(live, projectId, setProjectId);
   useClearVanishedChoice(live, projectId, setProjectId);
@@ -164,7 +164,7 @@ export function AskSection({
             <WrittenBy by={readable.generated_by} />
             <span>
               {t("co.brief.generatedAt", {
-                when: formatDate(readable.generated_at, locale, recordZone),
+                when: formatDate(readable.generated_at, locale, readerZone),
               })}
             </span>
           </p>

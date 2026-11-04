@@ -3670,6 +3670,7 @@ export const en = {
   "timeline.automatic.calendar": "Calendar invitation",
   "timeline.automatic.sending_system": "Sent by a system",
   "timeline.automatic.product": "Sent by Margince",
+  "timeline.automatic.bulk": "Sent to a mailing list",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
   "timeline.group.expand": "Open",
@@ -11113,8 +11114,20 @@ export const en = {
     "The provider’s change history expired. The next sync restarts from a new point.",
   "connectors.errInternal":
     "An internal error occurred. Capture stopped to avoid partial data.",
+  "connectors.errForbidden":
+    "Your role no longer lets Margince capture your mail, so capture is paused. It starts again by itself once an admin changes your role.",
   "connectors.errUnknown":
     "Capture failed for an unclassified reason. Retrying automatically.",
+  "connectors.roleCannotCapture":
+    "Your role does not let Margince capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.activity":
+    "Your role cannot create activities, so Margince cannot capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.contact":
+    "Your role cannot create contacts, so Margince cannot capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.lead":
+    "Your role cannot create leads, so Margince cannot capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.seat":
+    "Your seat is read-only, so Margince cannot capture your mail. Ask an admin for a full seat.",
 
   // The OAuth return outcome (Task 2): the callback lands back on
   // #/settings/connections/{outcome} — a dismissible inline note driven by
@@ -11131,6 +11144,8 @@ export const en = {
     "The provider declined the connection. Accept every requested permission, then connect again.",
   "connectors.oauthMisconfigured":
     "This installation cannot complete the connection because the provider’s API is not enabled. An administrator must enable it; the server log names the API.",
+  "connectors.oauthRoleCannotCapture":
+    "Your role does not let Margince capture your mail, so nothing was connected. Ask an admin to change your role.",
   "connectors.oauthBadClient":
     "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and apps; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
@@ -12059,9 +12074,9 @@ export const en = {
   "setup.baseLanguage": "Base language",
   "setup.baseLanguageHint":
     "The language AI writes in when the whole team reads the text. Each person chooses their own display language, and customer replies follow the language of the thread.",
-  "setup.timezone": "Reporting timezone",
+  "setup.timezone": "Company time zone",
   "setup.timezoneHint":
-    "IANA timezone name. All reporting periods are computed in it. Guessed from this browser; change it if the team works elsewhere.",
+    "IANA time zone name. Report periods, scheduled jobs and documents sent out use it. Guessed from this browser; change it if the company works elsewhere. Everyone sets their own time zone for the times they see.",
   "setup.adminName": "Your name",
   "setup.adminEmail": "Your email",
   "setup.adminPassword": "Password",
@@ -13605,6 +13620,8 @@ export const en = {
   "roles.system": "Built-in",
   "roles.archived": "Archived",
   "roles.custom": "Custom",
+  "roles.cannotCapture":
+    "Members with this role cannot connect a mailbox, and mailboxes already connected stop capturing.",
   "roles.members_one": "{count} member",
   "roles.members_other": "{count} members",
   "roles.empty": "No roles to show.",
@@ -13848,6 +13865,10 @@ export const en = {
     "This is the only admin. Make another member an admin first.",
   "users.role.own": "Another admin changes your role.",
   "users.role.outside": "This role is outside your access.",
+  "users.role.stopsCapture_one":
+    "Their {count} connected mailbox or calendar will stop capturing.",
+  "users.role.stopsCapture_other":
+    "Their {count} connected mailboxes and calendars will stop capturing.",
   "users.role.withheld": "Your role cannot change member roles.",
   "users.teamMemberCount_one": "{count} member",
   "users.teamMemberCount_other": "{count} members",
@@ -14322,9 +14343,9 @@ export const en = {
   "installationSettings.timeFormat.locale": "Use interface language",
   "installationSettings.timeFormat.24h": "24-hour · 17:30",
   "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
-  "installationSettings.timezone": "Reporting timezone",
+  "installationSettings.timezone": "Company time zone",
   "installationSettings.timezoneHint":
-    "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",
+    "IANA name, for example Europe/Berlin. Report periods, scheduled jobs and documents sent out use it for the whole company. Everyone sees times in their own time zone, set under Settings → Account.",
   "installationSettings.fiscalYearStart": "Fiscal year starts",
   "installationSettings.fiscalYearStartHint":
     "Reports group by this year and quarter. Changing it relabels every report. A saved period such as 2026 keeps the months it covered.",
@@ -19257,6 +19278,7 @@ export const en = {
   "captureConcern.backfill": "History import failed",
   "captureConcern.stalled": "Sync has stopped",
   "captureConcern.silent": "No recent mail delivered",
+  "captureConcern.roleCannotCapture": "Role cannot capture mail",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Since {since}",
   "captureConcern.more_one": "{count} more connection needs attention",

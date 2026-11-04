@@ -29,6 +29,8 @@ import (
 
 func TestConnectRefusesAGrantFromADeactivatedHuman(t *testing.T) {
 	e := integration.SetupSearch(t)
+	seedShippedRoles(t, e)
+	holdOnlyRole(t, e, e.Rep1, "rep")
 	// The production resolver, not the always-live harness fake: liveness is
 	// exactly what is under test.
 	registry := capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), identity.NewService(e.Pool), newTestKeyvault(t, e))

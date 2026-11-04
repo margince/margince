@@ -2,8 +2,10 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { UTC_ZONE } from "../../format/timezone";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,6 +13,9 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ContactCommitmentsCard } from "./contactcards";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 type Contact360 = components["schemas"]["Contact360"];
 type ConversationClaim = components["schemas"]["ConversationClaim"];

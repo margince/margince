@@ -2,7 +2,7 @@
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { browserZone, dayInZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import { readStored, removeStored, STORAGE_KEYS } from "../../lib/storage";
 import { digest, readingsDay } from "../../testing/brief.fixtures";
@@ -15,7 +15,7 @@ import { BriefIntro, GREETING_MS, LEAVE_MS, SHOW_MS } from "./brief.intro";
 
 // Eight in the morning on the viewer's own clock, which the greeting reads.
 const NOW = new Date(2026, 8, 3, 8, 0, 0);
-const TODAY = dayInZone(NOW.getTime(), viewerZone());
+const TODAY = dayInZone(NOW.getTime(), browserZone());
 const SKIP = en["brief.intro.skip"];
 // The curtain is named by everything it says, the way out included.
 const curtain = { name: (name: string) => name.includes(SKIP) };

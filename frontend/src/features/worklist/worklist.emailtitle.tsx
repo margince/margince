@@ -21,8 +21,8 @@
 
 import { EmailEntry } from "../../design-system/emailentry";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { viewerZone } from "../../format/timezone";
 import { useLocale } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { WorklistItem } from "./worklist.queries";
 
 /**
@@ -49,6 +49,7 @@ export function WaitingEmailLine({
    */
   onOpen: (activityId: string) => void;
 }>) {
+  const readerZone = useViewerZone();
   const { locale } = useLocale();
   const summary = item.email_summary;
   if (!summary) {
@@ -61,7 +62,7 @@ export function WaitingEmailLine({
         summary.occurred_at,
         summary.occurred_precision,
         locale,
-        viewerZone(),
+        readerZone,
       )}
       onOpen={() => onOpen(summary.activity_id)}
     />
