@@ -3670,6 +3670,7 @@ export const en = {
   "timeline.automatic.calendar": "Calendar invitation",
   "timeline.automatic.sending_system": "Sent by a system",
   "timeline.automatic.product": "Sent by Margince",
+  "timeline.automatic.bulk": "Sent to a mailing list",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
   "timeline.group.expand": "Open",

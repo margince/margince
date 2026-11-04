@@ -246,6 +246,7 @@ func (e AccountDraftReasonKind) Valid() bool {
 
 // Defines values for ActivityAutomaticKind.
 const (
+	ActivityAutomaticKindBulk          ActivityAutomaticKind = "bulk"
 	ActivityAutomaticKindCalendar      ActivityAutomaticKind = "calendar"
 	ActivityAutomaticKindProduct       ActivityAutomaticKind = "product"
 	ActivityAutomaticKindSendingSystem ActivityAutomaticKind = "sending_system"
@@ -254,6 +255,8 @@ const (
 // Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
 func (e ActivityAutomaticKind) Valid() bool {
 	switch e {
+	case ActivityAutomaticKindBulk:
+		return true
 	case ActivityAutomaticKindCalendar:
 		return true
 	case ActivityAutomaticKindProduct:
@@ -29241,7 +29244,7 @@ type Activity struct {
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
 
-	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
 
 	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
@@ -29391,7 +29394,7 @@ type Activity struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 type ActivityAutomaticKind string
 
 // ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.

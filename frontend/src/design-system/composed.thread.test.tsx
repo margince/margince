@@ -59,6 +59,36 @@ describe("a thread's card", () => {
     expect(screen.getByText("Calendar invitation")).toBeTruthy();
   });
 
+  it("marks a newsletter and leaves it out of either side's count", () => {
+    const reply = entry({
+      id: "in1",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+    });
+    const newsletter = entry({
+      id: "news",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+      automaticKind: "bulk",
+    });
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            newsletter,
+            reply,
+            entry({ id: "out1", direction: "outbound" }),
+          ]),
+        ]}
+      />,
+    );
+    expect(
+      screen.getByText("3 messages · 1 from them, 1 from your team"),
+    ).toBeTruthy();
+    expect(screen.getByText("Sent to a mailing list")).toBeTruthy();
+  });
+
   it("names the kind, the count and who it was with, and seats the verbs in its head", () => {
     render(
       <GroupedTimelineList

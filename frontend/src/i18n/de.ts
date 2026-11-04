@@ -3718,6 +3718,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.calendar": "Kalendereinladung",
   "timeline.automatic.sending_system": "Von einem System gesendet",
   "timeline.automatic.product": "Von Margince gesendet",
+  "timeline.automatic.bulk": "An einen Verteiler gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
   "timeline.group.expand": "Öffnen",
