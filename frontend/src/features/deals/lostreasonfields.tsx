@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Field, TextInput } from "../design-system/atoms";
-import { Select } from "../design-system/select";
-import { useT } from "../i18n";
-import type { LossReason } from "../lib/lossreasons.queries";
+import { Field, TextInput } from "../../design-system/atoms";
+import { Select } from "../../design-system/select";
+import { useT } from "../../i18n";
+import type { LossReason } from "../../lib/lossreasons.queries";
 
 /**
  * Why a deal was lost: a reason from the administered list, which a report
