@@ -17,6 +17,7 @@ import { ServiceList, ServiceRow } from "../../design-system/servicerow";
 import {
   ACCOUNT_NAME,
   type AccountVendor,
+  VENDOR_SERVICES,
 } from "../../format/connectorprovider";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -53,9 +54,8 @@ const ACCOUNT_DESCRIPTION: Record<FlowAccount, MessageKey> = {
 
 /**
  * Connecting mail and calendar, in three steps. First comes which account, then
- * what it brings in, then the hand-off to the vendor's own sign-in. The server
- * takes one consent per service, so a vendor account asks twice, chained
- * server-side in one round trip that lands back on Connections.
+ * what it brings in, then the hand-off to the vendor's own sign-in, which lands
+ * back on Connections: one consent screen at Google, two chained at Microsoft.
  *
  * `startFrom` opens on step 2 for a reader who already chose the vendor.
  * Another mail host has no step 3 here. Continue hands over to the IMAP form,
@@ -458,7 +458,7 @@ function SignInStep({
           ),
         )}
       </ServiceList>
-      {both && (
+      {both && !VENDOR_SERVICES[vendor].oneConsent && (
         <Callout title={t("connectFlow.asksTwice", { vendor: vendorName })} />
       )}
       <p className="t-caption">{t(after)}</p>

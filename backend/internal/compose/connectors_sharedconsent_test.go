@@ -49,8 +49,11 @@ func TestAGmailConnectAloneAsksForMailOnly(t *testing.T) {
 	h := wiredHandlers()
 	st, u := consentState(t, h, authorizeURLOf(t, connectWith(t, h, "gmail", `{}`)))
 
-	if scope := u.Query().Get("scope"); strings.Contains(scope, gcal.ReadScope) {
-		t.Errorf("a mail-only consent asks for the calendar: %q", scope)
+	scopes := strings.Fields(u.Query().Get("scope"))
+	for _, calendarScope := range gcal.ConsentScopes() {
+		if slices.Contains(scopes, calendarScope) {
+			t.Errorf("a mail-only consent asks for the calendar scope %q: %v", calendarScope, scopes)
+		}
 	}
 	if st.SharedConsent {
 		t.Error("a consent with nothing chained is marked shared")

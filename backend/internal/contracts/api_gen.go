@@ -35454,9 +35454,10 @@ type CaptureOwnerReview struct {
 
 // CaptureProviderAvailability Whether a connect started right now would proceed, decided by the same predicate the connect
 // endpoint itself uses so the two cannot disagree. Reported for the mail providers a contact can
-// choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent:
-// each is its own grant, asked for after its mail provider's (`ConnectConnectorRequest.also_connect`)
-// or connected directly, on the same vendor OAuth app as its mail provider.
+// choose between (gmail, graph, imap). The paired calendar connectors (gcal, graphcal) are absent.
+// Each joins its mail provider's connect (`ConnectConnectorRequest.also_connect`) or is connected
+// directly, on the same vendor OAuth app as its mail provider. `gcal` shares the Gmail consent
+// screen; `graphcal` gets its own consent after `graph`.
 type CaptureProviderAvailability struct {
 	// Provider The mail provider a seat picks between.
 	Provider CaptureProviderAvailabilityProvider `json:"provider"`
