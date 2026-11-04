@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -57,6 +58,9 @@ const (
 	// replaceOnAcceptance is a human's decision, which outranks whatever a
 	// pass put there.
 	replaceOnAcceptance
+	// replaceUnlessHumanHeld is an agent's acceptance. It outranks a pass, as its
+	// user's would, and never a value a user wrote.
+	replaceUnlessHumanHeld
 	// supersedeOnNewerObservation is the contact's own dated statement, and it
 	// replaces a row observed before it.
 	supersedeOnNewerObservation
@@ -87,16 +91,9 @@ func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 		// ends the question of what it replaced: offering the same undo again
 		// afterwards would put back a value the record has just been told is
 		// wrong, and offering it after a RESTORE would undo the undo.
-		return `DO UPDATE SET value = EXCLUDED.value,
-		    evidence_snippet = EXCLUDED.evidence_snippet,
-		    source_ref = EXCLUDED.source_ref,
-		    confidence = EXCLUDED.confidence,
-		    source = EXCLUDED.source,
-		    captured_by = EXCLUDED.captured_by,
-		    observed_at = EXCLUDED.observed_at,
-		    superseded_value = NULL,
-		    superseded_captured_by = NULL,
-		    superseded_observed_at = NULL`
+		return acceptanceUpdate
+	case replaceUnlessHumanHeld:
+		return acceptanceUpdate + ` WHERE NOT starts_with(contact_profile_field.captured_by, '` + principal.HumanIDPrefix + `')`
 	case supersedeOnNewerObservation:
 		if replacing {
 			return `DO UPDATE SET value = EXCLUDED.value,
@@ -137,6 +134,18 @@ func (p contactProfileFieldPrecedence) conflictClause(replacing bool) string {
 	}
 	return "DO NOTHING"
 }
+
+// acceptanceUpdate replaces the whole row for an accepted value.
+const acceptanceUpdate = `DO UPDATE SET value = EXCLUDED.value,
+		    evidence_snippet = EXCLUDED.evidence_snippet,
+		    source_ref = EXCLUDED.source_ref,
+		    confidence = EXCLUDED.confidence,
+		    source = EXCLUDED.source,
+		    captured_by = EXCLUDED.captured_by,
+		    observed_at = EXCLUDED.observed_at,
+		    superseded_value = NULL,
+		    superseded_captured_by = NULL,
+		    superseded_observed_at = NULL`
 
 // contactProfileFieldRow is one evidence row: a fact about who this contact is, and
 // what it was read from.

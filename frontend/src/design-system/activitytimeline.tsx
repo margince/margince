@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
+import { callOutcomeLabel } from "../lib/calloutcome";
 import { correspondenceSide } from "../lib/messagevoice";
 import { markdownLines } from "./markdown-text";
 import {
@@ -150,6 +151,8 @@ export function activityTimeline(
               (decision) => !decision.current_work,
             ).length,
       title: timelineTitle(activity),
+      // How a call ended sits where a direction sits: what the call did.
+      qualifier: callOutcomeLabel(activity, who?.t),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
       // subjectless rows together.
@@ -158,6 +161,7 @@ export function activityTimeline(
       // timeline of unreadable subject lines was a rendering choice, not a
       // limit of what the page knew.
       body: activity.body,
+      language: activity.language,
       transcript: isTranscriptActivity(activity),
       direction: activity.direction,
       // Who wrote it, by the shared rule: known authorship over transport.

@@ -40,7 +40,7 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-// The zone the viewer's browser reports, as `viewerZone()` asks for it.
+// The zone the viewer's browser reports, as `browserZone()` asks for it.
 // Restored by the afterEach above, so a case pretending to sit elsewhere never
 // decides what the next one renders.
 function pretendViewerZone(timeZone: string): void {
@@ -224,13 +224,12 @@ describe("ConnectedAgentsCard", () => {
     expect(screen.getByText(/Connected 02\/07\/2026/)).toBeTruthy();
   });
 
-  it("dates the grant on the record's calendar and the deadline on the viewer's", async () => {
-    // One row carries both purposes, so one render proves both halves of the
-    // zone-by-purpose rule — and both instants below fall on a DIFFERENT
-    // calendar day in Berlin than on the US west coast, so picking the wrong
-    // zone for either cannot pass by coincidence:
-    //   connected_at 00:30 UTC  → 2 July in RECORD_ZONE, 1 July in Los Angeles
-    //   expires_at   00:00 UTC  → 31 Dec in RECORD_ZONE, 30 Dec in Los Angeles
+  it("dates the grant and the deadline on the reader's own clock", async () => {
+    // Both instants fall on a DIFFERENT calendar day in Berlin than on the US
+    // west coast, so a zone other than the reader's cannot pass by
+    // coincidence:
+    //   connected_at 00:30 UTC  → 2 July in Berlin, 1 July in Los Angeles
+    //   expires_at   00:00 UTC  → 31 Dec in Berlin, 30 Dec in Los Angeles
     pretendViewerZone("America/Los_Angeles");
     vi.stubGlobal(
       "fetch",
@@ -248,13 +247,9 @@ describe("ConnectedAgentsCard", () => {
       }),
     );
     render(<ConnectedAgentsCard />);
-    // When the grant was made is a record fact — every colleague reading this
-    // installation must be able to quote the same day for it.
-    expect(await screen.findByText(/Connected 02\/07\/2026/)).toBeTruthy();
-    expect(screen.queryByText(/Connected 01\/07\/2026/)).toBeNull();
-    // When the credential runs out is this human's deadline, on this human's
-    // calendar: a fixed zone would promise them a day that, where they are,
-    // has not arrived.
+    // Every time is shown in the reader's own zone (#7894).
+    expect(await screen.findByText(/Connected 01\/07\/2026/)).toBeTruthy();
+    expect(screen.queryByText(/Connected 02\/07\/2026/)).toBeNull();
     expect(screen.getByText(/Expires 30\/12\/2026/)).toBeTruthy();
     expect(screen.queryByText(/Expires 31\/12\/2026/)).toBeNull();
   });

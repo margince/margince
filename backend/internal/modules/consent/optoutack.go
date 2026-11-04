@@ -96,9 +96,14 @@ func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subje
 }
 
 func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string) error {
-	rules, _, applicable, err := s.applicableRules(ctx, tx)
-	if err != nil || !applicable {
+	// The receipt is owed under the stopping subject's own country's rules.
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
+	if err != nil {
 		return err
+	}
+	rules, _, applicable := applicableRules(country.Code)
+	if !applicable {
+		return nil
 	}
 	if !rules.OptOutAcknowledgement {
 		return nil
@@ -111,7 +116,7 @@ func (s *Store) prepareAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub sub
 	if err != nil {
 		return err
 	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category)
+	rendered, err = s.controllerView(ctx, tx, rendered, category, address)
 	if err != nil {
 		return err
 	}

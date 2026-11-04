@@ -85,20 +85,11 @@ func NewRegistry(db *database.DB, sink *Sink, authority authz.Resolver, vault ke
 	}
 }
 
-// WithClock replaces the source of the instants this registry STAMPS — the
-// sync-state timestamps, not the schedule.
-//
-// The schedule is deliberately out of reach: next_sync_at is a delay the
-// database applies to its own clock, so nothing here can move it, which is the
-// property syncclock_test.go holds.
-//
-// It exists for the failure-streak case. failing_since is set once and left
-// alone across every failure after it, and the only way to see that is to fail
-// several times at instants an hour apart — which real time cannot do without
-// a sleep, and a test whose verdict depends on elapsed wall time is the
-// flakiness the suite refuses. A nil clock is ignored rather than installed:
-// a registry with no clock would panic on its first write.
-func (r *Registry) WithClock(now func() time.Time) *Registry {
+// SetClock replaces the clock for the sync-state timestamps this registry
+// stamps. next_sync_at stays on the database clock (syncclock_test.go).
+// A failure-streak test fails at instants an hour apart without a sleep.
+// A nil clock is ignored: a registry with none would panic on its first write.
+func (r *Registry) SetClock(now func() time.Time) *Registry {
 	if now != nil {
 		r.now = now
 	}
@@ -237,7 +228,9 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	// Before the credential and the provider: a member who may no longer
+	// capture costs the provider nothing and parks under its own class.
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		if recErr := r.recordSyncFailure(runCtx, snapshot, credentialRef, err); recErr != nil {
 			return errors.Join(err, recErr)

@@ -3,11 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import {
-  formatMoney,
-  formatMoneyCompact,
-  MONEY_ABSENT,
-} from "../../format/format";
+import { formatAnalyticsMoney, MONEY_ABSENT } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { vi as viCatalog } from "../../i18n/vi";
 import { AnalyticsScreen, buildStageAggregates } from "./analytics";
@@ -140,7 +136,9 @@ describe("reports never sum money across currencies", () => {
     await openPipeline();
 
     expect(
-      (await stageTable()).getByText(formatMoney(250_000, "EUR", "en")),
+      (await stageTable()).getByText(
+        formatAnalyticsMoney(250_000, "EUR", "en"),
+      ),
     ).toBeTruthy();
     // One stage, one row: the count cell appears once.
     expect(screen.getAllByText("Qualify")).toHaveLength(1);
@@ -166,7 +164,7 @@ describe("reports never sum money across currencies", () => {
     // The count is real and stays; only the money is unknown.
     expect((await stageTable()).getByText("4")).toBeTruthy();
     expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0);
-    expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
+    expect(screen.queryByText(formatAnalyticsMoney(0, "EUR", "en"))).toBeNull();
   });
 
   it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
@@ -178,7 +176,7 @@ describe("reports never sum money across currencies", () => {
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
-    expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
+    expect(screen.queryByText(formatAnalyticsMoney(0, "EUR", "en"))).toBeNull();
   });
 
   // One stage is one row: the server converts each deal before summing, so
@@ -357,12 +355,12 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
-      await screen.findByText(formatMoneyCompact(202_720_000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(202_720_000, "EUR", "en")),
     ).toBeTruthy();
     // And never folded into a named category: the two totals added together
     // is the number that must not appear anywhere.
     expect(
-      screen.queryByText(formatMoneyCompact(261_580_000, "EUR", "en")),
+      screen.queryByText(formatAnalyticsMoney(261_580_000, "EUR", "en")),
     ).toBeNull();
   });
 
@@ -400,7 +398,7 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     // Both categories, both figures, in the one base currency and compact.
-    const compact = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+    const compact = (minor: number) => formatAnalyticsMoney(minor, "EUR", "en");
     expect(await screen.findByText(compact(2_500_000))).toBeTruthy();
     expect(screen.getByText(compact(920_000))).toBeTruthy();
 
@@ -420,7 +418,7 @@ describe("reports never sum money across currencies", () => {
   // says how many deals it is about, as well as what they are worth.
   //
   // The sum has no sound alternative: guessing a rate would invent money. But
-  // a tile printing the total alone would give €25,000 as the category's
+  // a tile printing the total alone would give 25,000 EUR as the category's
   // worth. It holds two deals, and one was left out. The count makes that
   // visible: two deals, one figure.
   it("says how many deals a category holds, not only what it is worth", async () => {
@@ -446,7 +444,7 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
-      await screen.findByText(formatMoneyCompact(2_500_000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(2_500_000, "EUR", "en")),
     ).toBeTruthy();
     // Fragments on the tile's second line, never "Label: value" pairs: a
     // caption is read as one sentence about the figure above it. Where the
@@ -457,7 +455,7 @@ describe("reports never sum money across currencies", () => {
       text.includes("weighted · "),
     );
     expect(detail.textContent).toBe(
-      `${formatMoneyCompact(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
+      `${formatAnalyticsMoney(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
     );
   });
 
@@ -484,7 +482,7 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
     await waitFor(() =>
       expect(
-        screen.getByText(formatMoneyCompact(1000, "EUR", "en")),
+        screen.getByText(formatAnalyticsMoney(1000, "EUR", "en")),
       ).toBeTruthy(),
     );
     expect(screen.queryByText("No category yet")).toBeNull();

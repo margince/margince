@@ -48,6 +48,8 @@ var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	// The deal's owner, attached after classification.
 	crmcontracts.WorklistItemSourceBriefItem:  answers(ownerFromTheDeal),
 	crmcontracts.WorklistItemSourceDealAtRisk: answers(ownerFromTheDeal),
+	// The review's task assignee, else the deal's owner, or nobody.
+	crmcontracts.WorklistItemSourceDealReview: answers(ownerNamed, ownerNobody),
 	// The sole addressed seat or the owning record, nobody, or withheld.
 	crmcontracts.WorklistItemSourceCustomerWaiting: answers(ownerNamed, ownerNobody, ownerUnreadable),
 	// A promise read for its promiser; keepUnowned places it.

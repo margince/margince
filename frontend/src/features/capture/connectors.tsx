@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 import { OAuthOutcomeNote } from "../../components/connectors.notices";
 import { MailSharingPlate } from "../../components/mail-sharing";
 import { Button, EmptyState } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ProviderList } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
@@ -18,7 +19,7 @@ import {
   useConnectAccount,
 } from "../../lib/connect-account";
 import { canAddAccount, type FlowAccount } from "../../lib/connect-flow-draft";
-import { useConnectors } from "../../lib/connectors";
+import { captureRefusalOf, useConnectors } from "../../lib/connectors";
 import { problemMessageOf } from "../../lib/problem";
 import { type Route, useRoute } from "../../lib/router";
 import { type UrlParams, useUrlParams } from "../../lib/urlstate";
@@ -47,15 +48,18 @@ export { TelegramConnectorsPanel } from "./connectors.telegram";
 // so it sits in the header and opens the connect dialog.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
+type CaptureMissing = components["schemas"]["SeatCapture"]["missing"];
 
 // The roster as this card's list: one row per account.
 function MailRoster({
   rows,
   landing,
+  canConnect,
   onImapReconnect,
 }: Readonly<{
   rows: readonly CaptureConnection[];
   landing: Landing;
+  canConnect: boolean;
   onImapReconnect: () => void;
 }>) {
   const accounts = accountsOf(rows);
@@ -75,6 +79,7 @@ function MailRoster({
               ? landing.heldWindow
               : null
           }
+          canConnect={canConnect}
           onImapReconnect={onImapReconnect}
         />
       ))}
@@ -147,9 +152,11 @@ function MailHeadAction({
 function LandingOutcome({
   landing,
   connections,
+  captureMissing,
 }: Readonly<{
   landing: Landing;
   connections: readonly CaptureConnection[] | undefined;
+  captureMissing: CaptureMissing | undefined;
 }>) {
   const t = useT();
   const connect = useConnectAccount();
@@ -158,6 +165,7 @@ function LandingOutcome({
       outcome={landing.outcome}
       provider={landing.provider}
       connections={connections}
+      captureMissing={captureMissing}
       connectCalendar={{
         onConnect: (calendar) =>
           connect.mutate({ provider: calendar, returnTo: "settings" }),
@@ -181,6 +189,10 @@ export function ConnectorsCard() {
   const connectors = useConnectors();
 
   const notConfigured = connectors.data?.notConfigured ?? false;
+  // The server refuses every connect for a role or seat that cannot capture,
+  // so none is offered and the card says why once.
+  const refusal = captureRefusalOf(connectors.data);
+  const canConnect = refusal === null;
   const rows = (connectors.data?.data ?? []).filter(
     (c) => c.status !== "disconnected",
   );
@@ -191,7 +203,7 @@ export function ConnectorsCard() {
   // lands every account looks free.
   const rosterKnown = connectors.isSuccess && !notConfigured;
   const empty = rosterKnown && rows.length === 0;
-  const offerAdd = rosterKnown && canAddAccount(present);
+  const offerAdd = rosterKnown && canConnect && canAddAccount(present);
   const titleId = useId();
   const addId = useId();
   // Adding a mailbox can take the verb away (every account connected, or the
@@ -218,16 +230,23 @@ export function ConnectorsCard() {
     >
       <PanelBody>
         {/* The ask, while it may still be the answer: a roster has no intro. */}
-        {(empty || connectors.isPending) && (
+        {(empty || connectors.isPending) && canConnect && (
           <PanelIntro>{t("connectors.sub")}</PanelIntro>
         )}
-        <LandingOutcome landing={landing} connections={connectors.data?.data} />
+        <LandingOutcome
+          landing={landing}
+          connections={connectors.data?.data}
+          captureMissing={connectors.data?.captureMissing}
+        />
         <QueryStates query={connectors} pendingLabel={t("connectors.loading")}>
           {/* A deployment that never wired mail capture: a calm state. */}
           {notConfigured && (
             <EmptyState>{t("connectors.notConfigured")}</EmptyState>
           )}
-          {empty && (
+          {rosterKnown && refusal && (
+            <Callout tone="info" kind="standing" title={t(refusal)} />
+          )}
+          {empty && canConnect && (
             <ConnectTiles
               availability={connectors.data?.providers ?? []}
               onPick={setAdding}
@@ -238,6 +257,7 @@ export function ConnectorsCard() {
             <MailRoster
               rows={rows}
               landing={landing}
+              canConnect={canConnect}
               onImapReconnect={() => setImapConnectOpen(true)}
             />
           )}

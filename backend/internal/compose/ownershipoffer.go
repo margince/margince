@@ -91,7 +91,7 @@ func (t ownershipTransfers) Offer(ctx context.Context, recordType string, id, to
 // type a transfer moves to somebody other than themselves.
 func requireOfferer(ctx context.Context, recordType string, to ids.UUID) (ids.UUID, error) {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman || p.UserID.IsZero() {
+	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
 		return ids.Nil, fmt.Errorf("a record is offered by its owner: %w", apperrors.ErrPermissionDenied)
 	}
 	if _, ok := transferRecords[recordType]; !ok {

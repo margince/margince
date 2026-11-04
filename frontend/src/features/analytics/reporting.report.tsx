@@ -9,7 +9,7 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
@@ -307,7 +307,7 @@ export function ReportingReportDetail({
                         >
                           {t(`reporting.${schedule.definition.frequency}`)} ·{" "}
                           {t("reporting.revision", {
-                            revision: formatNumber(
+                            revision: formatAnalyticsNumber(
                               schedule.definition.report_revision,
                               locale,
                             ),
@@ -365,7 +365,7 @@ export function ReportingReportDetail({
                               header: t("reporting.details"),
                               render: (edition) =>
                                 t("reporting.revision", {
-                                  revision: formatNumber(
+                                  revision: formatAnalyticsNumber(
                                     edition.report_revision,
                                     locale,
                                   ),

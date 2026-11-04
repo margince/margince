@@ -100,7 +100,7 @@ describe("the calm start", () => {
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("button", { name: SAVE })).toBeNull();
     expect(
-      screen.queryByRole("button", { name: en["filters.footMore"] }),
+      screen.queryByRole("button", { name: en["filters.exportCsv"] }),
     ).toBeNull();
     expect(previews(seen)).toHaveLength(0);
   });
@@ -301,38 +301,13 @@ describe("keeping the reader's place", () => {
   });
 });
 
-describe("asking for more rows", () => {
+describe("paging the rows", () => {
   const MANY = Array.from({ length: 214 }, (_, index) => ({
     id: `p${index}`,
     full_name: `Contact ${index}`,
   }));
 
-  it("asks for up to 100 and shows them on one page", async () => {
-    const { seen, wrapper } = mount({
-      match_count: 214,
-      columns: ["id", "full_name"],
-      rows: MANY,
-    });
-    const user = userEvent.setup();
-    render(<FiltersScreen id="contacts" />, { wrapper });
-
-    await user.click(await screen.findByRole("button", { name: ADD }));
-    await user.type(screen.getByLabelText("Value"), "ann");
-    await user.click(
-      await screen.findByRole("button", { name: en["filters.showMore"] }),
-    );
-
-    expect(await screen.findByText("Contact 99")).toBeTruthy();
-    const last = previews(seen).at(-1)?.body as { limit?: number };
-    expect(last.limit).toBe(100);
-    // One page holding every row that came: the dial and the request agree.
-    expect(screen.queryByRole("button", { name: "Page 2" })).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: en["filters.showMore"] }),
-    ).toBeNull();
-  });
-
-  it("re-asks with the size the table's own dial chose", async () => {
+  it("asks for the page after the first with the first page's cursor", async () => {
     const { seen, wrapper } = mount({
       match_count: 214,
       columns: ["id", "full_name"],
@@ -347,12 +322,17 @@ describe("asking for more rows", () => {
     await pickOption(
       user,
       screen.getByRole("combobox", { name: "Rows per page" }),
-      "50 per page",
+      "100 per page",
     );
+    await user.click(screen.getByRole("button", { name: "Next" }));
 
-    expect(await screen.findByText("Contact 49")).toBeTruthy();
-    const last = previews(seen).at(-1)?.body as { limit?: number };
-    expect(last.limit).toBe(50);
+    expect(await screen.findByText("Contact 100")).toBeTruthy();
+    const bodies = previews(seen).map(
+      (sent) => sent.body as { limit?: number; cursor?: string },
+    );
+    expect(bodies.at(-1)).toMatchObject({ limit: 100, cursor: "100" });
+    // The count is the whole match count on every page.
+    expect(screen.getByText(/101 to 200 of 214 contacts/)).toBeTruthy();
   });
 });
 
@@ -417,9 +397,6 @@ describe("keeping and exporting", () => {
 
     const foot = await screen.findByText(en["filters.unsavedFilter"]);
     expect(foot.closest(".panel-foot")).not.toBeNull();
-    expect(
-      screen.getByRole("button", { name: en["filters.footMore"] }),
-    ).toBeTruthy();
     // From here the accent belongs to Save, and to nothing else.
     const primary = document.querySelectorAll(".btn-primary");
     expect(primary).toHaveLength(1);
@@ -450,24 +427,26 @@ describe("keeping and exporting", () => {
     return { anchors, written, answer: () => answer() };
   }
 
-  /** One complete condition, then More › Export CSV. */
+  /** One complete condition, then Export CSV beside the count. */
   async function exportCsv(user: ReturnType<typeof userEvent.setup>) {
     await user.click(await screen.findByRole("button", { name: ADD }));
     await user.type(screen.getByLabelText("Value"), "ann");
-    await user.click(
-      await screen.findByRole("button", { name: en["filters.footMore"] }),
-    );
-    await user.click(screen.getByRole("button", { name: "Export CSV" }));
+    await user.click(await screen.findByRole("button", { name: "Export CSV" }));
   }
 
-  it("exports the filter on screen from More, under the name the server gave it", async () => {
+  /** The results panel's head, where the count and the export stand. */
+  const resultsHead = () =>
+    screen.getByRole("heading", { name: "Matching records" }).closest("header");
+
+  it("exports the filter on screen from beside the count, under the name the server gave it", async () => {
     const { anchors, written, answer } = mountHeldExport();
     const user = userEvent.setup();
     await exportCsv(user);
 
-    // The menu closed on the press, so the band is what says a file is coming.
+    // No menu to open: the export stands beside the count, and says there that
+    // a file is coming.
     const exporting = await screen.findByText(en["filters.exporting"]);
-    expect(exporting.closest(".panel-foot")).not.toBeNull();
+    expect(resultsHead()?.contains(exporting)).toBe(true);
     expect(exporting.getAttribute("role")).toBe("status");
     answer();
     await waitFor(() =>
@@ -502,7 +481,7 @@ describe("keeping and exporting", () => {
     });
   });
 
-  it("says so beside the footer when an export is refused", async () => {
+  it("says so beside the count when an export is refused", async () => {
     const { wrapper } = mount({ match_count: 2 });
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
@@ -514,17 +493,13 @@ describe("keeping and exporting", () => {
     // a Problem body the screen has to read, not a thrown string.
     const served = globalThis.fetch;
     vi.stubGlobal("fetch", refusing("/exports", REFUSED_EXPORT, 403));
-    await user.click(
-      screen.getByRole("button", { name: en["filters.footMore"] }),
-    );
     await user.click(screen.getByRole("button", { name: "Export JSON" }));
 
     // The SERVER's reason, not "request failed": a refused bulk read can be
-    // refused for something a reader can act on. The menu that asked has
-    // closed, so the band is where it lands.
+    // refused for something a reader can act on. It lands beside the button.
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe("Bulk record read is human-only.");
-    expect(alert.closest(".panel-foot")).not.toBeNull();
+    expect(resultsHead()?.contains(alert)).toBe(true);
 
     // The refusal was about that filter: one rebuilt after the footer went
     // away is a filter nobody has tried to export.

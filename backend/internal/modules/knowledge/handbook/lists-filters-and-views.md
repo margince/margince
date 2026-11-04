@@ -97,7 +97,7 @@ One tag at a time: a second tag takes the place of the first. **Any tag** takes 
 Also called: filter by label, show tagged records, segment by tag.
 
 ### Why are some contacts tagged `machine-address`?
-Margince tags a contact `machine-address` when its email belongs to a sending system, such as `noreply@` or `receipts@`. These contacts were made before Margince refused such addresses. Filter by the tag, then keep or archive each one. Margince archives and deletes none of them itself.
+Margince does not make a contact from an address that belongs to a sending system, such as `noreply@`, `receipts@` or `@bcc.hubspot.com`. A background task cleans up contacts made before that. A contact whose every address is technical is archived, even if someone edited it, and Undo brings it back. A contact that also has a real address stays and loses only the technical one. A contact on legal hold, or with a phone number or chat identity, is tagged `machine-address` for you to review.
 Also called: contacts made from notification mail, automatic senders.
 
 ### How do I filter by date?
@@ -146,11 +146,12 @@ Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?
 To choose columns or row size in a Margince list, press **Display** in the toolbar.
-1. Under **Shown columns**, untick a column to hide it. The name column always stays.
+1. Under **Shown columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked.
 2. Under **Density**, tick **Compact** for smaller rows.
 3. Drag the side of a column heading to make it wider or narrower.
-Your browser keeps how wide each column is for next time. Hidden columns and density are not saved in a view.
-Also called: add column, remove column, change table layout.
+4. To move a column, drag the handle beside its name under **Shown columns**. With the keyboard, press ↑ or ↓ on the handle.
+Your browser keeps how wide each column is and the order of the columns for next time. Hidden columns and density are not saved in a view.
+Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
@@ -214,7 +215,7 @@ To build a detailed filter in Margince, open **Filters and views** in the sideba
 3. Press **Add condition** for more. The **and** between conditions means all of them must match.
 4. Press an **and** to switch that one word to **or**. Each word between two conditions switches by itself. **and** comes before **or**. So "A and B or C" matches A and B together, or C alone. Conditions joined by **and** sit in a box headed **All of these**.
 5. **Add a group**, next to **Add condition**, puts a group inside the filter. At the top of a group, press **All of these** or **Any of these** to choose how its conditions match. Groups go at most 4 levels down.
-6. Once a condition is full, the count ("12 contacts match") and **Matching records** show. They update as you go.
+6. Once a condition is full, the count ("12 contacts match") and **Matching records** show. They update as you go. Click a row to open the record, or press **Next** for more matches.
 To change the record type, press **Contacts**, **Companies**, **Deals** or **Leads** at the top. With conditions in place it asks first, because a switch clears them.
 Also called: advanced search, segment, query builder.
 
@@ -360,7 +361,7 @@ To change which records a Margince Live List holds, open the list and press **Ed
 1. Change, add or delete conditions; the match count updates as you go. **Discard changes** puts the list's filter back.
 2. Press **Save to** and the list's name. The box names any automations that use the list. They act on the new filter from the next check. Press **Save filter**; the list's page opens.
 3. From then on records join and leave by the new filter, and **What changed** records the edit.
-If someone changed the list after you opened it, Margince says so and saves nothing. Open the list again and make the edit again. To keep a copy instead, choose **Save as new view** under **⋯** at the bottom. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
+If someone changed the list after you opened it, Margince says so and saves nothing. Open the list again and make the edit again. To keep a copy instead, press **Save as new view** at the bottom. Only whoever may change the list (see [What is a list's steward?](#what-is-a-lists-steward)) sees **Edit filter**; a Shortlist has no filter.
 Also called: edit a list's criteria, change a segment, update a smart list.
 
 ### How do I rename, archive or restore a list?
@@ -391,9 +392,9 @@ Also called: lists missing, Live Lists not available.
 ## Exporting a list
 
 ### How do I export a list to CSV or Excel?
-To export records from Margince, build a filter on **Filters and views**. Choose **Export CSV** or **Export JSON** under **⋯** at the bottom of the filter. A Live List or Shortlist exports with **Export CSV** beside its name. The **Contacts**, **Companies**, **Deals** and **Leads** screens have no export button.
+To export records from Margince, build a filter on **Filters and views**. Press **Export CSV** or **Export JSON** beside the count of **Matching records**. A Live List or Shortlist exports with **Export CSV** beside its name. The **Contacts**, **Companies**, **Deals** and **Leads** screens have no export button.
 1. Open **Filters and views**, press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
-2. Press **Add condition** and fill at least one condition. **⋯** (**More for this filter**) then shows next to **Save**.
-3. Choose **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view offers both under **⋯** next to its name.
+2. Press **Add condition** and fill at least one condition. **Matching records** then shows, with **Export CSV** and **Export JSON** beside its count.
+3. Press **Export CSV** (opens in Excel) or **Export JSON**. An opened saved view shows them in the same place.
 Only records you can see are exported, and each export goes into the audit log. See [What is kept, what is destroyed](retention-exports-and-deletion.md). To export a Live List or a Shortlist, open it and press **Export CSV** beside its name.
 Also called: download a list, export to spreadsheet, extract contacts.

@@ -231,7 +231,7 @@ func TestEveryMetricKeepsItsNameInBothAlternatives(t *testing.T) {
 		words := mailcopy.For(language)
 		message := MailMessage(mailFixture(), "", words)
 		for _, label := range []string{words.WeeklyTasksDelivered, words.WeeklyDealsWon, words.WeeklyDealsLost, words.WeeklyMoved, words.WeeklyCarried} {
-			if !strings.Contains(message.Text, label+": ") || !strings.Contains(emailview.Render(message), ">"+label+"</th>") {
+			if !strings.Contains(message.Text, label+": ") || !strings.Contains(emailview.Render(message, emailview.Letterhead{}), ">"+label+"</") {
 				t.Errorf("%s metric %q lost its label", language, label)
 			}
 		}

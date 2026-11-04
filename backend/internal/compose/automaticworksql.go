@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auditattribution"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -27,19 +28,12 @@ func machineCreatedSQL(entityType, rowAlias string) string {
 		auditattribution.FirstCreateSQL("'"+entityType+"'", rowAlias+".id"))
 }
 
-// byAColleagueSQL is whether an audit row was a colleague's own act: their session,
-// or an agent working under their passport. The system and a passportless
-// agent are rules.
-func byAColleagueSQL(alias string) string {
-	return fmt.Sprintf(`(%[1]s.actor_type = 'human' OR (%[1]s.actor_type = 'agent' AND %[1]s.passport_id IS NOT NULL))`, alias)
-}
-
 // taskMovedSQL reads the first move off the first holder: by a colleague it says
 // the task was not theirs, by a rule it was rerouted. It holds even when the
 // task later came back to them.
 func taskMovedSQL() string {
 	return fmt.Sprintf(`WHEN mv.actor_type IS NOT NULL AND %s THEN 'not_mine'
-         WHEN mv.actor_type IS NOT NULL THEN 'rerouted'`, byAColleagueSQL("mv"))
+         WHEN mv.actor_type IS NOT NULL THEN 'rerouted'`, storekit.AuditForAUser("mv"))
 }
 
 // automaticItemsSQL is one row per automatic item created in the window: its
@@ -86,7 +80,7 @@ SELECT '%[8]s', COALESCE(mv.holder, ap.requested_decider_id), made.at,
 		arg([]string{activities.CommitmentTaskSource, activities.EmailRequestTaskSource}),
 		crmcontracts.AutomaticWorkKindNameApprovalRequest,
 		fromPos, toPos,
-		byAColleagueSQL("last_archive"),
+		storekit.AuditForAUser("last_archive"),
 		machineCreatedSQL("approval", "ap"),
 		firstMoveSQL("approval", "ap", "requested_decider_id", unscrubbed))
 }

@@ -101,3 +101,46 @@ func TestSettingTheDealMoveAsideHidesItForThatReaderUntilTheUndo(t *testing.T) {
 		t.Errorf("a malformed fingerprint answered %v, want a 422", err)
 	}
 }
+
+// An agent reads the card as its user left it, and what it sets aside its user
+// finds set aside.
+func TestAnAgentSharesItsUsersSetAsideOnTheDealCard(t *testing.T) {
+	e := Setup(t)
+	pipelineID, stage, _ := DealFixture(t, e)
+	deal := e.SeedDeal(t, "Turbinenbau Agent", pipelineID, stage, &e.Rep1)
+	subject := "Send the signed contract"
+	now := clocktest.Now(t)
+	due := now.Add(48 * time.Hour)
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+	}); err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	svc := dealstatus.NewService(e.Pool, e.Deals, e.Activities, dealrooms.NewStore(e.DB()), func() time.Time { return now })
+	dealID := ids.From[ids.DealKind](deal)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	next := func(ctx context.Context) *crmcontracts.DealStatusCardMove {
+		t.Helper()
+		card, err := svc.ReadFacts(ctx, dealID)
+		if err != nil {
+			t.Fatalf("reading the card: %v", err)
+		}
+		return card.Next
+	}
+
+	move := next(agent)
+	if move == nil || move.Fingerprint == nil {
+		t.Fatalf("the agent's move = %+v, want one to set aside", move)
+	}
+	if err := svc.DismissMove(agent, dealID, *move.Fingerprint); err != nil {
+		t.Fatalf("the agent setting the move aside: %v", err)
+	}
+	if got := next(agent); got != nil {
+		t.Errorf("the agent still reads the move it set aside: %+v", got)
+	}
+	if got := next(rep); got != nil {
+		t.Errorf("its user still reads the move their agent set aside: %+v", got)
+	}
+}

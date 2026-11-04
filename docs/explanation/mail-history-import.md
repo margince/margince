@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go frontend/src/components/mailcoveragenotice.tsx -->
+<!-- describes: backend/internal/modules/capture/backfill.go backend/internal/modules/capture/backfillpager.go backend/internal/modules/capture/backfillyields.go backend/internal/modules/capture/gmail/backfill.go backend/internal/modules/capture/graph/backfill.go backend/internal/compose/costestimate backend/internal/compose/backfilltransport.go frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/mailcoverage.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/syncsnapshot.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/registry_connections.go backend/internal/compose/mailcapturecoverageseam.go backend/internal/compose/mailcoverage/coverage.go -->
 # Mail history import: the capped scan back in time and its cost
 
 Connecting a mailbox starts *standing sync*: from then on, new mail comes in. A new connection is also
@@ -138,6 +138,11 @@ wait that is twice as long each time. The wait keeps to the provider's own `Retr
 longer, since coming back early only gets refused again. Anything else ends the run at once. The
 ladder of failures that may pass is capped at 10 **in a row**. A committed page sets it back to zero, so
 faults the import already passed never end it.
+
+A run whose member may no longer capture ends with the class `forbidden`, before the page reads a
+credential. The start is refused the same way (`403 role_cannot_capture`). An admin can give the
+member a role that captures again. The next sync that works then puts the run back in the queue,
+as it does for a run a revoked credential ended.
 
 ## What the run learns about itself
 

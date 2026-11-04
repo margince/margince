@@ -162,17 +162,41 @@ func (f sdrTeamMemberFigures) apply(ctx context.Context, tx pgx.Tx, out *crmcont
 	if err != nil {
 		return err
 	}
+	qualified := sdrQualifications{owners: map[ids.UUID]sdrTeamLeads{}}
+	readEvents := f.workflow == crmcontracts.SdrTeamReviewWorkflowQualification && !slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresQualified)
+	if readEvents {
+		qualified, err = readSdrTeamQualifications(ctx, tx, seats, window, month, out.AsOf)
+		if err != nil {
+			return err
+		}
+		basis := crmcontracts.SdrTeamReviewQualificationBasis("first_qualification")
+		out.QualificationBasis = &basis
+		out.QualificationUnattributed = &qualified.unattributed
+		out.QualificationTargetUnattributed = &qualified.monthUnattributed
+	}
+	eventTargets, err := f.readEventTargets(ctx, tx, out, month, seats)
+	if err != nil {
+		return err
+	}
 	for index := range out.Members {
 		member := &out.Members[index]
 		figures := leads[ids.UUID(member.Id)]
 		if !slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresQualified) {
 			member.Qualified = &figures.qualified
+			if readEvents {
+				q := qualified.owners[ids.UUID(member.Id)]
+				member.QualifiedEvents = &q.qualified
+			}
 		}
 		if !slices.Contains(out.WithheldFigures, crmcontracts.SdrTeamReviewWithheldFiguresUnanswered) {
 			member.Unanswered = &figures.unanswered
 		}
 		if value, ok := targets[ids.UUID(member.Id)]; ok {
 			member.Target = &crmcontracts.SdrTeamMemberTarget{Value: value, Actual: figures.monthQualified}
+		}
+		if value, ok := eventTargets[ids.UUID(member.Id)]; ok && readEvents {
+			q := qualified.owners[ids.UUID(member.Id)]
+			member.EventTarget = &crmcontracts.SdrTeamMemberTarget{Value: value, Actual: q.monthQualified}
 		}
 	}
 	return nil
@@ -200,4 +224,17 @@ func (f sdrTeamMemberFigures) readTargets(ctx context.Context, tx pgx.Tx, out *c
 		month.to = out.AsOf
 	}
 	return &month, targets, nil
+}
+
+func (f sdrTeamMemberFigures) readEventTargets(ctx context.Context, tx pgx.Tx, out *crmcontracts.SdrTeamReview, month *sdrTeamWindow, seats []ids.UUID) (map[ids.UUID]int64, error) {
+	if month == nil || f.targets == nil || out.MemberTargets == nil {
+		return map[ids.UUID]int64{}, nil
+	}
+	window := out.MemberTargets.Window
+	targets, readable, err := f.targets.OwnerTargets(ctx, tx, f.scope, reportingLeadsQualified, window, seats)
+	if err != nil || !readable {
+		return nil, err
+	}
+	out.MemberEventTargets = &crmcontracts.SdrTeamMemberTargets{Metric: reportingLeadsQualified, Window: window}
+	return targets, nil
 }

@@ -22,15 +22,15 @@ func (s *Store) PreviewMailFooter(ctx context.Context, in SendEmailInput) (MailF
 		return MailFooterPreview{}, err
 	}
 	surface := surfaceFor(in.Context, in.MarketingPurpose, in.ConsentPurpose)
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()))
+	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), in.Recipients)
 	if err != nil {
 		return MailFooterPreview{}, err
 	}
 	return MailFooterPreview{Disclosures: owed, OffersUnsubscribe: surface.carries()}, nil
 }
 
-func (s *Store) requiredDisclosures(ctx context.Context, category string) ([]DisclosureLine, error) {
-	owed, err := s.disclosuresFor(ctx, category)
+func (s *Store) requiredDisclosures(ctx context.Context, category string, recipients []string) ([]DisclosureLine, error) {
+	owed, err := s.disclosuresFor(ctx, category, recipients)
 	if err != nil {
 		return nil, err
 	}

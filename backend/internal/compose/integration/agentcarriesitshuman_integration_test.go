@@ -6,7 +6,7 @@
 package integration
 
 // A passport carries its granting human's UserID, so a check for one admits an
-// agent. Two reads relied on such a check to stay human-only.
+// agent. Such a check also admits automatic work holding an id.
 //
 // The pattern is worth naming because it looks like a gate and is not:
 //
@@ -17,13 +17,6 @@ package integration
 // contact's own standing — what they dismissed, who refused them — to a
 // credential acting on their behalf. auth.RequireHuman is what tells the two
 // apart, and each site now says so where the check is.
-//
-// introductions/routestate.go named getContactGraph's human-only annotation as
-// its protection, which made the answer depend on which door a read arrived
-// through rather than on what it discloses. That protection was also narrower
-// than it looked: an agent already assembles a Contact360 today, through
-// prep_for_meeting → the meeting brief → AssembleScoped, so the dismissal guard
-// is live behaviour rather than defence in depth.
 //
 // The third case in this file is not about agents at all: the employment edge
 // returned an employer's name to a caller holding no company grant, which
@@ -53,32 +46,31 @@ var routeStatePerms = principal.Permissions{
 	RowScope: principal.RowScopeAll,
 }
 
-// TestTheIntroductionLedgerRefusesAnAgentCarryingItsHumansID covers the read
-// that reports which introductions the caller already asked for and which they
-// were refused.
-//
-// The human is admitted and the agent is not, over ONE fixture with ONE set of
-// permissions: the two contexts differ in principal type and in nothing the
-// test chose, so the refusal cannot be a grant the agent was never given.
-func TestTheIntroductionLedgerRefusesAnAgentCarryingItsHumansID(t *testing.T) {
+// The ledger reports which introductions the caller asked for and which they
+// were refused. A user's agent reads its user's ledger. Automatic work holding
+// the same id reads nothing, over one fixture with one set of permissions.
+func TestTheIntroductionLedgerAnswersAUsersAgentAndRefusesAutomaticWork(t *testing.T) {
 	e := Setup(t)
 	contact := e.SeedContact(t, "Marit Vermittelt", &e.Rep1)
 	store := introductions.NewStore(e.DB(), time.Now)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, routeStatePerms)
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, routeStatePerms)
-
-	// The positive control comes first: a fixture that refuses everybody would
-	// pass the agent assertion below while proving nothing.
 	if _, err := store.RouteStates(human, ids.From[ids.ContactKind](contact)); err != nil {
-		t.Fatalf("the granting human's own read = %v, want the ledger", err)
+		t.Fatalf("the user's own read = %v, want the ledger", err)
+	}
+	if _, err := store.RouteStates(agent, ids.From[ids.ContactKind](contact)); err != nil {
+		t.Errorf("the user's agent = %v, want the ledger", err)
 	}
 
-	_, err := store.RouteStates(agent, ids.From[ids.ContactKind](contact))
+	automatic, ok := principal.Actor(human)
+	if !ok {
+		t.Fatal("the fixture carries no actor")
+	}
+	automatic.Type, automatic.ID = principal.PrincipalAgent, "agent:enrich"
+	_, err := store.RouteStates(principal.WithActor(human, automatic), ids.From[ids.ContactKind](contact))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an agent read the introduction ledger → %v, want ErrPermissionDenied — "+
-			"it reports which introductions its human has open and which they were "+
-			"refused, so an agent reading it learns its human was turned down", err)
+		t.Errorf("automatic work read the ledger: %v, want ErrPermissionDenied", err)
 	}
 }
 
@@ -183,18 +175,9 @@ func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 	}
 }
 
-// TestAnAgentDoesNotConsumeItsHumansDismissal drives momentDismissals through
-// the real assembly rather than asserting auth.RequireHuman in isolation.
-//
-// This is the arm that matters: an agent CAN already assemble a contact page
-// today, through prep_for_meeting → the meeting brief → Contact360. So the guard
-// is live behaviour and not defence in depth, and a test that only proved
-// RequireHuman refuses agents would leave the assembly free to stop calling it.
-//
-// The fixture dismisses as the HUMAN and then reads the same page twice. The
-// human's moment is gone; the agent's is still there, because a dismissal is
-// one contact's screen and a passport reading on their behalf is not them.
-func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
+// An agent reads a contact page as its user left it, so a moment that user put
+// away stays away. Passportless work has no reader and sees the moment.
+func TestAnAgentReadsItsUsersDismissal(t *testing.T) {
 	e := Setup(t)
 	contact := e.SeedContact(t, "Rune Verstummt", &e.Rep1)
 
@@ -238,15 +221,26 @@ func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
 			"so this fixture is not exercising the dismissal path at all", claim)
 	}
 
-	// The agent's is untouched: it never had a screen to put anything away on.
+	// Their agent reads as they left it.
 	theirs, err := svc.Assemble(agent, ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling the agent's page: %v", err)
 	}
-	if theirs.Moment == nil || theirs.Moment.ClaimKey != claim {
-		t.Errorf("an agent's page lost the moment its granting human dismissed "+
-			"(got %+v, want claim %q) — a dismissal belongs to a contact's screen, "+
-			"and a passport reading on their behalf consumed it", theirs.Moment, claim)
+	if theirs.Moment != nil && theirs.Moment.ClaimKey == claim {
+		t.Errorf("an agent's page still opens on %q, the moment its user dismissed", claim)
+	}
+
+	// Passportless work has no reader, so the dismissal is not its to honour.
+	work := principal.WithActor(agent, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:deal-scout", UserID: e.Rep1,
+		SeatType: principal.SeatFull, Permissions: perms,
+	})
+	unattended, err := svc.Assemble(work, ids.From[ids.ContactKind](contact))
+	if err != nil {
+		t.Fatalf("assembling the page for passportless work: %v", err)
+	}
+	if unattended.Moment == nil || unattended.Moment.ClaimKey != claim {
+		t.Errorf("passportless work lost the moment a colleague dismissed: %+v", unattended.Moment)
 	}
 }
 

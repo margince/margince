@@ -1,0 +1,36 @@
+# CASE 70 — Marking notices read belongs to change_attention, not to update_record.
+name: case70_clear_my_notices
+criteria: [1]
+writes: true
+
+prompt: |
+  I have read all my notices. Clear them so they stop showing up.
+
+must_call:
+  - change_attention
+
+must_call_with:
+  - change_attention.action=mark_all_notices_read
+
+may_call:
+  - read_details
+  - read_attention
+  - whoami
+  - read_workspace
+
+must_not_call_with:
+  - update_record~.
+  - archive_record~.
+  - create_record~.
+  - bulk_update_records~.
+  - change_record_parts~.
+  - change_state~.
+  - change_activities~.
+  - change_access~.
+  - change_attention~"action": "(?!mark_)
+
+must_mention:
+  - "(?i)notice"
+
+runs: 3
+pass_at: 2

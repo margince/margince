@@ -25,7 +25,7 @@ import "./contact360.css";
 // of the same list stood here before, and the two drifted. Under them sits
 // the record-keeping the left column does not draw. It holds the details to
 // confirm, consent with its proof and billing roles. It also holds every
-// field with its inline edit, tags, source, custom fields, the correspondence
+// field with its edit, tags, source, custom fields, the correspondence
 // hold and the lists.
 
 type Contact360 = components["schemas"]["Contact360"];

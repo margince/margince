@@ -193,7 +193,7 @@ func checkKindFields(fields map[string]string, typed map[string]any, _ cellClock
 	if s, ok := typed[activityTargetMeetingStatus].(string); ok {
 		status = &s
 	}
-	err := activities.CheckKindFields(kind, seconds, status, "")
+	err := activities.CheckKindFields(kind, seconds, status, nil, "")
 	if err == nil {
 		return nil
 	}

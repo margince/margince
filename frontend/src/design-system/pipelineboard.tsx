@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
 import { Fragment, useContext, useRef } from "react";
-import {
-  formatDate,
-  formatMoneyOrAbsent,
-  formatNumber,
-} from "../format/format";
+import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { AnsweredSearch } from "./answeredsearch";
 import { Button, OptionCount } from "./atoms";
+import { ColumnTotals, largestStageTotal } from "./boardtotals";
 import { Callout } from "./callout";
 import "./composed.css";
 
@@ -220,42 +217,7 @@ type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   columns: BoardColumn<Record>[];
   renderCard: (record: Record, column: BoardColumn<Record>) => ReactNode;
   moneyFor: (column: BoardColumn<Record>) => BoardMoneyColumn | undefined;
-  zone?: string;
 };
-
-function MoneyNotes({
-  money,
-  hidden,
-  zone,
-}: Readonly<{
-  money: BoardMoneyColumn | undefined;
-  hidden?: boolean;
-  zone?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  if (!money || hidden) return null;
-  const unpriced = money.unpricedCount ?? 0;
-  const reportZone = money.timezone ?? zone;
-  return (
-    <>
-      {money.asOf && reportZone && (
-        <span className="board-col-refusal">
-          {t("board.convertedAt", {
-            date: formatDate(money.asOf, locale, reportZone),
-          })}
-        </span>
-      )}
-      {unpriced > 0 && (
-        <span className="board-col-refusal">
-          {translatePlural(locale, "brief.readings.unpricedCount", unpriced, {
-            count: formatNumber(unpriced, locale),
-          })}
-        </span>
-      )}
-    </>
-  );
-}
 
 function BoardLayout<Record extends BoardRecord>({
   columns,
@@ -265,7 +227,6 @@ function BoardLayout<Record extends BoardRecord>({
   columnDropHandlers,
   onToggleColumn,
   moneyFor,
-  zone,
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
@@ -275,6 +236,7 @@ function BoardLayout<Record extends BoardRecord>({
   // match in view, the board scrolls to the first and says where they are.
   const revealKey = useContext(AnsweredSearch);
   const matches = revealKey ? matchingColumns(columns) : [];
+  const scaleMinor = largestStageTotal(columns.map(moneyFor));
   const offScreen = useOffScreenMatches(
     board,
     sections,
@@ -388,49 +350,19 @@ function BoardLayout<Record extends BoardRecord>({
                   </span>
                 )}
               </div>
-              {/* The stage's total is the figure being scanned down the board,
-              so it leads with the deal count beside it. The weighted figure is
-              its own server-sourced total (not derived from the raw total). It
-              reads underneath rather than competing on the line. */}
+              {/* The stage's money leads the sub. The count is in the head;
+                  a screen reader gets it here with its unit, as "12 deals". */}
               <div className="board-col-sub">
-                <span className="board-col-total">
-                  {money && !column.sumHidden && (
-                    <span className="board-col-money">
-                      {money.rawMinor != null && money.currency ? "≈ " : ""}
-                      {formatMoneyOrAbsent(
-                        money.rawMinor,
-                        money.currency,
-                        locale,
-                      )}
-                    </span>
-                  )}
-                  {/* The count is in the head; what a screen reader needs here
-                    is the unit the head's bare figure leaves out, so the column
-                    announces "12 deals" rather than "Qualified: 12". */}
-                  <span className="sr-only">
-                    {countLabel
-                      ? countLabel(dealCount)
-                      : translatePlural(locale, "board.count", dealCount, {
-                          count: formatNumber(dealCount, locale),
-                        })}
-                  </span>
-                </span>
                 {money && !column.sumHidden && (
-                  <span className="board-col-weighted">
-                    {t("board.weighted", {
-                      value: formatMoneyOrAbsent(
-                        money.weightedMinor,
-                        money.currency,
-                        locale,
-                      ),
-                    })}
-                  </span>
+                  <ColumnTotals money={money} scaleMinor={scaleMinor} />
                 )}
-                <MoneyNotes
-                  money={money}
-                  hidden={column.sumHidden}
-                  zone={zone}
-                />
+                <span className="sr-only">
+                  {countLabel
+                    ? countLabel(dealCount)
+                    : translatePlural(locale, "board.count", dealCount, {
+                        count: formatNumber(dealCount, locale),
+                      })}
+                </span>
                 {money && column.sumHidden && dealCount > 0 && (
                   <span className="board-col-refusal">
                     {column.sumHiddenReason}

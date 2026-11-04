@@ -349,8 +349,7 @@ type corpusAskEngine struct {
 	// lane writes the prose. Nil is a composition without a chat lane, and the
 	// answer is the passages themselves.
 	lane corpusAskLane
-	// pool resolves the workspace's base language, which is what the answer's
-	// sentences are written in.
+	// pool resolves the base language for a caller who chose none of their own.
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
@@ -371,8 +370,10 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 		modelfailure.Write(w, r, err)
 		return
 	}
+	// The answer goes to the one caller who asked and is stored nowhere, so it
+	// takes their language rather than the shared record's.
 	answer := AnswerCorpus(r.Context(), e.lane, state, question, passages,
-		identity.BaseLanguageForPrompt(r.Context(), e.pool), e.log)
+		identity.ReaderLanguageForPrompt(r.Context(), e.pool), e.log)
 	httperr.WriteJSON(w, http.StatusOK, answer)
 }
 

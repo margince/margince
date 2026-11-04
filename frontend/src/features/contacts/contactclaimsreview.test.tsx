@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { StoryProviders } from "../../testing/story-utils";
 import { ContactClaimsReview } from "./contactclaimsreview";
 
@@ -33,9 +33,9 @@ const claim = (over: Partial<Claim>): Claim => ({
 async function caption(row: Claim): Promise<string> {
   render(
     <StoryProviders>
-      <RecordZoneProvider zone={UTC_ZONE}>
+      <ViewerZoneProvider zone={UTC_ZONE}>
         <ContactClaimsReview claims={[row]} dismiss={() => null} />
-      </RecordZoneProvider>
+      </ViewerZoneProvider>
     </StoryProviders>,
   );
   await userEvent.click(screen.getByText(en["contact.loops.review"]));

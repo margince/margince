@@ -48,18 +48,15 @@ const claimTaskKey = "task_activity_id"
 // RecordConversationClaim holds: a claim is a fact about a contact, and settling
 // one writes to that contact's record as much as recording it did.
 //
-// Human-only in the STORE as well as the router table, for the reason the
-// recording path states: a store relying on the routing declaration alone is one
-// x-mcp-tool away from being agent-reachable without anybody revisiting it. And
-// here the stakes are the reason to keep it — whether a human kept their word is
-// not a thing to let an extractor decide about itself.
+// Checked in the STORE as well as the router table. Whether a contact kept
+// their word is the user's to say, or their agent's, never an extractor's.
 func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, outcome string) error {
 	if outcome != string(crmcontracts.SettleClaimRequestOutcomeDone) &&
 		outcome != string(crmcontracts.SettleClaimRequestOutcomeDismissed) {
 		return httperr.Validation("outcome", "invalid",
 			"a claim settles as done or dismissed")
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {

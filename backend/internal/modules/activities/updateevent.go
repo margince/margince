@@ -30,9 +30,17 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 	}
 	if in.DueAt != nil {
 		fields.DueAt = in.DueAt
+		fields.DueHasTime = in.DueHasTime
 	}
 	if in.RemindAt != nil {
 		fields.RemindAt = in.RemindAt
+	}
+	// A cleared reminder is a change a consumer must hear: one that mirrors
+	// reminders would otherwise keep firing a reminder this row no longer has.
+	// The clear may be the caller's null or the server ending a reminder when
+	// the due date moved; both are in Clear by now.
+	if in.clears("remind_at") && current.RemindAt != nil {
+		fields.RemindAtCleared = new(true)
 	}
 	if in.AssigneeID != nil {
 		assignee := openapi_types.UUID(in.AssigneeID.UUID)
@@ -44,6 +52,15 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 	if in.MeetingStatus != nil {
 		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
 		fields.MeetingStatus = &status
+	}
+	if in.CallOutcome != nil {
+		outcome := crmcontracts.PublicEventActivityChangedFieldsCallOutcome(*in.CallOutcome)
+		fields.CallOutcome = &outcome
+	}
+	// A cleared outcome is a change too: the call is back to "no outcome",
+	// which counts as contact again.
+	if in.clears(fieldCallOutcome) && current.CallOutcome != nil {
+		fields.CallOutcomeCleared = new(true)
 	}
 	return fields
 }

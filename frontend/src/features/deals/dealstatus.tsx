@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
-import { MailCoverageNotice } from "../../components/mailcoveragenotice";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
@@ -14,7 +13,7 @@ import { formatDayMonth } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   Citations,
@@ -126,7 +125,6 @@ export function DealStatusCardPanel({
           more={more}
         />
         {standing(cardHead(card, deal, t, onOpenEmail))}
-        <MailCoverageNotice coverage={card.mail_coverage} />
         {/* The record page says what the brief says through How it stands and
             its cards; the board's drawer has neither, so only it reads the
             brief. */}
@@ -162,7 +160,7 @@ export function DealStatusCardPanel({
 // instant of its own has no day to head the card with, so it draws nothing.
 function VerdictOnly({ head }: Readonly<{ head: DealStandingHead }>) {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   if (!head.readAt) {
     return null;
   }

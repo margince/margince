@@ -35,7 +35,7 @@ var previewDetailSources = map[string][]string{
 // previewAddressDetails repeat an email address, so a mask on a contact's or a
 // lead's email reaches them.
 var previewAddressDetails = []string{
-	"to", "cc", "bcc", "intended_attendee", "confirmation_recipient", "relink_participant_address",
+	"to", "cc", "bcc", "intended_attendee", previewHostNamedAttendee, "confirmation_recipient", "relink_participant_address",
 	"merge_participant_address", "merge_confirmation", "merge_draft_to", "merge_draft_cc", "merge_draft_bcc",
 	"promotion_withdrawal_address",
 }

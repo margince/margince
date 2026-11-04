@@ -5,9 +5,9 @@ import { AppLink } from "../../design-system/applink";
 import { EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   formatDateTime,
-  formatMoneyOrAbsent,
-  formatNumber,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
@@ -50,11 +50,11 @@ export function ProjectsByPhaseTable({
   const plural = usePlural();
   const money = (amount: number | null, unpriced: number) => (
     <>
-      {formatMoneyOrAbsent(amount, baseCurrency, locale)}
+      {formatAnalyticsMoneyOrAbsent(amount, baseCurrency, locale)}
       {unpriced > 0 && (
         <div className="t-caption">
           {plural("brief.readings.unpricedCount", unpriced, {
-            count: formatNumber(unpriced, locale),
+            count: formatAnalyticsNumber(unpriced, locale),
           })}
         </div>
       )}
@@ -102,7 +102,7 @@ export function ProjectsByPhaseTable({
               scale={scale}
               label={t("analytics.projects")}
             >
-              {formatNumber(row.projects, locale)}
+              {formatAnalyticsNumber(row.projects, locale)}
             </BarFigure>
           ),
         },
@@ -196,13 +196,15 @@ export function ProjectCommitmentsTable({
           key: "open",
           header: t("analytics.openTasks"),
           align: "end",
-          render: (row: ProjectListRow) => formatNumber(row.open, locale),
+          render: (row: ProjectListRow) =>
+            formatAnalyticsNumber(row.open, locale),
         },
         {
           key: "overdue",
           header: t("analytics.overdueTasks"),
           align: "end",
-          render: (row: ProjectListRow) => formatNumber(row.overdue, locale),
+          render: (row: ProjectListRow) =>
+            formatAnalyticsNumber(row.overdue, locale),
         },
       ]}
       rows={listed}

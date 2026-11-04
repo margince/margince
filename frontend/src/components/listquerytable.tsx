@@ -51,6 +51,7 @@ export function ListTable<Row>({
   rowKey,
   rowRoute,
   unit,
+  layoutKey = unit,
   chips = [],
   dataChips = [],
   views = [],
@@ -101,6 +102,11 @@ export function ListTable<Row>({
   rowRoute?: (row: Row) => Route;
   /** Message key for the plural noun in the count and the empty state. */
   unit: MessageKey;
+  /**
+   * Names the table for the column widths and order it remembers. Defaults to
+   * `unit`; two tables that share a unit pass keys of their own.
+   */
+  layoutKey?: string;
   chips?: readonly FilterSpec[];
   /**
    * Chips whose options are runtime record names rather than message keys:
@@ -267,8 +273,11 @@ export function ListTable<Row>({
   // The browser's own navigation is the discriminator, with no false hits.
   // `replaceParams` uses `history.replaceState`, which fires neither event, so
   // every dial this surface turns is silent here. Both events are heard: Back
-  // moves the address at `popstate` and announces it a task later. A timer
-  // firing between them would write the word over the address Back restored.
+  // moves the address at `popstate`, and a fragment-only move also fires
+  // `hashchange` a task later. A timer firing between them would write the word
+  // over the address Back restored. These are the raw events and not
+  // lib/router.tsx's `watchAddress`, which also runs for the app's own
+  // `replaceParams` announcements. Those must not abandon the word.
   useEffect(() => {
     const abandonPendingSearch = () => {
       const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
@@ -413,8 +422,7 @@ export function ListTable<Row>({
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
       bodyRef={rowsScroller}
-      // The unit key names the table for the widths it remembers.
-      widthsKey={unit}
+      widthsKey={layoutKey}
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
       bodyCount={bodyCount}

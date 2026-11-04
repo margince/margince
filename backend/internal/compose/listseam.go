@@ -78,10 +78,12 @@ func (s listSeam) previewDefinition(ctx context.Context, q agents.ListRead) (jso
 	if limit == 0 {
 		limit = filterPreviewDefaultRows
 	}
-	out, err := s.preview.preview(ctx, engine, pred, limit, true)
+	out, err := s.preview.preview(ctx, engine, pred, nil, limit, true)
 	if err != nil {
 		return nil, err
 	}
+	// A tool reads one logged page; read_lists takes no cursor to continue it.
+	out.NextCursor = nil
 	out.Resource = crmcontracts.FilterPreviewResource(q.EntityType)
 	return json.Marshal(out)
 }

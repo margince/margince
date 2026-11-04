@@ -20,7 +20,7 @@ import (
 )
 
 // MaxMCPRequestBytes bounds one MCP request. An agent attaches a file inline as
-// base64, so the largest file it can attach is maxInlineFileBytes.
+// base64, so the largest file it can attach is MaxInlineFileBytes.
 const MaxMCPRequestBytes = 8 << 20
 
 // maxLargeMCPBodiesInFlight bounds the requests over httperr.MaxBodyBytes one

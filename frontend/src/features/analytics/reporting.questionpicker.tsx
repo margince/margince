@@ -6,8 +6,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { formatDate } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   savedQuestionLabel,
   savedQuestionShape,
@@ -106,7 +106,7 @@ function SavedQuestionPicker({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const schema = useAnalyticsSchema();
   const fields = customLabels(t, schema.data?.entities ?? []);
   const [browsing, setBrowsing] = useState(false);

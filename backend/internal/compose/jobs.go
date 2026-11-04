@@ -426,6 +426,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addDedupeRecheckJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
+		addProjectHealthJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
 		addTagScoutJobs(reg, pool, cfg, log),
 		addListEvaluateJobs(reg, pool, cfg, log),

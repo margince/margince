@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import { Meter } from "../../design-system/readings";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { metricOf } from "./analytics.overview.readings";
 import {
@@ -19,7 +19,7 @@ type Comparison = NonNullable<
 
 /**
  * What stands under Sales won. It shows progress to the quarter's target,
- * what is still to win, the projected shortfall and the previous period.
+ * what is still to win and the previous period.
  * Every figure is the server's; the page only formats.
  * A target that cannot be compared says why, with its fix, in place.
  */
@@ -36,10 +36,9 @@ export function HeroAside({
   // Who can set a target, for a quarter that has none.
   targetSetup: ReactNode;
 }>) {
-  const comparison = metricOf(
-    evaluation,
-    "forecast_landing",
-  )?.target_comparison;
+  const forecast = metricOf(evaluation, "forecast_landing");
+  if (forecast?.coverage.withheld) return null;
+  const comparison = forecast?.target_comparison;
   let target: ReactNode = null;
   if (comparison?.status === "no_target") target = targetSetup;
   else if (
@@ -74,7 +73,6 @@ function TargetProgress({
     won?.attainment != null && won.target === comparison.target
       ? won.attainment
       : undefined;
-  const { gap } = comparison;
   return (
     <>
       {comparison.won != null && comparison.target ? (
@@ -92,7 +90,7 @@ function TargetProgress({
               target: money(comparison.target),
             })
           : t("analytics.hero.attained", {
-              percent: formatNumber(Math.round(percent), locale),
+              percent: formatAnalyticsNumber(Math.round(percent), locale),
               target: money(comparison.target),
             })}
       </p>
@@ -101,15 +99,6 @@ function TargetProgress({
           ? t("reporting.compare.reached")
           : t("analytics.hero.remaining", {
               amount: money(comparison.remaining),
-            })}
-      </p>
-      {/* A comparison without its gap names no gap, rather than a zero one. */}
-      <p className="t-caption">
-        {gap == null
-          ? t("analytics.overview.gapMissing")
-          : t(gap < 0 ? "analytics.hero.surplus" : "analytics.hero.shortfall", {
-              amount: money(Math.abs(gap)),
-              landing: money(comparison.landing),
             })}
       </p>
     </>
@@ -129,8 +118,7 @@ function PriorPeriod({
   );
   if (trend?.coverage.status !== "ok") return null;
   const last = trend.points.at(-1);
-  if (!trend.comparison_interval || last?.comparison == null)
-    return <p className="t-caption">{t("analytics.hero.noPrior")}</p>;
+  if (!trend.comparison_interval || last?.comparison == null) return null;
   const { currency } = evaluation.context;
   return (
     <p className="t-caption">

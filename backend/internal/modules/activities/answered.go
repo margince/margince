@@ -34,6 +34,7 @@ func normalisedSubject(column string) string        { return storekit.Normalised
 // Confirmed requests survive replies until fulfilled, settled or dismissed.
 // Unclassified manually logged mail retains the newest-unanswered rule.
 // Machine senders and calendar responses require confirmed requests too.
+// Bulk mail waits only once a human accepted it; a verdict alone does not.
 //
 // Two judgements end the obligation and are each counted in
 // /worklist/hidden: a human's not-sales call on the thread, and the
@@ -54,6 +55,7 @@ func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOw
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + machineSenderSQL + `)
+	 AND (` + acceptedRequestSQL + ` OR NOT a.bulk_mail_attested)
 	 AND ((` + confirmedRequestSQL + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentSQL + `)

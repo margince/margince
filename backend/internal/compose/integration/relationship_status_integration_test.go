@@ -43,12 +43,6 @@ func TestTheWriteAPIRefusesAnUnknownEmploymentStatus(t *testing.T) {
 		} {
 			var problem json.RawMessage
 			status := e.Call(t, request.method, request.path, request.body, headers, &problem)
-			if headers != nil && strings.HasSuffix(request.path, "/employment-import") {
-				if status != http.StatusForbidden || !strings.Contains(string(problem), "human-only") {
-					t.Fatalf("agent import correction: %d %s", status, problem)
-				}
-				continue
-			}
 			if status != http.StatusUnprocessableEntity || !strings.Contains(string(problem), "employment_status") {
 				t.Fatalf("%s: %d %s", request.method, status, problem)
 			}

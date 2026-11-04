@@ -8,7 +8,6 @@ import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import type { CompanyTab } from "../../lib/companytab";
-import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -31,6 +30,7 @@ import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { useCompanyVerbRefusal } from "./companyheader";
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./companytabs.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
@@ -133,7 +133,7 @@ export function CompanyRecordBody({
   // drawer stays mounted to animate out, and dropping the anchor on close would
   // empty it in front of the reader. Null only before the first composer opens.
   const shownAnchor = useRef<ComposeAnchor | null>(null);
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const canWriteCompany =
     useCanWriteRecord("company", company) && !company.archived_at;
   const verbRefusal = useCompanyVerbRefusal(company);
@@ -318,7 +318,7 @@ export function CompanyRecordBody({
           the same reason: both are what a chip on this page opens into. */}
       <OpenEmailDrawer
         activityId={receipt.email}
-        zone={recordZone}
+        zone={readerZone}
         onClose={receipt.closeEmail}
       />
       <CompanyProfileTab

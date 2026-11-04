@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -33,7 +33,7 @@ const USERS = Array.from({ length: 16 }, (_, i) => ({
   email: `member${i}@acme.test`,
   display_name:
     i === 0 ? "Maximiliane von Habsburg-Lothringen" : `Colleague ${i}`,
-  timezone: viewerZone(),
+  timezone: browserZone(),
   status: "active",
   is_agent: false,
   team_ids: [

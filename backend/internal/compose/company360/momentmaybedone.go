@@ -76,7 +76,7 @@ func (s *Service) askDone(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 	if !ok {
 		return moment, nil
 	}
-	if auth.RequireHuman(ctx) == nil {
+	if auth.RequireHumanOrItsAgent(ctx) == nil {
 		dismissed, err := s.dismissedFingerprints(ctx, tx, companyID, []string{question.EvidenceFingerprint})
 		if err != nil {
 			return moment, err

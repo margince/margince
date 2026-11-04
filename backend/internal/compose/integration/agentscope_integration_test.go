@@ -104,25 +104,15 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 	}
 }
 
-// TestOfferSendRefusesAnyAgentAsHumanOnly proves that sendOffer carries no
-// registered agent tool: the contract declares it `x-agent-access:
-// human-only`, so ANY agent principal is refused outright at the gate,
-// whatever caps its passport holds — no cap, however broad, reaches the
-// send verb. The refusal is distinguished from a cap refusal
-// (scope_exceeds_grantor) by its own code, permission_denied, so a caller
-// can tell "you may never do this" from "mint a passport with the right
-// cap and retry."
-func TestOfferSendRefusesAnyAgentAsHumanOnly(t *testing.T) {
+// Sending an offer is a route-backed action with the send scope. It runs at once
+// as the app's Send does, and the action tells the agent to ask its user first.
+func TestAnAgentSendsAnOfferAsItsUser(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Send Scope", "send@fable.test", "Admin")
 	dealID := offerFixture(t, e)
 
-	// The broadest passport short of a human session: even every cap the
-	// contract knows does not reach a human-only verb.
 	bearer := apptest.PassportBearer(t, e, "drafting agent", "read", "write", "send", "enrich")
 
-	// Drafting is 🟢 under `write` and still is: send being human-only is
-	// not a blanket tightening of the offer surface.
 	var offer offerBody
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
@@ -131,28 +121,13 @@ func TestOfferSendRefusesAnyAgentAsHumanOnly(t *testing.T) {
 		t.Fatalf("agent 🟢 offer draft → %d", status)
 	}
 
-	var refusal capRefusal
-	status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/send", nil, bearer, &refusal)
-	if status != http.StatusForbidden || refusal.Code != "permission_denied" {
-		t.Fatalf("agent send → %d %q, want 403 permission_denied (human-only)", status, refusal.Code)
+	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/send", nil, bearer, nil); status != http.StatusOK {
+		t.Fatalf("agent send → %d, want 200", status)
 	}
-	// The code check above already separates this from a cap miss, which
-	// answers scopeRefusalCode. What it cannot separate is the 🟡 admission:
-	// reaching the tier gate at all on a verb no agent may call.
-	if refusal.Code == "approval_required" || strings.Contains(refusal.Detail, "staged as approval") {
-		t.Fatalf("an agent reached the 🟡 gate on a human-only verb: %q", refusal.Detail)
-	}
-	if !strings.Contains(refusal.Detail, "human-only") {
-		t.Fatalf("refusal %q does not say the verb is human-only", refusal.Detail)
-	}
-	assertNothingStaged(t, e, "refused send")
-	assertRefusalLeaksNothing(t, refusal.Detail, "human-only")
-
-	// Nothing left the workspace, and nothing is waiting in an inbox to say
-	// it might.
-	var still offerBody
-	if status := e.Call(t, "GET", "/v1/offers/"+offer.ID, nil, bearer, &still); status != http.StatusOK || still.Status != "draft" {
-		t.Fatalf("offer after the refused send = %q, want draft", still.Status)
+	assertNothingStaged(t, e, "an offer sent at once")
+	var sent offerBody
+	if status := e.Call(t, "GET", "/v1/offers/"+offer.ID, nil, bearer, &sent); status != http.StatusOK || sent.Status != "sent" {
+		t.Fatalf("offer after the send = %q, want sent", sent.Status)
 	}
 }
 

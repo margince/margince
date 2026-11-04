@@ -32,6 +32,7 @@ const RUN: Assurance = {
     changed_signals: 0,
     workspace_changed: false,
   },
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
 };
 
 function check(id: string, label: string, changed: boolean | null): InputCheck {
@@ -197,5 +198,30 @@ describe("an input check the records moved past", () => {
     await screen.findByRole("link", { name: "Fleet retrofit" });
     expect(screen.queryByText("Out of date")).toBeNull();
     expect(badgeOf("Ready")).toContain("badge-success");
+  });
+});
+
+describe("a customer review whose task could not be delivered", () => {
+  it("says how many and that the next check tries again", async () => {
+    show(
+      { ...RUN, review_deliveries: { pending: 1, failed: 2, delivered: 4 } },
+      [],
+    );
+
+    expect(
+      await screen.findByText(
+        "2 customer reviews could not be handed to their owners as tasks. The next check tries again.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing while every delivery is on its way or done", async () => {
+    show(
+      { ...RUN, review_deliveries: { pending: 1, failed: 0, delivered: 4 } },
+      [],
+    );
+
+    expect(await screen.findByText("Ready")).toBeTruthy();
+    expect(screen.queryByText(/could not be handed/)).toBeNull();
   });
 });

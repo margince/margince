@@ -7,7 +7,7 @@ import {
   formatNumber,
   formatTimeOfDay,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { line, receipt, renderMagic, stub } from "../../testing/magic.testkit";
 
 afterEach(() => {
@@ -122,7 +122,7 @@ describe("a receipt line is one row", () => {
       "Overnight agent This kind of change cannot be undone.",
     );
     // The hour on the clock the reader is on, the full instant one hover away.
-    const zone = viewerZone();
+    const zone = browserZone();
     expect(row.when?.textContent).toBe(
       formatTimeOfDay("2026-09-13T07:30:00Z", "en", zone),
     );
@@ -141,7 +141,7 @@ describe("a receipt line is one row", () => {
     );
     renderMagic();
     expect(rowOf(await onlyLine("Done for you")).when?.textContent).toBe(
-      formatDayMonth("2026-09-09T14:00:00Z", "en", viewerZone()),
+      formatDayMonth("2026-09-09T14:00:00Z", "en", browserZone()),
     );
   });
 

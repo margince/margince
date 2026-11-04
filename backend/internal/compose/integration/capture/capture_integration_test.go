@@ -346,7 +346,7 @@ func (fakeAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.R
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
 			"lead":     {Create: true, Read: true},
-			"contact":  {Read: true},
+			"contact":  {Create: true, Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}}, nil

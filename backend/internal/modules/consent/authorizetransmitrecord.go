@@ -28,7 +28,7 @@ import (
 // exists so a later reader can tell whether the message that went is the
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, ruleset rulesetStampValue) ([]commsauthz.Decision, error) {
+func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, countries []RecipientCountry) ([]commsauthz.Decision, error) {
 	var written []commsauthz.Decision
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
@@ -47,7 +47,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 	if err != nil {
 		return nil, err
 	}
-	for _, d := range set.Decisions {
+	for i, d := range set.Decisions {
 		// Both or neither, which the table's own CHECK also demands: a
 		// subject_kind naming a row with no id describes nothing.
 		subjectKind := nullableText(d.SubjectKind)
@@ -56,6 +56,9 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			id := d.SubjectID
 			subjectID = &id
 		}
+		// The country this recipient was decided under, so the row names the
+		// pack that judged it.
+		ruleset := rulesetStamp(countries[i])
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
@@ -160,7 +163,7 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 		 WHERE revoked_at IS NULL
 		   AND (contact_id = $1
 		        OR lead_id = $1
-		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
+		        OR (address IS NOT NULL AND $2 <> '' AND `+sameAddressSQL("address", "$2")+`))`,
 		contactID, r.Email)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)

@@ -207,6 +207,8 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
+	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
+		"and a shipped migration is never renamed",
 	"backend/migrations/testdata/rbac_baseline_era_defaults.json": "pinned byte for byte to the " +
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"backend/migrations/enginebackfill_integration_test.go": "it REPLAYS a shipped migration, " +
@@ -251,6 +253,7 @@ var retired = gatekit.Waive(map[string]string{
 	"frontend/src/features/settings/users-access.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/components/roster.stories.tsx":                     "the member roster under the seats settings group",
 	"frontend/src/features/settings/users-edit.stories.tsx":          "a page under the seats settings group",
+	"frontend/src/features/settings/users-entitycell.stories.tsx":    "a page under the seats settings group",
 	"frontend/src/features/settings/users-retire.stories.tsx":        "a page under the seats settings group",
 	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
 	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",

@@ -32,6 +32,7 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		fieldOccurredPrecision: string(a.OccurredPrecision),
 		fieldDurationSeconds:   derefOrNil(a.DurationSeconds),
 		"due_at":               derefOrNil(a.DueAt),
+		fieldDueHasTime:        derefOrNil(a.DueHasTime),
 		"remind_at":            derefOrNil(a.RemindAt),
 		"assignee_id":          derefOrNil(a.AssigneeId),
 		auditFieldIsDone:       derefOrNil(a.IsDone),
@@ -41,6 +42,8 @@ func activityColumnImage(a crmcontracts.Activity) map[string]any {
 		// happened. "Who recorded that the meeting was a no-show" is exactly the
 		// question the trail is read for.
 		"meeting_status": derefOrNil(a.MeetingStatus),
+		// How a call ended: writable on the patch, so the diff must see it.
+		fieldCallOutcome: derefOrNil(a.CallOutcome),
 	}
 }
 

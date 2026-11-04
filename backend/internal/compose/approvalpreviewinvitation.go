@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
@@ -27,7 +28,7 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 	if previewUnavailable(err) {
 		return out, nil
 	}
-	call := agents.NewMeetingInvitationCall(r.records, nil, in)
+	call := agents.NewMeetingInvitationCall(r.records, nil, nil, in)
 	if err := call.Guards(ctx); err != nil {
 		var invalid *agents.BadArgsError
 		if previewUnavailable(err) || errors.As(err, &invalid) {
@@ -58,12 +59,12 @@ func (r approvalPreviewReader) invitationPreview(ctx context.Context, approval c
 		previewDetail("meeting_location", appointment.Location),
 		previewDetail("meeting_start", appointment.Start.Format(time.RFC3339Nano)),
 		previewDetail("meeting_end", appointment.End.Format(time.RFC3339Nano)),
-		previewDetail("to", string(in.AttendeeEmail)),
 		{Field: "meeting_host", Value: hostValue},
 		{Field: "filed_under", Value: contact},
 		{Field: "video_call", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueBoolean, Text: strconv.FormatBool(appointment.VideoCall)}},
 		{Field: "email_reminder", Value: crmcontracts.ApprovalPreviewValue{Kind: previewValueBoolean, Text: strconv.FormatBool(appointment.EmailReminder)}},
 	}
+	details = append(details, invitationRecipients(in, appointment)...)
 	out.Details, out.Effects, out.State = &details, &[]string{"authorize_calendar_invitation"}, previewReadyState
 	return out, r.currentEvidence(ctx, approval, out)
 }
@@ -84,4 +85,22 @@ func (r approvalPreviewReader) invitationParticipants(ctx context.Context, host 
 		return hostValue, crmcontracts.ApprovalPreviewValue{}, err
 	}
 	return hostValue, contact, nil
+}
+
+// invitationRecipients names every address the approval sends the invite to.
+// An address no record the host can read stands behind gets its own field.
+// It is the same whether or not a record hidden from the host holds it.
+func invitationRecipients(in crmcontracts.MeetingInvitationRequest, appointment connector.CalendarAppointment) []crmcontracts.ApprovalPreviewDetail {
+	if len(appointment.Roster) == 0 {
+		return []crmcontracts.ApprovalPreviewDetail{previewDetail("to", string(in.AttendeeEmail))}
+	}
+	out := make([]crmcontracts.ApprovalPreviewDetail, 0, len(appointment.Roster))
+	for _, attendee := range appointment.Roster {
+		field := "to"
+		if attendee.Basis == connector.AttendeeHostNamed {
+			field = previewHostNamedAttendee
+		}
+		out = append(out, previewDetail(field, attendee.Address))
+	}
+	return out
 }

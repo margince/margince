@@ -237,7 +237,11 @@ func recordCompanyUpdate(
 	if err := reconcileCompanyReplaceSets(ctx, tx, id, by, in, before, after); err != nil {
 		return err
 	}
-	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "company", id.UUID, before, after)
+	trail, err := withRestoredProfileFields(ctx, tx, id, in.Trail)
+	if err != nil {
+		return err
+	}
+	auditID, err := storekit.AuditWithTrail(ctx, tx, trail, "company", id.UUID, before, after)
 	if err != nil {
 		return fmt.Errorf("audit company update: %w", err)
 	}
