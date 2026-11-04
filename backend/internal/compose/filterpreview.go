@@ -25,9 +25,9 @@ package compose
 //
 // Why un-logged is defensible at all, stated as the fact rather than the
 // intuition: GET /v1/contacts already returns the same Contact projection, 200 rows
-// a page WITH a cursor, writing no ledger row either. Preview is strictly less
-// capable — 100 rows, no cursor — so it opens no channel a human with read access
-// did not have. The export's system_log row is about an extraction ARTIFACT
+// a page with a cursor, writing no ledger row either. Preview pages the same way
+// at 100 rows, so its cursor opens no channel a human with read access did not
+// have. The export's system_log row is about an extraction ARTIFACT
 // leaving the system, which a preview does not produce; it is not a general
 // obligation on reading records, or the paged list read would owe one too.
 
@@ -46,6 +46,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // logDetailFilter is the system_log detail key an agent's logged preview
@@ -80,6 +81,7 @@ type filterPreviewRequest struct {
 	Resource string              `json:"resource"`
 	Filter   *storekit.Predicate `json:"filter"`
 	Limit    *int                `json:"limit"`
+	Cursor   *string             `json:"cursor"`
 }
 
 func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Request) {
@@ -105,6 +107,15 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
+	var token string
+	if req.Cursor != nil {
+		token = *req.Cursor
+	}
+	after, err := storekit.DecodeIDCursor(token)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	engine, ok, err := h.collections.SegmentEngine(r.Context(), req.Resource)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -116,7 +127,7 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	preview, err := h.preview(r.Context(), engine, *req.Filter, limit, false)
+	preview, err := h.preview(r.Context(), engine, *req.Filter, after, limit, false)
 	if err != nil {
 		writeFilterPreviewError(w, r, err)
 		return
@@ -125,8 +136,10 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
-// preview runs the count and the page in ONE transaction, which buys less than
-// it looks like and is still worth having.
+// preview runs the count and the page after `after` (nil for the first) in ONE
+// transaction, which buys less than it looks like and is still worth having.
+// The count is the full match count on every page, so a table paging through
+// the answer keeps one total.
 //
 // What it does NOT buy is a shared snapshot. These run at READ COMMITTED — the
 // pool sets no isolation level — so each statement takes its own snapshot and a
@@ -143,7 +156,7 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 // typing is not logged; an agent's preview is, because for an agent the same
 // read is a bulk read of records that must leave a trace.
 func (h filterPreviewHandlers) preview(
-	ctx context.Context, engine storekit.Query, pred storekit.Predicate, limit int, logged bool,
+	ctx context.Context, engine storekit.Query, pred storekit.Predicate, after *ids.UUID, limit int, logged bool,
 ) (crmcontracts.FilterPreview, error) {
 	var out crmcontracts.FilterPreview
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
@@ -164,7 +177,7 @@ func (h filterPreviewHandlers) preview(
 		if err != nil {
 			return err
 		}
-		matched, err := engine.SelectIDs(ctx, tx, pred, limit)
+		matched, more, err := engine.SelectPage(ctx, tx, pred, after, limit)
 		if err != nil {
 			return err
 		}
@@ -180,7 +193,10 @@ func (h filterPreviewHandlers) preview(
 			MatchCount: count,
 			Columns:    columns,
 			Rows:       rowsAsMaps(memberData{table: engine.Table, columns: columns, rows: rows}),
-			Truncated:  count > len(rows),
+			Truncated:  more,
+		}
+		if page := storekit.IDPage(matched, more); page.HasMore {
+			out.NextCursor = &page.NextCursor
 		}
 		if !logged {
 			return nil
