@@ -14,7 +14,7 @@ import {
 } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import {
   figureReading,
   figureValue,
@@ -178,7 +178,7 @@ export function HeadlineFigures({
 }: Readonly<{ review: WeeklyReview; figures: WeeklyFigures }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const priorStart = review.prior?.local_week_start;
   return (
     <>
@@ -228,7 +228,7 @@ function HeadlineTile({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const reading = figureReading(
     state,
     { value: figure.shown(review.counts) },

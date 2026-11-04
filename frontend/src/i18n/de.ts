@@ -12053,9 +12053,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.baseLanguage": "Basissprache",
   "setup.baseLanguageHint":
     "Die Sprache, in der die KI schreibt, wenn das ganze Team den Text liest. Jede Person wählt ihre eigene Anzeigesprache, und Antworten an Kontakte folgen der Sprache des Threads.",
-  "setup.timezone": "Zeitzone für Berichte",
+  "setup.timezone": "Zeitzone des Unternehmens",
   "setup.timezoneHint":
-    "IANA-Zeitzonenname. Alle Berichtszeiträume werden in dieser Zeitzone berechnet. Der Wert wurde aus diesem Browser ermittelt. Ändere die Zeitzone, wenn das Team anderswo arbeitet.",
+    "IANA-Zeitzonenname. Berichtszeiträume, geplante Abläufe und versendete Dokumente nutzen ihn. Der Wert wurde aus diesem Browser ermittelt. Ändere ihn, wenn das Unternehmen anderswo arbeitet. Alle legen ihre eigene Zeitzone für die angezeigten Zeiten fest.",
   "setup.adminName": "Dein Name",
   "setup.adminEmail": "Deine E-Mail-Adresse",
   "setup.adminPassword": "Passwort",
@@ -14395,9 +14395,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.timeFormat.locale": "Sprache der Oberfläche verwenden",
   "installationSettings.timeFormat.24h": "24-Stunden-Format · 17:30",
   "installationSettings.timeFormat.12h": "12-Stunden-Format · 05:30 pm",
-  "installationSettings.timezone": "Zeitzone für Berichte",
+  "installationSettings.timezone": "Zeitzone des Unternehmens",
   "installationSettings.timezoneHint":
-    "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume und Datumsangaben gelten damit für das ganze Team. Jedes Nutzerkonto behält seine eigene Anzeigezeitzone.",
+    "IANA-Name, zum Beispiel Europe/Berlin. Berichtszeiträume, geplante Abläufe und versendete Dokumente nutzen sie für das ganze Unternehmen. Alle sehen Zeiten in ihrer eigenen Zeitzone, festgelegt unter Einstellungen → Konto.",
   "installationSettings.fiscalYearStart": "Beginn des Geschäftsjahres",
   "installationSettings.fiscalYearStartHint":
     "Berichte gruppieren nach diesem Jahr und Quartal. Eine Änderung benennt jeden Bericht neu. Ein gespeicherter Zeitraum wie 2026 behält seine Monate.",

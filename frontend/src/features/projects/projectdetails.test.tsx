@@ -7,9 +7,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { project, project360 } from "../../testing/projects.fixtures";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { ProjectDetails, ProjectSubtitle } from "./projectdetails";
+
+// The screen reads the browser's zone here, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 // The project's details column and the head's lines: About, Ownership, the
 // empty fields folded behind one link, and the closing rule.
@@ -40,7 +44,7 @@ function show(node: ReactNode, zone = UTC_ZONE) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>{node}</RecordZoneProvider>
+        <CompanyZoneProvider zone={zone}>{node}</CompanyZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

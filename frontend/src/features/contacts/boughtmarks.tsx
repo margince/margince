@@ -6,7 +6,7 @@ import {
 import { providerBrandName } from "../../design-system/provider-mark";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // What a data provider put on a contact, marked where it stands on the record.
 // The server decides which values still hold what the run wrote
@@ -25,7 +25,7 @@ export function useBoughtSource(): (
   at: string | null | undefined,
 ) => EvidenceMarkSource {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (provider, at) => ({
     provenance: {
       kind: "connector",

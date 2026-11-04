@@ -7,8 +7,8 @@ import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useReportingPages } from "./reporting.pagination";
 
@@ -23,7 +23,7 @@ export function ReportingExecutions({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const client = useQueryClient();
   const { cursor, next: setCursor, back, canBack } = useReportingPages();
   const latest = useQuery({

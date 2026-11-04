@@ -15,9 +15,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   useAnalyticsContext,
   useAnalyticsSelection,
@@ -33,7 +33,7 @@ export function ReportingTargets() {
   const metricName = useMetricNames();
   const { locale } = useLocale();
   const context = useAnalyticsContext();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const { selection } = useAnalyticsSelection(context.data);
   const pipelines = usePipelines();
   const canCreate = useCanWrite("sales_target", "create");

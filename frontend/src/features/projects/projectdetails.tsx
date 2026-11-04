@@ -25,7 +25,7 @@ import { formatDateAbbrev } from "../../format/format.dates";
 import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useProjectEdit } from "./projectedit";
 import { PHASE_LABEL, type Project } from "./projects.form";
 import { timeUsed } from "./projectstanding";
@@ -66,7 +66,7 @@ function CompanyRef({ view }: Readonly<{ view: Project360 }>) {
 export function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const used = timeUsed(view, zone);
   return (
     <>
@@ -180,7 +180,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
   const cf = useObjectCustomFields("project");
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const display = useCustomFieldDisplay();
   const grants = useProjectGrants(view.project.id);
   const project = view.project;

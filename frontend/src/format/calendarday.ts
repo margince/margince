@@ -140,13 +140,11 @@ export function calendarMonth(at: Date, zone: string): string {
 // `yyyy-mm-dd` a date input yields, which every caller has already checked is
 // non-empty.
 //
-// A deadline is a fact about the RECORD, so the day ends on the installation's
-// clock and every colleague reads back the day that was agreed. Resolving it in
-// the browser's zone instead is what made a transcript proposal for the 9th
-// become a task labelled the 10th: the accept path stamps the day's end in the
-// installation zone, and a reader east of it saw that last second land after
-// midnight. Callers pass the zone from `useRecordZone()`, the same one the task
-// is rendered in.
+// The day ends on the clock of the user who picks it (decision A1 on
+// #7894): a day picked in Berlin ends at midnight in Berlin, and a colleague
+// elsewhere sees that same moment in their own zone. Callers pass the zone from
+// `useViewerZone()`, the zone the picker reads the day in. Tasks minted before
+// this ended on the installation's clock and keep that moment.
 //
 // `endOfDayInZone` already resolves a named day's end against a zone's real
 // offset, DST included, and privacy files its deadlines with it. Reuse rather

@@ -27,13 +27,13 @@ import {
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { searchByEntity } from "../../lib/relationshipcandidates";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   confirmEffect,
   type DomainQuestionContext,
@@ -322,6 +322,7 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
 // Diagnostics the task does not need, closed by default. They are the triage's
 // note, the answering site, the redirects and the evidence date.
 function WebsiteDetails({ row }: Readonly<{ row: DomainQuestion }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   return (
@@ -338,7 +339,7 @@ function WebsiteDetails({ row }: Readonly<{ row: DomainQuestion }>) {
       <p className="t-caption">
         {row.evidence_at
           ? t("worklist.domainReview.evidenceAt", {
-              date: formatDate(row.evidence_at, locale, viewerZone()),
+              date: formatDate(row.evidence_at, locale, readerZone),
             })
           : t("worklist.domainReview.noEvidenceDate")}
       </p>

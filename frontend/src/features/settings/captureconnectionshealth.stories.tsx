@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { StoryProviders } from "../../testing/story-utils";
 import { CaptureConnectionsHealth } from "./captureconnectionshealth";
 
@@ -18,7 +18,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Stalled: Story = {
   args: {
-    zone: viewerZone(),
+    zone: browserZone(),
     rows: [
       {
         user_id: "0190b7a2-0000-7000-8000-000000000001",
@@ -33,6 +33,6 @@ export const Stalled: Story = {
     ],
   },
 };
-export const Empty: Story = { args: { zone: viewerZone(), rows: [] } };
+export const Empty: Story = { args: { zone: browserZone(), rows: [] } };
 
 export const StalledDark: Story = { ...Stalled, globals: { theme: "dark" } };

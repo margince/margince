@@ -19,7 +19,6 @@ import { DataTable } from "../../../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../../../design-system/panel";
 import { QueryGate } from "../../../design-system/querystates";
 import { formatDateTime } from "../../../format/format";
-import { viewerZone } from "../../../format/timezone";
 import { useLocale, useT } from "../../../i18n";
 import { useCan, useCanWriteRecord } from "../../../lib/capability";
 import {
@@ -32,6 +31,7 @@ import {
 } from "../../../lib/legalreviews.queries";
 import { problemMessageOf } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import { useViewerZone } from "../../../lib/viewerzone";
 import "./deallegaltab.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -165,7 +165,7 @@ function ReviewTable({
 }: Readonly<{ deal: Deal; reviews: readonly LegalReviewSummary[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const someone = t("legalReview.someoneShort");
   return (
     <DataTable

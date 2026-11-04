@@ -19,7 +19,6 @@ import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { backStaysInApp } from "../../lib/historydepth";
 import {
@@ -28,6 +27,7 @@ import {
 } from "../../lib/meeting-invitation-query";
 import { problemCodeOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief/drawer";
 import { useBookingTitle } from "./booking-common";
 import { BookingReschedule } from "./booking-reschedule";
@@ -203,7 +203,7 @@ export function BookingMeetingScreen({
 function MeetingHead({ meeting }: Readonly<{ meeting: Invitation }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   return (
     <div className="bookmeet-head">
       <div role="status">

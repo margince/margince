@@ -15,7 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -73,7 +73,7 @@ function member(email: string, roles?: string[]): User {
     display_name: email,
     status: "active",
     is_agent: false,
-    timezone: viewerZone(),
+    timezone: browserZone(),
     ...(roles ? { roles } : {}),
   };
 }

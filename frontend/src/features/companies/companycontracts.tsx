@@ -21,7 +21,6 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { ContractForm } from "../projects/contractform";
 import {
   ContractCancelModal,
@@ -36,6 +35,7 @@ import { CustomFieldsPanel } from "./customfields.card";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The account's agreements: what it signed, what each is worth, and when the
 // next one has to be decided.
@@ -411,8 +411,8 @@ function ContractRow({
 function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const on = (date: string) => formatDate(date, locale, recordZone);
+  const readerZone = useViewerZone();
+  const on = (date: string) => formatDate(date, locale, readerZone);
   if (!contract.starts_on && !contract.ends_on) {
     return <span>{t("contracts.noTerm")}</span>;
   }
@@ -438,7 +438,7 @@ function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
 function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
 
   // Its dates have run out and nobody has moved the status. Saying only
   // "active" here would present an approval queue as a live agreement.
@@ -454,7 +454,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
           when: formatDate(
             contract.cancellation_effective_on,
             locale,
-            recordZone,
+            readerZone,
           ),
         })}
       </Badge>
@@ -464,7 +464,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <span className="t-caption">
         {t("contracts.renewsOn", {
-          when: formatDate(contract.renewal_on, locale, recordZone),
+          when: formatDate(contract.renewal_on, locale, readerZone),
         })}
       </span>
     );

@@ -9,9 +9,9 @@ import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { PROJECT_PHASES } from "../../format/projectphase";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { reveal } from "../../lib/reveal";
 import { activityMarks } from "../../lib/standingmarks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useUndoProjectHealth } from "./projecthealth.queries";
 import { PhaseStepper } from "./projectphase";
 import { PROJECT_COMMITMENTS_ANCHOR, ProjectFigures } from "./projectreadings";
@@ -105,7 +105,7 @@ export function ProjectStanding({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const ctx = { t, plural, locale, zone };
   const peeks = {
     commitments: commitmentsPeek(view, ctx, reveal(PROJECT_COMMITMENTS_ANCHOR)),
