@@ -7,7 +7,7 @@ import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { periodText } from "../settings/settings.jurisdiction.text";
+import { periodText } from "../../lib/jurisdictiontext";
 import { keepFor } from "./retention.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
