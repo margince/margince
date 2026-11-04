@@ -101,7 +101,7 @@ func (s *Store) updateContactInTx(
 	if err := s.lockConvertStops(ctx, tx, id, in.ConvertLeadIDs); err != nil {
 		return out, err
 	}
-	current, err := readContactRow(ctx, tx, id, storekit.LiveOnly, active)
+	current, err := readContactToEdit(ctx, tx, id, in, active)
 	if err != nil {
 		return out, fmt.Errorf("read contact before update: %w", err)
 	}
@@ -208,6 +208,26 @@ func contactChangeImages(
 	return before, after
 }
 
+// readContactToEdit reads the row the edit decides on. An edit that moves a name
+// part decides full_name from the stored parts, so it reads them under the row
+// lock. That lock comes first in the lock order (lockorder.go).
+func readContactToEdit(
+	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
+) (crmcontracts.Contact, error) {
+	if movesANamePart(in) {
+		if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
+			return crmcontracts.Contact{}, err
+		}
+	}
+	return readContactRow(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// movesANamePart reports whether the update sets or clears first_name or last_name.
+func movesANamePart(in UpdateContactInput) bool {
+	return in.FirstName != nil || in.LastName != nil ||
+		slices.Contains(in.Clear, columnFirstName) || slices.Contains(in.Clear, columnLastName)
+}
+
 // updateAsWritten completes the input with what the request implies: the core
 // fields cleared to NULL, and the display name that follows the name parts.
 func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
@@ -225,7 +245,7 @@ func displayNameAfter(current crmcontracts.Contact, in UpdateContactInput) *stri
 		return in.FullName
 	}
 	first, last := derefString(current.FirstName), derefString(current.LastName)
-	newFirst, newLast := namePartAfter(first, in.FirstName, in.Clear, "first_name"), namePartAfter(last, in.LastName, in.Clear, "last_name")
+	newFirst, newLast := namePartAfter(first, in.FirstName, in.Clear, columnFirstName), namePartAfter(last, in.LastName, in.Clear, columnLastName)
 	joined := JoinNameParts(newFirst, newLast)
 	if joined == "" || joined == current.FullName || current.FullName != JoinNameParts(first, last) {
 		return in.FullName

@@ -91,16 +91,17 @@ func contactFullName(fields map[string]string) string {
 	return strings.TrimSpace(fields[fieldEmail])
 }
 
-// withNamePartsAsFullName gives a row that states both name parts those parts
-// as its full name, whether or not it maps a full name column. The update
-// comparison reads it, so a disagreeing full name is never sent on its own.
-func withNamePartsAsFullName(fields map[string]string) map[string]string {
+// withoutDisagreeingFullName drops a full name that disagrees with the two name
+// parts beside it in the same row. Such a name is never sent on its own. The parts
+// go to the store, whose rule decides whether the stored display name follows
+// them: a plain join does, a hand-typed name stays.
+func withoutDisagreeingFullName(fields map[string]string) map[string]string {
 	joined := joinedNameParts(fields)
-	if joined == "" || fields[fieldFullName] == joined {
+	if _, given := fields[fieldFullName]; !given || joined == "" || strings.TrimSpace(fields[fieldFullName]) == joined {
 		return fields
 	}
 	out := maps.Clone(fields)
-	out[fieldFullName] = joined
+	delete(out, fieldFullName)
 	return out
 }
 
