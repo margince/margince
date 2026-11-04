@@ -92,7 +92,10 @@ func (r *Registry) requireDeclaredArgs(name string, args json.RawMessage) error 
 	if err := r.requireDeclaredTypes(name, args); err != nil {
 		return err
 	}
-	return joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args))
+	if err := joinArgRefusals(r.requireDeclaredBounds(name, args), r.requireDeclaredEnums(name, args)); err != nil {
+		return err
+	}
+	return r.requireDeclaredUniqueness(name, args)
 }
 
 // joinArgRefusals answers with both refusals when both fired, and with whichever

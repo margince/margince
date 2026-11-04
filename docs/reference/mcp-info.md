@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 190.0 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 49945 |
+| Approx. wire tokens | 49950 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -102,7 +102,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1004 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 1681 |
-| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
+| [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 312 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1309 |
@@ -10636,7 +10636,8 @@ before calling, unless they asked for this call themselves; requires passport sc
         "format": "uuid",
         "type": "string"
       },
-      "type": "array"
+      "type": "array",
+      "uniqueItems": true
     },
     "owner_id": {
       "description": "Who owns the remaining contact: the owner of one selected member",

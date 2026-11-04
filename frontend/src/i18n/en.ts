@@ -4202,6 +4202,12 @@ export const en = {
   "co.next.col.verbs": "Actions",
   "co.next.daysLate_one": "{days} day late",
   "co.next.daysLate_other": "{days} days late",
+  "promise.late.today": "Due earlier today and still open.",
+  "promise.late.sentence_one": "Due one day ago and still open.",
+  "promise.late.sentence_other": "Due {days} days ago and still open.",
+  "promise.claim.today": "Promised for a date earlier today.",
+  "promise.claim.sentence_one": "Promised for yesterday.",
+  "promise.claim.sentence_other": "Promised for a date {days} days ago.",
   "co.next.dueToday": "Due today",
   "co.next.inDays_one": "In {days} day",
   "co.next.inDays_other": "In {days} days",
@@ -15212,6 +15218,12 @@ export const en = {
   "autonomy.kind.deal_close_lost.label": "Close silent deals as lost",
   "autonomy.kind.deal_close_lost.help":
     "Closes a deal as lost when the customer has not answered for 120 days (an admin can change the number), or at once when the customer declines. Each close shows on Home with an Undo.",
+  "autonomy.kind.deal_amount.label": "Deal amounts",
+  "autonomy.kind.deal_amount.help":
+    "Sets a deal’s amount when the customer or your offer names a price for it, such as “50,000 USD for the first year”. A price in another currency is converted at the stored rate. Each change shows on Home with an Undo.",
+  "autonomy.kind.deal_probability.label": "Win probabilities",
+  "autonomy.kind.deal_probability.help":
+    "Sets a deal’s win probability when the evidence clearly moves it, such as a verbal yes or a budget freeze. A probability you set yourself is never changed. Each change shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -15727,7 +15739,8 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.field.owner": "Runs as",
-  "webhooks.field.ownerHint": "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
+  "webhooks.field.ownerHint":
+    "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
   "webhooks.field.ownerInactive": "Former owner, no longer active",
   "webhooks.field.ownerCurrent": "Current owner",
   "webhooks.row.ownerInactive": "Stopped: owner deactivated",
@@ -16883,8 +16896,6 @@ export const en = {
   "contact.standing.event.meetingKind": "meeting",
   "contact.standing.event.promiseDue": "Commitment due",
   "standing.wrote": "{name} wrote",
-  "contact.standing.late_one": "{count} day late",
-  "contact.standing.late_other": "{count} days late",
   "contact.rail.consentTitle": "Communication permissions",
   "contact.rail.phone": "Phone",
   "contact.rail.noEmailAddress": "No address on file",
@@ -18187,6 +18198,8 @@ export const en = {
   "worklist.handled.putBackDone": "Already undone",
   "worklist.handled.closeLostUndone":
     "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check.",
+  "worklist.handled.verdictUndone":
+    "Undone. Margince will not change this again until something new happens on this deal.",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
@@ -19825,6 +19838,7 @@ export const en = {
   "aiTask.name.cert_judge": "Certification judging",
   "aiTask.name.cold_start": "Onboarding read",
   "aiTask.name.corpus_ask": "Document corpus question",
+  "aiTask.name.deal_verdict": "Checking the dates, amount and chances of a deal",
   "aiTask.name.deal_health": "Deal status card",
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
