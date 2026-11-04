@@ -425,6 +425,57 @@ func nullIfEmpty(resolution string) *string {
 	return &resolution
 }
 
+// seedSubjectRefOnlyRequest files an open request that names its subject only by
+// subject_ref, the contact id as text, with contact_id left NULL. An officer opens
+// such a case by hand before the subject resolves to a contact row. With upper set,
+// the id is written in capitals, as a hand-typed reference may be.
+func seedSubjectRefOnlyRequest(t *testing.T, e *integration.Env, address string, upper bool) {
+	t.Helper()
+	subject := e.SeedContact(t, "Der Mandant", nil)
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
+		VALUES ($1, $2, $3, 'work', true, 'manual', 'human:x')`,
+		ids.NewV7(), subject, address); err != nil {
+		t.Fatalf("seeding the subject's address: %v", err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO data_subject_request (id, kind, status, subject_ref, contact_id, due_at)
+		VALUES ($1, 'erasure', 'open',
+		        CASE WHEN $3 THEN upper($2::text) ELSE $2::text END, NULL, now() + interval '30 days')`,
+		ids.NewV7(), subject, upper); err != nil {
+		t.Fatalf("seeding the subject-ref-only request: %v", err)
+	}
+}
+
+// A request that names its subject only by subject_ref still shields the mail.
+// With contact_id NULL, the shield rests on the guarded subject_ref::uuid arm.
+// This test keeps a later rewrite of the id comparison from dropping that arm.
+// The capitalised case keeps the guard from narrowing back to lower case.
+func TestAnOpenRequestCarryingOnlyASubjectRefStillShields(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		upper bool
+	}{{"lower case", false}, {"upper case", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			const address = "anwalt@kanzlei.example"
+			evidence := seedPurgeableMail(t, e, address, "Mandat", e.Rep1)
+			seedSubjectRefOnlyRequest(t, e, address, tc.upper)
+
+			rule := seedOwnExclusion(t, e, e.Rep1, capture.ExclusionKindDomain, "kanzlei.example")
+			outcome := runPurge(t, e, e.Rep1, rule, false)
+			if outcome.Skipped != 1 || outcome.Destroyed != 0 {
+				t.Fatalf("skipped=%d destroyed=%d, want 1 and 0. A request that names its subject only "+
+					"by subject_ref must still shield the subject's mail", outcome.Skipped, outcome.Destroyed)
+			}
+			if body := activityBody(t, e, evidence); body == "" {
+				t.Fatal("mail an open subject-ref-only request is about was destroyed")
+			}
+		})
+	}
+}
+
 // A message a data-subject request has not finished with survives an owner's
 // purge, and the count says so.
 //
