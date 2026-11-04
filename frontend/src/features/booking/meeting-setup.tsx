@@ -3,6 +3,7 @@
 
 import { CalendarPlus } from "lucide-react";
 import { Button } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { Checklist, ChecklistStep } from "../../design-system/checklist";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { useT } from "../../i18n";
@@ -30,14 +31,16 @@ export function MeetingSetupCard({
             title={t("scheduling.setup.step1")}
             caption={t("scheduling.setup.step1Help")}
             action={
-              <Button
-                variant="primary"
-                pending={calendar.connect.isPending}
-                onClick={() => calendar.start(calendar.target)}
-              >
-                <CalendarPlus aria-hidden />
-                {t("scheduling.connectCalendar")}
-              </Button>
+              calendar.refusal ? undefined : (
+                <Button
+                  variant="primary"
+                  pending={calendar.connect.isPending}
+                  onClick={() => calendar.start(calendar.target)}
+                >
+                  <CalendarPlus aria-hidden />
+                  {t("scheduling.connectCalendar")}
+                </Button>
+              )
             }
           />
           <ChecklistStep
@@ -55,6 +58,9 @@ export function MeetingSetupCard({
             caption={hasLink ? t("scheduling.setup.step3Help") : undefined}
           />
         </Checklist>
+        {calendar.refusal && (
+          <Callout tone="info" kind="standing" title={t(calendar.refusal)} />
+        )}
         <ConnectRefusal connect={calendar.connect} />
       </PanelBody>
     </Panel>

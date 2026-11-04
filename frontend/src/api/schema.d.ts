@@ -26215,6 +26215,8 @@ export interface components {
             since: string | null;
             /** Format: date-time */
             last_success_at: string | null;
+            /** @description The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed. */
+            error_class?: string | null;
         };
         /**
          * @description A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
@@ -26268,7 +26270,7 @@ export interface components {
              * @description Last successful sync for this mailbox; null before one succeeds.
              */
             last_success_at?: string | null;
-            /** @description rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log. */
+            /** @description rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member's role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval. */
             last_sync_error_class?: string | null;
             /**
              * Format: date-time
@@ -27246,6 +27248,26 @@ export interface components {
              *     between, so the connect screen can say so before the click rather than after a 501.
              */
             providers?: components["schemas"]["CaptureProviderAvailability"][];
+            seat_capture?: components["schemas"]["SeatCapture"];
+        };
+        /**
+         * @description Whether the caller's own role and seat let capture write, asked by the same check connect
+         *     and every sync ask. False hides every connect button; a connected mailbox stops at its
+         *     next sync.
+         */
+        SeatCapture: {
+            allowed: boolean;
+            /**
+             * @description Why `allowed` is false; null when it is true.
+             * @enum {string|null}
+             */
+            reason?: "role_cannot_capture" | null;
+            /**
+             * @description What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+             *     `lead`, or `seat` for a read seat. Null when `allowed` is true.
+             * @enum {string|null}
+             */
+            missing?: "activity" | "contact" | "lead" | "seat" | null;
         };
         /**
          * @description Whether a connect started right now would proceed, decided by the same predicate the connect
@@ -27264,10 +27286,11 @@ export interface components {
              * @description `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
              *     app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
              *     is a different fix from registering one. `unsupported`: this deployment does not serve the
-             *     provider at all.
+             *     provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+             *     capture writes, for every provider alike (`seat_capture` says so once).
              * @enum {string}
              */
-            reason: "ready" | "app_missing" | "app_unusable" | "unsupported";
+            reason: "ready" | "app_missing" | "app_unusable" | "unsupported" | "role_cannot_capture";
         };
         /**
          * @description The address this installation puts in outgoing links, and whether it answered when last asked.
@@ -43803,6 +43826,8 @@ export interface components {
             team_ids?: string[];
             /** @description Whether this unused member's sign-in email can still be corrected. Present only on the administration view. */
             email_editable?: boolean;
+            /** @description How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture. */
+            readonly connected_mailboxes?: number;
             /**
              * @description What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
              * @enum {string|null}
@@ -45439,6 +45464,8 @@ export interface components {
             name: string;
             /** @description True for a role the product ships. */
             is_system: boolean;
+            /** @description Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change. */
+            readonly captures_mail?: boolean;
         };
         CreateRoleRequest: {
             /** @description The key of the live role the new one starts as a copy of. */
@@ -56103,6 +56130,20 @@ export interface components {
         };
         /** @description Authenticated but not permitted (RBAC row/field scope, or 🟡 approval missing). */
         Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /**
+         * @description The caller's role or seat cannot record what capture writes (activities, and the contacts
+         *     and leads a mailbox brings in), so no mailbox of theirs can be captured
+         *     (`code: role_cannot_capture`). Nothing is stored. An admin changes their role.
+         *     `details.missing` names what is lacking, as `SeatCapture.missing` does.
+         */
+        RoleCannotCapture: {
             headers: {
                 [name: string]: unknown;
             };
@@ -76891,6 +76932,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -77369,6 +77411,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             /** @description Provider unreachable — the estimate needs the provider (`code: provider_unreachable`). */
@@ -77455,6 +77498,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };

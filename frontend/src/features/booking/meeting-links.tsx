@@ -295,13 +295,15 @@ function NoInvitationsCallout({
       title={t("scheduling.liveNoInvitesTitle")}
       actions={
         <>
-          <Button
-            variant="primary"
-            pending={calendar.connect.isPending}
-            onClick={() => calendar.start(known ?? calendar.target)}
-          >
-            {t("scheduling.reconnectCalendar")}
-          </Button>
+          {!calendar.refusal && (
+            <Button
+              variant="primary"
+              pending={calendar.connect.isPending}
+              onClick={() => calendar.start(known ?? calendar.target)}
+            >
+              {t("scheduling.reconnectCalendar")}
+            </Button>
+          )}
           <Button pending={pausing} onClick={onPause}>
             {t("scheduling.pause")}
           </Button>
@@ -309,6 +311,7 @@ function NoInvitationsCallout({
       }
     >
       <p>{attentionBody(t, standing, connection)}</p>
+      {calendar.refusal && <p>{t(calendar.refusal)}</p>}
       <ConnectRefusal connect={calendar.connect} />
     </Callout>
   );

@@ -136,6 +136,11 @@ func (r *Registry) EstimateBackfill(ctx context.Context, provider string, userID
 		return BackfillPreview{}, fmt.Errorf("%w: %d months (this installation offers %v)",
 			ErrWindowInvalid, windowMonths, r.OfferedBackfillWindows())
 	}
+	// Before the credential is unsealed or the provider asked: a member who
+	// may not capture is shown no count of a mailbox they cannot import.
+	if err := r.requireCapturingMember(ctx, userID); err != nil {
+		return BackfillPreview{}, err
+	}
 	var connID ids.UUID
 	var name string
 	var credentialRef *string
@@ -215,6 +220,9 @@ func (r *Registry) openBackfill(ctx context.Context, provider string, userID ids
 	}
 	if enqueue == nil {
 		return BackfillRun{}, errors.New("capture: starting a backfill needs a scheduler — an unpaged run blocks its connection permanently")
+	}
+	if err := r.requireCapturingMember(ctx, userID); err != nil {
+		return BackfillRun{}, err
 	}
 	var run BackfillRun
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {

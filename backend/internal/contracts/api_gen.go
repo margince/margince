@@ -4368,10 +4368,11 @@ func (e CaptureProviderAvailabilityProvider) Valid() bool {
 
 // Defines values for CaptureProviderAvailabilityReason.
 const (
-	CaptureProviderAvailabilityReasonAppMissing  CaptureProviderAvailabilityReason = "app_missing"
-	CaptureProviderAvailabilityReasonAppUnusable CaptureProviderAvailabilityReason = "app_unusable"
-	CaptureProviderAvailabilityReasonReady       CaptureProviderAvailabilityReason = "ready"
-	CaptureProviderAvailabilityReasonUnsupported CaptureProviderAvailabilityReason = "unsupported"
+	CaptureProviderAvailabilityReasonAppMissing        CaptureProviderAvailabilityReason = "app_missing"
+	CaptureProviderAvailabilityReasonAppUnusable       CaptureProviderAvailabilityReason = "app_unusable"
+	CaptureProviderAvailabilityReasonReady             CaptureProviderAvailabilityReason = "ready"
+	CaptureProviderAvailabilityReasonRoleCannotCapture CaptureProviderAvailabilityReason = "role_cannot_capture"
+	CaptureProviderAvailabilityReasonUnsupported       CaptureProviderAvailabilityReason = "unsupported"
 )
 
 // Valid indicates whether the value is a known member of the CaptureProviderAvailabilityReason enum.
@@ -4382,6 +4383,8 @@ func (e CaptureProviderAvailabilityReason) Valid() bool {
 	case CaptureProviderAvailabilityReasonAppUnusable:
 		return true
 	case CaptureProviderAvailabilityReasonReady:
+		return true
+	case CaptureProviderAvailabilityReasonRoleCannotCapture:
 		return true
 	case CaptureProviderAvailabilityReasonUnsupported:
 		return true
@@ -20374,6 +20377,45 @@ func (e SearchResultType) Valid() bool {
 	}
 }
 
+// Defines values for SeatCaptureMissing.
+const (
+	SeatCaptureMissingActivity SeatCaptureMissing = "activity"
+	SeatCaptureMissingContact  SeatCaptureMissing = "contact"
+	SeatCaptureMissingLead     SeatCaptureMissing = "lead"
+	SeatCaptureMissingSeat     SeatCaptureMissing = "seat"
+)
+
+// Valid indicates whether the value is a known member of the SeatCaptureMissing enum.
+func (e SeatCaptureMissing) Valid() bool {
+	switch e {
+	case SeatCaptureMissingActivity:
+		return true
+	case SeatCaptureMissingContact:
+		return true
+	case SeatCaptureMissingLead:
+		return true
+	case SeatCaptureMissingSeat:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SeatCaptureReason.
+const (
+	SeatCaptureReasonRoleCannotCapture SeatCaptureReason = "role_cannot_capture"
+)
+
+// Valid indicates whether the value is a known member of the SeatCaptureReason enum.
+func (e SeatCaptureReason) Valid() bool {
+	switch e {
+	case SeatCaptureReasonRoleCannotCapture:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SendAuthorizationPreviewRecipientDecidedBy.
 const (
 	SendAuthorizationPreviewRecipientDecidedByAdmin   SendAuthorizationPreviewRecipientDecidedBy = "admin"
@@ -32301,6 +32343,9 @@ type AssignNoticeCase struct {
 
 // AssignableRole defines model for AssignableRole.
 type AssignableRole struct {
+	// CapturesMail Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change.
+	CapturesMail *bool `json:"captures_mail,omitempty"`
+
 	// IsSystem True for a role the product ships.
 	IsSystem bool `json:"is_system"`
 
@@ -35033,7 +35078,7 @@ type CaptureConnection struct {
 	// LastSuccessAt Last successful sync for this mailbox; null before one succeeds.
 	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
 
-	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.
+	// LastSyncErrorClass rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member's role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval.
 	LastSyncErrorClass *string `json:"last_sync_error_class,omitempty"`
 
 	// LastSyncedAt Last sync attempt (CAP-DDL-5); null before the first.
@@ -35112,10 +35157,13 @@ type CaptureConnectionStatus string
 
 // CaptureConnectionConcern defines model for CaptureConnectionConcern.
 type CaptureConnectionConcern struct {
-	AccountLabel  *string            `json:"account_label"`
-	Concern       CaptureConcernKind `json:"concern"`
-	ConnectionId  openapi_types.UUID `json:"connection_id"`
-	DisplayName   *string            `json:"display_name"`
+	AccountLabel *string            `json:"account_label"`
+	Concern      CaptureConcernKind `json:"concern"`
+	ConnectionId openapi_types.UUID `json:"connection_id"`
+	DisplayName  *string            `json:"display_name"`
+
+	// ErrorClass The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed.
+	ErrorClass    *string            `json:"error_class,omitempty"`
 	LastSuccessAt *time.Time         `json:"last_success_at"`
 	Provider      string             `json:"provider"`
 	Since         *time.Time         `json:"since"`
@@ -35135,6 +35183,11 @@ type CaptureConnectionListResponse struct {
 	// send guards are what actually refuse an unusable one. A probe from inside the deployment says this
 	// process can reach the origin — it cannot say a recipient's mail client can.
 	PublicOrigin *PublicOriginStatus `json:"public_origin,omitempty"`
+
+	// SeatCapture Whether the caller's own role and seat let capture write, asked by the same check connect
+	// and every sync ask. False hides every connect button; a connected mailbox stops at its
+	// next sync.
+	SeatCapture *SeatCapture `json:"seat_capture,omitempty"`
 }
 
 // CaptureConsent The consent passthrough every capture surface (booking, public forms, imports) must carry
@@ -35430,7 +35483,8 @@ type CaptureProviderAvailability struct {
 	// Reason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
 	// app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
 	// is a different fix from registering one. `unsupported`: this deployment does not serve the
-	// provider at all.
+	// provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+	// capture writes, for every provider alike (`seat_capture` says so once).
 	Reason CaptureProviderAvailabilityReason `json:"reason"`
 }
 
@@ -35440,7 +35494,8 @@ type CaptureProviderAvailabilityProvider string
 // CaptureProviderAvailabilityReason `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
 // app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
 // is a different fix from registering one. `unsupported`: this deployment does not serve the
-// provider at all.
+// provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+// capture writes, for every provider alike (`seat_capture` says so once).
 type CaptureProviderAvailabilityReason string
 
 // CapturePurgeOutcome What a purge destroyed, or what a preview says it would. The four counts are disjoint and
@@ -57886,6 +57941,27 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
+// SeatCapture Whether the caller's own role and seat let capture write, asked by the same check connect
+// and every sync ask. False hides every connect button; a connected mailbox stops at its
+// next sync.
+type SeatCapture struct {
+	Allowed bool `json:"allowed"`
+
+	// Missing What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+	// `lead`, or `seat` for a read seat. Null when `allowed` is true.
+	Missing *SeatCaptureMissing `json:"missing,omitempty"`
+
+	// Reason Why `allowed` is false; null when it is true.
+	Reason *SeatCaptureReason `json:"reason,omitempty"`
+}
+
+// SeatCaptureMissing What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+// `lead`, or `seat` for a read seat. Null when `allowed` is true.
+type SeatCaptureMissing string
+
+// SeatCaptureReason Why `allowed` is false; null when it is true.
+type SeatCaptureReason string
+
 // SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
 	// Departed True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out.
@@ -61790,10 +61866,13 @@ type User struct {
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
 	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
-	Assignable  *bool               `json:"assignable,omitempty"`
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	DisplayName string              `json:"display_name"`
-	Email       openapi_types.Email `json:"email"`
+	Assignable *bool `json:"assignable,omitempty"`
+
+	// ConnectedMailboxes How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
+	ConnectedMailboxes *int                `json:"connected_mailboxes,omitempty"`
+	CreatedAt          *time.Time          `json:"created_at,omitempty"`
+	DisplayName        string              `json:"display_name"`
+	Email              openapi_types.Email `json:"email"`
 
 	// EmailEditable Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
 	EmailEditable *bool `json:"email_editable,omitempty"`
@@ -65212,6 +65291,9 @@ type PermissionDenied = Problem
 
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
+
+// RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type RoleCannotCapture = Problem
 
 // SettingLocked RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type SettingLocked = Problem

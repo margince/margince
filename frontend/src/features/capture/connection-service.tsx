@@ -53,8 +53,10 @@ export function AccountServices({
   heldWindow: ImportWindow | null;
   /** The provider whose consent is on its way, if any. */
   connectPendingFor: Provider | undefined;
-  /** Asks for a missing service's consent for the first time. */
-  onConnect: (provider: Provider) => void;
+  /** Asks for a missing service's consent for the first time; null when the
+   *  reader may connect nothing, which leaves the missing services and the
+   *  past-email import out. */
+  onConnect: ((provider: Provider) => void) | null;
   onImport: () => void;
 }>) {
   const t = useT();
@@ -64,7 +66,7 @@ export function AccountServices({
   return (
     <ServiceList label={label}>
       {mail && <ConnectedService conn={mail} kind="mail" />}
-      {!mail && mailProvider && (
+      {!mail && mailProvider && onConnect && (
         <MissingService
           kind="mail"
           connectLabel={t("connectors.connectMail")}
@@ -72,7 +74,7 @@ export function AccountServices({
           onConnect={() => onConnect(mailProvider)}
         />
       )}
-      {vendor && mail?.can_backfill && (
+      {vendor && mail?.can_backfill && onConnect && (
         <PastEmailService
           mail={mail}
           heldWindow={heldWindow}
@@ -82,7 +84,7 @@ export function AccountServices({
       {calendar && vendor && (
         <ConnectedService conn={calendar} kind="calendar" />
       )}
-      {!calendar && calendarProvider && (
+      {!calendar && calendarProvider && onConnect && (
         <MissingService
           kind="calendar"
           connectLabel={t("connectors.connectCalendar")}

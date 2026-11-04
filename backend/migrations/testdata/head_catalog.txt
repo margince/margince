@@ -2132,7 +2132,7 @@ public.capture_sweep_run_pkey CREATE UNIQUE INDEX capture_sweep_run_pkey ON publ
 public.capture_sync_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sync_state.backfill_active boolean NOT NULL gen=- def=false
 public.capture_sync_state.capture_sync_state_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES capture_connection(id) ON DELETE CASCADE
-public.capture_sync_state.capture_sync_state_last_error_class_check CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited'::text, 'unreachable'::text, 'auth'::text, 'history_gone'::text, 'internal'::text]))))
+public.capture_sync_state.capture_sync_state_last_error_class_check CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited'::text, 'unreachable'::text, 'auth'::text, 'history_gone'::text, 'forbidden'::text, 'internal'::text]))))
 public.capture_sync_state.capture_sync_state_pkey PRIMARY KEY (connection_id)
 public.capture_sync_state.connection_id uuid NOT NULL gen=- def=-
 public.capture_sync_state.consecutive_failures integer NOT NULL gen=- def=0

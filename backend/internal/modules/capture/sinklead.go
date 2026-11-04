@@ -73,7 +73,7 @@ func (s *Sink) captureLead(ctx context.Context, tx pgx.Tx, rec connector.Normali
 		// Somebody who is already a contact is not made a lead as well. The
 		// contact is the answer, and its owner is told after the commit. Only a
 		// caller who may create the lead is given that answer.
-		if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
+		if err := auth.Require(ctx, capturedLeadObject, principal.ActionCreate); err != nil {
 			return datasource.EntityRef{}, nil, nil, err
 		}
 		holders, err := storekit.LockIdentityHolders(ctx, tx, storekit.IdentityKeys{Emails: []string{fields.Email}})
@@ -118,7 +118,7 @@ func leadCreatedCapturePayload(sourceSystem string) crmcontracts.PublicEventLead
 }
 
 func (s *Sink) upsertLead(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields LeadFields) (ids.LeadID, bool, error) {
-	if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedLeadObject, principal.ActionCreate); err != nil {
 		return ids.LeadID{}, false, err
 	}
 	var id ids.LeadID

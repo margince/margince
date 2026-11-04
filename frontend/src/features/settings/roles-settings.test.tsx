@@ -139,6 +139,16 @@ function backend(
       rosterReads += 1;
       return json({ data: opts.roster ?? ROSTER, page: { has_more: false } });
     }
+    if (url.pathname.endsWith("/v1/users/assignable-roles")) {
+      return json({
+        roles: [ADMIN, RENAMED_REP, FIELD].map((role) => ({
+          key: role.key,
+          name: role.name,
+          is_system: role.is_system,
+          captures_mail: role !== FIELD,
+        })),
+      });
+    }
     if (url.pathname.endsWith("/v1/users/access-preview")) {
       return json({
         role: url.searchParams.get("role"),
@@ -260,6 +270,20 @@ describe("RolesSettings", () => {
     await screen.findByText("Field sales");
     expect(screen.queryByText(/^\d+ members?$/)).toBeNull();
     expect(rosterReads).toBe(0);
+  });
+
+  it("says a role that cannot capture mail stops its members' mailboxes, and says nothing on one that can", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backend([]));
+    render(<RolesSettings />);
+
+    const field = await openRole(user, "Field sales");
+    expect(await field.findByText(en["roles.cannotCapture"])).toBeTruthy();
+    await user.keyboard("{Escape}");
+
+    const admin = await openRole(user, "Admin");
+    await admin.findByText("Admin", { selector: "h2" });
+    expect(admin.queryByText(en["roles.cannotCapture"])).toBeNull();
   });
 
   it("opens a role in a drawer from anywhere on its row, by keyboard too, and gives focus back to the row", async () => {
