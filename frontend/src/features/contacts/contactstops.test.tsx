@@ -101,7 +101,7 @@ describe("the stops on a contact", () => {
     });
   });
 
-  it("says why the person's own stop and a restriction stay", async () => {
+  it("says why the contact's own stop and a restriction stay", async () => {
     installFetchStub({
       [STOPS_ROUTE]: () =>
         jsonResponse({ stops: [PRESSED_OBJECTION, RESTRICTION] }),

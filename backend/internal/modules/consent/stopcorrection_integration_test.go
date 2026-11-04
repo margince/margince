@@ -9,7 +9,7 @@ package consent
 //
 // A marketing objection is stamped at the subject's level whoever types it. An
 // admin may take back one a colleague typed, with a reason; a rep may not, and
-// nobody takes back one the person pressed themselves.
+// nobody takes back one the contact pressed themselves.
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func repOwnedContact(t *testing.T, e *channelConsentEnv) ids.ContactID {
 }
 
 // systemCtx is the principal the public preference edge binds: the product
-// acting on the person's own press.
+// acting on the contact's own press.
 func systemCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -117,24 +117,24 @@ func TestAnAdminCorrectsAnObjectionAColleagueTyped(t *testing.T) {
 	}
 }
 
-func TestNobodyCorrectsAnObjectionThePersonPressed(t *testing.T) {
+func TestNobodyCorrectsAnObjectionTheContactPressed(t *testing.T) {
 	e := setupChannelConsent(t)
 	if _, err := e.store.PublicStop(systemCtx(e.ws), e.contact, StopAllMarketing, "No more ads."); err != nil {
-		t.Fatalf("the person's own press: %v", err)
+		t.Fatalf("the contact's own press: %v", err)
 	}
 	stop := onlyStop(t, e, e.ctx, e.contact)
 	if stop.MayLift || stop.RecordedByColleague {
-		t.Errorf("the admin is offered %+v, want no lift on the person's own press", stop)
+		t.Errorf("the admin is offered %+v, want no lift on the contact's own press", stop)
 	}
 	err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: ids.UUID(stop.Id), Reason: "resume"})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("an admin lifting the person's press answered %v, want ErrPermissionDenied", err)
+		t.Errorf("an admin lifting the contact's press answered %v, want ErrPermissionDenied", err)
 	}
 }
 
-// A merge copies the person's press onto the survivor and stamps the merger.
-// The copy is still the person's.
-func TestACarriedPressStaysThePersons(t *testing.T) {
+// A merge copies the contact's press onto the survivor and stamps the merger.
+// The copy is still the contact's.
+func TestACarriedPressStaysTheContacts(t *testing.T) {
 	e := setupChannelConsent(t)
 	origin, carried := ids.NewV7(), ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -151,7 +151,7 @@ func TestACarriedPressStaysThePersons(t *testing.T) {
 	}
 }
 
-// No level lifts a restriction here: lifting one owes the person notice first.
+// No level lifts a restriction here: lifting one owes the contact notice first.
 func TestNoSeatLiftsARestriction(t *testing.T) {
 	e := setupChannelConsent(t)
 	row := ids.NewV7()
@@ -174,7 +174,7 @@ func TestNoSeatLiftsARestriction(t *testing.T) {
 }
 
 // Only a seat typing through Suppress is correctable. Every other first
-// recorder counts as the person's own act, and so does a copy whose original
+// recorder counts as the contact's own act, and so does a copy whose original
 // is gone.
 func TestOnlyASeatTypedObjectionIsCorrectable(t *testing.T) {
 	cases := map[string]struct{ capturedBy, source string }{

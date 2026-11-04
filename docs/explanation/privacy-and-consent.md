@@ -5,8 +5,7 @@
 How Margince meets its duties to a data subject. The **authorization engine** decides whether each
 outbound message may go, and keeps a record of why. The **privacy engines** (erasure, subject
 access, retention) do the work a granted request asks for. The product refuses to fill records by
-scraping in the first place. The legal reasons behind that, for the EU and Vietnam, are in a
-document kept with the company's business files, not in this tree.
+scraping in the first place.
 
 Two modules work together: `consent` owns the engine and the case queue, and `privacy` owns the
 code that does the work. They are connected at the composition root, never by a sibling import.
@@ -275,15 +274,13 @@ since rotated.
   `communication_suppression` records which kind, its `source`, the seat that captured it, and the
   authority level that decided it. `lift.go` refuses any lift that the level of the user who lifts it cannot override.
 
-  The two kinds are not the same there. A passed-on **marketing objection** is marked
-  `decided_by_level='subject'`, because Article 21 is the subject's own act and no user should undo
-  it. One exception: an admin may correct an objection a user typed by mistake, with a reason that
-  the audit row keeps. An objection the subject pressed on a mailed link stays theirs.
-  `stopcorrection.go` holds this rule, and `GET /contacts/{id}/consent/stops` shows each user what
-  it allows. No user lifts a processing restriction, because lifting one owes the subject notice
-  first and Margince sends no such notice yet. A passed-on **subject request** keeps the seat's
-  level. It is a user's report of a call with no article behind it. So an admin who fixes a wrong
-  "stop everything" note does not need the subject back on the phone.
+  A passed-on **marketing objection** is marked `decided_by_level='subject'`, because Article 21 is
+  the subject's own act. An admin may still correct one a user typed in error, with a reason the
+  audit row keeps (`stopcorrection.go`). One the subject pressed on a mailed link stays theirs. A
+  passed-on **subject request** keeps the seat's level, so an admin can fix a wrong "stop
+  everything" note a user typed from a call. `GET /contacts/{id}/consent/stops` shows each user
+  which stops they may lift. Nobody lifts a limit on processing here, because that owes the subject
+  notice first, and Margince sends none yet.
 - **A public fix or erasure opens a case.** A subject who types into a confirm link opens a
   `data_subject_request` in the same transaction. The case gets a reference number and the last day to answer it.
   No row is left behind for nobody to work.

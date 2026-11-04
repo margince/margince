@@ -81,7 +81,7 @@ func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.Authority
 func admitLifter(ctx context.Context) error {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.Type != principal.PrincipalHuman {
-		return fmt.Errorf("only a person signed in to a seat takes back a stop: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("only a colleague signed in to a seat takes back a stop: %w", apperrors.ErrPermissionDenied)
 	}
 	return auth.Require(ctx, "contact", principal.ActionUpdate)
 }
@@ -299,9 +299,9 @@ const (
 func liftRefusal(blockedBy crmcontracts.ContactStopLiftBlockedBy) string {
 	switch blockedBy {
 	case crmcontracts.ContactStopLiftBlockedByRestriction:
-		return "a processing restriction is lifted only after the person is told in advance, which Margince cannot do yet"
+		return "a processing restriction is lifted only after the contact is told in advance, which Margince cannot do yet"
 	case crmcontracts.ContactStopLiftBlockedBySubjectDecision:
-		return "the person set this stop themselves; only they can change it"
+		return "the contact set this stop themselves; only they can change it"
 	}
 	return "this stop was recorded at a level you do not outrank"
 }

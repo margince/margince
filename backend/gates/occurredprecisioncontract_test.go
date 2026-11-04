@@ -110,6 +110,8 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml RecordCommunicationContextRequest.occurred_at": "a rep's statement about a contact, written to consent_qualifying_event, not an activity",
 	"api/crm.yaml NoticeAcquisition.occurred_at": "when a contact's data was acquired, stated by a rep or taken from captured mail's sent " +
 		"instant, held in contact_acquisition_evidence and not an activity",
+	"api/crm.yaml ContactAcquisitionRequest.occurred_at": "the earliest live request in contact_acquisition_evidence, " +
+		"the same rows NoticeAcquisition reads, and not an activity",
 	"api/crm.yaml NoticeOrigin.occurred_at":                         "when the event behind a notification was emitted, the bus's own instant",
 	"api/crm.yaml ListDependency.occurred_at":                       "when an export ran or a list rule was made, not an activity",
 	"api/crm.yaml ListHistoryEntry.occurred_at":                     "when a list membership or revision changed, not an activity",

@@ -16984,7 +16984,7 @@ export interface paths {
          *
          *     **A mistake is corrected by an admin.** No seat outranks the subject, so a rep cannot take
          *     one back. An admin may correct an objection a colleague recorded by mistake, with a reason
-         *     (`liftSuppression`). An objection the person recorded themselves on a link stays until they
+         *     (`liftSuppression`). An objection the contact recorded themselves on a link stays until they
          *     change it.
          *
          *     Two kinds are recordable here. `subject_request` is "stop contacting me", and it stops
@@ -17028,12 +17028,12 @@ export interface paths {
          *     admin's is liftable by an admin other than by the one who set it only through this
          *     same rule.
          *
-         *     **Nothing lifts the subject's own act.** An Art. 21 objection the person recorded on a
+         *     **Nothing lifts the subject's own act.** An Art. 21 objection the contact recorded on a
          *     link in a mail is theirs, not the installation's, so no seat reaches it here whatever
          *     their role. One exception: an admin may correct a marketing objection a colleague
          *     recorded by mistake. The reason is required and the audit row records the correction.
          *
-         *     **No seat lifts a processing restriction here.** Lifting one owes the person notice
+         *     **No seat lifts a processing restriction here.** Lifting one owes the contact notice
          *     first, and Margince sends no such notice yet.
          *
          *     `listContactStops` answers, per stop, whether this caller may lift it and why not.
@@ -17066,8 +17066,8 @@ export interface paths {
          *
          *     `may_lift` is the answer `liftSuppression` would give this caller, from the same rule. An
          *     admin may correct a marketing objection a colleague recorded by mistake (`correction`);
-         *     one the person recorded themselves stays until they change it. No seat lifts a processing
-         *     restriction here, because lifting one owes the person notice first and Margince sends no
+         *     one the contact recorded themselves stays until they change it. No seat lifts a processing
+         *     restriction here, because lifting one owes the contact notice first and Margince sends no
          *     such notice yet.
          */
         get: operations["listContactStops"];
@@ -51956,7 +51956,7 @@ export interface components {
              */
             kind: string;
             /**
-             * @description Whose decision the stop is. `subject` is the person's own, whoever typed it.
+             * @description Whose decision the stop is. `subject` is the contact's own, whoever typed it.
              * @enum {string}
              */
             authority: "machine" | "user" | "admin" | "subject";
@@ -51964,12 +51964,12 @@ export interface components {
             purpose_key?: string | null;
             /** @description The address a stop is held on. Null for a stop on the contact. */
             address?: string | null;
-            /** @description What the colleague or the person wrote when the stop was recorded. Null when nothing was written. */
+            /** @description What the colleague or the contact wrote when the stop was recorded. Null when nothing was written. */
             reason?: string | null;
             /** Format: date-time */
             recorded_at: string;
             /**
-             * @description A colleague recorded the stop. False when the person recorded it on a link in a mail or
+             * @description A colleague recorded the stop. False when the contact recorded it on a link in a mail or
              *     Margince recorded it, for example for a bounce.
              */
             recorded_by_colleague: boolean;
@@ -51985,8 +51985,8 @@ export interface components {
             /**
              * @description Why `may_lift` is false. `permission`: you may not change this contact, or you are not
              *     signed in to a seat. `address`: a stop on an address clears when mail to it works
-             *     again. `restriction`: lifting it owes the person notice first, which Margince cannot
-             *     send yet. `subject_decision`: the person set it and only they change it. `level`: it
+             *     again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+             *     send yet. `subject_decision`: the contact set it and only they change it. `level`: it
              *     was recorded at your level or above. Null when `may_lift` is true.
              * @enum {string|null}
              */

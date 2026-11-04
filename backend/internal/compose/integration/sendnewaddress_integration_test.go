@@ -188,7 +188,7 @@ func TestASendToAKnownAddressReusesTheContact(t *testing.T) {
 }
 
 // A lead holding the address is the recipient. The send makes no contact and
-// converts nobody: a person is a lead or a contact, and only a human converts.
+// converts nobody: somebody is a lead or a contact, and only a human converts.
 func TestASendToALeadsAddressLeavesTheLeadALead(t *testing.T) {
 	e := setupNewAddress(t)
 	const address = "lead@prospect.test"

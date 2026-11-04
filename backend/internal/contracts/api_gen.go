@@ -41285,7 +41285,7 @@ type ContactStop struct {
 	// Address The address a stop is held on. Null for a stop on the contact.
 	Address *string `json:"address,omitempty"`
 
-	// Authority Whose decision the stop is. `subject` is the person's own, whoever typed it.
+	// Authority Whose decision the stop is. `subject` is the contact's own, whoever typed it.
 	Authority ContactStopAuthority `json:"authority"`
 
 	// Correction Taking it back corrects a stop a colleague recorded by mistake: a marketing objection,
@@ -41301,8 +41301,8 @@ type ContactStop struct {
 
 	// LiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
 	// signed in to a seat. `address`: a stop on an address clears when mail to it works
-	// again. `restriction`: lifting it owes the person notice first, which Margince cannot
-	// send yet. `subject_decision`: the person set it and only they change it. `level`: it
+	// again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+	// send yet. `subject_decision`: the contact set it and only they change it. `level`: it
 	// was recorded at your level or above. Null when `may_lift` is true.
 	LiftBlockedBy *ContactStopLiftBlockedBy `json:"lift_blocked_by,omitempty"`
 
@@ -41312,11 +41312,11 @@ type ContactStop struct {
 	// PurposeKey The one purpose a narrow stop binds. Null for a stop on every purpose of its kind.
 	PurposeKey *string `json:"purpose_key,omitempty"`
 
-	// Reason What the colleague or the person wrote when the stop was recorded. Null when nothing was written.
+	// Reason What the colleague or the contact wrote when the stop was recorded. Null when nothing was written.
 	Reason     *string   `json:"reason,omitempty"`
 	RecordedAt time.Time `json:"recorded_at"`
 
-	// RecordedByColleague A colleague recorded the stop. False when the person recorded it on a link in a mail or
+	// RecordedByColleague A colleague recorded the stop. False when the contact recorded it on a link in a mail or
 	// Margince recorded it, for example for a bounce.
 	RecordedByColleague bool `json:"recorded_by_colleague"`
 
@@ -41324,13 +41324,13 @@ type ContactStop struct {
 	RecordedByName *string `json:"recorded_by_name,omitempty"`
 }
 
-// ContactStopAuthority Whose decision the stop is. `subject` is the person's own, whoever typed it.
+// ContactStopAuthority Whose decision the stop is. `subject` is the contact's own, whoever typed it.
 type ContactStopAuthority string
 
 // ContactStopLiftBlockedBy Why `may_lift` is false. `permission`: you may not change this contact, or you are not
 // signed in to a seat. `address`: a stop on an address clears when mail to it works
-// again. `restriction`: lifting it owes the person notice first, which Margince cannot
-// send yet. `subject_decision`: the person set it and only they change it. `level`: it
+// again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+// send yet. `subject_decision`: the contact set it and only they change it. `level`: it
 // was recorded at your level or above. Null when `may_lift` is true.
 type ContactStopLiftBlockedBy string
 

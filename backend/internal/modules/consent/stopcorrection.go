@@ -8,7 +8,7 @@ package consent
 //
 // The ladder in commsauthz answers most of it. A marketing objection is stamped
 // at the subject's level whoever typed it (levelFor). An admin may correct one
-// a colleague typed by mistake. One the person pressed on a mailed link stays
+// a colleague typed by mistake. One the contact pressed on a mailed link stays
 // theirs: the product, not a seat, wrote its first row.
 
 import (
@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// kindProcessingRestriction is the Art. 18 stop. Lifting one owes the person
+// kindProcessingRestriction is the Art. 18 stop. Lifting one owes the contact
 // notice before it happens, and Margince has no such notice, so no seat lifts
 // one here at any level.
 const kindProcessingRestriction = "processing_restriction"
@@ -30,7 +30,7 @@ type stopFacts struct {
 	decided commsauthz.AuthorityLevel
 	// origin and originSource are the captured_by and source of the first row
 	// of the stop's carry chain. A merge copies a stop and stamps the merger,
-	// so the copy's own captured_by would make the person's press look typed.
+	// so the copy's own captured_by would make the contact's press look typed.
 	origin       string
 	originSource string
 	// pinned is a stop held on an address rather than on the contact. It
@@ -66,7 +66,7 @@ func judgeLift(caller commsauthz.AuthorityLevel, stop stopFacts) liftVerdict {
 
 // typedObjection reports a subject-level objection a seat typed through
 // Suppress. It is an allow-list. An agent, a connector, an import, the product
-// and a copy whose original is gone all count as the person's own act.
+// and a copy whose original is gone all count as the contact's own act.
 func typedObjection(stop stopFacts) bool {
 	return stop.kind == commsauthz.ReasonObjection &&
 		stop.decided == commsauthz.LevelSubject &&
