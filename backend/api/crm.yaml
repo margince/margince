@@ -24831,6 +24831,100 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /existing-customer-notices:
+    get:
+      tags: [Compliance]
+      operationId: listExistingCustomerNotices
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: The collection-notice declarations the existing-customer route reads.
+      description: |
+        Needs `consent_config:read`. Live declarations first, then withdrawn ones, newest first.
+        UNPAGED: an installation declares a handful, one per customer group.
+
+        Where the recipient's country grants an existing-customer route (Germany, UWG §7(3)), a
+        marketing send to a contact without consent goes out when all of these hold: the contact
+        is a stakeholder on a won deal of the sending entity; a live declaration of that entity
+        covers the day the deal was won; the declaration names the send's marketing purpose; and
+        the contact has not objected. The send then records the basis
+        `existing_customer_exception`.
+      responses:
+        '200':
+          description: The declarations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/ExistingCustomerNotice' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Compliance]
+      operationId: declareExistingCustomerNotice
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Declare that a group of customers was told at collection that they may object to advertising.
+      description: |
+        Needs `consent_config:create`, and a signed-in user: an agent cannot declare evidence.
+        A declaration is never edited; to correct one, withdraw it and declare again.
+
+        `effective_from` may lie in the past, so customers won before the declaration was made
+        qualify where the notice was given then. It may not lie in the future. `effective_until`
+        is exclusive and optional; without it the notice is still given. Every purpose must be a
+        marketing purpose. An archived legal entity is refused as 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclareExistingCustomerNoticeRequest' }
+      responses:
+        '201':
+          description: The declaration as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistingCustomerNotice' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /existing-customer-notices/{id}/withdraw:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: withdrawExistingCustomerNotice
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Withdraw a collection-notice declaration, with a reason.
+      description: |
+        Needs `consent_config:update`. From now on no send rests on it. A send already made on
+        it keeps its own decision record. A declaration already withdrawn, or one that does not
+        exist, answers 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200':
+          description: The withdrawn declaration.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistingCustomerNotice' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /retention/settings:
     get:
       tags: [Compliance]
@@ -47428,6 +47522,7 @@ components:
             - consent_withdrawn
             - no_consent_exception_not_offered
             - no_consent
+            - existing_customer
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -67158,6 +67253,10 @@ components:
         key: { type: string, description: 'Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.' }
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).' }
+        class:
+          type: string
+          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         created_at: { type: string, format: date-time }
 
     CreateConsentPurposeRequest:
@@ -67167,6 +67266,41 @@ components:
         key: { type: string }
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false }
+
+    ExistingCustomerNotice:
+      type: object
+      required: [id, legal_entity_id, customer_group, collection_channel, notice_text, effective_from, purpose_ids, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        legal_entity_id: { type: string, format: uuid, description: 'The sending entity that collected the addresses.' }
+        customer_group: { type: string, description: 'Which customers the declaration covers, in words.' }
+        collection_channel: { type: string, description: 'How their addresses were collected, for example the web shop checkout.' }
+        notice_text: { type: string, description: 'The notice the customers saw when their address was collected.' }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: [string, 'null'], format: date-time, description: 'Exclusive end of the period. Null while the notice is still given.' }
+        purpose_ids:
+          type: array
+          description: The marketing purposes that advertise goods or services like the ones these customers bought.
+          items: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+        withdrawn_at: { type: [string, 'null'], format: date-time }
+        withdrawn_reason: { type: [string, 'null'] }
+
+    DeclareExistingCustomerNoticeRequest:
+      type: object
+      required: [legal_entity_id, customer_group, collection_channel, notice_text, effective_from, purpose_ids]
+      properties:
+        legal_entity_id: { type: string, format: uuid }
+        customer_group: { type: string, minLength: 1, maxLength: 500 }
+        collection_channel: { type: string, minLength: 1, maxLength: 200 }
+        notice_text: { type: string, minLength: 1, maxLength: 4000 }
+        effective_from: { type: string, format: date-time }
+        effective_until: { type: [string, 'null'], format: date-time }
+        purpose_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { type: string, format: uuid }
 
     RetentionScope:
       type: string

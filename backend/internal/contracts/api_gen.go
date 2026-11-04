@@ -7096,6 +7096,30 @@ func (e ConsentEventNewState) Valid() bool {
 	}
 }
 
+// Defines values for ConsentPurposeClass.
+const (
+	ConsentPurposeClassBusinessCorrespondence ConsentPurposeClass = "business_correspondence"
+	ConsentPurposeClassMarketing              ConsentPurposeClass = "marketing"
+	ConsentPurposeClassPhoneOutreach          ConsentPurposeClass = "phone_outreach"
+	ConsentPurposeClassTransactional          ConsentPurposeClass = "transactional"
+)
+
+// Valid indicates whether the value is a known member of the ConsentPurposeClass enum.
+func (e ConsentPurposeClass) Valid() bool {
+	switch e {
+	case ConsentPurposeClassBusinessCorrespondence:
+		return true
+	case ConsentPurposeClassMarketing:
+		return true
+	case ConsentPurposeClassPhoneOutreach:
+		return true
+	case ConsentPurposeClassTransactional:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
@@ -7593,6 +7617,7 @@ const (
 	ContactConsentGuardEntryReasonCodeConsentConfirmed             ContactConsentGuardEntryReasonCode = "consent_confirmed"
 	ContactConsentGuardEntryReasonCodeConsentWithdrawn             ContactConsentGuardEntryReasonCode = "consent_withdrawn"
 	ContactConsentGuardEntryReasonCodeContractNotice               ContactConsentGuardEntryReasonCode = "contract_notice"
+	ContactConsentGuardEntryReasonCodeExistingCustomer             ContactConsentGuardEntryReasonCode = "existing_customer"
 	ContactConsentGuardEntryReasonCodeNoCallPath                   ContactConsentGuardEntryReasonCode = "no_call_path"
 	ContactConsentGuardEntryReasonCodeNoConnection                 ContactConsentGuardEntryReasonCode = "no_connection"
 	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
@@ -7616,6 +7641,8 @@ func (e ContactConsentGuardEntryReasonCode) Valid() bool {
 	case ContactConsentGuardEntryReasonCodeConsentWithdrawn:
 		return true
 	case ContactConsentGuardEntryReasonCodeContractNotice:
+		return true
+	case ContactConsentGuardEntryReasonCodeExistingCustomer:
 		return true
 	case ContactConsentGuardEntryReasonCodeNoCallPath:
 		return true
@@ -39727,8 +39754,10 @@ type ConsentEventNewState string
 
 // ConsentPurpose defines model for ConsentPurpose.
 type ConsentPurpose struct {
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
+	// Class What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+	Class     *ConsentPurposeClass `json:"class,omitempty"`
+	CreatedAt time.Time            `json:"created_at"`
+	Id        openapi_types.UUID   `json:"id"`
 
 	// Key Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.
 	Key   string `json:"key"`
@@ -39737,6 +39766,9 @@ type ConsentPurpose struct {
 	// RequiresDoubleOptIn When true, a grant is only effective after a confirmed DOI event (German email norm).
 	RequiresDoubleOptIn *bool `json:"requires_double_opt_in,omitempty"`
 }
+
+// ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+type ConsentPurposeClass string
 
 // ConsentQualifyingEvent The deterministic event that makes business correspondence lawful (ADR-0098 D2): an
 // inbound message, an inquiry they initiated, an active deal with their company, or
@@ -44427,6 +44459,17 @@ type DecideLegalReviewRequest struct {
 	Outcome  LegalReviewOutcome `json:"outcome"`
 }
 
+// DeclareExistingCustomerNoticeRequest defines model for DeclareExistingCustomerNoticeRequest.
+type DeclareExistingCustomerNoticeRequest struct {
+	CollectionChannel string               `json:"collection_channel"`
+	CustomerGroup     string               `json:"customer_group"`
+	EffectiveFrom     time.Time            `json:"effective_from"`
+	EffectiveUntil    *time.Time           `json:"effective_until,omitempty"`
+	LegalEntityId     openapi_types.UUID   `json:"legal_entity_id"`
+	NoticeText        string               `json:"notice_text"`
+	PurposeIds        []openapi_types.UUID `json:"purpose_ids"`
+}
+
 // DeclaredExtensionSetting One setting a unit declares, drawn by the core.
 type DeclaredExtensionSetting struct {
 	// Hint One line saying what the setting does.
@@ -45433,6 +45476,32 @@ type ExcuseNoticeCase struct {
 
 // ExcuseNoticeCaseState Which claim this is: the duty does not apply, or it was met somewhere this installation did not send from.
 type ExcuseNoticeCaseState string
+
+// ExistingCustomerNotice defines model for ExistingCustomerNotice.
+type ExistingCustomerNotice struct {
+	// CollectionChannel How their addresses were collected, for example the web shop checkout.
+	CollectionChannel string    `json:"collection_channel"`
+	CreatedAt         time.Time `json:"created_at"`
+
+	// CustomerGroup Which customers the declaration covers, in words.
+	CustomerGroup string    `json:"customer_group"`
+	EffectiveFrom time.Time `json:"effective_from"`
+
+	// EffectiveUntil Exclusive end of the period. Null while the notice is still given.
+	EffectiveUntil *time.Time         `json:"effective_until,omitempty"`
+	Id             openapi_types.UUID `json:"id"`
+
+	// LegalEntityId The sending entity that collected the addresses.
+	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`
+
+	// NoticeText The notice the customers saw when their address was collected.
+	NoticeText string `json:"notice_text"`
+
+	// PurposeIds The marketing purposes that advertise goods or services like the ones these customers bought.
+	PurposeIds      []openapi_types.UUID `json:"purpose_ids"`
+	WithdrawnAt     *time.Time           `json:"withdrawn_at,omitempty"`
+	WithdrawnReason *string              `json:"withdrawn_reason,omitempty"`
+}
 
 // ExtOAuthConnectResponse defines model for ExtOAuthConnectResponse.
 type ExtOAuthConnectResponse struct {
@@ -69818,6 +69887,11 @@ type BackfillEmploymentImportJSONBody struct {
 	Limit *int                `json:"limit,omitempty"`
 }
 
+// WithdrawExistingCustomerNoticeJSONBody defines parameters for WithdrawExistingCustomerNotice.
+type WithdrawExistingCustomerNoticeJSONBody struct {
+	Reason string `json:"reason"`
+}
+
 // ExtOauthCallbackParams defines parameters for ExtOauthCallback.
 type ExtOauthCallbackParams struct {
 	// Code The vendor's authorization code
@@ -74427,6 +74501,12 @@ type BackfillEmploymentImportJSONRequestBody BackfillEmploymentImportJSONBody
 
 // ResolveEntitiesJSONRequestBody defines body for ResolveEntities for application/json ContentType.
 type ResolveEntitiesJSONRequestBody = EntityResolutionRequest
+
+// DeclareExistingCustomerNoticeJSONRequestBody defines body for DeclareExistingCustomerNotice for application/json ContentType.
+type DeclareExistingCustomerNoticeJSONRequestBody = DeclareExistingCustomerNoticeRequest
+
+// WithdrawExistingCustomerNoticeJSONRequestBody defines body for WithdrawExistingCustomerNotice for application/json ContentType.
+type WithdrawExistingCustomerNoticeJSONRequestBody WithdrawExistingCustomerNoticeJSONBody
 
 // CreateFilteredExportJSONRequestBody defines body for CreateFilteredExport for application/json ContentType.
 type CreateFilteredExportJSONRequestBody = FilteredExportRequest
@@ -89040,6 +89120,15 @@ type ServerInterface interface {
 	// Find out whether a contact or company is already a record here, before creating one.
 	// (POST /entity-resolutions)
 	ResolveEntities(w http.ResponseWriter, r *http.Request)
+	// The collection-notice declarations the existing-customer route reads.
+	// (GET /existing-customer-notices)
+	ListExistingCustomerNotices(w http.ResponseWriter, r *http.Request)
+	// Declare that a group of customers was told at collection that they may object to advertising.
+	// (POST /existing-customer-notices)
+	DeclareExistingCustomerNotice(w http.ResponseWriter, r *http.Request)
+	// Withdraw a collection-notice declaration, with a reason.
+	// (POST /existing-customer-notices/{id}/withdraw)
+	WithdrawExistingCustomerNotice(w http.ResponseWriter, r *http.Request, id Id)
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
@@ -93624,6 +93713,24 @@ func (_ Unimplemented) BackfillEmploymentImport(w http.ResponseWriter, r *http.R
 // Find out whether a contact or company is already a record here, before creating one.
 // (POST /entity-resolutions)
 func (_ Unimplemented) ResolveEntities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The collection-notice declarations the existing-customer route reads.
+// (GET /existing-customer-notices)
+func (_ Unimplemented) ListExistingCustomerNotices(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Declare that a group of customers was told at collection that they may object to advertising.
+// (POST /existing-customer-notices)
+func (_ Unimplemented) DeclareExistingCustomerNotice(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw a collection-notice declaration, with a reason.
+// (POST /existing-customer-notices/{id}/withdraw)
+func (_ Unimplemented) WithdrawExistingCustomerNotice(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -119786,6 +119893,78 @@ func (siw *ServerInterfaceWrapper) ResolveEntities(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// ListExistingCustomerNotices operation middleware
+func (siw *ServerInterfaceWrapper) ListExistingCustomerNotices(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExistingCustomerNotices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeclareExistingCustomerNotice operation middleware
+func (siw *ServerInterfaceWrapper) DeclareExistingCustomerNotice(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclareExistingCustomerNotice(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawExistingCustomerNotice operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawExistingCustomerNotice(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawExistingCustomerNotice(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateFilteredExport operation middleware
 func (siw *ServerInterfaceWrapper) CreateFilteredExport(w http.ResponseWriter, r *http.Request) {
 
@@ -142449,6 +142628,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/entity-resolutions", wrapper.ResolveEntities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/existing-customer-notices", wrapper.ListExistingCustomerNotices)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/existing-customer-notices", wrapper.DeclareExistingCustomerNotice)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/existing-customer-notices/{id}/withdraw", wrapper.WithdrawExistingCustomerNotice)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/exports", wrapper.CreateFilteredExport)

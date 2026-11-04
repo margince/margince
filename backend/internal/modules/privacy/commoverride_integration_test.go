@@ -32,8 +32,8 @@ import (
 func seedOverride(ctx context.Context, t *testing.T, conn execer, contact, lead *ids.UUID) {
 	t.Helper()
 	mustExec(ctx, t, conn, `
-		INSERT INTO communication_override (contact_id, lead_id, category, reason, decided_by_level, captured_by)
-		VALUES ($1, $2, 'marketing', 'vouched for on the call', 'user', 'user:test')`,
+		INSERT INTO communication_override (contact_id, lead_id, category, reason, decided_by_level, captured_by, legal_entity_id)
+		VALUES ($1, $2, 'marketing', 'vouched for on the call', 'user', 'user:test', (SELECT id FROM legal_entity WHERE is_default))`,
 		contact, lead)
 }
 

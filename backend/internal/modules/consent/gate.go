@@ -78,10 +78,10 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 				return err
 			}
 			w := packRulesFor(country)
-			// The legacy gate is asked about a purpose key and never about the
-			// message, so it can make no similarity claim. An exception whose
-			// pack requires similarity therefore refuses here.
-			marketing := MarketingContext{Exception: w.marketingException}
+			marketing, err := marketingContextTx(ctx, tx, w)
+			if err != nil {
+				return err
+			}
 			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now().Add(-w.reply), marketing)
 			if err != nil {
 				return err

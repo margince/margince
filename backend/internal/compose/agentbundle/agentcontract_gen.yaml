@@ -29091,6 +29091,7 @@ components:
             - consent_withdrawn
             - no_consent_exception_not_offered
             - no_consent
+            - existing_customer
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -43423,6 +43424,10 @@ components:
         key: {type: string, description: 'Stable machine key (e.g. transactional, marketing_email, profiling).'}
         label: {type: string}
         requires_double_opt_in: {type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).'}
+        class:
+          type: string
+          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         created_at: {type: string, format: date-time}
     RetentionScope:
       type: string

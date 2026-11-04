@@ -9,6 +9,7 @@ import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { NOTICE_CASE_PARAM } from "../../lib/privacycaselink";
 import { useUrlParams } from "../../lib/urlstate";
+import { CustomerNoticesCard } from "../privacy/customernotices";
 import { NoticeCasesCard } from "../privacy/noticecases";
 import { NewDsrForm, PrivacyInboxCard } from "../privacy/privacy";
 import {
@@ -32,6 +33,7 @@ export function PrivacyLanes() {
   return (
     <>
       <ConsentPurposesCard />
+      <CustomerNoticesCard />
       <RetentionCard />
       <RequestsPanel />
       <NoticeCasesCard />

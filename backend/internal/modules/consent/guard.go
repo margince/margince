@@ -76,11 +76,12 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 		}
 		w := packRulesFor(country)
 		since := s.now().Add(-w.reply)
-		// A guard reads a CONTACT, not a message, so it names nothing advertised
-		// and an exception requiring similarity answers no here. The guard is
-		// advisory; the send path asks the same question with the message in
-		// hand and is what actually decides.
-		marketing := MarketingContext{Exception: w.marketingException}
+		// The same marketing context the send path builds for this caller, so
+		// the advisory answer and the send agree on the existing-customer route.
+		marketing, err := marketingContextTx(ctx, tx, w)
+		if err != nil {
+			return err
+		}
 		for _, purpose := range purposes {
 			verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
 			if err != nil {

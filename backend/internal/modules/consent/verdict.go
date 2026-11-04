@@ -27,6 +27,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -43,8 +44,8 @@ const (
 	// business relationship exists.
 	ClassTransactional Class = "transactional"
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
-	// feedback requests. Express consent with double-opt-in proof; the §7(3)
-	// existing-customer exception is not offered.
+	// feedback requests. Express consent with double-opt-in proof, or the
+	// §7(3) existing-customer route where the pack grants it.
 	ClassMarketing Class = "marketing"
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
@@ -93,6 +94,9 @@ type Verdict struct {
 	// and writing a record because somebody opened a drawer would put a legal
 	// fact on the record for a message nobody sent.
 	QualifyingDerived bool
+	// ExistingCustomer is the sale and declaration a marketing verdict allowed
+	// on, when it allowed on the existing-customer route.
+	ExistingCustomer *ExistingCustomerGround
 }
 
 const (
@@ -136,6 +140,9 @@ type PurposeRow struct {
 // read, and the verdict reads no settings.
 type MarketingContext struct {
 	Exception *messaging.MarketingException
+	// SendingEntity is the legal entity the message goes out for. The
+	// existing-customer route counts only a sale that entity made.
+	SendingEntity ids.UUID
 }
 
 // VerdictForRecipient is the decision. The guard endpoint and the transmit gate
@@ -276,10 +283,10 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, add
 }
 
 // marketingVerdict is the strict arm, unchanged in strictness by ADR-0098:
-// express consent with the DOI round-trip. The §7(3) existing-customer exception
-// a pack may grant is refused below, with its own reason. There is no legitimate-interest
-// escape for marketing email, B2C or B2B, and the product does not offer the
-// toggle.
+// express consent with the DOI round-trip, or the §7(3) existing-customer route
+// where the pack grants it (existingcustomerroute.go). There is no
+// legitimate-interest escape for marketing email, B2C or B2B, and the product
+// does not offer the toggle.
 func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
 	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
@@ -297,11 +304,16 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 		// not send.
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonUnconfirmedDOI, Code: BlockUnconfirmedDOI}), nil
 	}
-	// The existing-customer exception a jurisdiction may grant (UWG §7(3)) is
-	// not offered: nothing here can answer its similarity condition, since no
-	// send names the goods it advertises. It refuses whatever the pack declares,
-	// and says so rather than reading as a plain absence of consent.
+	// A withdrawal returned above, so a customer who once consented and then
+	// withdrew never reaches the route that needs no consent.
 	if marketing.Exception != nil {
+		ground, err := existingCustomerGround(ctx, tx, contactID, purpose.ID, marketing.SendingEntity)
+		if err != nil {
+			return Verdict{}, err
+		}
+		if ground != nil {
+			return said(Verdict{State: VerdictAllowed, ReasonCode: ReasonExistingCustomer, ExistingCustomer: ground}), nil
+		}
 		return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsentExceptionNotOffered}), nil
 	}
 	return said(Verdict{State: VerdictUnknown, ReasonCode: ReasonNoConsent}), nil

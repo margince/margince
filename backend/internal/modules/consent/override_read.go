@@ -50,19 +50,28 @@ import (
 // silently demote it. array_position over levelsAboveMachine ranks the seat
 // levels off the SAME ladder — it is ordered weakest→strongest, so DESC puts
 // admin ahead of user — and recorded_at only breaks a tie between equals.
+//
+// ONE SENDING ENTITY. A vouch recorded by a rep of one legal entity serves
+// every rep of that entity, whoever owns the contact now and however old the
+// vouch is, and never a send for another entity.
 func liveOverride(
 	ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category,
 ) (ids.UUID, bool, error) {
+	entity, err := sendingEntityTx(ctx, tx, senderOf(ctx))
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT id FROM communication_override
 		 WHERE revoked_at IS NULL
 		   AND category = $2
 		   AND decided_by_level = ANY($3)
 		   AND contact_id = $1
+		   AND legal_entity_id = $4
 		 ORDER BY array_position($3::text[], decided_by_level) DESC, recorded_at DESC
 		 LIMIT 1`,
-		contactID, string(category), levelsAboveMachine).Scan(&id)
+		contactID, string(category), levelsAboveMachine, entity).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, false, nil
 	}

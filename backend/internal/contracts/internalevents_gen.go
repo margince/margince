@@ -146,6 +146,14 @@ type InternalEventDealSuggestionDismissed struct{}
 // InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
 type InternalEventDealSuggestionSuperseded struct{}
 
+// InternalEventExistingCustomerNoticeDeclared An administrator declared that a group of customers was told at collection that they may object to advertising.
+type InternalEventExistingCustomerNoticeDeclared struct {
+	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`
+}
+
+// InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
+type InternalEventExistingCustomerNoticeWithdrawn struct{}
+
 // InternalEventLeadPrivacyNoticeCreated A website lead's Art. 14 notice was queued, or could not be given and nothing about the lead was kept. Entity-less and without the lead, which keeps it off the subscribable set: a named lead's unmet legal obligation is not a subscriber's to read. The proof row stays on the audit row the emit points at.
 type InternalEventLeadPrivacyNoticeCreated struct {
 	// Failure Why the notice could not be given, when it could not.
@@ -261,6 +269,22 @@ func (InternalEventDealSuggestionDismissed) EntityType() string { return "" }
 func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_suggestion.superseded" }
 
 func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
+
+func (InternalEventExistingCustomerNoticeDeclared) EventType() string {
+	return "existing_customer_notice.declared"
+}
+
+func (InternalEventExistingCustomerNoticeDeclared) EntityType() string {
+	return "existing_customer_notice"
+}
+
+func (InternalEventExistingCustomerNoticeWithdrawn) EventType() string {
+	return "existing_customer_notice.withdrawn"
+}
+
+func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
+	return "existing_customer_notice"
+}
 
 func (InternalEventLeadPrivacyNoticeCreated) EventType() string { return "lead_privacy_notice.created" }
 

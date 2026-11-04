@@ -358,11 +358,11 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 	}
 
 	w := packRulesFor(country)
-	// No Advertises: nothing on a send names the goods it advertises. The
-	// existing-customer exception needs them for its similarity test, so the
-	// verdict does not offer it here, as it does not for the guard.
-	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, time.Now().Add(-w.reply),
-		MarketingContext{Exception: w.marketingException})
+	marketing, err := marketingContextTx(ctx, tx, w)
+	if err != nil {
+		return commsauthz.Decision{}, nil, err
+	}
+	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, time.Now().Add(-w.reply), marketing)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
@@ -410,6 +410,9 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
 		d.Basis = basisForClass(purpose.Class)
+		if verdict.ExistingCustomer != nil {
+			d.Basis = commsauthz.BasisExistingCustomerException
+		}
 	case VerdictBlocked:
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = blockedReasonCode(verdict)
