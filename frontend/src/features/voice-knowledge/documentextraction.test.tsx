@@ -22,6 +22,7 @@ type Extraction = components["schemas"]["AttachmentExtraction"];
 
 const GROUNDED: Extraction = {
   id: "11111111-1111-1111-1111-111111111111",
+  question: "deal_facts",
   status: "done",
   stalled: false,
   created_at: "2026-08-15T09:00:00Z",

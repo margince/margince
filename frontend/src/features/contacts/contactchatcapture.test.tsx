@@ -264,9 +264,8 @@ describe("capturing a chat from a screenshot", () => {
     await user.click(file);
 
     await waitFor(() => expect(filings(sent)).toHaveLength(1));
-    expect(
-      (filings(sent)[0]?.body as { confirm_other_counterparty: boolean })
-        .confirm_other_counterparty,
-    ).toBe(true);
+    expect(filings(sent)[0]?.body).toMatchObject({
+      confirm_other_counterparty: true,
+    });
   });
 });
