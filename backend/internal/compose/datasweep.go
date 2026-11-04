@@ -55,10 +55,10 @@ var preservedResetTables = map[string]bool{
 	"team": true, "team_membership": true,
 	"session": true, "passport": true, "auth_token": true, "oauth_client": true, "oauth_grant": true, "oauth_refresh_token": true,
 	// append-only ledgers
-	"audit_log": true, "system_log": true, "tax_rate": true,
+	"audit_log": true, "system_log": true,
 	// installation configuration and secrets
 	"setting": true, "vault_secret": true, "ai_call_config": true,
-	"embed_store_binding": true,
+	"embed_store_binding": true, "tax_rate": true,
 	// The derived channel-provider registry: installation-global reference data,
 	// not this workspace's records, on the SAME footing as `setting` above — a
 	// reset that cleared it would leave the installation unable to recognise the
