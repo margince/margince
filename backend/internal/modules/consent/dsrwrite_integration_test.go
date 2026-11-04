@@ -178,21 +178,92 @@ func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
 func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
-	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
-		return erasureaccount.Empty(), nil
+	// The first erase finds the contact; the retry finds nothing left.
+	accounts := []erasureaccount.Account{
+		{Rows: map[string]int64{"contact.updated": 1}, Uncounted: []string{}},
+		erasureaccount.Empty(),
 	}
-	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request"), Proof: idDocumentChecked}
+	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+		next := accounts[0]
+		accounts = accounts[1:]
+		return next, nil
+	}
+	in := UpdateDSRInput{Status: new("fulfilled"), Proof: idDocumentChecked}
 
 	for attempt := 1; attempt <= 2; attempt++ {
 		if _, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase); err != nil {
 			t.Fatalf("fulfilment attempt %d: %v", attempt, err)
 		}
 	}
+	// The retry keeps the first answer: it found nothing because the first one
+	// had already erased the contact, not because nothing was ever held.
 	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasedResolution {
 		t.Fatalf("the erased request holds %v, want %q", after.Resolution, erasedResolution)
 	}
 	if claims := e.auditedResolutionClaims(t, request.ID); len(claims) != 2 || claims[0] != "true" || claims[1] != "false" {
 		t.Fatalf("the update rows claim the answer changed as %v, want [true false]: the repeat changed nothing", claims)
+	}
+}
+
+// An erasure is answered from a fixed list. Text an officer typed is refused,
+// and refused before anything is erased: the officer learns it at once, and
+// nothing they wrote is thrown away without a word.
+//
+// Mutation: drop the refusal in FulfilErasure, or move it after the erase,
+// and this fails.
+func TestAnErasureFulfilledWithTextIsRefusedBeforeErasing(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+	erased := 0
+	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+		erased++
+		return erasureaccount.Empty(), nil
+	}
+	in := UpdateDSRInput{Status: new("fulfilled"), Resolution: new("erased on request"), Proof: idDocumentChecked}
+
+	_, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase)
+	var verr *ValidationError
+	if !errors.As(err, &verr) || verr.Field != fieldResolution {
+		t.Fatalf("fulfilling an erasure with text = %v, want a refusal on resolution", err)
+	}
+	if erased != 0 {
+		t.Fatalf("the erasure ran %d time(s) before the refusal, want never", erased)
+	}
+	if after := e.read(t, request.ID); after.Status == "fulfilled" {
+		t.Fatal("a refused fulfilment closed the request")
+	}
+}
+
+// A contact an earlier erasure already anonymised holds nothing more, and the
+// request says so instead of claiming an erasure that removed nothing.
+//
+// Mutation: make erasureAnswerFor always answer erased and this fails.
+func TestAnErasureThatFoundNothingSaysNothingHeld(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+		return erasureaccount.Empty(), nil
+	}
+	if _, err := e.store.FulfilErasure(e.ctx, request.ID, UpdateDSRInput{Status: new("fulfilled"), Proof: idDocumentChecked}, erase); err != nil {
+		t.Fatalf("fulfilling: %v", err)
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasureAnswerNothingHeld {
+		t.Fatalf("the request holds %v, want %q", after.Resolution, erasureAnswerNothingHeld)
+	}
+}
+
+// Rejecting an erasure erased nothing, so it keeps the officer's own answer.
+func TestARejectedErasureKeepsItsWrittenAnswer(t *testing.T) {
+	e := setupDSR(t)
+	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+	if w := e.patchDSR(t, request.ID, `{"status":"rejected"}`); w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("rejecting with no answer → %d, want 422", w.Code)
+	}
+	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"legal hold applies","identity_check":"id_document"}`); w.Code != http.StatusOK {
+		t.Fatalf("rejecting with an answer → %d: %s", w.Code, w.Body)
+	}
+	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != "legal hold applies" {
+		t.Fatalf("the rejected request holds %v, want the officer's answer", after.Resolution)
 	}
 }
 

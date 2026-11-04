@@ -92,7 +92,7 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 	e := Setup(t)
 	h, store, id := setupErasureDSR(t, e, ids.NewV7().String())
 
-	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified by phone","identity_check":"id_document"}`)
+	w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"id_document"}`)
 
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("a well-formed but nonexistent subject must be refused 422, got %d: %s", w.Code, w.Body)
@@ -121,9 +121,9 @@ func TestFulfillErasureHTTPRefusesASyntacticallyValidButNonexistentSubject(t *te
 func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Erasure Subject", nil)
-	h, _, id := setupErasureDSR(t, e, contactID.String())
+	h, store, id := setupErasureDSR(t, e, contactID.String())
 
-	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","resolution":"verified in person","identity_check":"in_person"}`)
+	first := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"in_person"}`)
 	if first.Code != http.StatusOK {
 		t.Fatalf("first fulfilment of a real contact must succeed, got %d: %s", first.Code, first.Body)
 	}
@@ -136,6 +136,23 @@ func TestFulfillErasureHTTPIsIdempotentAcrossTwoFulfilments(t *testing.T) {
 		t.Fatalf("re-fulfilling an already-erased contact must still succeed (idempotent), got %d: %s",
 			second.Code, second.Body)
 	}
+	// The answer is the first erasure's, from the fixed list: the replay found
+	// nothing left, and that does not rewrite what the first one did.
+	if got := erasureAnswerOf(t, e, store, id); got != "erased" {
+		t.Fatalf("the fulfilled erasure answers %q, want erased", got)
+	}
+}
+
+func erasureAnswerOf(t *testing.T, e *Env, store *consent.Store, id ids.UUID) string {
+	t.Helper()
+	read, err := store.GetDSR(e.Admin(), id)
+	if err != nil {
+		t.Fatalf("reading the request: %v", err)
+	}
+	if read.Resolution == nil {
+		return ""
+	}
+	return *read.Resolution
 }
 
 // gatedEraser wraps the real eraser so the test can act WHILE a scrub is in
@@ -219,7 +236,7 @@ func TestFulfillErasureHoldsTheRequestLockedAcrossTheErase(t *testing.T) {
 
 	done := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
-		done <- fulfilErasureDSR(t, e, h, created.ID, `{"status":"fulfilled","resolution":"verified","identity_check":"id_document"}`)
+		done <- fulfilErasureDSR(t, e, h, created.ID, `{"status":"fulfilled","identity_check":"id_document"}`)
 	}()
 
 	<-gate.entered // the scrub is running ⇒ the request lock must be held now

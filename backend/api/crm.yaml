@@ -24035,6 +24035,10 @@ paths:
       x-agent-access: human-only
       x-human-only-reason: pending
       summary: Update a data-subject request's status / assignee / resolution.
+      description: |
+        Fulfilling an erasure runs the erasure and records its own answer, `erased` or
+        `nothing_held`. Text sent as `resolution` with it is refused with 422 before anything
+        is erased.
       requestBody:
         required: true
         content:
@@ -68133,7 +68137,15 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: 'null hands the request back to the unassigned pool.' }
         resolution:
           type: [string, 'null']
-          description: 'A closed (fulfilled or rejected) request keeps its answer: null, or text other than the stored answer, is refused with 422. An open request takes any draft.'
+          description: |
+            A closed (fulfilled or rejected) request keeps its answer: null, or text other than
+            the stored answer, is refused with 422. An open request takes any draft.
+
+            Fulfilling an erasure takes no answer: leave this out. The erasure answers for itself
+            from a fixed list, `erased` when it removed or anonymised something and `nothing_held`
+            when there was nothing left to erase. Any text on an erasure's fulfilment is refused
+            with 422 on `resolution`, before anything is erased, because typed prose could name the
+            subject the erasure removes. Rejecting an erasure still needs a written answer.
         identity_check:
           type: string
           enum: [confirm_link, address_on_file, id_document, in_person, not_verified]

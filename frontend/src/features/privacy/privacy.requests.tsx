@@ -35,6 +35,7 @@ import {
   DSR_STATUS_LABEL,
   type DsrClosing,
   type DsrStatus,
+  ERASURE_ANSWER_LABEL,
   isIllegalTransition,
   isOverdue,
   isTerminal,
@@ -255,7 +256,7 @@ export function DsrDetail({
       onFulfilErasure(dsr, closing);
       return;
     }
-    patch.mutate({ id: dsr.id, body: closingBody(next, closing) });
+    patch.mutate({ id: dsr.id, body: closingBody(next, closing, dsr.kind) });
   }
 
   function draft(change: Partial<DsrClosing>) {
@@ -317,7 +318,11 @@ export function DsrDetail({
           {open && (
             <Field
               label={t("privacy.resolution")}
-              hint={t("privacy.resolutionRequired")}
+              hint={t(
+                dsr.kind === "erasure"
+                  ? "privacy.resolutionErasureHint"
+                  : "privacy.resolutionRequired",
+              )}
             >
               {(control) => (
                 <Textarea
@@ -334,7 +339,9 @@ export function DsrDetail({
           {open && (
             <DsrTransitions
               status={dsr.status}
-              ready={(next) => closingReady(next, closing, dsr.resolution)}
+              ready={(next) =>
+                closingReady(next, closing, dsr.resolution, dsr.kind)
+              }
               pending={patch.isPending}
               onTransition={transition}
             />
@@ -405,10 +412,13 @@ function DsrFacts({
     });
   }
   if (dsr.resolution && isTerminal(dsr.status)) {
+    // An erasure's answer is a fixed word, shown in the reader's language.
+    const fixed =
+      dsr.kind === "erasure" ? ERASURE_ANSWER_LABEL[dsr.resolution] : undefined;
     facts.push({
       key: "resolution",
       term: t("privacy.resolution"),
-      value: dsr.resolution,
+      value: fixed ? t(fixed) : dsr.resolution,
     });
   }
 

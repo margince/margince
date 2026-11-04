@@ -353,21 +353,16 @@ describe("fulfilling an erasure", () => {
     );
   });
 
-  // The confirm modal's own mutation, not the row's plain PATCH above.
-  // submitTransition never reaches it for an erasure fulfil. The server
-  // checks a DSR update before it erases, and an erasure fulfil without a
-  // resolution gets a 422. So the resolution the operator wrote in the row
-  // must go into this PATCH too. The modal has no field to ask for it again.
-  // The stub echoes what the server would store. An open fixture with no
-  // resolution cannot get a 200 for a fulfil that sent none. So the response
-  // includes the resolution just sent.
-  it("sends {status: fulfilled, resolution, identity_check} on the erasure fulfil PATCH", async () => {
+  // An erasure is answered by the erasure itself, from a fixed list: the
+  // fulfil PATCH carries no text, and the server would refuse any. A draft
+  // the officer typed is not kept, and the confirm says so before the press.
+  it("sends no answer on the erasure fulfil PATCH and says a typed draft is not kept", async () => {
     const sent = stubRoutes({
       "PATCH /data-subject-requests/d1": () =>
         jsonResponse({
           ...DSRS.data[0],
           status: "fulfilled",
-          resolution: "verified",
+          resolution: "erased",
         }),
     });
     render(<RequestsPanel />);
@@ -377,6 +372,9 @@ describe("fulfilling an erasure", () => {
     await draftClose("verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
+    expect(
+      await screen.findByText(en["privacy.erasureDraftReplaced"]),
+    ).toBeInTheDocument();
     await userEvent.type(erasePhraseInput(), "ERASE");
     await userEvent.click(
       screen.getByRole("button", { name: /erase and suppress/i }),
@@ -391,9 +389,48 @@ describe("fulfilling an erasure", () => {
     );
     expect(patches[0]?.body).toEqual({
       status: "fulfilled",
-      resolution: "verified",
       identity_check: "id_document",
     });
+  });
+
+  it("offers Fulfil on an erasure with the answer box left empty", async () => {
+    stubRoutes();
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
+    );
+    expect(
+      screen.getByText(en["privacy.resolutionErasureHint"]),
+    ).toBeInTheDocument();
+    await draftClose("");
+    const row = await findDsrRow("8f3a-contact-uuid");
+    const fulfil = within(row).getByRole("button", { name: /fulfil/i });
+    expect(fulfil).toBeEnabled();
+    await userEvent.click(fulfil);
+    await screen.findByRole("button", { name: /erase and suppress/i });
+    expect(screen.queryByText(en["privacy.erasureDraftReplaced"])).toBeNull();
+  });
+
+  it("shows a fulfilled erasure's answer in the reader's words", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () =>
+        jsonResponse({
+          ...DSRS,
+          data: DSRS.data.map((dsr) =>
+            dsr.id === "d1"
+              ? { ...dsr, status: "fulfilled", resolution: "nothing_held" }
+              : dsr,
+          ),
+        }),
+    });
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /8f3a-contact-uuid/i }),
+    );
+    expect(
+      await screen.findByText(en["privacy.erasureAnswer.nothing_held"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("nothing_held")).toBeNull();
   });
 
   // A fulfilled request is terminal, so the verb the confirm was opened from is

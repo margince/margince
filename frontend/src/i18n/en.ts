@@ -10269,6 +10269,12 @@ export const en = {
   "privacy.erasureIrreversible":
     "This permanently erases the contact across the whole system: record, captured activity and derived values. It cannot be undone. The erasure itself is audited.",
   "privacy.erasureConfirm": "Erase and suppress",
+  "privacy.resolutionErasureHint":
+    "Used only if you reject. Fulfilling records what the erasure found: Erased, or Nothing held.",
+  "privacy.erasureDraftReplaced":
+    "The answer you typed is not kept. Fulfilling records what the erasure found: Erased, or Nothing held.",
+  "privacy.erasureAnswer.erased": "Erased",
+  "privacy.erasureAnswer.nothing_held": "Nothing held (already erased)",
   "privacy.legalHoldTitle": "Blocked by legal hold",
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
@@ -15727,7 +15733,8 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.field.owner": "Runs as",
-  "webhooks.field.ownerHint": "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
+  "webhooks.field.ownerHint":
+    "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
   "webhooks.field.ownerInactive": "Former owner, no longer active",
   "webhooks.field.ownerCurrent": "Current owner",
   "webhooks.row.ownerInactive": "Stopped: owner deactivated",
