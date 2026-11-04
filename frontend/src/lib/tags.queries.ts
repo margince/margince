@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { foldForMatch } from "../format/collate";
 import { unwrap } from "./problem";
 import { RECORD_LIST_KEY } from "./recordlistkeys";
 import type { MutationOutcome } from "./undoableremoval";
@@ -204,7 +205,7 @@ export function useCreateTag() {
 
 /** One spelling of "the same tag name" for a lookup after a conflict. */
 function sameTagName(a: string, b: string) {
-  return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+  return foldForMatch(a.trim()) === foldForMatch(b.trim());
 }
 
 /**
