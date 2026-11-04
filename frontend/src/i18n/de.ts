@@ -18300,6 +18300,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.stewardOnly":
     "Klären kann das nur, wer beide Datensätze bearbeiten kann: Admins oder Vertriebsleitungen.",
   "worklist.needsPrep": "Vorbereitung nötig",
+  "worklist.pinnedMark": "Von dir angeheftet",
   "worklist.ready.confirm": "Ich bin bereit",
   "worklist.ready.badge": "Bereit",
   "worklist.ready.done": "Als bereit für diesen Termin markiert.",
