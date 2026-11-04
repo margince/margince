@@ -922,9 +922,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Deal mới",
   "reporting.movement.pulled_in": "Kéo vào kỳ này",
   "reporting.movement.pushed_out": "Đẩy ra khỏi kỳ này",
-  "reporting.movement.excluded": "Bị loại sau rà soát",
-  "reporting.movement.reinstated": "Được tính lại sau rà soát",
-  "reporting.movement.not_checked": "Chưa kiểm tra",
   "reporting.movement.amount": "Thay đổi giá trị",
   "reporting.movement.category": "Thay đổi nhóm dự báo",
   "reporting.movement.stage_weight": "Thay đổi trọng số giai đoạn",
@@ -1509,24 +1506,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Kết quả dự kiến {landing}, theo {basis}",
   "reporting.compare.basis.likely": "deal khả năng cao",
   "reporting.compare.basis.weighted": "pipeline có trọng số",
-  "reporting.compare.basis.qualified_likely": "deal khả năng cao được ủng hộ",
-  "reporting.compare.basis.qualified_weighted":
-    "pipeline có trọng số được ủng hộ",
   "reporting.compare.basis.manager_call": "ước tính của quản lý",
   "reporting.compare.remaining": "Còn phải thắng",
   "reporting.compare.remainingBasis": "Đã thắng {won} trên {target}",
   "reporting.compare.reached": "Đã đạt mục tiêu",
   "reporting.compare.coverageAll":
     "Mức bao phủ, deal dự kiến chốt trong quý này",
-  "reporting.compare.coverageQualified": "Mức bao phủ, deal đủ điều kiện",
   "reporting.compare.coverageBasis":
     "{open} đủ điều kiện chốt trong quý này / {remaining} còn phải chốt",
-  "reporting.compare.qualifiedBasis":
-    "{open} trong deal đủ điều kiện, so với phần còn phải thắng",
   "reporting.compare.ratio": "{ratio} lần",
-  "reporting.compare.qualifiedOff": "Chưa bật",
-  "reporting.compare.qualifiedOffBasis":
-    "Bật dự báo đủ điều kiện để chỉ tính các deal khách hàng vẫn ủng hộ.",
   "reporting.compare.no_target": "Chưa có mục tiêu doanh số cho quý này",
   "reporting.compare.no_targetBody":
     "Đặt mục tiêu doanh số đã thắng cho phạm vi và quý này trong Mục tiêu để xem khoảng cách và mức bao phủ. Không có mục tiêu không phải là mục tiêu bằng không.",
@@ -2125,7 +2113,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kết nối lịch",
   "brief.coverage.source.next_meeting": "Cuộc họp tiếp theo",
   "brief.coverage.source.deal_at_risk": "Deal bị gắn cờ",
-  "brief.coverage.source.deal_review": "Rà soát sự ủng hộ",
   "brief.coverage.source.lead_response": "Lead đã giao",
   "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",
   "brief.coverage.source.conversation_claim": "Cam kết của khách hàng",
@@ -5538,24 +5525,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Xác nhận",
   "deals.cancel": "Hủy",
   "deals.advanced": "Đã chuyển sang {stage}",
-  "deals.viability.title": "Sự ủng hộ của khách hàng",
-  "deals.viability.standing": "Dự báo deal được ủng hộ",
-  "deals.viability.enforced":
-    "Dự báo chỉ tính các deal được khách hàng ủng hộ.",
-  "deals.viability.notEnforced":
-    "Dự báo tính mọi deal; mục này chỉ để tham khảo.",
-  "deals.viability.qualification.eligible": "Được tính",
-  "deals.viability.qualification.excluded": "Tạm loại để rà soát",
-  "deals.viability.qualification.unsupported": "Bị loại: không được ủng hộ",
-  "deals.viability.qualification.unknown": "Chưa kiểm tra",
-  "deals.viability.qualification.closed": "Đã đóng: không nằm trong dự báo",
-  "deals.viability.checkOutOfDate":
-    "Lần kiểm tra này không còn được tính, nên deal được xem là chưa kiểm tra.",
-  "deals.viability.assessed": "Kiểm tra lần cuối",
-  "deals.viability.review": "Rà soát sự ủng hộ",
-  "deals.viability.reviewOpenedOn": "Mở ngày {date}",
-  "deals.viability.reviewOpen": "Đang mở",
-  "deals.viability.taskDoneReviewOpen": "Đã xong việc, vẫn mở",
 
   "deal.ownerKeep": "Giữ người chịu trách nhiệm hiện tại",
   "deal.ownerMe": "Giao cho tôi",
@@ -6363,10 +6332,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Mở dự báo",
   "brief.weekly.outlook.measure.likely": "Theo deal khả năng cao",
   "brief.weekly.outlook.measure.weighted": "Theo deal có trọng số",
-  "brief.weekly.outlook.measure.qualified_likely":
-    "Theo deal khả năng cao được ủng hộ",
-  "brief.weekly.outlook.measure.qualified_weighted":
-    "Theo deal có trọng số được ủng hộ",
   "brief.weekly.outlook.measure.manager_call": "Theo nhận định của quản lý",
   "brief.weekly.bridge": "Biến động trong tuần",
   "brief.weekly.bridge.opening": "Thứ Hai",
@@ -6378,9 +6343,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Mới tạo",
   "brief.weekly.bar.advanced": "Tiến lên",
   "brief.weekly.bar.slipped": "Bị lùi",
-  "brief.weekly.bar.excluded": "Bị loại sau rà soát",
-  "brief.weekly.bar.reinstated": "Được tính lại sau rà soát",
-  "brief.weekly.bar.not_checked": "Chưa kiểm tra",
   "brief.weekly.bar.won": "Thắng",
   "brief.weekly.bar.lost": "Thua",
   "brief.weekly.bar.other": "Tỷ giá và định nghĩa",
@@ -8043,10 +8005,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 deal đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateDeals_other":
     "{count} deal đã thay đổi kể từ lần kiểm tra này.",
-  "review.deliveryFailed_one":
-    "Không thể giao 1 lượt xem xét khách hàng cho người chịu trách nhiệm về deal dưới dạng công việc. Lần kiểm tra tiếp theo sẽ thử lại.",
-  "review.deliveryFailed_other":
-    "Không thể giao {count} lượt xem xét khách hàng cho người chịu trách nhiệm về deal dưới dạng công việc. Lần kiểm tra tiếp theo sẽ thử lại.",
   "review.outOfDateWorkspace":
     "Một giai đoạn hoặc một dự báo đã thay đổi kể từ lần kiểm tra này.",
   "review.outOfDateSignals_one":
@@ -8101,47 +8059,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Chưa có bước tiếp theo",
   "review.noEconomicBuyer": "Chưa xác định ai ký",
   "review.buyerSilent": "Bên mua đã im lặng",
-  "review.dealViability": "Cần xem lại sự ủng hộ của khách hàng",
-  "forecast.qualifiedPartial":
-    "Một số deal này không có số tiền bạn xem được, nên các số tiền ở trên thấp hơn giá trị đầy đủ.",
-  "forecast.qualifiedLeftOut_one":
-    "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
-  "forecast.qualifiedLeftOut_other":
-    "{count} deal ({amount}) bị loại ra khi việc xem xét còn mở.",
-  "forecast.qualifiedUnsupported_one":
-    "{count} deal ({amount}) bị loại ra vì chưa có ngày chốt được xác nhận hoặc chưa có bước tiếp theo.",
-  "forecast.qualifiedUnsupported_other":
-    "{count} deal ({amount}) bị loại ra vì chưa có ngày chốt được xác nhận hoặc chưa có bước tiếp theo.",
-  "forecast.qualifiedUnknown_one":
-    "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
-  "forecast.qualifiedUnknown_other":
-    "{count} deal ({amount}) không được tính vì lần kiểm tra gần nhất không đánh giá được.",
-  "forecast.qualifiedAnswer":
-    "Deal đã chốt và deal khả năng cao mà khách hàng vẫn ủng hộ: {evidence}. Có trọng số: {weighted}.",
-  "review.enforcementLabel": "Chỉ tính deal được khách hàng ủng hộ",
-  "review.enforcementHint":
-    "Deal có khách hàng ngừng trả lời sẽ ra khỏi dòng các deal được khách hàng ủng hộ cho đến khi được xem xét. Các số liệu khác không đổi.",
-  "review.enforcementPreviewLeftOut_one":
-    "Nếu bật ngay bây giờ, {count} deal sẽ ra khỏi dòng này.",
-  "review.enforcementPreviewLeftOut_other":
-    "Nếu bật ngay bây giờ, {count} deal sẽ ra khỏi dòng này.",
-  "review.enforcementPreviewUnknown_one":
-    "{count} deal chưa được đánh giá và cũng sẽ không được tính.",
-  "review.enforcementPreviewUnknown_other":
-    "{count} deal chưa được đánh giá và cũng sẽ không được tính.",
-  "review.revive": "Khách hàng đã quay lại",
-  "review.reviveHelp":
-    "Tính lại deal khi khách hàng đã viết thư hoặc gặp bạn, ngày chốt đã được xác nhận và đã có bước tiếp theo.",
-  "review.wait": "Khách hàng đề nghị chờ",
-  "review.waitHelp":
-    "Ghi việc chờ vào deal. Deal không được tính cho đến ngày đó, và việc xem xét sẽ quay lại vào ngày đó.",
-  "review.waitUntil": "Chờ đến",
-  "review.closeLost": "Đóng là thua",
-  "review.closeLostHelp": "Đóng deal là thua, kèm lý do của bạn.",
-  "review.enforcementOn": "Dự báo đã xác thực đang bật.",
-  "review.enforcementOff": "Dự báo đã xác thực đang tắt.",
-  "review.enforcementAdminOnly": "Chỉ admin mới đổi được mục này.",
-  "review.enforcementNotStarted": "Hãy chạy lần kiểm tra đầu tiên trước.",
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
   "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
   "review.callMovedHelp_one":
@@ -9448,8 +9365,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_sweep": "Kiểm tra dự báo",
   "jobs.kind.assurance_deal_rescan":
     "Kiểm tra dự báo cho một giao dịch đã thay đổi",
-  "jobs.kind.assurance_review_delivery":
-    "Công việc cho một lần xem xét khách hàng",
   "jobs.kind.brief_generate": "Bản tin sáng",
   "jobs.kind.capture_auto_enrich_sweep": "Bổ sung dữ liệu công ty từ thư",
   "jobs.kind.capture_backfill": "Nhập thư cũ",
@@ -14075,10 +13990,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khả năng cao: deal đạt ngưỡng khả năng cao trở lên, có ngày chốt đã xác nhận",
   "installationSettings.forwardMeasure.weighted":
     "Có trọng số: mọi deal đang mở theo xác suất của deal",
-  "installationSettings.forwardMeasure.qualified_likely":
-    "Khả năng cao được ủng hộ: deal khả năng cao mà khách hàng vẫn ủng hộ",
-  "installationSettings.forwardMeasure.qualified_weighted":
-    "Có trọng số được ủng hộ: deal đang mở mà khách hàng vẫn ủng hộ, theo xác suất của deal",
   "installationSettings.forwardMeasure.manager_call":
     "Nhận định của quản lý: con số đã nhập cho kỳ",
   "installationSettings.likelyThreshold": "Ngưỡng khả năng cao",
@@ -14089,8 +14000,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.likely": "Đã chốt + deal khả năng cao",
   "forecast.basis.weighted": "Đã chốt + deal mở theo trọng số",
-  "forecast.basis.qualified_likely": "Đã chốt + deal khả năng cao được ủng hộ",
-  "forecast.basis.qualified_weighted": "Đã chốt + deal có trọng số được ủng hộ",
   "forecast.basis.manager_call": "Ước tính của quản lý",
   "forecast.basis.unknown": "Chưa ghi nhận cơ sở",
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
@@ -14119,8 +14028,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị deal khả năng cao.",
-  "forecast.landing.caveat.qualified_unavailable":
-    "Việc đếm deal được ủng hộ đang tắt, nên số này hiển thị mọi deal.",
   "forecast.landing.caveat.call_below_actual":
     "Nhận định thấp hơn số tiền đã chốt. Số này hiển thị đúng như đã ghi, không chỉnh sửa.",
   "forecast.pipelineNeeded": "Giá trị deal cần có",
@@ -17815,8 +17722,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lead này đang chờ phản hồi đầu tiên. Liên hệ trước khi hết thời hạn phản hồi.",
   "worklist.ask.deal_at_risk":
     "Deal này có dấu hiệu chững lại. Mở deal và lên bước tiếp theo.",
-  "worklist.ask.deal_review":
-    "Khách hàng có thể không còn ủng hộ deal này. Mở deal và trả lời phần rà soát.",
   "worklist.ask.meeting": "Cuộc họp này sắp diễn ra. Mở để chuẩn bị.",
   "worklist.ask.relationship_decay":
     "Đã lâu không có liên hệ nào với liên hệ này. Liên hệ lại, hoặc tạm gác trong một tháng.",
@@ -18216,7 +18121,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Khách hàng chờ trả lời",
   "worklist.untitled.lead_response": "Lead chưa có tên",
   "worklist.untitled.deal_at_risk": "Deal đang chững lại",
-  "worklist.untitled.deal_review": "Rà soát sự ủng hộ",
   "worklist.untitled.meeting": "Cuộc họp chưa có tiêu đề",
   "worklist.untitled.meeting_outcome": "Kết quả cuộc họp",
   "worklist.untitled.relationship_decay": "Liên lạc đang thưa dần",

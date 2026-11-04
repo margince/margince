@@ -897,9 +897,6 @@ export const en = {
   "reporting.movement.new": "New deals",
   "reporting.movement.pulled_in": "Pulled into the period",
   "reporting.movement.pushed_out": "Pushed out of the period",
-  "reporting.movement.excluded": "Left out after review",
-  "reporting.movement.reinstated": "Counted again after review",
-  "reporting.movement.not_checked": "Not checked",
   "reporting.movement.amount": "Value changes",
   "reporting.movement.category": "Forecast category changes",
   "reporting.movement.stage_weight": "Stage weight changes",
@@ -1474,23 +1471,14 @@ export const en = {
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
   "reporting.compare.basis.likely": "the Likely deals",
   "reporting.compare.basis.weighted": "the weighted pipeline",
-  "reporting.compare.basis.qualified_likely": "the supported Likely deals",
-  "reporting.compare.basis.qualified_weighted":
-    "the supported weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
   "reporting.compare.reached": "Target reached",
   "reporting.compare.coverageAll": "Coverage, deals closing this quarter",
-  "reporting.compare.coverageQualified": "Coverage, qualified deals",
   "reporting.compare.coverageBasis":
     "{open} eligible to close this quarter / {remaining} still to win",
-  "reporting.compare.qualifiedBasis":
-    "{open} in qualified deals, over what is left to win",
   "reporting.compare.ratio": "{ratio}×",
-  "reporting.compare.qualifiedOff": "Not switched on",
-  "reporting.compare.qualifiedOffBasis":
-    "Turn on the qualified forecast to count only the deals the customer still supports.",
   "reporting.compare.no_target": "No sales target for this quarter",
   "reporting.compare.no_targetBody":
     "Set a sales won target for this scope and quarter under Targets to see the gap and coverage. No target is not a target of zero.",
@@ -2091,7 +2079,6 @@ export const en = {
   "brief.coverage.source.calendar": "Calendar connection",
   "brief.coverage.source.next_meeting": "Next meeting",
   "brief.coverage.source.deal_at_risk": "Flagged deals",
-  "brief.coverage.source.deal_review": "Customer support reviews",
   "brief.coverage.source.lead_response": "Assigned leads",
   "brief.coverage.source.customer_waiting": "Unanswered messages",
   "brief.coverage.source.conversation_claim": "Customer commitments",
@@ -5631,24 +5618,6 @@ export const en = {
   "deals.confirm": "Confirm",
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
-  "deals.viability.title": "Customer support",
-  "deals.viability.standing": "Supported-deals forecast",
-  "deals.viability.enforced":
-    "The forecast counts only deals the customer supports.",
-  "deals.viability.notEnforced":
-    "The forecast counts every deal; this is shown for reference.",
-  "deals.viability.qualification.eligible": "Counted",
-  "deals.viability.qualification.excluded": "Left out for review",
-  "deals.viability.qualification.unsupported": "Left out: no support",
-  "deals.viability.qualification.unknown": "Not checked",
-  "deals.viability.qualification.closed": "Closed: not in the forecast",
-  "deals.viability.checkOutOfDate":
-    "This check no longer counts, so the deal is not checked.",
-  "deals.viability.assessed": "Last checked",
-  "deals.viability.review": "Customer support review",
-  "deals.viability.reviewOpenedOn": "Opened {date}",
-  "deals.viability.reviewOpen": "Open",
-  "deals.viability.taskDoneReviewOpen": "Task done, still open",
 
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
@@ -6517,10 +6486,6 @@ export const en = {
   "brief.weekly.outlook.open": "Open the forecast",
   "brief.weekly.outlook.measure.likely": "From Likely deals",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
-  "brief.weekly.outlook.measure.qualified_likely":
-    "From supported Likely deals",
-  "brief.weekly.outlook.measure.qualified_weighted":
-    "From supported weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
   "brief.weekly.bridge": "Weekly change",
   "brief.weekly.bridge.opening": "Monday",
@@ -6532,9 +6497,6 @@ export const en = {
   "brief.weekly.bar.created": "Created",
   "brief.weekly.bar.advanced": "Advanced",
   "brief.weekly.bar.slipped": "Slipped",
-  "brief.weekly.bar.excluded": "Left after review",
-  "brief.weekly.bar.reinstated": "Back after review",
-  "brief.weekly.bar.not_checked": "Not checked",
   "brief.weekly.bar.won": "Won",
   "brief.weekly.bar.lost": "Lost",
   "brief.weekly.bar.other": "Rates and definitions",
@@ -8240,10 +8202,6 @@ export const en = {
   "review.outOfDate": "Out of date",
   "review.outOfDateDeals_one": "1 deal changed since this check.",
   "review.outOfDateDeals_other": "{count} deals changed since this check.",
-  "review.deliveryFailed_one":
-    "1 customer review could not be handed to its owner as a task. The next check tries again.",
-  "review.deliveryFailed_other":
-    "{count} customer reviews could not be handed to their owners as tasks. The next check tries again.",
   "review.outOfDateWorkspace":
     "A stage or forecast call changed since this check.",
   "review.outOfDateSignals_one": "1 buying signal changed since this check.",
@@ -8301,48 +8259,6 @@ export const en = {
   "review.noNextStep": "No next step",
   "review.noEconomicBuyer": "No signer identified",
   "review.buyerSilent": "Buyer has gone quiet",
-  "review.dealViability": "Customer support needs review",
-  "forecast.qualifiedPartial":
-    "Some of these deals have no amount you can see, so the amounts above are lower than their full value.",
-  "forecast.qualifiedLeftOut_one":
-    "{count} deal ({amount}) is left out while its review is open.",
-  "forecast.qualifiedLeftOut_other":
-    "{count} deals ({amount}) are left out while their reviews are open.",
-  "forecast.qualifiedUnsupported_one":
-    "{count} deal ({amount}) is left out because it has no confirmed close date or no next step.",
-  "forecast.qualifiedUnsupported_other":
-    "{count} deals ({amount}) are left out because they have no confirmed close date or no next step.",
-  "forecast.qualifiedUnknown_one":
-    "{count} deal ({amount}) is not counted because the last check could not judge it.",
-  "forecast.qualifiedUnknown_other":
-    "{count} deals ({amount}) are not counted because the last check could not judge them.",
-  "forecast.qualifiedAnswer":
-    "Won plus Likely deals the customer still supports: {evidence}. Weighted: {weighted}.",
-  "review.enforcementLabel": "Count only deals the customer supports",
-  "review.enforcementHint":
-    "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
-  "review.enforcementPreviewLeftOut_one":
-    "Turning it on now leaves {count} deal out of that line.",
-  "review.enforcementPreviewLeftOut_other":
-    "Turning it on now leaves {count} deals out of that line.",
-  "review.enforcementPreviewUnknown_one":
-    "{count} deal has not been judged yet and would not count either.",
-  "review.enforcementPreviewUnknown_other":
-    "{count} deals have not been judged yet and would not count either.",
-  "review.revive": "The customer is back",
-  "review.reviveHelp":
-    "Counts the deal again once the customer has written or met with you, the close date is confirmed and a next step is planned.",
-  "review.wait": "The customer asked to wait",
-  "review.waitHelp":
-    "Records the wait on the deal. The deal stays out until then, and the review comes back on that day.",
-  "review.waitUntil": "Wait until",
-  "review.closeLost": "Close as lost",
-  "review.closeLostHelp": "Closes the deal as lost, with your reason.",
-  "review.enforcementOn": "The qualified forecast is on.",
-  "review.enforcementOff": "The qualified forecast is off.",
-  "review.enforcementAdminOnly": "Only an admin can change this.",
-  "review.enforcementNotStarted":
-    "Run the first check before you turn this on.",
   "review.commitUnpriced": "Committed with no amount",
   "review.stageExitUnmet": "Stage exit criteria not met",
   "review.callMovedHelp_one":
@@ -9724,7 +9640,6 @@ export const en = {
   "jobs.kind.assurance_run": "Forecast check on request",
   "jobs.kind.assurance_sweep": "Forecast check",
   "jobs.kind.assurance_deal_rescan": "Forecast check of a changed deal",
-  "jobs.kind.assurance_review_delivery": "Task for a customer review",
   "jobs.kind.brief_generate": "Morning brief",
   "jobs.kind.capture_auto_enrich_sweep": "Company enrichment from mail",
   "jobs.kind.capture_backfill": "Mail history import",
@@ -14397,10 +14312,6 @@ export const en = {
     "Likely: deals at the Likely threshold or above, with confirmed close dates",
   "installationSettings.forwardMeasure.weighted":
     "Weighted: every open deal at its probability",
-  "installationSettings.forwardMeasure.qualified_likely":
-    "Supported Likely: Likely deals the customer still supports",
-  "installationSettings.forwardMeasure.qualified_weighted":
-    "Supported weighted: open deals the customer still supports, at their probability",
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
   "installationSettings.likelyThreshold": "Likely threshold",
@@ -14411,8 +14322,6 @@ export const en = {
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.likely": "Won + Likely deals",
   "forecast.basis.weighted": "Won + weighted open deals",
-  "forecast.basis.qualified_likely": "Won + supported Likely deals",
-  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.manager_call": "Manager’s call",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
@@ -14442,8 +14351,6 @@ export const en = {
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows the Likely deals.",
-  "forecast.landing.caveat.qualified_unavailable":
-    "The count of supported deals is off, so this shows all deals.",
   "forecast.landing.caveat.call_below_actual":
     "The call is below the amount already won. It is shown as recorded, not corrected.",
   "forecast.pipelineNeeded": "Deal value needed",
@@ -18112,8 +18019,6 @@ export const en = {
     "This lead is waiting for a first answer. Get in touch before its response time runs out.",
   "worklist.ask.deal_at_risk":
     "This deal shows signs of slipping. Open it and plan the next step.",
-  "worklist.ask.deal_review":
-    "The customer may no longer support this deal. Open it and answer the review.",
   "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
   "worklist.ask.relationship_decay":
     "Nobody has been in touch with this contact for a while. Get in touch, or set it aside for a month.",
@@ -18512,7 +18417,6 @@ export const en = {
   "worklist.untitled.customer_waiting": "Customer awaiting reply",
   "worklist.untitled.lead_response": "Untitled lead",
   "worklist.untitled.deal_at_risk": "Deal drifting",
-  "worklist.untitled.deal_review": "Customer support review",
   "worklist.untitled.meeting": "Untitled meeting",
   "worklist.untitled.meeting_outcome": "Meeting outcome",
   "worklist.untitled.relationship_decay": "Relationship going quiet",

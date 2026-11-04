@@ -945,9 +945,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.movement.new": "Neue Deals",
   "reporting.movement.pulled_in": "In den Zeitraum vorgezogen",
   "reporting.movement.pushed_out": "Aus dem Zeitraum geschoben",
-  "reporting.movement.excluded": "Nach Prüfung herausgenommen",
-  "reporting.movement.reinstated": "Nach Prüfung wieder gezählt",
-  "reporting.movement.not_checked": "Nicht geprüft",
   "reporting.movement.amount": "Wertänderungen",
   "reporting.movement.category": "Änderungen der Prognosekategorie",
   "reporting.movement.stage_weight": "Änderungen der Phasengewichtung",
@@ -1535,25 +1532,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.gapBasis": "Erwartetes Ergebnis {landing}, aus {basis}",
   "reporting.compare.basis.likely": "den wahrscheinlichen Deals",
   "reporting.compare.basis.weighted": "der gewichteten Pipeline",
-  "reporting.compare.basis.qualified_likely":
-    "den gestützten wahrscheinlichen Deals",
-  "reporting.compare.basis.qualified_weighted":
-    "der gestützten gewichteten Pipeline",
   "reporting.compare.basis.manager_call": "der Einschätzung der Führungskraft",
   "reporting.compare.remaining": "Noch zu gewinnen",
   "reporting.compare.remainingBasis": "{won} von {target} gewonnen",
   "reporting.compare.reached": "Ziel erreicht",
   "reporting.compare.coverageAll":
     "Deckung, Deals mit Abschluss in diesem Quartal",
-  "reporting.compare.coverageQualified": "Deckung, qualifizierte Deals",
   "reporting.compare.coverageBasis":
     "{open} mit Abschluss in diesem Quartal / {remaining} noch zu gewinnen",
-  "reporting.compare.qualifiedBasis":
-    "{open} in qualifizierten Deals, im Verhältnis zum Rest",
   "reporting.compare.ratio": "{ratio}×",
-  "reporting.compare.qualifiedOff": "Nicht eingeschaltet",
-  "reporting.compare.qualifiedOffBasis":
-    "Schalte die qualifizierte Prognose ein, um nur Deals zu zählen, die der Kunde noch trägt.",
   "reporting.compare.no_target": "Kein Umsatzziel für dieses Quartal",
   "reporting.compare.no_targetBody":
     "Leg unter Ziele ein Ziel für gewonnenen Umsatz für diesen Bereich und dieses Quartal fest, um Abstand und Deckung zu sehen. Kein Ziel ist kein Ziel von null.",
@@ -2185,7 +2172,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.calendar": "Kalenderverbindung",
   "brief.coverage.source.next_meeting": "Nächster Termin",
   "brief.coverage.source.deal_at_risk": "Markierte Deals",
-  "brief.coverage.source.deal_review": "Prüfungen des Kundenrückhalts",
   "brief.coverage.source.lead_response": "Zugewiesene Leads",
   "brief.coverage.source.customer_waiting": "Unbeantwortete Nachrichten",
   "brief.coverage.source.conversation_claim": "Kundenzusagen",
@@ -5685,25 +5671,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Bestätigen",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
-  "deals.viability.title": "Rückhalt beim Kunden",
-  "deals.viability.standing": "Prognose gestützter Deals",
-  "deals.viability.enforced":
-    "Die Prognose zählt nur Deals, die der Kunde stützt.",
-  "deals.viability.notEnforced":
-    "Die Prognose zählt alle Deals; dies ist nur zur Information.",
-  "deals.viability.qualification.eligible": "Gezählt",
-  "deals.viability.qualification.excluded": "Zur Prüfung herausgenommen",
-  "deals.viability.qualification.unsupported": "Herausgenommen: kein Rückhalt",
-  "deals.viability.qualification.unknown": "Nicht geprüft",
-  "deals.viability.qualification.closed":
-    "Abgeschlossen: nicht in der Prognose",
-  "deals.viability.checkOutOfDate":
-    "Diese Prüfung zählt nicht mehr, daher ist der Deal nicht geprüft.",
-  "deals.viability.assessed": "Zuletzt geprüft",
-  "deals.viability.review": "Prüfung des Kundenrückhalts",
-  "deals.viability.reviewOpenedOn": "Geöffnet am {date}",
-  "deals.viability.reviewOpen": "Offen",
-  "deals.viability.taskDoneReviewOpen": "Aufgabe erledigt, noch offen",
 
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
@@ -6520,10 +6487,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.outlook.open": "Prognose öffnen",
   "brief.weekly.outlook.measure.likely": "Aus wahrscheinlichen Deals",
   "brief.weekly.outlook.measure.weighted": "Aus gewichteten Deals",
-  "brief.weekly.outlook.measure.qualified_likely":
-    "Aus gestützten wahrscheinlichen Deals",
-  "brief.weekly.outlook.measure.qualified_weighted":
-    "Aus gestützten gewichteten Deals",
   "brief.weekly.outlook.measure.manager_call":
     "Aus der Einschätzung der Führungskraft",
   "brief.weekly.bridge": "Veränderung der Woche",
@@ -6536,9 +6499,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.bar.created": "Neu erstellt",
   "brief.weekly.bar.advanced": "Vorangekommen",
   "brief.weekly.bar.slipped": "Verschoben",
-  "brief.weekly.bar.excluded": "Nach Prüfung raus",
-  "brief.weekly.bar.reinstated": "Nach Prüfung zurück",
-  "brief.weekly.bar.not_checked": "Nicht geprüft",
   "brief.weekly.bar.won": "Gewonnen",
   "brief.weekly.bar.lost": "Verloren",
   "brief.weekly.bar.other": "Wechselkurse und Definitionen",
@@ -8258,10 +8218,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.outOfDateDeals_one": "1 Deal hat sich seit dieser Prüfung geändert.",
   "review.outOfDateDeals_other":
     "{count} Deals haben sich seit dieser Prüfung geändert.",
-  "review.deliveryFailed_one":
-    "1 Kundenprüfung konnte nicht als Aufgabe an den Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
-  "review.deliveryFailed_other":
-    "{count} Kundenprüfungen konnten nicht als Aufgaben an die Verantwortlichen gehen. Die nächste Prüfung versucht es erneut.",
   "review.outOfDateWorkspace":
     "Eine Phase oder eine Prognose hat sich seit dieser Prüfung geändert.",
   "review.outOfDateSignals_one":
@@ -8317,47 +8273,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.noNextStep": "Kein nächster Schritt",
   "review.noEconomicBuyer": "Niemand mit Unterschriftsrecht benannt",
   "review.buyerSilent": "Käuferseite verstummt",
-  "review.dealViability": "Rückhalt beim Kunden prüfen",
-  "forecast.qualifiedPartial":
-    "Einige dieser Deals haben keinen Betrag, den du sehen kannst. Die Beträge oben liegen deshalb unter ihrem vollen Wert.",
-  "forecast.qualifiedLeftOut_one":
-    "{count} Deal ({amount}) bleibt draußen, solange seine Prüfung offen ist.",
-  "forecast.qualifiedLeftOut_other":
-    "{count} Deals ({amount}) bleiben draußen, solange ihre Prüfung offen ist.",
-  "forecast.qualifiedUnsupported_one":
-    "{count} Deal ({amount}) bleibt draußen, weil er kein bestätigtes Abschlussdatum oder keinen nächsten Schritt hat.",
-  "forecast.qualifiedUnsupported_other":
-    "{count} Deals ({amount}) bleiben draußen, weil sie kein bestätigtes Abschlussdatum oder keinen nächsten Schritt haben.",
-  "forecast.qualifiedUnknown_one":
-    "{count} Deal ({amount}) zählt nicht, weil die letzte Prüfung ihn nicht beurteilen konnte.",
-  "forecast.qualifiedUnknown_other":
-    "{count} Deals ({amount}) zählen nicht, weil die letzte Prüfung sie nicht beurteilen konnte.",
-  "forecast.qualifiedAnswer":
-    "Gewonnene plus wahrscheinliche Deals, die der Kunde noch stützt: {evidence}. Gewichtet: {weighted}.",
-  "review.enforcementLabel": "Nur Deals zählen, die der Kunde stützt",
-  "review.enforcementHint":
-    "Ein Deal, dessen Kunde sich nicht mehr meldet, fällt aus der gestützten Prognose, bis jemand ihn prüft. Die anderen Zahlen ändern sich nicht.",
-  "review.enforcementPreviewLeftOut_one":
-    "Wenn du sie jetzt einschaltest, fällt {count} Deal aus dieser Zeile.",
-  "review.enforcementPreviewLeftOut_other":
-    "Wenn du sie jetzt einschaltest, fallen {count} Deals aus dieser Zeile.",
-  "review.enforcementPreviewUnknown_one":
-    "{count} Deal ist noch nicht beurteilt und zählt ebenfalls nicht.",
-  "review.enforcementPreviewUnknown_other":
-    "{count} Deals sind noch nicht beurteilt und zählen ebenfalls nicht.",
-  "review.revive": "Der Kunde ist zurück",
-  "review.reviveHelp":
-    "Zählt den Deal wieder, sobald der Kunde geschrieben oder sich mit dir getroffen hat, das Abschlussdatum bestätigt und ein nächster Schritt geplant ist.",
-  "review.wait": "Der Kunde hat um Geduld gebeten",
-  "review.waitHelp":
-    "Hält das Warten am Deal fest. Bis dahin zählt der Deal nicht, und die Prüfung kommt an diesem Tag zurück.",
-  "review.waitUntil": "Warten bis",
-  "review.closeLost": "Als verloren schließen",
-  "review.closeLostHelp": "Schließt den Deal als verloren, mit deinem Grund.",
-  "review.enforcementOn": "Die gestützte Prognose ist an.",
-  "review.enforcementOff": "Die gestützte Prognose ist aus.",
-  "review.enforcementAdminOnly": "Nur ein Admin kann das ändern.",
-  "review.enforcementNotStarted": "Starte zuerst die erste Prüfung.",
   "review.commitUnpriced": "Commit ohne Betrag",
   "review.stageExitUnmet": "Austrittskriterien der Phase nicht erfüllt",
   "review.callMovedHelp_one":
@@ -9715,7 +9630,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.assurance_run": "Prognoseprüfung auf Anfrage",
   "jobs.kind.assurance_sweep": "Prognoseprüfung",
   "jobs.kind.assurance_deal_rescan": "Prognoseprüfung eines geänderten Deals",
-  "jobs.kind.assurance_review_delivery": "Aufgabe zu einer Kundenprüfung",
   "jobs.kind.brief_generate": "Morgenbericht",
   "jobs.kind.capture_auto_enrich_sweep":
     "Anreicherung von Unternehmensdaten aus E-Mails",
@@ -14454,10 +14368,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wahrscheinlich: Deals ab der Schwelle für wahrscheinlich, mit bestätigtem Abschlussdatum",
   "installationSettings.forwardMeasure.weighted":
     "Gewichtet: jeder offene Deal mit seiner Abschlusschance",
-  "installationSettings.forwardMeasure.qualified_likely":
-    "Gestützt wahrscheinlich: wahrscheinliche Deals, die der Kunde noch stützt",
-  "installationSettings.forwardMeasure.qualified_weighted":
-    "Gestützt gewichtet: offene Deals, die der Kunde noch stützt, mit ihrer Abschlusschance",
   "installationSettings.forwardMeasure.manager_call":
     "Einschätzung der Führungskraft: die für den Zeitraum festgelegte Zahl",
   "installationSettings.likelyThreshold": "Schwelle für wahrscheinlich",
@@ -14468,9 +14378,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
-  "forecast.basis.qualified_likely":
-    "Gewonnen + gestützte wahrscheinliche Deals",
-  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
@@ -14504,8 +14411,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die wahrscheinlichen Deals, da für diesen Zeitraum keine Einschätzung erfasst ist.",
-  "forecast.landing.caveat.qualified_unavailable":
-    "Die Zählung gestützter Deals ist aus, daher zeigt dies alle Deals.",
   "forecast.landing.caveat.call_below_actual":
     "Die Einschätzung liegt unter dem bereits gewonnenen Betrag. Die Einschätzung wird wie erfasst angezeigt, nicht korrigiert.",
   "forecast.pipelineNeeded": "Benötigter Deal-Wert",
@@ -18280,8 +18185,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Lead wartet auf eine erste Antwort. Melde dich, bevor seine Antwortfrist abläuft.",
   "worklist.ask.deal_at_risk":
     "Dieser Deal zeigt Anzeichen, dass er abrutscht. Öffne ihn und plane den nächsten Schritt.",
-  "worklist.ask.deal_review":
-    "Der Kunde stützt diesen Deal vielleicht nicht mehr. Öffne ihn und beantworte die Prüfung.",
   "worklist.ask.meeting":
     "Dieser Termin steht bevor. Öffne ihn, um dich vorzubereiten.",
   "worklist.ask.relationship_decay":
@@ -18691,7 +18594,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.customer_waiting": "Kontakt wartet auf Antwort",
   "worklist.untitled.lead_response": "Lead ohne Titel",
   "worklist.untitled.deal_at_risk": "Deal stagniert",
-  "worklist.untitled.deal_review": "Prüfung des Kundenrückhalts",
   "worklist.untitled.meeting": "Termin ohne Titel",
   "worklist.untitled.meeting_outcome": "Terminergebnis",
   "worklist.untitled.relationship_decay": "Beziehung wird still",

@@ -20502,46 +20502,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/forecast/assurance/enforcement": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Whether the qualified forecast applies the viability reviews.
-         * @description `state` is `not_enrolled` before the input check has ever run, `observing` once it
-         *     runs and raises reviews and tasks but the forecast figures are unchanged, and
-         *     `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-         *     forecast reading carry `qualified`, and only then does the close-date sweep stop
-         *     lowering forecast categories.
-         */
-        get: operations["getForecastAssuranceEnforcement"];
-        /**
-         * Switch the qualified forecast's enforcement on or off.
-         * @description Admin only. A setting fixed by the environment is refused with
-         *     `409 setting_locked_by_boot_source`.
-         *
-         *     Switching on changes the qualified forecast figures for every reader. It sends
-         *     `preview_digest`, the `digest` of the preview the admin saw, and is refused with
-         *     `409 preview_stale` when the deals' treatment changed since, so nobody switches
-         *     on a picture that is no longer true. It is then refused with
-         *     `409 input_check_not_started` until a check has judged a deal: before that the
-         *     qualified forecast would count nothing.
-         *
-         *     Switching off takes effect at once. The reviews, their tasks and their history
-         *     stay; only the qualified readings disappear, and the baseline readings never
-         *     changed.
-         */
-        put: operations["setForecastAssuranceEnforcement"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/analytics/coverage": {
         parameters: {
             query?: never;
@@ -20640,56 +20600,6 @@ export interface paths {
          *     open.
          */
         post: operations["resolveInputCheck"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/forecast/assurance/exceptions/{id}/wait": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Answer a customer review with the day the customer asked you to wait until.
-         * @description For a `deal_viability` review only. One transaction records the customer's wait on
-         *     the deal (`wait_until`) and answers the review `remind_later` for the same day. The
-         *     review stays open and the deal stays out of the qualified forecast while it waits:
-         *     a wait is not support. The review comes back on that day.
-         *
-         *     404 when the finding is not an open customer review.
-         */
-        post: operations["waitInputCheck"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/forecast/assurance/exceptions/{id}/close-lost": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Answer a customer review by closing its deal as lost.
-         * @description For a `deal_viability` review only. One transaction moves the deal to its pipeline's
-         *     lost stage with the reason given, and answers the review `not_relevant` with that
-         *     reason. A review is never answered `not_relevant` while its deal is still open.
-         *
-         *     404 when the finding is not an open customer review. 422 when the pipeline has no
-         *     lost stage.
-         */
-        post: operations["closeLostInputCheck"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22072,39 +21982,6 @@ export interface paths {
          *     coverage view was withheld, not that the deal passes every check.
          */
         get: operations["getDealCoverage"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/deals/{id}/viability": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        /**
-         * Whether the customer still supports this deal, and the review behind the answer.
-         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
-         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
-         *     `deal_viability` review with its task. The review is shown while it is open, even when
-         *     its task is done: completing the task does not answer the review.
-         *
-         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
-         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
-         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
-         *     so nothing here needs masking.
-         *     `qualification` is computed whether or not the installation enforces it;
-         *     `qualification_mode` says whether the qualified forecast applies it.
-         */
-        get: operations["getDealViability"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24754,18 +24631,15 @@ export interface components {
              *
              *     `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
              *     percent or more whose close date somebody confirmed, a provisional date being a
-             *     guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
-             *     readings over the deals the customer still supports (the `qualified` block on
-             *     `GET /forecast`). `manager_call` takes the authored call as the whole period's
+             *     guess that stays out. `manager_call` takes the authored call as the whole period's
              *     landing and is not added to what is already won; with no current call the read
              *     falls back to `likely` and says so in the landing's `caveat`.
              *
-             *     With no measure saved, the landing uses `qualified_likely` while the installation
-             *     enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
-             *     client shows an unknown value by its name.
+             *     With no measure saved, the landing uses `likely`. A saved measure is used as saved.
+             *     The set can grow, so a client shows an unknown value by its name.
              * @enum {string}
              */
-            forecast_forward_measure: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
+            forecast_forward_measure: "likely" | "weighted" | "manager_call";
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
@@ -24946,7 +24820,7 @@ export interface components {
              *     at once and re-means no stored row.
              * @enum {string}
              */
-            forecast_forward_measure?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
+            forecast_forward_measure?: "likely" | "weighted" | "manager_call";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -43356,7 +43230,7 @@ export interface components {
              * @description The forward measure the landing was projected with.
              * @enum {string}
              */
-            basis?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
+            basis?: "likely" | "weighted" | "manager_call";
             /** Format: double */
             landing?: number;
             /** Format: double */
@@ -43369,7 +43243,6 @@ export interface components {
             open_pipeline?: number;
             /** Format: double */
             coverage?: number;
-            qualified?: components["schemas"]["ReportingQualifiedCoverage"];
             operands?: components["schemas"]["ReportingComparisonOperands"];
         };
         /**
@@ -43428,29 +43301,11 @@ export interface components {
              */
             included_count?: number;
         };
-        /**
-         * @description Coverage over the deals the qualified forecast keeps, beside the
-         *     coverage over all open deals. Present when the comparison carries
-         *     figures.
-         */
-        ReportingQualifiedCoverage: {
-            /**
-             * @description `not_enforced` means the qualified forecast is switched off, so no
-             *     open deal is judged and no qualified figure exists.
-             * @enum {string}
-             */
-            status: "compared" | "target_reached" | "not_enforced";
-            /** Format: double */
-            open_pipeline?: number;
-            /** Format: double */
-            coverage?: number;
-        };
         /** @description The evidence each figure of a target comparison was read from. */
         ReportingComparisonOperands: {
             won: components["schemas"]["ReportingEvidenceRef"];
             landing: components["schemas"]["ReportingEvidenceRef"];
             open_pipeline: components["schemas"]["ReportingEvidenceRef"];
-            qualified_open_pipeline?: components["schemas"]["ReportingEvidenceRef"];
         };
         ReportingEvaluation: {
             overview_actions?: components["schemas"]["ReportingOverviewAction"][];
@@ -44295,12 +44150,6 @@ export interface components {
             sufficiency?: components["schemas"]["ForecastSufficiency"];
             /** @description The frozen states of this period and population, newest first: the ten most recent plus the period's first, so a reader has both the latest and the "since the period opened" anchor. These are the ids `getForecastMovement` takes in `from` and `to`. Only whole-pipeline snapshots are listed; one restricted to a single pipeline covers a different population. Empty when nothing was frozen, and always empty for `managed_teams`, which nothing is frozen against. */
             snapshots?: components["schemas"]["ForecastSnapshotRef"][];
-            qualified?: components["schemas"]["ForecastQualifiedReadings"];
-            /**
-             * @description Whether the installation enforced viability reviews for this read. `enforcing` always comes with a `qualified` block, a zero one when the period and scope hold no visible deal; `off` never does. A client tells "enforcement off" from "nothing to qualify" by this field, not by whether `qualified` is present.
-             * @enum {string}
-             */
-            qualification_mode: "off" | "enforcing";
             /** @description Whether the chances moved with recorded outcomes and learned risk effects (installation setting `forecast_self_correcting`). Absent on a stored answer from before the field existed. */
             self_correcting?: boolean;
             /**
@@ -44409,105 +44258,6 @@ export interface components {
             won_percent?: number;
             chance_in_use: number;
         };
-        DealViability: {
-            /** Format: uuid */
-            deal_id: string;
-            /**
-             * @description Whether the installation's qualified forecast applies `qualification`.
-             * @enum {string}
-             */
-            qualification_mode: "off" | "enforcing";
-            /**
-             * @description The deal's treatment in the qualified forecast, by the rule `GET /forecast` applies: `excluded` under an open review, `unsupported` judged unsupported with no review, `unknown` not judged on its current evidence. `closed` is a won or lost deal, which no open reading counts.
-             * @enum {string}
-             */
-            qualification: "eligible" | "excluded" | "unsupported" | "unknown" | "closed";
-            /**
-             * Format: date-time
-             * @description When the input check last assessed the deal; null when it never did.
-             */
-            assessed_at?: string | null;
-            /**
-             * @description The review standing the qualification rests on.
-             * @enum {string}
-             */
-            disposition?: "none" | "open_review" | "override" | "unsupported";
-            /** @description Whether the deal was judged on its current evidence under the current policy. */
-            complete?: boolean;
-            policy_version?: string;
-            receipt?: components["schemas"]["DealViabilityReceipt"];
-            /** Format: date */
-            expected_close_date?: string | null;
-            close_date_provisional: boolean;
-            /** @description True when the expected close date is before today in the installation's zone. */
-            close_date_overdue: boolean;
-            /** @description The baseline chance, the deal's stage probability. */
-            stage_probability: number;
-            review?: components["schemas"]["DealViabilityReview"];
-        };
-        /** @description The input check's last answer about the deal. Absent when it never assessed it. */
-        DealViabilityReceipt: {
-            /** @description The check's outcome, such as `eligible` or `unsupported`. */
-            outcome: string;
-            /** @description The viability policy the check applied. */
-            policy_version: string;
-            /** @description Whether the forecast still takes this receipt, by its rule: the current policy, an outcome the check could judge, not past `valid_until`, and the deal's evidence unchanged since. False makes the deal `unknown`. */
-            current: boolean;
-            /** @description The reason codes the check recorded. */
-            reasons: string[];
-            /** Format: date-time */
-            valid_until: string;
-        };
-        /** @description The open `deal_viability` review on the deal. Absent when none is open. It stays while the review is open even when its task is done. */
-        DealViabilityReview: {
-            /** Format: uuid */
-            id: string;
-            /** Format: date-time */
-            opened_at: string;
-            episode: number;
-            /**
-             * @description How far handing the review to a task got; null before a pass queued it.
-             * @enum {string|null}
-             */
-            delivery_state?: "pending" | "failed" | "delivered" | null;
-            task?: components["schemas"]["DealViabilityTask"];
-        };
-        /** @description The task the review was delivered as. Absent until delivered, or when the reader may not see it. */
-        DealViabilityTask: {
-            /** Format: uuid */
-            id: string;
-            done: boolean;
-        };
-        /**
-         * @description The readings restricted to deals the customer still supports, present only while the installation enforces viability reviews (`assurance.qualified_forecast_enforced`). Absent means no qualified reading exists, never that it equals the baseline.
-         *     A deal under an open viability review is excluded. So is a deal the customer still talks about but whose close date is provisional or overdue, or that has no next step; it gets no review, and `unsupported_minor` and `unsupported_count` carry it apart. A deal the input check could not judge on current evidence, because the mailbox was unread, the deal is new, or the evidence changed since the check, is unknown. The two are counted apart: an unknown deal is a gap in what was checked, not in the pipeline. Every figure is a subset of the baseline reading beside it, weighted per deal exactly as `weighted_minor` is.
-         */
-        ForecastQualifiedReadings: {
-            /** Format: int64 */
-            evidence_minor: number;
-            /** Format: int64 */
-            weighted_minor: number;
-            /**
-             * Format: int64
-             * @description Open baseline money on every deal left out: under an open viability review, or unsupported.
-             */
-            excluded_minor: number;
-            /**
-             * Format: int64
-             * @description The part of `excluded_minor` on deals left out with no review: a close date that is provisional or overdue, or no next step. A deal with no close date falls in no period, so no reading counts it.
-             */
-            unsupported_minor: number;
-            unsupported_count: number;
-            /**
-             * Format: int64
-             * @description Open baseline money on deals the check could not judge on current evidence.
-             */
-            unknown_minor: number;
-            excluded_count: number;
-            unknown_count: number;
-            /** @description True when an excluded or unknown deal had no amount the reader can see: unpriced, no exchange rate, or masked. The two subtotals are then lower than the money those deals carry, and are not the full figure. */
-            amounts_partial?: boolean;
-        };
         /** @description One frozen forecast, by the handle a movement read takes. */
         ForecastSnapshotRef: {
             /** Format: uuid */
@@ -44531,10 +44281,10 @@ export interface components {
              */
             amount_minor: number;
             /**
-             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
+             * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
              * @enum {string}
              */
-            measure: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
+            measure: "likely" | "weighted" | "manager_call";
             /**
              * Format: int64
              * @description The money already banked, the backward half of the sum.
@@ -44551,10 +44301,10 @@ export interface components {
              */
             system_minor?: number;
             /**
-             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it. `qualified_unavailable` is a qualified measure on a read with no qualified block (enforcement off), so `measure` names the baseline reading used instead.
+             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
              * @enum {string}
              */
-            caveat?: "call_absent" | "call_below_actual" | "qualified_unavailable";
+            caveat?: "call_absent" | "call_below_actual";
         };
         /**
          * @description Whether the open pipeline supports the reference landing, and what the reference is.
@@ -44742,22 +44492,6 @@ export interface components {
             /** @enum {string} */
             status: "enqueued";
         };
-        /** @description Whether the qualified forecast applies the viability reviews. */
-        ForecastAssuranceEnforcement: {
-            readonly locks?: components["schemas"]["SettingLocks"];
-            /** @enum {string} */
-            state: "not_enrolled" | "observing" | "enforcing";
-            preview?: components["schemas"]["ForecastEnforcementPreview"];
-        };
-        /** @description What switching enforcement on would do now. Present only while `observing`, and only to an admin: it counts every open deal. Switching on sends `digest` back, and is refused when the deals' treatment changed since. */
-        ForecastEnforcementPreview: {
-            /** @description Open deals the qualified forecast would leave out, under review or unsupported. */
-            left_out_count: number;
-            /** @description Open deals the last check could not judge on current evidence. */
-            unknown_count: number;
-            /** @description Names the policy version and every open deal's treatment this preview counted. */
-            digest: string;
-        };
         /** @description What the most recent nightly input check found, and how much of the pipeline it was able to reach. */
         ForecastAssurance: {
             /** Format: uuid */
@@ -44780,16 +44514,6 @@ export interface components {
             /** @description Every source the run tried, and how far it reached into each. */
             sources: components["schemas"]["ForecastAssuranceSource"][];
             freshness: components["schemas"]["AssuranceFreshness"];
-            review_deliveries: components["schemas"]["AssuranceReviewDeliveries"];
-        };
-        /** @description The open customer reviews by how far their task delivery got. A delivery is a background job queued with the check; a failed one is queued again by the next check. */
-        AssuranceReviewDeliveries: {
-            /** @description Reviews whose task is queued or retrying. */
-            pending: number;
-            /** @description Reviews whose task could not be delivered after every retry. */
-            failed: number;
-            /** @description Reviews that have their task, including a task somebody already completed while the review stays open. */
-            delivered: number;
         };
         /** @description Whether the records changed after this check read them. Changes are marked as they happen; only the next run reads them, and a run that could not read all it needs clears none. */
         AssuranceFreshness: {
@@ -44824,7 +44548,7 @@ export interface components {
         /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
         ForecastMovement: {
             /** @enum {string} */
-            reading: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
+            reading: "open" | "weighted" | "evidence";
             /** Format: int64 */
             opening_minor: number;
             /** Format: int64 */
@@ -44836,10 +44560,10 @@ export interface components {
         };
         ForecastMovementBucket: {
             /**
-             * @description `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. `excluded`, `reinstated` and `not_checked` occur only in a qualified reading: a deal that left it because its viability review excluded it, one that came back, and one that left because its review status became unknown. The set can grow, so a client shows an unknown bucket by its name.
+             * @description `stage_weight` is a deal that changed stage and with it its chance. `record_changed` is a deal whose chance or risk effect moved while it stayed in its stage, because outcomes were recorded since. The set can grow, so a client shows an unknown bucket by its name.
              * @enum {string}
              */
-            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "excluded" | "reinstated" | "not_checked" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
+            name: "new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "definition" | "model";
             /** Format: int64 */
             amount_minor: number;
             deal_count: number;
@@ -44864,8 +44588,8 @@ export interface components {
             audit_id?: string;
             /** Format: uuid */
             approval_id?: string;
-            /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. `qualification` is the deal leaving or rejoining the qualified forecast, which moves no money in this reading. */
-            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx" | "qualification")[];
+            /** @description Every change this deal went through between the two snapshots, in drawing order. `bucket` is the one cause its money is counted under, so a deal whose amount, stage and close date all moved is one row. */
+            causes?: ("new" | "pulled_in" | "pushed_out" | "amount" | "category" | "stage_weight" | "record_changed" | "won" | "lost" | "reopened_or_archived" | "fx")[];
         };
         NewForecastCall: {
             /**
@@ -52817,7 +52541,7 @@ export interface components {
              *     said. Freezing an opinion as a measurement would make the record argue with itself.
              * @enum {string}
              */
-            forward_measure?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
+            forward_measure?: "likely" | "weighted" | "manager_call";
             /** Format: int64 */
             won_minor: number;
             /**
@@ -52842,9 +52566,7 @@ export interface components {
             /**
              * @description Which move this is. Folded from the forecast engine's movement buckets, whose
              *     grain is right for diagnosing a quarter and too fine for a weekly retrospective.
-             *     `excluded`, `reinstated` and `not_checked` appear only when the window is landing on a
-             *     qualified measure: a deal that left or rejoined the qualified number on its viability
-             *     review alone, or left because its review status became unknown. The set can grow.
+             *     The set can grow.
              *
              *     `advanced` and `slipped` are decided by the SIGN of the change and not by its cause: a
              *     reprice, a category move and a stage move each go both ways, and reading the cause
@@ -52853,7 +52575,7 @@ export interface components {
              *     DID it, and crediting it as progress tells a rep they sold what a rate move did.
              * @enum {string}
              */
-            bar: "created" | "advanced" | "slipped" | "excluded" | "reinstated" | "not_checked" | "won" | "lost" | "other";
+            bar: "created" | "advanced" | "slipped" | "won" | "lost" | "other";
             /**
              * Format: int64
              * @description Signed. A bar takes money out of the window as well as putting it in, and an unsigned
@@ -54244,7 +53966,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch" | "deal_review";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. A folded group counts as its members, so this is in items, not cards. */
@@ -55191,17 +54913,12 @@ export interface components {
             /**
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              *
-             *     `deal_review` is one open customer-support review on a deal (`deal_viability`), its id
-             *     the review's. The review's task row and the deal's quiet-only `deal_at_risk` row fold
-             *     into it, and it stays while the review is open, even once its task is done. It offers
-             *     only `open`; the review is answered on the deal.
-             *
              *     `batch` is the one that names no single record: it stands for a GROUP of
              *     routine decisions that read alike, so a hundred of them cost the reader one
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch" | "deal_review";
+            source: "approval" | "dedupe_candidate" | "contact_case" | "deal_suggestion" | "tag_suggestion" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "capture_health" | "domain_question" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "awaiting_reply" | "meeting_follow_up" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
@@ -88733,60 +88450,6 @@ export interface operations {
             };
         };
     };
-    getForecastAssuranceEnforcement: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The installation's enforcement state. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForecastAssuranceEnforcement"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-        };
-    };
-    setForecastAssuranceEnforcement: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    enabled: boolean;
-                    /** @description The `digest` of the preview shown before switching on. */
-                    preview_digest?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description The state after the change. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForecastAssuranceEnforcement"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            409: components["responses"]["SettingLocked"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
     getDataCoverage: {
         parameters: {
             query?: never;
@@ -88887,69 +88550,6 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    waitInputCheck: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: date */
-                    until: string;
-                };
-            };
-        };
-        responses: {
-            /** @description The wait was recorded on the deal and the review. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    closeLostInputCheck: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    lost_reason: string;
-                    /** @description An active key from `/loss-reasons`. Without one the loss is recorded with its note alone, as unmapped. */
-                    lost_reason_code?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description The deal was closed as lost and the review answered. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
     getForecastMovement: {
         parameters: {
             query: {
@@ -88957,8 +88557,8 @@ export interface operations {
                 from: string;
                 /** @description The closing snapshot. */
                 to: string;
-                /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`. */
-                reading?: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
+                /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. */
+                reading?: "open" | "weighted" | "evidence";
             };
             header?: never;
             path?: never;
@@ -90520,33 +90120,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealCoverage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    getDealViability: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The deal's viability. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealViability"];
                 };
             };
             401: components["responses"]["Unauthorized"];

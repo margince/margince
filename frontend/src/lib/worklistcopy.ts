@@ -409,7 +409,6 @@ export const KNOWN_SOURCES = {
   meeting_follow_up: true,
   lead_response: true,
   deal_at_risk: true,
-  deal_review: true,
   meeting: true,
   meeting_outcome: true,
   relationship_decay: true,
