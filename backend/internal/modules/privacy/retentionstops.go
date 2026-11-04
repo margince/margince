@@ -61,10 +61,12 @@ func keepContactStops(ctx context.Context, tx pgx.Tx, id ids.UUID, addresses []s
 
 // keepStopsOnAddresses detaches every stop of one subject onto its addresses.
 //
-// A stop that names its own address keeps it. A stop for the whole subject
-// gets one row per address, because the subject asked about all of them. A
-// stop with no address to pin to stays on the anonymized record, which still
-// exists, so its evidence is kept.
+// Only an active stop is pinned. A stop that names its own address keeps it. A
+// stop for the whole subject gets one row per address, because the subject
+// asked about all of them. A stop with no address to pin to stays on the
+// anonymized record, which still exists, so its evidence is kept. A lifted
+// stop stays on the record too, with its address cleared: it stops nothing,
+// and a copy would only spread the address.
 func keepStopsOnAddresses(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, id ids.UUID, addresses []string) error {
 	if err := pinWithdrawals(ctx, tx, column, id, addresses); err != nil {
 		return err
@@ -74,19 +76,30 @@ func keepStopsOnAddresses(ctx context.Context, tx pgx.Tx, column stopSubjectColu
 	// address that already has one is already stopped.
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		INSERT INTO communication_suppression
-		    (address, kind, source, captured_by, decided_by_level, purpose_id, recorded_at, revoked_at, carried_from)
-		SELECT u.addr, s.kind, s.source, s.captured_by, s.decided_by_level, s.purpose_id, s.recorded_at, s.revoked_at, s.id
+		    (address, kind, source, captured_by, decided_by_level, purpose_id, recorded_at, carried_from)
+		SELECT u.addr, s.kind, s.source, s.captured_by, s.decided_by_level, s.purpose_id, s.recorded_at, s.id
 		  FROM communication_suppression s
 		 CROSS JOIN unnest($2::text[]) WITH ORDINALITY AS u(addr, n)
-		 WHERE s.%[1]s = $1 AND s.address IS NULL AND u.n > 1
+		 WHERE s.%[1]s = $1 AND s.revoked_at IS NULL AND s.address IS NULL AND u.n > 1
 		ON CONFLICT DO NOTHING`, column), id, addresses); err != nil {
 		return fmt.Errorf("copy the subject's stops onto each of their addresses: %w", err)
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE communication_suppression
 		   SET %[1]s = NULL, address = coalesce(address, ($2::text[])[1])
-		 WHERE %[1]s = $1 AND coalesce(address, ($2::text[])[1]) IS NOT NULL`, column), id, addresses); err != nil {
+		 WHERE %[1]s = $1 AND revoked_at IS NULL AND coalesce(address, ($2::text[])[1]) IS NOT NULL`, column), id, addresses); err != nil {
 		return fmt.Errorf("detach the subject's stops onto their addresses: %w", err)
+	}
+	return clearLiftedStopAddresses(ctx, tx, column, id)
+}
+
+// clearLiftedStopAddresses empties the address of the subject's lifted stops,
+// which stay on the anonymized record as evidence.
+func clearLiftedStopAddresses(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, id ids.UUID) error {
+	if _, err := tx.Exec(ctx, fmt.Sprintf(`
+		UPDATE communication_suppression SET address = NULL
+		 WHERE %s = $1 AND revoked_at IS NOT NULL AND address IS NOT NULL`, column), id); err != nil {
+		return fmt.Errorf("clear the address of the subject's lifted stops: %w", err)
 	}
 	return nil
 }

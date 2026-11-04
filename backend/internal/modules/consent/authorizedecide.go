@@ -32,9 +32,9 @@ import (
 // far less often than contacts do.
 //
 // The returned resolution's Supported reports whether it settled. When it did
-// not, the caller asks its own subject kind's grant, which is the ONLY part
-// that differs: a contact's is VerdictForRecipient and a lead's is grantedForLead,
-// and each reads a column the other's query does not.
+// not, the caller asks its own subject kind's grant, which is the only part
+// that differs. A contact's is VerdictForRecipient and a lead's is
+// grantedForLead, and each reads a column the other's query does not.
 func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, stops []liveStop) (resolution, error) {
 	res, err := g.resolveCategory(ctx, tx, req, subject)
 	if err != nil {
@@ -283,9 +283,9 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // legacyVerdictFor answers on the old purpose model when the record supports no
 // category on its own.
 //
-// It calls VerdictForRecipient rather than reimplementing the class model, which
-// is what keeps the engine, the legacy transmit gate and the guard endpoint
-// answering with one body of code about one contact. A second implementation
+// It calls VerdictForRecipient rather than reimplementing the class model. So
+// the engine, the legacy transmit gate and the guard endpoint answer with one
+// body of code (verdictFor). A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
 //
@@ -358,9 +358,9 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 	}
 
 	w := packRulesFor(country)
-	// NO Advertises. Nothing on a send names the GOODS it advertises, so the
-	// §7(3) exception, whose similarity condition needs exactly that, is not
-	// offered: VerdictForRecipient refuses it here as it does for the guard.
+	// No Advertises: nothing on a send names the goods it advertises. The
+	// existing-customer exception needs them for its similarity test, so the
+	// verdict does not offer it here, as it does not for the guard.
 	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, time.Now().Add(-w.reply),
 		MarketingContext{Exception: w.marketingException})
 	if err != nil {
@@ -370,13 +370,13 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 	case VerdictAllowed:
 		// THE TRANSACTIONAL CLASS DOES NOT CARRY ITSELF ON THE SEND PATH.
 		//
-		// VerdictForRecipient allows ClassTransactional unconditionally, because
-		// Art 6(1)(b) really does mean the contract is the basis and the guard
-		// endpoint has to say so about a contact who has an invoice coming. But
-		// that answer is about a CONTACT, and this function is about a MESSAGE:
-		// we are only here because resolveCategory found nothing supporting
-		// this one — no thread, no live deal, no accepted claim — and
-		// resolutionForClass already said so with legacy_transactional_unevidenced.
+		// The verdict allows ClassTransactional unconditionally. Art 6(1)(b)
+		// makes the contract the basis, and the guard endpoint has to say so
+		// about a contact who has an invoice coming. But that answer is about a
+		// contact, and this function is about a message. We are here only
+		// because resolveCategory found nothing supporting this one (no thread,
+		// no live deal, no accepted claim). resolutionForClass already said so
+		// with legacy_transactional_unevidenced.
 		//
 		// Taking the allow anyway is what let any message calling itself
 		// operational become one, on nothing but the purpose key. The lead arm
@@ -384,9 +384,9 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		// this is the same hole for contacts, and the reason code is the one the
 		// resolution had picked before the legacy gate overrode it.
 		//
-		// The guard endpoint and the legacy gate keep VerdictForRecipient's answer
-		// untouched: an invoice with real evidence resolves as supported and
-		// returns from decideResolved's supported arm, never reaching here.
+		// The guard endpoint and the legacy gate keep the verdict's answer. An
+		// invoice with real evidence resolves as supported and returns from
+		// decideResolved's supported arm, never reaching here.
 		if purpose.Class == ClassTransactional {
 			d.Verdict = commsauthz.VerdictReview
 			d.ReasonCode = commsauthz.ReasonLegacyTransactionalUnevidenced

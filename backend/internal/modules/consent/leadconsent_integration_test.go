@@ -528,7 +528,7 @@ func TestALeadsEvidenceOutranksAnUngrantedPurpose(t *testing.T) {
 	}
 }
 
-// A LEAD NEVER TAKES AUTHORITY FROM GuardVerdictForContact.
+// A lead never takes authority from the contact verdict (verdictFor).
 //
 // This holds a claim that otherwise lives only in a comment on decideLead.
 // GuardVerdictForContact's ClassTransactional arm returns an unconditional allow

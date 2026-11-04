@@ -31,8 +31,8 @@ func TestTheRecheckKeepsTheSetWhileNothingChanged(t *testing.T) {
 }
 
 // A recipient country that changes between issue and wire selects other rules.
-// The answer stays a refusal, and the recheck still records a new set, because
-// the requirement check reads the rule packs of the set it is given.
+// The answer stays a refusal, and the recheck still records a new set. The
+// requirement check reads the rule packs of the set it is given.
 func TestACountryChangedBeforeTheWireRecordsANewSet(t *testing.T) {
 	e := setupResolve(t)
 	delivery, authorize := e.stagedMarketingDelivery(t)

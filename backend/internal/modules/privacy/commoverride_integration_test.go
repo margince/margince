@@ -300,3 +300,49 @@ func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 			onPredecessor, onAddress)
 	}
 }
+
+// A lifted stop stops nothing. The anonymize keeps it on the record as
+// evidence, with no address, and copies only the active stops onto addresses.
+func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
+	ctx := context.Background()
+	tx := subjectColumnsTx(ctx, t)
+
+	ws, user := ids.NewV7(), ids.NewV7()
+	contact := ids.New[ids.ContactKind]()
+	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
+	mustExec(ctx, t, tx,
+		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
+		user, "admin-"+user.String()+"@anon.test")
+	mustExec(ctx, t, tx,
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
+	for _, address := range []string{"hedda@anon.test", "hedda.home@anon.test"} {
+		mustExec(ctx, t, tx,
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, $2, 'manual', 'user:'||$3::text)`, contact, address, user)
+	}
+	mustExec(ctx, t, tx, `
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level, revoked_at)
+		VALUES ($1, 'subject_request', 'operator_ui', 'human:x', 'user', now()),
+		       ($1, 'marketing_objection', 'operator_ui', 'human:x', 'subject', NULL)`, contact)
+	mustExec(ctx, t, tx, `
+		INSERT INTO communication_suppression (contact_id, address, kind, source, captured_by, decided_by_level, revoked_at)
+		VALUES ($1, 'hedda@anon.test', 'subject_request', 'operator_ui', 'human:x', 'user', now())`, contact)
+
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+		t.Fatalf("anonymizing the contact: %v", err)
+	}
+
+	var liveOnAddresses, liftedWithAddress, liftedKept int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE revoked_at IS NULL AND contact_id IS NULL AND address IS NOT NULL),
+		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND address IS NOT NULL),
+		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND contact_id = $1)
+		  FROM communication_suppression`, contact).Scan(&liveOnAddresses, &liftedWithAddress, &liftedKept); err != nil {
+		t.Fatalf("counting the stops: %v", err)
+	}
+	if liveOnAddresses != 2 || liftedWithAddress != 0 || liftedKept != 2 {
+		t.Errorf("after the anonymize: %d live stops on addresses (want 2), %d lifted stops holding an address (want 0), "+
+			"%d lifted stops kept on the record (want 2)", liveOnAddresses, liftedWithAddress, liftedKept)
+	}
+}

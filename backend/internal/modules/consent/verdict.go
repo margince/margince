@@ -132,14 +132,14 @@ type PurposeRow struct {
 // MarketingContext is what a marketing verdict needs beyond the contact and the
 // purpose: the exception this installation's jurisdiction grants.
 //
-// Passed in for the reason `since` is passed in — resolving it needs a settings
-// read, and the verdict is deliberately free of those.
+// Passed in for the reason `since` is passed in: resolving it needs a settings
+// read, and the verdict reads no settings.
 type MarketingContext struct {
 	Exception *messaging.MarketingException
 }
 
-// VerdictForRecipient is THE decision. Both the guard endpoint and the transmit
-// gate call it, so a preview and a send answer with the same code.
+// VerdictForRecipient is the decision. The guard endpoint and the transmit gate
+// share its body (verdictFor), so a preview and a send answer with one code.
 //
 // The order of the checks is the ruling, and it is not rearrangeable: an
 // objection is evaluated FIRST and overrides every basis below it, including
@@ -156,7 +156,7 @@ type MarketingContext struct {
 // and a gated read inside the verdict would fail a send with a 500 rather than
 // an answer about consent.
 //
-// VerdictForRecipient is the form that authorizes: it names the address the
+// VerdictForRecipient is the form that authorizes. It names the address the
 // message goes to, so a request a merge carried over counts only for its own
 // addresses (requestCoversSQL). GuardVerdictForContact answers about the
 // contact as a whole and only feeds the advisory guard read.

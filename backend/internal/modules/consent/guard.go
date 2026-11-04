@@ -9,8 +9,8 @@ package consent
 // a composer can show the verdict before a word is typed. Two things about it
 // are load-bearing:
 //
-// It is computed by GuardVerdictForContact — the SAME code the dispatcher runs at
-// transmit — so a preview and the check that fires at send cannot drift.
+// It is computed by GuardVerdictForContact, which shares verdictFor with the
+// check the dispatcher runs at transmit. So a preview and a send cannot drift.
 //
 // It never grants anything. The transmit-time recheck stays authoritative and
 // refuses with the newer answer when state changed after the drawer opened; a

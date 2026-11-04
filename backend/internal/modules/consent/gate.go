@@ -104,9 +104,9 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 
 // grantedForRecipient answers the one recipient's question.
 //
-// A recipient that resolves to a CONTACT is answered by VerdictForRecipient — the
-// same code the guard endpoint serves, so the preview a composer shows and the
-// check that fires at transmit cannot drift. Two implementations of one
+// A recipient that resolves to a contact is answered by VerdictForRecipient. The
+// guard endpoint serves the same code (verdictFor), so the preview a composer
+// shows and the check that fires at transmit cannot drift. Two implementations of one
 // question are two questions, and the one that stops matching looks exactly
 // like the one that still does.
 //

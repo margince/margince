@@ -113,7 +113,7 @@ func quoteVerdictFor(t *testing.T, e *integration.Env, gate *consent.Gate, addre
 }
 
 // The legacy correspondence verdict reads the same recorded request, so it is
-// bound the same way: the guard read and the purpose gate a send still asks.
+// bound the same way. The purpose gate a send still asks reads it.
 func TestAMergedRequestDoesNotOpenCorrespondenceToTheOtherAddress(t *testing.T) {
 	e := integration.Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
