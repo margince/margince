@@ -176,7 +176,7 @@ describe("settingsSearch over the settings a page draws", () => {
 
   it.each([
     ["de", de, "system-health", "operations.retention.label"],
-    ["vi", vi, "company", "installationSettings.timezone"],
+    ["vi", vi, "company", "installationSettings.dateFormat"],
   ] as const)("finds a %s setting by its own label", (_, words, page, key) => {
     const hit = settingsSearch(words(key), ALL, words).find(
       (candidate) => candidate.page.id === page,

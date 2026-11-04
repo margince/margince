@@ -17,7 +17,7 @@ import { pickOption } from "../design-system/select-testing";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
@@ -69,7 +69,7 @@ function render(ui: ReactNode, zone = INSTALLATION_ZONE) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={zone}>{ui}</RecordZoneProvider>
+        <ViewerZoneProvider zone={zone}>{ui}</ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

@@ -27,10 +27,10 @@ import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import type { RecordTabId } from "../../lib/recordtaborder";
-import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
@@ -177,7 +177,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // The instant this page was read at, pinned once, so every "today" and
   // "days since" on it is measured from the same moment.
   const [asOf] = useState(() => new Date().toISOString());
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // Minted here because the band that carries the sentence and the verbs that
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
@@ -306,7 +306,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   <DealProjectLine deal={deal} />
                 </>
               }
-              zone={recordZone}
+              zone={readerZone}
               pulse={
                 <DealPulsePills
                   status={deal.status}
@@ -416,7 +416,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               />
               <OpenEmailDrawer
                 activityId={openEmail}
-                zone={recordZone}
+                zone={readerZone}
                 onClose={() => setOpenEmail(null)}
               />
               <ErrorLine

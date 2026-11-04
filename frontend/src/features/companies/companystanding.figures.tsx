@@ -4,7 +4,7 @@ import { StatStrip } from "../../design-system/statstrip";
 import { omitted } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Company360 } from "./company360";
 import { MoneyStat } from "./company360.money";
 import { PipelineCard, StripWithheld } from "./company360.strip";
@@ -32,7 +32,7 @@ export function StandingFigures({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const strip = view.state_strip;
   const door = (tab: CompanyTab) => onOpenTab && (() => onOpenTab(tab));
   if (!strip && omitted(view, "state_strip")) {
@@ -48,7 +48,7 @@ export function StandingFigures({
       <NextMeetingStat
         view={view}
         locale={locale}
-        recordZone={recordZone}
+        recordZone={readerZone}
         onOpen={door("timeline")}
         t={t}
       />
@@ -56,7 +56,7 @@ export function StandingFigures({
         view={view}
         withheld={omitted(view, "last_touch")}
         locale={locale}
-        recordZone={recordZone}
+        recordZone={readerZone}
         tone={statTone(ratingTone(view.health?.relationship?.rating))}
         onOpen={door("timeline")}
         t={t}
@@ -73,7 +73,7 @@ export function StandingFigures({
         commercial={strip?.commercial}
         peek={openDeals}
         locale={locale}
-        recordZone={recordZone}
+        recordZone={readerZone}
         onOpen={door("deals")}
         t={t}
       />

@@ -12,7 +12,6 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { TagPill } from "../design-system/tagpill";
 import { useTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { RecordTag, TaggableType, TagRestore } from "../lib/tags.queries";
 import {
@@ -25,6 +24,7 @@ import { ContactsTagOffer, EmployerTagOffer } from "./tagfollow";
 import { AddTagPicker } from "./tagpicker";
 import "./tagspanel.css";
 import { useUndoableRemoval } from "../lib/undoableremoval";
+import { useViewerZone } from "../lib/viewerzone";
 
 /**
  * The tags on one record — the same component on a contact, a company and a
@@ -290,7 +290,7 @@ function TagOnRecord({
 function TagLink({ tag }: Readonly<{ tag: RecordTag }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   // Intl throws on an unparseable date, and a server out of step may send one.
   const stamped = !Number.isNaN(Date.parse(tag.assigned_at));
   const who = tag.assigned_by?.display_name;

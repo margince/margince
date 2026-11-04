@@ -13,11 +13,12 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { Select } from "../../design-system/select";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { acquisitionKindLabel } from "../../format/acquisitionkind";
-import { startOfDayInZone, viewerZone } from "../../format/timezone";
+import { startOfDayInZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { ACQUISITION_KINDS } from "../../lib/acquisitionkinds";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { NoticeCase } from "./noticecases.logic";
 
 type SourceKind = components["schemas"]["AssessNoticeSource"]["kind"];
@@ -72,7 +73,8 @@ export function SourceReviewDialog({
   const queryClient = useQueryClient();
   const [kind, setKind] = useState<SourceKind | "">("");
   const [date, setDate] = useState<ISODate | "">("");
-  const [zone, setZone] = useState(viewerZone);
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(readerZone);
   const [note, setNote] = useState("");
   const assessment = useMutation({
     mutationFn: async (vars: {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useMe } from "../../lib/session";
 import {
@@ -43,7 +43,7 @@ export function ConfirmDetailsAction({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = browserZone();
   // Asked here rather than by each caller, because a caller that forgot would
   // offer an action the server refuses.
   //

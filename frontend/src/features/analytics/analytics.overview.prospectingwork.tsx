@@ -12,9 +12,9 @@ import { StatStrip } from "../../design-system/statstrip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { formatAnalyticsNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { UPCOMING_LIST_ID } from "./analytics.overview.prospectinghero";
 import {
   type ReportingEvaluation,
@@ -139,13 +139,14 @@ function MeetingRow({
   meeting: Meeting;
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   // A meeting known only by its day names the day, never a made-up noon.
   const when = formatActivityWhen(
     meeting.starts_at,
     meeting.starts_precision,
     locale,
-    viewerZone(),
+    readerZone,
   );
   return (
     <PanelRow className="analytics-attention-row">

@@ -26,7 +26,7 @@ const (
 	// file-share notice, a notification, a delivery report.
 	AutomaticSendingSystem AutomaticKind = "sending_system"
 	// AutomaticBulk is mail that carried a List-Unsubscribe header: a
-	// newsletter or a campaign, sent to a list rather than written to a person.
+	// newsletter or a campaign, sent to a list rather than written to one contact.
 	AutomaticBulk AutomaticKind = "bulk"
 )
 

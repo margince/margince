@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import {
   bookingConnection,
@@ -122,7 +122,7 @@ afterEach(() => {
 });
 
 const slotName = (start: string) =>
-  formatDateTime(start, "en", viewerZone()).replace(/\s+/g, " ");
+  formatDateTime(start, "en", browserZone()).replace(/\s+/g, " ");
 
 it("prefills the contact and saved details, then offers two picked times in one step", async () => {
   const user = userEvent.setup();
@@ -174,7 +174,7 @@ it("removes an offered time from the review list", async () => {
   expect(screen.getByText("1 of 3")).toBeTruthy();
   await user.click(
     screen.getByRole("button", {
-      name: `Remove ${formatDateTime(bookingSlots[0].start, "en", viewerZone())}`,
+      name: `Remove ${formatDateTime(bookingSlots[0].start, "en", browserZone())}`,
     }),
   );
   expect(screen.getByText("0 of 3")).toBeTruthy();
@@ -201,7 +201,7 @@ it("sends an agreed time as an invitation without a video link when switched off
   );
   await user.click(
     screen.getByRole("button", {
-      name: `Send invite · ${formatDateTime(bookingSlots[1].start, "en", viewerZone())}`,
+      name: `Send invite · ${formatDateTime(bookingSlots[1].start, "en", browserZone())}`,
     }),
   );
   await waitFor(() => expect(invitations).toHaveLength(1));

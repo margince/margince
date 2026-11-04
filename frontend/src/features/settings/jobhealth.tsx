@@ -20,12 +20,12 @@ import {
   ordinalNumber,
 } from "../../format/format";
 import { formatAge, formatInterval } from "../../format/interval";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 import { jobKindNameKey } from "./jobkinds";
 import { healthConditions } from "./systemhealth.copy";
@@ -373,7 +373,7 @@ export function JobHealthCard({
   const t = useT();
   // The reader's own zone: a stalled-queue time is only useful against the
   // clock on their wall.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const { canSee, query } = useJobHealth();
 
   return (
