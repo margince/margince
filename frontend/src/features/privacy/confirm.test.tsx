@@ -48,6 +48,14 @@ const SUBSCRIPTION = {
   state: "unknown",
 };
 
+// The lists every privacy notice carries, empty where a record holds nothing.
+const NOTICE_LISTS = {
+  purpose_bases: ["legitimate_interests", "consent"],
+  data_categories: [],
+  recipients: ["colleagues", "service_providers"],
+  retention: [],
+};
+
 const RECORD = {
   kind: "record_confirmation",
   full_name: "Anna Müller",
@@ -202,6 +210,7 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
   it("names the purposes a privacy notice lists, and keeps an operator's own", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse({
+        ...NOTICE_LISTS,
         kind: "privacy_notice",
         acquired_as: "referral",
         purposes: ["Business correspondence", "Partner events"],
@@ -256,6 +265,7 @@ it("lets contact details be corrected without choosing marketing", async () => {
 
 describe("the page speaks the language the mail was sent in", () => {
   const NOTICE = {
+    ...NOTICE_LISTS,
     kind: "privacy_notice",
     acquired_as: "purchased_or_imported",
     rights: ["access", "erasure"],
@@ -316,5 +326,60 @@ describe("an expired link still speaks the language its mail was sent in", () =>
 
     expect(await screen.findByText(VI_INVALID_LINK)).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("vi");
+  });
+});
+
+describe("a privacy notice discloses who answers, why, what, to whom and for how long", () => {
+  const FULL = {
+    ...NOTICE_LISTS,
+    kind: "privacy_notice",
+    acquired_as: "public_or_business_source",
+    controller: {
+      legal_name: "Beispiel GmbH",
+      postal_address: "Hauptstr. 1\n10115 Berlin",
+      privacy_contact: "privacy@beispiel.test",
+      objection_route: "Reply STOP",
+    },
+    purposes: ["Talks", "News"],
+    purpose_keys: ["talks", "news"],
+    data_categories: ["name", "email", "correspondence"],
+    retention: [{ scope: "activity", retain_days: 1095, action: "archive" }],
+    rights: ["access", "objection"],
+  };
+
+  it("names each part from the codes the server sent", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(FULL));
+
+    render(<ConfirmDetailsScreen token="tok-full" />);
+
+    expect(await screen.findByText("Beispiel GmbH")).toBeInTheDocument();
+    expect(
+      screen.getByText("Questions about your data: privacy@beispiel.test"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Our legitimate interest in business contact/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Only with your agreement/)).toBeInTheDocument();
+    expect(screen.getByText("Your email address")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Emails, meetings and calls with you: taken out of daily use after 3 years.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Staff who work with our CRM."),
+    ).toBeInTheDocument();
+  });
+
+  it("states the right to object apart from the other rights", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(FULL));
+
+    render(<ConfirmDetailsScreen token="tok-object" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Your right to object" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("To object: Reply STOP")).toBeInTheDocument();
+    expect(screen.queryByText("Object to how we use it.")).toBeNull();
   });
 });

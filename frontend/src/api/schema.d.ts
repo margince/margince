@@ -49946,6 +49946,26 @@ export interface components {
              * @enum {string}
              */
             kind: "privacy_notice";
+            controller?: components["schemas"]["PrivacyInformationController"];
+            /**
+             * @description Why the installation may use the data for each entry in `purposes`, at the same index, as
+             *     a code the page names in its reader's language: the reader's own agreement, an interest
+             *     the installation weighed against theirs, or a contract with them or their company.
+             */
+            purpose_bases: ("consent" | "legitimate_interests" | "contract")[];
+            /**
+             * @description The kinds of data held about this person, read from what the record holds today. Codes
+             *     only: the page names each kind and never shows a value.
+             */
+            data_categories: ("name" | "job_title" | "employer" | "email" | "phone" | "correspondence")[];
+            /** @description Who the data is shared with, as codes the page names in its reader's language. */
+            recipients: ("colleagues" | "service_providers")[];
+            /**
+             * @description The retention rules that act on this person's data today, from the installation's own
+             *     retention settings. A rule switched off, or held back by the retain-only setting, is not
+             *     listed. Empty means no rule removes the data by age.
+             */
+            retention: components["schemas"]["PrivacyInformationRetention"][];
             /**
              * @description How this contact was obtained, in the closed vocabulary
              *     `contact_acquisition_evidence.kind` uses. It is what Art. 14(2)(f) requires: the source
@@ -49972,6 +49992,24 @@ export interface components {
             rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+        };
+        /**
+         * @description Who is responsible for the data, from the installation's own controller particulars. A field
+         *     the installation has not filled in is absent, never invented.
+         */
+        PrivacyInformationController: {
+            legal_name?: string;
+            postal_address?: string;
+            /** @description How to reach whoever answers questions about the data. */
+            privacy_contact?: string;
+            /** @description How to object, where the installation states a way of its own. */
+            objection_route?: string;
+        };
+        /** @description One retention rule that acts on this person's data. */
+        PrivacyInformationRetention: {
+            scope: components["schemas"]["RetentionScope"];
+            retain_days: number;
+            action: components["schemas"]["RetentionAction"];
         };
         /**
          * @description The answer for a consent link: one named subscription and the contact's current answer to it.

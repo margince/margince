@@ -10207,6 +10207,50 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Widersprechen Sie der Nutzung Ihrer Daten durch uns.",
   "privacynotice.right.complain":
     "Reichen Sie eine Beschwerde bei der für Sie zuständigen Datenschutzbehörde ein.",
+  "privacynotice.controller.title": "Wer verantwortlich ist",
+  "privacynotice.controller.contact": "Fragen zu Ihren Daten: {contact}",
+  "privacynotice.categories.title": "Was wir speichern",
+  "privacynotice.category.name": "Ihr Name",
+  "privacynotice.category.jobTitle": "Ihre Funktion",
+  "privacynotice.category.employer": "Das Unternehmen, für das Sie arbeiten",
+  "privacynotice.category.email": "Ihre E-Mail-Adresse",
+  "privacynotice.category.phone": "Ihre Telefonnummer",
+  "privacynotice.category.correspondence":
+    "E-Mails, Termine und Anrufe mit Ihnen",
+  "privacynotice.basis.consent":
+    "Nur mit Ihrer Einwilligung. Sie können sie jederzeit widerrufen.",
+  "privacynotice.basis.legitimateInterests":
+    "Unser berechtigtes Interesse an geschäftlichem Kontakt mit Ihnen und dem Unternehmen, für das Sie arbeiten, abgewogen gegen Ihre Interessen.",
+  "privacynotice.basis.contract":
+    "Nötig für einen Vertrag mit Ihnen oder dem Unternehmen, für das Sie arbeiten.",
+  "privacynotice.recipients.title": "Wer die Daten sieht",
+  "privacynotice.recipient.colleagues":
+    "Mitarbeitende, die mit unserem CRM arbeiten.",
+  "privacynotice.recipient.serviceProviders":
+    "Unternehmen, die unser CRM betreiben und seine E-Mails für uns zustellen. Ein Vertrag verpflichtet sie, Ihre Daten nur nach unseren Weisungen zu nutzen.",
+  "privacynotice.retention.title": "Wie lange wir die Daten speichern",
+  "privacynotice.retention.archive":
+    "{scope}: nach {days} aus der täglichen Nutzung genommen.",
+  "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
+  "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
+  "privacynotice.retention.rest":
+    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen, oder bis Sie uns bitten, es zu löschen.",
+  "privacynotice.retention.scope.activity":
+    "E-Mails, Termine und Anrufe mit Ihnen",
+  "privacynotice.retention.scope.activityTranscript":
+    "Abschriften von Anrufen mit Ihnen",
+  "privacynotice.retention.scope.rawCapture":
+    "Kopien von E-Mails, wie sie eingegangen sind",
+  "privacynotice.retention.scope.aiCallPayload":
+    "Text, der zur Verarbeitung an KI-Dienste ging",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Ihr Datensatz, wenn Sie keine Neuigkeiten wünschen und an keinem Geschäft beteiligt sind",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Ihre Angaben, wenn kein weiterer Kontakt folgte",
+  "privacynotice.objection.title": "Ihr Widerspruchsrecht",
+  "privacynotice.objection.body":
+    "Sie können der Nutzung Ihrer Daten, die auf unserem berechtigten Interesse beruht, jederzeit widersprechen. Wir hören dann damit auf, es sei denn, wir haben zwingende Gründe weiterzumachen. Widersprechen Sie Werbung, senden wir keine mehr, und Sie müssen keinen Grund nennen.",
+  "privacynotice.objection.how": "So widersprechen Sie: {route}",
   "notice.ownerOf": "Zuständig für {duty}",
   "notice.excuse": "Ohne Versand beenden",
   "notice.excuseTitle": "Pflicht ohne Versand der Information beenden",

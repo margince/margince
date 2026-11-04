@@ -68340,11 +68340,43 @@ components:
         It carries LESS than the record page: the acquisition and the purposes, not the contact's
         employer, phone, address or provenance trail. Telling somebody what is held is a different
         act from showing them their file, and this message promised the first.
-      required: [kind, acquired_as, rights]
+      required: [kind, acquired_as, rights, purpose_bases, data_categories, recipients, retention]
       properties:
         kind:
           type: string
           enum: [privacy_notice]
+        controller:
+          $ref: '#/components/schemas/PrivacyInformationController'
+        purpose_bases:
+          type: array
+          description: |
+            Why the installation may use the data for each entry in `purposes`, at the same index, as
+            a code the page names in its reader's language: the reader's own agreement, an interest
+            the installation weighed against theirs, or a contract with them or their company.
+          items:
+            type: string
+            enum: [consent, legitimate_interests, contract]
+        data_categories:
+          type: array
+          description: |
+            The kinds of data held about this person, read from what the record holds today. Codes
+            only: the page names each kind and never shows a value.
+          items:
+            type: string
+            enum: [name, job_title, employer, email, phone, correspondence]
+        recipients:
+          type: array
+          description: Who the data is shared with, as codes the page names in its reader's language.
+          items:
+            type: string
+            enum: [colleagues, service_providers]
+        retention:
+          type: array
+          description: |
+            The retention rules that act on this person's data today, from the installation's own
+            retention settings. A rule switched off, or held back by the retain-only setting, is not
+            listed. Empty means no rule removes the data by age.
+          items: { $ref: '#/components/schemas/PrivacyInformationRetention' }
         acquired_as:
           type: string
           description: |
@@ -68377,6 +68409,26 @@ components:
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
+
+    PrivacyInformationController:
+      type: object
+      description: |
+        Who is responsible for the data, from the installation's own controller particulars. A field
+        the installation has not filled in is absent, never invented.
+      properties:
+        legal_name: { type: string }
+        postal_address: { type: string }
+        privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
+        objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
+
+    PrivacyInformationRetention:
+      type: object
+      description: One retention rule that acts on this person's data.
+      required: [scope, retain_days, action]
+      properties:
+        scope: { $ref: '#/components/schemas/RetentionScope' }
+        retain_days: { type: integer, minimum: 1 }
+        action: { $ref: '#/components/schemas/RetentionAction' }
 
     SubscriptionConfirmationPage:
       type: object

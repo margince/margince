@@ -17182,6 +17182,36 @@ func (e PrincipalAttributionActorType) Valid() bool {
 	}
 }
 
+// Defines values for PrivacyInformationPageDataCategories.
+const (
+	PrivacyInformationPageDataCategoriesCorrespondence PrivacyInformationPageDataCategories = "correspondence"
+	PrivacyInformationPageDataCategoriesEmail          PrivacyInformationPageDataCategories = "email"
+	PrivacyInformationPageDataCategoriesEmployer       PrivacyInformationPageDataCategories = "employer"
+	PrivacyInformationPageDataCategoriesJobTitle       PrivacyInformationPageDataCategories = "job_title"
+	PrivacyInformationPageDataCategoriesName           PrivacyInformationPageDataCategories = "name"
+	PrivacyInformationPageDataCategoriesPhone          PrivacyInformationPageDataCategories = "phone"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageDataCategories enum.
+func (e PrivacyInformationPageDataCategories) Valid() bool {
+	switch e {
+	case PrivacyInformationPageDataCategoriesCorrespondence:
+		return true
+	case PrivacyInformationPageDataCategoriesEmail:
+		return true
+	case PrivacyInformationPageDataCategoriesEmployer:
+		return true
+	case PrivacyInformationPageDataCategoriesJobTitle:
+		return true
+	case PrivacyInformationPageDataCategoriesName:
+		return true
+	case PrivacyInformationPageDataCategoriesPhone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrivacyInformationPageKind.
 const (
 	PrivacyInformationPageKindPrivacyNotice PrivacyInformationPageKind = "privacy_notice"
@@ -17191,6 +17221,45 @@ const (
 func (e PrivacyInformationPageKind) Valid() bool {
 	switch e {
 	case PrivacyInformationPageKindPrivacyNotice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPagePurposeBases.
+const (
+	PrivacyInformationPagePurposeBasesConsent             PrivacyInformationPagePurposeBases = "consent"
+	PrivacyInformationPagePurposeBasesContract            PrivacyInformationPagePurposeBases = "contract"
+	PrivacyInformationPagePurposeBasesLegitimateInterests PrivacyInformationPagePurposeBases = "legitimate_interests"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
+func (e PrivacyInformationPagePurposeBases) Valid() bool {
+	switch e {
+	case PrivacyInformationPagePurposeBasesConsent:
+		return true
+	case PrivacyInformationPagePurposeBasesContract:
+		return true
+	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrivacyInformationPageRecipients.
+const (
+	PrivacyInformationPageRecipientsColleagues       PrivacyInformationPageRecipients = "colleagues"
+	PrivacyInformationPageRecipientsServiceProviders PrivacyInformationPageRecipients = "service_providers"
+)
+
+// Valid indicates whether the value is a known member of the PrivacyInformationPageRecipients enum.
+func (e PrivacyInformationPageRecipients) Valid() bool {
+	switch e {
+	case PrivacyInformationPageRecipientsColleagues:
+		return true
+	case PrivacyInformationPageRecipientsServiceProviders:
 		return true
 	default:
 		return false
@@ -53146,6 +53215,19 @@ type PrincipalAttribution struct {
 // PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
 type PrincipalAttributionActorType string
 
+// PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars. A field
+// the installation has not filled in is absent, never invented.
+type PrivacyInformationController struct {
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// ObjectionRoute How to object, where the installation states a way of its own.
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+	PostalAddress  *string `json:"postal_address,omitempty"`
+
+	// PrivacyContact How to reach whoever answers questions about the data.
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
+}
+
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
 // it came from, what it is used for, and the rights the contact has over it.
 //
@@ -53167,11 +53249,24 @@ type PrivacyInformationPage struct {
 	AcquiredAs string `json:"acquired_as"`
 
 	// AcquiredAt When the acquisition happened, absent where the door could not say.
-	AcquiredAt *time.Time                 `json:"acquired_at,omitempty"`
-	Kind       PrivacyInformationPageKind `json:"kind"`
+	AcquiredAt *time.Time `json:"acquired_at,omitempty"`
+
+	// Controller Who is responsible for the data, from the installation's own controller particulars. A field
+	// the installation has not filled in is absent, never invented.
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// DataCategories The kinds of data held about this person, read from what the record holds today. Codes
+	// only: the page names each kind and never shows a value.
+	DataCategories []PrivacyInformationPageDataCategories `json:"data_categories"`
+	Kind           PrivacyInformationPageKind             `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
+
+	// PurposeBases Why the installation may use the data for each entry in `purposes`, at the same index, as
+	// a code the page names in its reader's language: the reader's own agreement, an interest
+	// the installation weighed against theirs, or a contract with them or their company.
+	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
@@ -53181,16 +53276,50 @@ type PrivacyInformationPage struct {
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
 
+	// Recipients Who the data is shared with, as codes the page names in its reader's language.
+	Recipients []PrivacyInformationPageRecipients `json:"recipients"`
+
+	// Retention The retention rules that act on this person's data today, from the installation's own
+	// retention settings. A rule switched off, or held back by the retain-only setting, is not
+	// listed. Empty means no rule removes the data by age.
+	Retention []PrivacyInformationRetention `json:"retention"`
+
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
 }
 
+// PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
+type PrivacyInformationPageDataCategories string
+
 // PrivacyInformationPageKind defines model for PrivacyInformationPage.Kind.
 type PrivacyInformationPageKind string
 
+// PrivacyInformationPagePurposeBases defines model for PrivacyInformationPage.PurposeBases.
+type PrivacyInformationPagePurposeBases string
+
+// PrivacyInformationPageRecipients defines model for PrivacyInformationPage.Recipients.
+type PrivacyInformationPageRecipients string
+
 // PrivacyInformationPageRights defines model for PrivacyInformationPage.Rights.
 type PrivacyInformationPageRights string
+
+// PrivacyInformationRetention One retention rule that acts on this person's data.
+type PrivacyInformationRetention struct {
+	// Action What happens to a record past its window. One action per policy row — a ladder is separate
+	// rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
+	// `anonymize` and `erase` destroy data and are the two the retain-only posture suppresses.
+	Action     RetentionAction `json:"action"`
+	RetainDays int             `json:"retain_days"`
+
+	// Scope An authorable retention scope (GCS-PARAM-8) — a `(object_type, category)` pair the nightly
+	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
+	// scope that would be stored and then skipped every pass. `activity` is the bare object type
+	// (the row whose `category` is null); every other value carries its category after the slash.
+	//
+	// Extending this enum means adding a selector in the same change.
+	Scope RetentionScope `json:"scope"`
+}
 
 // Problem RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Problem struct {
