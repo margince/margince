@@ -35,11 +35,6 @@ import {
   ProductStatus,
   productStatus,
 } from "./products.display";
-import {
-  TAX_CATEGORIES,
-  TAX_CATEGORY_LABEL,
-  taxCategoryOf,
-} from "./products.taxcategory";
 import { ProductTranslationsDialog } from "./products.translations";
 import {
   TAX_CATEGORIES,
