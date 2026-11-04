@@ -44,46 +44,54 @@ type LiftInput struct {
 func (s *Store) Lift(ctx context.Context, in LiftInput) error {
 	// What is judged and what is stored are the same words.
 	in.Reason = strings.TrimSpace(in.Reason)
-	sub, level, err := admitLift(ctx, in)
+	sub, caller, err := admitLift(ctx, in)
 	if err != nil {
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return s.liftAdmittedTx(ctx, tx, in, sub, level)
+		return s.liftAdmittedTx(ctx, tx, in, sub, caller)
 	})
 }
 
 // admitLift settles what is decidable before a connection is taken.
-func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.AuthorityLevel, error) {
+func admitLift(ctx context.Context, in LiftInput) (subject, lifter, error) {
 	sub, err := consentSubject(RecordInput{ContactID: in.ContactID})
 	if err != nil {
-		return subject{}, "", err
+		return subject{}, lifter{}, err
 	}
 	if in.SuppressionID.IsZero() {
-		return subject{}, "", &ValidationError{
+		return subject{}, lifter{}, &ValidationError{
 			Field:  "suppression_id",
 			Reason: "name the suppression to lift; a subject may carry more than one",
 		}
 	}
 	if err := requireReason(in.Reason, "taking back a stop"); err != nil {
-		return subject{}, "", err
+		return subject{}, lifter{}, err
 	}
 	if err := admitLifter(ctx); err != nil {
-		return subject{}, "", err
+		return subject{}, lifter{}, err
 	}
-	return sub, authorityOf(ctx), nil
+	return sub, lifterOf(ctx), nil
 }
 
 // admitLifter is the caller half of a lift, which the list of stops asks too:
-// a human signed in to a seat, holding contact:update. auth.RequireHuman would
-// admit the system and connector principals, and authorityOf reads an admin
-// role off any principal, so the type is asked here by name.
+// a colleague, or an agent on their passport, holding contact:update.
+// auth.RequireHuman would admit the system and connector principals, and
+// authorityOf reads an admin role off any principal, so the type is asked here.
 func admitLifter(ctx context.Context) error {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman {
-		return fmt.Errorf("only a colleague signed in to a seat takes back a stop: %w", apperrors.ErrPermissionDenied)
+	if !ok || !p.HumanOrItsAgent() {
+		return fmt.Errorf("only a colleague, or an agent working for one, takes back a stop: %w",
+			apperrors.ErrPermissionDenied)
 	}
 	return auth.Require(ctx, "contact", principal.ActionUpdate)
+}
+
+// lifterOf reads who asks to lift: their level, and whether a human is signed
+// in to the seat rather than an agent working on its passport.
+func lifterOf(ctx context.Context) lifter {
+	p, ok := principal.Actor(ctx)
+	return lifter{level: authorityOf(ctx), human: ok && p.Type == principal.PrincipalHuman}
 }
 
 // mayLiftOn answers the caller half of a lift for one contact without failing
@@ -146,7 +154,7 @@ func requireReason(reason, act string) error {
 
 // liftAdmittedTx reads the row's authority, compares it, and revokes.
 func (s *Store) liftAdmittedTx(
-	ctx context.Context, tx pgx.Tx, in LiftInput, sub subject, level commsauthz.AuthorityLevel,
+	ctx context.Context, tx pgx.Tx, in LiftInput, sub subject, caller lifter,
 ) error {
 	// FIRST, before anything that reads the subject's row. The count below and
 	// the level read want every concurrent writer of this subject's stops to be
@@ -194,7 +202,7 @@ func (s *Store) liftAdmittedTx(
 		return fmt.Errorf("consent: reading the suppression: %w", err)
 	}
 
-	verdict := judgeLift(level, stopFacts{
+	verdict := judgeLift(caller, stopFacts{
 		kind: kind, decided: commsauthz.AuthorityLevel(decided), origin: origin, originSource: originSource,
 	})
 	if !verdict.may {
@@ -260,7 +268,7 @@ func (s *Store) liftAdmittedTx(
 	audit := map[string]any{
 		"lifted_suppression": in.SuppressionID.String(),
 		"recorded_at_level":  decided,
-		"lifted_by_level":    string(level),
+		"lifted_by_level":    string(caller.level),
 		"lifted_by":          by,
 		// The lifter's words. Suppress keeps the subject's words off the
 		// audit payload; this reason is the installation explaining itself.
@@ -274,7 +282,7 @@ func (s *Store) liftAdmittedTx(
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
-		suppressionLiftedPayload(in.SuppressionID, decided, level, remaining))
+		suppressionLiftedPayload(in.SuppressionID, decided, caller.level, remaining))
 }
 
 // contactLiveStopsSQL selects the live stops of the contact in $1, over the
@@ -302,6 +310,8 @@ func liftRefusal(blockedBy crmcontracts.ContactStopLiftBlockedBy) string {
 		return "a processing restriction is lifted only after the contact is told in advance, which Margince cannot do yet"
 	case crmcontracts.ContactStopLiftBlockedBySubjectDecision:
 		return "the contact set this stop themselves; only they can change it"
+	case crmcontracts.ContactStopLiftBlockedByPermission:
+		return "only an admin signed in to a seat corrects an objection a colleague typed"
 	}
 	return "this stop was recorded at a level you do not outrank"
 }

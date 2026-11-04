@@ -278,30 +278,39 @@ func TestAReadOnlyAdminIsOfferedNoLift(t *testing.T) {
 	}
 }
 
-// Only a human seat takes back a stop. The system principal and an agent
-// lent an admin role both read as LevelAdmin, and both are refused.
+// adminAgent is an agent lent an admin role over contacts. A passport makes it
+// an agent working on its user's passport.
+func adminAgent(e *channelConsentEnv, id string, passport ids.UUID) context.Context {
+	return principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: id, UserID: e.user,
+		PassportID: passport, OnBehalfOf: onBehalfOf(e, passport),
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+func onBehalfOf(e *channelConsentEnv, passport ids.UUID) ids.UUID {
+	if passport.IsZero() {
+		return ids.UUID{}
+	}
+	return e.user
+}
+
+// Only a human seat corrects an objection. The system principal and an agent
+// lent an admin role all read as LevelAdmin, and all are refused, an agent on
+// its user's passport included.
 func TestOnlyAHumanSeatCorrectsAnObjection(t *testing.T) {
 	e := setupChannelConsent(t)
 	row := typedObjectionOnContact(t, e)
-	agent := principal.WithActor(e.ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:drafter", UserID: e.user,
-		Permissions: principal.Permissions{
-			RoleKeys: []string{"admin"},
-			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
-			RowScope: principal.RowScopeAll,
-		},
-	})
-	// An agent whose id spells a seat, so the principal type alone refuses it.
-	seatSpelled := principal.WithActor(e.ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "human:" + e.user.String(), UserID: e.user,
-		Permissions: principal.Permissions{
-			RoleKeys: []string{"admin"},
-			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
-			RowScope: principal.RowScopeAll,
-		},
-	})
 	for name, ctx := range map[string]context.Context{
-		"system": systemCtx(e.ws), "agent": agent, "agent spelled as a seat": seatSpelled,
+		"system": systemCtx(e.ws),
+		"agent":  adminAgent(e, "agent:drafter", ids.UUID{}),
+		// An id that spells a seat, so the principal type alone refuses it.
+		"agent spelled as a seat":      adminAgent(e, "human:"+e.user.String(), ids.UUID{}),
+		"agent on its user's passport": adminAgent(e, "agent:drafter", ids.NewV7()),
 	} {
 		err := e.store.Lift(ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"})
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -310,5 +319,26 @@ func TestOnlyAHumanSeatCorrectsAnObjection(t *testing.T) {
 	}
 	if !stillLive(t, e, row) {
 		t.Error("a refused correction revoked the objection")
+	}
+}
+
+// An agent on its user's passport lifts what its user may lift.
+func TestAnAgentOnItsUsersPassportLiftsARepsStop(t *testing.T) {
+	e := setupChannelConsent(t)
+	contact := repOwnedContact(t, e)
+	if err := e.store.Suppress(boundedRepCtx(e.ws, e.user), SuppressInput{
+		ContactID: contact, Kind: commsauthz.ReasonSubjectRequest, Reason: "asked on the phone",
+	}); err != nil {
+		t.Fatalf("recording the rep's stop: %v", err)
+	}
+	stop := onlyStop(t, e, e.ctx, contact)
+	agent := adminAgent(e, "agent:drafter", ids.NewV7())
+	if err := e.store.Lift(agent, LiftInput{
+		ContactID: contact, SuppressionID: ids.UUID(stop.Id), Reason: "they asked us to carry on",
+	}); err != nil {
+		t.Fatalf("the agent's lift: %v", err)
+	}
+	if stillLive(t, e, ids.UUID(stop.Id)) {
+		t.Error("the agent's lift left the stop live")
 	}
 }

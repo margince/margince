@@ -38,6 +38,14 @@ type stopFacts struct {
 	pinned bool
 }
 
+// lifter is who asks to lift a stop.
+type lifter struct {
+	level commsauthz.AuthorityLevel
+	// human is a colleague signed in to a seat. A correction overrules the
+	// contact's level, so an agent on their passport does not make one.
+	human bool
+}
+
 // liftVerdict answers whether the caller may lift a stop, and why not.
 type liftVerdict struct {
 	may bool
@@ -47,16 +55,18 @@ type liftVerdict struct {
 }
 
 // judgeLift is the one answer to "may this caller lift this stop".
-func judgeLift(caller commsauthz.AuthorityLevel, stop stopFacts) liftVerdict {
+func judgeLift(caller lifter, stop stopFacts) liftVerdict {
 	switch {
 	case stop.pinned:
 		return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByAddress}
 	// Before the ladder: no level lifts a restriction without the notice.
 	case stop.kind == kindProcessingRestriction:
 		return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByRestriction}
-	case caller.CanOverrule(stop.decided):
+	case caller.level.CanOverrule(stop.decided):
 		return liftVerdict{may: true}
-	case caller == commsauthz.LevelAdmin && typedObjection(stop):
+	case caller.level == commsauthz.LevelAdmin && typedObjection(stop) && !caller.human:
+		return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedByPermission}
+	case caller.level == commsauthz.LevelAdmin && typedObjection(stop):
 		return liftVerdict{may: true, correction: true}
 	case stop.decided == commsauthz.LevelSubject:
 		return liftVerdict{blockedBy: crmcontracts.ContactStopLiftBlockedBySubjectDecision}

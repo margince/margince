@@ -25,7 +25,7 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
 		return nil, err
 	}
-	caller := authorityOf(ctx)
+	caller := lifterOf(ctx)
 	var out []crmcontracts.ContactStop
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureReadable(ctx, tx, entityContact, contactID.UUID); err != nil {
@@ -67,7 +67,7 @@ func (s *Store) ListStops(ctx context.Context, contactID ids.ContactID) ([]crmco
 	return out, err
 }
 
-func scanStop(row pgx.CollectableRow, caller commsauthz.AuthorityLevel, admitted bool) (crmcontracts.ContactStop, error) {
+func scanStop(row pgx.CollectableRow, caller lifter, admitted bool) (crmcontracts.ContactStop, error) {
 	var (
 		id                     ids.UUID
 		kind, decided, source  string
