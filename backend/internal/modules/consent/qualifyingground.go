@@ -188,13 +188,14 @@ func stampQualifyingEvent(
 // recordedQualifyingEvent reads a row a human or an integration wrote.
 func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, since time.Time) (QualifyingEvent, bool, error) {
 	var event QualifyingEvent
+	var id string
 	var sourceType, sourceID, note *string
 	err := tx.QueryRow(ctx, `
-		SELECT kind, occurred_at, source_entity_type, source_entity_id, note
+		SELECT id, kind, occurred_at, source_entity_type, source_entity_id, note
 		FROM consent_qualifying_event
 		WHERE contact_id = $1 AND occurred_at >= $2 AND retracted_at IS NULL
 		ORDER BY occurred_at DESC
-		LIMIT 1`, contactID, since).Scan(&event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
+		LIMIT 1`, contactID, since).Scan(&id, &event.Kind, &event.OccurredAt, &sourceType, &sourceID, &note)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QualifyingEvent{}, false, nil
 	}
@@ -209,6 +210,9 @@ func recordedQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, s
 	}
 	if note != nil {
 		event.Note = *note
+	}
+	if handRecordedKinds[event.Kind] {
+		event.ID = id
 	}
 	return event, true, nil
 }

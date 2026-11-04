@@ -3507,6 +3507,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
     "Berechtigungen gelten für den genannten Zweck. Konto- und Servicehinweise berechtigen nicht zu Vertrieb oder Marketing. Jede Nachricht wird vor dem Versand geprüft.",
+  "consent.retractRequest": "Anfrage zurücknehmen",
+  "consent.retractRequestTitle": "Anfrage zurücknehmen?",
+  "consent.retractRequestBody":
+    "Keine Nachricht stützt sich mehr darauf, auch keine, die schon in der Warteschlange steht. Die Anfrage bleibt als zurückgenommen im Datensatz und lässt sich nicht wiederherstellen.",
+  "consent.acquisitionRequest":
+    "Bei der Aufnahme hat der Kontakt ein Angebot oder einen Termin angefragt oder persönlich erlaubt, dass Mails an ihn gehen dürfen.",
+  "consent.stopsTitle": "Sperren",
+  "consent.stopKind.subject_request":
+    "Hat gebeten, keinen Kontakt mehr aufzunehmen",
+  "consent.stopKind.marketing_objection": "Hat Werbung widersprochen",
+  "consent.stopKind.processing_restriction": "Verarbeitung ist eingeschränkt",
+  "consent.stopKind.hard_bounce": "Adresse nimmt keine Mails an",
+  "consent.stopKind.unknown": "Sperre",
+  "consent.stopOnAddress": "Für {address}",
+  "consent.stopOnPurpose": "Nur für {purpose}",
+  "consent.stopRecordedBy": "Erfasst von {name} am {date}",
+  "consent.stopRecordedByColleague": "Erfasst von einem Teammitglied am {date}",
+  "consent.stopRecordedBySubject": "Vom Kontakt selbst gesetzt am {date}",
+  "consent.stopRecordedAutomatically": "Von Margince erfasst am {date}",
+  "consent.stopBlocked.address":
+    "Die Sperre endet, sobald Mails an die Adresse wieder ankommen.",
+  "consent.stopBlocked.restriction":
+    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Margince kann diese Nachricht noch nicht senden, daher bleibt die Einschränkung.",
+  "consent.stopBlocked.subject_decision":
+    "Der Kontakt hat diese Sperre selbst gesetzt. Nur er kann sie ändern.",
+  "consent.stopCorrect": "Sperre korrigieren",
+  "consent.stopLift": "Sperre aufheben",
+  "consent.stopCorrectTitle": "Versehentlich erfasste Sperre korrigieren?",
+  "consent.stopLiftTitle": "Sperre aufheben?",
+  "consent.stopCorrectBody":
+    "Nur korrigieren, wenn jemand die Sperre versehentlich erfasst hat. Hat der Kontakt darum gebeten, bleibt sie. Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
+  "consent.stopLiftBody":
+    "Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
+  "consent.stopReason": "Grund (bleibt im Verlauf des Datensatzes)",
   "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
@@ -7486,7 +7520,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.reason.tooMany":
     "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
   "sendPermission.reason.ambiguous":
-    "Es lässt sich nicht feststellen, wer die Nachricht erhält, da mehrere Datensätze diese Adresse teilen. Führe die Datensätze zusammen, um das zu lösen.",
+    "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
   "sendPermission.reason.unconfirmed":
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
   "sendPermission.reason.noMarketingConsent":
@@ -7578,6 +7612,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
+  "compose.newContact":
+    "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
   "compose.multiRecipientWarning":
     "Ein Versand an mehr als eine Adresse wird abgelehnt, da dieser Zweck einen Abmeldelink hinzufügt. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",

@@ -110,6 +110,9 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	if err != nil {
 		return PreparedSend{}, err
 	}
+	if err := s.fileTypedRecipients(ctx, origin, in.Recipients); err != nil {
+		return PreparedSend{}, err
+	}
 
 	// Who the recipient sees this is from, read ONCE: the From header and a
 	// closing's name line both carry it, and two reads could give two names.

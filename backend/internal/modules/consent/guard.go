@@ -136,6 +136,13 @@ func wireQualifying(event QualifyingEvent) (*crmcontracts.ConsentQualifyingEvent
 		Kind:       crmcontracts.ConsentQualifyingEventKind(event.Kind),
 		OccurredAt: event.OccurredAt,
 	}
+	if event.ID != "" {
+		id, err := ids.Parse(event.ID)
+		if err != nil {
+			return nil, fmt.Errorf("the qualifying event has an unreadable id: %w", err)
+		}
+		wired.Id = new(openapi_types.UUID(id))
+	}
 	if event.SourceEntityType != "" {
 		sourceType := crmcontracts.ConsentQualifyingEventSourceEntityType(event.SourceEntityType)
 		wired.SourceEntityType = &sourceType

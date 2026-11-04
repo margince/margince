@@ -3403,6 +3403,38 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.guardFailed": "Không thể tải quyền liên lạc.",
   "consent.permissionScope":
     "Quyền áp dụng cho mục đích đã nêu. Thông báo tài khoản và dịch vụ không cho phép gửi nội dung bán hàng hay tiếp thị; mỗi tin nhắn đều được kiểm tra trước khi gửi.",
+  "consent.retractRequest": "Rút lại yêu cầu này",
+  "consent.retractRequestTitle": "Rút lại yêu cầu này?",
+  "consent.retractRequestBody":
+    "Các thư sẽ không còn dựa vào yêu cầu này, kể cả thư đã xếp hàng chờ gửi. Yêu cầu vẫn nằm trong hồ sơ ở trạng thái đã rút lại và không thể khôi phục.",
+  "consent.acquisitionRequest":
+    "Khi được thêm vào, liên hệ này đã yêu cầu báo giá hoặc cuộc hẹn, hoặc đã đồng ý trực tiếp để nhận thư.",
+  "consent.stopsTitle": "Lệnh dừng",
+  "consent.stopKind.subject_request": "Đã yêu cầu ngừng liên hệ",
+  "consent.stopKind.marketing_objection": "Đã phản đối tiếp thị",
+  "consent.stopKind.processing_restriction": "Việc xử lý bị hạn chế",
+  "consent.stopKind.hard_bounce": "Địa chỉ không nhận thư",
+  "consent.stopKind.unknown": "Lệnh dừng",
+  "consent.stopOnAddress": "Cho {address}",
+  "consent.stopOnPurpose": "Chỉ cho {purpose}",
+  "consent.stopRecordedBy": "Do {name} ghi nhận ngày {date}",
+  "consent.stopRecordedByColleague": "Do một đồng nghiệp ghi nhận ngày {date}",
+  "consent.stopRecordedBySubject": "Do chính liên hệ đặt ngày {date}",
+  "consent.stopRecordedAutomatically": "Do Margince ghi nhận ngày {date}",
+  "consent.stopBlocked.address":
+    "Lệnh này hết khi thư đến địa chỉ này gửi được trở lại.",
+  "consent.stopBlocked.restriction":
+    "Muốn bỏ hạn chế phải báo trước cho liên hệ. Margince chưa gửi được thông báo đó, nên hạn chế vẫn giữ nguyên.",
+  "consent.stopBlocked.subject_decision":
+    "Liên hệ tự đặt lệnh dừng này. Chỉ họ mới đổi được.",
+  "consent.stopCorrect": "Sửa lệnh dừng này",
+  "consent.stopLift": "Bỏ lệnh dừng này",
+  "consent.stopCorrectTitle": "Sửa lệnh dừng bị ghi nhầm?",
+  "consent.stopLiftTitle": "Bỏ lệnh dừng này?",
+  "consent.stopCorrectBody":
+    "Chỉ làm vậy nếu đồng nghiệp ghi nhầm lệnh dừng. Nếu liên hệ đã yêu cầu thì giữ nguyên. Thư bị lệnh này giữ lại có thể được gửi lại.",
+  "consent.stopLiftBody": "Thư bị lệnh này giữ lại có thể được gửi lại.",
+  "consent.stopReason": "Lý do (lưu trong lịch sử hồ sơ)",
   "consent.manage": "Quản lý sự đồng ý và lịch sử bằng chứng",
   "contact.consent": "Sự đồng ý",
   "consent.grant": "Ghi nhận sự đồng ý",
@@ -7306,7 +7338,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.reason.tooMany":
     "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
   "sendPermission.reason.ambiguous":
-    "Nhiều hồ sơ dùng chung địa chỉ này nên không thể xác định người nhận. Gộp các hồ sơ để xử lý.",
+    "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
   "sendPermission.reason.unconfirmed":
     "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
   "sendPermission.reason.noMarketingConsent":
@@ -7390,6 +7422,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
+  "compose.newContact":
+    "{address} chưa có trong hồ sơ nào. Khi gửi, địa chỉ này sẽ được thêm làm liên hệ của bạn.",
   "compose.multiRecipientWarning":
     "Mục đích này thêm liên kết hủy đăng ký, nên tin nhắn gửi cho nhiều hơn một người nhận sẽ bị từ chối. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",

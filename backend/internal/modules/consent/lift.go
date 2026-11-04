@@ -5,21 +5,9 @@ package consent
 
 // Lifting a suppression, and who may.
 //
-// Writing one was the previous change; until this one nothing could take it
-// back, so every stop a rep recorded was permanent whatever level it carried.
-// That made the level a claim rather than a rule — the contract said an admin
-// could lift a rep's row and no code could.
-//
-// ONE RULE, and it is commsauthz.AuthorityLevel.CanOverrule: you may lift a
-// decision made BELOW your level, never at or above it. This file asks that
-// question and does not re-answer it. A second comparison here — a rank check,
-// a role switch, an "is admin" shortcut — would be the copy that stops matching
-// the day a level is added, and the one that stops matching decides whether
-// mail reaches somebody who asked us to stop.
-//
-// The subject's own act is the tier nothing satisfies. An Art. 21 objection and
-// a withdrawal are theirs, not the installation's, so no seat lifts them and
-// this door does not offer a way to try.
+// judgeLift (stopcorrection.go) decides it, and this file does not ask again.
+// A second comparison here would stop matching the day a level is added. Then
+// it would decide whether mail reaches somebody who asked us to stop.
 
 import (
 	"context"
@@ -80,10 +68,38 @@ func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.Authority
 	if err := requireReason(in.Reason, "taking back a stop"); err != nil {
 		return subject{}, "", err
 	}
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := admitLifter(ctx); err != nil {
 		return subject{}, "", err
 	}
 	return sub, authorityOf(ctx), nil
+}
+
+// admitLifter is the caller half of a lift, which the list of stops asks too:
+// a human signed in to a seat, holding contact:update. auth.RequireHuman would
+// admit the system and connector principals, and authorityOf reads an admin
+// role off any principal, so the type is asked here by name.
+func admitLifter(ctx context.Context) error {
+	p, ok := principal.Actor(ctx)
+	if !ok || p.Type != principal.PrincipalHuman {
+		return fmt.Errorf("only a person signed in to a seat takes back a stop: %w", apperrors.ErrPermissionDenied)
+	}
+	return auth.Require(ctx, "contact", principal.ActionUpdate)
+}
+
+// mayLiftOn answers the caller half of a lift for one contact without failing
+// the read: false where Lift would refuse with a 403 or 404.
+func mayLiftOn(ctx context.Context, tx pgx.Tx, contact ids.UUID) (bool, error) {
+	err := admitLifter(ctx)
+	if err == nil {
+		err = auth.EnsureRetractable(ctx, tx, entityContact, contact)
+	}
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+		return false, nil
+	}
+	return false, err
 }
 
 // fieldReason names the reason field once, so the two refusals and the audit
@@ -161,11 +177,13 @@ func (s *Store) liftAdmittedTx(
 	// only ever narrow which rows this matches, and the id already picks
 	// exactly one — there is nothing left for a purpose filter to do except
 	// occasionally answer not-found for a row that does exist.
-	var decided string
+	var decided, kind, origin, originSource string
 	err = tx.QueryRow(ctx, `
-		SELECT decided_by_level FROM communication_suppression
-		 WHERE id = $1 AND contact_id = $2 AND revoked_at IS NULL
-		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided)
+		SELECT s.decided_by_level, s.kind, `+originColumnSQL("s", "captured_by")+`,
+		       `+originColumnSQL("s", "source")+`
+		  FROM communication_suppression s
+		 WHERE s.id = $1 AND s.contact_id = $2 AND s.revoked_at IS NULL
+		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided, &kind, &origin, &originSource)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A row that is already revoked, belongs to another subject, or never
 		// existed all answer alike: a caller learns nothing about rows they were
@@ -176,9 +194,11 @@ func (s *Store) liftAdmittedTx(
 		return fmt.Errorf("consent: reading the suppression: %w", err)
 	}
 
-	if !level.CanOverrule(commsauthz.AuthorityLevel(decided)) {
-		return fmt.Errorf(
-			"this stop was recorded at a level you do not outrank: %w", apperrors.ErrPermissionDenied)
+	verdict := judgeLift(level, stopFacts{
+		kind: kind, decided: commsauthz.AuthorityLevel(decided), origin: origin, originSource: originSource,
+	})
+	if !verdict.may {
+		return fmt.Errorf("%s: %w", liftRefusal(verdict.blockedBy), apperrors.ErrPermissionDenied)
 	}
 
 	if _, err = tx.Exec(ctx, `
@@ -233,34 +253,57 @@ func (s *Store) liftAdmittedTx(
 	var remaining int
 	if err = tx.QueryRow(ctx, `
 		SELECT count(*) FROM communication_suppression s
-		 WHERE s.revoked_at IS NULL
-		   AND (s.contact_id = $1
-		        OR (s.address IS NOT NULL AND EXISTS (
-		              SELECT 1 FROM contact_email pe
-		               WHERE pe.contact_id = $1
-		                 AND pe.archived_at IS NULL
-		                 AND pe.email = lower(s.address))))`,
-		sub.id).Scan(&remaining); err != nil {
+		 WHERE `+contactLiveStopsSQL, sub.id).Scan(&remaining); err != nil {
 		return fmt.Errorf("consent: counting the stops still standing: %w", err)
 	}
 
-	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
-		map[string]any{
-			"lifted_suppression": in.SuppressionID.String(),
-			"recorded_at_level":  decided,
-			"lifted_by_level":    string(level),
-			"lifted_by":          by,
-			// The LIFTER's words, and the audit entry is their home. Suppress
-			// keeps the SUBJECT's reason off the audit payload because those
-			// words are theirs; this reason is the installation explaining
-			// itself, and the trail is exactly who should be able to read it.
-			fieldReason: in.Reason,
-		})
+	audit := map[string]any{
+		"lifted_suppression": in.SuppressionID.String(),
+		"recorded_at_level":  decided,
+		"lifted_by_level":    string(level),
+		"lifted_by":          by,
+		// The lifter's words. Suppress keeps the subject's words off the
+		// audit payload; this reason is the installation explaining itself.
+		fieldReason: in.Reason,
+	}
+	if verdict.correction {
+		audit[auditFieldLiftBasis] = liftBasisCorrection
+	}
+	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, audit)
 	if err != nil {
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
 		suppressionLiftedPayload(in.SuppressionID, decided, level, remaining))
+}
+
+// contactLiveStopsSQL selects the live stops of the contact in $1, over the
+// suppression aliased `s`. It takes the contact's own rows and the rows held on
+// one of its live addresses. The lift's count and the list of stops share it.
+const contactLiveStopsSQL = `s.revoked_at IS NULL
+		   AND (s.contact_id = $1
+		        OR (s.address IS NOT NULL AND EXISTS (
+		              SELECT 1 FROM contact_email pe
+		               WHERE pe.contact_id = $1
+		                 AND pe.archived_at IS NULL
+		                 AND pe.email = lower(s.address))))`
+
+// auditFieldLiftBasis marks a lift that corrected a stop recorded by mistake,
+// so the history can tell it from an ordinary lift.
+const (
+	auditFieldLiftBasis = "lift_basis"
+	liftBasisCorrection = "recorded_by_mistake"
+)
+
+// liftRefusal says, in the 403's words, why this stop is not the caller's.
+func liftRefusal(blockedBy crmcontracts.ContactStopLiftBlockedBy) string {
+	switch blockedBy {
+	case crmcontracts.ContactStopLiftBlockedByRestriction:
+		return "a processing restriction is lifted only after the person is told in advance, which Margince cannot do yet"
+	case crmcontracts.ContactStopLiftBlockedBySubjectDecision:
+		return "the person set this stop themselves; only they can change it"
+	}
+	return "this stop was recorded at a level you do not outrank"
 }
 
 // suppressionLiftedPayload says a stop was taken back and by whose authority.
