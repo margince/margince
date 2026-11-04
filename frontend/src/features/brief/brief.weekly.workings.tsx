@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type Fact, FactList } from "../../design-system/factlist";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
@@ -65,10 +65,8 @@ export function WeeklyWorkings({
     },
   ];
   return (
-    <Panel>
-      <PanelBody>
-        <FactList numeric className="brief-weekly-workings" facts={facts} />
-      </PanelBody>
-    </Panel>
+    <PanelBody>
+      <FactList numeric className="brief-weekly-workings" facts={facts} />
+    </PanelBody>
   );
 }

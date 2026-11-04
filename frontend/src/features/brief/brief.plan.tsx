@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { SquareCheck } from "lucide-react";
 import { useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import {
@@ -30,6 +31,7 @@ import {
 } from "../worklist/weeklyplan.queries";
 import { AddCommitment } from "./brief.plan.add";
 import { PlanContract } from "./brief.plan.contract";
+import { ReportTitle } from "./brief.reportcard";
 
 import "./brief.plan.css";
 
@@ -124,7 +126,36 @@ function hasFoot(
   return reading.unsaved > 0 || (reading.editable && reading.staged > 0);
 }
 
-export function PlanSection() {
+/**
+ * Whether the week's plan takes edits. A closed week is history: the weekly
+ * job freezes its outcome into the review, so an edit would make the two
+ * disagree.
+ */
+function planEditable(
+  canEdit: boolean,
+  plan: Readonly<{ status: string }> | null | undefined,
+): boolean {
+  return canEdit && plan?.status === "open";
+}
+
+/** What the week is up against, on its own, for the report's side column. */
+export function PlanConstraints() {
+  const plan = useWeeklyPlan();
+  const canEdit = useCanWrite("weekly_plan", "update");
+  return (
+    <PlanContract
+      plan={plan.data}
+      editable={planEditable(canEdit, plan.data)}
+    />
+  );
+}
+
+export function PlanSection({
+  withContract = true,
+}: Readonly<{
+  /** False where the constraints stand in a column of their own. */
+  withContract?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const plan = useWeeklyPlan();
@@ -155,10 +186,7 @@ export function PlanSection() {
       ? "unavailable"
       : "ready";
   const commitments = plan.data?.commitments ?? [];
-  // A closed week is history. The weekly job settles it and freezes its outcome
-  // into the review, so accepting an edit afterwards would make the review's
-  // counts disagree with the rows they were counted from.
-  const editable = canEdit && plan.data?.status === "open";
+  const editable = planEditable(canEdit, plan.data);
   // A closed week says nothing about posture — it is not this seat that the
   // plan is shut to, and `editable` above is what closes it.
   const readOnly = statesReadOnly({
@@ -216,15 +244,19 @@ export function PlanSection() {
   return (
     <section id="brief-plan">
       <Panel
+        flatHead
+        className="brief-report-card"
         title={
-          plan.data
-            ? t("plan.title", {
-                week: formatNumber(
-                  isoWeekOf(plan.data.local_week_start),
-                  locale,
-                ),
-              })
-            : t("plan.titleThisWeek")
+          <ReportTitle icon={SquareCheck}>
+            {plan.data
+              ? t("plan.title", {
+                  week: formatNumber(
+                    isoWeekOf(plan.data.local_week_start),
+                    locale,
+                  ),
+                })
+              : t("plan.titleThisWeek")}
+          </ReportTitle>
         }
         titleAction={
           editable && !adding ? (
@@ -298,7 +330,7 @@ export function PlanSection() {
       {/* What the week is up against, after what it is for. Its own panel
           because it is the half a lead reads first and a reader should be able
           to find it without walking the commitment list. */}
-      <PlanContract plan={plan.data} editable={editable} />
+      {withContract && <PlanContract plan={plan.data} editable={editable} />}
     </section>
   );
 }

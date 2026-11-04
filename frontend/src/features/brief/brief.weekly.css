@@ -13,11 +13,6 @@
   text-align: end;
 }
 
-.brief-weekly-learnings {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
 /* One lesson per row: its kind first, then the claim and what it rests on. */
 .brief-weekly-learning {
   display: flex;
@@ -46,41 +41,43 @@
 }
 
 /* ── The report ──────────────────────────────────────────────────────────── */
-.brief-weekly-page > .brief-report {
-  padding-block-end: var(--space-10);
-}
 .brief-report {
   display: flex;
   flex-direction: column;
-  gap: var(--space-12);
+  gap: var(--space-4);
+  padding-block-end: var(--space-10);
+}
+/* A section's name, led by the small mark of what it counts. */
+.brief-report-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.brief-report-card-title > svg {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  color: var(--textSecondary);
 }
 .brief-report-stepper {
   display: flex;
   gap: var(--gapActions);
 }
-/* Margince's own paragraph about the week, the report's opening. */
+/* Margince's own sentence about the week, the report's opening line. */
 .brief-report-narrative {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-3);
+}
+.brief-report-narrative > svg {
+  flex: none;
+  inline-size: var(--space-4);
+  block-size: var(--space-4);
+  color: var(--aiText);
 }
 .brief-report-narrative > p {
   margin: 0;
-  font: var(--fontHeadingMedium);
   font-weight: var(--fontWeightMedium);
-}
-.brief-report-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-/* A section's label, with a total or a verb at its end where it has one. */
-.brief-report-section-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
 }
 /* The headline figures, as one plate of tiles with a rule between them. The
    rules are each tile's own top and start edge. The grid steps out by one
@@ -151,10 +148,6 @@
 .brief-report-figure-delta {
   display: flex;
 }
-.brief-report-total {
-  margin: 0;
-  font-weight: var(--fontWeightMedium);
-}
 /* What the week won against what it lost, as one bar of two shares. */
 .brief-report-split {
   display: flex;
@@ -213,35 +206,89 @@
   gap: var(--gapActions);
 }
 .brief-report-closing {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
-}
-.brief-report-closing > p {
   margin: 0;
+  padding-inline: var(--space-1);
 }
 
-/* The weekly reads like the morning: cards on the page, each section headed
-   on a tinted band, Margince's own paragraph on the indigo one. */
-.brief-weekly-page.page-pane {
+/* The weekly reads like the morning: cards on the page in the work column,
+   and the side column's panels standing on the page beside them. */
+.brief-weekly-page > .page-pane {
+  --padPane: 0px;
   border-color: transparent;
   background: none;
   box-shadow: none;
   padding: 0;
 }
-.brief-weekly-page > .brief-report {
-  gap: var(--space-8);
+.brief-weekly-page > .brief-main,
+.brief-weekly-page > .brief-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
-.brief-report-section-head {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--accentMed);
+
+/* ── The side column ──────────────────────────────────────────────────────
+ * The headline figures as one list: the name, the count at the end, and the
+ * share as a bar under them. */
+.brief-weekly-summary .brief-report-tiles {
+  grid-template-columns: minmax(0, 1fr);
+}
+.brief-weekly-summary .brief-report-tile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4); /* ds:ignore a list row, not a tile */
+}
+.brief-weekly-summary .brief-report-tile-figure {
+  justify-self: end;
+}
+.brief-weekly-summary .brief-report-tile-value {
+  font: var(--fontHeadingSmall);
+}
+.brief-weekly-summary .brief-report-tile-of {
+  font: var(--fontBodySmall);
+}
+.brief-weekly-summary
+  :is(
+    .brief-report-tile-bar,
+    .brief-report-figure-line,
+    .brief-report-figure-delta
+  ) {
+  grid-column: 1 / -1;
+}
+.brief-weekly-summary > .t-caption {
+  margin: 0;
+  padding: var(--space-3) var(--space-4); /* ds:ignore the plate's own inset */
+}
+/* The weeks to open, the one shown on a raised ground. */
+.brief-weekly-weeks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-2);
+  list-style: none;
+}
+.brief-weekly-week {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
   border-radius: var(--r-md);
-  background: var(--accentLight);
-  color: var(--accentText);
+  background: none;
+  color: var(--textPrimary);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
 }
-.brief-report-narrative.card {
-  border-color: var(--aiMed);
-  background-image: linear-gradient(var(--aiLight), var(--aiLight));
+.brief-weekly-week:hover {
+  background: var(--bgHover);
 }
-.brief-report-section-head > :first-child {
-  color: inherit;
+.brief-weekly-week[aria-current="true"] {
+  border-color: var(--borderSubtle);
+  background: var(--bgWell);
+  font-weight: var(--fontWeightMedium);
 }

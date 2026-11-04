@@ -3,7 +3,7 @@
 
 import { EntityRef } from "../../components/entityref";
 import { Badge } from "../../design-system/atoms";
-import { Panel, PanelRow } from "../../design-system/panel";
+import { PanelBody, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { WeeklyReview } from "./brief.queries";
@@ -39,29 +39,27 @@ export function LearningsPanel({
   // an empty panel would state a verdict about a week nobody looked at.
   if (!learnings) return null;
 
-  return (
-    <div className="brief-weekly-learnings">
-      {learnings.items.length > 0 && (
-        <p className="t-caption">{t("brief.weekly.learnings.caveat")}</p>
-      )}
-      {learnings.items.length === 0 ? (
+  if (learnings.items.length === 0)
+    return (
+      <PanelBody>
         <EmptyLearnings state={learnings.state} />
-      ) : (
-        <Panel>
-          {learnings.items.map((item) => (
-            <LearningItem
-              // Keyed on what the learning RESTS ON rather than its position:
-              // a frozen week's list never reorders, but a key built from an
-              // index says the opposite to anybody reading it later. The first
-              // citation is present on every learning — one that cites nothing
-              // is refused before it is stored.
-              key={`${item.citations[0]?.subject_id}-${item.kind}`}
-              learning={item}
-            />
-          ))}
-        </Panel>
-      )}
-    </div>
+      </PanelBody>
+    );
+  return (
+    <>
+      {learnings.items.map((item) => (
+        <LearningItem
+          // Keyed on what the learning RESTS ON rather than its position:
+          // the first citation is present on every learning, because one
+          // that cites nothing is refused before it is stored.
+          key={`${item.citations[0]?.subject_id}-${item.kind}`}
+          learning={item}
+        />
+      ))}
+      <PanelBody>
+        <p className="t-caption">{t("brief.weekly.learnings.caveat")}</p>
+      </PanelBody>
+    </>
   );
 }
 

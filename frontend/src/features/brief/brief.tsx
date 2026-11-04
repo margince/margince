@@ -44,14 +44,14 @@ import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
-import { PlanSection } from "./brief.plan";
+import { PlanConstraints, PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
-import { WeeklySection, WeekStepper } from "./brief.weekly";
+import { WeeklyRail, WeeklySection, WeekStepper } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
@@ -182,13 +182,18 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
+  const t = useT();
   if (address.view === "weekly")
     return (
       <PageZones
-        shape="single"
+        shape="aside"
         panes
-        mainClassName="brief-weekly-page"
-        main={<WeeklySection plan={<PlanSection />} />}
+        className="brief-weekly-page"
+        mainClassName="brief-main"
+        asideClassName="brief-rail"
+        asideLabel={t("brief.weekly.rail")}
+        main={<WeeklySection plan={<PlanSection withContract={false} />} />}
+        aside={<WeeklyRail constraints={<PlanConstraints />} />}
       />
     );
   return <PersonalMorning query={query} queueToggle={queueToggle} />;

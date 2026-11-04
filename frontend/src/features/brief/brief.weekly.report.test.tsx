@@ -118,8 +118,8 @@ describe("BriefScreen — the weekly report", () => {
   it("leaves out a section with nothing to say", async () => {
     openReport(["2026-06-29"]);
 
-    await screen.findByText(en["brief.report.chapter.figures"], {
-      selector: "h2",
+    await screen.findByRole("heading", {
+      name: en["brief.report.chapter.figures"],
     });
     // No deal closed this week, so there is no section for closed deals.
     expect(
@@ -127,6 +127,18 @@ describe("BriefScreen — the weekly report", () => {
         name: new RegExp(en["brief.report.chapter.closed"]),
       }),
     ).toBeNull();
+  });
+
+  it("lists the newest weeks beside the report, and opens one", async () => {
+    openReport(["2026-06-29", "2026-06-22"]);
+    const user = userEvent.setup();
+
+    const shown = await screen.findByRole("button", { name: /^Week 27/ });
+    expect(shown.getAttribute("aria-current")).toBe("true");
+    await user.click(screen.getByRole("button", { name: /^Week 26/ }));
+    await waitFor(() =>
+      expect(window.location.hash).toContain("week=2026-06-22"),
+    );
   });
 
   // The stepper reaches only weeks that have a report, and writes the week

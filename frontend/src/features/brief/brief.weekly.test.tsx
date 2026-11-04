@@ -421,7 +421,9 @@ describe("BriefScreen — the week's sentence", () => {
       "Weber signed; two promises slipped to this week.",
     );
     const weekly = within(weeklySection());
-    expect(weekly.getByText(en["co.assistant.aiTag"])).toBeTruthy();
+    expect(
+      weekly.getByRole("img", { name: en["co.assistant.aiTag"] }),
+    ).toBeTruthy();
     // The mark is on the sentence, not the report. The figures are worked out
     // without a model, and a mark over them would claim a model wrote them.
     const marked = weeklySection().querySelector(".brief-report-narrative");

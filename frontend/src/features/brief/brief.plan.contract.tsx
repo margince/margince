@@ -51,7 +51,7 @@ export function PlanContract({
   const crowded = capacity !== undefined && isCrowded(capacity, commitments);
   const n = (value: number) => formatNumber(value, locale);
   return (
-    <Panel title={t("plan.contract.title")}>
+    <Panel flatHead title={t("plan.contract.title")}>
       {/* A warning Callout only when the week is actually crowded. Drawn always,
           the tone would stop meaning anything and a reader would learn to skip
           it. */}
