@@ -4,9 +4,9 @@ import { DataTable } from "../../design-system/datatable";
 import { Popover } from "../../design-system/popover";
 import { StatStrip } from "../../design-system/statstrip";
 import {
-  formatMoneyCompact,
-  formatMoneyOrAbsent,
-  formatNumber,
+  formatAnalyticsMoney,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -61,8 +61,8 @@ export function pricedFootnote(
     return null;
   }
   return t("analytics.priced", {
-    priced: formatNumber(pricedDeals, locale),
-    total: formatNumber(total, locale),
+    priced: formatAnalyticsNumber(pricedDeals, locale),
+    total: formatAnalyticsNumber(total, locale),
   });
 }
 
@@ -119,7 +119,9 @@ export function ForecastTile({
   ) : undefined;
   // "1 deals" is a sentence no call site should be able to spell.
   const deals = (n: number) =>
-    plural("analytics.forecastDeals", n, { count: formatNumber(n, locale) });
+    plural("analytics.forecastDeals", n, {
+      count: formatAnalyticsNumber(n, locale),
+    });
   if (amountMinor == null || !currency) {
     // A word, never a glyph. With no money, the deals the category holds are
     // the reading; with no count either, nothing was measured at all.
@@ -143,7 +145,7 @@ export function ForecastTile({
   if (weightedMinor != null) {
     parts.push(
       t("analytics.forecastWeighted", {
-        amount: formatMoneyCompact(weightedMinor, currency, locale),
+        amount: formatAnalyticsMoney(weightedMinor, currency, locale),
       }),
     );
   }
@@ -153,8 +155,8 @@ export function ForecastTile({
     parts.push(
       pricedDeals != null && pricedDeals < dealCount
         ? t("analytics.forecastPriced", {
-            priced: formatNumber(pricedDeals, locale),
-            count: formatNumber(dealCount, locale),
+            priced: formatAnalyticsNumber(pricedDeals, locale),
+            count: formatAnalyticsNumber(dealCount, locale),
           })
         : deals(dealCount),
     );
@@ -165,7 +167,7 @@ export function ForecastTile({
       label={label}
       source={source}
       href={dealsUrl}
-      value={formatMoneyCompact(amountMinor, currency, locale)}
+      value={formatAnalyticsMoney(amountMinor, currency, locale)}
       detail={parts.join(" · ") || undefined}
     />
   );
@@ -375,7 +377,11 @@ export function StageTable({
                   label={row.stageName}
                 >
                   <span className="analytics-money-cell">
-                    {formatMoneyOrAbsent(row.rawMinor, baseCurrency, locale)}
+                    {formatAnalyticsMoneyOrAbsent(
+                      row.rawMinor,
+                      baseCurrency,
+                      locale,
+                    )}
                     {footnote && <span className="t-caption">{footnote}</span>}
                   </span>
                 </BarFigure>
@@ -387,7 +393,11 @@ export function StageTable({
             header: t("analytics.weighted"),
             align: "end",
             render: (row: StageAgg) =>
-              formatMoneyOrAbsent(row.weightedMinor, baseCurrency, locale),
+              formatAnalyticsMoneyOrAbsent(
+                row.weightedMinor,
+                baseCurrency,
+                locale,
+              ),
           },
         ]}
         rows={aggregates}
@@ -446,18 +456,22 @@ function PipelineTotals({
       <StatCard
         narrow="row"
         label={t("analytics.openDeals")}
-        value={formatNumber(count, locale)}
+        value={formatAnalyticsNumber(count, locale)}
       />
       <StatCard
         narrow="row"
         label={t("analytics.unweighted")}
-        value={formatMoneyOrAbsent(rawMinor, baseCurrency, locale)}
+        value={formatAnalyticsMoneyOrAbsent(rawMinor, baseCurrency, locale)}
         detail={footnote}
       />
       <StatCard
         narrow="row"
         label={t("analytics.weighted")}
-        value={formatMoneyOrAbsent(weightedMinor, baseCurrency, locale)}
+        value={formatAnalyticsMoneyOrAbsent(
+          weightedMinor,
+          baseCurrency,
+          locale,
+        )}
         detail={footnote}
       />
     </StatStrip>

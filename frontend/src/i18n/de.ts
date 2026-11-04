@@ -925,6 +925,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch ist kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
   "reporting.periodYear": "Jahr",
   "reporting.periodMonth": "Startmonat",
+  "reporting.expectedCloseOn": "Erwarteter Abschluss",
+  "reporting.qualifiedOn": "Qualifiziert am",
+  "reporting.owner": "Verantwortlich",
   "reporting.closedOn": "Abgeschlossen am",
   "reporting.meetingOn": "Termindatum",
   "reporting.acceptedOn": "Angenommen am",
@@ -1029,6 +1032,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.pausedSchedules_other": "Pausierte Zeitpläne: {count}",
   "reporting.moreMetrics": "Alle Kennzahlen",
   "reporting.selectedValue": "Gesamt",
+  "reporting.pageRecordsOf_one": "{count} von {total} Datensätzen angezeigt",
+  "reporting.pageRecordsOf_other": "{count} von {total} Datensätzen angezeigt",
   "reporting.pageRecords_one": "{count} Eintrag angezeigt",
   "reporting.pageRecords_other": "{count} Einträge angezeigt",
   "reporting.currentState": "Aktueller Stand",
@@ -3639,6 +3644,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Beleg",
   "stat.evidence.rests": "Worauf das beruht",
   "stat.open": "Öffnen",
+  "stat.forecast": "Prognose",
   "stat.records": "Datensätze anzeigen",
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
@@ -7630,10 +7636,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
   "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
-  "analytics.overview.quarterOnlyTitle":
-    "Das erwartete Ergebnis gilt für dieses Quartal",
-  "analytics.overview.quarterOnlyBody":
-    "Erwartetes Ergebnis und Abstand zum Ziel gelten für das laufende Geschäftsquartal. Zeige dieses Quartal, um sie zu sehen.",
   "analytics.overview.setTarget": "Ziele setzen",
   "analytics.overview.targetWho":
     "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
@@ -7680,7 +7682,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahl unbeantworteter Leads ist für dich verborgen",
   "analytics.prospect.unansweredFailed":
     "Unbeantwortete Leads konnten nicht gezählt werden",
-  "analytics.prospect.tooFew": "Zu wenige",
   "analytics.prospect.tooFewResponses":
     "Zu wenige beantwortete Leads für eine typische Zeit.",
   "analytics.prospect.upcoming": "Gebuchte Termine",
@@ -7752,6 +7753,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.count": "Anzahl",
   "analytics.team.membersWithheld":
     "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
+  "analytics.team.viewMeetings": "Gebuchte Termine ansehen",
+  "analytics.team.memberRecords": "{name}: Datensätze für {metric} ansehen",
   "analytics.team.members": "Mitglieder",
   "analytics.team.member": "Mitglied",
   "analytics.team.meetings": "Gehaltene Termine",
@@ -7787,6 +7790,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Lead wartet noch auf eine erste Antwort",
   "analytics.team.unansweredRow_other":
     "{count} Leads warten noch auf eine erste Antwort",
+  "analytics.team.currentUnansweredBasis":
+    "Offene Leads ohne erste Antwort, unabhängig vom Eingangsdatum",
   "analytics.team.unansweredBasis":
     "In diesem Zeitraum geschrieben, noch ohne Antwort",
   "analytics.team.unansweredHidden":
@@ -7814,7 +7819,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.waitingListBasis":
     "Wartet jetzt, die älteste zuerst. Jede Zeile nennt den Interessenten und auf wen er wartet.",
   "analytics.team.qualified": "Qualifiziert",
-  "analytics.team.unanswered": "Unbeantwortet",
+  "analytics.team.unanswered": "Eingänge im Zeitraum ohne Antwort",
   "analytics.team.target": "Monatsziel",
   "analytics.team.targetOf": "{actual} von {target}",
   "analytics.team.noTarget": "Kein Ziel",
@@ -8245,12 +8250,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.source.contracts": "Verträge",
   "review.source.incumbent": "Altsystem",
   "analytics.coverageNeverRun":
-    "Noch keine Prüfung gelaufen. Eine ungeprüfte Installation ist nicht dasselbe wie eine fehlerfreie.",
+    "Starte die Eingabeprüfung unter „Prognose“, um die Quellenabdeckung zu sehen.",
   "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht geprüft: {sources}. Die Befunde unten decken nur ab, was geprüft wurde.",
-  "review.notCheckedYet":
-    "Noch nichts geprüft: Die erste Prüfung wurde noch nicht ausgeführt. Die Werte oben geben die aktuellen Datensätze wieder.",
   "review.firstCheck.title": "Eingabeprüfung starten",
   "review.firstCheck.body":
     "Startet nächtliche Prüfungen und erstellt eine Aufgabe pro betroffenem Deal.",
@@ -18501,6 +18504,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} offene Entscheidungen",
   "worklist.view.total.system_one": "{count} ungelöstes Problem",
   "worklist.view.total.system_other": "{count} ungelöste Probleme",
+  "worklist.filter.linked.prospecting":
+    "Nachfassaktionen und Terminarbeit für die Akquise.",
   "worklist.filter.linked.urgent": "Nur dringende Arbeit.",
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
@@ -20302,6 +20307,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
     "Pipeline mit Abschluss in diesem Quartal",
+  "analytics.outlook.selectedSales": "Vertriebsausblick",
   "analytics.outlook.sales": "Quartalsausblick",
   "analytics.outlook.team": "Ausblick zur Teamakquise",
   "analytics.outlook.prospecting": "Akquiseausblick",

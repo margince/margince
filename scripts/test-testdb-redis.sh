@@ -69,6 +69,27 @@ check "$(from_make 26379)" "$(resolved 26379)" \
 check "present" "${script_default:+present}" \
     "the resolved address is not empty"
 
+source "$root/scripts/lib-testdb.sh"
+batch_fixture="$(mktemp -d)"
+trap 'rm -rf "$batch_fixture"' EXIT
+printf '%s\n' one two three four five > "$batch_fixture/work"
+run_one() {
+    printf '%s|%s\n' "$PPID" "$1" > "$3/$2"
+}
+export -f run_one
+run_integration_packages "$batch_fixture/work" 2 2 "$batch_fixture"
+check "$(cut -d'|' -f1 "$batch_fixture/1")" "$(cut -d'|' -f1 "$batch_fixture/2")" \
+    "the first two packages share a bounded batch"
+check "$(cut -d'|' -f1 "$batch_fixture/3")" "$(cut -d'|' -f1 "$batch_fixture/4")" \
+    "the next two packages share a bounded batch"
+parents="$(cat "$batch_fixture/"{1,3,5} | cut -d'|' -f1 | sort -u | wc -l | tr -d ' ')"
+check 3 "$parents" "each Redis reuse starts in a separate waited batch"
+subjects="$(cat "$batch_fixture/"{1,2,3,4,5} | cut -d'|' -f2 | paste -sd, -)"
+check one,two,three,four,five "$subjects" "all packages retain global indices beyond capacity"
+if run_integration_packages "$batch_fixture/work" 2 0 "$batch_fixture" 2>/dev/null; then
+    check rejected accepted "zero capacity is rejected"
+fi
+
 if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures check(s) failed" >&2
     exit 1

@@ -50,6 +50,7 @@ const (
 	reportingLeadsQualified                = "leads_qualified"
 	reportingLeadFirstResponse             = "lead_first_response"
 	reportingLeadsAwaitingResponse         = "leads_awaiting_response"
+	reportingLeadsAwaitingResponseNow      = "leads_awaiting_response_now"
 	reportingPartnerPipeline               = "partner_pipeline"
 	reportingPartnerWon                    = "partner_won"
 	reportingPartnerCommission             = "partner_commission"

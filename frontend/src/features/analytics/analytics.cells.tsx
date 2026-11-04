@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { Meter } from "../../design-system/readings";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale } from "../../i18n";
 // BarFigure's layout lives in the screen's sheet; its own module loads it so a
 // table drawn outside the screen lays its cells out the same.
@@ -33,7 +33,7 @@ export function CountLink({
   const { locale } = useLocale();
   return (
     <AppLink className="link-button" href={href} title={title}>
-      {formatNumber(count, locale)}
+      {formatAnalyticsNumber(count, locale)}
     </AppLink>
   );
 }

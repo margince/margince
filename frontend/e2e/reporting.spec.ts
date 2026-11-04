@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { forecastEvaluation } from "../src/features/analytics/reporting.scenarios";
 import { meFixture } from "../src/testing/mefixture";
 import {
   reportingStoryCatalog,
@@ -7,7 +8,6 @@ import {
   reportingStoryFramework,
   reportingStoryScope,
 } from "../src/testing/reporting.fixtures";
-import { forecastEvaluation } from "../src/features/analytics/reporting.scenarios";
 import { mockApi } from "./seed";
 
 test.use({ locale: "en-GB" });
@@ -80,7 +80,7 @@ for (const colorScheme of ["light", "dark"] satisfies ("light" | "dark")[]) {
       });
       await expect(graph).toBeVisible();
       await expect(page.locator(".stat-card-value").first()).toHaveText(
-        "€216k",
+        "216,000 EUR",
       );
       const bounds = await page
         .locator(".report-chart-line")

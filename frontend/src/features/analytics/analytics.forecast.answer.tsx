@@ -5,10 +5,10 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SegmentBar } from "../../design-system/readings";
 import { StatStrip } from "../../design-system/statstrip";
 import {
+  formatAnalyticsMoney,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   formatDateAbbrev,
-  formatMoneyCompact,
-  formatMoneyOrAbsent,
-  formatNumber,
 } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
@@ -45,7 +45,7 @@ function callDetail(
     readings.base_currency,
     locale,
     t("format.notForecast"),
-    formatMoneyCompact,
+    formatAnalyticsMoney,
   );
   return t(
     difference > 0
@@ -73,23 +73,15 @@ export function ForecastAnswer({
 }>) {
   const t = useT();
   const currency = readings.base_currency;
-  // The sentence carries the amount in full. It is read once, at prose width.
-  // A call somebody authored to the cent is a number they should meet as they
-  // wrote it. The slots below carry the same figures compactly, because a slot
-  // is a hundred points wide and a full amount clips there.
   const money = (minor: number | null | undefined) =>
-    formatMoneyOrAbsent(minor ?? null, currency, locale);
-  // Compact, and a word where the pair cannot be said as money at all. A slot
-  // is about a hundred points wide. One compared across a row must not answer
-  // with a glyph. The landing cards at the end of this strip answer the same
-  // way, so the row reads as one comparison.
+    formatAnalyticsMoneyOrAbsent(minor ?? null, currency, locale);
   const slot = (minor: number | null | undefined) =>
     formatMoneyOrWord(
       minor,
       currency,
       locale,
       t("format.notForecast"),
-      formatMoneyCompact,
+      formatAnalyticsMoney,
     );
   const call = readings.current_call;
   const range = rangeOf(readings.range_low_minor, readings.range_high_minor);
@@ -179,8 +171,8 @@ export function ForecastAnswer({
           title={t("forecast.partialTitle")}
         >
           {t("forecast.partial", {
-            priced: formatNumber(readings.priced_count, locale),
-            eligible: formatNumber(readings.eligible_count, locale),
+            priced: formatAnalyticsNumber(readings.priced_count, locale),
+            eligible: formatAnalyticsNumber(readings.eligible_count, locale),
           })}
         </Callout>
       )}

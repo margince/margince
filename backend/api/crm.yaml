@@ -19856,7 +19856,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
+          schema: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming] }
           description: |
             Narrow the queue. Omitted means everything, which is the default view.
 
@@ -50433,7 +50433,8 @@ components:
       properties:
         id: { type: string, description: "`metric:<metric id>` or `point:<metric id>:<group key>`." }
         label: { type: string }
-        value: { type: string }
+        value: { type: string, description: Raw source quantity with its unit. }
+        display: { type: string, description: Locale-formatted quantity for reader text. }
       additionalProperties: false
     ReportSetupRequest:
       type: object
@@ -58084,6 +58085,7 @@ components:
       - leads_qualified
       - lead_first_response
       - leads_awaiting_response
+      - leads_awaiting_response_now
       - partner_pipeline
       - partner_won
       - partner_commission
@@ -59039,6 +59041,13 @@ components:
         `priced_count` and by `fx_missing_count`.
       required: [landing, period, eligible_count, priced_count, fx_missing_count]
       properties:
+        open_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Open deals eligible for this forecast period.
+        open_evidence:
+          $ref: '#/components/schemas/ReportingEvidenceRef'
         open_pipeline_minor:
           type: integer
           format: int64
@@ -59658,6 +59667,8 @@ components:
           description: >-
             How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC
             date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
+        owner_label: { type: string }
+        stage_label: { type: string }
         owner_id: *id002
         source_type:
           type: string
@@ -72529,7 +72540,7 @@ components:
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
         team_week: { $ref: '#/components/schemas/TeamWeekReach' }
-        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
