@@ -83,6 +83,7 @@ describe("the company's Next bar", () => {
     await sessionRead(
       show(task({ assignee_id: "u-left", assignee_name: null })),
     );
+    expect(screen.getByText("Send the revised quote")).toBeInTheDocument();
     expect(screen.queryByText("u-left")).toBeNull();
     expect(screen.queryByText("You")).toBeNull();
     expect(screen.queryByText("Unassigned")).toBeNull();
