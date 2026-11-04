@@ -286,7 +286,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -1234,7 +1234,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "gemini",
@@ -2294,7 +2294,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "gemini_vertex",
@@ -3426,7 +3426,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "ollama",
@@ -4365,7 +4365,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -5304,7 +5304,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -6243,7 +6243,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -7182,7 +7182,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "vllm",

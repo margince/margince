@@ -379,3 +379,36 @@ describe("a follow-up row says why it is there", () => {
     expect(line).toMatch(/no attendee on file/);
   });
 });
+
+// A pinned row says it is pinned. The order alone does not: a new pin or a
+// change in the ranking moves the row, and the reader then has to open each
+// row's menu to find which one is pinned.
+describe("a pinned row says it is pinned", () => {
+  function taskRow(because: WorklistItem["because"]): WorklistItem {
+    return {
+      occurred_precision: "instant",
+      id: "t1",
+      source: "task",
+      category: "tasks",
+      level: 1,
+      consequence: "task_slips",
+      title: "Send the retrofit quote",
+      because,
+      actions: [],
+    };
+  }
+
+  it("says pinned by you beside the row's other reasons", async () => {
+    draw([taskRow([{ kind: "unassigned" }, { kind: "pinned" }])]);
+
+    expect(await screen.findByText(/\bpinned by you\b/)).toBeTruthy();
+    expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
+  });
+
+  it("says nothing about a pin on a row that is not pinned", async () => {
+    draw([taskRow([{ kind: "unassigned" }])]);
+
+    expect(await screen.findByText(/\bno owner\b/)).toBeTruthy();
+    expect(screen.queryByText(/\bpinned by you\b/)).toBeNull();
+  });
+});

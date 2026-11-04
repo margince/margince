@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
-import { browserZone } from "../../format/timezone";
-import { LOCALES, translate } from "../../i18n";
-import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
+import { browserZone } from "../format/timezone";
+import { LOCALES, translate } from "../i18n";
+import { receiptBasis, receiptSummary } from "./receiptcopy";
 
 it.each(LOCALES)(
   "does not repeat unverified historical forecast prose in %s",

@@ -3533,6 +3533,21 @@
     },
     {
       "tool": "read_details",
+      "action": "deal_margince_changes",
+      "verb": "list_deal_margince_changes",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "deal_products",
       "verb": "list_deal_products",
       "allowed_for": [
@@ -4170,6 +4185,21 @@
     },
     {
       "tool": "read_details",
+      "action": "pending_margince_changes",
+      "verb": "get_pending_margince_changes",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "project_filing",
       "verb": "get_activity_project_filing",
       "allowed_for": [
@@ -4294,6 +4324,22 @@
       "tool": "read_details",
       "action": "team_exceptions",
       "verb": "get_team_exceptions",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only"
+      ],
+      "refused_for": [
+        "rep"
+      ],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "team_margince_changes",
+      "verb": "get_team_margince_changes",
       "allowed_for": [
         "admin",
         "management",

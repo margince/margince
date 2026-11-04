@@ -1735,6 +1735,14 @@ func (stubs) DownloadDataSubjectPackage(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "DownloadDataSubjectPackage")
 }
 
+func (stubs) GetPendingMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetPendingMarginceChanges")
+}
+
+func (stubs) UndoMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UndoMarginceChanges")
+}
+
 func (stubs) ListDealRooms(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealRoomsParams) {
 	httperr.NotImplemented(w, r, "ListDealRooms")
 }
@@ -1917,6 +1925,10 @@ func (stubs) ListDealLegalReviews(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) RequestLegalReview(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RequestLegalReview")
+}
+
+func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListDealMarginceChangesParams) {
+	httperr.NotImplemented(w, r, "ListDealMarginceChanges")
 }
 
 func (stubs) RestoreDealMove(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RestoreDealMoveParams) {
@@ -4057,6 +4069,10 @@ func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, pa
 
 func (stubs) GetTeamBoard(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetTeamBoardParams) {
 	httperr.NotImplemented(w, r, "GetTeamBoard")
+}
+
+func (stubs) GetTeamMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetTeamMarginceChangesParams) {
+	httperr.NotImplemented(w, r, "GetTeamMarginceChanges")
 }
 
 func (stubs) QueryWorkspace(w nethttp.ResponseWriter, r *nethttp.Request) {

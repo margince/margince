@@ -29,11 +29,11 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		t.Fatalf("create DSR → %d %+v", status, dsr)
 	}
 
-	// Closing without a resolution refuses.
+	// Closing without the identity check refuses.
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "fulfilled",
 	}, nil, nil); status != 422 {
-		t.Fatalf("resolution-less close → %d, want 422", status)
+		t.Fatalf("a close without the identity check → %d, want 422", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "in_progress",
@@ -41,8 +41,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		t.Fatalf("start → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased contact + activities per retention policy",
-		"identity_check": "id_document",
+		"status": "fulfilled", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill → %d", status)
 	}
