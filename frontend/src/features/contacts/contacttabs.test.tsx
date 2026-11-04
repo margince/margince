@@ -881,7 +881,9 @@ describe("the meetings tab", () => {
     expect(screen.getByText("Upcoming")).toBeTruthy();
     expect(screen.getByText(/Prepare before the meeting/)).toBeTruthy();
     const draft = screen.getByRole("button", { name: "Draft agenda" });
-    expect(draft.classList.contains("btn-ai")).toBe(true);
+    // Beside the brief, the card's one filled verb, it is outlined with its ✦.
+    expect(draft.classList.contains("btn-aiQuiet")).toBe(true);
+    expect(draft.querySelector(".lucide-sparkles")).not.toBeNull();
     await userEvent.setup().click(draft);
     expect(acted).toEqual([draftAgenda]);
   });

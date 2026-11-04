@@ -196,10 +196,10 @@ export function DraftOffer({
               value={intent}
               onChange={(event) => onIntentChange(event.target.value)}
             />
-            {/* The agent's own verb, in the agent's own colour and mark:
-                indigo means "Margince does this" everywhere on the record. */}
+            {/* Outlined with its ✦: Send is the composer's one filled
+                verb, and the mark alone says "Margince does this". */}
             <Button
-              variant="ai"
+              variant="aiQuiet"
               onClick={draft.run}
               disabled={draft.disabled}
               pending={draft.pending}

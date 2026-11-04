@@ -51,6 +51,11 @@ function aDayWith(item: ReturnType<typeof aQuietDeal>) {
   });
 }
 
+/** The agent's mark: the ✦ a control draws when its press makes the model write. */
+function wearsMark(control: Element): boolean {
+  return control.querySelector(".lucide-sparkles") !== null;
+}
+
 describe("a deal row carrying a decided next step", () => {
   it("offers the step, rather than naming the problem alone", async () => {
     stub(aDayWith(aQuietDeal()));
@@ -173,7 +178,7 @@ describe("a deal row carrying a decided next step", () => {
           ? en["worklist.verb.draft_email_now"]
           : en["worklist.verb.draft_email"],
       });
-      expect(link.classList.contains("btn-ai"), subject.type).toBe(marked);
+      expect(wearsMark(link), subject.type).toBe(marked);
     }
   });
 
@@ -231,9 +236,9 @@ describe("a waiting message whose prepared move is the reply", () => {
   function marked(): string[] {
     const acts = document.querySelector(".worklist-row-acts");
     expect(acts, "the row drew no line of verbs").not.toBeNull();
-    return [...(acts?.querySelectorAll(".btn-ai") ?? [])].map(
-      (verb) => verb.textContent ?? "",
-    );
+    return [...(acts?.querySelectorAll(".btn") ?? [])]
+      .filter(wearsMark)
+      .map((verb) => verb.textContent ?? "");
   }
 
   it("offers one control and not two", async () => {
@@ -257,7 +262,7 @@ describe("a waiting message whose prepared move is the reply", () => {
     const draft = await screen.findByRole("button", {
       name: en["worklist.verb.draft_reply_now"],
     });
-    expect(draft.classList.contains("btn-ai")).toBe(true);
+    expect(wearsMark(draft)).toBe(true);
   });
 
   it("opens the composer where the reader is standing", async () => {

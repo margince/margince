@@ -15,7 +15,6 @@
 // the tree allows and this is one idea that reads whole on its own.
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { viewerZone } from "../../format/timezone";
@@ -173,7 +172,6 @@ function MeetingFollowUp({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <>
       <Button variant="ai" onClick={() => setOpen((seq) => (seq ?? 0) + 1)}>
-        <Sparkles aria-hidden="true" />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
       {open !== null && (

@@ -1,7 +1,8 @@
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Sparkles } from "lucide-react";
 import { type ComponentPropsWithRef, type ReactNode, useId } from "react";
 import { describedByIds } from "./describedby";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
+import { atRegionVolume, useQuietVerbs } from "./verbvolume";
 
 // `federated` is the door into another company's sign-in: full-width,
 // unfilled, and carrying that company's own mark. It is a variant rather than a
@@ -12,12 +13,10 @@ import { swallowWhileBusy, useSinglePress } from "./presslatch";
 /**
  * How loud a control is, and on whose behalf it acts.
  *
- * `ai` is the one that is not a volume. It says the press starts a model: it
- * drafts the mail, reads the site, writes the summary. It is indigo everywhere
- * for the same reason the bands and the citation rules are. A reader learns
- * one colour for "Margince does this now" rather than one per surface. It never
- * marks importance: a destructive verb an agent performs is still danger.
- * Accepting a proposal is `primary` and only opening something is `ghost`.
+ * `ai` and `aiQuiet` say the press starts a model, and both draw the ✦. `ai`
+ * is filled like `primary`, and a screen, panel or card in hand has one of the
+ * two at most. Every other AI verb is `aiQuiet`, a ghost with an indigo ✦. An
+ * agent's destructive verb is still danger. Accepting a proposal is `primary`.
  *
  * `link` is the quietest rung: the text affordance `.link-button` already draws
  * for an `<a>` or a hand-rolled `<button>`. A verb reaches it through this
@@ -184,9 +183,11 @@ export function Button({
   const ownReasonId = useId();
   const busyLabelId = useId();
   const singlePress = useSinglePress(pending);
+  const drawn = atRegionVolume(variant, useQuietVerbs());
+  const marked = (drawn === "ai" || drawn === "aiQuiet") && !iconOnly;
   const classes = [
     "btn",
-    `btn-${variant}`,
+    faceClass(drawn),
     iconOnly ? "btn-icon" : "",
     unavailable ? "btn-unavailable" : "",
     className ?? "",
@@ -240,6 +241,7 @@ export function Button({
       onClick={busy ? swallowWhileBusy : singlePress(onClick)}
     >
       {busy && <BusyMark />}
+      {marked && <Sparkles aria-hidden="true" />}
       {/* The children stay, always. An icon-only control has no room for two
           16px marks side by side, so the glyph is hidden, but in CSS, by the
           `.btn-icon` rule for a busy button. Dropping the children here would also
@@ -260,6 +262,15 @@ export function Button({
       {button}
     </ButtonSentences>
   );
+}
+
+/**
+ * The class a variant's face is drawn by. `aiQuiet` is a ghost that carries
+ * the ✦ in indigo, so it wears the ghost rules rather than a copy of them. An
+ * anchor drawn with the button classes takes its face from here too.
+ */
+export function faceClass(variant: ButtonVariant | "bare"): string {
+  return variant === "aiQuiet" ? "btn-ghost btn-aiQuiet" : `btn-${variant}`;
 }
 
 /**

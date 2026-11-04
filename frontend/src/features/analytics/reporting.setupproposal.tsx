@@ -68,8 +68,9 @@ export function SetupProposalStep({
   return (
     <div className="form-stack">
       <div className="form-actions">
+        {/* Apply is the one filled verb once a proposal stands. */}
         <Button
-          variant="ai"
+          variant={proposal ? "aiQuiet" : "ai"}
           onClick={ask}
           pending={propose.isPending}
           busyLabel={t("reporting.setup.busy")}

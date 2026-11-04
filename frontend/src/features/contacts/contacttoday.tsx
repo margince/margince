@@ -1,16 +1,9 @@
-import {
-  CheckSquare,
-  FileText,
-  Search,
-  Send,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
-import { Button } from "../../design-system/atoms";
+import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatDate, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
@@ -384,6 +377,12 @@ function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
   );
 }
 
+// The bar has one filled verb, its lead; indigo when the model writes it.
+function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
+  if (lead) return drafts ? "ai" : "primary";
+  return drafts ? "aiQuiet" : "ghost";
+}
+
 // One verb: the button, and under it what will happen when it is pressed.
 function ActionVerb({
   action,
@@ -396,10 +395,10 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // A rule ladder picks the verb, not a model. Only a press that has the model
-  // write the mail wears indigo; the rest keep the accent.
+  // A rule ladder picks the verb, not a model. Only the bar's lead verb is
+  // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
-  const variant = drafts ? "ai" : primary ? "primary" : "ghost";
+  const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
@@ -412,7 +411,7 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
+        {!drafts && actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>

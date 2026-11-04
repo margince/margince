@@ -323,14 +323,11 @@ export function TodoRow({
           {action ??
             (verb && (
               <Button
-                // Tinted, not filled: three filled buttons down a column
-                // outshout the one move above them that the pane is actually
-                // recommending, and `aiQuiet` is that volume for an agent's
-                // verb among equals.
+                // Outlined, not filled: three filled buttons down a column
+                // outshout the one move above them that the pane recommends.
                 variant={verb.byMargince ? "aiQuiet" : "ghost"}
                 onClick={verb.onAct}
               >
-                {verb.byMargince && <Sparkles aria-hidden="true" />}
                 {verb.label}
               </Button>
             ))}

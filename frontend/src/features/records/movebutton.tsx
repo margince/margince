@@ -9,7 +9,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -232,7 +232,6 @@ export function MoveButton({
               })
             }
           >
-            <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
           <ErrorLine error={openBrief.error} />
@@ -290,7 +289,6 @@ function FollowUpDraft({
           })
         }
       >
-        <Sparkles aria-hidden />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
       <ErrorLine error={check.error} />

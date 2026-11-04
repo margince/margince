@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Mail, Sparkles } from "lucide-react";
+import { Mail } from "lucide-react";
 import type { ReactNode } from "react";
 import { mailbox } from "../format/contacturi";
 import { useT } from "../i18n";
@@ -105,7 +105,6 @@ export function ContactLink(props: Contact) {
             writeTo({ ...props.record, address, draftIntent: draft.intent })
           }
         >
-          <Sparkles aria-hidden="true" />
           {draft.label}
         </Button>
       );

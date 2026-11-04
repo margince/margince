@@ -217,14 +217,14 @@ function FirstBuildActs({
       run={run}
       profile={profile}
       intakeBusy={intakeBusy}
-      variant={ready ? "ai" : "ghost"}
+      variant={ready ? "ai" : "aiQuiet"}
       describedBy={run.blocked === null ? undefined : reasonId}
     />
   );
   const add = (
     <Button
       key="add"
-      variant={ready ? "ghost" : "ai"}
+      variant={ready ? "ghost" : "primary"}
       onClick={() => jump(VOICE_SECTIONS.sharpen)}
     >
       <Plus aria-hidden />{" "}
@@ -365,7 +365,10 @@ export function SharpenStrip({
       </div>
       <div className="vdna-sharpen-acts">
         {canEdit && (
-          <Button variant="ai" onClick={() => jump(VOICE_SECTIONS.sharpen)}>
+          <Button
+            variant="primary"
+            onClick={() => jump(VOICE_SECTIONS.sharpen)}
+          >
             <Plus aria-hidden /> {t("settings.voice.addWriting")}
           </Button>
         )}

@@ -195,12 +195,10 @@
 .btn-danger:hover {
   filter: brightness(1.06);
 }
-/* The agent's own verb. Filled indigo rather than outlined, because it is the
-   move the card is recommending and an outlined control beside a bordered
-   "not now" offers a reader two equal choices when only one advances the
-   account. --ai does not lift in dark, so the ink is --textOnAccent, the light
+/* The agent's own verb as the one filled control of its screen, panel or
+   card. --ai does not lift in dark, so the ink is --textOnAccent, the light
    ink every fill that stays put takes: the dark --textOnAccentControl reads
-   3.26:1 on it. */
+   3.26:1 on it. The ✦ takes the label's ink. */
 .btn-ai {
   background: var(--ai);
   color: var(--textOnAccent);
@@ -208,18 +206,11 @@
 .btn-ai:hover {
   filter: brightness(1.06);
 }
-/* The agent's own verb where it is ONE of several equal offers — the four
-   rewrites of a draft, where no single one is the move. Tinted and outlined
-   rather than filled: four filled indigo buttons in a row read as four
-   recommendations, and the colour stops meaning "the machine does this" and
-   starts meaning "press me". */
-.btn-aiQuiet {
-  background: var(--aiLight);
+/* Every other agent verb is a ghost that also carries this class (see
+   `faceClass` in button.tsx), so a row of verbs reads as one volume, and only
+   the ✦ in --aiText says the press starts a model. */
+.btn-aiQuiet .lucide-sparkles {
   color: var(--aiText);
-  border-color: var(--aiMed);
-}
-.btn-aiQuiet:hover {
-  background: var(--aiChip);
 }
 
 /* The outlined verb: the pane's own ground with a hairline, in the primary

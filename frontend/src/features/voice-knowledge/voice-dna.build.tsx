@@ -1,5 +1,4 @@
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { Button } from "../../design-system/atoms";
@@ -201,7 +200,7 @@ export function BuildButton({
   run: VoiceBuild;
   profile: VoiceProfile;
   intakeBusy: boolean;
-  variant?: "ai" | "ghost";
+  variant?: "ai" | "aiQuiet";
   describedBy?: string;
 }>) {
   const t = useT();
@@ -217,7 +216,6 @@ export function BuildButton({
       busyLabel={t("settings.voice.building")}
       onClick={() => run.build.mutate()}
     >
-      <Sparkles aria-hidden />{" "}
       {t(
         (profile.profile_version ?? 0) > 0
           ? "settings.voice.rebuild"

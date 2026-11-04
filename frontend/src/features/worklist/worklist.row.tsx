@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
+import { QuietVerbs } from "../../design-system/verbvolume";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { isUnprepared } from "../../lib/meetingreadiness";
@@ -306,26 +307,29 @@ export function WorklistRow({
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work
-            where it has, so the answer keeps one x down the whole queue. */}
-        <RowActs
-          allowPin={allowPin}
-          onOpenEmail={onOpenEmail}
-          item={item}
-          title={title}
-          href={href}
-          owner={owner}
-          primary={answer.primary}
-          equals={answer.equals}
-          onReview={onReview}
-          context={context}
-          framed={framed}
-          titled={titleLinks(emailOpener, href, source.open)}
-        />
-        {/* An answer that is not a VERB: a duplicate pair, whose two buttons
+            where it has, so the answer keeps one x down the whole queue.
+            Outlined in a list; only the card in hand has a filled verb. */}
+        <QuietVerbs quiet={!framed}>
+          <RowActs
+            allowPin={allowPin}
+            onOpenEmail={onOpenEmail}
+            item={item}
+            title={title}
+            href={href}
+            owner={owner}
+            primary={answer.primary}
+            equals={answer.equals}
+            onReview={onReview}
+            context={context}
+            framed={framed}
+            titled={titleLinks(emailOpener, href, source.open)}
+          />
+          {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
             it. It stays a block under the row, where it has the width to show
             both sides. */}
-        {answer.below}
+          {answer.below}
+        </QuietVerbs>
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>
