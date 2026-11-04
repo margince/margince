@@ -5,7 +5,7 @@
 
 package gates
 
-// A person's time zone has one writer after their row exists: writeTimezoneTx
+// A user's time zone has one writer after their row exists: writeTimezoneTx
 // in identity/usertimezone.go. It is the one place that keeps a chosen zone
 // from being replaced by a browser guess, and that sets timezone_chosen with
 // the zone. A second writer would store a zone without saying who picked it.
@@ -31,7 +31,7 @@ var (
 	timezoneColumn   = regexp.MustCompile(`(?i)(?:^|[\s,])timezone(?:_chosen)?\s*(?:,|$)`)
 )
 
-// assignsTimezone reports whether one SQL literal writes a person's zone.
+// assignsTimezone reports whether one SQL literal writes a user's zone.
 func assignsTimezone(sql string) bool {
 	for _, m := range appUserUpdateSet.FindAllStringSubmatch(sql, -1) {
 		if timezoneAssigned.MatchString(m[1]) {
@@ -46,15 +46,15 @@ func assignsTimezone(sql string) bool {
 	return false
 }
 
-// timezoneRowCreators insert a person's row with a zone. A row being created
+// timezoneRowCreators insert a user's row with a zone. A row being created
 // has no stored zone a browser guess could replace.
 var timezoneRowCreators = gatekit.Waive(map[string]string{
 	"internal/modules/identity/installation.go": "creates the first admin's row with the zone the installation was set up in",
 })
 
-// TestOneWriterSetsAPersonsTimezone is what writeTimezoneTx's doc comment
+// TestOneWriterSetsAUsersTimezone is what writeTimezoneTx's doc comment
 // names.
-func TestOneWriterSetsAPersonsTimezone(t *testing.T) {
+func TestOneWriterSetsAUsersTimezone(t *testing.T) {
 	t.Parallel()
 	var where []string
 	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
@@ -73,7 +73,7 @@ func TestOneWriterSetsAPersonsTimezone(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(where) != 1 || where[0] != "internal/modules/identity/usertimezone.go" {
-		t.Errorf("a person's time zone is written from %d place(s), want exactly 1 (writeTimezoneTx): %s",
+		t.Errorf("a user's time zone is written from %d place(s), want exactly 1 (writeTimezoneTx): %s",
 			len(where), strings.Join(where, ", "))
 	}
 	timezoneRowCreators.AssertAllMatched(t)

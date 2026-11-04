@@ -265,6 +265,33 @@ func (e ActivityAutomaticKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityCallOutcome.
+const (
+	ActivityCallOutcomeActivityCallOutcomeCallBackLater ActivityCallOutcome = "put_through"
+	ActivityCallOutcomeActivityCallOutcomeNone          ActivityCallOutcome = "reached"
+	ActivityCallOutcomeActivityCallOutcomeNotReached    ActivityCallOutcome = "voicemail"
+	ActivityCallOutcomeActivityCallOutcomeReached       ActivityCallOutcome = "not_reached"
+	ActivityCallOutcomeActivityCallOutcomeVoicemail     ActivityCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the ActivityCallOutcome enum.
+func (e ActivityCallOutcome) Valid() bool {
+	switch e {
+	case ActivityCallOutcomeActivityCallOutcomeCallBackLater:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeNone:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeNotReached:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeReached:
+		return true
+	case ActivityCallOutcomeActivityCallOutcomeVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityCaptureLabel.
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
@@ -8704,6 +8731,33 @@ func (e ConversationMemoryEntryStatus) Valid() bool {
 	case ConversationMemoryEntryStatusReplied:
 		return true
 	case ConversationMemoryEntryStatusUnanswered:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateActivityRequestCallOutcome.
+const (
+	CreateActivityRequestCallOutcomeCreateCallOutcomeCallBackLater CreateActivityRequestCallOutcome = "put_through"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeNone          CreateActivityRequestCallOutcome = "reached"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeNotReached    CreateActivityRequestCallOutcome = "voicemail"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeReached       CreateActivityRequestCallOutcome = "not_reached"
+	CreateActivityRequestCallOutcomeCreateCallOutcomeVoicemail     CreateActivityRequestCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityRequestCallOutcome enum.
+func (e CreateActivityRequestCallOutcome) Valid() bool {
+	switch e {
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeCallBackLater:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeNone:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeNotReached:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeReached:
+		return true
+	case CreateActivityRequestCallOutcomeCreateCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -18826,6 +18880,7 @@ const (
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
+	ReportingMetricIDLeadsAwaitingResponseNow      ReportingMetricID = "leads_awaiting_response_now"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
@@ -18863,6 +18918,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadStatusMoves:
 		return true
 	case ReportingMetricIDLeadsAwaitingResponse:
+		return true
+	case ReportingMetricIDLeadsAwaitingResponseNow:
 		return true
 	case ReportingMetricIDLeadsCreated:
 		return true
@@ -22054,6 +22111,33 @@ func (e UndoabilityReason) Valid() bool {
 	}
 }
 
+// Defines values for UpdateActivityRequestCallOutcome.
+const (
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeCallBackLater UpdateActivityRequestCallOutcome = "put_through"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeNone          UpdateActivityRequestCallOutcome = "reached"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeNotReached    UpdateActivityRequestCallOutcome = "voicemail"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeReached       UpdateActivityRequestCallOutcome = "not_reached"
+	UpdateActivityRequestCallOutcomeUpdateCallOutcomeVoicemail     UpdateActivityRequestCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the UpdateActivityRequestCallOutcome enum.
+func (e UpdateActivityRequestCallOutcome) Valid() bool {
+	switch e {
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeCallBackLater:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeNone:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeNotReached:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeReached:
+		return true
+	case UpdateActivityRequestCallOutcomeUpdateCallOutcomeVoicemail:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateActivityRequestMeetingStatus.
 const (
 	UpdateActivityRequestMeetingStatusBooked   UpdateActivityRequestMeetingStatus = "booked"
@@ -24197,6 +24281,7 @@ const (
 	WorklistFilterExceptDecisions   WorklistFilter = "except_decisions"
 	WorklistFilterLeads             WorklistFilter = "leads"
 	WorklistFilterMeetings          WorklistFilter = "meetings"
+	WorklistFilterProspecting       WorklistFilter = "prospecting"
 	WorklistFilterRelationships     WorklistFilter = "relationships"
 	WorklistFilterSystem            WorklistFilter = "system"
 	WorklistFilterTasks             WorklistFilter = "tasks"
@@ -24222,6 +24307,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
+		return true
+	case WorklistFilterProspecting:
 		return true
 	case WorklistFilterRelationships:
 		return true
@@ -25552,6 +25639,33 @@ func (e ListActivitiesParamsKind) Valid() bool {
 	case ListActivitiesParamsKindNote:
 		return true
 	case ListActivitiesParamsKindTask:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListActivitiesParamsCallOutcome.
+const (
+	ListActivitiesParamsCallOutcomeListCallOutcomeCallBackLater ListActivitiesParamsCallOutcome = "call_back_later"
+	ListActivitiesParamsCallOutcomeListCallOutcomeNotReached    ListActivitiesParamsCallOutcome = "not_reached"
+	ListActivitiesParamsCallOutcomeListCallOutcomePutThrough    ListActivitiesParamsCallOutcome = "put_through"
+	ListActivitiesParamsCallOutcomeListCallOutcomeReached       ListActivitiesParamsCallOutcome = "reached"
+	ListActivitiesParamsCallOutcomeListCallOutcomeVoicemail     ListActivitiesParamsCallOutcome = "voicemail"
+)
+
+// Valid indicates whether the value is a known member of the ListActivitiesParamsCallOutcome enum.
+func (e ListActivitiesParamsCallOutcome) Valid() bool {
+	switch e {
+	case ListActivitiesParamsCallOutcomeListCallOutcomeCallBackLater:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomeNotReached:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomePutThrough:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomeReached:
+		return true
+	case ListActivitiesParamsCallOutcomeListCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -28691,6 +28805,7 @@ const (
 	GetWorklistParamsFilterExceptDecisions   GetWorklistParamsFilter = "except_decisions"
 	GetWorklistParamsFilterLeads             GetWorklistParamsFilter = "leads"
 	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterProspecting       GetWorklistParamsFilter = "prospecting"
 	GetWorklistParamsFilterRelationships     GetWorklistParamsFilter = "relationships"
 	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
@@ -28716,6 +28831,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterLeads:
 		return true
 	case GetWorklistParamsFilterMeetings:
+		return true
+	case GetWorklistParamsFilterProspecting:
 		return true
 	case GetWorklistParamsFilterRelationships:
 		return true
@@ -29140,6 +29257,9 @@ type Activity struct {
 	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
 	CalendarManaged *bool `json:"calendar_managed,omitempty"`
 
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
+
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
@@ -29157,7 +29277,7 @@ type Activity struct {
 	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
 	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
 
-	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
 
 	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
@@ -29274,10 +29394,13 @@ type Activity struct {
 // ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
 type ActivityAutomaticKind string
 
+// ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type ActivityCallOutcome string
+
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
 
-// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
@@ -41190,6 +41313,9 @@ type CreateActivityRequest struct {
 	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
 	Body            *string               `json:"body,omitempty"`
 
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *CreateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
+
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns
 	// `422 code: field_not_valid_for_kind`. Must name a provider this installation has
@@ -41262,6 +41388,9 @@ type CreateActivityRequest struct {
 	ThreadKey            *string                `json:"thread_key,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateActivityRequestCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type CreateActivityRequestCallOutcome string
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
 type CreateActivityRequestDirection string
@@ -55712,9 +55841,11 @@ type ReportingEvidenceRow struct {
 	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
 	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	OwnerLabel        *string             `json:"owner_label,omitempty"`
 	Restricted        bool                `json:"restricted"`
 	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
 	SourceType        *string             `json:"source_type,omitempty"`
+	StageLabel        *string             `json:"stage_label,omitempty"`
 	Value             *float64            `json:"value"`
 }
 
@@ -55766,6 +55897,10 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenCount Open deals eligible for this forecast period.
+	OpenCount    *int64                `json:"open_count,omitempty"`
+	OpenEvidence *ReportingEvidenceRef `json:"open_evidence,omitempty"`
 
 	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
 	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
@@ -56795,9 +56930,14 @@ type SalesAssessmentConfidence string
 
 // SalesAssessmentCell defines model for SalesAssessmentCell.
 type SalesAssessmentCell struct {
+	// Display Locale-formatted quantity for reader text.
+	Display *string `json:"display,omitempty"`
+
 	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
 	Id    string `json:"id"`
 	Label string `json:"label"`
+
+	// Value Raw source quantity with its unit.
 	Value string `json:"value"`
 }
 
@@ -57082,7 +57222,7 @@ type SaveMyLocaleRequestLocale string
 // SaveMyTimezoneRequest defines model for SaveMyTimezoneRequest.
 type SaveMyTimezoneRequest struct {
 	// Source `browser` is the app's guess from the browser, stored only while no
-	// zone is stored. `chosen` is the person's own pick, always stored.
+	// zone is stored. `chosen` is the user's own pick, always stored.
 	Source SaveMyTimezoneRequestSource `json:"source"`
 
 	// Timezone An IANA zone name, such as `Europe/Berlin`.
@@ -57090,7 +57230,7 @@ type SaveMyTimezoneRequest struct {
 }
 
 // SaveMyTimezoneRequestSource `browser` is the app's guess from the browser, stored only while no
-// zone is stored. `chosen` is the person's own pick, always stored.
+// zone is stored. `chosen` is the user's own pick, always stored.
 type SaveMyTimezoneRequestSource string
 
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
@@ -60272,7 +60412,10 @@ type UpdateAcquisitionSourceRequest struct {
 type UpdateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	Body       *string             `json:"body,omitempty"`
-	DueAt      *time.Time          `json:"due_at,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
+	CallOutcome *UpdateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
+	DueAt       *time.Time                        `json:"due_at,omitempty"`
 
 	// DueHasTime Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`.
 	DueHasTime *bool `json:"due_has_time,omitempty"`
@@ -60304,6 +60447,9 @@ type UpdateActivityRequest struct {
 	Subject              *string                `json:"subject,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// UpdateActivityRequestCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
+type UpdateActivityRequestCallOutcome string
 
 // UpdateActivityRequestMeetingStatus How the meeting went, set AFTER it happened. Meeting only, and 422 with a
 // `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
@@ -61686,10 +61832,10 @@ type User struct {
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
-	// Timezone The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+	// Timezone The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
 	Timezone *string `json:"timezone,omitempty"`
 
-	// TimezoneChosen Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
 	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
 	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
@@ -62129,6 +62275,17 @@ type VoiceReviewReason struct {
 	Code   string             `json:"code"`
 	Text   string             `json:"text"`
 	Values map[string]float64 `json:"values"`
+}
+
+// VoiceSentMailLearned The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+// each of them is `added`, `already_present` (a source already, left as it is), or
+// `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+type VoiceSentMailLearned struct {
+	Added          int                `json:"added"`
+	AlreadyPresent int                `json:"already_present"`
+	NoOwnWords     int                `json:"no_own_words"`
+	Read           int                `json:"read"`
+	Summary        VoiceCorpusSummary `json:"summary"`
 }
 
 // WebForm A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
@@ -65158,6 +65315,9 @@ type ListActivitiesParams struct {
 	IncludeArchived *IncludeArchived          `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 	Kind            *ListActivitiesParamsKind `form:"kind,omitempty" json:"kind,omitempty"`
 
+	// CallOutcome Calls that ended this way. Matches calls only.
+	CallOutcome *ListActivitiesParamsCallOutcome `form:"call_outcome,omitempty" json:"call_outcome,omitempty"`
+
 	// ChannelProvider Filter to messages carried by one transport. Since `kind=message` no longer names
 	// the transport, this is the only way to ask the question `kind=telegram` used to
 	// answer (ADR-0107).
@@ -65195,6 +65355,9 @@ type ListActivitiesParams struct {
 
 // ListActivitiesParamsKind defines parameters for ListActivities.
 type ListActivitiesParamsKind string
+
+// ListActivitiesParamsCallOutcome defines parameters for ListActivities.
+type ListActivitiesParamsCallOutcome string
 
 // ListActivitiesParamsEntityType defines parameters for ListActivities.
 type ListActivitiesParamsEntityType string
@@ -72435,6 +72598,30 @@ type IngestVoiceCorpusSourceParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// LearnVoiceFromSentMailParams defines parameters for LearnVoiceFromSentMail.
+type LearnVoiceFromSentMailParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // DeleteVoiceCorpusSourceParams defines parameters for DeleteVoiceCorpusSource.
 type DeleteVoiceCorpusSourceParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -74258,6 +74445,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "calendar_managed")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["capture_label"]; found {
 		err = json.Unmarshal(raw, &a.CaptureLabel)
 		if err != nil {
@@ -74717,6 +74912,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
+		}
+	}
+
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
 		}
 	}
 
@@ -76931,6 +77133,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "body")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["channel_provider"]; found {
 		err = json.Unmarshal(raw, &a.ChannelProvider)
 		if err != nil {
@@ -77192,6 +77402,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
 		}
 	}
 
@@ -83298,6 +83515,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "body")
 	}
 
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
 	if raw, found := object["due_at"]; found {
 		err = json.Unmarshal(raw, &a.DueAt)
 		if err != nil {
@@ -83392,6 +83617,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
 		}
 	}
 
@@ -88589,6 +88821,9 @@ type ServerInterface interface {
 	// Dry-run one candidate source; detect its shape and speakers without storing anything.
 	// (POST /voice-profiles/{id}/sources/preview)
 	PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id)
+	// Learn the owner's voice from their own most recent sent mail, once, on request.
+	// (POST /voice-profiles/{id}/sources/sent-mail)
+	LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams)
 	// Permanently remove one retained source and mark any active artifact stale.
 	// (DELETE /voice-profiles/{id}/sources/{sourceId})
 	DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, sourceId openapi_types.UUID, params DeleteVoiceCorpusSourceParams)
@@ -94529,6 +94764,12 @@ func (_ Unimplemented) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Learn the owner's voice from their own most recent sent mail, once, on request.
+// (POST /voice-profiles/{id}/sources/sent-mail)
+func (_ Unimplemented) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id Id, params LearnVoiceFromSentMailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Permanently remove one retained source and mark any active artifact stale.
 // (DELETE /voice-profiles/{id}/sources/{sourceId})
 func (_ Unimplemented) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request, id Id, sourceId openapi_types.UUID, params DeleteVoiceCorpusSourceParams) {
@@ -95033,6 +95274,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "call_outcome" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "call_outcome", r.URL.Query(), &params.CallOutcome, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "call_outcome"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "call_outcome", Err: err})
 		}
 		return
 	}
@@ -136537,6 +136791,62 @@ func (siw *ServerInterfaceWrapper) PreviewVoiceCorpusSource(w http.ResponseWrite
 	handler.ServeHTTP(w, r)
 }
 
+// LearnVoiceFromSentMail operation middleware
+func (siw *ServerInterfaceWrapper) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LearnVoiceFromSentMailParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LearnVoiceFromSentMail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteVoiceCorpusSource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteVoiceCorpusSource(w http.ResponseWriter, r *http.Request) {
 
@@ -141507,6 +141817,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/preview", wrapper.PreviewVoiceCorpusSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/voice-profiles/{id}/sources/sent-mail", wrapper.LearnVoiceFromSentMail)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/voice-profiles/{id}/sources/{sourceId}", wrapper.DeleteVoiceCorpusSource)

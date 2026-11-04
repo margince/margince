@@ -52,6 +52,7 @@ const FILTERS = [
 // describes a moment. Offered as pills they would be three cuts nobody asked
 // for, so the row stays the eight kinds plus `all` and these arrive by link.
 const LINKED_ONLY = [
+  "prospecting",
   "urgent",
   "except_decisions",
   "changed_since_brief",

@@ -13,11 +13,15 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatAnalyticsNumber } from "../../format/format";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { isVersionSkewOf, problemFieldErrors, unwrap } from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
+import {
+  assessmentText,
+  readableQuantities,
+} from "./analytics.assessment.text";
 import { RecordDecisionDialog } from "./analytics.decisions";
 import { metricOf } from "./analytics.overview.readings";
 import type {
@@ -29,12 +33,17 @@ import { useMetricNames, useReportingCatalog } from "./reporting.queries";
 
 export type SalesAssessment = components["schemas"]["SalesAssessment"];
 type View = components["schemas"]["SalesAssessmentView"];
+type WorkReading = Readonly<{
+  upcoming_meetings?: number;
+  upcoming_window?: { start_at: string; end_at: string };
+}>;
 
 export function useSalesAssessment(
   selection: ReportingSelection,
   enabled: boolean,
   evaluation?: ReportingEvaluation,
   view: View = "sales",
+  work?: WorkReading,
 ) {
   const [refresh, setRefresh] = useState(0);
   const client = useQueryClient();
@@ -50,6 +59,9 @@ export function useSalesAssessment(
       evaluation?.evaluation_key,
       locale,
       supported,
+      work?.upcoming_meetings,
+      work?.upcoming_window?.start_at,
+      work?.upcoming_window?.end_at,
       refresh,
     ],
     queryFn: async ({ signal }) => {
@@ -127,6 +139,8 @@ type AssessmentProps = Readonly<{
   evaluation: ReportingEvaluation;
   onEvidence: (reference: ReportingEvidenceRef) => void;
   view?: View;
+  work?: WorkReading;
+  workPending?: boolean;
 }>;
 
 function assessmentParagraphs(assessment: SalesAssessment) {
@@ -140,18 +154,25 @@ export function AssessmentPanel({
   evaluation,
   onEvidence,
   view = "sales",
+  work,
+  workPending = false,
 }: AssessmentProps) {
   const t = useT();
+  const client = useQueryClient();
+  const { locale } = useLocale();
   const empty =
     view === "sales" && evaluation.context.scope_holds_deals === false;
   const { query, assessment, supported, refresh } = useSalesAssessment(
     selection,
-    !empty,
+    !empty && !workPending,
     evaluation,
     view,
+    work,
   );
   const written =
-    assessment?.generated_by === "model" && assessment.sentences.length > 0;
+    assessment?.generated_by === "model" &&
+    assessment.sentences.length > 0 &&
+    readableAssessment(assessment, locale);
   const actions = (
     <OverviewActions
       evaluation={evaluation}
@@ -159,7 +180,26 @@ export function AssessmentPanel({
       onEvidence={onEvidence}
     />
   );
-  if (empty || (view !== "sales" && !supported)) return actions;
+  if (empty || workPending || (view !== "sales" && !supported)) return actions;
+  const upcoming = assessment?.cells?.find(
+    (cell) => cell.id === "work:upcoming",
+  );
+  if (
+    upcoming &&
+    work?.upcoming_meetings != null &&
+    Number(upcoming.value.replace(/\s+count$/, "").replace(/[,.]/g, "")) !==
+      work.upcoming_meetings
+  )
+    return (
+      <>
+        {actions}
+        <ErrorLine>{t("reporting.evidenceStale")}</ErrorLine>
+        <Button onClick={() => void reloadReportingFigures(client)}>
+          {t("common.retry")}
+        </Button>
+      </>
+    );
+
   if (written)
     return (
       <WrittenAssessment
@@ -174,10 +214,10 @@ export function AssessmentPanel({
   if (!query.isFetching && !query.isError) return actions;
   return (
     <>
-      <Panel title={t(outlookTitle(view))} flatHead>
+      <Panel title={t(outlookTitle(view, evaluation))} flatHead>
         <PanelBody>
           {query.isFetching ? (
-            <AiPending label={t(outlookTitle(view))} lines={3} />
+            <AiPending label={t(outlookTitle(view, evaluation))} lines={3} />
           ) : (
             <>
               <ErrorLine error={query.error} />
@@ -193,8 +233,11 @@ export function AssessmentPanel({
   );
 }
 
-function outlookTitle(view: View) {
-  if (view === "sales") return "analytics.outlook.sales";
+function outlookTitle(view: View, evaluation: ReportingEvaluation) {
+  if (view === "sales")
+    return evaluation.selection.period === "this_quarter"
+      ? "analytics.outlook.sales"
+      : "analytics.outlook.selectedSales";
   if (view === "team") return "analytics.outlook.team";
   return "analytics.outlook.prospecting";
 }
@@ -215,14 +258,29 @@ function WrittenAssessment({
   actions: ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [reading, setReading] = useState(false);
   const [deciding, setDeciding] = useState(false);
   const canDecide = useCanWrite("activity", "create");
-  const next = assessment.next_decision;
+  const proposed = assessment.next_decision
+    ? {
+        ...assessment.next_decision,
+        text: assessmentText(
+          {
+            text: assessment.next_decision.text,
+            cells: assessment.cells.map((cell) => cell.id),
+          },
+          assessment,
+          locale,
+        ),
+      }
+    : undefined;
+  const next =
+    proposed && readableQuantities(proposed.text) ? proposed : undefined;
   return (
     <>
       <Panel
-        title={t(outlookTitle(view))}
+        title={t(outlookTitle(view, evaluation))}
         tone="ai"
         flatHead
         titleAction={
@@ -236,7 +294,9 @@ function WrittenAssessment({
           <div className="analytics-outlook-prose">
             {assessmentParagraphs(assessment).map((paragraph) => (
               <p key={paragraph.map((s) => s.text).join(" ")}>
-                {paragraph.map((s) => s.text).join(" ")}
+                {paragraph
+                  .map((line) => assessmentText(line, assessment, locale))
+                  .join(" ")}
               </p>
             ))}
           </div>
@@ -310,7 +370,7 @@ function OverviewActions({
           variant="ghost"
           onClick={() => onEvidence(action.evidence)}
         >
-          {action.label} ({formatNumber(action.count, locale)})
+          {action.label} ({formatAnalyticsNumber(action.count, locale)})
         </Button>
       ))}
     </div>
@@ -329,6 +389,7 @@ function InterpretationDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const name = useMetricNames();
   const titleId = useId();
   const paragraphs = assessment.paragraphs?.length
@@ -339,7 +400,7 @@ function InterpretationDrawer({
       const metric = evaluation.metrics.find((m) => `metric:${m.id}` === id);
       if (metric) return name(metric.id);
     }
-    return assessment.cells.find((cell) => cell.id === id)?.label ?? "";
+    return assessment.cells?.find((cell) => cell.id === id)?.label ?? "";
   };
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
@@ -349,7 +410,7 @@ function InterpretationDrawer({
       <div className="analytics-outlook-prose">
         {paragraphs.flat().map((sentence) => (
           <div key={sentence.text}>
-            <p>{sentence.text}</p>
+            <p>{assessmentText(sentence, assessment, locale)}</p>
             <ul>
               {sentence.cells.map((id) => {
                 const reference = evidenceOf(evaluation, id);
@@ -386,4 +447,18 @@ function evidenceOf(
     (candidate) => `metric:${candidate.id}` === cell,
   );
   return metric ? metricOf(evaluation, metric.id)?.evidence : undefined;
+}
+
+function readableAssessment(
+  assessment: SalesAssessment,
+  locale: Locale,
+): boolean {
+  const unsupported =
+    /\b(?:commit_evidence|qualified_commit_evidence|no_target|nothing checked|i checked|i verified|i couldn[’']t confirm)\b/i;
+  return assessmentParagraphs(assessment)
+    .flat()
+    .every((line) => {
+      const text = assessmentText(line, assessment, locale);
+      return !unsupported.test(text) && readableQuantities(text);
+    });
 }

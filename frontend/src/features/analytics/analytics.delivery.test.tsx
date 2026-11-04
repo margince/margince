@@ -25,9 +25,9 @@ it("shows server-converted phase totals and their separate missing-price counts"
       />
     </StoryProviders>,
   );
-  expect(screen.getByText("€1,250.00")).toBeTruthy();
+  expect(screen.getByText("1,250 EUR")).toBeTruthy();
   expect(screen.getByText("1 deal not priced · excluded")).toBeTruthy();
   expect(screen.getByText("2 deals not priced · excluded")).toBeTruthy();
   expect(screen.getByText("—")).toBeTruthy();
-  expect(screen.queryByText("€0.00")).toBeNull();
+  expect(screen.queryByText("0 EUR")).toBeNull();
 });

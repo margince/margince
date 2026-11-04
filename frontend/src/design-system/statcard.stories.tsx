@@ -36,19 +36,7 @@ export default meta;
 
 type Story = StoryObj<typeof StatCard>;
 
-// The reading that OPENS something, beside the one that does not. The three
-// tiles are the whole of the door's contract and only read as one system side
-// by side: with a door the entire tile is the press target, so the arrow at the
-// foot has to lean from anywhere on the card and a keyboard Tab has to ring the
-// CARD rather than the two words at the bottom of it; without one the tile is
-// inert and must show neither. The word is the component's — every door in the
-// product says "Open →", and there is no prop to rename it — so what tells one
-// from another is the DESCRIPTION, which carries the reading a door opens and
-// is what a screen reader reads after the name.
-//
-// The first tile is the case the layering exists for. Its receipt chip sits
-// over the door's stretched target: pressing the chip has to open the working
-// and leave the page where it is, and only a card carrying both can show that.
+// The reading stays a description when the visible control names its destination.
 export const ReadingsWithADoor: Story = {
   name: "Readings — with a door, with View records, and without",
   render: () => (
@@ -264,5 +252,20 @@ export const ReadingsThatNameWhatTheyCount: Story = {
         }}
       />
     </div>
+  ),
+};
+
+export const WholeCurrencyRangeOnPhone: Story = {
+  tags: ["uat-phone"],
+  render: () => (
+    <StatStrip label="Quarter readings">
+      <StatCard
+        narrow="stack"
+        label="Modelled quarter finish"
+        value="6,100,000 EUR – 9,800,000 EUR"
+        href="#/analytics/forecast"
+        opens="forecast"
+      />
+    </StatStrip>
   ),
 };

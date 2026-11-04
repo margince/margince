@@ -198,8 +198,21 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			break
 		}
 		row := fact.Row
-		if fact.OwnerWithheld {
+		if fact.EvidenceAt != nil {
+			row.OccurredAt = fact.EvidenceAt
+		}
+		if fact.OwnerLabel != "" && !fact.OwnerWithheld && !row.Restricted {
+			row.OwnerLabel = &fact.OwnerLabel
+		}
+		if fact.StageLabel != "" && !row.Restricted {
+			row.StageLabel = &fact.StageLabel
+		}
+		if fact.OwnerWithheld || row.Restricted {
 			row.OwnerId = nil
+			row.OwnerLabel = nil
+		}
+		if row.Restricted {
+			row.StageLabel = nil
 		}
 		out.Rows = append(out.Rows, row)
 	}

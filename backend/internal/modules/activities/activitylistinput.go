@@ -38,6 +38,8 @@ type ListActivitiesInput struct {
 	// from Kind rather than a second spelling of it: the two compose, so "every
 	// message on telegram" and "every message" are both askable.
 	ChannelProvider *string
+	// CallOutcome narrows to calls that ended this way.
+	CallOutcome *string
 	// SourceSystem narrows to rows one connector wrote, such as website forms.
 	SourceSystem *string
 	// AnswersThem keeps only rows that answer the other side (answersThemSQL).

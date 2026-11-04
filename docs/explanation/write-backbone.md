@@ -251,6 +251,7 @@ time reports it.
 | `cg:context-graph` | keep the pgvector search embeddings up to date as records change | **live** (worker; only when an embedder model is set up) |
 | `cg:graph-edge` | build the interaction edges as activities and contacts move | **live** (worker) |
 | `cg:audience-rescope` | narrow the signals that point to a message whose set of readers changed | **live** (worker) |
+| `cg:voice-copy-recheck` | empty a voice sample once its sent mail is archived, restricted, narrowed or marked confidential | **live** (worker) |
 | `cg:linkedin-match` | join a LinkedIn ghost to its contact or company when that record shows up | **live** (worker) |
 | `cg:cohort-promote` | link a contact's earlier captured mail when the contact shows up or gets an address | **live** |
 | `cg:commissions` | add a partner's commission when a deal reaches `won`, and take it back if the deal opens again | **live** (worker) |

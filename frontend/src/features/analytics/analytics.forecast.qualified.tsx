@@ -1,5 +1,5 @@
 import type { components } from "../../api/schema";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 
 type Readings = components["schemas"]["ForecastReadings"];
@@ -34,7 +34,7 @@ export function QualifiedAnswer({
       {underReview > 0 && (
         <p className="t-caption">
           {plural("forecast.qualifiedLeftOut", underReview, {
-            count: formatNumber(underReview, locale),
+            count: formatAnalyticsNumber(underReview, locale),
             amount: money(
               qualified.excluded_minor - qualified.unsupported_minor,
             ),
@@ -47,7 +47,7 @@ export function QualifiedAnswer({
             "forecast.qualifiedUnsupported",
             qualified.unsupported_count,
             {
-              count: formatNumber(qualified.unsupported_count, locale),
+              count: formatAnalyticsNumber(qualified.unsupported_count, locale),
               amount: money(qualified.unsupported_minor),
             },
           )}
@@ -56,7 +56,7 @@ export function QualifiedAnswer({
       {qualified.unknown_count > 0 && (
         <p className="t-caption">
           {plural("forecast.qualifiedUnknown", qualified.unknown_count, {
-            count: formatNumber(qualified.unknown_count, locale),
+            count: formatAnalyticsNumber(qualified.unknown_count, locale),
             amount: money(qualified.unknown_minor),
           })}
         </p>

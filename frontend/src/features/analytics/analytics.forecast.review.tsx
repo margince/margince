@@ -4,7 +4,7 @@ import type { components } from "../../api/schema";
 import { Badge, Disclosure } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
@@ -162,7 +162,7 @@ function DeliveryFailedLine({
   return (
     <p className="sub">
       {plural("review.deliveryFailed", deliveries.failed, {
-        count: formatNumber(deliveries.failed, locale),
+        count: formatAnalyticsNumber(deliveries.failed, locale),
       })}
     </p>
   );

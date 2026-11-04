@@ -925,6 +925,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch ist kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
   "reporting.periodYear": "Jahr",
   "reporting.periodMonth": "Startmonat",
+  "reporting.expectedCloseOn": "Erwarteter Abschluss",
+  "reporting.qualifiedOn": "Qualifiziert am",
+  "reporting.owner": "Verantwortlich",
   "reporting.closedOn": "Abgeschlossen am",
   "reporting.meetingOn": "Termindatum",
   "reporting.acceptedOn": "Angenommen am",
@@ -1029,6 +1032,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.pausedSchedules_other": "Pausierte Zeitpläne: {count}",
   "reporting.moreMetrics": "Alle Kennzahlen",
   "reporting.selectedValue": "Gesamt",
+  "reporting.pageRecordsOf_one": "{count} von {total} Datensätzen angezeigt",
+  "reporting.pageRecordsOf_other": "{count} von {total} Datensätzen angezeigt",
   "reporting.pageRecords_one": "{count} Eintrag angezeigt",
   "reporting.pageRecords_other": "{count} Einträge angezeigt",
   "reporting.currentState": "Aktueller Stand",
@@ -2344,6 +2349,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.assign_owner_release": "Freigabe der Verantwortung",
   "systemJob.assurance": "Prognoseprüfung",
   "systemJob.audience_rescope": "Aktualisierung der Zielgruppe",
+  "systemJob.voice_copy_recheck": "Bereinigung der Schreibproben",
   "systemJob.authz_disagreement": "Prüfung der Versandberechtigung",
   "systemJob.auto_apply": "Automatische Freigabe",
   "systemJob.automation": "Automatisierung",
@@ -2754,6 +2760,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
   "history.field.due_has_time": "Fällig zu einer Uhrzeit",
+  "history.field.call_outcome": "Ergebnis des Anrufs",
   "history.field.remind_at": "Erinnerung",
   "history.field.resolved_category": "Nachrichtenkategorie",
   "history.field.score": "Score",
@@ -3638,6 +3645,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "stat.evidence": "Beleg",
   "stat.evidence.rests": "Worauf das beruht",
   "stat.open": "Öffnen",
+  "stat.forecast": "Prognose",
   "stat.records": "Datensätze anzeigen",
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
@@ -7085,6 +7093,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.addColleague": "Teammitglied hinzufügen",
   "log.subject": "Betreff",
   "log.body": "Details",
+  "log.callOutcome": "Ergebnis",
+  "log.callOutcomeNone": "Kein Ergebnis",
+  "activity.callOutcome.reached": "Erreicht",
+  "activity.callOutcome.not_reached": "Nicht erreicht",
+  "activity.callOutcome.voicemail": "Auf den Anrufbeantworter gesprochen",
+  "activity.callOutcome.call_back_later": "Später zurückrufen",
+  "activity.callOutcome.put_through": "Weiterverbunden",
   "log.dueAt": "Fälligkeitsdatum",
   "log.dueTime": "Uhrzeit (optional)",
   "log.dueTimeSkipped":
@@ -7629,10 +7644,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline wurde vielleicht archiviert oder ist nicht für dich freigegeben. Wähle eine Pipeline, um Zahlen zu sehen.",
   "analytics.overview.pipelineDefault": "Standard-Pipeline nutzen",
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
-  "analytics.overview.quarterOnlyTitle":
-    "Das erwartete Ergebnis gilt für dieses Quartal",
-  "analytics.overview.quarterOnlyBody":
-    "Erwartetes Ergebnis und Abstand zum Ziel gelten für das laufende Geschäftsquartal. Zeige dieses Quartal, um sie zu sehen.",
   "analytics.overview.setTarget": "Ziele setzen",
   "analytics.overview.targetWho":
     "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
@@ -7679,7 +7690,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahl unbeantworteter Leads ist für dich verborgen",
   "analytics.prospect.unansweredFailed":
     "Unbeantwortete Leads konnten nicht gezählt werden",
-  "analytics.prospect.tooFew": "Zu wenige",
   "analytics.prospect.tooFewResponses":
     "Zu wenige beantwortete Leads für eine typische Zeit.",
   "analytics.prospect.upcoming": "Gebuchte Termine",
@@ -7751,6 +7761,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.count": "Anzahl",
   "analytics.team.membersWithheld":
     "Die Einzelleistung ist ausgeschaltet, daher werden keine Zahlen einzelner Mitglieder gezeigt.",
+  "analytics.team.viewMeetings": "Gebuchte Termine ansehen",
+  "analytics.team.memberRecords": "{name}: Datensätze für {metric} ansehen",
   "analytics.team.members": "Mitglieder",
   "analytics.team.member": "Mitglied",
   "analytics.team.meetings": "Gehaltene Termine",
@@ -7786,6 +7798,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Lead wartet noch auf eine erste Antwort",
   "analytics.team.unansweredRow_other":
     "{count} Leads warten noch auf eine erste Antwort",
+  "analytics.team.currentUnansweredBasis":
+    "Offene Leads ohne erste Antwort, unabhängig vom Eingangsdatum",
   "analytics.team.unansweredBasis":
     "In diesem Zeitraum geschrieben, noch ohne Antwort",
   "analytics.team.unansweredHidden":
@@ -7813,7 +7827,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.team.waitingListBasis":
     "Wartet jetzt, die älteste zuerst. Jede Zeile nennt den Interessenten und auf wen er wartet.",
   "analytics.team.qualified": "Qualifiziert",
-  "analytics.team.unanswered": "Unbeantwortet",
+  "analytics.team.unanswered": "Eingänge im Zeitraum ohne Antwort",
   "analytics.team.target": "Monatsziel",
   "analytics.team.targetOf": "{actual} von {target}",
   "analytics.team.noTarget": "Kein Ziel",
@@ -8244,12 +8258,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "review.source.contracts": "Verträge",
   "review.source.incumbent": "Altsystem",
   "analytics.coverageNeverRun":
-    "Noch keine Prüfung gelaufen. Eine ungeprüfte Installation ist nicht dasselbe wie eine fehlerfreie.",
+    "Starte die Eingabeprüfung unter „Prognose“, um die Quellenabdeckung zu sehen.",
   "review.source.offers": "Angebote",
   "review.sourcesUnread":
     "Nicht geprüft: {sources}. Die Befunde unten decken nur ab, was geprüft wurde.",
-  "review.notCheckedYet":
-    "Noch nichts geprüft: Die erste Prüfung wurde noch nicht ausgeführt. Die Werte oben geben die aktuellen Datensätze wieder.",
   "review.firstCheck.title": "Eingabeprüfung starten",
   "review.firstCheck.body":
     "Startet nächtliche Prüfungen und erstellt eine Aufgabe pro betroffenem Deal.",
@@ -13527,6 +13539,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aus deinem Schreibstil herausgenommen",
   "settings.voice.exclusion.ownerRemoved": "Entfernt",
   "settings.voice.exclusion.corpusCleared": "Beim Leeren der Proben entfernt",
+  "settings.voice.sentMailLabel": "Aus gesendeten Mails lernen",
+  "settings.voice.sentMailConsent":
+    "Margince liest bis zu deinen 200 neuesten gesendeten Mails, nur aus deinem eigenen Postfach, nur jetzt und nur, weil du den Button drückst. Zitierte Antworten, Weiterleitungen und Signaturen bleiben außen vor, ebenso Mails, die nur für die Beteiligten bestimmt oder als vertraulich markiert sind. Deine eigenen Worte werden als Schreibproben gespeichert und beim Aufbau deiner Voice DNA an das KI-Modell gesendet. Du kannst einzelne Mails jederzeit entfernen oder alle Proben leeren.",
+  "settings.voice.sentMailButton": "Aus Mails lernen",
+  "settings.voice.sentMailReading": "Gesendete Mails werden gelesen…",
+  "settings.voice.sentMailLearned_one":
+    "Aus {count} deiner gesendeten Mails gelernt. Baue deine Voice DNA auf, um sie zu nutzen.",
+  "settings.voice.sentMailLearned_other":
+    "Aus {count} deiner gesendeten Mails gelernt. Baue deine Voice DNA auf, um sie zu nutzen.",
+  "settings.voice.sentMailNothingNew":
+    "Nichts Neues zu lernen. Jede gefundene Mail ist schon eine Probe oder wurde von dir entfernt.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} Mail wurde ausgelassen, weil sie nur Zitate, eine Signatur oder zu wenige eigene Wörter enthält.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} Mails wurden ausgelassen, weil sie nur Zitate, eine Signatur oder zu wenige eigene Wörter enthalten.",
+  "settings.voice.sentMailNone":
+    "Keine gesendete Mail zum Lernen gefunden. Es zählen nur Mails aus deinem eigenen verbundenen Postfach; private oder vertrauliche Mails bleiben außen vor.",
+  "settings.voice.sentMailFailed":
+    "Gesendete Mails wurden nicht gelesen. {detail}",
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
@@ -18481,6 +18512,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.view.total.decisions_other": "{count} offene Entscheidungen",
   "worklist.view.total.system_one": "{count} ungelöstes Problem",
   "worklist.view.total.system_other": "{count} ungelöste Probleme",
+  "worklist.filter.linked.prospecting":
+    "Nachfassaktionen und Terminarbeit für die Akquise.",
   "worklist.filter.linked.urgent": "Nur dringende Arbeit.",
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
@@ -20282,6 +20315,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
     "Pipeline mit Abschluss in diesem Quartal",
+  "analytics.outlook.selectedSales": "Vertriebsausblick",
   "analytics.outlook.sales": "Quartalsausblick",
   "analytics.outlook.team": "Ausblick zur Teamakquise",
   "analytics.outlook.prospecting": "Akquiseausblick",
