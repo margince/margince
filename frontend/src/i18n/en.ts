@@ -2559,6 +2559,8 @@ export const en = {
   "history.field.filled": "Fields filled in",
   "history.field.guests_added": "Guests added from the calendar",
   "history.field.guest_links_added": "Guests linked from the calendar",
+  "history.field.meeting_documents_added":
+    "Meeting notes linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
   "history.field.guest_answers_changed":
     "Guest answers updated from the calendar",
