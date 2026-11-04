@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/companies/companycontracts.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
+<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/companies/companycontracts.tsx frontend/src/components/contractterms.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
 # Contracts and invoices
 
 Contracts and invoices both live on a company's own page in Margince. The
@@ -64,6 +64,11 @@ months plus 12 months is not 48 months of anything.
 Where a yearly figure is recorded, the contract form shows a **Monthly
 equivalent** beside it. Margince works it out; you never type it. When the
 monthly figure has to be rounded, it says so.
+
+The company's **Contracts** panel and a project's **Contracts** card show each
+contract's payment terms and yearly figure under its name, in the same words,
+for example "Net 30" and "€10,000.00/year (approx. €833.33/month)". A contract
+with neither shows no extra line.
 
 ### The dates
 
