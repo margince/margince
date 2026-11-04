@@ -10,8 +10,8 @@ package gates
 //
 // The server chains a mail consent into its vendor's calendar only for the pair
 // it knows (also_connect answers 422 otherwise). The screens read the frontend's
-// own table to offer Mail and Calendar together and to pick the calendar.
-// A pair only one side knows is a connect button the server refuses.
+// own table to offer Mail and Calendar together, and `oneConsent` to say how
+// many screens follow. A side that disagrees promises what the server refuses.
 
 import (
 	"os"
@@ -24,10 +24,10 @@ import (
 
 const frontendVendorServices = "../frontend/src/format/connectorprovider.ts"
 
-// tsVendorPair reads one `vendor: { mail: "x", calendar: "y" }` entry, in
-// either quote style, so an entry spelled the other way still counts.
+// tsVendorPair reads one `vendor: { mail: "x", calendar: "y", oneConsent: b }`
+// entry, in either quote style, so an entry spelled the other way still counts.
 var tsVendorPair = regexp.MustCompile(
-	`([a-z]+):\s*\{\s*mail:\s*["']([a-z]+)["'],\s*calendar:\s*["']([a-z]+)["'],?\s*\}`)
+	`([a-z]+):\s*\{\s*mail:\s*["']([a-z]+)["'],\s*calendar:\s*["']([a-z]+)["'],\s*oneConsent:\s*(true|false),?\s*\}`)
 
 func TestTheFrontendVendorPairsMatchTheServersChain(t *testing.T) {
 	t.Parallel()
@@ -54,8 +54,10 @@ func TestTheFrontendVendorPairsMatchTheServersChain(t *testing.T) {
 	literal := tsComment.ReplaceAllString(body[open:open+end], " ")
 
 	inTS := map[string]string{}
+	oneConsent := map[string]bool{}
 	for _, m := range tsVendorPair.FindAllStringSubmatch(literal, -1) {
 		inTS[m[2]] = m[3]
+		oneConsent[m[2]] = m[4] == "true"
 	}
 	// Every mail key must have been read: an entry the pattern cannot parse is
 	// one this gate would silently agree with.
@@ -73,6 +75,11 @@ func TestTheFrontendVendorPairsMatchTheServersChain(t *testing.T) {
 		}
 	}
 	for mail, calendar := range inTS {
+		if oneConsent[mail] != compose.SharesConsent(mail) {
+			t.Errorf("%s's VENDOR_SERVICES says oneConsent: %t for %s, and compose.SharesConsent says %t: "+
+				"the screen would promise a different number of consent screens than the vendor shows",
+				frontendVendorServices, oneConsent[mail], mail, compose.SharesConsent(mail))
+		}
 		if _, ok := inGo[mail]; !ok {
 			t.Errorf("%s's VENDOR_SERVICES pairs %s with %s, and compose.PairedCalendars() chains no "+
 				"calendar from %s: the screen would offer a pair the server refuses",

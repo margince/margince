@@ -87,6 +87,10 @@ func sharesConsent(mail, calendar string) bool {
 	return ok && pairedCalendar[mail] == calendar
 }
 
+// SharesConsent reports whether mail's own consent screen also grants its
+// paired calendar, for the gate that holds the frontend's `oneConsent` to it.
+func SharesConsent(mail string) bool { return sharesConsent(mail, pairedCalendar[mail]) }
+
 // withCalendarScopes adds the calendar's scopes to a mail consent URL. The mail
 // app built the URL, so its own scopes, redirect and state stay as they are.
 func withCalendarScopes(consentURL, calendar string) (string, error) {
