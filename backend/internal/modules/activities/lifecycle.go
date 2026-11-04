@@ -134,23 +134,21 @@ func updateActivityInTx(
 		  meeting_status = coalesce($%[9]d, meeting_status),
 		  duration_seconds = coalesce($%[10]d, duration_seconds),
 		  occurred_precision = coalesce($%[14]d, occurred_precision),
-		  -- The language was READ from the text, so an edit to the text retires
-		  -- it. Cleared rather than recomputed: detection lives in Go, and a
-		  -- label that outlived the words it described would send a reply in
-		  -- the language the message used to be in. Cleared, the drafting
-		  -- ladder reads the new text instead, which is the honest answer.
+		  -- The language was READ from the text, so an edit to the text reads
+		  -- it again, from the words as they now stand.
 		  language = CASE
-		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN NULL
+		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
 		    ELSE language END,
 		  done_at = CASE
 		    WHEN $%[8]d IS TRUE AND NOT is_done THEN now()
 		    WHEN $%[8]d IS FALSE THEN NULL
-		    ELSE done_at END%[15]s
+		    ELSE done_at END%[16]s
 		WHERE id = $%[1]d`,
 		row, arg(in.Subject), arg(in.Body), arg(in.OccurredAt), arg(in.DueAt),
 		arg(in.RemindAt), arg(in.AssigneeID), done, arg(in.MeetingStatus), arg(in.DurationSeconds),
 		arg(in.clears("due_at")), arg(in.clears("remind_at")), arg(in.clears("assignee_id")),
-		arg(in.OccurredPrecision), customAssignments(in.customColumns, in.CustomFields, arg))
+		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
+		customAssignments(in.customColumns, in.CustomFields, arg))
 	if _, err := tx.Exec(ctx, query, args...); err != nil {
 		return crmcontracts.Activity{}, err
 	}

@@ -58,6 +58,10 @@ type subjectClaim struct {
 // namesItsSubject: the site cites a record, and the witness is where it is
 // named.
 var namesItsSubject = map[string]subjectClaim{
+	"internal/compose/readerrendering/service.go:Render": {
+		"internal/compose/readerrendering/service.go",
+		"the activity whose subject and body are the request",
+	},
 	"internal/compose/transcriptpropose.go:ask": {
 		"internal/compose/transcriptproposerun.go",
 		"the meeting whose transcript IS the request — the case this citation was built for",

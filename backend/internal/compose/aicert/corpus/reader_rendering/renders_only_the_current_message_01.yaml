@@ -1,0 +1,22 @@
+name: reader_rendering_renders_only_the_current_message
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "email"
+  subject: "Re: Liefertermin"
+  body: "Hallo Herr Weber,\n\npasst, dann bleibt es beim 4. Dezember. Wir bestätigen intern.\n\nGruß\nAnna Roth\n\nAm 28.11.2026 schrieb Tom Weber <tom.weber@example.com>:\n> Können wir den Liefertermin auf den 9. Dezember schieben?\n> Unser Lager ist voll."
+  source: "de"
+  target: "en"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["Weber", "4", "Anna Roth"]
+    omits: ["warehouse", "9 December", "December 9"]
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "Only the current message is rendered: the date stays on 4 December. Nothing of the quoted earlier message (the request to move to 9 December, the full warehouse) appears, because the service cut it before the call."

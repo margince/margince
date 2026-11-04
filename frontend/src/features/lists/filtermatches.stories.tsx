@@ -2,21 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { useFilterPreview, type VocabularyField } from "../../lib/filterdata";
 import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
 import { FilterMatches } from "./filtermatches";
 
-// What a filter selects: the count beside the title, and the first page of
-// rows behind it. The states are the ones a count can be in — on its way,
-// answered, behind the filter on screen, refused — plus the offer of more rows
-// and the answer that nothing matches.
+// What a filter selects: the count and the export beside the title, and the
+// rows behind it a page at a time. The states are the ones a count can be in:
+// on its way, answered and refused. Then a next page on its way, and no match.
 const meta: Meta<typeof FilterMatches> = {
   title: "Patterns/Filters and views/Matching records",
   component: FilterMatches,
@@ -43,7 +42,7 @@ const AND_TREE = newGroup("and", [
   newLeaf("city", "contains", "Mitte"),
 ]);
 
-const ROWS = Array.from({ length: 100 }, (_, index) => ({
+const ROWS = Array.from({ length: 214 }, (_, index) => ({
   id: `p-${index}`,
   full_name: `Contact ${index + 1}`,
   city: "Berlin",
@@ -52,12 +51,17 @@ const ROWS = Array.from({ length: 100 }, (_, index) => ({
 type Answer = Readonly<{ match_count: number; rows: number }>;
 
 /**
- * The preview route: the first answer at once, and every later one as the
- * story says — held, to show a count that is behind, or the same again.
+ * The preview route: the first page at once, and every later page as the story
+ * says. A held page shows one on its way; otherwise the page after the cursor.
  */
-function routes(first: Answer | "held" | "refused", later?: "held"): void {
+function routes(
+  first: Answer | "held" | "refused",
+  later?: "held",
+  extra: RouteMap = {},
+): void {
   let asked = 0;
   installFetchStub({
+    ...extra,
     "POST /filters/preview": (body) => {
       asked += 1;
       if (first === "held" || (asked > 1 && later === "held")) {
@@ -74,38 +78,37 @@ function routes(first: Answer | "held" | "refused", later?: "held"): void {
           403,
         );
       }
-      const limit =
-        typeof body === "object" && body !== null && "limit" in body
-          ? Number(body.limit)
-          : 25;
-      const rows = ROWS.slice(0, Math.min(first.rows, limit));
+      const read = (key: string) =>
+        typeof body === "object" && body !== null && key in body
+          ? Reflect.get(body, key)
+          : undefined;
+      const limit = Number(read("limit") ?? 25);
+      const from = Number(read("cursor") ?? 0);
+      const to = Math.min(first.rows, from + limit);
+      const more = to < first.rows;
       return jsonResponse({
         resource: "contact",
         match_count: first.match_count,
         columns: ["id", "full_name", "city"],
-        rows,
-        truncated: first.match_count > rows.length,
+        rows: ROWS.slice(from, to),
+        truncated: more,
+        next_cursor: more ? String(to) : null,
       });
     },
   });
 }
 
 function Matches({ andJoined = false }: Readonly<{ andJoined?: boolean }>) {
-  const [limit, setLimit] = useState(25);
-  const preview = useFilterPreview(
-    "contact",
-    andJoined ? AND_TREE : TREE,
-    limit,
-  );
+  const tree = andJoined ? AND_TREE : TREE;
+  const preview = useFilterPreview("contact", tree);
   return (
     <FilterMatches
       preview={preview}
       tab="contacts"
+      tree={tree}
       fields={FIELDS}
       named={["city"]}
       andJoined={andJoined}
-      limit={limit}
-      onLimit={setLimit}
     />
   );
 }
@@ -132,10 +135,10 @@ export const Counted: Story = {
   render: story({ match_count: 12, rows: 12 }),
 };
 
-// The reader asked for a bigger page and the answer is still coming: the last
-// count stays on screen, marked as behind.
-export const Stale: Story = {
-  render: story({ match_count: 214, rows: 100 }, "held"),
+// The reader stepped past the hundred rows in hand, and the next page is still
+// coming. The count stays as it was, and the rows wait for the page.
+export const NextPageComing: Story = {
+  render: story({ match_count: 214, rows: 214 }, "held"),
   play: async ({ canvasElement }) => {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
@@ -143,16 +146,37 @@ export const Stale: Story = {
     await user.click(
       await canvas.findByRole("combobox", { name: "Rows per page" }),
     );
-    await user.click(await page.findByRole("option", { name: "50 per page" }));
+    await user.click(await page.findByRole("option", { name: "100 per page" }));
+    await user.click(await canvas.findByRole("button", { name: "Next" }));
+  },
+};
+
+// Export stands beside the count. Pressed, it says a file is coming.
+export const Exporting: Story = {
+  render: () => {
+    routes({ match_count: 12, rows: 12 }, undefined, {
+      "POST /exports": () => new Promise<Response>(() => {}),
+    });
+    return (
+      <StoryProviders>
+        <Matches />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    await user.click(await canvas.findByRole("button", { name: "Export CSV" }));
+    await canvas.findByText("Exporting…");
   },
 };
 
 // A read seat may build a filter and is refused every count.
 export const Refused: Story = { render: story("refused") };
 
-// More match than one page holds, so the page offers up to 100.
-export const ShowMoreOffered: Story = {
-  render: story({ match_count: 214, rows: 100 }),
+// More match than one page holds: the pager walks them a fetch at a time.
+export const ManyPages: Story = {
+  render: story({ match_count: 214, rows: 214 }),
 };
 
 export const NoMatches: Story = {

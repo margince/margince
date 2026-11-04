@@ -589,6 +589,69 @@ func (e ActivityLinkInputEntityType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityReaderRenderingSourceLanguage.
+const (
+	ActivityReaderRenderingSourceLanguageDe ActivityReaderRenderingSourceLanguage = "de"
+	ActivityReaderRenderingSourceLanguageEn ActivityReaderRenderingSourceLanguage = "en"
+	ActivityReaderRenderingSourceLanguageVi ActivityReaderRenderingSourceLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingSourceLanguage enum.
+func (e ActivityReaderRenderingSourceLanguage) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingSourceLanguageDe:
+		return true
+	case ActivityReaderRenderingSourceLanguageEn:
+		return true
+	case ActivityReaderRenderingSourceLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingTargetLanguage.
+const (
+	ActivityReaderRenderingTargetLanguageDe ActivityReaderRenderingTargetLanguage = "de"
+	ActivityReaderRenderingTargetLanguageEn ActivityReaderRenderingTargetLanguage = "en"
+	ActivityReaderRenderingTargetLanguageVi ActivityReaderRenderingTargetLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingTargetLanguage enum.
+func (e ActivityReaderRenderingTargetLanguage) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingTargetLanguageDe:
+		return true
+	case ActivityReaderRenderingTargetLanguageEn:
+		return true
+	case ActivityReaderRenderingTargetLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReaderRenderingRequestLocale.
+const (
+	ActivityReaderRenderingRequestLocaleDe ActivityReaderRenderingRequestLocale = "de"
+	ActivityReaderRenderingRequestLocaleEn ActivityReaderRenderingRequestLocale = "en"
+	ActivityReaderRenderingRequestLocaleVi ActivityReaderRenderingRequestLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReaderRenderingRequestLocale enum.
+func (e ActivityReaderRenderingRequestLocale) Valid() bool {
+	switch e {
+	case ActivityReaderRenderingRequestLocaleDe:
+		return true
+	case ActivityReaderRenderingRequestLocaleEn:
+		return true
+	case ActivityReaderRenderingRequestLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityReferenceContentState.
 const (
 	ActivityReferenceContentStateAvailable ActivityReferenceContentState = "available"
@@ -905,6 +968,7 @@ const (
 	AiActivityKindOwedVerdict                   AiActivityKind = "owed_verdict"
 	AiActivityKindProposeRoles                  AiActivityKind = "propose_roles"
 	AiActivityKindRateExtract                   AiActivityKind = "rate_extract"
+	AiActivityKindReaderRendering               AiActivityKind = "reader_rendering"
 	AiActivityKindReportInterpret               AiActivityKind = "report_interpret"
 	AiActivityKindReportSetup                   AiActivityKind = "report_setup"
 	AiActivityKindRequestSettlement             AiActivityKind = "request_settlement"
@@ -965,6 +1029,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindProposeRoles:
 		return true
 	case AiActivityKindRateExtract:
+		return true
+	case AiActivityKindReaderRendering:
 		return true
 	case AiActivityKindReportInterpret:
 		return true
@@ -1489,6 +1555,7 @@ const (
 	AiTaskOwedVerdict                   AiTask = "owed_verdict"
 	AiTaskProposeRoles                  AiTask = "propose_roles"
 	AiTaskRateExtract                   AiTask = "rate_extract"
+	AiTaskReaderRendering               AiTask = "reader_rendering"
 	AiTaskReportInterpret               AiTask = "report_interpret"
 	AiTaskReportSetup                   AiTask = "report_setup"
 	AiTaskRequestSettlement             AiTask = "request_settlement"
@@ -1546,6 +1613,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskProposeRoles:
 		return true
 	case AiTaskRateExtract:
+		return true
+	case AiTaskReaderRendering:
 		return true
 	case AiTaskReportInterpret:
 		return true
@@ -10720,6 +10789,27 @@ func (e EmailDeliveryState) Valid() bool {
 	}
 }
 
+// Defines values for EmailPresentationLanguage.
+const (
+	EmailPresentationLanguageDe EmailPresentationLanguage = "de"
+	EmailPresentationLanguageEn EmailPresentationLanguage = "en"
+	EmailPresentationLanguageVi EmailPresentationLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the EmailPresentationLanguage enum.
+func (e EmailPresentationLanguage) Valid() bool {
+	switch e {
+	case EmailPresentationLanguageDe:
+		return true
+	case EmailPresentationLanguageEn:
+		return true
+	case EmailPresentationLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailPresentationLifecycle.
 const (
 	EmailPresentationLifecycleDelivered EmailPresentationLifecycle = "delivered"
@@ -16136,6 +16226,7 @@ const (
 	NotificationClassCapture         NotificationClass = "capture"
 	NotificationClassCoach           NotificationClass = "coach"
 	NotificationClassLeadSla         NotificationClass = "lead_sla"
+	NotificationClassProjectHealth   NotificationClass = "project_health"
 	NotificationClassSystem          NotificationClass = "system"
 )
 
@@ -16151,6 +16242,8 @@ func (e NotificationClass) Valid() bool {
 	case NotificationClassCoach:
 		return true
 	case NotificationClassLeadSla:
+		return true
+	case NotificationClassProjectHealth:
 		return true
 	case NotificationClassSystem:
 		return true
@@ -29097,7 +29190,7 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
-	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// Language What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
@@ -29175,7 +29268,7 @@ type ActivityInvitationStatus string
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
 
-// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// ActivityLanguage What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
@@ -29264,6 +29357,49 @@ type ActivityListResponse struct {
 	Data []Activity `json:"data"`
 	Page PageInfo   `json:"page"`
 }
+
+// ActivityReaderRendering One activity's text in one reader's language, written for this reader and stored
+// nowhere.
+type ActivityReaderRendering struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Body The text in the target language, null when the activity has none.
+	Body        *string   `json:"body,omitempty"`
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// ModelUsed The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked.
+	ModelUsed *string `json:"model_used,omitempty"`
+
+	// SourceLanguage The language the original is written in, null when it could not be told.
+	SourceLanguage *ActivityReaderRenderingSourceLanguage `json:"source_language,omitempty"`
+
+	// Subject The subject in the target language, null when the activity has none.
+	Subject        *string                               `json:"subject,omitempty"`
+	TargetLanguage ActivityReaderRenderingTargetLanguage `json:"target_language"`
+
+	// Unchanged True when the original is already in the target language. `subject` and `body`
+	// are then the original text.
+	Unchanged bool `json:"unchanged"`
+}
+
+// ActivityReaderRenderingSourceLanguage The language the original is written in, null when it could not be told.
+type ActivityReaderRenderingSourceLanguage string
+
+// ActivityReaderRenderingTargetLanguage defines model for ActivityReaderRendering.TargetLanguage.
+type ActivityReaderRenderingTargetLanguage string
+
+// ActivityReaderRenderingRequest defines model for ActivityReaderRenderingRequest.
+type ActivityReaderRenderingRequest struct {
+	// Locale The language to show the text in, normally the reader's interface language.
+	// Absent means the language the reader chose for their seat, else the
+	// installation's base language.
+	Locale *ActivityReaderRenderingRequestLocale `json:"locale,omitempty"`
+}
+
+// ActivityReaderRenderingRequestLocale The language to show the text in, normally the reader's interface language.
+// Absent means the language the reader chose for their seat, else the
+// installation's base language.
+type ActivityReaderRenderingRequestLocale string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.
@@ -30484,10 +30620,15 @@ type AiModelRate struct {
 	// where the embeddings lane binds and a `decisions` one where the decision lane
 	// binds, and a zero output price cannot tell them apart — every local chat row
 	// carries one too.
-	Lane          AiModelRateLane `json:"lane"`
-	ModelId       string          `json:"model_id"`
-	OutputPerMtok string          `json:"output_per_mtok"`
-	Provider      string          `json:"provider"`
+	Lane AiModelRateLane `json:"lane"`
+
+	// LongContext The second price band of a model that charges more for a call whose prompt is longer than
+	// `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+	// model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+	LongContext   *AiModelRateLongContext `json:"long_context,omitempty"`
+	ModelId       string                  `json:"model_id"`
+	OutputPerMtok string                  `json:"output_per_mtok"`
+	Provider      string                  `json:"provider"`
 
 	// Source Who wrote this price. `manual` was typed into the sheet and the daily sync never
 	// rewrites it; `catalogue` was read from models.dev or OpenRouter by the sync; `seed` was
@@ -30514,6 +30655,17 @@ type AiModelRateListResponse struct {
 	Data []AiModelRate `json:"data"`
 }
 
+// AiModelRateLongContext The second price band of a model that charges more for a call whose prompt is longer than
+// `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+// model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+type AiModelRateLongContext struct {
+	AboveTokens       int    `json:"above_tokens"`
+	CacheReadPerMtok  string `json:"cache_read_per_mtok"`
+	CacheWritePerMtok string `json:"cache_write_per_mtok"`
+	InputPerMtok      string `json:"input_per_mtok"`
+	OutputPerMtok     string `json:"output_per_mtok"`
+}
+
 // AiModelRateProviderRefresh defines model for AiModelRateProviderRefresh.
 type AiModelRateProviderRefresh struct {
 	// Added Models priced for the first time today.
@@ -30536,6 +30688,10 @@ type AiModelRateProviderRefresh struct {
 
 	// Provider The provider as the routing document spells it.
 	Provider string `json:"provider"`
+
+	// Review Model ids whose price carries a long-context band the catalogue does not publish, and
+	// whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
+	Review *[]string `json:"review,omitempty"`
 
 	// Unchanged Models already at the catalogue price.
 	Unchanged int `json:"unchanged"`
@@ -44031,6 +44187,11 @@ type EmailPresentation struct {
 	From           []EmailParty       `json:"from"`
 	Id             openapi_types.UUID `json:"id"`
 
+	// Language The language the message is written in, as `Activity.language` records it. Null
+	// when withheld, and when it could not be told. A client offers the reader's own
+	// language beside a message in another one or in an unknown one.
+	Language *EmailPresentationLanguage `json:"language,omitempty"`
+
 	// Lifecycle What kind of message this is. One value today: this read serves delivered
 	// correspondence. A scheduled send and a draft awaiting approval will borrow the
 	// frame when the reads that serve them land, and they are not listed until then.
@@ -44063,6 +44224,11 @@ type EmailPresentation struct {
 	// Version The activity's version, for the If-Match its own actions send.
 	Version RowVersion `json:"version"`
 }
+
+// EmailPresentationLanguage The language the message is written in, as `Activity.language` records it. Null
+// when withheld, and when it could not be told. A client offers the reader's own
+// language beside a message in another one or in an unknown one.
+type EmailPresentationLanguage string
 
 // EmailPresentationLifecycle What kind of message this is. One value today: this read serves delivered
 // correspondence. A scheduled send and a draft awaiting approval will borrow the
@@ -44662,17 +44828,21 @@ type FilterPreview struct {
 	// length of `rows`. This is the number a builder shows a human while
 	// they decide whether the filter is right, so it is a full count rather
 	// than a page size dressed up as one.
-	MatchCount int                   `json:"match_count"`
+	MatchCount int `json:"match_count"`
+
+	// NextCursor Opaque cursor for the next page, or null if none.
+	NextCursor *string               `json:"next_cursor,omitempty"`
 	Resource   FilterPreviewResource `json:"resource"`
 
-	// Rows Up to `limit` matching rows as column→value maps, ordered by id.
+	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
+	// after the request's `cursor` when it names one.
 	// Deliberately the export's projection rather than a shape invented for
 	// this screen: a preview that showed different columns than the export
 	// of the same filter would be a preview of something else.
 	Rows []map[string]interface{} `json:"rows"`
 
-	// Truncated Whether `match_count` exceeds the rows returned — so a caller can say
-	// "showing 25 of 812" without comparing lengths and guessing.
+	// Truncated Whether more rows follow this page. It is true exactly when
+	// `next_cursor` is set.
 	Truncated bool `json:"truncated"`
 }
 
@@ -44681,6 +44851,10 @@ type FilterPreviewResource string
 
 // FilterPreviewRequest A candidate filter to evaluate without saving it.
 type FilterPreviewRequest struct {
+	// Cursor Opaque keyset cursor: a previous answer's `next_cursor`, to read the
+	// page after it. Absent reads the first page.
+	Cursor *string `json:"cursor,omitempty"`
+
 	// Filter The canonical filter tree — the same representation a dynamic list's
 	// `definition` and a saved view's `query` carry, and untyped here for
 	// the same reason they are. The grammar's authority is the predicate
@@ -44691,8 +44865,8 @@ type FilterPreviewRequest struct {
 	// one a list or view accepts.
 	Filter map[string]interface{} `json:"filter"`
 
-	// Limit How many rows to sample. The COUNT is unaffected by this — it is the
-	// full match count for the caller, not the size of the page.
+	// Limit The page size. The COUNT is unaffected by this — it is the full match
+	// count for the caller on every page, not the size of the page.
 	Limit    *int                         `json:"limit,omitempty"`
 	Resource FilterPreviewRequestResource `json:"resource"`
 }
@@ -44722,7 +44896,8 @@ type FilterProposalResource string
 // FilterProposalRequest A list described in plain words, to be turned into filter clauses.
 type FilterProposalRequest struct {
 	// Locale The reader's interface language, which the reasons in `unsupported` are
-	// written in. Absent means the installation's base language.
+	// written in. Absent means the language the reader chose for their seat, else the
+	// installation's base language.
 	Locale   *FilterProposalRequestLocale  `json:"locale,omitempty"`
 	Resource FilterProposalRequestResource `json:"resource"`
 
@@ -44731,7 +44906,8 @@ type FilterProposalRequest struct {
 }
 
 // FilterProposalRequestLocale The reader's interface language, which the reasons in `unsupported` are
-// written in. Absent means the installation's base language.
+// written in. Absent means the language the reader chose for their seat, else the
+// installation's base language.
 type FilterProposalRequestLocale string
 
 // FilterProposalRequestResource defines model for FilterProposalRequest.Resource.
@@ -53205,7 +53381,7 @@ type ProjectHealthAssessment struct {
 	Note      *string            `json:"note,omitempty"`
 	ProjectId openapi_types.UUID `json:"project_id"`
 
-	// Source What recorded this assessment.
+	// Source What recorded this assessment: `human` for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading.
 	Source *string `json:"source,omitempty"`
 
 	// SourceAuthor Who is on record as having judged it, when that is not whoever typed it in.
@@ -58114,6 +58290,10 @@ type SetAiModelRateRequest struct {
 
 	// CacheWritePerMtok USD per 1M cache-write tokens.
 	CacheWritePerMtok string `json:"cache_write_per_mtok"`
+
+	// ClearLongContext True drops the model's long-context band, so every call pays the prices above. Omitted
+	// or false keeps the band the model already carries.
+	ClearLongContext *bool `json:"clear_long_context,omitempty"`
 
 	// EffectiveDate A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
@@ -70703,6 +70883,30 @@ type CorrectProjectHealthAssessmentParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// UndoProjectHealthAssessmentParams defines parameters for UndoProjectHealthAssessment.
+type UndoProjectHealthAssessmentParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // SetProjectStakeholderParams defines parameters for SetProjectStakeholder.
 type SetProjectStakeholderParams struct {
 	// XApprovalToken The id of the approval that authorizes this one 🟡 call — the id the `403 approval_required`
@@ -72670,6 +72874,9 @@ type DraftEmailJSONRequestBody = DraftSteering
 
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
+
+// RenderActivityForReaderJSONRequestBody defines body for RenderActivityForReader for application/json ContentType.
+type RenderActivityForReaderJSONRequestBody = ActivityReaderRenderingRequest
 
 // RelinkActivityJSONRequestBody defines body for RelinkActivity for application/json ContentType.
 type RelinkActivityJSONRequestBody RelinkActivityJSONBody
@@ -85424,6 +85631,9 @@ type ServerInterface interface {
 	// Undo filing this activity under a project. Requires a stated reason; audited.
 	// (POST /activities/{id}/project-filing/undo)
 	UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id)
+	// Show one note, mail or meeting in the reader's own language.
+	// (POST /activities/{id}/reader-rendering)
+	RenderActivityForReader(w http.ResponseWriter, r *http.Request, id Id)
 	// Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving).
 	// (POST /activities/{id}/relink)
 	RelinkActivity(w http.ResponseWriter, r *http.Request, id Id, params RelinkActivityParams)
@@ -87689,6 +87899,9 @@ type ServerInterface interface {
 	// Correct one reading, keeping when it was said.
 	// (POST /projects/{id}/health-assessments/{assessment_id}/corrections)
 	CorrectProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params CorrectProjectHealthAssessmentParams)
+	// Undo a reading the health job wrote.
+	// (POST /projects/{id}/health-assessments/{assessment_id}/undo)
+	UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params UndoProjectHealthAssessmentParams)
 	// List a project's stakeholders (project↔contact relationships).
 	// (GET /projects/{id}/stakeholders)
 	ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id)
@@ -88532,6 +88745,12 @@ func (_ Unimplemented) GetActivityProjectFiling(w http.ResponseWriter, r *http.R
 // Undo filing this activity under a project. Requires a stated reason; audited.
 // (POST /activities/{id}/project-filing/undo)
 func (_ Unimplemented) UndoActivityProjectFiling(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Show one note, mail or meeting in the reader's own language.
+// (POST /activities/{id}/reader-rendering)
+func (_ Unimplemented) RenderActivityForReader(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -93053,6 +93272,12 @@ func (_ Unimplemented) CorrectProjectHealthAssessment(w http.ResponseWriter, r *
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Undo a reading the health job wrote.
+// (POST /projects/{id}/health-assessments/{assessment_id}/undo)
+func (_ Unimplemented) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request, id Id, assessmentId openapi_types.UUID, params UndoProjectHealthAssessmentParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List a project's stakeholders (project↔contact relationships).
 // (GET /projects/{id}/stakeholders)
 func (_ Unimplemented) ListProjectStakeholders(w http.ResponseWriter, r *http.Request, id Id) {
@@ -95659,6 +95884,38 @@ func (siw *ServerInterfaceWrapper) UndoActivityProjectFiling(w http.ResponseWrit
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoActivityProjectFiling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenderActivityForReader operation middleware
+func (siw *ServerInterfaceWrapper) RenderActivityForReader(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenderActivityForReader(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -128043,6 +128300,71 @@ func (siw *ServerInterfaceWrapper) CorrectProjectHealthAssessment(w http.Respons
 	handler.ServeHTTP(w, r)
 }
 
+// UndoProjectHealthAssessment operation middleware
+func (siw *ServerInterfaceWrapper) UndoProjectHealthAssessment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "assessment_id" -------------
+	var assessmentId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "assessment_id", chi.URLParam(r, "assessment_id"), &assessmentId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "assessment_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoProjectHealthAssessmentParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoProjectHealthAssessment(w, r, id, assessmentId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListProjectStakeholders operation middleware
 func (siw *ServerInterfaceWrapper) ListProjectStakeholders(w http.ResponseWriter, r *http.Request) {
 
@@ -138212,6 +138534,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/project-filing/undo", wrapper.UndoActivityProjectFiling)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activities/{id}/reader-rendering", wrapper.RenderActivityForReader)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/relink", wrapper.RelinkActivity)
 	})
 	r.Group(func(r chi.Router) {
@@ -140463,6 +140788,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/corrections", wrapper.CorrectProjectHealthAssessment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/projects/{id}/health-assessments/{assessment_id}/undo", wrapper.UndoProjectHealthAssessment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/projects/{id}/stakeholders", wrapper.ListProjectStakeholders)

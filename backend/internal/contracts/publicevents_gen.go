@@ -670,6 +670,7 @@ const (
 	PipelineUpdated                       SubscribableEventType = "pipeline.updated"
 	ProjectArchived                       SubscribableEventType = "project.archived"
 	ProjectCreated                        SubscribableEventType = "project.created"
+	ProjectHealthAssessed                 SubscribableEventType = "project.health_assessed"
 	ProjectPhaseChanged                   SubscribableEventType = "project.phase_changed"
 	ProjectUpdated                        SubscribableEventType = "project.updated"
 	RelationshipNudgeDecided              SubscribableEventType = "relationship_nudge.decided"
@@ -928,6 +929,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ProjectArchived:
 		return true
 	case ProjectCreated:
+		return true
+	case ProjectHealthAssessed:
 		return true
 	case ProjectPhaseChanged:
 		return true
@@ -2413,6 +2416,18 @@ type PublicEventProjectCreated struct {
 	Phase string `json:"phase"`
 }
 
+// PublicEventProjectHealthAssessed Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user or the health job. The project row itself is not written, so no project.updated goes with it.
+type PublicEventProjectHealthAssessed struct {
+	// AssessmentId The appended reading.
+	AssessmentId openapi_types.UUID `json:"assessment_id"`
+
+	// Source human for a user, ai for the health job, undo for a user undoing an AI reading.
+	Source string `json:"source"`
+
+	// State on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again.
+	State string `json:"state"`
+}
+
 // PublicEventProjectPhaseChanged Payload for project.phase_changed — a project moved along the phase ladder. Emitted INSTEAD of project.updated, and written from the same transaction as its phase-history row, so "where does this stand" and "how did it get there" can never disagree.
 type PublicEventProjectPhaseChanged struct {
 	// FromPhase Phase the project left (absent on the creation row).
@@ -3333,6 +3348,10 @@ func (PublicEventProjectCreated) EventType() string { return "project.created" }
 
 func (PublicEventProjectCreated) EntityType() string { return "project" }
 
+func (PublicEventProjectHealthAssessed) EventType() string { return "project.health_assessed" }
+
+func (PublicEventProjectHealthAssessed) EntityType() string { return "project" }
+
 func (PublicEventProjectPhaseChanged) EventType() string { return "project.phase_changed" }
 
 func (PublicEventProjectPhaseChanged) EntityType() string { return "project" }
@@ -3585,6 +3604,7 @@ var PublicEventVersions = map[string]int{
 	"pipeline.updated":                          1,
 	"project.archived":                          1,
 	"project.created":                           1,
+	"project.health_assessed":                   1,
 	"project.phase_changed":                     1,
 	"project.updated":                           1,
 	"relationship_nudge.decided":                1,
@@ -3734,6 +3754,7 @@ var PublicEventSamples = map[string]string{
 	"pipeline.updated":                          "{\"changed_fields\":{}}",
 	"project.archived":                          "{}",
 	"project.created":                           "{\"company_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"key\":\"Sample key\",\"name\":\"Sample name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"phase\":\"Sample phase\"}",
+	"project.health_assessed":                   "{\"assessment_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source\":\"Sample source\",\"state\":\"Sample state\"}",
 	"project.phase_changed":                     "{\"from_phase\":\"Sample from phase\",\"reason\":\"Sample reason\",\"to_phase\":\"Sample to phase\"}",
 	"project.updated":                           "{\"changed_fields\":{}}",
 	"relationship_nudge.decided":                "{\"action\":\"dismissed\",\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"dismissed_until\":\"2026-10-14T09:12:00Z\",\"permanent\":true}",

@@ -51,6 +51,7 @@ export function ListTable<Row>({
   rowKey,
   rowRoute,
   unit,
+  layoutKey = unit,
   chips = [],
   dataChips = [],
   views = [],
@@ -101,6 +102,11 @@ export function ListTable<Row>({
   rowRoute?: (row: Row) => Route;
   /** Message key for the plural noun in the count and the empty state. */
   unit: MessageKey;
+  /**
+   * Names the table for the column widths and order it remembers. Defaults to
+   * `unit`; two tables that share a unit pass keys of their own.
+   */
+  layoutKey?: string;
   chips?: readonly FilterSpec[];
   /**
    * Chips whose options are runtime record names rather than message keys:
@@ -416,8 +422,7 @@ export function ListTable<Row>({
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
       bodyRef={rowsScroller}
-      // The unit key names the table for the widths it remembers.
-      widthsKey={unit}
+      widthsKey={layoutKey}
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
       bodyCount={bodyCount}
