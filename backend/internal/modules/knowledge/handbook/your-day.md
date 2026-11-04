@@ -183,7 +183,7 @@ The work counts come from the current Worklist read. The greeting's email count 
 ### Check applied changes
 **Check applied changes**, on **Today**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list. **Details** shows who made a change and when, each value before and after, and the email, call or meeting it came from. A source opens on a press, and one you cannot open is not named.
 
-**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
+**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist. When Margince changed three or more of your deals, they become one row: "Margince updated 3 of your deals: 1 closed, 2 re-dated". It counts deals and names the five worth the most, each with **Undo**. **View all** and **Undo all** end the row. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed).
 
 A deal that changed again reads "This deal changed again. Open the deal to review its current state."
 Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
@@ -355,7 +355,7 @@ A task that is late, or whose reminder is due, stays in Today. Also called: late
 When there is nothing: "No actions taken on your behalf today."
 
 **Undo** puts the record back the way it was before a deal change. A change already undone
-stays in history with its status and has no action to take.
+stays in history with its status and has no action to take. **Undo all** takes back every change Margince made to your deals that you have not kept or undone.
 
 ## For a team lead
 
@@ -370,7 +370,7 @@ Your brief and digest stay personal. **Team**, **All**, and teammate views show 
 not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 
 **Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due,
-promises due. Unassigned work gets its own row.
+promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone.
 
 **Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
 
@@ -387,7 +387,7 @@ You can also add a note to a teammate's Worklist with **Add note** ("A short not
 
 ### What is in the morning email?
 
-It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing.
+It names your next customer actions and their context from Home, even without an AI summary, and says when sources are missing. When Margince changed your deals overnight, it says "Margince changed 2 of your deals last night" and names up to five with links. **Undo or view all** opens Home. Such a morning is sent even with nothing else. A change you undo first is left out.
 
 Under Settings → Notifications, choose email, your working hours or a whole hour, and whether to combine your daily digest.
 Mail follows your working days and local clock, with a three-hour window that can end on the next day.
