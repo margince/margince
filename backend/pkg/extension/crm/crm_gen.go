@@ -2040,7 +2040,10 @@ type Company struct {
 
 	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
 	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
-	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS company: the row write gate `writable` asks, plus the `company:delete` grant or being the company's owner with `company:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
 	AssessAgainstEntityId *string `json:"assess_against_entity_id,omitempty"`
@@ -4241,6 +4244,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "address_country_mismatch")
 	}
 
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
 	if raw, found := object["archived_at"]; found {
 		err = json.Unmarshal(raw, &a.ArchivedAt)
 		if err != nil {
@@ -4583,6 +4594,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
 		}
 	}
 
