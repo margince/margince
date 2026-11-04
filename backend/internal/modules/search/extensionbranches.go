@@ -84,7 +84,8 @@ func admittedExtensionSQL(ctx context.Context, types []string, query string, hea
 		}
 		branches = append(branches, fmt.Sprintf(
 			`SELECT $%d::text AS rtype, t.id, %s AS title, NULL::text AS snippet,
-			        (CASE WHEN strpos(%s, $%d::text) = 1 THEN 1.0 ELSE 0.5 END)::float8 AS score, %s
+			        (CASE WHEN strpos(%s, $%d::text) = 1 THEN 1.0 ELSE 0.5 END)::float8 AS score, %s,
+			        NULL::text AS identifier_match
 			 FROM %s t WHERE t.archived_at IS NULL AND %s AND %s`,
 			arg(kind.Name), column,
 			title, arg(words[0]), noEmployer,
