@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -40,7 +41,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *twoDoors {
 	if err != nil {
 		t.Fatalf("starting the site read's fake model path: %v", err)
 	}
-	providers, err := integrations.NewRegistry(integrations.NewOfflineProvider(0, time.Now))
+	providers, err := integrations.NewRegistry(integrations.NewOfflineProvider(0, func() time.Time { return clocktest.Now(t) }))
 	if err != nil {
 		t.Fatalf("registering the offline data provider: %v", err)
 	}

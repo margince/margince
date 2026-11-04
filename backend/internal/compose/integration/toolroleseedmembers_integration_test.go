@@ -58,9 +58,9 @@ func (s sweepSeed) ownerExec(sql string, args ...any) {
 
 func uniqueEmail() string { return "sweep-" + ids.NewV7().String() + "@role-sweep.test" }
 
-// peopleSeeders make colleagues in the states the member and access calls
+// memberSeeders make colleagues in the states the member and access calls
 // need: active, invited, deactivated, retiring, and on the admin's team.
-func peopleSeeders(s sweepSeed) map[string]func() string {
+func memberSeeders(s sweepSeed) map[string]func() string {
 	invited := func(role string, teams ...string) string {
 		email := uniqueEmail()
 		body := AnyMap{"email": email, "display_name": "Role Sweep", "role": role}

@@ -223,7 +223,6 @@ internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks
 internal/modules/activities/activityread.go#func scanActivity
-internal/modules/activities/attachment.go#func resolveAttachmentParent
 internal/modules/activities/channelsend.go#method outboundChannelMessage.activity
 internal/modules/activities/companyscope.go#func ActivityWithinProject
 internal/modules/activities/companyscope.go#func CompanyLinkedActivityExists

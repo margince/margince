@@ -76,7 +76,7 @@ func finishedSiteRead(s sweepSeed) string {
 		s.t.Fatalf("beginning the site read: %v", err)
 	}
 	// The draft reads what the company already says, so confirming it asks no
-	// one to choose between the read and a value a person typed.
+	// one to choose between the read and a value someone typed.
 	var current struct {
 		OfferSummary string `json:"offer_summary"`
 		ICP          string `json:"icp"`
