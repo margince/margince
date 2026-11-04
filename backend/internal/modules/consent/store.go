@@ -29,9 +29,9 @@ type Store struct {
 	// module never imports a sibling; nil on any installation that has not
 	// wired it, which the page renders as an omission rather than a blank.
 	installationName InstallationNameReader
-	// country selects which jurisdiction's messaging rules a decision is taken
-	// under. Injected by compose because the setting lives in identity
-	// (installationcountry.go).
+	// country is the default legal entity's country, the data-protection
+	// selector's fallback. Injected by compose because the setting lives in
+	// identity (installationcountry.go).
 	country InstallationCountryReader
 	// zone and retireCase serve a privacy request's proof
 	// (requestproofseams.go).

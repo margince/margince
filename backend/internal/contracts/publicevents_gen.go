@@ -695,6 +695,7 @@ const (
 	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
+	UserTimezoneChanged                   SubscribableEventType = "user_timezone.changed"
 	UserUpdated                           SubscribableEventType = "user.updated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
 	VoiceCorpusChanged                    SubscribableEventType = "voice.corpus_changed"
@@ -979,6 +980,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserPasswordLinkIssued:
 		return true
 	case UserReactivated:
+		return true
+	case UserTimezoneChanged:
 		return true
 	case UserUpdated:
 		return true
@@ -2728,6 +2731,15 @@ type PublicEventUserReactivated struct {
 	UserId openapi_types.UUID `json:"user_id"`
 }
 
+// PublicEventUserTimezoneChanged Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+type PublicEventUserTimezoneChanged struct {
+	// Chosen True when the member picked the zone themselves. A later browser guess never replaces a chosen zone.
+	Chosen bool `json:"chosen"`
+
+	// Timezone The IANA name now stored, such as Europe/Berlin.
+	Timezone string `json:"timezone"`
+}
+
 // PublicEventUserUpdated defines model for PublicEventUserUpdated.
 type PublicEventUserUpdated struct {
 	By     openapi_types.UUID `json:"by"`
@@ -3454,6 +3466,10 @@ func (PublicEventUserReactivated) EventType() string { return "user.reactivated"
 
 func (PublicEventUserReactivated) EntityType() string { return "user" }
 
+func (PublicEventUserTimezoneChanged) EventType() string { return "user_timezone.changed" }
+
+func (PublicEventUserTimezoneChanged) EntityType() string { return "user" }
+
 func (PublicEventUserUpdated) EventType() string { return "user.updated" }
 
 func (PublicEventUserUpdated) EntityType() string { return "user" }
@@ -3636,6 +3652,7 @@ var PublicEventVersions = map[string]int{
 	"user_display_name.changed":                 1,
 	"user_greeting_name.changed":                1,
 	"user_locale.changed":                       1,
+	"user_timezone.changed":                     1,
 	"voice.build_changed":                       1,
 	"voice.corpus_changed":                      1,
 	"voice.draft_outcome_recorded":              1,
@@ -3786,6 +3803,7 @@ var PublicEventSamples = map[string]string{
 	"user_display_name.changed":                 "{\"display_name\":\"Sample display name\"}",
 	"user_greeting_name.changed":                "{\"greeting_name\":\"Sample greeting name\"}",
 	"user_locale.changed":                       "{\"locale\":\"Sample locale\"}",
+	"user_timezone.changed":                     "{\"chosen\":true,\"timezone\":\"Sample timezone\"}",
 	"voice.build_changed":                       "{\"build_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"candidate_action\":\"Sample candidate action\",\"next_attempt_at\":\"2026-10-14T09:12:00Z\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"result_version\":1,\"source_count\":1,\"source_hash\":\"Sample source hash\",\"stage\":\"Sample stage\",\"status\":\"Sample status\",\"status_code\":\"Sample status code\"}",
 	"voice.corpus_changed":                      "{\"action\":\"Sample action\",\"origin\":\"Sample origin\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"register\":\"Sample register\",\"source_count\":1,\"source_hash\":\"Sample source hash\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"word_delta\":1}",
 	"voice.draft_outcome_recorded":              "{\"outcome\":\"Sample outcome\",\"profile_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"qualifies_as_source\":true,\"transformation_count\":1}",

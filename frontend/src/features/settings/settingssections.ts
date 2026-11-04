@@ -18,6 +18,8 @@ export const SETTINGS_SECTIONS = {
     "auth.signOut",
     "mfa.title",
     "locale.switchLabel",
+    "account.languageCard",
+    "account.timezoneLabel",
     "settings.appearance",
   ],
   meetings: [
@@ -35,7 +37,6 @@ export const SETTINGS_SECTIONS = {
     "scheduling.yourName",
     "scheduling.reminderRow",
     "scheduling.acceptBookings",
-    "workingHours.timezone",
   ],
   voice: [
     "settings.voice.start.addTitle",

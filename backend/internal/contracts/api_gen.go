@@ -19786,6 +19786,24 @@ func (e SaveMyLocaleRequestLocale) Valid() bool {
 	}
 }
 
+// Defines values for SaveMyTimezoneRequestSource.
+const (
+	SaveMyTimezoneRequestSourceBrowser SaveMyTimezoneRequestSource = "browser"
+	SaveMyTimezoneRequestSourceChosen  SaveMyTimezoneRequestSource = "chosen"
+)
+
+// Valid indicates whether the value is a known member of the SaveMyTimezoneRequestSource enum.
+func (e SaveMyTimezoneRequestSource) Valid() bool {
+	switch e {
+	case SaveMyTimezoneRequestSourceBrowser:
+		return true
+	case SaveMyTimezoneRequestSourceChosen:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SavedViewSharedScope.
 const (
 	SavedViewSharedScopePrivate   SavedViewSharedScope = "private"
@@ -57061,6 +57079,39 @@ type SaveMyLocaleRequest struct {
 // with no catalog renders as raw message keys.
 type SaveMyLocaleRequestLocale string
 
+// SaveMyTimezoneRequest defines model for SaveMyTimezoneRequest.
+type SaveMyTimezoneRequest struct {
+	// Source `browser` is the app's guess from the browser, stored only while no
+	// zone is stored. `chosen` is the person's own pick, always stored.
+	Source SaveMyTimezoneRequestSource `json:"source"`
+
+	// Timezone An IANA zone name, such as `Europe/Berlin`.
+	Timezone string `json:"timezone"`
+}
+
+// SaveMyTimezoneRequestSource `browser` is the app's guess from the browser, stored only while no
+// zone is stored. `chosen` is the person's own pick, always stored.
+type SaveMyTimezoneRequestSource string
+
+// SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
+// own time zone, set through `saveMyTimezone`.
+type SaveWorkingHoursRequest struct {
+	// Days The days worked, as ISO-8601 weekday numbers — 1 is Monday.
+	Days []int `json:"days"`
+
+	// EndTime The minute the working day ends, exclusive. `24:00` means until midnight.
+	EndTime string `json:"end_time"`
+
+	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
+	StartTime string `json:"start_time"`
+
+	// Timezone An older client's way to set the caller's time zone with the hours. When
+	// present it is stored as the caller's own chosen zone, in the same
+	// transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Timezone *string `json:"timezone,omitempty"`
+}
+
 // SavedView A per-user saved view (columns, sort, filter state) over one resource. Mirrors the `saved_view` table. V1 is private (owner-only); shared/team views are a fast-follow.
 type SavedView struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -61635,9 +61686,12 @@ type User struct {
 	// TeamIds The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have.
 	TeamIds *[]openapi_types.UUID `json:"team_ids,omitempty"`
 
-	// Timezone IANA name.
-	Timezone  *string    `json:"timezone,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	// Timezone The IANA zone this person's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
+	Timezone *string `json:"timezone,omitempty"`
+
+	// TimezoneChosen Whether the person chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
+	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -63100,10 +63154,11 @@ type WorkingHours struct {
 	// StartTime The first minute of the working day, `HH:MM` on the contact's own clock.
 	StartTime string `json:"start_time"`
 
-	// Timezone The IANA zone the two times are read on. A contact who has never
-	// chosen one is read on the installation's reporting timezone, which
-	// is what makes the unset case work rather than scheduling everybody
-	// on UTC.
+	// Timezone The IANA zone the two times are read on: the caller's own time zone.
+	// A contact with no stored zone is read on the installation's
+	// reporting timezone, which is what makes the unset case work rather
+	// than scheduling everybody on UTC. Read-only here; it is set through
+	// `saveMyTimezone`.
 	Timezone string `json:"timezone"`
 }
 
@@ -73706,8 +73761,11 @@ type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest
 // SaveNotificationPreferenceJSONRequestBody defines body for SaveNotificationPreference for application/json ContentType.
 type SaveNotificationPreferenceJSONRequestBody SaveNotificationPreferenceJSONBody
 
+// SaveMyTimezoneJSONRequestBody defines body for SaveMyTimezone for application/json ContentType.
+type SaveMyTimezoneJSONRequestBody = SaveMyTimezoneRequest
+
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
-type SaveMyWorkingHoursJSONRequestBody = WorkingHours
+type SaveMyWorkingHoursJSONRequestBody = SaveWorkingHoursRequest
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -87752,6 +87810,9 @@ type ServerInterface interface {
 	// End one of your sessions.
 	// (DELETE /me/sessions/{sessionId})
 	RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Set the time zone your own times are shown in.
+	// (PUT /me/timezone)
+	SaveMyTimezone(w http.ResponseWriter, r *http.Request)
 	// When you are bookable.
 	// (GET /me/working-hours)
 	GetMyWorkingHours(w http.ResponseWriter, r *http.Request)
@@ -92888,6 +92949,12 @@ func (_ Unimplemented) ListMySessions(w http.ResponseWriter, r *http.Request) {
 // End one of your sessions.
 // (DELETE /me/sessions/{sessionId})
 func (_ Unimplemented) RevokeMySession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set the time zone your own times are shown in.
+// (PUT /me/timezone)
+func (_ Unimplemented) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124485,6 +124552,26 @@ func (siw *ServerInterfaceWrapper) RevokeMySession(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// SaveMyTimezone operation middleware
+func (siw *ServerInterfaceWrapper) SaveMyTimezone(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveMyTimezone(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMyWorkingHours operation middleware
 func (siw *ServerInterfaceWrapper) GetMyWorkingHours(w http.ResponseWriter, r *http.Request) {
 
@@ -140641,6 +140728,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/me/sessions/{sessionId}", wrapper.RevokeMySession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/timezone", wrapper.SaveMyTimezone)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/working-hours", wrapper.GetMyWorkingHours)

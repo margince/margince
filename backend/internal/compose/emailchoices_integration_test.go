@@ -55,7 +55,10 @@ func TestRoutineWindowReusesPersonalWorkingDaysAndTimezone(t *testing.T) {
 	e := integration.Setup(t)
 	service := identity.NewService(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	_, err := service.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{7}, Timezone: "Asia/Ho_Chi_Minh"})
+	if _, err := service.SaveMyTimezone(ctx, "Asia/Ho_Chi_Minh", identity.TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	_, err := service.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 9 * 60, EndMinute: 17 * 60, Days: []int{7}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +81,10 @@ func TestPersonalTimeCanStartBeforeTheReportingMorning(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
-	if _, err := b.worker.users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Timezone: "Asia/Tokyo"}); err != nil {
+	if _, err := b.worker.users.SaveMyTimezone(ctx, "Asia/Tokyo", identity.TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.worker.users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}}); err != nil {
 		t.Fatal(err)
 	}
 	b.now = time.Date(2026, 10, 19, 0, 30, 0, 0, time.UTC)
@@ -98,7 +104,10 @@ func TestPersonalWindowAcrossReportingMidnightKeepsOneAttempt(t *testing.T) {
 	relay := &countingMailer{}
 	b := setupBriefJob(t).withMailer(relay)
 	ctx := b.As(b.Rep1, []ids.UUID{b.Team1}, integration.AdminPerms)
-	if _, err := b.worker.users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Timezone: "America/New_York"}); err != nil {
+	if _, err := b.worker.users.SaveMyTimezone(ctx, "America/New_York", identity.TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.worker.users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}}); err != nil {
 		t.Fatal(err)
 	}
 	hour := "18:00"
@@ -202,7 +211,10 @@ func TestAWindowAtTwentyThreeSpansMidnightAndExpires(t *testing.T) {
 	e := integration.Setup(t)
 	users := identity.NewService(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	if _, err := users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Timezone: "Europe/Berlin"}); err != nil {
+	if _, err := users.SaveMyTimezone(ctx, "Europe/Berlin", identity.TimezoneChosen); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := users.SaveMyWorkingHours(ctx, identity.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}}); err != nil {
 		t.Fatal(err)
 	}
 	hour := "23:00"
