@@ -241,34 +241,9 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	}
 	var filed []time.Time
 	steps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Company360NextStep, error) {
-		var step crmcontracts.Company360NextStep
-		var id ids.UUID
-		var assignee, dealID, contactID *ids.UUID
-		var assigneeName string
-		// Read only to order by: the account's task list does not show when a
-		// task was filed, but two tasks due the same day have to rank the same
-		// here as on the contact page, and there the older one leads.
-		var occurredAt time.Time
-		// The version the row's own tick and snooze write with. Read here rather
-		// than fetched per press: a list that offered a verb and made the caller
-		// go and find the version first would be two round trips for one click,
-		// and the version it found could already be the wrong one.
-		var version int64
-		var dueHasTime bool
-		if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
-			&dealID, &contactID); err != nil {
-			return step, err
-		}
-		step.ActivityId = openapi_types.UUID(id)
-		step.DueHasTime = new(dueHasTime && step.DueAt != nil)
-		step.Version = &version
-		step.AssigneeId = uuidPtr(assignee)
-		step.AssigneeName = namedOrNobody(assigneeName)
-		step.LinkedDealId = uuidPtr(dealID)
-		step.LinkedContactId = uuidPtr(contactID)
-		step.Overdue = deadline.Passed(step.DueAt, now)
+		step, occurredAt, err := scanNextStep(row, now)
 		filed = append(filed, occurredAt)
-		return step, nil
+		return step, err
 	})
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
@@ -286,6 +261,33 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		steps = []crmcontracts.Company360NextStep{}
 	}
 	return steps, page, filed, nil
+}
+
+// scanNextStep reads one task row of readNextSteps. occurredAt is returned only
+// to order by: two tasks due the same day rank here as on the contact page,
+// where the older one leads. The version is read with the row so a tick or
+// snooze needs no second round trip.
+func scanNextStep(row pgx.CollectableRow, now time.Time) (crmcontracts.Company360NextStep, time.Time, error) {
+	var step crmcontracts.Company360NextStep
+	var id ids.UUID
+	var assignee, dealID, contactID *ids.UUID
+	var assigneeName string
+	var occurredAt time.Time
+	var version int64
+	var dueHasTime bool
+	if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
+		&dealID, &contactID); err != nil {
+		return step, occurredAt, err
+	}
+	step.ActivityId = openapi_types.UUID(id)
+	step.DueHasTime = new(dueHasTime && step.DueAt != nil)
+	step.Version = &version
+	step.AssigneeId = uuidPtr(assignee)
+	step.AssigneeName = namedOrNobody(assigneeName)
+	step.LinkedDealId = uuidPtr(dealID)
+	step.LinkedContactId = uuidPtr(contactID)
+	step.Overdue = deadline.Passed(step.DueAt, now)
+	return step, occurredAt, nil
 }
 
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {
