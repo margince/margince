@@ -714,11 +714,15 @@ describe("password-reset deep link", () => {
       screen.getByLabelText("Password"),
       "an entirely new password{enter}",
     );
-    // The rail is proof the app reached the Brief, not proof merely that /v1/me
-    // now resolves — a stale reset hash would instead leave login re-rendered
-    // with nowhere for the post-login redirect to go.
+    // The rail proves the app reached the Brief, not merely that /v1/me now
+    // resolves. A stale reset hash would leave login re-rendered instead. This
+    // is the first case here to reach the shell, so it waits on that chunk too.
     expect(
-      await screen.findByRole("navigation", { name: "Primary navigation" }),
+      await screen.findByRole(
+        "navigation",
+        { name: "Primary navigation" },
+        { timeout: 3000 },
+      ),
     ).toBeTruthy();
   });
 
