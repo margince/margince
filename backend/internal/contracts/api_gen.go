@@ -48477,7 +48477,7 @@ type InviteEmailHandoff struct {
 	// Queued Whether the invitation email was handed to the sender. The send runs after the answer,
 	// so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
 	// refuses the address is reported a moment later as the member's
-	// `invite_email_state` on the roster, where `resend_invite` is offered.
+	// `invite_email_state` on the roster.
 	Queued bool `json:"queued"`
 
 	// Sendable Whether this installation has an outbound relay and a link origin configured, so the
@@ -62309,7 +62309,7 @@ type UpsertPartnerRequestPartnerRole string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
@@ -62332,7 +62332,7 @@ type User struct {
 	// InviteEmail Present only on the answers of `inviteUser` and `resendUserInvite`.
 	InviteEmail *InviteEmailHandoff `json:"invite_email,omitempty"`
 
-	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+	// InviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
 	InviteEmailState *UserInviteEmailState `json:"invite_email_state,omitempty"`
 
 	// IsAgent First-party Agent Runner identity vs a human seat.
@@ -62373,7 +62373,7 @@ type User struct {
 // UserAllowedActions defines model for User.AllowedActions.
 type UserAllowedActions string
 
-// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+// UserInviteEmailState What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
 type UserInviteEmailState string
 
 // UserLocale The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
