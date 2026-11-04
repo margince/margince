@@ -52,6 +52,7 @@ func (s *Service) WithDealReviews(reviews DealReviews) *Service {
 
 // readingReviews carries this read's open reviews on a copy of the service.
 func (s *Service) readingReviews(ctx context.Context) (*Service, *crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage(ctx, "deal_reviews")()
 	scoped := *s
 	if s.reviews.source == nil {
 		return &scoped, nil
