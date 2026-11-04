@@ -18194,9 +18194,10 @@ export interface paths {
         put?: never;
         /**
          * Mail an invited member a new set-password link. Admin-only, human-only.
-         * @description For an invited member whose invitation email the relay refused, and only then: the live
-         *     link's `invite_email_state` must be `failed`. Mints a new single-use
-         *     set-password link exactly as `issueUserPasswordLink` does (it supersedes the old one,
+         * @description For any invited human member, whatever became of the last invitation: a link that
+         *     expired, a mail that was sent or refused, or a member who was never mailed. Mints a new
+         *     single-use set-password link exactly as `issueUserPasswordLink` does (it supersedes any
+         *     older one,
          *     writes the same audit row and emits `user.password_link_issued`), then mails it instead
          *     of returning it. Shares that operation's rate limits per actor and per target. Nothing
          *     retries on its own: an admin sends again from the roster.
@@ -43787,7 +43788,7 @@ export interface components {
              * @description Whether the invitation email was handed to the sender. The send runs after the answer,
              *     so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
              *     refuses the address is reported a moment later as the member's
-             *     `invite_email_state` on the roster, where `resend_invite` is offered.
+             *     `invite_email_state` on the roster.
              */
             queued: boolean;
         };
@@ -43835,7 +43836,7 @@ export interface components {
             /** @description How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture. */
             readonly connected_mailboxes?: number;
             /**
-             * @description What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+             * @description What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
              * @enum {string|null}
              */
             invite_email_state?: "sending" | "sent" | "failed" | null;
@@ -43843,7 +43844,7 @@ export interface components {
             invite_email?: components["schemas"]["InviteEmailHandoff"];
             /** @description Original account identities consolidated into this member, present only on the administration view. */
             merged_from?: components["schemas"]["SeatName"][];
-            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
+            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
             allowed_actions?: ("change_role" | "issue_password_link" | "resend_invite" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over" | "edit" | "merge" | "remove")[];
             /**
              * Format: date-time
@@ -84371,7 +84372,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `mail_unavailable` (this installation has no outbound relay or no link origin, so nothing can be mailed; `issueUserPasswordLink` is the way then), `invite_email_not_failed` (the member's live link was never mailed, or its mail is still `sending` or was `sent`; a resend would supersede a link that may still arrive), `member_not_invited` (the member has already set a password, or is suspended or deactivated), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `mail_unavailable` (this installation has no outbound relay or no link origin, so nothing can be mailed; `issueUserPasswordLink` is the way then), `member_not_invited` (the member has already set a password, or is suspended or deactivated), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
             409: {
                 headers: {
                     [name: string]: unknown;

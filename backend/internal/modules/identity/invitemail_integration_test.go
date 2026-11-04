@@ -161,8 +161,8 @@ func TestARefusedInviteMailShowsOnTheRosterUntilAResendGoesOut(t *testing.T) {
 	if mail.sent != 1 || mail.to != email || !resetLinkToken.MatchString(mail.body) {
 		t.Fatalf("the resend mailed %d message(s) to %q, want one link to %s", mail.sent, mail.to, email)
 	}
-	if row = rosterRow(t, e, working, email); !mailState(row, inviteMailSent) || offersResend(row) {
-		t.Fatalf("after a resend went out, the roster shows state=%v actions=%v; want sent and no resend",
+	if row = rosterRow(t, e, working, email); !mailState(row, inviteMailSent) || !offersResend(row) {
+		t.Fatalf("after a resend went out, the roster shows state=%v actions=%v; want sent, and a resend still offered",
 			row.InviteEmailState, row.AllowedActions)
 	}
 
@@ -224,28 +224,62 @@ func inviteThrough(t *testing.T, e *revocationEnv, h Handlers, email string) crm
 	return user.Id
 }
 
-func TestAResendIsRefusedUnlessTheLiveMailFailed(t *testing.T) {
+// Every invited member can be sent a new invitation, whatever became of the
+// last one: a link that expired, a mail that went out but never arrived, a
+// member never mailed at all. The new link is the only one left that opens
+// the account.
+func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-resend-state")
-	resend, _ := mailingHandlers(e, &capturedMail{})
-	stalled := stalledMail{release: make(chan struct{})}
-	t.Cleanup(func() { close(stalled.release) })
-
 	sent, sentDone := mailingHandlers(e, &capturedMail{})
 	sentID := inviteThrough(t, e, sent, "sent@acme.test")
 	<-sentDone
-	sending, _ := mailingHandlers(e, stalled)
-	sendingID := inviteThrough(t, e, sending, "sending@acme.test")
+	expiredID := inviteThrough(t, e, sent, "expired@acme.test")
+	<-sentDone
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE auth_token SET expires_at = now() - interval '1 hour' WHERE user_id = $1`, expiredID); err != nil {
+		t.Fatal(err)
+	}
 	unmailed := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	unmailedID := inviteThrough(t, e, unmailed, "unmailed@acme.test")
 
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
-	for state, id := range map[string]crmcontracts.Id{"sent": sentID, "sending": sendingID, "never mailed": unmailedID} {
-		rec := httptest.NewRecorder()
-		resend.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/x/resend-invite", nil).WithContext(ctx), id)
-		if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "invite_email_not_failed") {
-			t.Errorf("a resend of a %s invitation answered %d %s, want 409 invite_email_not_failed",
-				state, rec.Code, rec.Body)
-		}
+	for state, member := range map[string]struct {
+		id    crmcontracts.Id
+		email string
+	}{
+		"sent":         {sentID, "sent@acme.test"},
+		"expired":      {expiredID, "expired@acme.test"},
+		"never mailed": {unmailedID, "unmailed@acme.test"},
+	} {
+		t.Run(state, func(t *testing.T) {
+			mail := &capturedMail{}
+			resend, done := mailingHandlers(e, mail)
+			if row := rosterRow(t, e, resend, member.email); !offersResend(row) {
+				t.Fatalf("the roster offers %v for a %s invitation, want resend_invite", row.AllowedActions, state)
+			}
+			rec := httptest.NewRecorder()
+			resend.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/x/resend-invite", nil).
+				WithContext(ctx), member.id)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("a resend of a %s invitation answered %d %s, want 200", state, rec.Code, rec.Body)
+			}
+			<-done
+			link := resetLinkToken.FindStringSubmatch(mail.body)
+			if mail.sent != 1 || mail.to != member.email || len(link) != 2 {
+				t.Fatalf("the resend mailed %d message(s) to %q, want one link to %s", mail.sent, mail.to, member.email)
+			}
+			var live int
+			var newest bool
+			if err := e.owner.QueryRow(context.Background(),
+				`SELECT count(*), bool_and(token_hash = $2) FROM auth_token
+				  WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL AND expires_at > now()`,
+				member.id, hashToken(link[1])).Scan(&live, &newest); err != nil {
+				t.Fatal(err)
+			}
+			if live != 1 || !newest {
+				t.Fatalf("after the resend %d link(s) are live, newest=%v; want only the mailed one", live, newest)
+			}
+		})
 	}
 }
 
