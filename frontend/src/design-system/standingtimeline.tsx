@@ -155,12 +155,7 @@ export function StandingTimeline({
     ...events.map((event) => instant(event.at)),
     ...marks.map((mark) => instant(mark.at)),
   ]);
-  // A line with no events draws one sentence and needs no older rows.
-  const older = useOlderHistory(
-    events.length > 0 ? history : undefined,
-    marks.map((mark) => instant(mark.at)),
-    zoom === "all" ? null : from,
-  );
+  const older = useOlderHistory(history, zoom === "all" ? null : from);
   if (events.length === 0) {
     return (
       <p className="standing-timeline-empty t-caption">

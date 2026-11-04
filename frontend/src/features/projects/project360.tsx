@@ -198,6 +198,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         refusedReasonId={readOnly ? readOnlyReasonId : undefined}
         onMove={setMoveTo}
         onOpenDocuments={() => setDrawer("documents")}
+        onOpenHistory={() => setDrawer("history")}
       />
       <ProjectCards
         view={view}

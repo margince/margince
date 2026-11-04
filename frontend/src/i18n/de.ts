@@ -3843,6 +3843,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.timeline.zoom.all": "Gesamt",
   "standing.timeline.loadingOlder": "Frühere Einträge werden geladen…",
   "standing.timeline.olderOnHistory": "Frühere Einträge stehen im Verlauf.",
+  "standing.timeline.olderFailed":
+    "Frühere Einträge konnten nicht laden und stehen im Verlauf.",
   "latest.kind.email": "Neue E-Mail",
   "latest.kind.message": "Neue Nachricht",
   "latest.kind.webForm": "Neues Website-Formular",

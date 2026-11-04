@@ -3738,6 +3738,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.timeline.zoom.all": "Toàn bộ",
   "standing.timeline.loadingOlder": "Đang tải các mục trước đó…",
   "standing.timeline.olderOnHistory": "Các mục trước đó nằm trong Lịch sử.",
+  "standing.timeline.olderFailed":
+    "Không tải được các mục trước đó. Chúng nằm trong Lịch sử.",
   "latest.kind.email": "Email mới",
   "latest.kind.message": "Tin nhắn mới",
   "latest.kind.webForm": "Biểu mẫu trang web mới",

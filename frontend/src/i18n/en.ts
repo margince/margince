@@ -3806,6 +3806,8 @@ export const en = {
   "standing.timeline.zoom.all": "All time",
   "standing.timeline.loadingOlder": "Loading earlier items…",
   "standing.timeline.olderOnHistory": "Earlier items are in History.",
+  "standing.timeline.olderFailed":
+    "Earlier items could not load. They are in History.",
   "latest.kind.email": "New email",
   "latest.kind.message": "New message",
   "latest.kind.webForm": "New website form",

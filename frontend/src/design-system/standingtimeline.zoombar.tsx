@@ -14,11 +14,12 @@ export type TimelineHistory = Pick<
   RecordTimeline,
   "hasNextPage" | "isFetchingNextPage" | "fetchNextPage" | "isError"
 > &
-  // Only counted, so any page of rows will do.
-  Readonly<{ activities: readonly unknown[] }>;
+  // Counted for the cap, and dated to tell whether the zoom is reached.
+  Readonly<{ activities: readonly Readonly<{ occurred_at: string }>[] }>;
 
-/** Whether older rows are on their way, stopped at the cap, or all in. */
-export type OlderHistory = "loading" | "capped" | "done";
+/** Whether older rows are on their way, stopped at the cap or a failed page,
+ *  or all in. */
+export type OlderHistory = "loading" | "capped" | "failed" | "done";
 
 // The most rows the line pages in; older ones stay on the History tab.
 const HISTORY_CAP = 200;
@@ -30,21 +31,29 @@ const ZOOM_LABEL: Readonly<Record<TimelineZoom, MessageKey>> = {
   all: "standing.timeline.zoom.all",
 };
 
+const OLDER_NOTE: Readonly<Record<Exclude<OlderHistory, "done">, MessageKey>> =
+  {
+    loading: "standing.timeline.loadingOlder",
+    capped: "standing.timeline.olderOnHistory",
+    failed: "standing.timeline.olderFailed",
+  };
+
 /**
- * Pages older activities in while the zoom reaches past the oldest mark on
- * hand (`marks`, their instants), one page at a time, until `HISTORY_CAP`
- * rows are loaded. `from` is null on All time, which wants every page. A
- * failed page stops it, so a refusal is not asked again and again.
+ * Pages older activities in while the zoom reaches past the oldest row on
+ * hand, one page at a time, until `HISTORY_CAP` rows are loaded. Every row
+ * counts, a task that draws no mark too. `from` is null on All time, which
+ * wants every page. A failed page stops it, so a refusal is not asked again.
  */
 export function useOlderHistory(
   history: TimelineHistory | undefined,
-  marks: readonly number[],
   from: number | null,
 ): OlderHistory {
-  const reaches = from === null || Math.min(...marks) > from;
-  const wanted = Boolean(history?.hasNextPage) && !history?.isError && reaches;
-  // Rows, not marks: tasks draw no mark, and a page of them must still count.
-  const capped = (history?.activities.length ?? 0) >= HISTORY_CAP;
+  const rows = history?.activities ?? [];
+  const oldest = Math.min(...rows.map((row) => Date.parse(row.occurred_at)));
+  const reaches = from === null || oldest > from;
+  const more = Boolean(history?.hasNextPage) && reaches;
+  const wanted = more && !history?.isError;
+  const capped = rows.length >= HISTORY_CAP;
   const fetching = history?.isFetchingNextPage ?? false;
   const fetchOlder = useEffectEvent(() => history?.fetchNextPage());
   useEffect(() => {
@@ -52,6 +61,9 @@ export function useOlderHistory(
       fetchOlder();
     }
   }, [wanted, capped, fetching]);
+  if (more && history?.isError) {
+    return "failed";
+  }
   if (!wanted) {
     return "done";
   }
@@ -74,11 +86,7 @@ export function ZoomBar({
     <div className="standing-timeline-head">
       {older !== "done" && (
         <span className="standing-timeline-older t-caption">
-          {t(
-            older === "loading"
-              ? "standing.timeline.loadingOlder"
-              : "standing.timeline.olderOnHistory",
-          )}
+          {t(OLDER_NOTE[older])}
         </span>
       )}
       <SegmentedControl

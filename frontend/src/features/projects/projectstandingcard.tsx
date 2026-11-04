@@ -60,11 +60,14 @@ export function ProjectStanding({
   refusedReasonId,
   onMove,
   onOpenDocuments,
+  onOpenHistory,
 }: Readonly<{
   view: Project360;
   refusedReasonId?: string;
   onMove: (to: ProjectPhase) => void;
   onOpenDocuments: () => void;
+  // Where a mark's title goes: the project's history.
+  onOpenHistory?: () => void;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -121,6 +124,7 @@ export function ProjectStanding({
             ...ctx,
             record: zone,
             asOf: view.as_of,
+            onOpen: onOpenHistory,
           })}
         />
       }

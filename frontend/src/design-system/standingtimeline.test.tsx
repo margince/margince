@@ -188,8 +188,10 @@ describe("a date far ahead", () => {
 });
 
 describe("the zoom", () => {
+  // A row the record's list loaded, mark or not; only its date is read.
+  const row = (at: string) => ({ occurred_at: `${at}T09:00:00Z` });
   const older = (over: Partial<TimelineHistory>): TimelineHistory => ({
-    activities: [],
+    activities: [row("2026-08-01")],
     hasNextPage: true,
     isFetchingNextPage: false,
     isError: false,
@@ -268,12 +270,21 @@ describe("the zoom", () => {
   it("asks for nothing once the rows on hand reach the zoom's start", () => {
     const fetchNextPage = vi.fn();
     zoomed({
-      marks: [mark({ key: "m", at: "2026-04-01" })],
-      history: older({ fetchNextPage }),
+      history: older({ fetchNextPage, activities: [row("2026-04-01")] }),
     });
 
     expect(fetchNextPage).not.toHaveBeenCalled();
     expect(screen.queryByText("Loading earlier items…")).toBeNull();
+  });
+
+  it("reads a task's date as well, though a task draws no mark", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, activities: [row("2026-04-01")] }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
   });
 
   it("stops asking once a page fails, so a refusal is not asked again", () => {
@@ -284,11 +295,14 @@ describe("the zoom", () => {
     });
 
     expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Earlier items could not load. They are in History."),
+    ).toBeInTheDocument();
   });
 
   it("stops at 200 rows, tasks included, and leaves the rest to History", () => {
     const fetchNextPage = vi.fn();
-    const tasks = Array.from({ length: 200 }, (_, index) => ({ id: index }));
+    const tasks = Array.from({ length: 200 }, () => row("2026-08-01"));
     zoomed({
       marks: [mark({ key: "m", at: "2026-08-01" })],
       history: older({ fetchNextPage, activities: tasks }),
