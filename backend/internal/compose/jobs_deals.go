@@ -56,6 +56,9 @@ type closeDateSweepWorker struct {
 	// closer runs after the dates are corrected, in the same nightly pass, and
 	// closes the deals the customer stopped answering.
 	closer silentDealCloser
+	// verdict runs last: it reads each open deal's evidence and may set its
+	// close date, amount or probability.
+	verdict dealVerdictPass
 }
 
 func (w *closeDateSweepWorker) Work(ctx context.Context, _ *river.Job[CloseDateSweepArgs]) error {
@@ -78,8 +81,10 @@ func (w *closeDateSweepWorker) correctWorkspace(ctx context.Context, workspace i
 	if err := w.corrector.SweepWorkspace(wsCtx); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	_, err := w.closer.CloseWorkspace(wsCtx)
-	return jobs.FaultContext(ctx, err)
+	if _, err := w.closer.CloseWorkspace(wsCtx); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	return jobs.FaultContext(ctx, w.verdict.RunWorkspace(wsCtx))
 }
 
 // followUpReconcileWorker runs the overnight pass for every live workspace.

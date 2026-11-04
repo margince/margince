@@ -1342,10 +1342,16 @@ public.assurance_deal_receipt.input_fingerprint text NOT NULL gen=- def=-
 public.assurance_deal_receipt.outcome text NOT NULL gen=- def=-
 public.assurance_deal_receipt.policy_version text NOT NULL gen=- def=-
 public.assurance_deal_receipt.reasons text[] NOT NULL gen=- def='{}'::text[]
-public.assurance_deal_receipt.run_id uuid NOT NULL gen=- def=-
+public.assurance_deal_receipt.run_id uuid gen=- def=-
 public.assurance_deal_receipt.silent_days integer NOT NULL gen=- def=-
 public.assurance_deal_receipt.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.assurance_deal_receipt.valid_until timestamp with time zone NOT NULL gen=- def=-
+public.assurance_deal_receipt.verdict_actions jsonb gen=- def=-
+public.assurance_deal_receipt.verdict_assessed_at timestamp with time zone gen=- def=-
+public.assurance_deal_receipt.verdict_basis_digest text gen=- def=-
+public.assurance_deal_receipt.verdict_input_checksum text gen=- def=-
+public.assurance_deal_receipt.verdict_next_due_at timestamp with time zone gen=- def=-
+public.assurance_deal_receipt.verdict_prompt_version text gen=- def=-
 public.assurance_deal_receipt_by_run CREATE INDEX assurance_deal_receipt_by_run ON public.assurance_deal_receipt USING btree (run_id)
 public.assurance_deal_receipt_pkey CREATE UNIQUE INDEX assurance_deal_receipt_pkey ON public.assurance_deal_receipt USING btree (deal_id)
 public.assurance_exception acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -3970,7 +3976,7 @@ public.deal_correction.deal_correction_reversal_audit_id_fkey FOREIGN KEY (rever
 public.deal_correction.deal_correction_reversal_is_whole CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))
 public.deal_correction.deal_correction_run_id_fkey FOREIGN KEY (run_id) REFERENCES close_date_run(id) ON DELETE SET NULL
 public.deal_correction.deal_correction_stage_history_id_fkey FOREIGN KEY (stage_history_id) REFERENCES deal_stage_history(id) ON DELETE SET NULL
-public.deal_correction.deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text, 'close_lost'::text])))
+public.deal_correction.deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text, 'close_lost'::text, 'deal_close_date'::text, 'deal_amount'::text, 'deal_probability'::text])))
 public.deal_correction.deal_correction_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_correction.deal_id uuid NOT NULL gen=- def=-
 public.deal_correction.fields text[] NOT NULL gen=- def=-

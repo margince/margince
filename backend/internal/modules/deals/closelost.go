@@ -38,7 +38,11 @@ const DealCloseLostKind = "deal_close_lost"
 // correction Margince applied to a deal. A correction carries its own Undo; a
 // decided approval does not.
 func IsCorrectionReceiptKind(kind string) bool {
-	return kind == CloseDateCorrectionKind || kind == DealCloseLostKind
+	switch kind {
+	case CloseDateCorrectionKind, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection:
+		return true
+	}
+	return false
 }
 
 // LossReasonWentSilent is the catalog key a close for silence records.

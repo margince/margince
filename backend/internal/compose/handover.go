@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -102,6 +103,9 @@ func (s handoverSeam) countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID
 	var counts crmcontracts.HandoverCounts
 	var err error
 	if counts.Task, err = s.tasks.OpenTasksAssignedTo(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
+		return crmcontracts.HandoverCounts{}, err
+	}
+	if counts.Webhook, err = webhooks.OwnedLiveSubscriptionsTx(ctx, tx, ids.From[ids.UserKind](member)); err != nil {
 		return crmcontracts.HandoverCounts{}, err
 	}
 	for table, count := range handoverTally(&counts) {
@@ -200,6 +204,13 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Project = projectsMoved
+	// A webhook runs under its owner and stops when they leave; it moves with
+	// the rest of their work so the integration keeps delivering.
+	webhooksMoved, err := webhooks.TransferSubscriptionOwnershipTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.UserHandoverResult{}, err
+	}
+	moved.Webhook = webhooksMoved
 	// Whoever now owns the contacts decides who may see them. A share request
 	// put to the member who handed them over is withdrawn with the handover.
 	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {
