@@ -12452,6 +12452,18 @@ export const en = {
   "auto.runs.outcomeBlocked": "Blocked",
   "auto.runs.outcomeSkipped": "Skipped",
   "auto.runs.outcomeQueued": "Queued for approval",
+  "auto.runs.reasonCode.target_missing":
+    "the record it acts on no longer exists",
+  "auto.runs.reasonCode.not_permitted": "its owner may no longer do this",
+  "auto.runs.reasonCode.conflict":
+    "the record was in a state that did not allow it",
+  "auto.runs.reasonCode.record_changed":
+    "the record changed before the rule could act",
+  "auto.runs.reasonCode.no_consent": "the contact has not agreed to this",
+  "auto.runs.reasonCode.budget_exhausted": "the budget for this has run out",
+  "auto.runs.reasonCode.not_completed": "something went wrong while it ran",
+  "auto.runs.reasonCode.blocked":
+    "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
 
   "auto.preview.open": "Preview",
@@ -15727,7 +15739,8 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.field.owner": "Runs as",
-  "webhooks.field.ownerHint": "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
+  "webhooks.field.ownerHint":
+    "Events reach the receiver only while this colleague is active and may see the record. The signing secret stays the same.",
   "webhooks.field.ownerInactive": "Former owner, no longer active",
   "webhooks.field.ownerCurrent": "Current owner",
   "webhooks.row.ownerInactive": "Stopped: owner deactivated",
@@ -19190,7 +19203,8 @@ export const en = {
   "magic.action.send_email": "A message was sent",
   "magic.action.schedule": "A meeting was booked",
   "magic.action.disqualify": "A lead was disqualified",
-  "magic.action.automation_troubled": "{name} is in trouble: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} could not finish ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",

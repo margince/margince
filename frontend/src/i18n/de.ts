@@ -12456,6 +12456,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.runs.outcomeBlocked": "Blockiert",
   "auto.runs.outcomeSkipped": "Übersprungen",
   "auto.runs.outcomeQueued": "Wartet auf Freigabe",
+  "auto.runs.reasonCode.target_missing":
+    "der Datensatz, auf den sie wirkt, existiert nicht mehr",
+  "auto.runs.reasonCode.not_permitted":
+    "ihr Verantwortlicher darf das nicht mehr",
+  "auto.runs.reasonCode.conflict":
+    "der Datensatz ließ das in seinem Zustand nicht zu",
+  "auto.runs.reasonCode.record_changed":
+    "der Datensatz hat sich geändert, bevor die Regel handeln konnte",
+  "auto.runs.reasonCode.no_consent": "der Kontakt hat dem nicht zugestimmt",
+  "auto.runs.reasonCode.budget_exhausted": "das Budget dafür ist ausgeschöpft",
+  "auto.runs.reasonCode.not_completed":
+    "beim Ausführen ist etwas schiefgegangen",
+  "auto.runs.reasonCode.blocked":
+    "eine Berechtigungsprüfung oder eine abgelehnte Freigabe hat sie gestoppt",
   "auto.runs.outcome": "Ergebnis",
 
   "auto.preview.open": "Vorschau",
@@ -15822,7 +15836,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
   "webhooks.field.owner": "Läuft als",
-  "webhooks.field.ownerHint": "Ereignisse gehen nur raus, solange dieses Teammitglied aktiv ist und den Eintrag sehen darf. Das Signaturgeheimnis bleibt gleich.",
+  "webhooks.field.ownerHint":
+    "Ereignisse gehen nur raus, solange dieses Teammitglied aktiv ist und den Eintrag sehen darf. Das Signaturgeheimnis bleibt gleich.",
   "webhooks.field.ownerInactive": "Früheres Teammitglied, nicht mehr aktiv",
   "webhooks.field.ownerCurrent": "Aktuell zuständig",
   "webhooks.row.ownerInactive": "Gestoppt: Verantwortlicher deaktiviert",
@@ -19369,7 +19384,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.send_email": "Eine Nachricht wurde gesendet",
   "magic.action.schedule": "Ein Termin wurde gebucht",
   "magic.action.disqualify": "Ein Lead wurde disqualifiziert",
-  "magic.action.automation_troubled": "{name} hat Probleme: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} konnte nicht abgeschlossen werden ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
