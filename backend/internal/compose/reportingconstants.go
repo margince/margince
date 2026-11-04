@@ -47,6 +47,7 @@ const (
 	reportingLeadsCreated                  = "leads_created"
 	reportingLeadStatusMoves               = "lead_status_moves"
 	reportingLeadsPromoted                 = "leads_promoted"
+	reportingLeadsQualified                = "leads_qualified"
 	reportingLeadFirstResponse             = "lead_first_response"
 	reportingLeadsAwaitingResponse         = "leads_awaiting_response"
 	reportingPartnerPipeline               = "partner_pipeline"

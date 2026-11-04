@@ -23,7 +23,7 @@ const WEEKS = 6;
 
 export type ProspectingOutcome = Extract<
   ReportingMetricID,
-  "accepted_opportunities" | "leads_promoted"
+  "accepted_opportunities" | "leads_qualified" | "leads_promoted"
 >;
 
 /**
@@ -167,10 +167,14 @@ export function OutcomeHistory({
                 })}{" "}
                 {t(
                   evaluation.charts.some(
-                    (chart) => chart.metric === "leads_promoted",
+                    (chart) => chart.metric === "leads_qualified",
                   )
-                    ? "analytics.prospect.weeksByArrival"
-                    : "analytics.prospect.weeksByAcceptance",
+                    ? "analytics.prospect.weeksByQualification"
+                    : evaluation.charts.some(
+                          (chart) => chart.metric === "leads_promoted",
+                        )
+                      ? "analytics.prospect.weeksByArrival"
+                      : "analytics.prospect.weeksByAcceptance",
                 )}
                 {underWay(evaluation) &&
                   ` ${t("analytics.prospect.weeksUnderWay")}`}

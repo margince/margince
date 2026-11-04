@@ -18,6 +18,13 @@ import (
 func evaluationKey(evaluation Evaluation) (string, error) {
 	evaluation.Result.EvaluationKey = ""
 	evaluation.Result.Context.ProseLanguage = nil
+	if evaluation.Result.OverviewActions != nil {
+		actions := slices.Clone(*evaluation.Result.OverviewActions)
+		for i := range actions {
+			actions[i].Label = ""
+		}
+		evaluation.Result.OverviewActions = &actions
+	}
 	evaluation.Result.Metrics = slices.Clone(evaluation.Result.Metrics)
 	for i := range evaluation.Result.Metrics {
 		evaluation.Result.Metrics[i].Coverage.Reason = nil

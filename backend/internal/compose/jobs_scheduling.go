@@ -46,7 +46,8 @@ func (w *meetingDeliveryWorker) Work(ctx context.Context, _ *river.Job[MeetingDe
 	}
 	pass = principal.SystemActing(pass, "meeting_delivery")
 	store := activities.NewStore(InstallationDB(w.pool)).WithClock(time.Now).WithMeetingVault(w.vault).WithPublicBaseURL(w.origin.PublicBaseURL).WithRuntimeEnvironment(w.origin.Environment).
-		WithWorkingHours(workingHoursResolver(w.pool)).WithSchedulingCalendar(newSchedulingCalendar(w.pool, w.registry))
+		WithWorkingHours(workingHoursResolver(w.pool)).WithSchedulingCalendar(newSchedulingCalendar(w.pool, w.registry)).
+		WithInvitationAttention(invitationAttention{pool: w.pool})
 	deliveryErr := store.DeliverInvitations(pass)
 	reconcileErr := store.ReconcileInvitations(pass)
 	return jobs.FaultContext(pass, errors.Join(deliveryErr, reconcileErr, w.remind(pass, store)))
