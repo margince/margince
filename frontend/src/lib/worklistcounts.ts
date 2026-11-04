@@ -32,6 +32,29 @@ export function pillCount(
   return found === undefined ? undefined : exactCount(found);
 }
 
+/** A count a pill draws, and whether more may stand behind it. */
+export type CountFigure = { count: number; floor: boolean };
+
+// What a pill draws: the exact count, or else what was counted, marked as a
+// floor. A floor of none draws nothing, because "0" would claim the cut empty.
+export function pillFigure(
+  day: Worklist,
+  filter: WorklistFilter,
+  view?: WorklistView,
+): CountFigure | undefined {
+  const exact = pillCount(day, filter, view);
+  if (exact !== undefined) return { count: exact, floor: false };
+  const counted =
+    filter === "all"
+      ? outstandingCounts(day, view)
+      : day.counts.filter((count) => count.category === filter);
+  const floor = counted.reduce(
+    (total, count) => total + (exactCount(count) ?? count.considered),
+    0,
+  );
+  return floor > 0 ? { count: floor, floor: true } : undefined;
+}
+
 // The one figure a category may state as exact, or none.
 export function exactCount(count: WorklistCount): number | undefined {
   if (count.total !== undefined) return count.total;

@@ -5,6 +5,7 @@ import type {
   FormEventHandler,
   ReactNode,
 } from "react";
+import { floorFigure } from "../format/figure";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
@@ -424,12 +425,17 @@ export function SectionHeader({
  * It renders INSIDE the option's button, which is what puts the figure in that
  * option's accessible name rather than leaving it to a sighted reader alone.
  */
-export function OptionCount({ count }: Readonly<{ count: number }>) {
+export function OptionCount({
+  count,
+  floor = false,
+}: Readonly<{ count: number; floor?: boolean }>) {
   const { locale } = useLocale();
   return (
     <>
       <span className="sr-only">, </span>
-      <span className="optioncount t-num">{formatNumber(count, locale)}</span>
+      <span className="optioncount t-num">
+        {floorFigure(formatNumber(count, locale), floor, count)}
+      </span>
     </>
   );
 }
@@ -440,6 +446,7 @@ export function SegmentedControl<Option extends string>({
   onChange,
   labels,
   counts,
+  floors,
   label,
   marks,
 }: Readonly<{
@@ -458,6 +465,8 @@ export function SegmentedControl<Option extends string>({
   // screen reader announces "Contacts 6" rather than leaving the figure to a
   // sighted reader alone.
   counts?: Partial<Record<Option, number>>;
+  // Options whose count is a floor, drawn "25+": the read stopped at a bound.
+  floors?: Partial<Record<Option, boolean>>;
   // Accessible name for the control as a whole (the `fieldset` group); a
   // screen reader announces it alongside each option so the buttons aren't
   // read out of context. Optional so existing callers are unaffected.
@@ -481,7 +490,9 @@ export function SegmentedControl<Option extends string>({
             onClick={() => onChange(option)}
           >
             {labels[option]}
-            {count !== undefined && <OptionCount count={count} />}
+            {count !== undefined && (
+              <OptionCount count={count} floor={floors?.[option]} />
+            )}
             {marks?.[option] && <span className="segmented-mark" aria-hidden />}
           </button>
         );
