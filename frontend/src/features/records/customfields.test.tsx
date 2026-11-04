@@ -20,7 +20,7 @@ import { ANALYTICS_SCHEMA_KEY } from "../../lib/analyticskeys";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CustomFieldsAdmin } from "./customfields";
 import { FieldBuilder } from "./customfields.builder";
-import { AuditRail, FieldTable } from "./customfields.table";
+import { FieldTable } from "./customfields.table";
 
 afterEach(cleanup);
 
