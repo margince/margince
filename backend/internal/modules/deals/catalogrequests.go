@@ -43,6 +43,7 @@ func productCreateInput(req crmcontracts.CreateProductRequest, priceStated bool)
 		BillingModel:          billingModel,
 		BillingIntervalMonths: billingMonths,
 		ComponentKind:         componentKindOf(req.ComponentKind),
+		TaxCategory:           componentKindOf(req.TaxCategory),
 	}, nil
 }
 
@@ -87,6 +88,7 @@ func productUpdateInput(req crmcontracts.UpdateProductRequest, cleared []string,
 		Clear:          clears,
 		IfVersion:      ifVersion,
 		ComponentKind:  componentKindOf(req.ComponentKind),
+		TaxCategory:    componentKindOf(req.TaxCategory),
 
 		// A patch addresses the classification when it names either half.
 		Classified:            req.BillingModel != nil || req.BillingIntervalMonths != nil,

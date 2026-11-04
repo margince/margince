@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -14,6 +14,24 @@ The hours a host can be booked are a fact about one host, so each host sets thei
 installation replaces them. Hours a host never set fall back to 09:00 to 17:00, Monday to Friday,
 in the installation timezone. An agent acting for someone else may not set them, because when a
 host can be booked is that host's call.
+
+## A page with no calendar is paused, and says so
+
+A booking page saved before the profile existed names no calendar, and nothing migrates it. One
+rule, `Store.pagePaused`, decides whether a standing page is open: switched on, and `blocker` is
+`none`. The guest profile, the free-time read, both booking reads and the link card ask it.
+
+The guest profile of a paused page answers the host's name and `paused: true`, so the guest page
+can say whose page is closed. Every other field is empty, zero or false, and shows nothing about
+the calendar. The free-time read and the
+booking call answer as for an unknown slug, before any body is read, because the slug is the
+capability. Only a retry of a booking the page already took is answered, since that caller holds
+its own key. A proposal is paused by its calendar only, not by the standing page's switch.
+
+The host's own profile carries `blocker`. It is read from the connection row and the host's
+authority, never from a provider call. `no_calendar` is a page that names none, `calendar_read_only`
+a connection without the write grant, and `calendar_unavailable` a connection that is gone or
+refused.
 
 ## Free times are read live, and a failed read shows no times
 

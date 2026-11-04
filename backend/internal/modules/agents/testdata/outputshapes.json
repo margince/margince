@@ -5884,6 +5884,9 @@
           "priced_count": {
             "type": "integer"
           },
+          "qualification_mode": {
+            "type": "string"
+          },
           "qualified": {
             "type": "object",
             "properties": {
@@ -5993,6 +5996,7 @@
           "period_end",
           "period_start",
           "priced_count",
+          "qualification_mode",
           "scope_kind",
           "snapshots",
           "timezone",
@@ -13276,6 +13280,9 @@
           },
           "priced_count": {
             "type": "integer"
+          },
+          "qualification_mode": {
+            "type": "string"
           },
           "qualified": {
             "properties": {

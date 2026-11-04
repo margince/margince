@@ -113,6 +113,7 @@
     "GET /v1/deals/{id}/stage-evidence": "read_view",
     "GET /v1/deals/{id}/stakeholders": "read_view",
     "GET /v1/deals/{id}/status": "read_view",
+    "GET /v1/deals/{id}/viability": "read_view",
     "GET /v1/dedupe/candidates": "read_view",
     "GET /v1/dedupe/candidates/{id}": "read_view",
     "GET /v1/dedupe/contact-cases": "read_view",

@@ -12,6 +12,8 @@ package compose
 import (
 	"context"
 	"errors"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -40,6 +42,9 @@ func TestOfferDraftCaseRunsWhatProductionRuns(t *testing.T) {
 		// wantStaged is what the orchestrator carries into AddStagedOfferLines,
 		// and the case owes the same verdict about the same lines.
 		wantStaged []deals.StagedOfferLineInput
+		// groundedOn names the rate-card product each staged line's price came
+		// from, by position; its id is minted per case.
+		groundedOn map[int]string
 		wantResult string
 	}{
 		{
@@ -62,6 +67,7 @@ func TestOfferDraftCaseRunsWhatProductionRuns(t *testing.T) {
 					PriceGrounded: true,
 				},
 			},
+			groundedOn: map[int]string{1: offerDraftSupportPlan},
 			wantResult: aitasks.OutcomeAccepted,
 		},
 		{
@@ -94,7 +100,7 @@ func TestOfferDraftCaseRunsWhatProductionRuns(t *testing.T) {
 
 			outcome, trace := runOfferDraftCase(t, c, func(req model.Request) string { return tc.reply(t, req) })
 
-			assertOrchestratorAgrees(t, c, trace, tc.wantStaged)
+			assertOrchestratorAgrees(t, c, trace, groundOn(t, c, tc.wantStaged, tc.groundedOn))
 			if outcome.Result != tc.wantResult {
 				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
 			}
@@ -105,6 +111,22 @@ func TestOfferDraftCaseRunsWhatProductionRuns(t *testing.T) {
 // assertOrchestratorAgrees runs the shipped path over the same fixture, answered
 // with the text the case's model answered with, so the only thing that can
 // differ between the two is the code.
+// groundOn sets the product each wanted line was priced from, read from the
+// case's own catalogue.
+func groundOn(t *testing.T, c *offerDraftCase, want []deals.StagedOfferLineInput, names map[int]string) []deals.StagedOfferLineInput {
+	t.Helper()
+	want = slices.Clone(want)
+	for position, name := range names {
+		index := slices.IndexFunc(c.catalog, func(p crmcontracts.Product) bool { return p.Name == name })
+		if index < 0 {
+			t.Fatalf("the case's catalogue carries no %q", name)
+		}
+		id := ids.From[ids.ProductKind](ids.UUID(c.catalog[index].Id))
+		want[position].ProductID = &id
+	}
+	return want
+}
+
 func assertOrchestratorAgrees(
 	t *testing.T, c *offerDraftCase, trace aitasks.Trace, wantStaged []deals.StagedOfferLineInput,
 ) {
@@ -202,7 +224,7 @@ func assertSameStagedLines(t *testing.T, whose string, got, want []deals.StagedO
 		t.Fatalf("%s staged %d lines, want %d: %+v", whose, len(got), len(want), got)
 	}
 	for i, line := range want {
-		if got[i] != line {
+		if !reflect.DeepEqual(got[i], line) {
 			t.Errorf("%s staged %+v at %d, want %+v", whose, got[i], i, line)
 		}
 	}
