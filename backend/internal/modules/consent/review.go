@@ -206,11 +206,10 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 // the reason every scoped read here does: "forbidden" tells a caller the id
 // exists, which is itself a disclosure about a message they may not see.
 func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error) {
-	// A HUMAN. auth.RequireHuman admits connectors, which run with the
-	// granting human's grants — so on the decider's door it would hand one
-	// seat's refused correspondence to anything holding their credentials.
-	// The initiator's own door is bounded by the seat either way.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// A user or their agent, never a connector. It runs with the granting user's
+	// grants, so it would hand one seat's refused correspondence to anything
+	// holding their credentials.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return Review{}, err
 	}
 	seat := initiatingSeat(ctx)

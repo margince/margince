@@ -58,7 +58,7 @@ const kindInPerson = "in_person"
 // word is what stops the form and the store disagreeing about what was written.
 const KindRequestedBySubject = "requested_by_subject"
 
-// handRecordedKinds are the kinds a human may assert. Every other kind is
+// handRecordedKinds are the kinds a user or their agent may assert. Every other kind is
 // derived from records, and a hand-written one would be a second, unbacked
 // answer to a question the data already settles.
 //
@@ -119,9 +119,9 @@ type RecordQualifyingEventInput struct {
 // the record.
 //
 // It is `captured` rather than `human`: nobody typed this claim, the door that
-// took the booking wrote it. The hand-recorded verbs beside it stay what
-// they are — a named human asserting something with no other evidence — and
-// keep their RequireHuman.
+// took the booking wrote it. The hand-recorded verbs beside it stay a named
+// user's assertion with no other evidence, made by them or the agent on their
+// passport. They keep their RequireHumanOrItsAgent.
 func (s *Store) RecordInquiry(
 	ctx context.Context, contactID ids.ContactID, activityID ids.UUID,
 ) error {
@@ -225,11 +225,9 @@ func (s *Store) RecordQualifyingEvent(
 			Field: fieldOccurredAt, Reason: "an exchange you remember happened before now",
 		}
 	}
-	// Human-only HERE, not only on the route: an agent never asserts that a
-	// contact met somebody. The REST gate refuses the route today, and an
-	// in-process caller carrying an agent principal would otherwise reach this
-	// exported method with nothing between it and the row.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Here as well as on the route: automatic work never asserts that a contact
+	// met somebody, and an in-process caller would otherwise reach the row.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return QualifyingEvent{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -261,12 +259,12 @@ func (s *Store) RecordQualifyingEvent(
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
 				(contact_id, kind, note, occurred_at, source, captured_by, asks_for_quote)
-			SELECT $1, $2, $3, $4, 'human', $5, $6
+			SELECT $1, $2, $3, $4, $7, $5, $6
 			 WHERE NOT EXISTS (
 				SELECT 1 FROM consent_qualifying_event
 				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
 			RETURNING id::text`,
-			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote).Scan(&out.ID); err != nil {
+			contactID, in.Kind, note, in.OccurredAt, by, in.AsksForQuote, handRecordedSource(ctx)).Scan(&out.ID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Already on file. Nothing was written twice, so there is
 				// nothing to audit, and the answer is the standing row.
@@ -313,11 +311,10 @@ func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, o
 // as the record of what was said and when it was taken back; no send and no
 // verdict reads it any more.
 //
-// Human-only and gated like recording, because it is the same statement taken
-// back. A derived exchange is not retracted here: it stands on a record the
+// Gated like recording, because it is the same statement taken back. A derived exchange is not retracted here: it stands on a record the
 // product holds, and archiving that record is what ends it.
 func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.ContactID, eventID ids.UUID) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -361,6 +358,15 @@ func handRecordedKindList() []string {
 		out = append(out, kind)
 	}
 	return out
+}
+
+// handRecordedSource is the source column of a hand-recorded exchange. An agent's
+// row says so, because this row is the legal evidence and an agent was not there.
+func handRecordedSource(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return sourceKindAgent
+	}
+	return sourceKindHuman
 }
 
 // InvalidQualifyingEventError refuses a claim the record could not stand

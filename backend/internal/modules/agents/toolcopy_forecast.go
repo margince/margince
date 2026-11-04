@@ -143,7 +143,7 @@ var readForecastCopy = toolCopy{
 		"tells them apart, and needs a coverage grant sellers lack.",
 	Instead: "read_reports and find_records with engine query also produce numbers, and neither " +
 		"is the forecast. For a board-pack section, use read_analytics: query with save, then " +
-		"compose.",
+		"compose. To make a call, answer an input exception or share a reading, use change_reports.",
 	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number. Every `_minor` figure " +
 		"is in minor units of `base_currency`: 3100000 in EUR is EUR 31,000.",
 }

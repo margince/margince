@@ -149,6 +149,7 @@ type inProcessCall struct {
 	Query           url.Values
 	Body            json.RawMessage
 	Version         string
+	IdempotencyKey  string
 	// FileLimit lets a file answer past maxViewAnswerBytes, up to this many bytes.
 	FileLimit int
 }
@@ -174,6 +175,9 @@ func (door *viewDoor) serveInProcess(ctx context.Context, call inProcessCall) *c
 	}
 	if call.Version != "" {
 		req.Header.Set("If-Match", call.Version)
+	}
+	if call.IdempotencyKey != "" {
+		req.Header.Set("Idempotency-Key", call.IdempotencyKey)
 	}
 	rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: call.FileLimit}
 	door.api.ServeHTTP(rec, req)

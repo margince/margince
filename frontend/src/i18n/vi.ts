@@ -11016,6 +11016,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "blockedDomains.source.verdict": "Kết quả mô hình",
   "blockedDomains.source.heuristic": "Quy tắc suy đoán",
   "blockedDomains.source.human": "Thành viên",
+  "blockedDomains.source.agent": "Trợ lý",
   "blockedDomains.source.reservedDomain":
     "Tên miền dành riêng: tạm dừng nhận dạng công ty",
   "blockedDomains.source.forwardedIdentity":

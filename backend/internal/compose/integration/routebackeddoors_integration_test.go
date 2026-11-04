@@ -100,6 +100,10 @@ func TestNoRouteBackedActionStillRefusesAnActingAgent(t *testing.T) {
 		}
 		human := d.e.Call(t, v.Method, path, body, nil, nil)
 		result := d.mcp.Call(t, v.Verb, args)
+		// A record that is not there is the caller's mistake, never a fault.
+		if human == http.StatusInternalServerError || strings.Contains(result.Text, "the route failed with 500") {
+			t.Errorf("%s (%s %s) faults on a record that does not exist: %s", v.Verb, v.Method, v.Pattern, result.Text)
+		}
 		if human == http.StatusForbidden || human == http.StatusUnauthorized {
 			continue
 		}
