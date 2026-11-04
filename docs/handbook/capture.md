@@ -97,6 +97,8 @@ It is also listed when the names are close and the mail domain is the employer's
 Nothing is merged by itself. The same check runs when an edit or a data provider adds an address.
 Colleagues see the pair only once the sender has been judged a business contact. A sender kept private, for example because the message is held, is not shown to them.
 
+A contact kept private because its conversation was held opens to colleagues once nothing holds it any more. That is when the conversation is judged ordinary, or when you share it. A contact you made private yourself stays private. A contact you only wrote to stays yours until the address replies.
+
 ### Mail with a lead on it
 
 A captured email or meeting goes on the timeline of each open lead whose exact email address is on it. Case does not matter, and `lena@acme.example.org` is not `lena@acme.example`.
