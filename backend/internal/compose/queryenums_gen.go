@@ -174,6 +174,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/dedupe/contact-cases": {
 		{Name: "scope", Values: []string{"mine", "unassigned", "all"}, Array: false, Explode: true},
 	},
+	"GET /v1/extension-history": {
+		{Name: "entity_type", Values: []string{"contact", "company", "deal"}, Array: false, Explode: true},
+	},
 	"GET /v1/field-history": {
 		{Name: "actor_type", Values: []string{"human", "agent", "system", "connector", "buyer"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},

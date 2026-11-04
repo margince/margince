@@ -22,7 +22,7 @@ are done.
 | 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) | done |
 | 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) | done |
 | 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) | done |
-| 8 | Record page with merged history for extension kinds | Nothing yet. | None yet | planned |
+| 8 | Record page with merged history for extension kinds | Declare a timeline for a record kind. Its rows that reference a contact, company or deal, and the unit's signals about it, show in that record's History beside activities and field changes. | [Record page with merged history for extension kinds](#record-page-with-merged-history-for-extension-kinds) | done |
 | 9 | Search and lists for extension kinds | Nothing yet. | None yet | planned |
 | 10 | Suggested-link resolver | Nothing yet. | None yet | planned |
 | 11 | Typed links between core records | Nothing yet. | None yet | planned |
@@ -260,5 +260,42 @@ An extension that reads the field through `pkg/extension` sees `Type` `record` a
 What this feature does not do yet:
 
 - The value is not checked against the extension's table, so an id that names no row is stored. The check needs a
-  row lookup through the registry, and no record page or search exists for the kinds yet. See features 8 and 9.
+  row lookup through the registry, and no page of its own or search exists for the kinds yet. See feature 9.
 - The control takes the id as text. A picker that lists the kind's records waits for search over extension kinds.
+
+## Record page with merged history for extension kinds
+
+A unit can put its own rows and signals into the History tab of a contact, company or deal. The steps to declare it are
+in [Show a kind's rows in a record's History](../how-to/add-an-extension.md#show-a-kinds-rows-in-a-records-history).
+
+The maintainers chose to read the unit's own tables over writing an activity for each row. The activity writers and
+`ActivityLink` stay closed to core's kinds, so no activity is filed on an extension record. A row shows because it
+references the core record, and its unit declares which columns say how.
+
+```mermaid
+flowchart LR
+    T[History tab] --> H[useRecordChronology]
+    H --> A[Activities of the 360 read]
+    H --> X[GET extension-history]
+    X --> R[Rows of declared kinds]
+    X --> S[Signals of extension kinds]
+    H --> M[Merged, newest first]
+```
+
+| Part | What it does |
+|---|---|
+| `RecordKindDeclaration.Timeline` | Names the label field, the time column and, per core record, the `uuid` column that references it. The boot and `make gen` refuse a label that is no declared field, a bad column name, no subject or a repeated one. |
+| `GET /v1/extension-history` | Takes `entity_type` (`contact`, `company` or `deal`) and `entity_id`. It answers `record` and `signal` entries, newest first. |
+| Row scope | The core record is probed first, so a record outside the seat's scope is a 404. A kind the seat may not read is left out. Signals go through the signals module's own visible reader, so its row scope applies. |
+| Limits | At most 50 rows per kind and 50 signals. An archived row and a row with no time are left out. |
+| Signals | Only signals of an extension kind (`ext:<unit>:<kind>`) whose subject is the record. Signals of core's kinds stay in the signal strip. |
+| `useRecordChronology` | Reads the answer for a contact, company or deal under every cut that reads the exchanges, and merges it with the activities. The activities keep their order. While the activity feed has a next page, an entry older than the oldest loaded activity waits for it. |
+| Changes | The cut stays the record's own field changes. It reads no extension entry. |
+| Screens | An entry shows the kind `Extension` or `Signal`, its title and the kind's own name. |
+
+What this feature does not do yet:
+
+- A lead or a project shows no extension entry, because a unit declares rows about contacts, companies and deals only.
+- The kind's declared display name is not on the entry. The entry shows the kind's short name.
+- An entry does not open anything. An extension kind has no page of its own yet.
+- The feed has no next page. Core reads the newest 50 of each source.

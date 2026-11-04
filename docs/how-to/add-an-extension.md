@@ -727,6 +727,33 @@ The service reports itself unready while your table, a column or the unique inde
 [an extension cannot add its own record kinds](../reference/an-extension-cannot-add-its-own-record-k.md#extension-record-kinds-and-link-registry)
 says what core does with a kind today, and what it leaves out.
 
+### Show a kind's rows in a record's History
+
+Add `Timeline` to the declaration and the rows of the kind that reference a contact, company or deal show in that
+record's History tab. You name three things and core builds the entry. You write no timeline code.
+
+```go
+Timeline: &extension.RecordKindTimeline{
+	LabelField: "account_code",
+	AtColumn:   "posted_at",
+	Subjects:   []extension.TimelineSubject{{Entity: "company", Column: "company_id"}},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `LabelField` | A declared field. Its text is the entry's title. An empty value shows the kind's `DisplayName`. |
+| `AtColumn` | A `timestamptz` column in your table. It places the entry in time. A row with no value there is left out. |
+| `Subjects` | One entry per core record a row can reference: `Entity` is `contact`, `company` or `deal`, and `Column` is the `uuid` column that holds that record's id. Each record kind may appear once. |
+
+An archived row is left out. A reader sees an entry only with the `read` right on the kind, and only on a record the
+reader may see. Core reads at most 50 rows per kind, newest first.
+
+Signals of your own kinds (see [Declare a signal type](#declare-a-signal-type)) show in the same History. They need no
+declaration. They must be about a contact, company or deal. A reader sees one only inside the signal row scope.
+`GET /v1/extension-history` serves both; the History tab merges them with the activities in time order. The Changes cut
+stays the record's own field changes.
+
 ## Declare a report count or breakdown
 
 A unit can add a number to Reports and Home. A count says how many live records a population holds. A breakdown splits
@@ -1085,8 +1112,9 @@ res, err := rt.Ingest(ctx, member, rec) // res.Disposition is Accepted or Skippe
 A source may also list `KindCompany` and `KindDeal`; see
 [land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md).
 
-You build no timeline entry. You hand over a record, and the core decides what to do with it. These rules fail
-you if you miss them:
+You hand over a record, and the core decides what to do with it. Rows of your own kinds and your own signals reach a
+record's History through [a timeline declaration](#show-a-kinds-rows-in-a-records-history), which core turns into
+entries. These rules fail you if you miss them:
 
 - **`Ingest` hangs off `Runtime`, not `Tx`.** The pipeline opens its own transaction. Called from inside
   yours, it takes a second connection while it holds one. When the `pool` is small, that hangs.

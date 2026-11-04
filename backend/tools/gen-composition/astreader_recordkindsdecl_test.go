@@ -53,6 +53,35 @@ func TestRecordKindDeclarationsDeriveIntoTheManifest(t *testing.T) {
 	}
 }
 
+func TestARecordKindTimelineDerivesIntoTheManifest(t *testing.T) {
+	derived, err := deriveSynthetic(t, "x", recordKindUnitSource(`{
+	Kind: "visit", DisplayName: "Visit", Table: "ext_x_visit",
+	Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},
+	NaturalKey: []string{"code"},
+	Timeline: &extension.RecordKindTimeline{
+		LabelField: "code", AtColumn: "visited_at",
+		Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "contact_id"}},
+	},
+},`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"timeline"`, `"label_field": "code"`, `"at_column": "visited_at"`, `"entity": "contact"`, `"column": "contact_id"`} {
+		if !strings.Contains(string(derived), want) {
+			t.Errorf("the manifest misses %s:\n%s", want, derived)
+		}
+	}
+	_, err = deriveSynthetic(t, "x", recordKindUnitSource(`{
+	Kind: "visit", DisplayName: "Visit", Table: "ext_x_visit",
+	Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},
+	NaturalKey: []string{"code"},
+	Timeline: &extension.RecordKindTimeline{LabelField: "nope", AtColumn: "at", Subjects: []extension.TimelineSubject{{Entity: "contact", Column: "c"}}},
+},`))
+	if err == nil {
+		t.Error("generation accepted a timeline the boot refuses")
+	}
+}
+
 // Generation refuses what the boot would, through the same published Validate.
 func TestARecordKindTheBootWouldRefuseIsRefusedAtGeneration(t *testing.T) {
 	for name, kinds := range map[string]string{

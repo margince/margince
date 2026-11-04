@@ -35,6 +35,8 @@ type Declared struct {
 	NaturalKey []string
 	// DeletePolicy is never empty: the default is filled in at registration.
 	DeletePolicy extension.DeletePolicy
+	// Timeline is nil for a kind whose rows do not enter a History.
+	Timeline *extension.RecordKindTimeline
 }
 
 var (
@@ -57,7 +59,7 @@ func Register(unit extension.Name, kinds []extension.RecordKindDeclaration) {
 		byName[name] = Declared{
 			Name: name, Unit: unit, Kind: k.Kind, DisplayName: k.DisplayName, Table: k.Table,
 			Object: extension.RecordKindObject(unit, k.Kind), Fields: k.Fields,
-			NaturalKey: k.NaturalKey, DeletePolicy: policy,
+			NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline,
 		}
 	}
 }

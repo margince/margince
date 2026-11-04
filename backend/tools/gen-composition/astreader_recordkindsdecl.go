@@ -8,6 +8,7 @@ package main
 
 import (
 	"go/ast"
+	"go/token"
 	"sort"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -22,6 +23,18 @@ type declaredRecordKind struct {
 	NaturalKey   []string                    `json:"natural_key"`
 	Defaults     []declaredRecordKindDefault `json:"defaults,omitempty"`
 	DeletePolicy extension.DeletePolicy      `json:"delete_policy,omitempty"`
+	Timeline     *declaredKindTimeline       `json:"timeline,omitempty"`
+}
+
+type declaredKindTimeline struct {
+	LabelField string                `json:"label_field"`
+	AtColumn   string                `json:"at_column"`
+	Subjects   []declaredKindSubject `json:"subjects"`
+}
+
+type declaredKindSubject struct {
+	Entity string `json:"entity"`
+	Column string `json:"column"`
 }
 
 type declaredRecordKindField struct {
@@ -71,6 +84,12 @@ func (k declaredRecordKind) declaration() extension.RecordKindDeclaration {
 	}
 	for _, f := range k.Fields {
 		d.Fields = append(d.Fields, extension.RecordKindField{Name: f.Name, Label: f.Label})
+	}
+	if k.Timeline != nil {
+		d.Timeline = &extension.RecordKindTimeline{LabelField: k.Timeline.LabelField, AtColumn: k.Timeline.AtColumn}
+		for _, s := range k.Timeline.Subjects {
+			d.Timeline.Subjects = append(d.Timeline.Subjects, extension.TimelineSubject{Entity: s.Entity, Column: s.Column})
+		}
 	}
 	for _, def := range k.Defaults {
 		actions := make([]extension.RbacAction, 0, len(def.Actions))
@@ -124,10 +143,83 @@ func (r *unitReader) readRecordKindField(k *declaredRecordKind, name string, kv 
 		var policy string
 		policy, err = r.constValue(kv.Value, ext)
 		k.DeletePolicy = extension.DeletePolicy(policy)
+	case "Timeline":
+		k.Timeline, err = r.readKindTimeline(kv.Value, ext)
 	default:
 		err = r.errAt(kv, "RecordKindDeclaration field %s is not derivable by this generator", name)
 	}
 	return err
+}
+
+// readKindTimeline reads `&extension.RecordKindTimeline{...}`.
+func (r *unitReader) readKindTimeline(expr ast.Expr, ext string) (*declaredKindTimeline, error) {
+	unary, ok := expr.(*ast.UnaryExpr)
+	if !ok || unary.Op != token.AND {
+		return nil, r.errAt(expr, "RecordKindDeclaration.Timeline must be &extension.RecordKindTimeline{...}")
+	}
+	lit, ok := unary.X.(*ast.CompositeLit)
+	if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "RecordKindTimeline")) {
+		return nil, r.errAt(expr, "RecordKindDeclaration.Timeline must be an extension.RecordKindTimeline literal")
+	}
+	tl := &declaredKindTimeline{}
+	for _, e := range lit.Elts {
+		kv, ok := e.(*ast.KeyValueExpr)
+		key, named := kv.Key.(*ast.Ident)
+		if !ok || !named {
+			return nil, r.errAt(e, "RecordKindTimeline fields must be keyed by name")
+		}
+		var err error
+		switch key.Name {
+		case "LabelField":
+			tl.LabelField, err = r.stringLit(kv.Value, "RecordKindTimeline.LabelField")
+		case "AtColumn":
+			tl.AtColumn, err = r.stringLit(kv.Value, "RecordKindTimeline.AtColumn")
+		case "Subjects":
+			tl.Subjects, err = r.readTimelineSubjects(kv.Value, ext)
+		default:
+			err = r.errAt(kv, "RecordKindTimeline field %s is not derivable by this generator", key.Name)
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return tl, nil
+}
+
+func (r *unitReader) readTimelineSubjects(expr ast.Expr, ext string) ([]declaredKindSubject, error) {
+	list, ok := expr.(*ast.CompositeLit)
+	if !ok {
+		return nil, r.errAt(expr, "RecordKindTimeline.Subjects must be a slice literal")
+	}
+	out := make([]declaredKindSubject, 0, len(list.Elts))
+	for _, e := range list.Elts {
+		lit, ok := e.(*ast.CompositeLit)
+		if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "TimelineSubject")) {
+			return nil, r.errAt(e, "a Subjects entry must be an extension.TimelineSubject literal")
+		}
+		var s declaredKindSubject
+		for _, f := range lit.Elts {
+			kv, ok := f.(*ast.KeyValueExpr)
+			key, named := kv.Key.(*ast.Ident)
+			if !ok || !named {
+				return nil, r.errAt(f, "TimelineSubject fields must be keyed by name")
+			}
+			var err error
+			switch key.Name {
+			case "Entity":
+				s.Entity, err = r.stringLit(kv.Value, "TimelineSubject.Entity")
+			case "Column":
+				s.Column, err = r.stringLit(kv.Value, "TimelineSubject.Column")
+			default:
+				err = r.errAt(kv, "TimelineSubject field %s is not derivable by this generator", key.Name)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+		out = append(out, s)
+	}
+	return out, nil
 }
 
 func (r *unitReader) readStringSlice(expr ast.Expr, field string) ([]string, error) {
