@@ -19,8 +19,8 @@ var ownedKinds = map[string]string{
 	"company": "/v1/companies/", "contact": "/v1/contacts/", "deal": "/v1/deals/", "lead": "/v1/leads/", "project": "/v1/projects/",
 }
 
-// What a scoped role is answered on a colleague's record, beside the reason a
-// call stopped: it ran and left the record as it was, or it changed it.
+// A call on a colleague's record ran and left it as it was, or changed it.
+// Any other answer is the reason the call stopped.
 const (
 	colleagueRan     = "ran"
 	colleagueChanged = "changed"
@@ -28,9 +28,9 @@ const (
 
 // crossOwnerPass calls every tool that takes an owned record, on records a
 // colleague owns, as each role whose row scope stops short of all. Every
-// granted seat reads an identity record and may act on its own work beside one,
-// so a call may run; it must not change the colleague's record. It answers each
-// call's row with what each such role was told.
+// granted seat reads an identity record and may act on its own work beside it.
+// So a call may run, and it must not change the colleague's record. It answers
+// each call's row with what each such role was told.
 func crossOwnerPass(t *testing.T, e *apptest.AppEnv, roles []seededRole, calls []toolRoleCall) map[string]map[string]string {
 	t.Helper()
 	owned := callsTakingOwnedRecords(calls)

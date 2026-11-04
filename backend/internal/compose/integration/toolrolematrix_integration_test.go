@@ -226,8 +226,8 @@ func (v *toolRoleVerdicts) record(role string, got apptest.MCPResult) {
 }
 
 // Why a call stopped before a role gate, read from the answer the agent is
-// given. Each reason is a kind of work left: a value the filler cannot make, a
-// record the sweep does not seed, a service the test stack does not start.
+// given. Each reason is a kind of work left, such as a value the filler cannot
+// make or a record the sweep does not seed.
 const (
 	stopValidation  = "validation"
 	stopNotFound    = "not_found"

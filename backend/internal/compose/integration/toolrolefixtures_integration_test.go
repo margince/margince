@@ -6,9 +6,9 @@
 package integration
 
 // toolRoleFixtures are the arguments a verb needs that its schema does not
-// say: a field one record type requires, one of two fields that must be sent,
-// a list that must not be empty. They are laid over what the filler wrote, and
-// a request_body is merged into the filled one.
+// say, such as a field one record type requires or a list that must not be
+// empty. They are laid over what the filler wrote. A request_body is merged
+// into the filled one.
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
