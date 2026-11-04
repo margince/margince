@@ -7,6 +7,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { ifMatch, requireVersion } from "../../api/version";
 import { MultiSelect } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
@@ -83,9 +84,7 @@ export function useSetActivityKinds() {
         await api.PATCH("/custom-fields/{id}", {
           params: {
             path: { id: input.field.id },
-            header: input.field.version
-              ? { "If-Match": String(input.field.version) }
-              : undefined,
+            ...ifMatch(requireVersion(input.field.version)),
           },
           body: { activity_kinds: activityKindsOf(input.kinds) },
         }),
