@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // rbacActor resolves the acting principal; a missing actor is a
@@ -54,6 +55,18 @@ func refuseBuyer(p principal.Principal, what string) error {
 		what, apperrors.ErrPermissionDenied)
 }
 
+// gateObject maps an extension kind to its declared object; an undeclared one is no record, so even the system principal is refused.
+func gateObject(kind string) (string, error) {
+	if !recordkinds.IsExtensionName(kind) {
+		return kind, nil
+	}
+	declared, ok := recordkinds.Lookup(kind)
+	if !ok {
+		return "", fmt.Errorf("%s: no extension declares this record kind: %w", kind, apperrors.ErrPermissionDenied)
+	}
+	return declared.Object, nil
+}
+
 // Require is the object-level admission gate: the actor's merged role
 // policy must grant the action on the object type. The system principal
 // (workspace provisioning) is trusted by construction and has no role.
@@ -63,6 +76,9 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 		return err
 	}
 	if err := refuseBuyer(p, object+"."+string(action)); err != nil {
+		return err
+	}
+	if object, err = gateObject(object); err != nil {
 		return err
 	}
 	if p.Type == principal.PrincipalSystem {
@@ -100,6 +116,9 @@ func RequireAny(ctx context.Context, object string, actions ...principal.Action)
 		return err
 	}
 	if err := refuseBuyer(p, object); err != nil {
+		return err
+	}
+	if object, err = gateObject(object); err != nil {
 		return err
 	}
 	if p.Type == principal.PrincipalSystem {

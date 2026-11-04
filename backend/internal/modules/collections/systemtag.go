@@ -22,7 +22,7 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
-	if !memberEntityTables[entityType] {
+	if !acceptsEntityType(entityType) {
 		return 0, &BadInputError{Field: entityTypeField, Reason: "must be " + memberEntityVocabulary}
 	}
 	if len(entityIDs) == 0 {

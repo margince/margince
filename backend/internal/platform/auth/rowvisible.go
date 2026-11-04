@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // rowProbe is how strictly a single-row visibility probe judges the row.
@@ -56,6 +57,9 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 }
 
 func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mode rowProbe) error {
+	if recordkinds.IsExtensionName(table) {
+		return ensureExtensionRecord(ctx, tx, table, id, mode == probeLive)
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)

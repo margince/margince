@@ -17,7 +17,7 @@ are done.
 |---|---|---|---|---|
 | 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) | done |
 | 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) | done |
-| 3 | Extension record kinds and link registry | Nothing yet. | None yet | planned |
+| 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) | done |
 | 4 | Extension report breakdowns and counts | Nothing yet. | None yet | planned |
 | 5 | Extension signal types with structured evidence | Nothing yet. | None yet | planned |
 | 6 | Panels and tabs on record pages | Nothing yet. | None yet | planned |
@@ -89,3 +89,45 @@ carry both.
 `partner` works as before: it needs a partner row, and removing it while a partner row exists is a 422. Setting an
 extension type does not touch it. The database check on `company_relationship_type` accepts the shape
 `ext:<unit>:<type>`; which pairs exist is decided by the composed set, not by the database.
+
+## Extension record kinds and link registry
+
+An extension can declare a kind of record of its own, such as a visit or a ledger account. Core then treats the kind as
+a record in tags, Shortlists, the audit log and the places that name a kind, under rights that start denied. The steps to
+declare one are in [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind).
+
+A kind is named `ext:<unit>:<kind>`. The unit is the extension's name. The kind is a lower-case letter followed by up to
+31 lower-case letters, digits or underscores. The spelling is permanent once a row carries it, because every column
+that names a kind accepts it as a pattern.
+
+| Part | What it does |
+|---|---|
+| `Extension.RecordKinds` | The unit declares each kind: a display name, its own table, fields, a natural key, optional starting grants and a delete policy. The boot and `make gen` refuse a bad declaration. |
+| Registry | The core keeps the declared kinds in memory, filled at boot. Tags, lists and the rights check ask it, so none of them imports a unit. |
+| Rights | Each kind is gated on its own RBAC object, `ext_<unit>_<kind>` with hyphens turned into underscores. A role holds nothing on it until the unit's starting grants or an admin give it. |
+| Row check | A link, a tag or a Shortlist member needs the kind's `read` right and a live row in the unit's table. A caller without the right gets not found, so the id is not disclosed. |
+| Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing. |
+| Delete policy | `archive_only` (the default) keeps the row. `erasable` lets the row be erased through the erasure path. |
+| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, delete policy and the actions the seat holds. |
+| Audit | A change to an extension record is written with the `ext:<unit>:<kind>` name as its entity type and the existing actions. No new action is needed. |
+| Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. An extension kind has no record page, so `recordRoute` names none. |
+
+The database accepts the spelling in every column that named a kind. The columns are listed in the table below. A gate
+fails a new column that restates a closed list.
+
+| Table | Column |
+|---|---|
+| `activity_link` | `entity_type` (with `ext_entity_id` for the record's id) |
+| `attachment`, `embedding`, `list`, `list_member`, `list_live_member`, `list_member_event`, `taggable`, `user_record_view`, `signal` | `entity_type` |
+| `field_provenance` | `object_type` |
+| `record_grant` | `record_type` |
+| `dedupe_candidate` | `entity_type` (with `left_ext_id` and `right_ext_id`) |
+| `saved_view` | `resource` |
+
+No column gains a foreign key to an extension table, because an extension role cannot be referenced from core.
+
+What this feature does not do yet:
+
+- A Live List over an extension kind is refused. Only a Shortlist takes one.
+- The activity writers still refuse an extension kind, so no activity is filed on an extension record yet. The column is ready.
+- The record page, search, and the REST wire enums keep core's kinds. Tag counts do not include extension records.

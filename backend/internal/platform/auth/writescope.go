@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // grantAccessWrite is the wider of record_grant's two access levels. Spelled
@@ -296,6 +297,11 @@ func EnsureCanGrant(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // the callers uniform — a mutation asks for write authority whatever its table,
 // rather than each call site deciding whether its table can be shared.
 func ensureWriteAuthority(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	// An extension kind has no owner or share to narrow by: the kind's update
+	// right is the whole of the write authority.
+	if recordkinds.IsExtensionName(table) {
+		return Require(ctx, table, principal.ActionUpdate)
+	}
 	if !ownerScopedTables[table] {
 		return fmt.Errorf("auth: %q is not a row-scoped table", table)
 	}
