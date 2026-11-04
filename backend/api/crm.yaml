@@ -8834,7 +8834,9 @@ paths:
           description: >-
             Restrict the list to an inbound message still awaiting an answer: the newest message
             of each thread that nobody has answered. Combined with `entity_type`/`entity_id` it
-            answers what on this record is waiting for a reply.
+            answers what on this record is waiting for a reply. It lists for the whole team,
+            whoever the mail is addressed to, within what the caller may read; the caller's own
+            waiting mail is `GET /v1/worklist`.
         - name: reminder_due
           in: query
           schema: { type: boolean }
