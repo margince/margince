@@ -155,8 +155,9 @@ export function StandingTimeline({
     ...events.map((event) => instant(event.at)),
     ...marks.map((mark) => instant(mark.at)),
   ]);
+  // A line with no events draws one sentence and needs no older rows.
   const older = useOlderHistory(
-    history,
+    events.length > 0 ? history : undefined,
     marks.map((mark) => instant(mark.at)),
     zoom === "all" ? null : from,
   );
@@ -221,7 +222,7 @@ export function StandingTimeline({
     .filter(
       (mark) =>
         !drawn.has(mark.key) &&
-        instant(mark.at) >= axis.range.start &&
+        instant(mark.at) >= from &&
         activityHasBegun(mark.at, mark.precision, today, record),
     )
     .sort((a, b) => instant(a.at) - instant(b.at));

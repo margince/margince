@@ -13,6 +13,7 @@ import {
   type TimelineEvent,
   type TimelineMark,
 } from "./standingtimeline";
+import type { TimelineHistory } from "./standingtimeline.zoombar";
 
 afterEach(cleanup);
 
@@ -187,6 +188,14 @@ describe("a date far ahead", () => {
 });
 
 describe("the zoom", () => {
+  const older = (over: Partial<TimelineHistory>): TimelineHistory => ({
+    activities: [],
+    hasNextPage: true,
+    isFetchingNextPage: false,
+    isError: false,
+    fetchNextPage: () => undefined,
+    ...over,
+  });
   // An event's label on the canvas, not its line in the screen reader's list.
   const TITLE = ".standing-timeline-title";
   const sameMonth: TimelineEvent[] = [
@@ -249,7 +258,7 @@ describe("the zoom", () => {
     const fetchNextPage = vi.fn();
     zoomed({
       marks: [mark({ key: "m", at: "2026-08-01" })],
-      history: { hasNextPage: true, isFetchingNextPage: false, fetchNextPage },
+      history: older({ fetchNextPage }),
     });
 
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
@@ -260,18 +269,42 @@ describe("the zoom", () => {
     const fetchNextPage = vi.fn();
     zoomed({
       marks: [mark({ key: "m", at: "2026-04-01" })],
-      history: { hasNextPage: true, isFetchingNextPage: false, fetchNextPage },
+      history: older({ fetchNextPage }),
     });
 
     expect(fetchNextPage).not.toHaveBeenCalled();
     expect(screen.queryByText("Loading earlier items…")).toBeNull();
   });
 
+  it("stops asking once a page fails, so a refusal is not asked again", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, isError: true }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
+  it("stops at 200 rows, tasks included, and leaves the rest to History", () => {
+    const fetchNextPage = vi.fn();
+    const tasks = Array.from({ length: 200 }, (_, index) => ({ id: index }));
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, activities: tasks }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Earlier items are in History."),
+    ).toBeInTheDocument();
+  });
+
   it("asks for no second page while one is on its way", () => {
     const fetchNextPage = vi.fn();
     zoomed({
       marks: [mark({ key: "m", at: "2026-08-01" })],
-      history: { hasNextPage: true, isFetchingNextPage: true, fetchNextPage },
+      history: older({ fetchNextPage, isFetchingNextPage: true }),
     });
 
     expect(fetchNextPage).not.toHaveBeenCalled();

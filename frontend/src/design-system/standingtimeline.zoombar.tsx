@@ -12,13 +12,15 @@ import { TIMELINE_ZOOMS, type TimelineZoom } from "./standingtimeline.zoom";
  *  past the oldest the page holds. */
 export type TimelineHistory = Pick<
   RecordTimeline,
-  "hasNextPage" | "isFetchingNextPage" | "fetchNextPage"
->;
+  "hasNextPage" | "isFetchingNextPage" | "fetchNextPage" | "isError"
+> &
+  // Only counted, so any page of rows will do.
+  Readonly<{ activities: readonly unknown[] }>;
 
 /** Whether older rows are on their way, stopped at the cap, or all in. */
 export type OlderHistory = "loading" | "capped" | "done";
 
-// The most marks the line pages in; older ones stay on the History tab.
+// The most rows the line pages in; older ones stay on the History tab.
 const HISTORY_CAP = 200;
 
 const ZOOM_LABEL: Readonly<Record<TimelineZoom, MessageKey>> = {
@@ -30,8 +32,9 @@ const ZOOM_LABEL: Readonly<Record<TimelineZoom, MessageKey>> = {
 
 /**
  * Pages older activities in while the zoom reaches past the oldest mark on
- * hand (`marks`, their instants), one page at a time, up to `HISTORY_CAP`
- * marks. `from` is null on All time, which wants every page.
+ * hand (`marks`, their instants), one page at a time, until `HISTORY_CAP`
+ * rows are loaded. `from` is null on All time, which wants every page. A
+ * failed page stops it, so a refusal is not asked again and again.
  */
 export function useOlderHistory(
   history: TimelineHistory | undefined,
@@ -39,8 +42,9 @@ export function useOlderHistory(
   from: number | null,
 ): OlderHistory {
   const reaches = from === null || Math.min(...marks) > from;
-  const wanted = Boolean(history?.hasNextPage) && reaches;
-  const capped = marks.length >= HISTORY_CAP;
+  const wanted = Boolean(history?.hasNextPage) && !history?.isError && reaches;
+  // Rows, not marks: tasks draw no mark, and a page of them must still count.
+  const capped = (history?.activities.length ?? 0) >= HISTORY_CAP;
   const fetching = history?.isFetchingNextPage ?? false;
   const fetchOlder = useEffectEvent(() => history?.fetchNextPage());
   useEffect(() => {

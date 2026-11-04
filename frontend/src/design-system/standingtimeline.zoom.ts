@@ -28,9 +28,16 @@ export function zoomStart(
   if (zoom === "all") {
     return Math.min(today, ...moments);
   }
-  const back = new Date(today);
-  back.setUTCMonth(back.getUTCMonth() - ZOOM_MONTHS[zoom]);
-  return back.getTime();
+  const at = new Date(today);
+  const month = at.getUTCMonth() - ZOOM_MONTHS[zoom];
+  // Held to the month's last day, so 31 March less a month is 28 February.
+  const lastDay = new Date(
+    Date.UTC(at.getUTCFullYear(), month + 1, 0),
+  ).getUTCDate();
+  at.setUTCDate(1);
+  at.setUTCMonth(month);
+  at.setUTCDate(Math.min(new Date(today).getUTCDate(), lastDay));
+  return at.getTime();
 }
 
 // The zooms a default may open at, narrowest first.

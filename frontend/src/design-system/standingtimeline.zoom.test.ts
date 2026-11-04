@@ -17,6 +17,13 @@ describe("where a zoom starts the axis", () => {
     expect(iso(zoomStart("year", today, []))).toBe("2025-11-04T09:00:00.000Z");
   });
 
+  it("holds a month back to the shorter month's last day", () => {
+    const lastOfMarch = instant("2027-03-31T09:00:00Z");
+    expect(iso(zoomStart("month", lastOfMarch, []))).toBe(
+      "2027-02-28T09:00:00.000Z",
+    );
+  });
+
   it("starts All time at the earliest moment the record holds", () => {
     const first = instant("2023-02-14");
     expect(zoomStart("all", today, [instant("2026-01-01"), first])).toBe(first);
