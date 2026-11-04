@@ -2072,6 +2072,7 @@ export const en = {
   "brief.coverage.source.undelivered": "Unsent emails",
   "brief.coverage.source.bounce": "Undeliverable emails",
   "brief.coverage.source.ai_work_health": "Automation checks",
+  "brief.coverage.source.booking_health": "Booking page",
   "brief.coverage.source.capture_health": "Mailbox connections",
   "brief.coverage.source.failed_approval": "Failed approved actions",
   "brief.coverage.source.relationship_decay": "Quiet relationships",
@@ -18182,6 +18183,8 @@ export const en = {
     "A privacy request has a legal deadline. Open it and answer it in time.",
   "worklist.ask.notice_case":
     "A privacy notice is owed to this contact. Send it, ask them to confirm their details, or end the duty.",
+  "worklist.ask.booking_health":
+    "Your booking page is paused, so guests cannot book. Open booking settings and connect a calendar Margince can add meetings to.",
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":
@@ -18642,6 +18645,13 @@ export const en = {
   "noticeDuty.recorded": "Recorded",
   "noticeDuty.rule": "Rule",
   "worklist.untitled.notice_case": "Privacy notice owed",
+  "worklist.untitled.booking_health": "Your booking page is paused",
+  "worklist.untitled.booking_health_no_calendar":
+    "Your booking page is paused: it has no calendar to put meetings in",
+  "worklist.untitled.booking_health_calendar_read_only":
+    "Your booking page is paused: Margince may read your calendar but not add meetings",
+  "worklist.untitled.booking_health_calendar_unavailable":
+    "Your booking page is paused: Margince cannot reach your calendar",
   "worklist.untitled.capture_health": "Mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs review",
   "worklist.untitled.bounce": "Email bounced",

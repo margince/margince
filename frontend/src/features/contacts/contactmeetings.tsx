@@ -3,7 +3,6 @@ import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { RecordMeetingOutcome } from "../../components/meetingoutcome";
 import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
-import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import {
   Panel,
   PanelBody,
@@ -24,6 +23,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
+import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
@@ -466,7 +466,7 @@ function useBookingLink(copied: CopiedLink) {
   const t = useT();
   const profile = useSchedulingProfile();
   const url = profile.data?.enabled ? (profile.data.public_url ?? "") : "";
-  const copy = useClipboardCopy(
+  const copy = useCopyBookingLink(
     url,
     {
       copy: t("contact.meetings.copyBookingLink"),

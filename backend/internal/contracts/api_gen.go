@@ -2577,6 +2577,7 @@ const (
 	AttentionLanesFailedAiWorkHealth       AttentionLanesFailed = "ai_work_health"
 	AttentionLanesFailedAtRisk             AttentionLanesFailed = "at_risk"
 	AttentionLanesFailedAutomationHealth   AttentionLanesFailed = "automation_health"
+	AttentionLanesFailedBookingHealth      AttentionLanesFailed = "booking_health"
 	AttentionLanesFailedBounces            AttentionLanesFailed = "bounces"
 	AttentionLanesFailedCaptureHealth      AttentionLanesFailed = "capture_health"
 	AttentionLanesFailedCommitments        AttentionLanesFailed = "commitments"
@@ -2604,6 +2605,8 @@ func (e AttentionLanesFailed) Valid() bool {
 	case AttentionLanesFailedAtRisk:
 		return true
 	case AttentionLanesFailedAutomationHealth:
+		return true
+	case AttentionLanesFailedBookingHealth:
 		return true
 	case AttentionLanesFailedBounces:
 		return true
@@ -2649,6 +2652,7 @@ const (
 	AttentionLanesOmittedAiWorkHealth       AttentionLanesOmitted = "ai_work_health"
 	AttentionLanesOmittedAtRisk             AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedAutomationHealth   AttentionLanesOmitted = "automation_health"
+	AttentionLanesOmittedBookingHealth      AttentionLanesOmitted = "booking_health"
 	AttentionLanesOmittedBounces            AttentionLanesOmitted = "bounces"
 	AttentionLanesOmittedCaptureHealth      AttentionLanesOmitted = "capture_health"
 	AttentionLanesOmittedCommitments        AttentionLanesOmitted = "commitments"
@@ -2676,6 +2680,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedAtRisk:
 		return true
 	case AttentionLanesOmittedAutomationHealth:
+		return true
+	case AttentionLanesOmittedBookingHealth:
 		return true
 	case AttentionLanesOmittedBounces:
 		return true
@@ -2877,6 +2883,7 @@ const (
 	AttentionItemSourceAiWorkHealth        AttentionItemSource = "ai_work_health"
 	AttentionItemSourceApproval            AttentionItemSource = "approval"
 	AttentionItemSourceAutomationRun       AttentionItemSource = "automation_run"
+	AttentionItemSourceBookingHealth       AttentionItemSource = "booking_health"
 	AttentionItemSourceBounce              AttentionItemSource = "bounce"
 	AttentionItemSourceBriefItem           AttentionItemSource = "brief_item"
 	AttentionItemSourceCaptureHealth       AttentionItemSource = "capture_health"
@@ -2909,6 +2916,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceApproval:
 		return true
 	case AttentionItemSourceAutomationRun:
+		return true
+	case AttentionItemSourceBookingHealth:
 		return true
 	case AttentionItemSourceBounce:
 		return true
@@ -25229,6 +25238,7 @@ const (
 	WorklistItemSourceAutomationRun       WorklistItemSource = "automation_run"
 	WorklistItemSourceAwaitingReply       WorklistItemSource = "awaiting_reply"
 	WorklistItemSourceBatch               WorklistItemSource = "batch"
+	WorklistItemSourceBookingHealth       WorklistItemSource = "booking_health"
 	WorklistItemSourceBounce              WorklistItemSource = "bounce"
 	WorklistItemSourceBriefItem           WorklistItemSource = "brief_item"
 	WorklistItemSourceCaptureHealth       WorklistItemSource = "capture_health"
@@ -25267,6 +25277,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceAwaitingReply:
 		return true
 	case WorklistItemSourceBatch:
+		return true
+	case WorklistItemSourceBookingHealth:
 		return true
 	case WorklistItemSourceBounce:
 		return true
@@ -25403,6 +25415,7 @@ const (
 	WorklistReachSourceAutomationRun       WorklistReachSource = "automation_run"
 	WorklistReachSourceAwaitingReply       WorklistReachSource = "awaiting_reply"
 	WorklistReachSourceBatch               WorklistReachSource = "batch"
+	WorklistReachSourceBookingHealth       WorklistReachSource = "booking_health"
 	WorklistReachSourceBounce              WorklistReachSource = "bounce"
 	WorklistReachSourceBriefItem           WorklistReachSource = "brief_item"
 	WorklistReachSourceCaptureHealth       WorklistReachSource = "capture_health"
@@ -25441,6 +25454,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceAwaitingReply:
 		return true
 	case WorklistReachSourceBatch:
+		return true
+	case WorklistReachSourceBookingHealth:
 		return true
 	case WorklistReachSourceBounce:
 		return true
@@ -32925,6 +32940,16 @@ type Attention struct {
 	// installation whose feed does not read the run ledger.
 	AutomationHealth *[]AttentionItem `json:"automation_health,omitempty"`
 
+	// BookingHealth The reader's OWN booking page when it takes no bookings: at most one card. A page
+	// counts only when it is switched on and was used, meaning somebody booked through it
+	// or its host copied its link. `kind` is the page's `blocker` (`no_calendar`,
+	// `calendar_read_only` or `calendar_unavailable`). Fixing it lives on the booking
+	// settings screen, so the card offers no verbs.
+	//
+	// Withheld — named in `lanes_omitted` — for a caller with no human behind it. Absent —
+	// not empty — on an installation whose feed does not read booking pages.
+	BookingHealth *[]AttentionItem `json:"booking_health,omitempty"`
+
 	// Bounces The reader's OWN sends whose delivery reports came back hard, newest
 	// report first, inside the recent window — read from the bounce stamp on
 	// the send's own row, so this lane and the timeline cannot disagree about
@@ -33284,6 +33309,9 @@ type AttentionCounts struct {
 
 	// AutomationHealth How many troubled automation firings the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest.
 	AutomationHealth *int `json:"automation_health,omitempty" minimum:"0"`
+
+	// BookingHealth How many paused booking pages need the reader's hand: zero or one.
+	BookingHealth *int `json:"booking_health,omitempty" minimum:"0"`
 
 	// Bounces How many hard-bounced sends the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the newest reports.
 	Bounces *int `json:"bounces,omitempty" minimum:"0"`
@@ -90102,6 +90130,9 @@ type ServerInterface interface {
 	// Choose, change or clear the caller's friendly booking address.
 	// (PUT /scheduling/profile/alias)
 	PutSchedulingAlias(w http.ResponseWriter, r *http.Request)
+	// Record that the caller shared their booking link.
+	// (POST /scheduling/profile/shared)
+	MarkBookingPageShared(w http.ResponseWriter, r *http.Request)
 	// List the acting host's open proposals and personal links for one contact.
 	// (GET /scheduling/proposals)
 	ListMeetingProposals(w http.ResponseWriter, r *http.Request, params ListMeetingProposalsParams)
@@ -95790,6 +95821,12 @@ func (_ Unimplemented) PutSchedulingProfile(w http.ResponseWriter, r *http.Reque
 // Choose, change or clear the caller's friendly booking address.
 // (PUT /scheduling/profile/alias)
 func (_ Unimplemented) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that the caller shared their booking link.
+// (POST /scheduling/profile/shared)
+func (_ Unimplemented) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -134564,6 +134601,28 @@ func (siw *ServerInterfaceWrapper) PutSchedulingAlias(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// MarkBookingPageShared operation middleware
+func (siw *ServerInterfaceWrapper) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MarkBookingPageShared(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListMeetingProposals operation middleware
 func (siw *ServerInterfaceWrapper) ListMeetingProposals(w http.ResponseWriter, r *http.Request) {
 
@@ -143277,6 +143336,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/scheduling/profile/alias", wrapper.PutSchedulingAlias)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/scheduling/profile/shared", wrapper.MarkBookingPageShared)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/scheduling/proposals", wrapper.ListMeetingProposals)

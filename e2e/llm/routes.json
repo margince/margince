@@ -171,6 +171,7 @@
         "delete_disqualify_reason": "delete_lead_disqualify_reason",
         "delete_lead_origin": "delete_lead_origin",
         "delete_lead_source": "delete_lead_source",
+        "mark_booking_page_shared": "mark_booking_page_shared",
         "remove_legal_entity_logo": "delete_legal_entity_logo",
         "remove_own_logo": "delete_anchor_company_logo",
         "remove_own_logo_icon": "delete_anchor_company_logo_icon",

@@ -16,7 +16,11 @@ import { ENTITY, recordRoute } from "./entity";
 import { caseHref } from "./privacycaselink";
 import { routeHash } from "./router";
 import { settingsHref } from "./settingsrouting";
-import { connectionName, connectionTitleKey } from "./worklistconnection";
+import {
+  bookingTitleKey,
+  connectionName,
+  connectionTitleKey,
+} from "./worklistconnection";
 import { nonBuyerRequest } from "./worklisteyebrow";
 import type { Worklist, WorklistItem } from "./worklisttypes";
 
@@ -54,6 +58,7 @@ export function subjectHref(
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   dsr: routeHash(settingsHref("privacy")),
   capture_health: routeHash(settingsHref("connections")),
+  booking_health: routeHash({ screen: "book" }),
   // A rule that failed, and the page that lists the rules.
   //
   // The row named a broken automation and offered no address at all — not the
@@ -357,6 +362,7 @@ export function itemTitle(
     nonBuyerRequest(item)
       ? "worklist.source.awaiting_reply"
       : (connectionTitleKey(item) ??
+          bookingTitleKey(item) ??
           (`worklist.untitled.${item.source}` as const)),
   );
   return named ? `${title} · ${named}` : title;
@@ -416,6 +422,7 @@ export const KNOWN_SOURCES = {
   dsr: true,
   notice_case: true,
   capture_health: true,
+  booking_health: true,
   ai_work_health: true,
   bounce: true,
   undelivered: true,

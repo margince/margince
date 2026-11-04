@@ -2164,6 +2164,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.coverage.source.undelivered": "Nicht gesendete E-Mails",
   "brief.coverage.source.bounce": "Unzustellbare E-Mails",
   "brief.coverage.source.ai_work_health": "Zustand der Automatisierungen",
+  "brief.coverage.source.booking_health": "Buchungsseite",
   "brief.coverage.source.capture_health": "Postfachverbindungen",
   "brief.coverage.source.failed_approval":
     "Fehlgeschlagene freigegebene Aktionen",
@@ -18357,6 +18358,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Datenschutzanfrage hat eine gesetzliche Frist. Öffne sie und beantworte sie rechtzeitig.",
   "worklist.ask.notice_case":
     "Diesem Kontakt steht ein Datenschutzhinweis zu. Sende ihn, fordere eine Bestätigung der Daten an oder beende die Pflicht.",
+  "worklist.ask.booking_health":
+    "Deine Buchungsseite ist pausiert, Gäste können nicht buchen. Öffne die Buchungseinstellungen und verbinde einen Kalender, in den Margince Termine eintragen darf.",
   "worklist.ask.capture_health":
     "Ein Postfach erfasst keine E-Mails mehr. Verbinde es neu, damit seine E-Mails wieder erfasst werden.",
   "worklist.ask.domain_question":
@@ -18832,6 +18835,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "noticeDuty.recorded": "Erfasst",
   "noticeDuty.rule": "Regel",
   "worklist.untitled.notice_case": "Datenschutzhinweis geschuldet",
+  "worklist.untitled.booking_health": "Deine Buchungsseite ist pausiert",
+  "worklist.untitled.booking_health_no_calendar":
+    "Deine Buchungsseite ist pausiert: Es ist kein Kalender für die Termine gewählt",
+  "worklist.untitled.booking_health_calendar_read_only":
+    "Deine Buchungsseite ist pausiert: Margince darf deinen Kalender lesen, aber keine Termine eintragen",
+  "worklist.untitled.booking_health_calendar_unavailable":
+    "Deine Buchungsseite ist pausiert: Margince erreicht deinen Kalender nicht",
   "worklist.untitled.capture_health":
     "Postfachverbindung braucht Aufmerksamkeit",
   "worklist.untitled.ai_work_health": "KI-Arbeit muss geprüft werden",

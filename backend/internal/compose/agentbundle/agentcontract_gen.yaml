@@ -6135,6 +6135,29 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SchedulingProfile'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /scheduling/profile/shared:
+    post:
+      tags: [Activities]
+      operationId: markBookingPageShared
+      security: [{bearerAuth: []}]
+      summary: Record that the caller shared their booking link.
+      description: |-
+        The app calls this after the caller copies their booking link. The first call marks the
+        caller's booking page as used; later calls change nothing. Home warns a host about a
+        paused booking page only once the page was used: somebody booked through it, or its host
+        shared its link. Answers 404 when the caller has no booking page.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '204': {description: The booking page is marked as used.}
+        '404': {$ref: '#/components/responses/NotFound'}
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -40670,7 +40693,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -41363,7 +41386,7 @@ components:
         id: {type: string, description: "The owning record's id, as its own endpoint spells it."}
         source:
           type: string
-          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
+          enum: [approval, dedupe_candidate, contact_case, deal_suggestion, tag_suggestion, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, capture_health, booking_health, domain_question, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, awaiting_reply, meeting_follow_up, batch]
           description: |-
             Which producer raised it, and therefore which endpoint its verbs go to.
         category:

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 45 |
 | Resources | 13 |
-| Tool catalog | 190.4 KB |
+| Tool catalog | 190.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 50068 |
+| Approx. wire tokens | 50075 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -74,7 +74,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
 | [`change_reports`](#change_reports) | Prepare saved reports |  |  | 717 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 706 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 712 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1762 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
@@ -2665,6 +2665,7 @@ passport scope "write".)
         "delete_disqualify_reason",
         "delete_lead_origin",
         "delete_lead_source",
+        "mark_booking_page_shared",
         "remove_legal_entity_logo",
         "remove_own_logo",
         "remove_own_logo_icon",
