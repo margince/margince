@@ -412,9 +412,10 @@ function DsrFacts({
     });
   }
   if (dsr.resolution && isTerminal(dsr.status)) {
-    // An erasure's answer is a fixed word, shown in the reader's language.
-    const fixed =
-      dsr.kind === "erasure" ? ERASURE_ANSWER_LABEL[dsr.resolution] : undefined;
+    // An erasure's answer is a fixed word, shown in the reader's language. By
+    // the value, not the case's kind: an erasure retires the subject's other
+    // cases with the same word.
+    const fixed = ERASURE_ANSWER_LABEL[dsr.resolution];
     facts.push({
       key: "resolution",
       term: t("privacy.resolution"),

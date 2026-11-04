@@ -411,6 +411,30 @@ describe("fulfilling an erasure", () => {
     expect(screen.queryByText(en["privacy.erasureDraftReplaced"])).toBeNull();
   });
 
+  // An erasure retires the subject's other cases with the same word, so an
+  // access case can hold it too. The label follows the value, not the kind.
+  //
+  // Mutation: label only erasure cases and this shows the raw code.
+  it("shows a retired access case's erasure answer in the reader's words", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () =>
+        jsonResponse({
+          ...DSRS,
+          data: DSRS.data.map((dsr) =>
+            dsr.id === "d2" ? { ...dsr, resolution: "erased" } : dsr,
+          ),
+        }),
+    });
+    render(<RequestsPanel />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /anna@acme\.test/i }),
+    );
+    expect(
+      await screen.findByText(en["privacy.erasureAnswer.erased"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("erased")).toBeNull();
+  });
+
   it("shows a fulfilled erasure's answer in the reader's words", async () => {
     stubRoutes({
       "GET /data-subject-requests": () =>

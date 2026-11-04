@@ -65,8 +65,10 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 			return err
 		}
 		in = withoutReplayedAnswer(current, in)
-		// Text is refused before anything is erased, never dropped after.
-		if hasResolution(in.Resolution) {
+		// Any answer is refused before anything is erased, never dropped after:
+		// text, an empty or blank string, and an explicit null alike. The only
+		// answer an erasure takes is its own.
+		if in.Resolution != nil || in.ClearResolution {
 			return &ValidationError{
 				Field:  fieldResolution,
 				Reason: "an erasure is answered by the erasure itself; leave the answer empty",

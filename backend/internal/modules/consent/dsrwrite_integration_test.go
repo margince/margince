@@ -234,21 +234,35 @@ func TestAnErasureFulfilledWithTextIsRefusedBeforeErasing(t *testing.T) {
 	}
 }
 
-// A contact an earlier erasure already anonymised holds nothing more, and the
-// request says so instead of claiming an erasure that removed nothing.
+// Any answer on an erasure's fulfilment is refused, not only text: an empty
+// string, a blank one and an explicit null too. None of them may run the erase.
 //
-// Mutation: make erasureAnswerFor always answer erased and this fails.
-func TestAnErasureThatFoundNothingSaysNothingHeld(t *testing.T) {
-	e := setupDSR(t)
-	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
-	erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
-		return erasureaccount.Empty(), nil
+// Mutation: treat a blank answer as absent and the erase runs.
+func TestAnErasureFulfilledWithAnyAnswerIsRefusedBeforeErasing(t *testing.T) {
+	cases := map[string]UpdateDSRInput{
+		"empty":         {Resolution: new("")},
+		"blank":         {Resolution: new("   ")},
+		"explicit null": {ClearResolution: true},
 	}
-	if _, err := e.store.FulfilErasure(e.ctx, request.ID, UpdateDSRInput{Status: new("fulfilled"), Proof: idDocumentChecked}, erase); err != nil {
-		t.Fatalf("fulfilling: %v", err)
-	}
-	if after := e.read(t, request.ID); after.Resolution == nil || *after.Resolution != erasureAnswerNothingHeld {
-		t.Fatalf("the request holds %v, want %q", after.Resolution, erasureAnswerNothingHeld)
+	for name, in := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupDSR(t)
+			request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
+			erased := 0
+			erase := func(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
+				erased++
+				return erasureaccount.Empty(), nil
+			}
+			in.Status, in.Proof = new("fulfilled"), idDocumentChecked
+			_, err := e.store.FulfilErasure(e.ctx, request.ID, in, erase)
+			var verr *ValidationError
+			if !errors.As(err, &verr) || verr.Field != fieldResolution {
+				t.Fatalf("fulfilling with %s = %v, want a refusal on resolution", name, err)
+			}
+			if erased != 0 {
+				t.Fatalf("the erasure ran %d time(s), want never", erased)
+			}
+		})
 	}
 }
 

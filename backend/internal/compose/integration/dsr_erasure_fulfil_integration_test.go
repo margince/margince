@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -153,6 +154,32 @@ func erasureAnswerOf(t *testing.T, e *Env, store *consent.Store, id ids.UUID) st
 		return ""
 	}
 	return *read.Resolution
+}
+
+// A contact an earlier erasure already anonymised holds nothing more. An
+// erasure request on it, fulfilled through the real eraser, answers
+// nothing_held instead of claiming an erasure that removed nothing.
+//
+// Mutation: report a wired object store as uncounted whatever it destroyed,
+// or let the contact update run on an anonymised row, and this answers erased.
+func TestAnErasureOfAnAlreadyErasedContactAnswersNothingHeld(t *testing.T) {
+	e := Setup(t)
+	contactID := e.SeedContact(t, "Already Erased", nil)
+	// Wired as production wires it: an object store and nothing in it for this
+	// contact. A store that holds nothing for the subject destroys nothing.
+	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blobstore.NewMemory())
+	if _, err := eraser.EraseContactCounted(e.Admin(), contactID, "test:earlier erasure"); err != nil {
+		t.Fatalf("the earlier erasure: %v", err)
+	}
+	_, store, id := setupErasureDSR(t, e, contactID.String())
+	h := consent.NewHandlers(e.DB()).WithEraser(eraser)
+
+	if w := fulfilErasureDSR(t, e, h, id, `{"status":"fulfilled","identity_check":"id_document"}`); w.Code != http.StatusOK {
+		t.Fatalf("fulfilling the erasure → %d: %s", w.Code, w.Body)
+	}
+	if got := erasureAnswerOf(t, e, store, id); got != "nothing_held" {
+		t.Fatalf("the erasure of an already-erased contact answers %q, want nothing_held", got)
+	}
 }
 
 // gatedEraser wraps the real eraser so the test can act WHILE a scrub is in
