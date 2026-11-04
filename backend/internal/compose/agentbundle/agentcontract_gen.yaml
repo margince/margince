@@ -28645,8 +28645,9 @@ components:
           type: boolean
           description: |-
             Whether this installation permits stage automation at all
-            (`deals.stage_autopilot_enabled`). It defaults to FALSE, and while it is
-            off every transition is forced to `propose` regardless of its own rule.
+            (`deals.stage_autopilot_enabled`). It is on unless an admin turned it off,
+            and while it is off every transition is forced to `propose` regardless of
+            its own rule.
     TransitionPolicy:
       type: object
       required: [id, pipeline_id, from_stage_id, to_stage_id, mode, clean_acceptance_threshold, correction_reversal_threshold, min_reviewed, min_observation_days, window_days, undo_window_hours, version]

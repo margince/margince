@@ -864,12 +864,12 @@
           "default": 120
         },
         "stage_autopilot_enabled": {
-          "description": "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
+          "description": "Let Margince move a deal to a later stage when the customer's own words show it got there; off stops every automatic move.",
           "type": [
             "boolean",
             "null"
           ],
-          "default": false
+          "default": true
         }
       }
     },

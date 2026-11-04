@@ -83,7 +83,7 @@ type VerdictChange struct {
 	// criteria the move's evidence covers; the lock asks again that they are
 	// every required one of each stage the deal leaves.
 	ToStageID   ids.StageID
-	CriteriaMet []ids.UUID
+	CriteriaMet []CriterionCitation
 	// NewestCitedAt is the newest activity the change rests on. A human edit
 	// of the field after it wins.
 	NewestCitedAt time.Time

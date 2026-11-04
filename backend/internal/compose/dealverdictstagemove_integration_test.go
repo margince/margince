@@ -6,9 +6,8 @@
 package compose
 
 // Margince moves an open deal to a later stage when the cited evidence meets
-// the exit criteria of the stage it leaves, and Undo moves it back. The pass,
-// the stores and the stage gates are the real ones; only the model is a
-// stand-in.
+// the exit criteria of the stage it leaves. Undo moves it back. Only the model
+// is a stand-in.
 
 import (
 	"context"
@@ -19,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -168,5 +168,130 @@ func TestAnUndoAfterAColleagueMovedTheDealOnIsRefused(t *testing.T) {
 	}
 	if got := v.field(t, "stage_id"); got != later.String() {
 		t.Fatalf("stage = %s, want the colleague's %s kept", got, later)
+	}
+}
+
+func TestAnAdminsStoredOffStopsEveryStageMove(t *testing.T) {
+	v := setupStageMove(t)
+	t.Cleanup(func() {
+		if _, err := v.Pool.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, deals.StageAutopilotEnabled.Key()); err != nil {
+			t.Errorf("restoring the default: %v", err)
+		}
+	})
+	if _, err := v.Pool.Exec(t.Context(), `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, deals.StageAutopilotEnabled.Key()); err != nil {
+		t.Fatal(err)
+	}
+	v.run(t)
+	if got := v.field(t, "stage_id"); got != v.stage.String() {
+		t.Fatalf("stage = %s, want it left at %s while moves are off", got, v.stage)
+	}
+}
+
+func TestAnAdminsOffBetweenTheReadAndTheWriteStopsTheMove(t *testing.T) {
+	v := setupStageMove(t)
+	t.Cleanup(func() {
+		if _, err := v.Pool.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, deals.StageAutopilotEnabled.Key()); err != nil {
+			t.Errorf("restoring the default: %v", err)
+		}
+	})
+	v.move.during = func() {
+		if _, err := v.Pool.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ($1, 'false'::jsonb)
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, deals.StageAutopilotEnabled.Key()); err != nil {
+			t.Error(err)
+		}
+	}
+	v.run(t)
+	if got := v.outcomes(t); got != "move_stage="+deals.VerdictDroppedSwitch {
+		t.Fatalf("outcomes = %s, want the move stopped by the switch turned off mid-read", got)
+	}
+}
+
+// buyerCriterion puts a buyer milestone on the deal's stage in place of the
+// custom one, and cites the activity for it.
+func (v *stageMoveEnv) buyerCriterion(t *testing.T, kind deals.CriterionKind, activity ids.UUID, quote string) {
+	t.Helper()
+	criterion, err := v.Deals.CreateStageExitCriterion(v.Admin(), deals.CreateCriterionInput{
+		StageID: v.stage, Key: "proof_" + string(kind), Label: "Proof", Kind: string(kind),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v.WsExec(t, `UPDATE stage_exit_criterion SET archived_at = now() WHERE stage_id = $1 AND id <> $2`, v.stage, criterion.Id)
+	v.move.note, v.move.criterion, v.move.quote = activity.String(), criterion.Id.String(), quote
+}
+
+// seedDealActivity writes one activity on the deal with a sender, as a
+// mailbox sync leaves it.
+func (v *stageMoveEnv) seedDealActivity(t *testing.T, kind, direction, from, status, body string) ids.UUID {
+	t.Helper()
+	owner := integration.OwnerConn(t)
+	id := ids.NewV7()
+	var meetingStatus, dir *string
+	if status != "" {
+		meetingStatus = &status
+	}
+	if direction != "" {
+		dir = &direction
+	}
+	if _, err := owner.Exec(context.Background(), `INSERT INTO activity
+		(id, kind, subject, body, occurred_at, created_at, direction, meeting_status, source, captured_by)
+		VALUES ($1, $2, 'Contract', $3, $4, $4, $5, $6, 'manual', 'human:x')`,
+		id, kind, body, v.now, dir, meetingStatus); err != nil {
+		t.Fatal(err)
+	}
+	integration.LinkActivity(t, owner, id, "deal", v.deal)
+	if from != "" {
+		if _, err := owner.Exec(context.Background(),
+			`INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`, id, from); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return id
+}
+
+// seedBuyer makes a stakeholder of the deal who writes from address.
+func (v *stageMoveEnv) seedBuyer(t *testing.T, address string) {
+	t.Helper()
+	owner := integration.OwnerConn(t)
+	contact := integration.SeedStakeholder(t, v.Env, owner, v.deal)
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, contact, address); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestABuyerMilestoneNeedsMailFromABuyerOfTheDeal(t *testing.T) {
+	for _, tc := range []struct {
+		name, from string
+		moves      bool
+	}{
+		{"the deal's stakeholder wrote it", "buyer@customer.example", true},
+		{"somebody who is no contact of the deal wrote it", "stranger@elsewhere.example", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := setupStageMove(t)
+			v.seedBuyer(t, "buyer@customer.example")
+			mail := v.seedDealActivity(t, "email", "inbound", tc.from, "", "Please send us the contract draft.")
+			v.buyerCriterion(t, deals.CriterionBuyerConfirmed, mail, "send us the contract draft")
+			v.run(t)
+			moved := v.field(t, "stage_id") == v.next.String()
+			if moved != tc.moves {
+				t.Fatalf("moved = %t, want %t (outcomes %s)", moved, tc.moves, v.outcomes(t))
+			}
+		})
+	}
+}
+
+func TestAMeetingThatWasNotHeldMeetsNoHeldEvent(t *testing.T) {
+	v := setupStageMove(t)
+	meeting := v.seedDealActivity(t, "meeting", "", "", "canceled", "Demo with the buyer, cancelled by them.")
+	v.buyerCriterion(t, deals.CriterionEventHeld, meeting, "Demo with the buyer")
+	v.run(t)
+	if got := v.field(t, "stage_id"); got != v.stage.String() {
+		t.Fatalf("stage = %s, want it left at %s (outcomes %s)", got, v.stage, v.outcomes(t))
+	}
+	if got := v.outcomes(t); got != "move_stage="+deals.VerdictDroppedStageRefused {
+		t.Fatalf("outcomes = %s, want the row lock to refuse the cancelled meeting", got)
 	}
 }

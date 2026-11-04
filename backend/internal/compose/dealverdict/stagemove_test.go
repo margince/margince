@@ -15,6 +15,10 @@ const (
 	contractID    = "22222222-2222-4222-8222-222222222222"
 	askedID       = "33333333-3333-4333-8333-333333333333"
 	demoHeldID    = "44444444-4444-4444-8444-444444444444"
+	mailID        = "66666666-6666-4666-8666-666666666666"
+	oursID        = "77777777-7777-4777-8777-777777777777"
+	demoID        = "88888888-8888-4888-8888-888888888888"
+	callID        = "99999999-9999-4999-8999-999999999999"
 )
 
 // moveInput is a deal in Proposal (position 1) with Negotiation and Contract
@@ -32,11 +36,14 @@ func moveInput() Input {
 		{ID: demoHeldID, StagePosition: 2, Stage: "Negotiation", Label: "Demo held", Kind: "event_held"},
 	}
 	in.Activities = append(in.Activities,
-		Activity{ID: "ours", Kind: "email", Direction: "outbound", OccurredAt: today.AddDate(0, 0, -2),
+		Activity{ID: oursID, Kind: "email", Direction: "outbound", OccurredAt: today.AddDate(0, 0, -2),
 			ArrivedAt: today.AddDate(0, 0, -2), Body: "They asked us for the contract draft."},
-		Activity{ID: "demo", Kind: "meeting", OccurredAt: today.AddDate(0, 0, -1),
+		Activity{ID: callID, Kind: callID, OccurredAt: today.AddDate(0, 0, -1),
+			ArrivedAt: today.AddDate(0, 0, -1), Body: "We talked it through."},
+		Activity{ID: demoID, Kind: "meeting", OccurredAt: today.AddDate(0, 0, -1),
 			ArrivedAt: today.AddDate(0, 0, -1), Body: "Demo with the buyer went well."},
 	)
+	in.Activities[0].ID = mailID
 	in.Activities[0].Body += " Please send us the contract draft."
 	return in
 }
@@ -48,7 +55,7 @@ func moveState() State {
 }
 
 func moveAction(to string, cites ...CriterionCite) Action {
-	cited := []string{"mail"}
+	cited := []string{mailID}
 	for _, cite := range cites {
 		cited = append(cited, cite.ActivityID)
 	}
@@ -56,8 +63,8 @@ func moveAction(to string, cites ...CriterionCite) Action {
 }
 
 var (
-	buyerAsked = CriterionCite{CriterionID: askedID, ActivityID: "mail", QuotedWords: "please send us the contract draft"}
-	demoHeld   = CriterionCite{CriterionID: demoHeldID, ActivityID: "demo", QuotedWords: "Demo with the buyer"}
+	buyerAsked = CriterionCite{CriterionID: askedID, ActivityID: mailID, QuotedWords: "please send us the contract draft"}
+	demoHeld   = CriterionCite{CriterionID: demoHeldID, ActivityID: demoID, QuotedWords: "Demo with the buyer"}
 )
 
 func TestAStageMoveNeedsEveryCriterionOfTheStagesItLeaves(t *testing.T) {
@@ -72,11 +79,13 @@ func TestAStageMoveNeedsEveryCriterionOfTheStagesItLeaves(t *testing.T) {
 		{"a skip with both stages' criteria met", moveAction(contractID, buyerAsked, demoHeld), OutcomeApply},
 		{"a skip missing the skipped stage's criterion", moveAction(contractID, buyerAsked), DroppedCriterionUnmet},
 		{"a buyer milestone resting on our own mail", moveAction(negotiationID,
-			CriterionCite{CriterionID: askedID, ActivityID: "ours", QuotedWords: "asked us for the contract draft"}), DroppedCriterionUnmet},
+			CriterionCite{CriterionID: askedID, ActivityID: oursID, QuotedWords: "asked us for the contract draft"}), DroppedCriterionUnmet},
 		{"a quote the cited activity does not hold", moveAction(negotiationID,
-			CriterionCite{CriterionID: askedID, ActivityID: "mail", QuotedWords: "we accept your terms"}), DroppedCriterionUnmet},
+			CriterionCite{CriterionID: askedID, ActivityID: mailID, QuotedWords: "we accept your terms"}), DroppedCriterionUnmet},
+		{"a held event resting on a call", moveAction(contractID, buyerAsked,
+			CriterionCite{CriterionID: demoHeldID, ActivityID: callID, QuotedWords: "talked it through"}), DroppedCriterionUnmet},
 		{"a held event resting on a mail", moveAction(contractID, buyerAsked,
-			CriterionCite{CriterionID: demoHeldID, ActivityID: "mail", QuotedWords: "start in March"}), DroppedCriterionUnmet},
+			CriterionCite{CriterionID: demoHeldID, ActivityID: mailID, QuotedWords: "start in March"}), DroppedCriterionUnmet},
 		{"a stage that is not a later open one", moveAction("55555555-5555-4555-8555-555555555555", buyerAsked), DroppedNotForward},
 	}
 	for _, tc := range cases {
@@ -108,16 +117,24 @@ func TestAnAppliedMoveCarriesItsTargetAndTheCriteriaItCovers(t *testing.T) {
 	}
 }
 
-func TestALegalReviewIsNeverMetByEvidence(t *testing.T) {
+func TestAKindSettledByItsOwnRecordOrUnknownBlocksTheMove(t *testing.T) {
 	t.Parallel()
-	in := moveInput()
-	in.ExitCriteria[0].Kind = string(deals.CriterionLegalReviewed)
-	got, err := Decide(in, moveState(), Payload{Actions: []Action{moveAction(negotiationID, buyerAsked)}}, fixedRates{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got[0].Outcome != DroppedCriterionUnmet {
-		t.Fatalf("outcome = %q, want %q", got[0].Outcome, DroppedCriterionUnmet)
+	for _, kind := range []string{
+		string(deals.CriterionLegalReviewed), string(deals.CriterionDocumentSigned),
+		string(deals.CriterionRoleIdentified), "a_kind_nobody_knows",
+	} {
+		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
+			in := moveInput()
+			in.ExitCriteria[0].Kind = kind
+			got, err := Decide(in, moveState(), Payload{Actions: []Action{moveAction(negotiationID, buyerAsked)}}, fixedRates{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got[0].Outcome != DroppedCriterionUnmet {
+				t.Fatalf("outcome = %q, want %q", got[0].Outcome, DroppedCriterionUnmet)
+			}
+		})
 	}
 }
 
@@ -141,8 +158,8 @@ func TestTheValidatorRefusesAMoveToAStageNotListed(t *testing.T) {
 	if msg := validateMove(action, in); msg == "" {
 		t.Fatal("a move to a stage not listed passed the validator")
 	}
-	action = moveAction(negotiationID, CriterionCite{CriterionID: askedID, ActivityID: "demo", QuotedWords: "x"})
-	action.Cited = []string{"mail"}
+	action = moveAction(negotiationID, CriterionCite{CriterionID: askedID, ActivityID: demoID, QuotedWords: "x"})
+	action.Cited = []string{mailID}
 	if msg := validateMove(action, in); msg == "" {
 		t.Fatal("a criterion resting on an activity the move does not cite passed the validator")
 	}

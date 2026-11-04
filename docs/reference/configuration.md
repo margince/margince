@@ -355,7 +355,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `deals.legal_review_enabled` | `MARGINCE_DEALS_LEGAL_REVIEW_ENABLED` | — | `bool`, stored | `true` | api, worker | Let a deal be sent to legal for review, and let a `legal_reviewed` criterion hold a deal at its stage. |
 | `deals.maintenance_writes_enabled` | `MARGINCE_DEALS_MAINTENANCE_WRITES_ENABLED` | — | `bool`, stored | `true` | api, worker | Let the nightly close-date sweep write to a deal. Off stops every automatic write the sweep makes. |
 | `deals.silent_close_days` | `MARGINCE_DEALS_SILENT_CLOSE_DAYS` | — | `int`, 60 to 730, stored | `120` | api, worker | Days without word from the customer after which Margince closes an open deal as lost. |
-| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `false` | api, worker | Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move. |
+| `deals.stage_autopilot_enabled` | `MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED` | — | `bool`, stored | `true` | api, worker | Let Margince move a deal to a later stage when the customer's own words show it got there; off stops every automatic move. |
 
 ### `email`
 
