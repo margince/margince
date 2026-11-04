@@ -10,6 +10,7 @@ package webhooks
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -92,31 +93,43 @@ func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to id
 	if err != nil {
 		return 0, err
 	}
+	moved := 0
 	for _, id := range owned {
-		if err := reassignSubscription(ctx, tx, id, to); err != nil {
+		ok, err := reassignSubscription(ctx, tx, id, from, to)
+		if err != nil {
 			return 0, err
 		}
+		if ok {
+			moved++
+		}
 	}
-	return len(owned), nil
+	return moved, nil
 }
 
-func reassignSubscription(ctx context.Context, tx pgx.Tx, id ids.UUID, to ids.UserID) error {
+// reassignSubscription moves one subscription from from to to, and reports
+// whether it did. The owner is judged again under the row lock: a handover
+// that got there first has moved it already, and this one leaves it with that
+// successor rather than overwriting them.
+func reassignSubscription(ctx context.Context, tx pgx.Tx, id ids.UUID, from, to ids.UserID) (bool, error) {
 	lock, err := storekit.LockRow(ctx, tx, "webhook_subscription", id, storekit.LiveOnly)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
 	if err != nil {
-		return err
+		return false, err
 	}
 	current, err := scanSubscription(tx.QueryRow(ctx,
 		"SELECT "+subscriptionColumns+" FROM webhook_subscription WHERE id = $1", id))
-	if err != nil {
-		return err
+	if err != nil || current.OwnerID != from.UUID {
+		return false, err
 	}
 	p := storekit.NewPatch()
 	if err := setOwner(ctx, tx, p, current, &to, nil); err != nil || p.Empty() {
-		return err
+		return false, err
 	}
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
-		return err
+		return false, err
 	}
 	_, err = storekit.Audit(ctx, tx, "update", rbacObject, id, p.Before(), p.After())
-	return err
+	return err == nil, err
 }
