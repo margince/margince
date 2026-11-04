@@ -33,7 +33,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		if e.compared != nil {
 			e.compared.operands = &reporting.ForecastOperands{Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End}, ColleagueWithheld: true}
 		}
-		return []reporting.Fact{}, loneColleagueCoverage(frame), nil
+		return []reporting.Fact{}, belowFloorCoverage(frame), nil
 	}
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err

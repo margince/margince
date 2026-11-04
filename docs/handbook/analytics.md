@@ -100,7 +100,7 @@ Under it come what holds the team up: waiting handoffs, handoffs sent back or tu
 
 Qualification credit stays with the owner at the first qualification, and each lead counts once in the period when that happened. Qualifications whose earlier owner was not recorded count in the whole-company total. Owner and team readings show the attributed part with a partial-history notice. Existing targets for leads that came in keep their own label and meaning. The Leads report still follows the period when they came in.
 
-A handoff counts for whoever handed it on, and the team is today’s team. The rows need not add up to the team: a lead with no owner is in no row, and a shared meeting is in each. A figure your role may not see is named under the table, never shown as zero, and with **Show individual performance** off no row shows. A total of one colleague’s work is held back, and a team of you and one colleague hides its readings and movement, with the reason.
+A handoff counts for whoever handed it on, and the team is today’s team. The rows need not add up to the team: a lead with no owner is in no row, and a shared meeting is in each. A figure your role may not see is named under the table, never shown as zero, and with **Show individual performance** off no row shows. A total of one colleague’s work is held back, and a team of you and one colleague hides its readings and movement, with the reason. So does a team that would leave one colleague once another team's members are taken away.
 
 Each view keeps its own record scope, pipeline, period, close window and dates. **All pipelines** on Sales review is still set when you come back from the other views. A link that names a view and its filters opens what it names and changes nothing you chose. What you chose is kept per account in this browser until you sign out. The links out of a view carry its filters, and Back returns to the same filters, place and card. Forecast covers every pipeline, so it says so first when the figure you came from counts one pipeline of several.
 
@@ -119,7 +119,7 @@ The scope picker rules Performance, Forecast, Pipeline and Custom reports, so th
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only
-the owners you may measure, and the answer says so. With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
+the owners you may measure, and the answer says so. With **Show individual performance** off, grouping or filtering by a colleague is refused. So is a figure holding only one colleague's work besides yours, or one that another team's total leaves to one colleague. See [Can we stop Margince from showing each colleague's performance?](compliance.md#can-we-stop-margince-from-showing-each-colleagues-performance).
 
 ## Under every report
 

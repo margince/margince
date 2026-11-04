@@ -118,6 +118,9 @@ func forecastDealsForPipeline(ctx context.Context, tx pgx.Tx, period forecasting
 	if err := requireNoLoneColleague(ctx, tx, forecastDealGroups(out)); err != nil {
 		return nil, forecasting.Scope{}, false, err
 	}
+	if err := requirePopulationFloor(ctx, tx, resolved); err != nil {
+		return nil, forecasting.Scope{}, false, err
+	}
 	return out, forecastScopeFromResolved(resolved), limited, nil
 }
 

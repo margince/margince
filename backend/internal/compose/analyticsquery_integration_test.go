@@ -40,12 +40,11 @@ func (e *forecastEnv) askAnalytics(
 ) (AnalyticsAnswer, error) {
 	t.Helper()
 	var out AnalyticsAnswer
-	err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(ctx,
-		func(ctx context.Context, tx pgx.Tx) error {
-			var err error
-			out, err = RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
-			return err
-		})
+	err := InstallationDB(e.Pool).TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		var err error
+		out, err = RunAnalyticsQuery(ctx, tx, q, analyticsquery.DefaultFloor)
+		return err
+	})
 	return out, err
 }
 
