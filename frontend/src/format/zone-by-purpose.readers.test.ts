@@ -193,12 +193,15 @@ function zoneSourceRefs(
       // type, whether written in place or held in a constant.
       if (ts.isElementAccessExpression(node)) {
         const key = checker.getTypeAtLocation(node.argumentExpression);
-        if (key.isStringLiteral()) {
-          const read = checker.getPropertyOfType(
-            checker.getTypeAtLocation(node.expression),
-            key.value,
-          );
-          record(read, node);
+        const keys = key.isUnion() ? key.types : [key];
+        for (const each of keys) {
+          if (each.isStringLiteral()) {
+            const read = checker.getPropertyOfType(
+              checker.getTypeAtLocation(node.expression),
+              each.value,
+            );
+            record(read, node);
+          }
         }
       }
       if (ts.isIdentifier(node)) {
@@ -263,7 +266,9 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
             '  const f = zones["browserZone"]();',
             '  const key = "browserZone";',
             "  const g = zones[key]();",
-            "  return [a, b, c, d, e, f, g].join();",
+            '  const either = Math.random() > 0.5 ? "browserZone" : "nothing";',
+            "  const h = zones[either]();",
+            "  return [a, b, c, d, e, f, g, h].join();",
             "}",
             "export type Zone = ReturnType<typeof browserZone>;",
           ].join("\n"),
@@ -278,6 +283,7 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
       { source: "browserZone", file: "features/zzplanted.tsx", line: 10 },
       { source: "browserZone", file: "features/zzplanted.tsx", line: 11 },
       { source: "browserZone", file: "features/zzplanted.tsx", line: 13 },
+      { source: "browserZone", file: "features/zzplanted.tsx", line: 15 },
     ]);
     expect(listed.browserZone.has("features/zzplanted.tsx")).toBe(false);
     expect(listed.useCompanyZone.has("features/zzplanted.tsx")).toBe(false);
