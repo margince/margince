@@ -6931,6 +6931,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.reading.show": "Ausgelesene Felder einblenden",
   "docs.reading.hide": "Ausgelesene Felder ausblenden",
 
+  // Einen Chat aus einem Screenshot an einem Kontakt erfassen.
+  "chatCapture.action": "Chat erfassen",
+  "chatCapture.title": "Chat erfassen",
+  "chatCapture.drop": "Screenshot",
+  "chatCapture.dropEmpty":
+    "Füge einen Screenshot des Chats ein, zieh ihn hierher oder klicke, um ihn auszuwählen",
+  "chatCapture.reading": "Chat wird gelesen",
+  "chatCapture.startFailed": "Der Screenshot konnte nicht gelesen werden",
+  "chatCapture.storedUnread":
+    "Der Screenshot wurde gespeichert, aber die Antwort nannte die Datei nicht. Du findest ihn unter Dokumente.",
+  "chatCapture.discard": "Verwerfen",
+  "chatCapture.discardFailed": "Der Screenshot konnte nicht entfernt werden",
+  "chatCapture.unread": "Der Chat konnte nicht gelesen werden",
+  "chatCapture.nothingRead": "Kein Chat zum Übernehmen gefunden",
+  "chatCapture.header": "Im Kopf des Chats steht {who}.",
+  "chatCapture.text": "Was gesagt wurde",
+  "chatCapture.textHint":
+    "Tippe oder füge ein, was gesagt wurde. Du kannst den Screenshot auch ohne Text ablegen.",
+  "chatCapture.readBadge": "Von der KI aus dem Screenshot übernommen",
+  "chatCapture.channel": "Chat-App",
+  "chatCapture.file": "Beim Kontakt ablegen",
+  "chatCapture.fileFailed": "Der Chat konnte nicht abgelegt werden",
+
   // Ein Dokument hinzufügen. Die Frage „Wozu gehört es?" trägt die eigentliche
   // Entscheidung: nur ein Dokument an einem Deal kann für Deal-Felder gelesen
   // werden. Der Hinweis sagt das, statt es die Lesenden an einem Panel

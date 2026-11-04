@@ -137,6 +137,7 @@ type Server struct {
 	recordAccessHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
+	chatCaptureHandlers
 	outcomeReviewHandlers
 	embedReindexHandlers
 	rateRefreshHandlers

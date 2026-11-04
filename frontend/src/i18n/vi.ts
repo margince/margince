@@ -6772,6 +6772,29 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.reading.show": "Hiển thị trường đã trích xuất",
   "docs.reading.hide": "Ẩn trường đã trích xuất",
 
+  // Lưu cuộc trò chuyện từ ảnh chụp màn hình dán vào một liên hệ.
+  "chatCapture.action": "Lưu cuộc trò chuyện",
+  "chatCapture.title": "Lưu cuộc trò chuyện",
+  "chatCapture.drop": "Ảnh chụp màn hình",
+  "chatCapture.dropEmpty":
+    "Dán ảnh chụp màn hình cuộc trò chuyện, kéo thả vào đây hoặc bấm để chọn",
+  "chatCapture.reading": "Đang đọc cuộc trò chuyện",
+  "chatCapture.startFailed": "Không đọc được ảnh chụp màn hình",
+  "chatCapture.storedUnread":
+    "Ảnh đã được lưu nhưng phản hồi không cho biết đó là tệp nào. Bạn tìm thấy nó trong mục Tài liệu.",
+  "chatCapture.discard": "Bỏ",
+  "chatCapture.discardFailed": "Không xóa được ảnh chụp màn hình",
+  "chatCapture.unread": "Không đọc được cuộc trò chuyện",
+  "chatCapture.nothingRead": "Không tìm thấy cuộc trò chuyện nào để sao chép",
+  "chatCapture.header": "Phần đầu cuộc trò chuyện hiển thị {who}.",
+  "chatCapture.text": "Nội dung trao đổi",
+  "chatCapture.textHint":
+    "Nhập hoặc dán nội dung đã trao đổi. Bạn cũng có thể lưu ảnh mà không có văn bản.",
+  "chatCapture.readBadge": "AI sao chép từ ảnh chụp màn hình",
+  "chatCapture.channel": "Ứng dụng chat",
+  "chatCapture.file": "Lưu vào liên hệ này",
+  "chatCapture.fileFailed": "Không lưu được cuộc trò chuyện",
+
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
   // liệu gắn với một deal mới được đọc để lấy các trường của deal.
   // Phần gợi ý nói thẳng điều đó, thay vì để người dùng tự đoán qua một bảng

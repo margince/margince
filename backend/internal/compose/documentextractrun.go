@@ -150,6 +150,10 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 	// the reading to somebody else, and this worker must not close or re-queue
 	// what it no longer holds.
 	claimedAt := claimStart(claim)
+	question, err := questionNamed(claim.Question)
+	if err != nil {
+		return d.retryable(ctx, store, readID, claimedAt, err)
+	}
 
 	src, detail, err := d.sourceFor(ctx, store, attachmentID)
 	if err != nil {
@@ -170,7 +174,7 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 		// affordance only `failed` offers. No model call was made either way.
 		return d.fail(ctx, store, readID, claimedAt, detail)
 	}
-	fields, err := d.ask(ctx, src)
+	fields, err := d.ask(ctx, question, src)
 	if err != nil {
 		if errors.Is(err, errRefusedDocument) {
 			d.log.WarnContext(ctx, "document reading refused",
@@ -181,7 +185,7 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 	}
 	return store.FinishExtractionRead(ctx, readID, activities.ExtractionReadOutcome{
 		Status:    activities.ExtractionReadDone,
-		Detail:    d.emptyReadingDetail(fields),
+		Detail:    d.emptyReadingDetail(question, fields),
 		Fields:    fields,
 		ClaimedAt: claimedAt,
 	})
@@ -221,13 +225,13 @@ func (d *DocumentExtractor) retryable(
 // documents state none of the four — but an empty panel that does not explain
 // itself reads as a broken feature, which is the one thing this whole shape
 // exists to prevent.
-func (d *DocumentExtractor) emptyReadingDetail(fields []extraction.ExtractedField) string {
+func (d *DocumentExtractor) emptyReadingDetail(q documentQuestion, fields []extraction.ExtractedField) string {
 	for _, f := range fields {
 		if !f.Omitted {
 			return ""
 		}
 	}
-	return documentWords.NoFields.In(d.said.Lang())
+	return q.noneGrounded.In(d.said.Lang())
 }
 
 // sourceFor decides which lane this document takes, and reads it.
@@ -390,14 +394,24 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 
 // attachmentParent is the record a document hangs on, as the citation names it.
 //
-// Two kinds and no default: the contract's own enum is activity or company, and
-// a third arriving here as a zero Ref would make the call cite nothing rather
-// than fail — which is the quiet half of a purge that misses.
+// Each parent kind the contract names maps to its own kind. A file on a contact
+// cited as an activity would cite a record that does not exist. A purge that
+// looks for the contact would then miss the call.
 func attachmentParent(meta crmcontracts.Attachment) ids.Ref {
-	if meta.EntityType == crmcontracts.AttachmentEntityTypeCompany {
-		return ids.From[ids.CompanyKind](ids.UUID(meta.EntityId)).Ref()
+	id := ids.UUID(meta.EntityId)
+	switch meta.EntityType {
+	case crmcontracts.AttachmentEntityTypeCompany:
+		return ids.From[ids.CompanyKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeContact:
+		return ids.From[ids.ContactKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeDeal:
+		return ids.From[ids.DealKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeLead:
+		return ids.From[ids.LeadKind](id).Ref()
+	case crmcontracts.AttachmentEntityTypeProject:
+		return ids.From[ids.ProjectKind](id).Ref()
 	}
-	return ids.From[ids.ActivityKind](ids.UUID(meta.EntityId)).Ref()
+	return ids.From[ids.ActivityKind](id).Ref()
 }
 
 // refusedReadingDetail is what the panel says about a refused reading, and there
@@ -422,9 +436,14 @@ func (d *DocumentExtractor) refusedReadingDetail(err error) string {
 // A site whose corpus grades a validator production never calls is certifying a
 // standard the product does not hold itself to — the reply that would have been
 // refused in the lane reaches a deal instead.
-func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extraction.ExtractedField, error) {
-	req := documentExtractRequest(src)
-	validate := documentShapeValid(src)
+func (d *DocumentExtractor) ask(
+	ctx context.Context, q documentQuestion, src documentSource,
+) ([]extraction.ExtractedField, error) {
+	if q.name == activities.ExtractionQuestionChatCapture && src.onTextLane() {
+		return nil, fmt.Errorf("%w: a chat is read from an image, and this file reached the text lane", errRefusedDocument)
+	}
+	req := q.request(src)
+	validate := questionShapeValid(q, src)
 	// The document's own text IS the request, so the call is about the record
 	// it hangs on. The filename is not offered as the label: it is the
 	// uploader's string and the rail draws its unnamed sentence rather than
@@ -444,7 +463,7 @@ func (d *DocumentExtractor) ask(ctx context.Context, src documentSource) ([]extr
 	if err := validate(resp.Text); err != nil {
 		return nil, fmt.Errorf("%w: %w", errRefusedDocument, err)
 	}
-	return readDocumentFields(resp.Text)
+	return readQuestionFields(q, resp.Text)
 }
 
 // unreadableDocument separates a refusal a rep can act on from a fault the job

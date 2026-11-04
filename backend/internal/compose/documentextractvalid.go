@@ -31,12 +31,17 @@ import (
 // bytes lane's grounding is held by the prompt and by the certification rubric,
 // and RD-AC-N-4 says so in as many words.
 func documentShapeValid(src documentSource) ai.Validator {
+	return questionShapeValid(dealFactsQuestion(), src)
+}
+
+// questionShapeValid is the same validator for any question.
+func questionShapeValid(q documentQuestion, src documentSource) ai.Validator {
 	return func(text string) error {
 		var payload documentPayload
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 			return fmt.Errorf("output is not the required JSON shape: %w", err)
 		}
-		if msg := validateDocumentPayload(payload, src); msg != "" {
+		if msg := validateDocumentPayload(q, payload, src); msg != "" {
 			return errors.New(msg)
 		}
 		return nil
@@ -45,13 +50,15 @@ func documentShapeValid(src documentSource) ai.Validator {
 
 // validateDocumentPayload names the first fidelity violation, or "" when the
 // payload is one this site may act on.
-func validateDocumentPayload(payload documentPayload, src documentSource) string {
+func validateDocumentPayload(q documentQuestion, payload documentPayload, src documentSource) string {
 	if payload.Fields == nil {
 		return "the reply carries no fields key, so it did not answer the question"
 	}
-	seen := make(map[string]bool, len(documentFieldOrder()))
+	seen := make(map[string]bool, len(q.modelFields()))
 	for _, field := range payload.fields() {
-		if !isDocumentField(field.Field) {
+		// Refused whole rather than filtered: an extra field is evidence the
+		// reading did not read the prompt, so the rest of it earns less trust.
+		if !slices.Contains(q.modelFields(), field.Field) {
 			return fmt.Sprintf("the reply reports %q, which is not one of the fields this document was read for",
 				clampToken(field.Field))
 		}
@@ -59,7 +66,7 @@ func validateDocumentPayload(payload documentPayload, src documentSource) string
 			return fmt.Sprintf("the reply reports %q twice, and a document states a value once", field.Field)
 		}
 		seen[field.Field] = true
-		if msg := validateDocumentField(field, src); msg != "" {
+		if msg := validateDocumentField(q, field, src); msg != "" {
 			return msg
 		}
 	}
@@ -67,7 +74,7 @@ func validateDocumentPayload(payload documentPayload, src documentSource) string
 	// A reply that simply leaves one out is an INCOMPLETE reading, and grounding
 	// it anyway would report the missing field as a document that is silent
 	// about it — a claim about the document made from a fact about the reply.
-	for _, name := range modelFieldOrder() {
+	for _, name := range q.modelFields() {
 		if !seen[name] {
 			return fmt.Sprintf("the reply says nothing about %q, so the reading is incomplete rather than the document silent", name)
 		}
@@ -75,18 +82,10 @@ func validateDocumentPayload(payload documentPayload, src documentSource) string
 	return ""
 }
 
-// isDocumentField reports whether a reported name is one this site asked for. A
-// reply that answers a question nobody asked is refused whole rather than
-// filtered: the extra field is evidence the reading did not read the prompt,
-// which makes the fields it DID report worth less trust, not more.
-func isDocumentField(name string) bool {
-	return slices.Contains(modelFieldOrder(), name)
-}
-
 // validateDocumentField holds one reported field to what a document can
 // support. Every echoed token is MODEL output — someone who got the model to
 // obey can choose it — so anything reaching a log or a retry prompt is bounded.
-func validateDocumentField(field documentField, src documentSource) string {
+func validateDocumentField(q documentQuestion, field documentField, src documentSource) string {
 	switch field.Stated {
 	case documentStated, documentNotStated:
 	default:
@@ -100,9 +99,9 @@ func validateDocumentField(field documentField, src documentSource) string {
 	switch {
 	case strings.TrimSpace(field.Value) == "":
 		return fmt.Sprintf("field %q is reported as stated but carries no value", field.Field)
-	case len(field.Value) > maxDocumentValue:
+	case len(field.Value) > q.maxValue(field.Field):
 		return fmt.Sprintf("field %q carries a %d-character value, and at most %d may be reported",
-			field.Field, len(field.Value), maxDocumentValue)
+			field.Field, len(field.Value), q.maxValue(field.Field))
 	case strings.TrimSpace(field.Quote) == "":
 		return fmt.Sprintf("field %q cites no quote, and an uncited value is a guess", field.Field)
 	case len(field.Quote) > maxDocumentQuote:

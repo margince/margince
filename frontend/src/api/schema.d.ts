@@ -22978,6 +22978,10 @@ export interface paths {
          *     attachment can be read by someone who could never accept the result. That is
          *     deliberate — the read is valid for any entity_type and is worth having on its own —
          *     but it does mean a reading can be paid for and then have nowhere to land.
+         *
+         *     The optional body names the question. `chat_capture` reads a chat screenshot for
+         *     its messages and the name and number its header prints; it is refused with a 422
+         *     on a file that is not an image. A request with no body reads for the deal facts.
          */
         post: operations["readAttachmentForFields"];
         delete?: never;
@@ -23010,6 +23014,43 @@ export interface paths {
          *     authority on the target deal (object RBAC + row-scope visibility).
          */
         post: operations["acceptAttachmentExtraction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/{id}/extraction:file-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * File a chat screenshot on its contact as one message activity, with the image attached.
+         * @description The confirm step after a `chat_capture` reading of a screenshot uploaded to a
+         *     contact. It writes one `message` activity linked to that contact, on the channel
+         *     named, with `body` as its text, and moves the image from the contact onto the
+         *     activity. Nothing is written before this call: the reading never files anything.
+         *
+         *     When `body` is the reading's own text unchanged, the activity is written by the
+         *     reader on behalf of the caller, which is how the product marks text a model
+         *     read. A body the caller typed or changed is the caller's own. An empty body is
+         *     allowed, so a screenshot the model could not read is still filed.
+         *
+         *     Requires UPDATE on the contact and CREATE on activities. The reading named must
+         *     belong to this file, be a `chat_capture` reading, and be finished; otherwise
+         *     422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
+         *     A second call with the same reading answers the activity the first one wrote.
+         *     An agent files a chat through `log_activity` and `attach_document`.
+         */
+        post: operations["fileChatCapture"];
         delete?: never;
         options?: never;
         head?: never;
@@ -39300,6 +39341,12 @@ export interface components {
              */
             id: string;
             /**
+             * @description What the file was read for. `deal_facts` grounds the four deal fields;
+             *     `chat_capture` grounds `chat_text`, `counterparty_name` and `counterparty_phone`.
+             * @enum {string}
+             */
+            question: "deal_facts" | "chat_capture";
+            /**
              * @description queued/running are live; done and failed are terminal. `done` with zero grounded fields is a correct answer, not a failure.
              * @enum {string}
              */
@@ -39324,6 +39371,32 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             finished_at?: string | null;
+        };
+        AttachmentReadRequest: {
+            /**
+             * @description What to read the file for. `chat_capture` is accepted only on an image.
+             * @default deal_facts
+             * @enum {string}
+             */
+            question: "deal_facts" | "chat_capture";
+        };
+        FileChatCaptureRequest: {
+            /**
+             * Format: uuid
+             * @description The `chat_capture` reading the caller was shown.
+             */
+            extraction_id: string;
+            /** @description The messaging app the chat happened in. */
+            channel_provider: components["schemas"]["ProviderRef"];
+            /** @description The chat's text as the caller confirmed it. Empty or null files the image alone. */
+            body?: string | null;
+        };
+        FiledChatCapture: {
+            /**
+             * Format: uuid
+             * @description The message activity the chat is filed as.
+             */
+            activity_id: string;
         };
         /** @description The reading `readAttachmentForFields` started, or the one already in flight it joined. */
         AttachmentReadStarted: {
@@ -91345,7 +91418,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AttachmentReadRequest"];
+            };
+        };
         responses: {
             /** @description The reading is queued; poll it with `getAttachmentExtraction`. */
             202: {
@@ -91408,6 +91485,37 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    fileChatCapture: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileChatCaptureRequest"];
+            };
+        };
+        responses: {
+            /** @description The activity the chat is filed as. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiledChatCapture"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     requestAttachmentAccess: {
