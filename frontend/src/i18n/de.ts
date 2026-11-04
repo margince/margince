@@ -2135,7 +2135,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "home.change.stageUnknown": "Unbekannte Phase",
   "home.change.unidentified": "Unbekannt",
   "home.change.by": "Geändert von: {actor}",
-  "brief.focus.position": "{at} von {count}",
   "worklist.bandCount_one": "{count} Eintrag",
   "worklist.bandCount_other": "{count} Einträge",
   "brief.focus.context": "Details anzeigen",
@@ -6352,8 +6351,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
-  "brief.first.title": "Zuerst",
-  "brief.first.then": "Danach",
+  "brief.task.done": "Als erledigt markieren: {title}",
+  "brief.first.title": "Deine Aufgaben",
   "brief.intro.waiting": "Wartet auf dich",
   "brief.intro.meetings": "Termine heute",
   "brief.intro.urgent": "Dringend",

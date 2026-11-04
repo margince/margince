@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The focus panel's body: the row in hand as a card, and the ranked column
-// beside it. The panel's head, states and foot are in brief.feed.tsx.
+// The focus panel's body: the day's rows as cards, the one in hand opened.
+// The panel's head, states and foot are in brief.feed.tsx.
 
 import { useRef } from "react";
 import {
@@ -11,28 +11,19 @@ import {
 } from "../../components/tasknextsteps";
 import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
-import { formatDayMonth, formatNumber } from "../../format/format";
+import { formatDayMonth } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import {
-  briefContextTitle,
-  briefSubjectLabel,
-  dealFactsText,
-  itemTitle,
-  phrasedReasons,
-  reasonText,
-  subjectHref,
-  whenText,
-} from "../../lib/worklistcopy";
+import { briefSubjectLabel, subjectHref } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
 import { contactHref, useListed } from "../worklist/worklist.row.captions";
+import { cardWhen, TaskCard, TaskTick } from "./brief.taskcard";
 
 import "./brief.feed.css";
 
@@ -111,100 +102,70 @@ export function Triage({
       ]
         .filter(Boolean)
         .join(", ")
-    : whenText(lead, t, locale, zone, recordZone, new Date());
+    : cardWhen(lead, t, locale, zone, recordZone);
   const label = t(eyebrowKeyFor(lead));
+  // Every row of the day is a card in the server's order, and the one in hand
+  // opens where it stands. An ordered list, so the order reaches a screen
+  // reader as the claim it is.
   return (
-    <div className="brief-triage">
-      {/* Keyed by the row, so pressing another one in the list mounts a new
-          card and replays its arrival. The press is answered on the card. */}
-      <div
-        ref={takeFocus}
-        tabIndex={-1}
-        className="brief-triage-frame"
-        key={identity(lead)}
-      >
-        <Card as="article" className="brief-triage-lead">
-          <p className="t-caption brief-triage-lead-head">
-            <span
-              className={
-                lead.band === "now"
-                  ? "brief-triage-label brief-triage-label-now"
-                  : "brief-triage-label"
-              }
-            >
-              {label}
-            </span>
-            <AboutLine item={lead} />
-            {when && <span className="t-num">{when}</span>}
-          </p>
-          <WorklistRow
-            // Personal ordering is the queue's, not the focus projection's.
-            allowPin={false}
-            item={lead}
-            position={at + 1}
-            owner=""
-            onOpenEmail={onOpenEmail}
-            onReview={() =>
-              navigate(
-                { screen: "worklist" },
-                new Map([["filter", lead.category]]),
-              )
-            }
-            context={cardVerbs}
-            // The card around this row says whose it is, why it is here and
-            // where it stands in the day. Each is said once, in its own place.
-            framed
-          />
-        </Card>
-      </div>
-      {rows.length > 1 && (
-        <div className="brief-triage-queue">
-          <Eyebrow as="h3" className="brief-triage-queue-head">
-            {t("brief.first.then")}
-          </Eyebrow>
-          {/* An ordered list, so the order reaches a screen reader as the
-              claim it is; the tile states the rank for everybody else. */}
-          <ol className="brief-focus-list">
-            {rows.map((item, index) =>
-              index === at ? null : (
-                <li key={identity(item)}>
-                  <QueueEntry
-                    item={item}
-                    rank={index + 1}
-                    onChoose={() => {
-                      pressed.current = true;
-                      onChoose(item);
-                    }}
+    <ol className="brief-triage">
+      {rows.map((item, index) =>
+        index === at ? (
+          <li key={identity(item)}>
+            {/* Keyed by the row, so pressing another one mounts a new card and
+                replays its arrival. The press is answered on the card. */}
+            <div ref={takeFocus} tabIndex={-1} className="brief-triage-frame">
+              <Card as="article" className="brief-triage-lead">
+                <TaskTick item={lead} />
+                <div className="brief-triage-body">
+                  <p className="t-caption brief-triage-lead-head">
+                    <span
+                      className={
+                        lead.band === "now"
+                          ? "brief-triage-label brief-triage-label-now"
+                          : "brief-triage-label"
+                      }
+                    >
+                      {label}
+                    </span>
+                    <AboutLine item={lead} />
+                    {when && <span className="t-num">{when}</span>}
+                  </p>
+                  <WorklistRow
+                    // Personal ordering is the queue's, not the focus projection's.
+                    allowPin={false}
+                    item={lead}
+                    position={at + 1}
+                    owner=""
+                    onOpenEmail={onOpenEmail}
+                    onReview={() =>
+                      navigate(
+                        { screen: "worklist" },
+                        new Map([["filter", lead.category]]),
+                      )
+                    }
+                    context={cardVerbs}
+                    // The card around this row says whose it is, why it is
+                    // here and where it stands in the day, each once.
+                    framed
                   />
-                </li>
-              ),
-            )}
-          </ol>
-        </div>
+                </div>
+              </Card>
+            </div>
+          </li>
+        ) : (
+          <li key={identity(item)}>
+            <TaskCard
+              item={item}
+              onOpen={() => {
+                pressed.current = true;
+                onChoose(item);
+              }}
+            />
+          </li>
+        ),
       )}
-    </div>
-  );
-}
-
-/** One row still waiting behind the card; a press puts it in hand. */
-function QueueEntry({
-  item,
-  rank,
-  onChoose,
-}: Readonly<{ item: WorklistItem; rank: number; onChoose: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const line = queueLine(item, t, locale, viewerZone());
-  return (
-    <button type="button" className="brief-focus-item" onClick={onChoose}>
-      <span className="brief-focus-rank t-num">
-        {formatNumber(rank, locale)}
-      </span>
-      <span className="brief-focus-item-title">
-        {briefSubjectLabel(item) ?? itemTitle(item, t, locale)}
-      </span>
-      {line && <span className="t-caption brief-focus-item-line">{line}</span>}
-    </button>
+    </ol>
   );
 }
 
@@ -235,34 +196,3 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
     </>
   );
 }
-
-/**
- * The line under a queued row's name: who it is with and its first reason,
- * through the row's own helpers. Null when the row has neither.
- */
-function queueLine(
-  item: WorklistItem,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): string | null {
-  // The contact on the row, not the message's counterparty: a task or meeting
-  // has no message. On a waiting message the backend puts the sender here.
-  const who = item.contact?.label ?? null;
-  // The reader's own pin is the queue's reason and not the focus projection's,
-  // for the reason the row in hand withholds it (`allowPin`).
-  const reason =
-    phrasedReasons(item, false)
-      .filter((entry) => entry.kind !== "pinned")
-      .map((entry) => reasonText(entry, t, locale, zone))
-      .find((text) => text !== null) ?? null;
-  const subject = briefSubjectLabel(item);
-  const action = briefContextTitle(item);
-  const facts = subject ? dealFactsText(item, t, locale, zone) : null;
-  const parts = [action, who, facts, reason].filter(
-    (part): part is string => part != null && part !== "",
-  );
-  return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-/** Whether the panel's foot has anything to say about the rest of the day. */

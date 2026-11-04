@@ -205,27 +205,13 @@ export function BriefGlance({
   const hour = hourInZone(now, viewerZone());
   const { locale } = useLocale();
   const sentence = glanceSentence({ view, day, week }, t, locale);
+  // Small facts over the title, the title, then the day in one sentence; the
+  // view's dial stands at the end of the head.
   return (
     <header className="glance arrive" data-testid="brief-glance">
-      <div className="glance-title">
-        <Heading size="large" as="h1" className="glance-greeting">
-          {view === "weekly" ? (
-            <WeekTitle weekStart={week?.local_week_start} />
-          ) : (
-            <Greeting
-              text={greetingText(firstName, hour, t)}
-              firstName={firstName}
-            />
-          )}
-        </Heading>
-        {titleAside}
-      </div>
-      <div className="glance-row">
-        <div className="glance-facts">
+      <div className="glance-head">
+        <div className="glance-facts t-caption">
           <GlanceWhen view={view} now={now} week={week} />
-          {!narratedWeek(view, week) && (
-            <GlanceOpening view={view} sentence={sentence} pending={pending} />
-          )}
           {briefedAt && (
             <p>
               <Badge tone="ai">
@@ -236,8 +222,24 @@ export function BriefGlance({
             </p>
           )}
         </div>
-        {controls}
+        <div className="glance-title">
+          <Heading size="large" as="h1" className="glance-greeting">
+            {view === "weekly" ? (
+              <WeekTitle weekStart={week?.local_week_start} />
+            ) : (
+              <Greeting
+                text={greetingText(firstName, hour, t)}
+                firstName={firstName}
+              />
+            )}
+          </Heading>
+          {titleAside}
+        </div>
+        {!narratedWeek(view, week) && (
+          <GlanceOpening view={view} sentence={sentence} pending={pending} />
+        )}
       </div>
+      {controls}
     </header>
   );
 }

@@ -2079,7 +2079,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "home.change.stageUnknown": "Không rõ giai đoạn",
   "home.change.unidentified": "Không rõ",
   "home.change.by": "Người đổi: {actor}",
-  "brief.focus.position": "{at} / {count}",
   "worklist.bandCount_one": "{count} việc",
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
@@ -6199,8 +6198,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
-  "brief.first.title": "Trước tiên",
-  "brief.first.then": "Sau đó",
+  "brief.task.done": "Đánh dấu xong: {title}",
+  "brief.first.title": "Việc của bạn",
   "brief.intro.waiting": "Đang chờ bạn",
   "brief.intro.meetings": "Cuộc họp hôm nay",
   "brief.intro.urgent": "Khẩn cấp",

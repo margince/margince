@@ -163,7 +163,9 @@ it("opens a task's evidence without replacing the Home overview", async () => {
       }),
   });
   render(<BriefScreen />);
-  const focus = await screen.findByRole("region", { name: "First" });
+  const focus = await screen.findByRole("region", {
+    name: en["brief.first.title"],
+  });
   const opener = await screen.findByRole("button", {
     name: en["brief.focus.context"],
   });

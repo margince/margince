@@ -2046,7 +2046,6 @@ export const en = {
   "home.change.stageUnknown": "Unknown stage",
   "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
-  "brief.focus.position": "{at} of {count}",
   "worklist.bandCount_one": "{count} item",
   "worklist.bandCount_other": "{count} items",
   "brief.focus.context": "View details",
@@ -6345,8 +6344,8 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.briefedAt": "Briefed by Margince at {time}",
-  "brief.first.title": "First",
-  "brief.first.then": "Then",
+  "brief.task.done": "Mark done: {title}",
+  "brief.first.title": "Your tasks",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",
   "brief.intro.urgent": "Urgent",

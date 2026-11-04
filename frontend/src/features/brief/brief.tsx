@@ -237,8 +237,8 @@ function PersonalMorning({
   }, [state, day, settled, magic.data]);
   return (
     <>
-      {/* The brief and the work it names in one column; beside it, the
-          figures and the meetings the work is read against. */}
+      {/* The work in one column; beside it, the meetings and the figures
+          the work is read against. */}
       <PageZones
         shape="aside"
         panes
@@ -257,6 +257,9 @@ function PersonalMorning({
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
             />
+            {/* The agent's own changes stand with the work, where a reader
+                keeps or undoes them, not in the rail beside it. */}
+            <BriefChanges />
             <BriefSuggestions />
             <MagicPanel
               visibleApprovalIds={day?.focus?.items
@@ -278,6 +281,8 @@ function PersonalMorning({
         }
         aside={
           <>
+            {/* The day's meetings first: the work is read against them. */}
+            <SchedulePanel day={day} state={state} />
             {day && (
               <div className="brief-overview">
                 <Eyebrow as="h2" className="brief-section-label">
@@ -291,9 +296,7 @@ function PersonalMorning({
                 />
               </div>
             )}
-            {/* The figures stand above the meetings, so their wait holds
-                their place rather than letting the meetings rise and fall. */}
-            {/* Hidden from a screen reader: the meetings below already
+            {/* Hidden from a screen reader: the meetings above already
                 announce the wait. */}
             {state === "loading" && (
               <div className="brief-overview" aria-hidden="true">
@@ -303,8 +306,6 @@ function PersonalMorning({
                 <BriefReadingsPending />
               </div>
             )}
-            <SchedulePanel day={day} state={state} />
-            <BriefChanges />
           </>
         }
       />

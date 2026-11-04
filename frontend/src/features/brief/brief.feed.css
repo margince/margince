@@ -11,41 +11,124 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+/* The section's name on a tinted band, the way the voice page heads its
+   sections, with the count and the way into the whole queue on it. */
 .brief-first-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--accentMed);
+  border-radius: var(--r-md);
+  background: var(--accentLight);
 }
 .brief-first-head > .t-eyebrow {
   margin: 0;
 }
-.brief-first-position {
+.brief-morning .brief-first-head > .t-eyebrow {
+  color: var(--accentText);
+}
+.brief-first-count {
+  min-inline-size: var(--space-5);
+  padding: 0 var(--space-2);
+  border-radius: var(--r-full);
+  background: var(--bgElevated);
+  color: var(--accentText);
+  text-align: center;
+}
+.brief-first-queue {
   margin-inline-start: auto;
-}
-/* The way into the whole queue under the day's order, with the count of what
-   the page left out beside it. */
-.brief-first-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-4);
-  margin-block-start: var(--space-1);
-}
-.brief-first-foot > p {
-  margin: 0;
 }
 .brief-triage {
   display: flex;
   flex-direction: column;
-  gap: var(--space-10);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── A card still waiting ─────────────────────────────────────────────────
+ * A to-do: the tick, then one press that opens it, holding the name, what to
+ * do, and when, what kind and with whom. */
+.brief-task {
+  display: grid;
+  grid-template-columns: var(--space-8) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-3);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+}
+.brief-task-tick {
+  display: grid;
+  place-items: center;
+  min-block-size: var(--space-8);
+}
+.brief-task-tick svg {
+  color: var(--textSecondary);
+  transition: color var(--dur-state) var(--ease-out);
+}
+.brief-task-tick button:hover svg {
+  color: var(--accentText);
+}
+.brief-task-open {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-1) 0 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.brief-task-open:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+.brief-task-title {
+  font: var(--fontHeadingXSmall);
+  text-wrap: balance;
+  transition: color var(--dur-state) var(--ease-out);
+}
+.brief-task-open:hover .brief-task-title {
+  color: var(--accentText);
+}
+/* What to do, two lines at most until the card opens. */
+.brief-task-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+}
+.brief-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+.brief-task-who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontBodySmall);
+  color: var(--textPrimary);
 }
 
 /* ── The card in hand ─────────────────────────────────────────────────────
- * One thing to answer, drawn whole on its own raised surface: why it is here,
- * the work, the words, why first, the verbs. The row inside is a `PanelRow`
- * laid open (`display: contents`), so the card orders the row's parts among
- * its own without a second row layout.
+ * One thing to answer, drawn whole: the name, what to do and the words, then
+ * when and whose, then the verbs. The row inside is a `PanelRow` laid open
+ * (`display: contents`), so the card orders the row's parts among its own.
  *
  * Its edge turns slowly through the accent and the agent's indigo, because
  * the agent put this card first. A reader who asked for less motion gets the
@@ -61,16 +144,13 @@
   isolation: isolate;
   border-radius: var(--r-lg);
 }
-.brief-triage-frame::before,
-.brief-triage-frame::after {
+.brief-triage-frame::before {
   content: "";
   position: absolute;
   z-index: -1;
+  inset: -1px;
   border-radius: inherit;
   pointer-events: none;
-}
-.brief-triage-frame::before {
-  inset: -1px;
   background: conic-gradient(
     from var(--brief-ring-angle),
     transparent 0deg,
@@ -80,13 +160,6 @@
     transparent 300deg
   );
   opacity: 0.4;
-}
-/* The soft light the card stands in. */
-.brief-triage-frame::after {
-  inset: 8% 4% -10%;
-  background: linear-gradient(90deg, var(--accent), var(--ai));
-  filter: blur(40px);
-  opacity: 0.08;
 }
 .brief-triage-frame:focus {
   outline: none;
@@ -100,7 +173,7 @@
     animation: brief-ring-turn 9s linear infinite;
   }
   .brief-triage-lead {
-    animation: brief-card-off-the-stack var(--dur-move) var(--ease-out);
+    animation: brief-card-open var(--dur-move) var(--ease-out);
   }
 }
 @keyframes brief-ring-turn {
@@ -108,31 +181,45 @@
     --brief-ring-angle: 360deg;
   }
 }
-@keyframes brief-card-off-the-stack {
+@keyframes brief-card-open {
   from {
-    opacity: 0;
-    transform: translateY(var(--space-2)) scale(0.985);
+    opacity: 0.6;
+    transform: translateY(var(--space-1));
   }
 }
 
 .brief-triage-lead {
+  display: grid;
+  grid-template-columns: var(--space-8) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: start;
+  min-width: 0;
+  padding: var(--space-5) var(--space-6) var(--space-5) var(--space-3);
+  border: 0;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+}
+.brief-triage-body {
   display: flex;
   flex-direction: column;
   align-items: start;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-8);
-  border: 0;
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-pop);
+  padding-block-start: var(--space-1);
 }
 /* The card's wait spans the card, not the width of its widest bar. */
+.brief-triage-pending {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-6);
+}
 .brief-triage-pending > .pending {
   align-self: stretch;
 }
-/* THE HEAD: why the row is here, whose it is, where it sits and when, as one
-   caption line split by dots. */
+/* WHEN AND WHOSE, under the work: what kind, who it is with, and its clock,
+   as one caption line split by dots. Nothing stands above the name. */
 .brief-triage-lead-head {
+  order: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -161,8 +248,11 @@
   width: 100%;
 }
 .brief-triage-lead .worklist-row-acts {
+  order: 2;
+  align-self: stretch;
   justify-content: flex-start;
-  padding-block-start: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--borderSubtle);
 }
 /* The head already says where the row stands, why and whose it is, so the
    rank tile, the kind, the message's by-line and its marks draw nothing here. */
@@ -173,11 +263,11 @@
   display: none;
 }
 
-/* THE NAME OF THE ROW IN HAND is the page's one headline after the greeting.
-   A waiting message names itself by its subject, at the same rung. */
+/* THE NAME OF THE ROW IN HAND: the column's headline. A waiting message names
+   itself by its subject, at the same rung. */
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead .emailentry__subject {
-  font: var(--fontHeadingXXLarge);
+  font: var(--fontHeadingMedium);
   white-space: normal;
   overflow-wrap: anywhere;
   text-wrap: balance;
@@ -185,7 +275,7 @@
 .brief-triage-lead .worklist-row-context,
 .brief-triage-lead .worklist-row-detail,
 .brief-triage-lead .worklist-row-verdict {
-  font: var(--fontBodyLarge);
+  font: var(--fontBody);
 }
 .brief-triage-lead .worklist-row-facts {
   font: var(--fontBody);
@@ -209,113 +299,51 @@
 .brief-triage-lead .worklist-row-title > .heading > .btn {
   font: inherit;
 }
+/* What the sender wrote, in their words, as a quote: three lines, because the
+   reader is deciding how to answer and the message is what they answer. */
 .brief-triage-lead .emailentry {
   padding: 0;
 }
-/* What the sender wrote, in their words: three lines, because the reader is
-   deciding how to answer and the message is what they are answering. */
 .brief-triage-lead .emailentry__preview {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
+  margin-block-start: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgChip);
   font: var(--fontBodyLarge);
-  color: var(--textSecondary);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
   white-space: normal;
   text-wrap: pretty;
 }
 
-/* ── The rest of the order ─────────────────────────────────────────────────── */
-.brief-triage-queue {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.brief-triage-queue-head {
-  display: block;
-  margin: 0;
-  padding: 0 0 var(--space-1);
-}
-.brief-focus-list {
-  display: flex;
-  flex-direction: column;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.brief-focus-list > li {
-  border-block-end: 1px solid var(--borderSubtle);
-}
-
-/* One row is ONE PRESS that puts it in hand: the rank, the name, and whose it
-   is with why on the far edge, the name lit under the pointer. */
-.brief-focus-item {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-4);
-  width: 100%;
-  padding: var(--space-4) var(--space-1);
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: color var(--dur-state) var(--ease-out);
-}
-.brief-focus-item:hover {
-  color: var(--accentText);
-}
-.brief-focus-item:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: -2px;
-}
-.brief-focus-rank {
-  flex: none;
-  min-inline-size: var(--space-4);
-  color: var(--textSecondary);
-}
-.brief-focus-item-title {
-  flex: 1;
-  min-width: 0;
-  font: var(--fontBodyLarge);
-  font-weight: var(--fontWeightMedium);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.brief-focus-item-line {
-  flex: 0 1 auto;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 720px) {
+  .brief-task,
   .brief-triage-lead {
-    display: flex;
-    flex-direction: column;
-    padding: var(--space-6);
-  }
-  .brief-triage-lead .worklist-row > * {
-    order: 1;
-  }
-  .brief-triage-lead .worklist-row-acts {
-    order: 2;
+    padding-inline-end: var(--space-4);
   }
   /* ds:ignore the phone rung of the same one headline */
   .brief-triage-lead p.worklist-row-title,
   .brief-triage-lead .emailentry__subject {
-    font: var(--fontHeadingLarge);
+    font: var(--fontHeadingSmall);
   }
-  .brief-focus-item {
-    flex-wrap: wrap;
-    row-gap: 0;
-  }
-  .brief-focus-item-line {
-    max-width: none;
-    flex-basis: 100%;
-    padding-inline-start: var(--space-8);
-  }
+}
+
+/* The tick is round, as a to-do's is; the verb under it is the house glyph. */
+.brief-task-tick .icon-action .btn.btn-icon {
+  border-color: transparent;
+  border-radius: var(--r-full);
+  background: none;
+  box-shadow: none;
+}
+.brief-task-tick .icon-action .btn.btn-icon:hover {
+  background: var(--accentLight);
+}
+/* The name is a press into the task, set in the card's ink like every name. */
+.brief-triage-lead .worklist-row-title .btn-link {
+  color: var(--textPrimary);
 }

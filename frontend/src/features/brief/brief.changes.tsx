@@ -40,7 +40,10 @@ export function BriefChanges() {
     return null;
   }
   return (
-    <section className="brief-section" aria-labelledby={titleId}>
+    <section
+      className="brief-section brief-agent-section"
+      aria-labelledby={titleId}
+    >
       <Eyebrow as="h2" id={titleId} className="brief-section-label">
         {t("brief.changes.title")}
       </Eyebrow>

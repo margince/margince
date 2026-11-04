@@ -324,22 +324,28 @@ function TaskComplete({
   version,
 }: Readonly<{ id: string; version: number | undefined }>) {
   const t = useT();
+  const done = useTaskDone(id, version);
+  return (
+    <Button variant="primary" pending={done.pending} onClick={done.complete}>
+      {t("tasks.complete")}
+    </Button>
+  );
+}
+
+/** A task's Done write, shared by every control that offers it. */
+export function useTaskDone(id: string, version: number | undefined) {
+  const t = useT();
   const toast = useToast();
   const update = useTaskUpdate([worklistKey]);
-  // A rejected PATCH otherwise leaves the button idle with nothing on screen
+  // A rejected PATCH otherwise leaves the control idle with nothing on screen
   // to say so, and the reader has no reason to try again.
   const complete = useCompleteTask(update, (error) =>
     toast.show(t(completeFailureKey(error)), { tone: "danger" }),
   );
-  return (
-    <Button
-      variant="primary"
-      pending={update.isPending}
-      onClick={() => complete(id, version)}
-    >
-      {t("tasks.complete")}
-    </Button>
-  );
+  return {
+    pending: update.isPending,
+    complete: () => complete(id, version),
+  };
 }
 
 // Running a failed rule again, from the row that reported it.

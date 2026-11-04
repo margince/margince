@@ -317,7 +317,7 @@ describe("the Brief's dials", () => {
     expect(screen.queryByTestId("glance-sentence")).toBeNull();
     const glance = screen.getByTestId("brief-glance");
     expect(glance.children).toHaveLength(2);
-    expect(glance.firstElementChild?.firstElementChild?.tagName).toBe("H1");
+    expect(glance.querySelector(".glance-title > h1")).toBeTruthy();
     // And no clock. The time the queue was read was the one thing here that
     // moved on its own, and a substring read is what catches it coming back in
     // some other wording.
