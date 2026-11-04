@@ -161,9 +161,9 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connect
 	// purpose — neither known here. applySuppression decides that, after
 	// resolution.
 	//
-	// One row per (kind, purpose_id): two narrow rows for the same kind but
+	// One row per (kind, purpose_id). Two narrow rows for the same kind but
 	// different purposes are two different stops, and collapsing them would
-	// silently drop one of them. The newest recorded_at of each is kept.
+	// drop one of them. The newest recorded_at of each is kept.
 	rows, err := tx.Query(ctx, `
 		SELECT kind, purpose_id, max(recorded_at) FROM communication_suppression
 		 WHERE revoked_at IS NULL

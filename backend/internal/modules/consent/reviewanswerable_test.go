@@ -39,8 +39,8 @@ func TestOnlyTheReasonsAStatementResolvesOfferAContextAnswer(t *testing.T) {
 	}
 }
 
-// A refusal keeps the deal its message named, so the answer a rep gives in the
-// review form is recorded about that deal and reused for the next message
+// A refusal keeps the deal its message named. So the answer a rep gives in the
+// review form is recorded about that deal, and reused for the next message
 // about it. A message that named no deal records an answer about none.
 func TestARefusalKeepsTheDealItsAnswerIsAbout(t *testing.T) {
 	deal := ids.NewV7()

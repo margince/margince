@@ -325,12 +325,11 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 // liveStakeholderSQL is "deal d is open and the contact bound to $2 is a
 // current stakeholder on it, through relationship r".
 //
-// BOTH end tests on the edge, and they are different facts. ended_at is a
-// business date somebody types; archived_at is how the edge is actually
-// removed — every delete and every cascade (contact archive, merge, deal
-// archive) writes archived_at and leaves ended_at alone. Checking only ended_at
-// would let a stakeholder who was REMOVED from the deal keep supporting mail
-// about it.
+// It reads both end markers on the edge, and they are different facts.
+// ended_at is a business date somebody types. archived_at is how the edge is
+// removed: every delete and every cascade (contact archive, merge, deal archive)
+// writes archived_at and leaves ended_at alone. With only ended_at, a
+// stakeholder removed from the deal would keep supporting mail about it.
 const liveStakeholderSQL = `d.status = 'open'
 			   AND d.archived_at IS NULL
 			   AND r.kind = 'deal_stakeholder'
@@ -339,8 +338,8 @@ const liveStakeholderSQL = `d.status = 'open'
 			   AND r.archived_at IS NULL`
 
 // requestedNegotiation reports whether one of these deals is a negotiation the
-// recipient asked for: open, the recipient a current stakeholder, and the
-// record shows them asking about THAT deal. A deal we created is no permission,
+// recipient asked for. The deal is open and the recipient a current
+// stakeholder. The record shows them asking about that same deal. A deal we created is no permission,
 // and a request about one deal does not carry another.
 //
 // Asking about the deal is one of three things, none bounded by age while the

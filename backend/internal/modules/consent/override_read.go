@@ -51,10 +51,11 @@ import (
 // levels off the SAME ladder — it is ordered weakest→strongest, so DESC puts
 // admin ahead of user — and recorded_at only breaks a tie between equals.
 //
-// ONE SENDING ENTITY. A vouch recorded by a rep of one legal entity serves
-// every rep of that entity, whoever owns the contact now and however old the
-// vouch is, and never a send for another entity. The entity is the one the
-// message was staged for; an unknown one matches no vouch.
+// One sending entity. A vouch recorded by a rep of one legal entity serves every
+// rep of that entity. That holds whoever owns the contact now and however old
+// the vouch is.
+// It never serves a send for another entity. The entity is the one the message
+// was staged for. An unknown one matches no vouch.
 func liveOverride(
 	ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category, entity ids.UUID,
 ) (ids.UUID, bool, error) {

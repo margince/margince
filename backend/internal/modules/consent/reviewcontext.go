@@ -188,8 +188,8 @@ func (s *Store) RecordContext(
 			return Review{}, err
 		}
 	}
-	// A request stated against a refused quote is a request for that quote,
-	// and one stated against a message about a deal is about that deal. So the
+	// A request stated against a refused quote is a request for that quote.
+	// One stated against a message about a deal is about that deal. So the
 	// rep confirms once and the next message about the deal reuses it.
 	if _, err := s.RecordQualifyingEvent(ctx, in.SubjectID, RecordQualifyingEventInput{
 		Kind:       in.Kind,

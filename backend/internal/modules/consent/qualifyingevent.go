@@ -179,42 +179,35 @@ func holdSurvivingContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	return survivor, auth.LockSubjectLive(ctx, tx, entityContact, survivor.UUID)
 }
 
-// RecordQualifyingEvent writes the exchange and returns it as it now stands.
-//
-// Gated on the SUBJECT rather than on a consent object: what this asserts is a
-// fact about a contact, it changes what may be sent to them, and the authority
-// to make that assertion is the authority to write their record.
-func (s *Store) RecordQualifyingEvent(
-	ctx context.Context,
-	contactID ids.ContactID,
-	in RecordQualifyingEventInput,
-) (QualifyingEvent, error) {
+// validated checks a hand-recorded exchange before any database work and
+// returns its trimmed note.
+func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 	if !handRecordedKinds[in.Kind] {
-		return QualifyingEvent{}, &InvalidQualifyingEventError{
+		return "", &InvalidQualifyingEventError{
 			Field: "kind",
 			Reason: "only an exchange in person or a request the subject made themselves is " +
 				"recorded by hand; the rest are derived",
 		}
 	}
 	if in.AsksForQuote && in.Kind != KindRequestedBySubject {
-		return QualifyingEvent{}, &InvalidQualifyingEventError{
+		return "", &InvalidQualifyingEventError{
 			Field: "asks_for_quote", Reason: "only a request the contact made can ask for a quote",
 		}
 	}
 	note := strings.TrimSpace(in.Note)
 	if note == "" {
-		return QualifyingEvent{}, &InvalidQualifyingEventError{
+		return "", &InvalidQualifyingEventError{
 			Field:  fieldNote,
 			Reason: "a hand-recorded exchange has no other evidence, so it needs one",
 		}
 	}
 	if len([]rune(note)) > noteMaxRunes {
-		return QualifyingEvent{}, &InvalidQualifyingEventError{
+		return "", &InvalidQualifyingEventError{
 			Field: fieldNote, Reason: fmt.Sprintf("keep it under %d characters", noteMaxRunes),
 		}
 	}
 	if in.OccurredAt.IsZero() {
-		return QualifyingEvent{}, &InvalidQualifyingEventError{
+		return "", &InvalidQualifyingEventError{
 			Field: fieldOccurredAt, Reason: "say when it happened, not when it was typed in",
 		}
 	}
@@ -223,10 +216,27 @@ func (s *Store) RecordQualifyingEvent(
 	// would authorize sending now and shadow the genuine evidence under it. The
 	// small skew allowance is for a client clock that runs fast, not for a
 	// claim about tomorrow.
-	if in.OccurredAt.After(s.now().Add(clockSkewAllowance)) {
-		return QualifyingEvent{}, &InvalidQualifyingEventError{
+	if in.OccurredAt.After(now.Add(clockSkewAllowance)) {
+		return "", &InvalidQualifyingEventError{
 			Field: fieldOccurredAt, Reason: "an exchange you remember happened before now",
 		}
+	}
+	return note, nil
+}
+
+// RecordQualifyingEvent writes the exchange and returns it as it now stands.
+//
+// Gated on the subject rather than on a consent object. What this asserts is a
+// fact about a contact, and it changes what may be sent to them. The authority
+// to make that assertion is the authority to write their record.
+func (s *Store) RecordQualifyingEvent(
+	ctx context.Context,
+	contactID ids.ContactID,
+	in RecordQualifyingEventInput,
+) (QualifyingEvent, error) {
+	note, err := in.validated(s.now())
+	if err != nil {
+		return QualifyingEvent{}, err
 	}
 	// Here as well as on the route: automatic work never asserts that a contact
 	// met somebody, and an in-process caller would otherwise reach the row.

@@ -223,8 +223,8 @@ func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
 	}
 }
 
-// A request newer than the opt-out carries the quote: the contact asked again
-// after they opted out, or the rep confirmed with them and recorded it.
+// A request newer than the opt-out carries the quote. Either the contact asked
+// again after they opted out, or the rep confirmed with them and recorded it.
 //
 // Mutation: make objectionBindsResolution ignore RequestedAt and both cases are
 // refused.
@@ -533,10 +533,10 @@ func (e *resolveEnv) recordRequestAbout(t *testing.T, deal ids.UUID, when time.T
 	}
 }
 
-// A deal follow-up rests on a request about THAT deal. An enquiry filed on deal
-// A does not carry deal B, a request that names no deal carries neither, an
-// enquiry filed on B carries B, and a request the rep confirmed about B is
-// reused for every later message about B.
+// A deal follow-up rests on a request about that same deal. An enquiry filed on
+// deal A does not carry deal B. A request that names no deal carries neither.
+// An enquiry filed on B carries B. A request the rep confirmed about B is reused
+// for every later message about B.
 //
 // Mutation: drop the deal test from any arm of requestedNegotiation (filing,
 // about_deal_id) and the matching case is supported for the wrong deal.
@@ -661,8 +661,9 @@ func (e *resolveEnv) acquiredAboutDealAt(t *testing.T, deal ids.UUID, at time.Ti
 }
 
 // Evidence on a deal is the contact's own act. A meeting a connector captured,
-// or authenticated mail from them, carries the deal; a meeting or mail a rep
-// typed by hand, a canceled meeting and an unauthenticated sender do not. A
+// or authenticated mail from them, carries the deal. A meeting or mail a rep
+// typed by hand does not. Nor does a canceled meeting or an unauthenticated
+// sender. A
 // request dated in the future is not a memory and carries nothing.
 //
 // Mutation: replace capturedMeetingSQL or AuthenticatedInboundSQL in

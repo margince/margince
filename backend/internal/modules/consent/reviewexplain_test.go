@@ -53,8 +53,8 @@ func TestAStopSaysWhatCanStillGo(t *testing.T) {
 	}
 }
 
-// A request answering a reply, a follow-up, a quote or a deal follow-up is read
-// with no age limit, so the review form takes it at any age. Anything else
+// A request answering a reply, a follow-up, a quote or a deal follow-up has no
+// age limit. So the review form takes it at any age. Anything else
 // keeps the window.
 func TestOnlyARequestForAClaimItAnswersSkipsTheWindow(t *testing.T) {
 	t.Parallel()

@@ -55,8 +55,8 @@ var buyerRoles = []string{dealrole.EconomicBuyer, dealrole.LegacyDecisionMaker}
 // known entity, answers nil.
 //
 // A declaration covers sales from its effective start, but no earlier than
-// the date of the evidence it names, and without evidence no earlier than the
-// day it was declared. A period back-dated on the admin's word alone covers
+// the date of the evidence it names. Without evidence it covers nothing before
+// the day it was declared. A period back-dated on the admin's word alone covers
 // nothing before that day.
 func existingCustomerGround(
 	ctx context.Context, tx pgx.Tx, contactID, purposeID string, entity ids.UUID,

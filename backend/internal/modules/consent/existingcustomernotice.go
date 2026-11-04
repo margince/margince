@@ -102,12 +102,9 @@ func (in DeclareNoticeInput) validate() error {
 	return nil
 }
 
-// requireNoticeAdmin admits a signed-in user who may configure consent. An
-// agent cannot declare evidence on its user's behalf.
-func requireNoticeAdmin(ctx context.Context, action principal.Action) error {
-	if err := auth.Require(ctx, "consent_config", action); err != nil {
-		return err
-	}
+// requireNoticeHuman refuses an agent: it cannot declare evidence on its user's
+// behalf. Each caller checks the consent configuration grant first.
+func requireNoticeHuman(ctx context.Context) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return fmt.Errorf("a collection notice is declared by a signed-in user: %w", apperrors.ErrPermissionDenied)
@@ -117,7 +114,10 @@ func requireNoticeAdmin(ctx context.Context, action principal.Action) error {
 
 // DeclareCustomerNotice records one declaration with its audit row and event.
 func (s *Store) DeclareCustomerNotice(ctx context.Context, in DeclareNoticeInput) (CustomerNotice, error) {
-	if err := requireNoticeAdmin(ctx, principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, "consent_config", principal.ActionCreate); err != nil {
+		return CustomerNotice{}, err
+	}
+	if err := requireNoticeHuman(ctx); err != nil {
 		return CustomerNotice{}, err
 	}
 	if err := in.validate(); err != nil {
@@ -203,7 +203,10 @@ func uniqueIDs(in []ids.UUID) map[ids.UUID]struct{} {
 
 // CustomerNotices lists every declaration, live ones first, newest first.
 func (s *Store) CustomerNotices(ctx context.Context) ([]CustomerNotice, error) {
-	if err := requireNoticeAdmin(ctx, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "consent_config", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	if err := requireNoticeHuman(ctx); err != nil {
 		return nil, err
 	}
 	var out []CustomerNotice
@@ -219,7 +222,10 @@ func (s *Store) CustomerNotices(ctx context.Context) ([]CustomerNotice, error) {
 // reason on the row and in the audit log. A send already made on it stays
 // explained by its own decision row.
 func (s *Store) WithdrawCustomerNotice(ctx context.Context, id ids.UUID, reason string) (CustomerNotice, error) {
-	if err := requireNoticeAdmin(ctx, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "consent_config", principal.ActionUpdate); err != nil {
+		return CustomerNotice{}, err
+	}
+	if err := requireNoticeHuman(ctx); err != nil {
 		return CustomerNotice{}, err
 	}
 	if err := requireReason(reason, "withdrawing a collection notice"); err != nil {

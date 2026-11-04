@@ -347,8 +347,8 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	return event, true, nil
 }
 
-// capturedMeetingSQL is "activity a is a meeting that counts as evidence": a
-// connector captured it, it names no counterparty string, it was not declined
+// capturedMeetingSQL is "activity a is a meeting that counts as evidence". A
+// connector captured it and it names no counterparty string. It was not declined
 // or abandoned, and it lies inside the diary horizon. A meeting a rep typed by
 // hand is not evidence of anything the contact did. meetingQualifyingEvent and
 // requestedNegotiation both read this one constant.

@@ -15,10 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// askedAboutTheDeal plants the contact's own enquiry about a deal: mail from
-// them that a connector captured from an authenticated sender, filed on the
-// deal. An open deal they are staked on carries a follow-up only with such a
-// request behind it; a deal we created, or a hand-logged activity, does not.
+// askedAboutTheDeal plants the contact's own enquiry about a deal. It is mail
+// from them that a connector captured from an authenticated sender. It is filed
+// on the deal. An open deal they are staked on carries a follow-up only with
+// such a request behind it. A deal we created, or a hand-logged activity, does
+// not.
 func askedAboutTheDeal(t *testing.T, e *apptest.AppEnv, contactID, address, dealID string) {
 	t.Helper()
 	ctx := context.Background()

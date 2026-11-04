@@ -15,7 +15,7 @@ import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { ContactStops } from "./contactstops";
 
 // The stops on a contact. The server says per stop whether this reader may take
-// it back; the panel offers exactly that, with a required reason.
+// it back; the panel offers that, with a required reason.
 
 type ContactStop = components["schemas"]["ContactStop"];
 

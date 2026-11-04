@@ -105,8 +105,8 @@ func TestARepsExceptionDoesNotCoverAnAdminOnlyRefusal(t *testing.T) {
 }
 
 // Where the recipient's country requires prior consent, nobody records an
-// exception in its place, and the country's advertising ceiling is not lifted
-// for one message either.
+// exception in its place. The country's advertising ceiling is not lifted for
+// one message either.
 func TestNoExceptionStandsInForConsentWhereTheCountryRequiresIt(t *testing.T) {
 	t.Parallel()
 	for _, reason := range []string{ReasonMarketingConsentRequired, ReasonFrequencyCapReached, ReasonOptedOutAfterRequest} {

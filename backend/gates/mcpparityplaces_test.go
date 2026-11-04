@@ -213,6 +213,7 @@ var parityPathAreas = map[string]string{
 	"/dedupe/settings":                    "sales_rules",
 	"/email-signature-template":           "sales_rules",
 	"/embeddings":                         "search_index",
+	"/existing-customer-notices":          "consent",
 	"/exports":                            "exports",
 	"/ext-oauth/{provider}/callback":      "oauth_callbacks",
 	"/ext-oauth/{provider}/connect":       "extensions",

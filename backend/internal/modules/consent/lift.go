@@ -87,8 +87,8 @@ func admitLifter(ctx context.Context) error {
 	return auth.Require(ctx, "contact", principal.ActionUpdate)
 }
 
-// lifterOf reads who asks to lift: their level, and whether a human is signed
-// in to the seat rather than an agent working on its passport.
+// lifterOf reads who asks to lift. It returns their level, and whether a human
+// is signed in to the seat rather than an agent working on its passport.
 func lifterOf(ctx context.Context) lifter {
 	p, ok := principal.Actor(ctx)
 	return lifter{level: authorityOf(ctx), human: ok && p.Type == principal.PrincipalHuman}

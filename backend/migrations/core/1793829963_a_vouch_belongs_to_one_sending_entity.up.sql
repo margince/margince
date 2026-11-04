@@ -61,7 +61,7 @@ SELECT 'system', 'migration', 'update',
 ALTER TABLE communication_override
     ALTER COLUMN legal_entity_id SET NOT NULL,
     ADD CONSTRAINT communication_override_legal_entity_id_fkey
-        FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT;
+        FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT NOT VALID;
 
 DROP INDEX communication_override_live_contact;
 CREATE INDEX communication_override_live_contact

@@ -26,8 +26,8 @@ func requireConsentWhereNothingStandsIn(d commsauthz.Decision, country Recipient
 }
 
 // lacksMarketingConsent reports whether a refusal is marketing with no consent
-// behind it: the legacy verdict's own reason, or a marketing claim the record
-// does not bear out. Resolved is not read for the second, because it starts as
+// behind it. That is the legacy verdict's own reason, or a marketing claim the
+// record does not bear out. Resolved is not read for the second, because it starts as
 // marketing on every decision and an unproven follow-up keeps that default.
 func lacksMarketingConsent(d commsauthz.Decision) bool {
 	switch d.ReasonCode {

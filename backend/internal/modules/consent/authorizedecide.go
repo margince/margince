@@ -107,7 +107,7 @@ func objectionBindsResolution(res resolution, stops []liveStop) bool {
 }
 
 // denyByObjection is the refusal objectionBindsResolution asks for. The
-// suppression is the objection; the reason says it came after the request, so
+// suppression is the objection. The reason says it came after the request, so
 // the send screen asks the rep to confirm with the contact first.
 func denyByObjection(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	d.Resolved = res.Category

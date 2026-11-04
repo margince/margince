@@ -282,8 +282,8 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, add
 	}), nil
 }
 
-// marketingVerdict is the strict arm, unchanged in strictness by ADR-0098:
-// express consent with the DOI round-trip, or the §7(3) existing-customer route
+// marketingVerdict is the strict arm, unchanged in strictness by ADR-0098. It
+// needs express consent with the DOI round-trip, or the existing-customer route
 // where the pack grants it (existingcustomerroute.go). There is no
 // legitimate-interest escape for marketing email, B2C or B2B, and the product
 // does not offer the toggle.

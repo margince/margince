@@ -100,7 +100,7 @@ type Rules struct {
 	MarketingExceptions []MarketingException
 
 	// ConsentOnly says advertising to a recipient here needs their prior
-	// consent and nothing else: no one-message exception a sender or an admin
+	// consent and nothing else. No one-message exception a sender or an admin
 	// records stands in for it. False keeps that exception, which is the
 	// default.
 	ConsentOnly bool

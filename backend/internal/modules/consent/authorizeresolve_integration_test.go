@@ -218,9 +218,9 @@ func (e *resolveEnv) openDeal(t *testing.T, status string, stakeholder bool) ids
 	return dealID
 }
 
-// enquiredAbout plants the subject's own inbound enquiry ten days ago, captured
-// by a connector from an authenticated sender and filed on the deal, which
-// makes that deal a negotiation they asked for.
+// enquiredAbout plants the subject's own inbound enquiry ten days ago. A
+// connector captured it from an authenticated sender and it is filed on the
+// deal, which makes that deal a negotiation they asked for.
 func (e *resolveEnv) enquiredAbout(t *testing.T, deal ids.UUID) {
 	t.Helper()
 	enquiry := e.inboundFrom(t, "their-enquiry-"+deal.String(), e.address, clocktest.Now(t).Add(-10*24*time.Hour))
@@ -253,10 +253,10 @@ func (e *resolveEnv) seedPurpose(t *testing.T, key, class string) {
 	}
 }
 
-// decide runs the WHOLE per-recipient decision, not just the resolution — which
-// is what the Resolved/Requested split has to be asserted through, because the
-// split happens in decideResolved rather than in the resolver. It names the
-// sending entity as staging does.
+// decide runs the whole per-recipient decision, not only the resolution. The
+// Resolved/Requested split happens in decideResolved rather than in the
+// resolver, so a test of the split goes through here. It names the sending
+// entity as staging does.
 func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Decision {
 	t.Helper()
 	var out commsauthz.Decision
