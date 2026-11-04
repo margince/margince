@@ -45,11 +45,11 @@ var preservedResetTables = map[string]bool{
 	"data_task_run_history":   true,
 	// Seeded by its migration; mail captured after a reset is past it anyway.
 	"activity_own_sent_mail_repair_cutoff": true,
-	// The installation's own published wording. Not tenant data: it is the
-	// controller's text, shared across every subject who saw it, and a proof row
-	// surviving the reset would otherwise point at a version the sweep removed.
-	// The migration revokes DELETE on it, so a sweep would abort here anyway.
+	// consent_text_version is the controller's published wording, which a surviving
+	// proof row points at. tax_rate holds an admin's versioned rates. Both
+	// migrations revoke DELETE, so a sweep would abort here anyway.
 	"consent_text_version": true,
+	"tax_rate":             true,
 	// identity and auth; an AI tool's connection stays with its passports (passport_grant_fkey is RESTRICT)
 	objectWorkspace: true, "app_user": true, "role": true, "role_assignment": true,
 	"team": true, "team_membership": true,
