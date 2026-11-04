@@ -60772,22 +60772,44 @@ type TotpEnrolment struct {
 	Secret string `json:"secret"`
 }
 
+// TranscriptReadAskedOf The colleague a staged approval waits on. A client reads the approval's status only when `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the caller's to read.
+type TranscriptReadAskedOf struct {
+	IsYou bool `json:"is_you"`
+
+	// Name The colleague as the roster names them; null for a seat with no name to show.
+	Name   *string            `json:"name,omitempty"`
+	SeatId openapi_types.UUID `json:"seat_id"`
+}
+
+// TranscriptReadProposal One approval a transcript reading staged, and who it waits on.
+type TranscriptReadProposal struct {
+	// AskedOf The colleague a staged approval waits on. A client reads the approval's status only when `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the caller's to read.
+	AskedOf TranscriptReadAskedOf `json:"asked_of"`
+	Id      openapi_types.UUID    `json:"id"`
+}
+
 // TranscriptReadReport What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
 type TranscriptReadReport struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 	CreatedAt  time.Time          `json:"created_at"`
-	FinishedAt *time.Time         `json:"finished_at,omitempty"`
+
+	// Detail What the reading did, phrased for the caller in their display language: tasks it added "for you" or for a named colleague, proposals waiting on the caller, proposals "sent to" a named colleague to confirm, commitments it withheld and why, or why it could not be used. Null while the reading runs, and on a reading finished before the outcome was kept as facts, where `status_detail` is the account.
+	Detail     *string    `json:"detail,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
 
 	// LineCount How many lines the reading addressed, so a cited line can be shown against the size of what was read. It is the count at READ time; a later body edit re-normalizes and can change it, and each proposal's own evidence stays authoritative about what it saw.
 	LineCount int `json:"line_count"`
 
 	// ProposalIds The approvals this reading staged. Empty on a reading that found nothing to propose.
-	ProposalIds []openapi_types.UUID       `json:"proposal_ids"`
-	ReadId      openapi_types.UUID         `json:"read_id"`
-	StartedAt   *time.Time                 `json:"started_at,omitempty"`
-	Status      TranscriptReadReportStatus `json:"status"`
+	ProposalIds []openapi_types.UUID `json:"proposal_ids"`
 
-	// StatusDetail Why it ended as it did, in words a rep can act on. Set on failure, and on a done reading that produced nothing so an empty result explains itself.
+	// Proposals The approvals this reading staged, each with the colleague it waits on. Empty on a reading finished before the outcome was kept as facts; `proposal_ids` still lists those.
+	Proposals []TranscriptReadProposal   `json:"proposals"`
+	ReadId    openapi_types.UUID         `json:"read_id"`
+	StartedAt *time.Time                 `json:"started_at,omitempty"`
+	Status    TranscriptReadReportStatus `json:"status"`
+
+	// StatusDetail The sentence stored when the reading finished, in the installation's base language and naming nobody. Kept for readings finished before `detail` existed; a client shows `detail` when it is set.
 	StatusDetail *string `json:"status_detail,omitempty"`
 }
 
