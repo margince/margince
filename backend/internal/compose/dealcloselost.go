@@ -227,8 +227,8 @@ func decideClose(
 }
 
 // silenceReason names the silence the close was decided on. The reason reaches
-// every reader of the deal, so when only private mail is newer than the mail
-// everyone may read, it names the threshold and not a day that private mail set.
+// every reader of the deal. When private mail is newer than all visible mail,
+// it names the threshold, not a day that private mail set.
 func silenceReason(silentDays, visibleDays, threshold int) string {
 	if silentDays < visibleDays {
 		return fmt.Sprintf("No word from the customer for more than %d days", threshold)
