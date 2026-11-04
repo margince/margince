@@ -88,5 +88,7 @@ describe("a list's column layout", () => {
 
     mount();
     expect(await headers()).toEqual(["Name", "Stage", "City"]);
-  });
+    // Three mounts, each waiting for its table and its row: a ceiling of its own
+    // that covers those waiters.
+  }, 25_000);
 });
