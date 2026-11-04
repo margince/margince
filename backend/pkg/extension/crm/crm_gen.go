@@ -1773,7 +1773,8 @@ type Activity struct {
 	// MessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
 	// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
 	// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
-	// word with them, `none` otherwise.
+	// word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+	// a message owed our answer is `none`, as for mail.
 	MessageMove *ActivityMessageMove `json:"message_move,omitempty"`
 	OccurredAt  time.Time            `json:"occurred_at"`
 
@@ -1851,7 +1852,8 @@ type ActivityMeetingStatus string
 // ActivityMessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
 // message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
 // still owed our answer, `waiting_for_them` on one a seat sent that is still the last
-// word with them, `none` otherwise.
+// word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+// a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -2623,6 +2625,9 @@ type EmailSummary struct {
 	// that is still the last word with them. A calendar invitation, update, cancellation
 	// or answer is `none` unless someone confirmed it asks us something. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
+	// A message older than the waiting horizon that nobody kept is `none` too: it is
+	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+	// The message stays on the timeline; `none` does not mean it was answered.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
 
@@ -2652,6 +2657,9 @@ type EmailSummaryDirection string
 // that is still the last word with them. A calendar invitation, update, cancellation
 // or answer is `none` unless someone confirmed it asks us something. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
+// A message older than the waiting horizon that nobody kept is `none` too: it is
+// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+// The message stays on the timeline; `none` does not mean it was answered.
 type EmailSummaryMove string
 
 // MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.

@@ -26840,6 +26840,9 @@ export interface components {
              *     that is still the last word with them. A calendar invitation, update, cancellation
              *     or answer is `none` unless someone confirmed it asks us something. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
+             *     A message older than the waiting horizon that nobody kept is `none` too: it is
+             *     no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+             *     The message stays on the timeline; `none` does not mean it was answered.
              * @enum {string}
              */
             move: "needs_reply" | "waiting_for_them" | "none";
@@ -38649,7 +38652,8 @@ export interface components {
              * @description Present exactly when `kind=message` and the reader may read it. Whose move the chat
              *     message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
              *     still owed our answer, `waiting_for_them` on one a seat sent that is still the last
-             *     word with them, `none` otherwise.
+             *     word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+             *     a message owed our answer is `none`, as for mail.
              * @enum {string}
              */
             readonly message_move?: "needs_reply" | "waiting_for_them" | "none";

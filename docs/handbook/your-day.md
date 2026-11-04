@@ -80,7 +80,7 @@ To clear several rows, press **Select** and tick them. **Complete** finishes tic
 **Done** and **Not mine** clear your own list only. **Not mine** shows only on a row someone else
 owns, or nobody owns. **Not a customer** removes the whole thread for everyone, and does not run out. Also called: dismiss, delete from worklist, hide, not relevant, mark as done, handled.
 
-Captured mail needs a reply only when Margince finds a request or you keep it as work. Other mail stays on the record. Archiving a contact removes their waiting messages; restoring them brings those messages back. A message stays if another contact you can see is still live, or none of its contacts are visible.
+Captured mail needs a reply only when Margince finds a request or you keep it as work. A request nobody kept stops needing a reply once it is too old for your worklist, on the contact page too. Other mail stays on the record. Archiving a contact removes their waiting messages; restoring them brings those messages back. A message stays if another contact you can see is still live, or none of its contacts are visible.
 
 ### How do I undo a snooze or removal on my worklist?
 To undo a Worklist snooze or removal in Margince, press **Undo** in the note that appears right after you picked it.
