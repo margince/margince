@@ -34,6 +34,10 @@ export function render(ui: ReactNode, zone = INSTALLATION_ZONE) {
   );
 }
 
+const emptyPage = { data: [], page: { next_cursor: null } };
+
+export type Captured = { key: string; body: unknown };
+
 async function sentBody(
   request: Request | null,
   init: RequestInit | undefined,

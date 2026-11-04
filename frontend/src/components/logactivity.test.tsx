@@ -16,6 +16,7 @@ import { formatTimeOfDay } from "../format/format";
 import { LogActivity } from "./logactivity";
 import { LogActivityAction } from "./logactivity.action";
 import {
+  type Captured,
   contact,
   createdActivity,
   INSTALLATION_ZONE,
@@ -50,8 +51,6 @@ function pretendViewerZone(timeZone: string): void {
   });
 }
 
-const _emptyPage = { data: [], page: { next_cursor: null } };
-
 const dayBox = (label: string) =>
   screen.getByRole<HTMLInputElement>("textbox", { name: label });
 
@@ -62,8 +61,6 @@ async function typeDay(user: UserEvent, box: HTMLInputElement, day: string) {
   await user.tripleClick(box);
   await user.keyboard(shown(day));
 }
-
-type Captured = { key: string; body: unknown };
 
 // One day, picked in the form and asserted against — and the zone the machine
 // running this suite is in, because the invariant is "the day the writer picked
