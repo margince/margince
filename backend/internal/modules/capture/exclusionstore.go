@@ -280,7 +280,7 @@ func kindsAdmittedBy(admitted func(kind string) bool) []string {
 
 var (
 	exclusionKinds = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CaptureExclusionKind(kind).Valid() })
-	holdKinds      = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CaptureCounterpartyHoldKind(kind).Valid() })
+	holdKinds      = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CreateCaptureCounterpartyHoldRequestKind(kind).Valid() })
 	identityKinds  = kindsAdmittedBy(func(kind string) bool { return crmcontracts.CaptureOwnerIdentityKind(kind).Valid() })
 )
 
