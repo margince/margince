@@ -15390,6 +15390,31 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/consent/stops:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listContactStops
+      security: [{bearerAuth: []}]
+      summary: List the stops that stand on this contact, and which ones you may take back.
+      description: |-
+        Every live suppression the send check reads for this contact: the contact's own stops and
+        the stops held on one of its live addresses. Newest first.
+      responses:
+        '200':
+          description: The stops that stand.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stops]
+                properties:
+                  stops: {type: array, items: {$ref: '#/components/schemas/ContactStop'}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/consent/allow:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -45199,6 +45224,57 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the earliest of them happened. Null when nobody recorded the time.
+    ContactStop:
+      type: object
+      description: One live stop on a contact, and whether the caller may take it back.
+      required: [id, kind, authority, recorded_at, recorded_by_colleague, may_lift, correction]
+      properties:
+        id: {type: string, format: uuid, description: The stop. `liftSuppression` takes this id.}
+        kind:
+          type: string
+          description: |-
+            `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`. A
+            kind from a newer server is shown as a stop of unknown kind.
+        authority:
+          type: string
+          enum: [machine, user, admin, subject]
+          description: Whose decision the stop is. `subject` is the contact's own, whoever typed it.
+        purpose_key:
+          type: [string, 'null']
+          description: The one purpose a narrow stop binds. Null for a stop on every purpose of its kind.
+        address:
+          type: [string, 'null']
+          description: The address a stop is held on. Null for a stop on the contact.
+        reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: What the colleague or the contact wrote when the stop was recorded. Null when nothing was written.
+        recorded_at: {type: string, format: date-time}
+        recorded_by_colleague:
+          type: boolean
+          description: |-
+            A colleague recorded the stop. False when the contact recorded it on a link in a mail or
+            Margince recorded it, for example for a bounce.
+        recorded_by_name:
+          type: [string, 'null']
+          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+        may_lift:
+          type: boolean
+          description: This caller may take the stop back now, with a reason.
+        correction:
+          type: boolean
+          description: |-
+            Taking it back corrects a stop a colleague recorded by mistake: a marketing objection,
+            which only an admin may correct. The audit row records the correction.
+        lift_blocked_by:
+          type: [string, 'null']
+          enum: [address, restriction, subject_decision, level, permission, null]
+          description: |-
+            Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+            signed in to a seat. `address`: a stop on an address clears when mail to it works
+            again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+            send yet. `subject_decision`: the contact set it and only they change it. `level`: it
+            was recorded at your level or above. Null when `may_lift` is true.
     RecordedOverride:
       type: object
       description: >-

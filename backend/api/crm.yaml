@@ -25382,9 +25382,8 @@ paths:
     get:
       tags: [Compliance]
       operationId: listContactStops
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
-      x-human-only-reason: security
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: list_contact_stops, router: read_details, action: contact_stops, tier: auto_execute, scope: read, served_by: route }
       summary: List the stops that stand on this contact, and which ones you may take back.
       description: |
         Every live suppression the send check reads for this contact: the contact's own stops and
@@ -25408,6 +25407,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /contacts/{id}/consent/allow:
     parameters:
