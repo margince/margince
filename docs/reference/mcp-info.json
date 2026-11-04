@@ -10,16 +10,16 @@
   "totals": {
     "tools": 45,
     "resources": 13,
-    "tool_catalog_bytes": 194849,
+    "tool_catalog_bytes": 194687,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 50027,
+    "approx_wire_tokens_total": 49986,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 42671,
-      "input_schema_bytes": 93450,
-      "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 136121
+      "input_schema_bytes": 93540,
+      "output_schema_bytes": 47182,
+      "description_plus_input_schema_bytes": 136211
     }
   },
   "tools": {
@@ -2046,8 +2046,6 @@
                                   "type": "array"
                                 },
                                 "limit": {
-                                  "maximum": 1000,
-                                  "minimum": 1,
                                   "type": "integer"
                                 },
                                 "measures": {
@@ -4250,7 +4248,6 @@
                             "type": "array"
                           },
                           "more_fields": {
-                            "minimum": 0,
                             "type": "integer"
                           },
                           "sentence": {
@@ -4605,23 +4602,18 @@
                     "disposition": {
                       "properties": {
                         "created": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "duplicates": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "skipped": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "unchanged": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "updated": {
-                          "minimum": 0,
                           "type": "integer"
                         }
                       },
@@ -4649,7 +4641,6 @@
                             "type": "string"
                           },
                           "line": {
-                            "minimum": 1,
                             "type": "integer"
                           },
                           "params": {
@@ -4678,11 +4669,9 @@
                     "links": {
                       "properties": {
                         "applied": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "offered": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "unresolved": {
@@ -4733,33 +4722,26 @@
                       "items": {
                         "properties": {
                           "closed_lost": {
-                            "minimum": 1,
                             "type": "integer"
                           },
                           "closed_won": {
-                            "minimum": 1,
                             "type": "integer"
                           },
                           "disposition": {
                             "properties": {
                               "created": {
-                                "minimum": 0,
                                 "type": "integer"
                               },
                               "duplicates": {
-                                "minimum": 0,
                                 "type": "integer"
                               },
                               "skipped": {
-                                "minimum": 0,
                                 "type": "integer"
                               },
                               "unchanged": {
-                                "minimum": 0,
                                 "type": "integer"
                               },
                               "updated": {
-                                "minimum": 0,
                                 "type": "integer"
                               }
                             },
@@ -4778,7 +4760,6 @@
                             "type": "string"
                           },
                           "rows_read": {
-                            "minimum": 0,
                             "type": "integer"
                           }
                         },
@@ -4793,7 +4774,6 @@
                       "type": "array"
                     },
                     "rows_read": {
-                      "minimum": 0,
                       "type": "integer"
                     },
                     "run_id": {
@@ -4866,7 +4846,6 @@
                           "type": "array"
                         },
                         "reversed_count": {
-                          "minimum": 0,
                           "type": "integer"
                         },
                         "run_id": {
@@ -4877,7 +4856,6 @@
                           "type": "string"
                         },
                         "updates_not_reversed": {
-                          "minimum": 0,
                           "type": "integer"
                         }
                       },
@@ -5588,7 +5566,6 @@
                       "type": "array"
                     },
                     "more_fields": {
-                      "minimum": 0,
                       "type": "integer"
                     },
                     "sentence": {
@@ -7190,6 +7167,7 @@
                 "contact_profile_fields",
                 "contract",
                 "deal_legal_reviews",
+                "deal_margince_changes",
                 "deal_products",
                 "deal_room_brief",
                 "deal_suggestion",
@@ -7232,6 +7210,7 @@
                 "ownership_offer",
                 "ownership_offer_candidates",
                 "ownership_request",
+                "pending_margince_changes",
                 "project_filing",
                 "relationship_nudge",
                 "response_metrics",
@@ -7241,6 +7220,7 @@
                 "tag_suggestion",
                 "team_board",
                 "team_exceptions",
+                "team_margince_changes",
                 "team_weekly_review",
                 "teammate_weekly_plan",
                 "weekly_plan",
@@ -7274,7 +7254,7 @@
               "type": "boolean"
             },
             "cursor": {
-              "description": "company_contracts, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
+              "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
               "type": "string"
             },
             "days": {
@@ -7318,7 +7298,7 @@
               "type": "boolean"
             },
             "id": {
-              "description": "activity_pipeline, capture_triage, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_profile_fields, contract, deal_legal_reviews, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
+              "description": "activity_pipeline, capture_triage, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_profile_fields, contract, deal_legal_reviews, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
               "type": "string"
             },
             "lang": {
@@ -7362,7 +7342,7 @@
               "type": "string"
             },
             "since": {
-              "description": "magic, magic_line_records only",
+              "description": "magic, magic_line_records, team_margince_changes only",
               "type": "string"
             },
             "stage_id": {
@@ -8942,8 +8922,6 @@
                                   "type": "array"
                                 },
                                 "limit": {
-                                  "maximum": 1000,
-                                  "minimum": 1,
                                   "type": "integer"
                                 },
                                 "measures": {

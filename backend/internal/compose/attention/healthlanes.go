@@ -158,6 +158,8 @@ type TroubledAutomationRun struct {
 	// Outcome is the contract's failed/blocked vocabulary.
 	Outcome string
 	// Reason is the engine's own recorded why, when it left one.
-	Reason     string
+	Reason string
+	// ReasonCode is Reason in automation.RunReasonCodes, for any language.
+	ReasonCode string
 	OccurredAt time.Time
 }
