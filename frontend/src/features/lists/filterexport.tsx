@@ -48,8 +48,8 @@ const LABEL: Record<Format, MessageKey> = {
  * the engine refuses, and an export button that answers 422 has told the reader
  * nothing they could not have been spared.
  *
- * Asked before the menu holding the items is drawn: a menu whose items all
- * refuse is a trigger that opens onto nothing.
+ * Asked before the export buttons are drawn: a button that can only refuse
+ * is a control that does nothing.
  */
 export function canExportFilter(tree: Node): boolean {
   return isComplete(tree);
@@ -101,7 +101,7 @@ export function useFilterExport() {
 
 export type FilterExportRun = ReturnType<typeof useFilterExport>;
 
-/** "Export CSV" and "Export JSON", as items of the menu that holds them. */
+/** "Export CSV" and "Export JSON", beside the count of what they export. */
 export function ExportFilterItems({
   run,
   resource,

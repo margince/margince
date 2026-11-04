@@ -23,13 +23,11 @@ package compose
 // operation is human-only — un-logged is right for somebody typing and wrong for
 // an agent reading records in bulk.
 //
-// Why un-logged is defensible at all, stated as the fact rather than the
-// intuition: GET /v1/contacts already returns the same Contact projection, 200 rows
-// a page with a cursor, writing no ledger row either. Preview pages the same way
-// at 100 rows, so its cursor opens no channel a human with read access did not
-// have. The export's system_log row is about an extraction ARTIFACT
-// leaving the system, which a preview does not produce; it is not a general
-// obligation on reading records, or the paged list read would owe one too.
+// Why un-logged is defensible: GET /v1/contacts already returns the same
+// Contact projection, 200 rows a page with a cursor, and writes no ledger row.
+// Preview pages the same way at 100 rows, so its cursor opens no new channel.
+// The export's system_log row records a file leaving the system. A preview
+// makes no file, and reading records owes no row, or the list read would too.
 
 import (
 	"context"
@@ -136,10 +134,10 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 	httperr.WriteJSON(w, http.StatusOK, preview)
 }
 
-// preview runs the count and the page after `after` (nil for the first) in ONE
-// transaction, which buys less than it looks like and is still worth having.
-// The count is the full match count on every page, so a table paging through
-// the answer keeps one total.
+// preview runs the count and the page after `after` (nil for the first) in one
+// transaction. That buys less than it looks like and is still worth having.
+// The count is the full match count on every page, so a paging table keeps one
+// total.
 //
 // What it does NOT buy is a shared snapshot. These run at READ COMMITTED — the
 // pool sets no isolation level — so each statement takes its own snapshot and a

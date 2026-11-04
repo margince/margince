@@ -39,16 +39,13 @@ import { throwProblem, unwrap } from "../../lib/problem";
 import "./lists.css";
 import "./listsection.css";
 
-/** Where each record type's rows are read, and the screen a row opens. */
+/** Where each record type's rows are read. `ENTITY` names the page a row opens. */
 export const MEMBER_SOURCES = {
-  contact: { path: "/contacts", screen: "contacts", unit: "unit.contacts" },
-  company: { path: "/companies", screen: "companies", unit: "unit.companies" },
-  deal: { path: "/deals", screen: "deals", unit: "unit.deals" },
-  lead: { path: "/leads", screen: "leads", unit: "unit.leads" },
-} as const satisfies Record<
-  string,
-  { path: string; screen: string; unit: MessageKey }
->;
+  contact: { path: "/contacts", unit: "unit.contacts" },
+  company: { path: "/companies", unit: "unit.companies" },
+  deal: { path: "/deals", unit: "unit.deals" },
+  lead: { path: "/leads", unit: "unit.leads" },
+} as const satisfies Record<string, { path: string; unit: MessageKey }>;
 
 type MemberSource = keyof typeof MEMBER_SOURCES;
 

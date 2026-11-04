@@ -5,9 +5,8 @@
 
 package compose
 
-// Paging a filter preview: the cursor walks every match once in id order, each
-// page carries the full count, and a reader who may not see some rows meets
-// none of them on any page.
+// Paging a filter preview. The cursor walks every match once in id order, and
+// each page carries the full count. A reader meets no row they may not see.
 
 import (
 	"context"
@@ -41,8 +40,9 @@ func seedPagedContacts(t *testing.T, e *integration.Env, owner ids.UUID, n int) 
 	return created
 }
 
-// walkPreview reads every page of the preview as ctx, checking on each page the
-// count and that truncated and next_cursor agree, and answers the ids in order.
+// walkPreview reads every page of the preview as ctx and answers the ids in
+// order. On each page it checks the count, and that truncated and next_cursor
+// agree.
 func walkPreview(ctx context.Context, t *testing.T, e *integration.Env, pageSize, wantCount int) []ids.UUID {
 	t.Helper()
 	handlers := filterPreviewHandlers{pool: e.Pool, collections: NewCollectionsStore(e.Pool)}

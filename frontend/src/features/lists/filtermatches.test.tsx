@@ -86,3 +86,22 @@ describe("a filter nothing matches", () => {
     expect(screen.queryByText(switchToOr)).toBeNull();
   });
 });
+
+describe("the results head", () => {
+  it("shows Export beside the count without opening a menu", async () => {
+    nothingMatches(newGroup("and", [newLeaf("city", "eq", "Berlin")]));
+    const exportCsv = await screen.findByRole("button", {
+      name: en["filters.exportCsv"],
+    });
+    const head = screen
+      .getByRole("heading", { name: en["filters.resultsTitle"] })
+      .closest("header");
+
+    expect(head?.contains(exportCsv)).toBe(true);
+    expect(
+      head?.contains(
+        screen.getByRole("button", { name: en["filters.exportJson"] }),
+      ),
+    ).toBe(true);
+  });
+});

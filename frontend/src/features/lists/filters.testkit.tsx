@@ -145,6 +145,12 @@ function limitOf(sent: Sent): number {
   return typeof limit === "number" ? limit : Number.POSITIVE_INFINITY;
 }
 
+/** Where a preview request's page starts: this stub's cursor is a row index. */
+function offsetOf(sent: Sent): number {
+  const cursor = isRow(sent.body) ? sent.body.cursor : undefined;
+  return typeof cursor === "string" ? Number(cursor) : 0;
+}
+
 function isRow(value: unknown): value is Row {
   return typeof value === "object" && value !== null;
 }
@@ -411,18 +417,21 @@ function readsServer(
       );
       return json(held?.[1] ?? { resource, fields: [] });
     },
-    // At most the page asked for, as the server sends: a case about asking
-    // for more rows hands over more than one page and reads what arrives.
+    // The page after the cursor, at most the size asked for, as the server
+    // sends: a case about paging hands over more than one page.
     "/filters/preview": async (sent) => {
       await server.previewAnswered;
-      const rows = (server.preview?.rows ?? []).slice(0, limitOf(sent));
-      const matchCount = server.preview?.match_count ?? 0;
+      const all = server.preview?.rows ?? [];
+      const from = offsetOf(sent);
+      const to = Math.min(all.length, from + limitOf(sent));
+      const more = to < all.length;
       return json({
         resource: "contact",
-        match_count: matchCount,
+        match_count: server.preview?.match_count ?? 0,
         columns: server.preview?.columns ?? ["id"],
-        rows,
-        truncated: matchCount > rows.length,
+        rows: all.slice(from, to),
+        truncated: more,
+        next_cursor: more ? String(to) : null,
       });
     },
     "/exports": async (sent) => {
