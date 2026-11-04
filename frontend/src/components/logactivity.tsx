@@ -45,7 +45,7 @@ import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import "./logactivity.css";
-import { FollowUpTaskFields } from "./followuptaskfields";
+import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
   type MeetingRecord,
@@ -324,6 +324,13 @@ export function LogActivityForm({
             />
           )}
         </Field>
+        {draft.kind === "task" && (
+          <TaskTimeField
+            day={draft.day}
+            value={draft.time}
+            onChange={(time) => setField({ time })}
+          />
+        )}
       </div>
       {recordOf.question}
       {/* WHO owes this task, asked beside when it is due. Only a task is held

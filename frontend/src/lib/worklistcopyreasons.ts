@@ -260,14 +260,36 @@ export function whenText(
   if (key === null) {
     return null;
   }
-  const zone = item.source === "task" ? record : viewer;
+  if (item.source === "task") {
+    return taskWhen(item, item.due_at, key, t, locale, record, now);
+  }
   // A meeting's `due_at` is its start, as exact as the meeting is; any other
   // row's is a deadline, which always has its time.
   const when =
     item.source === "meeting"
-      ? momentText(item.due_at, item.occurred_precision, locale, zone, now)
-      : momentText(item.due_at, "instant", locale, zone, now);
+      ? momentText(item.due_at, item.occurred_precision, locale, viewer, now)
+      : momentText(item.due_at, "instant", locale, viewer, now);
   return t(key, { when });
+}
+
+// A task with an agreed time reads like any other moment: the time alone
+// today, the date and time otherwise. A task due by its day has no hour to
+// print. Due today, the row's "due today" reason says it already.
+function taskWhen(
+  item: WorklistItem,
+  dueAt: string,
+  key: "worklist.when.starts" | "worklist.when.due",
+  t: T,
+  locale: Locale,
+  record: string,
+  now: Date,
+): string | null {
+  if (item.due_has_time === true) {
+    return t(key, { when: momentText(dueAt, "instant", locale, record, now) });
+  }
+  return sameCalendarDay(new Date(dueAt), now, record)
+    ? null
+    : t(key, { when: formatDate(dueAt, locale, record) });
 }
 
 // Which sentence the moment goes in, or null for a row whose `due_at` is not a

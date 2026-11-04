@@ -2078,6 +2078,7 @@ public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::te
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty.withheld_from_workspace boolean NOT NULL gen=- def=false
 public.capture_pending_counterparty_backfill_idx CREATE INDEX capture_pending_counterparty_backfill_idx ON public.capture_pending_counterparty USING btree (backfill_id) WHERE (backfill_id IS NOT NULL)
+public.capture_pending_counterparty_email_ix CREATE INDEX capture_pending_counterparty_email_ix ON public.capture_pending_counterparty USING btree (email)
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
@@ -3409,6 +3410,7 @@ public.contact_channel_identity.updated_at timestamp with time zone NOT NULL gen
 public.contact_channel_identity.username text gen=- def=-
 public.contact_channel_identity.version bigint NOT NULL gen=- def=1
 public.contact_channel_identity_pkey CREATE UNIQUE INDEX contact_channel_identity_pkey ON public.contact_channel_identity USING btree (id)
+public.contact_confidentiality_hold_ix CREATE INDEX contact_confidentiality_hold_ix ON public.contact USING btree (id) WHERE (narrowing_reason = 'confidentiality_hold'::text)
 public.contact_confirm_submission acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact_confirm_submission.contact_confirm_submission_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_confirm_submission.contact_confirm_submission_field_matches_kind CHECK ((((kind = 'correction'::text) AND (field IS NOT NULL)) OR ((kind = 'erasure_request'::text) AND (field IS NULL))))

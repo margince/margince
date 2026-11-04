@@ -58,7 +58,7 @@ func mailSettings(t *testing.T, body string, environ ...string) *config.Config {
 // relayPassword is the credential the operator mailer would present, read
 // through the same constructor the api and the worker build their relay with.
 func relayPassword(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, log *slog.Logger) (string, error) {
-	relay, err := compose.OperatorMailer(ctx, pool, vault, cfg, log)
+	relay, err := compose.OperatorMailer(ctx, pool, vault, nil, cfg, log)
 	return relay.Password, err
 }
 

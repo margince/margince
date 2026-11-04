@@ -1,7 +1,10 @@
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { formatNumber } from "../../format/format";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format.dates";
+import {
+  calendarDaysBetween,
+  formatDueCompact,
+} from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
@@ -176,7 +179,12 @@ export function CompanyNextBar({
       sub={
         task?.due_at
           ? t("co.next.due", {
-              when: formatDayMonth(task.due_at, locale, zone),
+              when: formatDueCompact(
+                task.due_at,
+                task.due_has_time,
+                locale,
+                zone,
+              ),
             })
           : undefined
       }
