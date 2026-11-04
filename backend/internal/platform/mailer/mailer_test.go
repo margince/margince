@@ -18,7 +18,7 @@ func startFakeRelay(t *testing.T, reject bool) *testsmtp.Relay { return testsmtp
 func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 	relay := startFakeRelay(t, false)
 	host, port := relay.Address(t)
-	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 
 	err := s.Send(context.Background(), "ada@example.test", "Reset your password", "the link body")
 	if err != nil {
@@ -33,7 +33,7 @@ func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 }
 
 func TestSendRefusesHeaderInjection(t *testing.T) {
-	s := SMTP{Host: "127.0.0.1", Port: 25, FromAddress: "crm@example.test"}
+	s := SMTP{Host: "127.0.0.1", Port: 25, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 	if err := s.Send(context.Background(), "a@b.test\r\nBcc: evil@x.test", "s", "b"); err == nil {
 		t.Fatal("a CRLF recipient was accepted (header injection)")
 	}
@@ -45,7 +45,7 @@ func TestSendRefusesHeaderInjection(t *testing.T) {
 func TestSendSurfacesARefusedRecipient(t *testing.T) {
 	relay := startFakeRelay(t, true)
 	host, port := relay.Address(t)
-	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 
 	err := s.Send(context.Background(), "nobody@example.test", "s", "b")
 	if err == nil || !strings.Contains(err.Error(), "refused the recipient") {
@@ -66,7 +66,7 @@ func TestSendRefusesAnUnreachableRelay(t *testing.T) {
 	if err := ln.Close(); err != nil {
 		t.Fatal(err)
 	}
-	s := SMTP{Host: "127.0.0.1", Port: tcp.Port, FromAddress: "crm@example.test"}
+	s := SMTP{Host: "127.0.0.1", Port: tcp.Port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 	if err := s.Send(context.Background(), "a@b.test", "s", "b"); err == nil || !strings.Contains(err.Error(), "unreachable") {
 		t.Fatalf("err = %v, want the unreachable wrap", err)
 	}

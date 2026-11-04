@@ -106,3 +106,28 @@ func TestAHeavyLogoIsRefittedUnderTheByteCap(t *testing.T) {
 		t.Fatalf("the heavy logo kept its %dpx edge", sized.Bounds().Dx())
 	}
 }
+
+// A logo that stays over the cap at the smallest legible edge is left out, so
+// the mail carries the name alone rather than a heavy image on every message.
+// Square noise cannot be compressed: at 150px it is still about 90 KiB.
+func TestALogoOverTheCapAtEveryEdgeIsLeftOut(t *testing.T) {
+	t.Parallel()
+	blob := blobstore.NewMemory()
+	noise := image.NewRGBA(image.Rect(0, 0, 1000, 1000))
+	seed := uint32(7)
+	for i := range noise.Pix {
+		seed = seed*1664525 + 1013904223
+		noise.Pix[i] = byte(seed >> 24)
+	}
+	var encoded bytes.Buffer
+	if err := png.Encode(&encoded, noise); err != nil {
+		t.Fatal(err)
+	}
+	if err := blob.Put(context.Background(), "logos/square-noise.png", bytes.NewReader(encoded.Bytes()), int64(encoded.Len()), "image/png"); err != nil {
+		t.Fatal(err)
+	}
+	got, ok, err := newSignatureLogo(blob).SignatureLogo(context.Background(), "logos/square-noise.png")
+	if err != nil || ok || len(got.Body) != 0 {
+		t.Fatalf("an incompressible logo: ok=%v err=%v, %d bytes; want it left out", ok, err, len(got.Body))
+	}
+}
