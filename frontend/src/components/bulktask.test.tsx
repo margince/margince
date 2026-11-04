@@ -49,5 +49,5 @@ it("dates a bulk task at the end of the picked day on the record's clock", async
   expect(ready).toHaveBeenCalledTimes(1);
   const dueAt = ready.mock.calls[0]?.[0].due_at ?? "";
   expect(dueAt).toBe(dueInstant("2026-09-15", RECORD_ZONE));
-  expect(dueTimeOf(dueAt, RECORD_ZONE)).toBe("");
+  expect(dueTimeOf(dueAt, false, RECORD_ZONE)).toBe("");
 });
