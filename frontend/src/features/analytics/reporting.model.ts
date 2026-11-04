@@ -1,10 +1,10 @@
 import type { components } from "../../api/schema";
 import {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
   formatDateAbbrev,
   formatDateTime,
-  formatHours,
-  formatMoney,
-  formatMoneyCompact,
   formatNumber,
 } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
@@ -50,9 +50,10 @@ export function reportingAmount(
 ): string {
   if (value == null) return "—";
   if (reportingMoneyUnit(unit, currency))
-    return currency ? formatMoney(value, currency, locale) : "—";
-  if (unit === "hours") return formatHours(value, locale);
-  return `${formatNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
+    return currency ? formatAnalyticsMoney(value, currency, locale) : "—";
+  if (unit === "hours") return formatAnalyticsHours(value, locale);
+  if (unit === "ratio") return formatNumber(value, locale);
+  return `${formatAnalyticsNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
 }
 
 // Names a metric as the catalog does, in the reader's language.
@@ -116,7 +117,7 @@ export function reportingCompactAmount(
 ): string {
   return value != null && reportingMoneyUnit(unit, currency)
     ? currency
-      ? formatMoneyCompact(value, currency, locale)
+      ? formatAnalyticsMoney(value, currency, locale)
       : "—"
     : reportingAmount(value, unit, currency, locale);
 }

@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
@@ -74,13 +74,25 @@ describe("one evidence interaction on Sales review", () => {
     expect(door).toHaveFocus();
   });
 
-  it("offers no records door on coverage, whose numerator is one total and not its deals", async () => {
-    openOverview("#/analytics", bySeat("leader"));
+  it("opens quarter pipeline records through the supplied evidence reference", async () => {
+    const asked = openOverview("#/analytics", bySeat("leader"));
     const strip = await readings();
-    expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
+    const door = strip.getByRole("button", {
+      name: "View records",
+      description: "Pipeline due this quarter",
+    });
+    await userEvent.click(door);
+    await screen.findByRole("dialog", { name: "Pipeline due this quarter" });
+    await waitFor(() => expect(evidenceAsked(asked)).toHaveLength(1));
+    expect(evidenceAsked(asked)[0]?.searchParams.get("context_id")).toBe(
+      "forecast_period_deals",
+    );
     expect(
-      strip.queryByRole("button", { description: "Pipeline due this quarter" }),
-    ).toBeNull();
+      strip.getByRole("button", {
+        name: "View records",
+        description: "Pipeline due this quarter",
+      }),
+    ).toBeVisible();
   });
 
   it("keeps an open drawer on the receipt it was opened from when the figures are read again", async () => {
@@ -131,7 +143,7 @@ describe("one evidence interaction on Sales review", () => {
     openOverview("#/analytics", bySeat("leader"));
     const strip = await readings();
     const forecast = strip.getByRole("link", {
-      name: "Open",
+      name: "Forecast",
       description: "Won + confirmed commit",
     });
     expect(forecast.getAttribute("href")).toMatch(/^\/#\/analytics\/forecast/);
@@ -147,7 +159,12 @@ describe("one evidence interaction on Sales review", () => {
       await screen.findByRole("region", { name: "Opening readings" }),
     );
 
-    await user.click(hero.getByRole("button", { name: "View records" }));
+    await user.click(
+      hero.getByRole("button", {
+        name: "View records",
+        description: "Sales won",
+      }),
+    );
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(
@@ -168,7 +185,12 @@ describe("one evidence interaction on Sales review", () => {
       await screen.findByRole("region", { name: "Opening readings" }),
     );
 
-    await user.click(hero.getByRole("button", { name: "View records" }));
+    await user.click(
+      hero.getByRole("button", {
+        name: "View records",
+        description: "Sales won",
+      }),
+    );
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(
@@ -232,7 +254,7 @@ describe("headline, actions and charts are ready on their own", () => {
     expect(
       within(
         screen.getByRole("region", { name: "Opening readings" }),
-      ).getByText("€420k"),
+      ).getByText("420,000 EUR"),
     ).toBeVisible();
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
     expect(

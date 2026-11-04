@@ -46,7 +46,9 @@ function scenario(name: ScenarioName, view: OverviewView): Story {
 }
 
 const dark = { globals: { theme: "dark" } };
-const phone = { globals: { viewport: { value: "phone" } } };
+const phone = {
+  globals: { viewport: { value: "phone" } },
+};
 
 // The names this catalog had before the scenario map, each one a scenario.
 export const SalesReview = scenario("populated", "sales");
@@ -54,6 +56,7 @@ export const SalesReviewDark = { ...scenario("populated", "sales"), ...dark };
 export const SalesReviewOnAPhone = {
   ...scenario("populated", "sales"),
   ...phone,
+  tags: ["uat-phone"],
 };
 export const SalesReviewWithoutATarget = scenario("noTarget", "sales");
 export const SalesReviewWithAFailedFigure = scenario(
@@ -68,6 +71,7 @@ export const MyProspectingDark = {
 export const MyProspectingOnAPhone = {
   ...scenario("populated", "prospecting"),
   ...phone,
+  tags: ["uat-phone"],
 };
 export const MyProspectingWithoutHandoffs = scenario(
   "qualificationWorkflow",
@@ -82,6 +86,7 @@ export const TeamProspectingDark = {
 export const TeamProspectingOnAPhone = {
   ...scenario("populated", "team"),
   ...phone,
+  tags: ["uat-phone"],
 };
 export const TeamProspectingWithIndividualPerformanceOff = scenario(
   "individualPerformanceOff",

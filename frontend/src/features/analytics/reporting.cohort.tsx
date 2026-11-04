@@ -1,6 +1,10 @@
 import { Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { formatNumber, formatPercent, MONEY_ABSENT } from "../../format/format";
+import {
+  formatAnalyticsNumber,
+  formatAnalyticsPercent,
+  MONEY_ABSENT,
+} from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ReportingChart, ReportingEvidenceRef } from "./reporting.model";
@@ -99,7 +103,8 @@ export function CohortTable({
             header: stages
               ? t("reporting.cohortEntered")
               : t("reporting.cohortArrived"),
-            render: (point) => formatNumber(point.observations ?? 0, locale),
+            render: (point) =>
+              formatAnalyticsNumber(point.observations ?? 0, locale),
           },
           ...outcomes.map((outcome) => ({
             key: outcome.key,
@@ -118,7 +123,7 @@ export function CohortTable({
                 key: `entry-${entry}`,
                 header: t(`reporting.cohortEntry.${entry}`),
                 render: (point: CohortPoint) =>
-                  formatNumber(
+                  formatAnalyticsNumber(
                     point.entries?.find((count) => count.key === entry)
                       ?.count ?? 0,
                     locale,
@@ -131,7 +136,7 @@ export function CohortTable({
             render: (point) =>
               point.value == null
                 ? t("reporting.cohortNoRate")
-                : formatPercent(point.value / 100, locale),
+                : formatAnalyticsPercent(point.value / 100, locale),
           },
         ]}
       />
@@ -165,20 +170,20 @@ function CohortCell({
   const t = useT();
   const { locale } = useLocale();
   if (!count) return MONEY_ABSENT;
-  if (count.count === 0) return formatNumber(0, locale);
+  if (count.count === 0) return formatAnalyticsNumber(0, locale);
   return (
     <>
       <Button
         variant="link"
         onClick={() => count.evidence && onEvidence(count.evidence)}
       >
-        {formatNumber(count.count, locale)}
+        {formatAnalyticsNumber(count.count, locale)}
       </Button>
       {count.median_days != null && (
         <span className="sub">
           {" "}
           {t("reporting.cohortMedianDays", {
-            days: formatNumber(Math.round(count.median_days), locale),
+            days: formatAnalyticsNumber(Math.round(count.median_days), locale),
           })}
         </span>
       )}

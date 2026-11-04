@@ -18826,6 +18826,7 @@ const (
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
 	ReportingMetricIDLeadsAwaitingResponse         ReportingMetricID = "leads_awaiting_response"
+	ReportingMetricIDLeadsAwaitingResponseNow      ReportingMetricID = "leads_awaiting_response_now"
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
@@ -18863,6 +18864,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadStatusMoves:
 		return true
 	case ReportingMetricIDLeadsAwaitingResponse:
+		return true
+	case ReportingMetricIDLeadsAwaitingResponseNow:
 		return true
 	case ReportingMetricIDLeadsCreated:
 		return true
@@ -24197,6 +24200,7 @@ const (
 	WorklistFilterExceptDecisions   WorklistFilter = "except_decisions"
 	WorklistFilterLeads             WorklistFilter = "leads"
 	WorklistFilterMeetings          WorklistFilter = "meetings"
+	WorklistFilterProspecting       WorklistFilter = "prospecting"
 	WorklistFilterRelationships     WorklistFilter = "relationships"
 	WorklistFilterSystem            WorklistFilter = "system"
 	WorklistFilterTasks             WorklistFilter = "tasks"
@@ -24222,6 +24226,8 @@ func (e WorklistFilter) Valid() bool {
 	case WorklistFilterLeads:
 		return true
 	case WorklistFilterMeetings:
+		return true
+	case WorklistFilterProspecting:
 		return true
 	case WorklistFilterRelationships:
 		return true
@@ -28691,6 +28697,7 @@ const (
 	GetWorklistParamsFilterExceptDecisions   GetWorklistParamsFilter = "except_decisions"
 	GetWorklistParamsFilterLeads             GetWorklistParamsFilter = "leads"
 	GetWorklistParamsFilterMeetings          GetWorklistParamsFilter = "meetings"
+	GetWorklistParamsFilterProspecting       GetWorklistParamsFilter = "prospecting"
 	GetWorklistParamsFilterRelationships     GetWorklistParamsFilter = "relationships"
 	GetWorklistParamsFilterSystem            GetWorklistParamsFilter = "system"
 	GetWorklistParamsFilterTasks             GetWorklistParamsFilter = "tasks"
@@ -28716,6 +28723,8 @@ func (e GetWorklistParamsFilter) Valid() bool {
 	case GetWorklistParamsFilterLeads:
 		return true
 	case GetWorklistParamsFilterMeetings:
+		return true
+	case GetWorklistParamsFilterProspecting:
 		return true
 	case GetWorklistParamsFilterRelationships:
 		return true
@@ -55712,9 +55721,11 @@ type ReportingEvidenceRow struct {
 	// OccurredPrecision How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant.
 	OccurredPrecision *OccurredPrecision  `json:"occurred_precision,omitempty"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
+	OwnerLabel        *string             `json:"owner_label,omitempty"`
 	Restricted        bool                `json:"restricted"`
 	SourceId          *openapi_types.UUID `json:"source_id,omitempty"`
 	SourceType        *string             `json:"source_type,omitempty"`
+	StageLabel        *string             `json:"stage_label,omitempty"`
 	Value             *float64            `json:"value"`
 }
 
@@ -55766,6 +55777,10 @@ type ReportingForecastBasis struct {
 	// Landing Where the period finishes if nothing changes, and what that answer rests on.
 	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 	Landing ForecastLanding `json:"landing"`
+
+	// OpenCount Open deals eligible for this forecast period.
+	OpenCount    *int64                `json:"open_count,omitempty"`
+	OpenEvidence *ReportingEvidenceRef `json:"open_evidence,omitempty"`
 
 	// OpenPipelineMinor Open deal value eligible for the forecast period, in base minor units.
 	OpenPipelineMinor *int64 `json:"open_pipeline_minor,omitempty"`
@@ -56795,9 +56810,14 @@ type SalesAssessmentConfidence string
 
 // SalesAssessmentCell defines model for SalesAssessmentCell.
 type SalesAssessmentCell struct {
+	// Display Locale-formatted quantity for reader text.
+	Display *string `json:"display,omitempty"`
+
 	// Id `metric:<metric id>` or `point:<metric id>:<group key>`.
 	Id    string `json:"id"`
 	Label string `json:"label"`
+
+	// Value Raw source quantity with its unit.
 	Value string `json:"value"`
 }
 

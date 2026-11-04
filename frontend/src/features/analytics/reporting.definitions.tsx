@@ -16,7 +16,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
@@ -96,7 +96,10 @@ export function ReportingDefinitions() {
                 <>
                   <p>
                     {t("reporting.revision", {
-                      revision: formatNumber(framework.revision, locale),
+                      revision: formatAnalyticsNumber(
+                        framework.revision,
+                        locale,
+                      ),
                     })}{" "}
                     · {t(`reporting.${framework.definition.template}`)}
                   </p>

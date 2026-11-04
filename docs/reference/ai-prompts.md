@@ -4897,7 +4897,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `report_interpret` / `sales_assessment`
 
-`system 4,694 B (~1,173 tok)`: rules 4,392 B · boundary 302 B · after boundary 0 B · **cacheable 93%**
+`system 4,926 B (~1,231 tok)`: rules 4,624 B · boundary 302 B · after boundary 0 B · **cacheable 93%**
 
 <details><summary>system prompt</summary>
 
@@ -4909,7 +4909,7 @@ Every next action must come from "actions". You may prioritise them through "act
 Return ONLY a JSON object with these keys:
 {"paragraphs":[[{"text":"...","kind":"observation|claim|hypothesis","cells":["<cell id>", ...]}, ...]],"action_ids":["<supplied action id>"],"next_decision":{"deal_id":"...","owner_id":"...","text":"..."} or null,"confidence":"low|medium|high"}
 Each paragraph has at most six sentences of at most 240 characters. Each sentence cites the cell ids it rests on in "cells". Connect the reasoning across sentences. "kind" says what the sentence is: "observation" reads a figure as it is; "claim" repeats what a source reported; "hypothesis" is your reading of why, and says so.
-Every number you write must appear in a cited cell's "value". Never add, divide or round figures into a number no cell carries. Never write an id in "text".
+Write each quantity as {{cell id}}, for example {{metric:bookings_won}}, and cite that cell. The application substitutes its whole-number display. Never write count as a unit, raw basis/status codes, an assurance that you checked something, or a list of clean checks. Do not add, divide or round figures yourself. Literal numbers must match a cited value. Never write a record id in text.
 "next_decision" names the one deal to act on, from "candidate_deals" only, with that deal's "owner_id", and says in one sentence what to decide. Return null when no candidate deal supports a decision.
 "decisions" are what earlier reviews decided. A done one with a "result" is work that happened; an open one is still owed. Acknowledge them before you recommend again, and never recommend what an open decision already covers.
 Coverage "withheld", "failed" or "unsupported" prohibits a conclusion from that cell. Do not turn this into boilerplate caveats. Partial coverage permits only the stated covered population. "not measured" is never zero.

@@ -46,6 +46,10 @@ func numbersCarried(text string, cited []string, cells map[string]CellIn) bool {
 
 // A compact suffix must scale to an entire supplied value, never a prefix.
 func quantityCarried(token string, carried []float64) bool {
+	token = strings.TrimRight(token, ".,")
+	if token == "" {
+		return false
+	}
 	factor := 1.0
 	switch strings.ToLower(token[len(token)-1:]) {
 	case "k":
