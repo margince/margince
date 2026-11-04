@@ -115,7 +115,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Valid until",
 		"visibility":               "Visibility",
 		"wait_until":               "Waiting until",
-		"win_probability":          "Win probability",
+		"win_probability":          "Probability",
 	},
 	textlang.German: {
 		"acquisition_source":       "Akquisitionsquelle",
@@ -207,7 +207,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Gültig bis",
 		"visibility":               "Sichtbarkeit",
 		"wait_until":               "Wartet bis",
-		"win_probability":          "Abschlusswahrscheinlichkeit",
+		"win_probability":          "Abschlusschance",
 	},
 	textlang.Vietnamese: {
 		"acquisition_source":       "Nguồn tiếp cận",
@@ -299,7 +299,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"valid_until":              "Có hiệu lực đến",
 		"visibility":               "Phạm vi hiển thị",
 		"wait_until":               "Chờ đến",
-		"win_probability":          "Xác suất thắng",
+		"win_probability":          "Xác suất",
 	},
 }
 

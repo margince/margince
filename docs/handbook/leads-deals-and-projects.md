@@ -201,7 +201,7 @@ To edit a deal in Margince, open it from **Deals** and press the value to change
 1. If the panel is hidden, choose **Show details**.
 2. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Value**, **Company** and **Referring partner** open a dialog with several fields.
 
-Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Forecast category**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
+Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Probability**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
@@ -250,7 +250,7 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-No. Win probability in Margince belongs to the stage (**Settings → Pipelines**, **Win probability**), not to a single deal. To say how likely one deal is, set its **Forecast category** in **Details**: Commit, Best case, Pipeline or Omitted.
+Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Pipelines**, **Win probability**). Moving the deal to another stage also sets it back to that stage's.
 Also called: deal probability, likelihood, confidence.
 
 ## Projects
