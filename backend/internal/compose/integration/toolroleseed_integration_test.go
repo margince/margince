@@ -7,11 +7,13 @@ package integration
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -19,7 +21,7 @@ import (
 // routes, as the admin. The admin owns them, or the named owner does.
 func seedToolRoleRecords(t *testing.T, e *apptest.AppEnv, calls []toolRoleCall, owner string) *recordPool {
 	t.Helper()
-	counting := countingPool()
+	counting := countingPool(t)
 	for _, call := range calls {
 		call.args(counting)
 	}
@@ -78,9 +80,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string) map[string]f
 		}
 		return attachmentIDOf(t, raw)
 	}
-	for kind, seed := range configSeeders(post, unique, create) {
-		create[kind] = seed
-	}
+	maps.Copy(create, configSeeders(post, unique, create))
 	create["voice_profile"] = func() string { return liveVoiceProfile(t, e) }
 	create["commitment"] = func() string {
 		if status := e.Call(t, "POST", "/v1/weekly-plans/current", AnyMap{}, nil, nil); status >= http.StatusBadRequest && status != http.StatusConflict {
@@ -91,7 +91,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string) map[string]f
 	return create
 }
 
-// configSeeders make the workspace's own records: people, vocabulary, settings
+// configSeeders make the workspace's own records: users, vocabulary, settings
 // rows and the sales documents that hang off a deal.
 func configSeeders(post func(string, AnyMap) string, unique func(string) string, create map[string]func() string) map[string]func() string {
 	label := func(path string) func() string {
@@ -150,8 +150,9 @@ func configSeeders(post func(string, AnyMap) string, unique func(string) string,
 }
 
 // countingPool answers placeholders and counts what each kind is asked for.
-func countingPool() *recordPool {
-	return &recordPool{wanted: map[string]int{}, sweepStart: time.Now().UTC().Truncate(24 * time.Hour).Add(9 * time.Hour)}
+func countingPool(t *testing.T) *recordPool {
+	t.Helper()
+	return &recordPool{wanted: map[string]int{}, sweepStart: clocktest.Now(t).UTC().Truncate(24 * time.Hour).Add(9 * time.Hour)}
 }
 
 // liveVoiceProfile is the user's one live voice profile, made on first need.

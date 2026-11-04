@@ -241,6 +241,8 @@ const (
 )
 
 // stopReasonMeanings is what each reason says, which the page prints.
+//
+// gatekit:fixture the published meaning of each stop reason — expected data, not a waived cost
 var stopReasonMeanings = map[string]string{
 	stopValidation:  "An argument was refused: a value the filler cannot make.",
 	stopNotFound:    "No such record: a kind the sweep does not seed, or a record it does not relate.",

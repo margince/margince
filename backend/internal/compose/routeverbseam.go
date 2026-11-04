@@ -92,7 +92,7 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 		problem.Detail = http.StatusText(res.StatusCode)
 	}
 	if res.StatusCode == http.StatusNotImplemented {
-		return nil, notOfferedHere(problem.Code, problem.Detail)
+		return nil, notOfferedHere(problem.Detail)
 	}
 	if problem.Code == "version_skew" {
 		return nil, fmt.Errorf("%s: %s: %w", verb, problem.Detail, apperrors.ErrVersionSkew)
@@ -105,8 +105,8 @@ func routeAnswer(call agents.RouteVerb, rec *cappedRecorder) (json.RawMessage, e
 
 // notOfferedHere is a route's 501: this installation does not serve the call,
 // which no argument or retry changes, unlike a fault of the server's own.
-func notOfferedHere(code, detail string) error {
-	return &httperr.DetailedError{Status: http.StatusNotImplemented, Code: code, Detail: detail}
+func notOfferedHere(detail string) error {
+	return &httperr.DetailedError{Status: http.StatusNotImplemented, Code: "not_implemented", Detail: detail}
 }
 
 // answersAFile is true for a route answer that is not a JSON document.

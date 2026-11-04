@@ -254,7 +254,7 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 			return nil, fmt.Errorf("read_view: the route answered %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
 		}
 		if res.StatusCode == http.StatusNotImplemented {
-			return nil, notOfferedHere(problem.Code, problem.Detail)
+			return nil, notOfferedHere(problem.Detail)
 		}
 		return nil, httperr.Validation("view", problem.Code, problem.Detail)
 	}

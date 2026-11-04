@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -46,6 +47,8 @@ func (p *recordPool) take(kind string) string {
 
 // recordKinds names the record a sweep seeds for an argument, or for the path
 // segment before a route's parameter.
+//
+// gatekit:fixture the record kind each argument or collection names — expected data, not a waived cost
 var recordKinds = map[string]string{
 	"company_id": "company", "entity_id": "company", "record_id": "company", "companies": "company", "records": "company",
 	"contact_id": "contact", "contacts": "contact",
@@ -80,10 +83,9 @@ func pathRecordKind(pattern, param string) string {
 	if kind := recordKindOf(param); kind != "" {
 		return kind
 	}
-	segments := strings.Split(before, "/")
-	for i := len(segments) - 1; i >= 0; i-- {
-		if !strings.HasPrefix(segments[i], "{") {
-			return recordKindOf(segments[i])
+	for _, segment := range slices.Backward(strings.Split(before, "/")) {
+		if !strings.HasPrefix(segment, "{") {
+			return recordKindOf(segment)
 		}
 	}
 	return ""
@@ -168,6 +170,8 @@ func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[strin
 }
 
 // namedValues are the strings a field's name settles, whatever the schema says.
+//
+// gatekit:fixture a valid value for each well-known field name — expected data, not a waived cost
 var namedValues = map[string]string{
 	"country": "de", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
 	"content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 role sweep")), "filename": "role-sweep.pdf",

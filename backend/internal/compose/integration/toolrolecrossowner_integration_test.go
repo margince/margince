@@ -15,6 +15,8 @@ import (
 
 // ownedKinds are the records that carry an owner, which row scope is about, by
 // the collection that serves each.
+//
+// gatekit:fixture the route that reads each owned record — expected data, not a waived cost
 var ownedKinds = map[string]string{
 	"company": "/v1/companies/", "contact": "/v1/contacts/", "deal": "/v1/deals/", "lead": "/v1/leads/", "project": "/v1/projects/",
 }
@@ -33,7 +35,7 @@ const (
 // each call's row with what each such role was told.
 func crossOwnerPass(t *testing.T, e *apptest.AppEnv, roles []seededRole, calls []toolRoleCall) map[string]map[string]string {
 	t.Helper()
-	owned := callsTakingOwnedRecords(calls)
+	owned := callsTakingOwnedRecords(t, calls)
 	if len(owned) == 0 {
 		t.Fatal("no call takes a record with an owner, so the cross-owner pass measured nothing")
 	}
@@ -75,10 +77,11 @@ func crossOwnerPass(t *testing.T, e *apptest.AppEnv, roles []seededRole, calls [
 	return answers
 }
 
-func callsTakingOwnedRecords(calls []toolRoleCall) []toolRoleCall {
+func callsTakingOwnedRecords(t *testing.T, calls []toolRoleCall) []toolRoleCall {
+	t.Helper()
 	var owned []toolRoleCall
 	for _, call := range calls {
-		counting := countingPool()
+		counting := countingPool(t)
 		call.args(counting)
 		for kind := range ownedKinds {
 			if counting.wanted[kind] > 0 {
