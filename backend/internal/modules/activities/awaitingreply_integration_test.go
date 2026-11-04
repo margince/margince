@@ -309,7 +309,7 @@ func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{activity})
+		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{activity}, clocktest.Now(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -348,7 +348,7 @@ func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
 				t.Fatal(err)
 			}
 		}()
-		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{plain, invitation})
+		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{plain, invitation}, clocktest.Now(t))
 		if err != nil {
 			t.Fatal(err)
 		}

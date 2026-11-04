@@ -218,7 +218,7 @@ func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActiviti
 	// Measured only when the waiting filter is asked for. The spread is a
 	// percentile over a year, a scan no other list should pay for.
 	if in.WaitingReplyAsOf != nil {
-		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
+		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
 			return nil, storekit.Page{}, err
 		}
 	}

@@ -98,7 +98,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 // facts, links, creators, affordances and custom-field values. A reader outside
 // this module that scans rows itself calls it, so its rows answer the same.
 func FinishActivityRows(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
-	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, activities, asOf); err != nil {
 		return err
 	}
 	if err := AttachLinks(ctx, tx, activities); err != nil {

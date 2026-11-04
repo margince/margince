@@ -18119,6 +18119,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.category.deals_at_risk": "Deal có rủi ro",
   "worklist.category.meetings": "Cuộc họp",
   "worklist.category.tasks": "Việc cần làm",
+  "worklist.category.upcoming": "Sắp tới",
   "worklist.category.decisions": "Phê duyệt",
   "worklist.category.relationships": "Liên hệ đã im lặng",
   "worklist.category.system": "Hệ thống",
