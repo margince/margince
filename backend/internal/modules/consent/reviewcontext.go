@@ -282,11 +282,11 @@ func HeldSubjectsForReview(review Review) []ids.ContactID {
 func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, subject ids.ContactID, occurredAt time.Time) error {
 	var window time.Duration
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rules, err := packRulesFor(ctx, tx, ruleSubject{Kind: entityContact, ID: subject.String()})
+		country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: subject.String()})
 		if err != nil {
 			return err
 		}
-		window = rules.reply
+		window = packRulesFor(country).reply
 		return nil
 	}); err != nil {
 		return err

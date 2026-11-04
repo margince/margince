@@ -73,14 +73,11 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 		for _, r := range recipients {
 			// Each recipient's own country sets the window a qualifying event
 			// still supports an unprompted message within.
-			who, err := subjectOfRecipient(ctx, tx, r)
+			country, err := recipientCountryOf(ctx, tx, r)
 			if err != nil {
 				return err
 			}
-			w, err := packRulesFor(ctx, tx, who)
-			if err != nil {
-				return err
-			}
+			w := packRulesFor(country)
 			// The legacy gate is asked about a purpose key and never about the
 			// message, so it can make no similarity claim. An exception whose
 			// pack requires similarity therefore refuses here.

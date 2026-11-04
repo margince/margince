@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -105,13 +104,20 @@ func subjectOfRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient) (
 	return ruleSubject{Kind: entityLead, ID: leadID}, nil
 }
 
-// subjectOfDecision names the record a decision was taken about, the same one
-// subjectOfRecipient resolves for its recipient.
-func subjectOfDecision(d commsauthz.Decision) ruleSubject {
-	if d.SubjectID.IsZero() {
-		return ruleSubject{}
+// recipientCountries resolves every recipient's country once, before any of
+// them is decided. The cap lock, the verdict, the cap count and the recorded
+// stamp all read this one answer. So a record edited mid-send cannot make one
+// step judge under a pack another step did not.
+func recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient) ([]RecipientCountry, error) {
+	out := make([]RecipientCountry, 0, len(recipients))
+	for _, r := range recipients {
+		country, err := recipientCountryOf(ctx, tx, r)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, country)
 	}
-	return ruleSubject{Kind: d.SubjectKind, ID: d.SubjectID.String()}
+	return out, nil
 }
 
 // recipientCountryOf is the marketing selector for an address.

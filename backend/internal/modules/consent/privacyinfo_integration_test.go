@@ -385,13 +385,9 @@ func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		gate := NewGate(e.store)
-		rules, err := packRulesFor(e.ctx, tx, ruleSubject{Kind: entityContact, ID: e.contact.String()})
-		if err != nil {
-			return err
-		}
 		got, err = gate.validate(e.ctx, tx, commsauthz.Request{},
 			subjectRef{Kind: entityContact, ID: e.contact.String()},
-			commsauthz.CategoryPrivacyNotice, rules)
+			commsauthz.CategoryPrivacyNotice, packRulesFor(RecipientCountry{}))
 		return err
 	}); err != nil {
 		t.Fatalf("resolving the notice: %v", err)

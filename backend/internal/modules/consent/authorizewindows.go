@@ -18,10 +18,7 @@ package consent
 // than the core default is simply ignored.
 
 import (
-	"context"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -56,22 +53,18 @@ type packRules struct {
 	marketingException *messaging.MarketingException
 }
 
-// packRulesFor resolves the rules that bind a message to this subject: their
-// country's, through the marketing selector.
+// packRulesFor answers the rules that bind a message to a recipient in this
+// country, the marketing selector's answer.
 //
 // A jurisdiction that declares a window shortens the core default. One that
 // declares none, and a recipient whose country is unknown or has no pack, gets
 // the defaults above. So requested correspondence flows when nobody has filled
 // in an address.
-func packRulesFor(ctx context.Context, tx pgx.Tx, who ruleSubject) (packRules, error) {
+func packRulesFor(country RecipientCountry) packRules {
 	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
-	country, err := recipientCountryTx(ctx, tx, who)
-	if err != nil {
-		return packRules{}, err
-	}
 	rules, _, applicable := applicableRules(country.Code)
 	if !applicable {
-		return out, nil
+		return out
 	}
 	// Zero means the pack says nothing about this window, which is not the same
 	// as a pack asking for zero — Rules.Validate refuses a negative one and the
@@ -91,5 +84,5 @@ func packRulesFor(ctx context.Context, tx pgx.Tx, who ruleSubject) (packRules, e
 			break
 		}
 	}
-	return out, nil
+	return out
 }

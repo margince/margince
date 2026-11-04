@@ -63,6 +63,14 @@ func (g *Gate) AuthorizeStagingWithDecisionTx(
 	return set, directed.instructionID, nil
 }
 
+// errAdvertisingDutiesMissing refuses a body composed as correspondence when a
+// recipient resolves to marketing at staging. The composer asked the same engine
+// first, so this fires only when the record changed in between. Composing
+// again adds the objection route and the unsubscribe link.
+var errAdvertisingDutiesMissing = fmt.Errorf(
+	"consent: a recipient of this message is now read as advertising, and the message was composed without "+
+		"the advertising disclosures and unsubscribe link; send it again so they are added: %w", apperrors.ErrConflict)
+
 func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request, directed *directedExecution) (commsauthz.DecisionSet, error) {
 	for _, r := range req.Recipients {
 		if err := r.Validate(); err != nil {
@@ -82,10 +90,16 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	// Each recipient's country, resolved once: the decision and its recorded
+	// stamp read this one answer.
+	countries, err := recipientCountries(ctx, tx, req.Recipients)
+	if err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	setID := ids.NewV7()
 	set := commsauthz.DecisionSet{}
-	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
+	for i, r := range req.Recipients {
+		d, err := g.decideOneIn(ctx, tx, r, req, commsauthz.PhaseStaging, countries[i])
 		if err != nil {
 			return commsauthz.DecisionSet{}, err
 		}
@@ -95,6 +109,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		d.Mode = ModeFor(modes, d.Resolved)
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
+	}
+	if req.OmitsAdvertisingDuties && set.AdvertisesToASubject() {
+		return commsauthz.DecisionSet{}, errAdvertisingDutiesMissing
 	}
 	// THE AUTHORITY IS DECIDED BEFORE THE ROWS ARE WRITTEN, because it is part
 	// of what each row records and those rows are never updated afterwards.
@@ -110,7 +127,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		}
 		directed.instructionID = instruction
 	}
-	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed)); err != nil {
+	if err := g.recordStagingDecisions(ctx, tx, deliveryID, setID, req, set, directedAuthority(directed), countries); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	return set, nil
@@ -153,13 +170,13 @@ func refusesAnyRecipient(set commsauthz.DecisionSet) bool {
 // up yet, and every transmit row that follows carries the attempt it belonged
 // to. The fingerprint is of the message as staged, so a later reader can tell
 // whether what went out is what was authorized.
-func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID) error {
+func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID, setID ids.UUID, req commsauthz.Request, set commsauthz.DecisionSet, instruction ids.UUID, countries []RecipientCountry) error {
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	for _, d := range set.Decisions {
+	for i, d := range set.Decisions {
 		// The ids THIS RECIPIENT'S decision was taken on, so the transmit phase
 		// can put the same questions to the same records.
 		//
@@ -179,10 +196,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			id := d.SubjectID
 			subjectID = &id
 		}
-		ruleset, err := rulesetStamp(ctx, tx, subjectOfDecision(d))
-		if err != nil {
-			return err
-		}
+		ruleset := rulesetStamp(countries[i])
 		// NOT COUNTED. See decisioncounter.go: this runs on a transaction this
 		// function does not own, and an enforced refusal is delivered by
 		// rolling that transaction back (compose/commsstager.go refuseAtStaging),

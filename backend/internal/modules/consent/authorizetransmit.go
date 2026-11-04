@@ -92,11 +92,11 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 			return err
 		}
 		modeFor := func(c commsauthz.Category) commsauthz.Mode { return ModeFor(modes, c) }
-		set, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor)
+		set, countries, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor)
 		if err != nil {
 			return err
 		}
-		written, err := g.recordDecisions(ctx, tx, req, setID, set)
+		written, err := g.recordDecisions(ctx, tx, req, setID, set, countries)
 		if err != nil {
 			return err
 		}
@@ -164,7 +164,7 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 // Every recipient is asked even once one has refused, because the record is
 // per recipient: an operator answering "why did this not go" is owed the whole
 // answer, not the first line of it.
-func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, legacyAllowed bool, modeFor func(commsauthz.Category) commsauthz.Mode) (commsauthz.DecisionSet, error) {
+func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, legacyAllowed bool, modeFor func(commsauthz.Category) commsauthz.Mode) (commsauthz.DecisionSet, []RecipientCountry, error) {
 	legacy := commsauthz.VerdictDeny
 	if legacyAllowed {
 		legacy = commsauthz.VerdictAllow
@@ -176,40 +176,47 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	// because one message can be several things at once.
 	claims, err := stagedClaims(ctx, tx, req.DeliveryID)
 	if err != nil {
-		return commsauthz.DecisionSet{}, err
+		return commsauthz.DecisionSet{}, nil, err
 	}
 	// The conversation this delivery belongs to. Staging asked the thread arm
 	// with the anchor the caller named; nothing carries that anchor forward, so
 	// transmit names the same thread from the delivery row instead.
 	threadKey, err := deliveryThreadKey(ctx, tx, req.DeliveryID)
 	if err != nil {
-		return commsauthz.DecisionSet{}, err
+		return commsauthz.DecisionSet{}, nil, err
 	}
 	// The records this delivery's activity is filed under — the live-deal
 	// arm's own evidence, absent from TransmitRequest for deliveryThreadKey's
 	// reason.
 	links, err := deliveryLinks(ctx, tx, req.DeliveryID)
 	if err != nil {
-		return commsauthz.DecisionSet{}, err
+		return commsauthz.DecisionSet{}, nil, err
 	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
-	if err := g.lockCapAddresses(ctx, tx, req.Recipients); err != nil {
-		return commsauthz.DecisionSet{}, err
+	//
+	// Each recipient's country is resolved once, here, and the lock, the
+	// verdict, the count and the recorded stamp all read it.
+	countries, err := recipientCountries(ctx, tx, req.Recipients)
+	if err != nil {
+		return commsauthz.DecisionSet{}, nil, err
 	}
-	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey, links), commsauthz.PhaseTransmit)
+	if err := g.lockCapAddresses(ctx, tx, req.Recipients, countries); err != nil {
+		return commsauthz.DecisionSet{}, nil, err
+	}
+	for i, r := range req.Recipients {
+		d, err := g.decideOneIn(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey, links), commsauthz.PhaseTransmit, countries[i])
 		if err != nil {
-			return commsauthz.DecisionSet{}, err
+			return commsauthz.DecisionSet{}, nil, err
 		}
 		// The ceiling is applied HERE and not at staging, because it counts
 		// what has already been delivered and that number moves while a message
 		// waits in the queue. A cap checked at staging would be answering about
 		// a moment that has passed by the time the message goes.
-		d, err = g.applyFrequencyCap(ctx, tx, d, now)
+		d, err = g.applyFrequencyCap(ctx, tx, d, now, countries[i])
 		if err != nil {
-			return commsauthz.DecisionSet{}, err
+			return commsauthz.DecisionSet{}, nil, err
 		}
 		d.Phase = commsauthz.PhaseTransmit
 		// Stamped from the category the engine RESOLVED, not the one the
@@ -219,7 +226,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		d.LegacyVerdict = string(legacy)
 		set.Decisions = append(set.Decisions, d)
 	}
-	return set, nil
+	return set, countries, nil
 }
 
 // decideOne answers about a single recipient: who they are, whether anything
@@ -230,6 +237,16 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // read off the caller's label. The purpose key is still in there and still
 // consulted, as the weakest of the four grounds.
 func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
+	country, err := recipientCountryOf(ctx, tx, r)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	return g.decideOneIn(ctx, tx, r, req, phase, country)
+}
+
+// decideOneIn is decideOne under a country the caller already resolved for
+// this recipient, which every step of one decision then shares.
+func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
@@ -249,7 +266,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// the sends the legacy gate allows — an inversion rather than a
 		// tightening, and it would have arrived the day somebody flipped a
 		// mode rather than the day this code was written.
-		return g.decideLead(ctx, tx, r, req, d, phase)
+		return g.decideLead(ctx, tx, r, req, d, phase, country)
 	}
 	parsed, err := ids.Parse(contactID)
 	if err != nil {
@@ -276,7 +293,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	d, sendPurpose, err := g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityContact, ID: contactID, Address: address,
-		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
 	}, d, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, err

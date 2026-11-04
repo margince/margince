@@ -69,16 +69,13 @@ func (s *Store) CheckMessage(
 	}
 	var findings []RequirementFinding
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rulesets, advertising, found, err := advertisedRulesetsTx(ctx, tx, deliveryID, decisionSetID)
+		rulesets, found, err := advertisedRulesetsTx(ctx, tx, deliveryID, decisionSetID)
 		if err != nil || !found {
 			// NO DECISION, NO FINDING. A delivery the engine never judged is
 			// one this check knows nothing about, and inventing a requirement
 			// for it would park mail on an absence of evidence rather than on
 			// evidence of absence.
 			return err
-		}
-		if !advertising {
-			return nil
 		}
 		// THE PREFIX IS READ HERE, off the rule set this lookup answered, rather
 		// than inside the helper below taking it as a parameter.
@@ -92,7 +89,7 @@ func (s *Store) CheckMessage(
 		// running backwards.
 		//
 		// One subject line goes to every recipient, so it owes the label of
-		// each recipient's own pack.
+		// each pack that judged an advertising row.
 		for _, codes := range rulesets {
 			rules, _, applicable := applicableRules(codes...)
 			if !applicable {
@@ -151,37 +148,27 @@ func subjectPrefixFindings(declared, jurisdiction, subject string) []Requirement
 	}}
 }
 
-// advertisedRulesetsTx reports whether this send is advertising to all of its
-// recipients, within the one decision set it was authorized on.
+// advertisedRulesetsTx answers the ruleset of every recipient this send
+// advertises to, within the one decision set it was authorized on. found is
+// false when the set holds no decision at all.
 //
-// BOUND TO THE SET, never to the delivery id alone. A delivery can hold several
-// sets: a paced message redispatched after its circumstances changed writes a
-// fresh one beside the old, and reading by delivery would judge the message by
-// a category it no longer has. The set the ticket names is the decision this
-// send is going out on.
+// Bound to the set, never to the delivery id alone. A delivery can hold
+// several sets: a paced message redispatched later writes a fresh one beside
+// the old. Reading by delivery would judge the message by a category it no
+// longer has.
 //
-// EVERY recipient, because a subject line is one line for all of them. A
-// message read as an active-deal follow-up for one addressee and as marketing
-// for another is advertising to the second, and adding the label would mark it
-// for both while leaving it off would leave the second unmarked. This answers
-// the first case as "not advertising" deliberately: the mixed send is a
-// composition the product should not make, and refusing it HERE would park mail
-// on a label that cannot be right for everyone rather than on the mixing.
-//
-// A category the engine resolved CONSERVATIVELY is still that category — the
-// engine says what the message is, and second-guessing it here would be a
-// second answer to the question it already answered.
-//
-// It answers each recipient's ruleset as the decision recorded it. So the check
-// asks the rules that judged the send, not the record as it reads now.
+// Each row is read on its own. A message can be a deal follow-up for one
+// addressee and advertising for another. It still advertises to the second,
+// and that recipient's pack is owed its label. The rulesets are the ones each
+// decision recorded, so the check asks the rules that judged the send.
 func advertisedRulesetsTx(
 	ctx context.Context, tx pgx.Tx, deliveryID, decisionSetID string,
-) (rulesets [][]jurisdiction.Code, advertising, found bool, err error) {
+) (rulesets [][]jurisdiction.Code, found bool, err error) {
 	rows, err := tx.Query(ctx, `
 		SELECT resolved_category, ruleset_codes FROM communication_decision
 		 WHERE delivery_id = $1 AND decision_set_id = $2`, deliveryID, decisionSetID)
 	if err != nil {
-		return nil, false, false, fmt.Errorf(
+		return nil, false, fmt.Errorf(
 			"consent: reading what this delivery was judged to be: %w", err)
 	}
 	type judged struct {
@@ -190,15 +177,12 @@ func advertisedRulesetsTx(
 	}
 	all, err := pgx.CollectRows(rows, pgx.RowToStructByPos[judged])
 	if err != nil {
-		return nil, false, false, fmt.Errorf(
+		return nil, false, fmt.Errorf(
 			"consent: reading what this delivery was judged to be: %w", err)
-	}
-	if len(all) == 0 {
-		return nil, false, false, nil
 	}
 	for _, j := range all {
 		if commsauthz.Category(j.Category) != commsauthz.CategoryMarketing {
-			return nil, false, true, nil
+			continue
 		}
 		codes := make([]jurisdiction.Code, 0, len(j.Codes))
 		for _, c := range j.Codes {
@@ -206,7 +190,7 @@ func advertisedRulesetsTx(
 		}
 		rulesets = append(rulesets, codes)
 	}
-	return rulesets, true, true, nil
+	return rulesets, len(all) > 0, nil
 }
 
 // firstRunes bounds what a finding quotes back.

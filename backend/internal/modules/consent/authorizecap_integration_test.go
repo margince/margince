@@ -537,8 +537,11 @@ func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
 			}
 			var out commsauthz.Decision
 			if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-				var err error
-				out, err = gate.applyFrequencyCap(context.Background(), tx, allowed, time.Now())
+				country, err := recipientCountryOf(e.ctx, tx, allowed.Recipient)
+				if err != nil {
+					return err
+				}
+				out, err = gate.applyFrequencyCap(context.Background(), tx, allowed, time.Now(), country)
 				return err
 			}); err != nil {
 				t.Fatalf("applying the cap: %v", err)

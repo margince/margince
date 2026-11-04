@@ -15,12 +15,6 @@ package consent
 // re-deriving it from whatever the packs say today would answer a different
 // question.
 
-import (
-	"context"
-
-	"github.com/jackc/pgx/v5"
-)
-
 // rulesetStamp is what a decision records about the rules that judged it.
 //
 // A VALUE rather than two returns, because the pair travels together from the
@@ -55,14 +49,10 @@ type rulesetStampValue struct {
 // Both NULL is a real answer. A recipient under the baseline resolves to no
 // rules at all, recorded as absence. A zero version would read as a ruleset
 // that exists and has no version.
-func rulesetStamp(ctx context.Context, tx pgx.Tx, who ruleSubject) (rulesetStampValue, error) {
-	country, err := recipientCountryTx(ctx, tx, who)
-	if err != nil {
-		return rulesetStampValue{}, err
-	}
+func rulesetStamp(country RecipientCountry) rulesetStampValue {
 	rules, applied, found := applicableRules(country.Code)
 	if !found || len(applied.Codes) == 0 {
-		return rulesetStampValue{}, nil
+		return rulesetStampValue{}
 	}
 	codes := make([]string, 0, len(applied.Codes))
 	for _, code := range applied.Codes {
@@ -72,8 +62,8 @@ func rulesetStamp(ctx context.Context, tx pgx.Tx, who ruleSubject) (rulesetStamp
 	// condition Applied.Folded reports and the CHECK in migration 1789240000
 	// enforces from the other side.
 	if applied.Folded() {
-		return rulesetStampValue{Codes: codes}, nil
+		return rulesetStampValue{Codes: codes}
 	}
 	version := rules.Version
-	return rulesetStampValue{Version: &version, Codes: codes}, nil
+	return rulesetStampValue{Version: &version, Codes: codes}
 }

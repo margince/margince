@@ -206,30 +206,54 @@ func TestADeliveryTheEngineNeverJudgedOwesNothing(t *testing.T) {
 	}
 }
 
-// TestAMessageAdvertisingToOnlySomeRecipientsIsNotLabelled is Codex's finding.
+// TestEachAdvertisingRowOwesItsOwnLabel reads every row on its own, across
+// mixed categories and mixed countries.
 //
-// A subject line is ONE line for everybody it reaches. A send read as an
-// active-deal follow-up for one addressee and as marketing for another would be
-// labelled for both or for neither, and neither answer is right — so the
-// requirement does not fire, and the composition that produced the mix is the
-// thing to fix rather than the label.
+//   - A marketing row under the labelling pack owes the label, even beside a
+//     deal follow-up row: the second recipient is still sent advertising.
+//   - A marketing row under the baseline owes nothing.
+//   - A deal follow-up row under the labelling pack owes nothing.
 //
-// The alternative, firing on any marketing recipient, parks the message on a
-// label that cannot be correct for everyone.
-func TestAMessageAdvertisingToOnlySomeRecipientsIsNotLabelled(t *testing.T) {
+// Mutation: answer no finding as soon as any row is not marketing and the
+// first case fails.
+func TestEachAdvertisingRowOwesItsOwnLabel(t *testing.T) {
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
-	delivery, set := judgedAs(t, e,
-		commsauthz.CategoryMarketing, commsauthz.CategoryActiveDealFollowup)
-
-	findings, err := store.CheckMessage(composerCtx(e), delivery, set, "How did the trial go?")
-	if err != nil {
-		t.Fatalf("checking the mixed send: %v", err)
+	stamp := func(set, address string, labelled bool) {
+		t.Helper()
+		var codes []string
+		var version *int
+		if labelled {
+			one := 1
+			codes, version = []string{e.judgedUnder}, &one
+		}
+		if _, err := e.owner.Exec(context.Background(), `
+			UPDATE communication_decision SET ruleset_version = $3, ruleset_codes = $4
+			 WHERE decision_set_id = $1 AND recipient_address = $2`, set, address, version, codes); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if len(findings) != 0 {
-		t.Errorf("a send that is advertising to only some of its recipients was told to "+
-			"carry an advertising label: %+v — the same subject line reaches the addressee "+
-			"it is not advertising to", findings)
+	check := func(delivery, set string) []RequirementFinding {
+		t.Helper()
+		findings, err := store.CheckMessage(composerCtx(e), delivery, set, "How did the trial go?")
+		if err != nil {
+			t.Fatalf("checking the mixed send: %v", err)
+		}
+		return findings
+	}
+
+	// Row 0 is a deal follow-up under the baseline; row 1 advertises under the pack.
+	delivery, set := judgedAs(t, e, commsauthz.CategoryActiveDealFollowup, commsauthz.CategoryMarketing)
+	stamp(set, "someone0@corp.test", false)
+	if got := check(delivery, set); len(got) != 1 || got[0].Requirement != RequirementSubjectPrefix {
+		t.Errorf("findings = %+v, want the label the advertised recipient's pack owes", got)
+	}
+
+	// The advertising row is under the baseline; the labelled row is a follow-up.
+	delivery, set = judgedAs(t, e, commsauthz.CategoryActiveDealFollowup, commsauthz.CategoryMarketing)
+	stamp(set, "someone1@corp.test", false)
+	if got := check(delivery, set); len(got) != 0 {
+		t.Errorf("findings = %+v: no advertising row is under a pack that asks for a label", got)
 	}
 }
 

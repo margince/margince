@@ -70,10 +70,11 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 		// The SAME window the send path binds a decision to. A preview that
 		// answered on a different span would tell a rep a send is allowed that
 		// the engine then refuses, which is worse than no preview at all.
-		w, err := packRulesFor(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
+		country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
 		if err != nil {
 			return err
 		}
+		w := packRulesFor(country)
 		since := s.now().Add(-w.reply)
 		// A guard reads a CONTACT, not a message, so it names nothing advertised
 		// and an exception requiring similarity answers no here. The guard is

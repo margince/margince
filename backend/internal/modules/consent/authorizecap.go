@@ -54,18 +54,14 @@ const capLockNamespace = int64(0x636d7361) << 32 // "cmsa"
 //
 // The ceiling is the recipient's country's, so only an address whose own rules
 // carry one is locked.
-func (g *Gate) lockCapAddresses(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient) error {
+func (g *Gate) lockCapAddresses(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, countries []RecipientCountry) error {
 	addresses := make([]string, 0, len(recipients))
-	for _, r := range recipients {
+	for i, r := range recipients {
 		a := strings.TrimSpace(r.Email)
 		if a == "" {
 			continue
 		}
-		country, err := recipientCountryOf(ctx, tx, r)
-		if err != nil {
-			return err
-		}
-		rules, _, applicable := applicableRules(country.Code)
+		rules, _, applicable := applicableRules(countries[i].Code)
 		if applicable && rules.FrequencyCap != nil {
 			addresses = append(addresses, a)
 		}
@@ -76,7 +72,7 @@ func (g *Gate) lockCapAddresses(ctx context.Context, tx pgx.Tx, recipients []con
 	return lockAddressesForCap(ctx, tx, addresses)
 }
 
-func (g *Gate) applyFrequencyCap(ctx context.Context, tx pgx.Tx, d commsauthz.Decision, now time.Time) (commsauthz.Decision, error) {
+func (g *Gate) applyFrequencyCap(ctx context.Context, tx pgx.Tx, d commsauthz.Decision, now time.Time, country RecipientCountry) (commsauthz.Decision, error) {
 	if d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryMarketing {
 		return d, nil
 	}
@@ -88,10 +84,8 @@ func (g *Gate) applyFrequencyCap(ctx context.Context, tx pgx.Tx, d commsauthz.De
 		// rule — stated here because silence would read as an oversight.
 		return d, nil
 	}
-	country, err := recipientCountryTx(ctx, tx, subjectOfDecision(d))
-	if err != nil {
-		return commsauthz.Decision{}, err
-	}
+	// The country the lock was taken under, never a second read. A count under
+	// a pack whose lock was not taken lets concurrent dispatches pass it.
 	rules, _, applicable := applicableRules(country.Code)
 	if !applicable || rules.FrequencyCap == nil {
 		return d, nil
