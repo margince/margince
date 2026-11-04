@@ -3506,6 +3506,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.guardFailed": "Die Kontakterlaubnis konnte nicht geladen werden.",
   "consent.permissionScope":
     "Berechtigungen gelten für den genannten Zweck. Konto- und Servicehinweise berechtigen nicht zu Vertrieb oder Marketing. Jede Nachricht wird vor dem Versand geprüft.",
+  "consent.retractRequest": "Anfrage zurücknehmen",
+  "consent.retractRequestTitle": "Anfrage zurücknehmen?",
+  "consent.retractRequestBody":
+    "Keine Nachricht stützt sich mehr darauf, auch keine, die schon in der Warteschlange steht. Die Anfrage bleibt als zurückgenommen im Datensatz und lässt sich nicht wiederherstellen.",
   "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
@@ -7479,7 +7483,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.reason.tooMany":
     "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
   "sendPermission.reason.ambiguous":
-    "Es lässt sich nicht feststellen, wer die Nachricht erhält, da mehrere Datensätze diese Adresse teilen. Führe die Datensätze zusammen, um das zu lösen.",
+    "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
   "sendPermission.reason.unconfirmed":
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
   "sendPermission.reason.noMarketingConsent":
@@ -7571,6 +7575,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
+  "compose.newContact":
+    "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
   "compose.multiRecipientWarning":
     "Ein Versand an mehr als eine Adresse wird abgelehnt, da dieser Zweck einen Abmeldelink hinzufügt. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",

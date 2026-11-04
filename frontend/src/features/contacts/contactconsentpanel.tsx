@@ -15,6 +15,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
 import { consentWord } from "./contactreadings";
+import { RetractRecordedRequest } from "./retractrequest";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
@@ -225,6 +226,11 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
                     {consentReason(entry, t, locale, zone)}
                   </p>
                 )}
+                <RetractRecordedRequest
+                  contactId={view.contact.id}
+                  event={entry.qualifying_event}
+                  mayWrite={mayWrite}
+                />
               </div>
             ))}
         <p>{t("consent.permissionScope")}</p>

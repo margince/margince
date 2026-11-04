@@ -6732,10 +6732,13 @@ export interface paths {
          *
          *     Two refusals are specific to naming your own addressees and your own links:
          *
-         *     - every address in `to`/`cc` must belong to a contact the sender can READ, or the send is
-         *       refused 422 `recipient_not_on_file` naming the address — a fix the composer can offer
-         *       ("attach this address to a contact"), rather than mail to a string nobody is
-         *       accountable for;
+         *     - an address in `to`/`cc` that no contact or lead holds gets a new contact first, owned by
+         *       the sender and committed before the message is checked and staged. An address a record
+         *       already holds is never filed twice, and a lead stays a lead. Every address must then
+         *       belong to a contact or lead the sender can READ, or the send is refused 422
+         *       `recipient_not_on_file` naming the address. That is an address on a record the sender
+         *       cannot see, or one no contact may be made for: an erased address, a colleague's, a
+         *       sending system's, or any new address when the sender may not create contacts;
          *     - every entry in `links` is row-scope probed, so a record the caller cannot see is
          *       refused 404 exactly as reading it directly would be.
          *
@@ -33499,6 +33502,12 @@ export interface components {
          *     6(1)(f) balancing accountable rather than merely asserted.
          */
         ConsentQualifyingEvent: {
+            /**
+             * Format: uuid
+             * @description Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
+             *     the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
+             */
+            id?: string;
             /** @enum {string} */
             kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
             /** Format: date-time */
@@ -40140,6 +40149,12 @@ export interface components {
              *     close: a refused `active_deal_followup` claim asks for the deal, not for consent.
              */
             requested_category?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description No contact or lead holds this address yet. Sending makes a contact for it, owned by
+             *     the sender, before the message is checked, and this answer is the one that new
+             *     contact gets. Absent or false for an address a record already holds.
+             */
+            new_contact?: boolean;
             /** @description The lawful ground an allow would rest on. */
             basis?: string;
             /**
@@ -58660,7 +58675,7 @@ export interface operations {
                      * @description The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
                      */
                     about_activity_id?: string | null;
-                    /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds. */
+                    /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address the sender cannot write to. */
                     also_to?: string[];
                 };
             };

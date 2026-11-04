@@ -2240,7 +2240,7 @@ paths:
                         this contact's, and the writer is told the message has several readers.
                         Each must be a live contact the caller may read; one that is not refuses
                         the whole request with `422` `recipient_not_on_file`, the code
-                        `POST /emails` answers for an address nobody on file holds.
+                        `POST /emails` answers for an address the sender cannot write to.
       responses:
         '200':
           description: The draft, and what it was written from.
@@ -9954,10 +9954,13 @@ paths:
 
         Two refusals are specific to naming your own addressees and your own links:
 
-        - every address in `to`/`cc` must belong to a contact the sender can READ, or the send is
-          refused 422 `recipient_not_on_file` naming the address — a fix the composer can offer
-          ("attach this address to a contact"), rather than mail to a string nobody is
-          accountable for;
+        - an address in `to`/`cc` that no contact or lead holds gets a new contact first, owned by
+          the sender and committed before the message is checked and staged. An address a record
+          already holds is never filed twice, and a lead stays a lead. Every address must then
+          belong to a contact or lead the sender can READ, or the send is refused 422
+          `recipient_not_on_file` naming the address. That is an address on a record the sender
+          cannot see, or one no contact may be made for: an erased address, a colleague's, a
+          sending system's, or any new address when the sender may not create contacts;
         - every entry in `links` is row-scope probed, so a record the caller cannot see is
           refused 404 exactly as reading it directly would be.
 
@@ -47578,6 +47581,12 @@ components:
         6(1)(f) balancing accountable rather than merely asserted.
       required: [kind, occurred_at]
       properties:
+        id:
+          type: string
+          format: uuid
+          description: |
+            Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
+            the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
         kind:
           type: string
           enum: [inbound_message, inquiry, active_deal, in_person, meeting, requested_by_subject]
@@ -55555,6 +55564,12 @@ components:
             The reason for contact the sender claimed. An unproven claim never becomes
             `resolved_category`, so a composer reads this one to name the gap the sender can
             close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+        new_contact:
+          type: boolean
+          description: |
+            No contact or lead holds this address yet. Sending makes a contact for it, owned by
+            the sender, before the message is checked, and this answer is the one that new
+            contact gets. Absent or false for an address a record already holds.
         basis:
           type: string
           description: The lawful ground an allow would rest on.

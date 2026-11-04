@@ -30646,6 +30646,12 @@ components:
             The reason for contact the sender claimed. An unproven claim never becomes
             `resolved_category`, so a composer reads this one to name the gap the sender can
             close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+        new_contact:
+          type: boolean
+          description: |-
+            No contact or lead holds this address yet. Sending makes a contact for it, owned by
+            the sender, before the message is checked, and this answer is the one that new
+            contact gets. Absent or false for an address a record already holds.
         basis:
           type: string
           description: The lawful ground an allow would rest on.

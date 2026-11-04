@@ -3402,6 +3402,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.guardFailed": "Không thể tải quyền liên lạc.",
   "consent.permissionScope":
     "Quyền áp dụng cho mục đích đã nêu. Thông báo tài khoản và dịch vụ không cho phép gửi nội dung bán hàng hay tiếp thị; mỗi tin nhắn đều được kiểm tra trước khi gửi.",
+  "consent.retractRequest": "Rút lại yêu cầu này",
+  "consent.retractRequestTitle": "Rút lại yêu cầu này?",
+  "consent.retractRequestBody":
+    "Các thư sẽ không còn dựa vào yêu cầu này, kể cả thư đã xếp hàng chờ gửi. Yêu cầu vẫn nằm trong hồ sơ ở trạng thái đã rút lại và không thể khôi phục.",
   "consent.manage": "Quản lý sự đồng ý và lịch sử bằng chứng",
   "contact.consent": "Sự đồng ý",
   "consent.grant": "Ghi nhận sự đồng ý",
@@ -7299,7 +7303,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.reason.tooMany":
     "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
   "sendPermission.reason.ambiguous":
-    "Nhiều hồ sơ dùng chung địa chỉ này nên không thể xác định người nhận. Gộp các hồ sơ để xử lý.",
+    "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
   "sendPermission.reason.unconfirmed":
     "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
   "sendPermission.reason.noMarketingConsent":
@@ -7383,6 +7387,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
+  "compose.newContact":
+    "{address} chưa có trong hồ sơ nào. Khi gửi, địa chỉ này sẽ được thêm làm liên hệ của bạn.",
   "compose.multiRecipientWarning":
     "Mục đích này thêm liên kết hủy đăng ký, nên tin nhắn gửi cho nhiều hơn một người nhận sẽ bị từ chối. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",

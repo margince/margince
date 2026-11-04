@@ -39669,6 +39669,9 @@ type ConsentPurpose struct {
 // a recorded in-person exchange. Recording WHICH event and when is what makes the Art
 // 6(1)(f) balancing accountable rather than merely asserted.
 type ConsentQualifyingEvent struct {
+	// Id Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
+	// the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
+	Id   *openapi_types.UUID        `json:"id,omitempty"`
 	Kind ConsentQualifyingEventKind `json:"kind"`
 
 	// Note The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record.
@@ -58489,6 +58492,11 @@ type SendAuthorizationPreviewRecipient struct {
 	// showed it as a refusal would be describing a rollout position as a rule.
 	Mode *SendAuthorizationPreviewRecipientMode `json:"mode,omitempty"`
 
+	// NewContact No contact or lead holds this address yet. Sending makes a contact for it, owned by
+	// the sender, before the message is checked, and this answer is the one that new
+	// contact gets. Absent or false for an address a record already holds.
+	NewContact *bool `json:"new_contact,omitempty"`
+
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
 	// the lawful next action it can offer; it is deliberately not a sentence about the
@@ -68554,7 +68562,7 @@ type DraftContactEmailJSONBody struct {
 	// AboutActivityId The activity the message follows up, such as the meeting a follow-up is sent after. The writer reads it first, above the recent conversation, with the deal it is filed under. It must be an activity whose content the caller may read; any other id is `422` on `about_activity_id`, the same answer whether it does not exist or is out of reach.
 	AboutActivityId *openapi_types.UUID `json:"about_activity_id,omitempty"`
 
-	// AlsoTo Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds.
+	// AlsoTo Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address the sender cannot write to.
 	AlsoTo *[]openapi_types.UUID `json:"also_to,omitempty"`
 
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.

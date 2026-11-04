@@ -3449,6 +3449,10 @@ export const en = {
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
     "Permissions apply to the named purpose. Account and service notices do not authorize sales or marketing; each message is checked before sending.",
+  "consent.retractRequest": "Take back this request",
+  "consent.retractRequestTitle": "Take back this request?",
+  "consent.retractRequestBody":
+    "Sends stop resting on it, including a message already queued on it. The request stays on the record as withdrawn and cannot be restored.",
   "consent.manage": "Manage consent and proof history",
   "contact.consent": "Consent",
   "consent.grant": "Record consent",
@@ -7490,7 +7494,7 @@ export const en = {
   "sendPermission.reason.tooMany":
     "The recipient has reached the marketing message limit for now. This clears automatically.",
   "sendPermission.reason.ambiguous":
-    "Several records share this address, so the recipient cannot be identified. Merge the records to resolve this.",
+    "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
   "sendPermission.reason.unconfirmed":
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
   "sendPermission.reason.noMarketingConsent":
@@ -7584,6 +7588,8 @@ export const en = {
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
+  "compose.newContact":
+    "{address} is on no record yet. Sending adds it as your contact.",
   "compose.multiRecipientWarning":
     "This purpose adds an unsubscribe link, so a send to more than one recipient is refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
