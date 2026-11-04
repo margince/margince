@@ -8,7 +8,7 @@ import { providerName } from "../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { CAPTURE_CONCERNS } from "../lib/captureconcern";
+import { CAPTURE_CONCERNS, concernKey } from "../lib/captureconcern";
 import { useConnectors } from "../lib/connectors";
 import { problemMessageOf, unwrap } from "../lib/problem";
 import { briefKey, magicKey, worklistKey } from "../lib/workkeys";
@@ -65,7 +65,7 @@ export function CaptureHealthBanner() {
         kind="standing"
         title={t("captureConcern.title", {
           mailbox: label,
-          concern: t(CAPTURE_CONCERNS[row.concern]),
+          concern: t(concernKey(row.concern, row.last_sync_error_class)),
         })}
         actions={
           <AppLink href="#/settings/connections">

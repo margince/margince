@@ -3612,6 +3612,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.calendar": "Lời mời lịch",
   "timeline.automatic.sending_system": "Do hệ thống gửi",
   "timeline.automatic.product": "Do Margince gửi",
+  "timeline.automatic.bulk": "Gửi tới danh sách thư",
   "timeline.group.bulk_other": "gửi tới {count} người",
   "timeline.group.bulk_one": "gửi tới {count} người",
   "timeline.group.expand": "Mở",
@@ -10833,8 +10834,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lịch sử thay đổi bên nhà cung cấp đã hết hạn. Lần đồng bộ tới sẽ bắt đầu lại từ một mốc mới.",
   "connectors.errInternal":
     "Đã xảy ra lỗi nội bộ. Việc thu thập đã dừng để tránh dữ liệu dở dang.",
+  "connectors.errForbidden":
+    "Vai trò của bạn không còn cho phép Margince thu thập thư của bạn, nên việc thu thập đang tạm dừng. Việc thu thập sẽ tự chạy lại khi quản trị viên đổi vai trò của bạn.",
   "connectors.errUnknown":
     "Việc thu thập bị lỗi, không rõ nguyên nhân. Đang tự động thử lại.",
+  "connectors.roleCannotCapture":
+    "Vai trò của bạn không cho phép Margince thu thập thư của bạn. Liên hệ quản trị viên để đổi vai trò của bạn.",
+  "connectors.roleCannotCapture.activity":
+    "Vai trò của bạn không được tạo hoạt động, nên Margince không thể thu thập thư của bạn. Liên hệ quản trị viên để đổi vai trò của bạn.",
+  "connectors.roleCannotCapture.contact":
+    "Vai trò của bạn không được tạo liên hệ, nên Margince không thể thu thập thư của bạn. Liên hệ quản trị viên để đổi vai trò của bạn.",
+  "connectors.roleCannotCapture.lead":
+    "Vai trò của bạn không được tạo lead, nên Margince không thể thu thập thư của bạn. Liên hệ quản trị viên để đổi vai trò của bạn.",
+  "connectors.roleCannotCapture.seat":
+    "Tài khoản của bạn chỉ có quyền xem, nên Margince không thể thu thập thư của bạn. Liên hệ quản trị viên để nâng cấp tài khoản.",
 
   // The OAuth return outcome (Task 2): the callback lands back on
   // #/settings/connections/{outcome} — a dismissible inline note driven by
@@ -10849,6 +10862,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhà cung cấp từ chối kết nối. Chấp nhận mọi quyền được yêu cầu, rồi kết nối lại.",
   "connectors.oauthMisconfigured":
     "Bản cài đặt này không thể hoàn tất kết nối vì API của nhà cung cấp chưa được bật. Quản trị viên cần bật API đó; nhật ký máy chủ có ghi tên API.",
+  "connectors.oauthRoleCannotCapture":
+    "Vai trò của bạn không cho phép Margince thu thập thư của bạn, nên chưa có gì được kết nối. Liên hệ quản trị viên để đổi vai trò của bạn.",
   "connectors.oauthBadClient":
     "Nhà cung cấp từ chối thông tin xác thực ứng dụng của bản cài đặt này. Quản trị viên cần kiểm tra client ID và khóa bí mật trong Cài đặt, mục Đăng nhập và ứng dụng; kết nối lại sẽ không khắc phục lỗi này.",
   "connectors.dismissOutcome": "Bỏ qua",
@@ -13271,6 +13286,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.system": "Có sẵn",
   "roles.archived": "Trong kho lưu trữ",
   "roles.custom": "Tùy chỉnh",
+  "roles.cannotCapture":
+    "Thành viên có vai trò này không thể kết nối hộp thư, và các hộp thư đã kết nối sẽ ngừng thu thập.",
   "roles.members_one": "{count} thành viên",
   "roles.members_other": "{count} thành viên",
   "roles.empty": "Không có vai trò nào.",
@@ -13514,6 +13531,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đây là quản trị viên duy nhất. Chỉ định thành viên khác làm quản trị viên trước.",
   "users.role.own": "Vai trò của bạn do quản trị viên khác thay đổi.",
   "users.role.outside": "Vai trò này nằm ngoài quyền truy cập của bạn.",
+  "users.role.stopsCapture_one":
+    "{count} hộp thư và lịch đã kết nối của họ sẽ ngừng thu thập.",
+  "users.role.stopsCapture_other":
+    "{count} hộp thư và lịch đã kết nối của họ sẽ ngừng thu thập.",
   "users.role.withheld":
     "Vai trò hiện tại không có quyền đổi vai trò của thành viên.",
   "users.teamMemberCount_one": "{count} thành viên",
@@ -18923,6 +18944,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureConcern.backfill": "Nhập lịch sử gặp lỗi",
   "captureConcern.stalled": "Đồng bộ đã dừng",
   "captureConcern.silent": "Không nhận được thư gần đây",
+  "captureConcern.roleCannotCapture": "Vai trò không được thu thập thư",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Từ {since}",
   "captureConcern.more_one": "{count} kết nối khác cần chú ý",

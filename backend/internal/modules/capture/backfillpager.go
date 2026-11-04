@@ -90,7 +90,7 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 	if err != nil {
 		return true, false, 0, r.failBackfill(ctx, backfillID, err)
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
 		return true, false, 0, r.failBackfill(ctx, backfillID, err)
 	}

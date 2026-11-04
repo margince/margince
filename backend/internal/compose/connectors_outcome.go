@@ -84,6 +84,9 @@ const (
 	// credential mistake reading as an unenabled API that does not exist.
 	outcomeBadClient = "bad_client"
 	outcomeError     = "error"
+	// outcomeRoleCannotCapture lands a consent whose human lost the role to
+	// capture between starting it and coming back; an admin fixes it.
+	outcomeRoleCannotCapture = "role_cannot_capture"
 )
 
 // writeConnectorUnavailable answers a connect request this deployment cannot

@@ -304,7 +304,12 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 	// client that skipped the preview starts with none (the bar shows counts
 	// only — honest, just less shaped).
 	var estimate connector.BackfillEstimate
-	if previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months); err == nil {
+	previewed, err := h.registry.EstimateBackfill(r.Context(), string(provider), userID, months)
+	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err == nil {
 		estimate = previewed.BackfillEstimate
 	}
 	ws, ok := principal.WorkspaceID(r.Context())
@@ -421,6 +426,10 @@ func backfillStatusPayload(run *capture.BackfillRun) crmcontracts.BackfillStatus
 }
 
 func (h backfillHandlers) writeBackfillError(w http.ResponseWriter, r *http.Request, err error) {
+	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); refused {
+		httperr.Write(w, r, err)
+		return
+	}
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound):
 		httperr.Write(w, r, &httperr.DetailedError{
