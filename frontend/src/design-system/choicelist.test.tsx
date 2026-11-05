@@ -327,6 +327,27 @@ describe("ChoiceList tiles", () => {
 });
 
 describe("ChoiceList multiple", () => {
+  it("describes every checkbox by the detail too", () => {
+    const connected: ("mail" | "calendar")[] = ["mail"];
+    render(
+      <ChoiceList
+        legend="What to connect"
+        detail={<p>Two accounts are waiting</p>}
+        multiple
+        value={connected}
+        choices={SERVICES}
+        onChange={() => {}}
+      />,
+    );
+
+    for (const box of screen.getAllByRole("checkbox")) {
+      const describedBy = box.getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(describedBy)?.textContent).toBe(
+        "Two accounts are waiting",
+      );
+    }
+  });
+
   it("draws checkboxes in one group named by the legend", () => {
     render(<Services initial={["mail"]} onChange={() => {}} />);
 
