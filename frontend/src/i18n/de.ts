@@ -7622,6 +7622,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail senden",
   "compose.threadLeave": "Neue E-Mail",
+  "compose.channelDraftUnavailable":
+    "KI-Entwürfe sind in diesem Kanal nicht verfügbar. Schreib deine Antwort unten.",
   "compose.draftKept":
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du so weit bist.",
   "compose.threadFailed":

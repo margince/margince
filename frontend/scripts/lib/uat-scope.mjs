@@ -30,6 +30,14 @@ export function needsStory(file) {
 
 export const ALL_STORIES_FLAG = "--all-stories";
 
+export function baseRefFor(env) {
+  const ref = env.FE_UAT_BASE_REF ?? "origin/main";
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(ref)) {
+    throw new Error("FE_UAT_BASE_REF must name a git ref");
+  }
+  return ref;
+}
+
 export function scopeFor(argv) {
   return argv.includes(ALL_STORIES_FLAG) ? "all" : "diff";
 }

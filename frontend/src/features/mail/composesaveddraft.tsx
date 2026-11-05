@@ -80,6 +80,7 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
     subject: draft.subject,
     body: draft.body,
     html: draft.html_body ?? paragraphsFrom(draft.body),
+    editorState: draft.editor_state,
     grounding: (draft.grounding ?? []).map((ground) => ({
       type: ground.anchor_type,
       id: ground.anchor_id,
@@ -91,6 +92,20 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
+function sameEditorState(
+  a: SavedDraftFields["editorState"],
+  b: SavedDraftFields["editorState"],
+) {
+  return (
+    (a?.intent ?? "") === (b?.intent ?? "") &&
+    (a?.ai_generated ?? false) === (b?.ai_generated ?? false) &&
+    (a?.ai_disclosure ?? "") === (b?.ai_disclosure ?? "") &&
+    a?.voice_profile_version === b?.voice_profile_version &&
+    (a?.voice_degraded ?? false) === (b?.voice_degraded ?? false) &&
+    (a?.served_body ?? "") === (b?.served_body ?? "")
+  );
+}
+
 function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
   return (
     sameList(a.to, b.to) &&
@@ -98,6 +113,7 @@ function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     sameList(a.bcc, b.bcc) &&
     a.subject === b.subject &&
     a.body === b.body &&
+    sameEditorState(a.editorState, b.editorState) &&
     a.html === b.html
   );
 }
@@ -107,11 +123,13 @@ function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
 // defaults, so a reply opened and closed untouched saves nothing.
 export function wroteSomething(
   fields: SavedDraftFields,
-  defaults: Readonly<{ recipient?: string; subject: string }>,
+  defaults: Readonly<{ recipient?: string; subject: string; intent?: string }>,
 ): boolean {
   const subject = stripEveryKeyTag(fields.subject).trim();
   return (
     fields.body.trim() !== "" ||
+    (fields.editorState?.intent ?? "").trim() !==
+      (defaults.intent ?? "").trim() ||
     fields.cc.length > 0 ||
     fields.bcc.length > 0 ||
     fields.to.some((address) => address !== defaults.recipient) ||
@@ -177,6 +195,7 @@ export function useSavedDraft(input: {
   replyTo: Activity | undefined;
   /** The address the composer offered into To on its own. */
   offeredRecipient: string | undefined;
+  initialIntent?: string;
   /** Puts words in the composer: a saved draft's, or its opening defaults. */
   onRestore: (fields: SavedDraftFields) => void;
   onClose: () => void;
@@ -189,6 +208,7 @@ export function useSavedDraft(input: {
   // What the composer opens with: a draft is measured against it, and deleting
   // one puts it back.
   const defaults = {
+    intent: input.initialIntent ?? "",
     recipient: input.offeredRecipient,
     subject:
       input.replyTo?.kind === "email" &&

@@ -386,7 +386,7 @@ describe("the project a message files under", () => {
 
   // Nothing connected is nothing to ask about. The fixture at the top of this
   // file carries no projects, which is the ordinary contact.
-  it("keeps the picker shut on No project when no project is connected", async () => {
+  it("hides the project picker when no project is connected", async () => {
     stubRoutes();
     render(drawer());
 
@@ -529,9 +529,7 @@ describe("a reply written from a deal", () => {
   });
 });
 
-// The picker stays in its row, so the head keeps its shape, but it offers nothing.
 function expectNoProjectToOffer() {
-  const picker = screen.getByLabelText("Project");
-  expect(picker.textContent).toContain("No project");
-  expect(picker.hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByLabelText("Project")).toBeNull();
+  expect(screen.queryByText("No project")).toBeNull();
 }

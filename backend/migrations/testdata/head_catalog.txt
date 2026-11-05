@@ -6307,6 +6307,7 @@ public.mail_draft.bcc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.body text NOT NULL gen=- def=''::text
 public.mail_draft.cc_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.mail_draft.editor_state jsonb NOT NULL gen=- def='{}'::jsonb
 public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
 public.mail_draft.html_body text gen=- def=-
 public.mail_draft.id uuid NOT NULL gen=- def=uuidv7()

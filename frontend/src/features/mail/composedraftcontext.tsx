@@ -194,6 +194,7 @@ export function DraftOffer({
               {...control}
               placeholder={t(ask)}
               value={intent}
+              maxLength={400}
               onChange={(event) => onIntentChange(event.target.value)}
             />
             {/* The agent's own verb, in the agent's own colour and mark:

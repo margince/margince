@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -126,7 +125,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 			p.connect(t, gmailReadonlyScope, gmailSendScope)
 			id := p.scheduleClaiming(t, tc.claim)
 
-			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
+			p.theyWrite(t, tc.mail(p.scheduledCreation(t, id).Add(time.Second)))
 			p.makeDue(t, id)
 			p.fire(t, id)
 
@@ -159,7 +158,7 @@ func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
 	}
 	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
 
-	after := clocktest.Now(t).UTC().Add(time.Second)
+	after := p.scheduledCreation(t, id).Add(time.Second)
 	p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
 	p.makeDue(t, id)
 	p.fire(t, id)

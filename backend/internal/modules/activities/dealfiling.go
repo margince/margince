@@ -90,73 +90,107 @@ func validateDealFiling(kind string, filing *crmcontracts.ActivityDealFiling) er
 	return httperr.RequireBodyID("record_id", ids.UUID(filing.RecordId))
 }
 
-func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
-	if err := validateDealFiling(in.Kind, in.DealFiling); err != nil {
+type dealFilingContext struct {
+	kind          string
+	meetingStatus *string
+	source        *string
+	choice        *crmcontracts.ActivityDealFiling
+	links         []ActivityLinkInput
+	resolver      DealFilingResolver
+}
+
+func (in *LogActivityInput) applyDealFiling(ctx context.Context, tx pgx.Tx) error {
+	filing := dealFilingContext{
+		kind: in.Kind, meetingStatus: in.MeetingStatus,
+		source: in.SourceSystem, choice: in.DealFiling, links: in.Links, resolver: in.dealFilingResolver,
+	}
+	if err := applyLoggedDealFiling(ctx, tx, &filing); err != nil {
 		return err
 	}
-	if in.Kind != string(crmcontracts.ActivityKindCall) && in.Kind != KindMeeting {
-		return nil
+	in.Links = filing.links
+	return nil
+}
+
+func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *dealFilingContext) error {
+	if err := validateDealFiling(in.kind, in.choice); err != nil {
+		return err
 	}
-	imported, _ := storekit.ImportMark(ctx)
-	if (imported != nil && *imported) || (in.SourceSystem != nil && strings.HasPrefix(*in.SourceSystem, provenance.ReservedSourceSystemPrefix)) {
-		return nil
-	}
-	if in.Kind == KindMeeting && in.MeetingStatus != nil && *in.MeetingStatus != "held" {
+	if !in.shouldFile(ctx) {
 		return nil
 	}
 	if err := validateFilingContext(ctx, tx, in); err != nil {
 		return err
 	}
-	for _, link := range in.Links {
+	for _, link := range in.links {
 		if link.EntityType == "deal" || link.EntityType == "project" || link.EntityType == "lead" {
 			return nil
 		}
 	}
-	if in.DealFiling != nil && in.DealFiling.DealId != nil {
-		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*in.DealFiling.DealId)})
+	if in.choice != nil && in.choice.DealId != nil {
+		in.links = append(slices.Clone(in.links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*in.choice.DealId)})
 		return nil
 	}
-	if in.DealFiling != nil && in.DealFiling.Skip != nil && *in.DealFiling.Skip {
+	if in.choice != nil && in.choice.Skip != nil && *in.choice.Skip {
 		return nil
 	}
-	if in.dealFilingResolver == nil {
-		if in.DealFiling != nil {
-			return errors.New("activity deal filing resolver is not configured")
-		}
-		return nil
-	}
-	records := in.Links
-	if in.DealFiling != nil {
-		records = []ActivityLinkInput{{EntityType: string(in.DealFiling.RecordType), EntityID: ids.UUID(in.DealFiling.RecordId)}}
-	}
-	options, err := in.dealFilingResolver.Resolve(ctx, tx, records)
+	options, err := in.suggestedDeal(ctx, tx)
 	if err != nil {
 		return err
 	}
-	if options.ChoiceRequired {
-		if in.DealFiling != nil {
-			return httperr.Validation("deal_filing", "choose_deal", "Choose an open deal or choose none.")
-		}
-		return nil
-	}
 	if options.SuggestedDealId != nil {
-		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*options.SuggestedDealId)})
+		in.links = append(slices.Clone(in.links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*options.SuggestedDealId)})
 	}
 	return nil
 }
 
-func validateFilingContext(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
-	ref := in.DealFiling
+func (in *dealFilingContext) shouldFile(ctx context.Context) bool {
+	if in.kind != string(crmcontracts.ActivityKindCall) && in.kind != KindMeeting {
+		return false
+	}
+	imported, _ := storekit.ImportMark(ctx)
+	if (imported != nil && *imported) || (in.source != nil && strings.HasPrefix(*in.source, provenance.ReservedSourceSystemPrefix)) {
+		return false
+	}
+	return in.kind != KindMeeting || in.meetingStatus == nil || *in.meetingStatus == string(crmcontracts.ActivityMeetingStatusHeld)
+}
+
+func (in *dealFilingContext) suggestedDeal(ctx context.Context, tx pgx.Tx) (crmcontracts.ActivityDealFilingOptions, error) {
+	var empty crmcontracts.ActivityDealFilingOptions
+	if in.resolver == nil {
+		if in.choice != nil {
+			return empty, errors.New("activity deal filing resolver is not configured")
+		}
+		return empty, nil
+	}
+	records := in.links
+	if in.choice != nil {
+		records = []ActivityLinkInput{{EntityType: string(in.choice.RecordType), EntityID: ids.UUID(in.choice.RecordId)}}
+	}
+	options, err := in.resolver.Resolve(ctx, tx, records)
+	if err != nil {
+		return empty, err
+	}
+	if options.ChoiceRequired {
+		if in.choice != nil {
+			return empty, httperr.Validation("deal_filing", "choose_deal", "Choose an open deal or choose none.")
+		}
+		return empty, nil
+	}
+	return options, nil
+}
+
+func validateFilingContext(ctx context.Context, tx pgx.Tx, in *dealFilingContext) error {
+	ref := in.choice
 	if ref == nil {
 		return nil
 	}
-	for _, link := range in.Links {
+	for _, link := range in.links {
 		if link.EntityType == string(ref.RecordType) && link.EntityID == ids.UUID(ref.RecordId) {
 			return nil
 		}
 	}
-	if ref.RecordType == "company" && in.dealFilingResolver != nil {
-		companies, err := in.dealFilingResolver.CompaniesOfRecords(ctx, tx, in.Links)
+	if ref.RecordType == linkEntityCompany && in.resolver != nil {
+		companies, err := in.resolver.CompaniesOfRecords(ctx, tx, in.links)
 		if err != nil {
 			return err
 		}
@@ -171,10 +205,12 @@ func (s *Store) fileUpdatedActivity(ctx context.Context, tx pgx.Tx, current crmc
 	if in.DealFiling == nil && in.MeetingStatus == nil && in.CallOutcome == nil {
 		return current, nil
 	}
-	filing := LogActivityInput{Kind: string(current.Kind), DealFiling: in.DealFiling,
-		SourceSystem: current.SourceSystem, dealFilingResolver: s.dealFilingResolver}
+	filing := dealFilingContext{
+		kind: string(current.Kind), choice: in.DealFiling,
+		source: current.SourceSystem, resolver: s.dealFilingResolver,
+	}
 	if current.MeetingStatus != nil {
-		filing.MeetingStatus = new(string(*current.MeetingStatus))
+		filing.meetingStatus = new(string(*current.MeetingStatus))
 	}
 	for _, kind := range []string{"deal", "project", "lead"} {
 		if filed, err := hasLinkOfType(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(current.Id)), kind); err != nil || filed {
@@ -186,12 +222,12 @@ func (s *Store) fileUpdatedActivity(ctx context.Context, tx pgx.Tx, current crmc
 		links = *current.Links
 	}
 	for _, link := range links {
-		filing.Links = append(filing.Links, ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
+		filing.links = append(filing.links, ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
 	}
 	if err := applyLoggedDealFiling(ctx, tx, &filing); err != nil {
 		return current, err
 	}
-	added := filing.Links[len(links):]
+	added := filing.links[len(links):]
 	if len(added) == 0 {
 		return current, nil
 	}

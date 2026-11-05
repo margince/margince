@@ -57,9 +57,6 @@ function show(run: Assurance, checks: InputCheck[]) {
       if (url.includes("/forecast/assurance/exceptions")) {
         return jsonResponse({ data: checks });
       }
-      if (url.includes("/forecast/assurance/enforcement")) {
-        return jsonResponse({}, 404);
-      }
       if (url.includes("/forecast/assurance")) {
         return jsonResponse(run);
       }

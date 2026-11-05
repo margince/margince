@@ -21,6 +21,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -460,5 +461,39 @@ func TestAStaleBacklogDeeperThanOnePassDrainsOldestFirst(t *testing.T) {
 		if e.draftExists(t, id) {
 			t.Errorf("draft %s survived the passes that drained the backlog", id)
 		}
+	}
+}
+
+func TestDraftEditorStateSurvivesSaveReadAndReplacement(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	anchor := replyAnchor(e.seedAnchor(t, "", ""))
+	content := typedDraft()
+	content.EditorState = crmcontracts.MailDraftEditorState{
+		Intent: new("Ask about the revised scope"), AiGenerated: new(true),
+		AiDisclosure: new(draftfloor.AIProvenanceNotice("en")), VoiceProfileVersion: new(3),
+		ServedBody: new(content.Body),
+	}
+	saved, err := draftStore(e).SaveMailDraft(ctx, anchor, content, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := draftStore(e).GetMailDraft(ctx, anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.EditorState.Intent == nil || *got.Content.EditorState.Intent != *content.EditorState.Intent ||
+		got.Content.EditorState.AiGenerated == nil || !*got.Content.EditorState.AiGenerated ||
+		got.Content.EditorState.ServedBody == nil || *got.Content.EditorState.ServedBody != content.Body {
+		t.Fatalf("draft lost its editor state: %+v", got.Content.EditorState)
+	}
+	content.EditorState = crmcontracts.MailDraftEditorState{Intent: new("A different purpose")}
+	replaced, err := draftStore(e).SaveMailDraft(ctx, anchor, content, &saved.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replaced.Content.EditorState.AiGenerated != nil ||
+		replaced.Content.EditorState.Intent == nil || *replaced.Content.EditorState.Intent != "A different purpose" {
+		t.Fatalf("replacement retained state belonging to older words: %+v", replaced.Content.EditorState)
 	}
 }

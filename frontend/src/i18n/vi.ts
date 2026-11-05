@@ -7443,6 +7443,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email",
   "compose.threadLeave": "Email mới",
+  "compose.channelDraftUnavailable":
+    "Kênh này chưa hỗ trợ soạn bằng AI. Hãy viết câu trả lời bên dưới.",
   "compose.draftKept": "Đã giữ các chỉnh sửa. Soạn lại khi sẵn sàng.",
   "compose.threadFailed":
     "Không thể tải tin nhắn. Chọn Thử lại trong chuỗi thư.",

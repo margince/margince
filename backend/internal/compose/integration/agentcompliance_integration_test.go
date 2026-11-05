@@ -422,7 +422,6 @@ func TestAnAgentIsRefusedTheComplianceActsSecurityKeeps(t *testing.T) {
 		{"DELETE", "/v1/knowledge/documents/00000000-0000-4000-8000-000000000001"},
 		{"POST", "/v1/exports"},
 		{"POST", "/v1/admin/reporting/pause"},
-		{"PUT", "/v1/forecast/assurance/enforcement"},
 	} {
 		if status := c.e.Call(t, closed.method, closed.route, AnyMap{}, c.bearer, nil); status != http.StatusForbidden {
 			t.Errorf("an agent on %s %s → %d, want 403", closed.method, closed.route, status)

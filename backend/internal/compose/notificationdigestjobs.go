@@ -334,7 +334,7 @@ func (w *notificationDigestWorker) recordFailure(
 }
 
 func (w *notificationDigestWorker) combinedDigestFor(seatCtx context.Context, seat ids.UserID, address string, window notices.Window, personal routineWindow, settings identity.Delivery, now time.Time) error {
-	worker := briefGenerateWorker{pool: w.pool, users: w.users, log: w.log, mail: BriefMailConfig(w.mail)}
+	worker := briefGenerateWorker{engine: routineBriefEngine(w.pool), pool: w.pool, users: w.users, log: w.log, mail: BriefMailConfig(w.mail)}
 	if (settings.Weekly == nil || *settings.Weekly != identity.DeliveryNone) && worker.sendReadyWeekly(seatCtx, now) {
 		return nil
 	}

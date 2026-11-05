@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -44,7 +44,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the list shows **No project** and cannot be changed. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -113,7 +113,7 @@ To have AI draft an email in Margince, open the composer. Say what the email is 
 4. Then press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes, and an empty message field shows moving dots where the text will appear.
 5. Read and edit the draft, then send it as you always do.
 
-With no AI model set up, AI drafting is not available, and you write the email yourself.
+**Email** starts a new message and waits for you to press **Draft email**. Its subject does not come from an earlier thread. A suggested **Draft a follow-up** continues the message named by the suggestion. If that message can no longer be read, the action says so. With no AI model set up, AI drafting is not available, and you write the email yourself.
 Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
@@ -122,7 +122,7 @@ Also called: AI writer, generate an email, write it for me.
 **Why this draft**, closed until you open it, shows what it read
 ("Based on: {inputs}"), with a link to each record it read.
 
-Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
+A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
 that you should check and edit it before sending.
 
 Your voice profile has a number that goes up with each build, shown after
