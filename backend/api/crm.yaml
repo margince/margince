@@ -70748,6 +70748,17 @@ components:
         figure_coverage:
           $ref: '#/components/schemas/WeeklyFigureCoverageSet'
 
+    WeeklyDayActivity:
+      type: object
+      additionalProperties: false
+      description: One local day of a rep's own activity, in the installation reporting timezone.
+      required: [day, emails_sent, calls_logged, meetings_held]
+      properties:
+        day: { type: string, format: date }
+        emails_sent: { type: integer, minimum: 0, description: 'Outbound emails the rep wrote or their mailbox sent.' }
+        calls_logged: { type: integer, minimum: 0, description: 'Calls the rep logged, by their own hand or an agent acting for them.' }
+        meetings_held: { type: integer, minimum: 0, description: 'Meetings credited to the rep that took place that day.' }
+
     WeeklyFigureCoverageSet:
       type: object
       additionalProperties: false
@@ -70838,6 +70849,16 @@ components:
             nobody narrated and a week with nothing to say look identical.
         numeric_summary: { $ref: '#/components/schemas/WeeklyNumericSummary' }
         counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        daily_activity:
+          type: array
+          minItems: 7
+          maxItems: 7
+          items: { $ref: '#/components/schemas/WeeklyDayActivity' }
+          description: |
+            What the rep did on each day of the week, Monday first, frozen with the review.
+            Only their own work counts: emails they sent, calls they logged, meetings they were
+            credited with. A received email is not work they did. Absent on a review frozen
+            before this was measured, and for a reader who may not read activities.
         deals:
           type: array
           items: { $ref: '#/components/schemas/WeeklyReviewDeal' }

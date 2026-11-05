@@ -63149,6 +63149,19 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
+type WeeklyDayActivity struct {
+	// CallsLogged Calls the rep logged, by their own hand or an agent acting for them.
+	CallsLogged int                `json:"calls_logged" minimum:"0"`
+	Day         openapi_types.Date `json:"day"`
+
+	// EmailsSent Outbound emails the rep wrote or their mailbox sent.
+	EmailsSent int `json:"emails_sent" minimum:"0"`
+
+	// MeetingsHeld Meetings credited to the rep that took place that day.
+	MeetingsHeld int `json:"meetings_held" minimum:"0"`
+}
+
 // WeeklyFigureCoverage Whether one figure family's source held records for the review's owner scope across
 // the week, so a zero can be told from an unmeasured week.
 //
@@ -63336,6 +63349,12 @@ type WeeklyReview struct {
 	// AsOf The instant the week was measured to.
 	AsOf   time.Time          `json:"as_of"`
 	Counts WeeklyReviewCounts `json:"counts"`
+
+	// DailyActivity What the rep did on each day of the week, Monday first, frozen with the review.
+	// Only their own work counts: emails they sent, calls they logged, meetings they were
+	// credited with. A received email is not work they did. Absent on a review frozen
+	// before this was measured, and for a reader who may not read activities.
+	DailyActivity *[]WeeklyDayActivity `json:"daily_activity,omitempty"`
 
 	// Deals The deals the week is about, won and lost first. Capped for reading — the counts stay
 	// complete, so a busy week reads "12 moved" beside the most recent of them rather than

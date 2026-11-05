@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  Activity,
   ArrowRight,
   ChartColumn,
   Check,
@@ -35,6 +36,7 @@ import {
 } from "./brief.queries";
 import { ReportCard } from "./brief.reportcard";
 import { OutlookPanel } from "./brief.waterfall";
+import { ActivityTotal, WeekActivity } from "./brief.weekly.activity";
 import { FiguresTable } from "./brief.weekly.figures";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
@@ -207,6 +209,8 @@ function reportSections(
   const closed = review.deals.filter((deal) => deal.outcome !== "moved");
   const moved = review.deals.filter((deal) => deal.outcome === "moved");
   const learnings = review.learnings;
+  // Absent on an older review and for a reader who may not read activities.
+  const days = review.daily_activity;
   const optional = (when: unknown, section: Section) => (when ? [section] : []);
   return [
     ...optional(closed.length > 0, {
@@ -223,6 +227,17 @@ function reportSections(
       aside: <MovedCount count={moved.length} />,
       body: <MovedDeals deals={moved} />,
     }),
+    ...(days
+      ? [
+          {
+            key: "activity",
+            icon: Activity,
+            title: "brief.weekly.activity.title",
+            aside: <ActivityTotal days={days} />,
+            body: <WeekActivity days={days} />,
+          } satisfies Section,
+        ]
+      : []),
     ...optional(plan, {
       key: "commitments",
       title: "brief.report.chapter.commitments",

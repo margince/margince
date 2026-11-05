@@ -109,6 +109,9 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		Pipeline:         pipelineToWire(review.Money),
 		Deals:            deals,
 	}
+	if review.DailyActivity != nil {
+		out.DailyActivity = &review.DailyActivity
+	}
 	if review.Prior != nil {
 		out.Prior = &crmcontracts.WeeklyReviewPrior{
 			LocalWeekStart: openapi_types.Date{Time: review.Prior.LocalWeekStart},

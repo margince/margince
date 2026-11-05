@@ -867,6 +867,7 @@ const companyZoneSites: { file: string; why: string }[] = [
   { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.figures.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.weekly.activity.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.rail.tsx", why: SERVER_WEEK },
   { file: "features/worklist/brief.teamplan.tsx", why: SERVER_WEEK },
   {

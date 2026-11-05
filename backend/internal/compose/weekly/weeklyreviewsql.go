@@ -81,7 +81,7 @@ const reviewSelect = `
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
 	       base_currency, prior_review_id,
 	       coalesce(narrative, ''), narrated_at,
-	       learnings_state, numeric_summary
+	       learnings_state, numeric_summary, daily_activity
 	  FROM weekly_review`
 
 // scanReview reads one review row and its frozen deal lines.
@@ -100,7 +100,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&created, &won, &lost, &currency, &review.PriorReviewID,
-		&review.Narrative, &review.NarratedAt, &review.LearningsState, &review.NumericSummary); {
+		&review.Narrative, &review.NarratedAt, &review.LearningsState, &review.NumericSummary, &review.DailyActivity); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return Review{}, apperrors.ErrNotFound
 	case err != nil:
@@ -250,6 +250,7 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 		args = append(args, value)
 	}
 	add("numeric_summary", review.NumericSummary)
+	add("daily_activity", review.DailyActivity)
 	add("user_id", review.UserID)
 	add("local_week_start", review.LocalWeekStart)
 	add("as_of", review.AsOf)
