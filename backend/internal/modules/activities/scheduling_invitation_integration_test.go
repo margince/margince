@@ -30,6 +30,19 @@ type invitationCalendar struct {
 	checkErr   error
 	listErr    error
 	busyErr    error
+	// saved runs once the provider holds the event, before its receipt is filed.
+	saved func()
+	// contacts are the addresses ResolveAttendees answers as a visible contact.
+	contacts map[string]ids.UUID
+	// leads are the addresses it answers as a visible lead, with a name, as a
+	// resolver that leaked one would.
+	leads map[string]ids.UUID
+	// invitees are the address each linked contact or lead is invited at.
+	invitees map[ids.UUID]string
+	// reconnectedAt is when the host last granted the calendar.
+	reconnectedAt time.Time
+	// judging runs while Blocker judges the calendar.
+	judging func()
 }
 
 func (c *invitationCalendar) Check(context.Context, ids.UserID, string) error { return c.checkErr }
@@ -44,6 +57,9 @@ func (c *invitationCalendar) Save(_ context.Context, _ ids.UserID, _ string, in 
 	c.requests = append(c.requests, in)
 	if c.fail {
 		return connector.CalendarReceipt{}, connector.ErrUnreachable
+	}
+	if c.saved != nil {
+		c.saved()
 	}
 	receipt := connector.CalendarReceipt{EventID: in.RequestID, UID: in.RequestID + "@calendar.test", URL: "https://calendar.example.test/event"}
 	if in.VideoCall {
@@ -77,16 +93,35 @@ func TestInvitationDeliveryKeepsOneActivityAndOneProviderIdentity(t *testing.T) 
 	if _, err := e.owner.Exec(ctx, `INSERT INTO contact(id,full_name,source,captured_by)VALUES(`+args.add(contact)+`,'Guest','manual','human:test')`, args...); err != nil {
 		t.Fatal(err)
 	}
-	in := crmcontracts.MeetingInvitationRequest{ContactId: crmcontracts.Id(contact), AttendeeEmail: "guest@example.test", Subject: "Project meeting", Start: clock.Add(3 * time.Hour), End: clock.Add(3*time.Hour + 30*time.Minute)}
+	in := crmcontracts.MeetingInvitationRequest{ContactId: crmcontracts.Id(contact), AttendeeEmail: "guest@example.test", Subject: "Project meeting", Description: "Discuss project delivery.", Start: clock.Add(3 * time.Hour), End: clock.Add(3*time.Hour + 30*time.Minute)}
+	preview, err := store.PreviewInvitation(ctx, ids.From[ids.UserKind](e.rep), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var staged int
+	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM meeting_invitation`).Scan(&staged); err != nil {
+		t.Fatal(err)
+	}
+	if staged != 0 || len(calendar.requests) != 0 {
+		t.Fatal("preview reserved or delivered an invitation")
+	}
 	invited, err := store.CreateInvitation(ctx, in)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertInvitationRefusesActivityArchive(t, e, store, ids.UUID(invited.Id))
 	if invited.Status != "pending" || invited.ManagementToken == nil {
 		t.Fatalf("unexpected pending result: %+v", invited)
 	}
 	if err := store.DeliverInvitations(ctx); err != nil {
 		t.Fatal(err)
+	}
+	if len(calendar.requests) != 1 {
+		t.Fatalf("delivery requests: %d", len(calendar.requests))
+	}
+	actual := calendar.requests[0]
+	if preview.Subject != actual.Subject || actual.Description != preview.Description+"\n\nReschedule or cancel: https://crm.example.com/#/book/manage-"+*invited.ManagementToken || preview.Location != actual.Location || preview.VideoCall != actual.VideoCall || preview.EmailReminder != actual.EmailReminder || preview.CalendarID != actual.CalendarID || !preview.Start.Equal(actual.Start) || !preview.End.Equal(actual.End) || len(preview.Attendees) != 1 || preview.Attendees[0] != actual.Attendees[0] {
+		t.Fatalf("preview differs from delivered invitation: %+v / %+v", preview, actual)
 	}
 	pending, err := store.Invitation(ctx, ids.UUID(invited.Id))
 	if err != nil || pending.Status != "pending" {
@@ -231,6 +266,47 @@ func (c *invitationCalendar) CheckRecipient(context.Context, ids.UserID, ids.UUI
 	return nil
 }
 
+// ResolveAttendees answers an address in contacts as that contact, and every
+// other one as host-named.
+func (c *invitationCalendar) ResolveAttendees(_ context.Context, _ ids.UserID, addresses []string) ([]connector.CalendarAttendee, error) {
+	out := make([]connector.CalendarAttendee, 0, len(addresses))
+	for _, address := range addresses {
+		if id, ok := c.contacts[address]; ok {
+			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeContact, ID: id, Name: "Contact " + address, AskConsent: true})
+			continue
+		}
+		if id, ok := c.leads[address]; ok {
+			out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeLead, ID: id, Name: "Lead " + address, AskConsent: true})
+			continue
+		}
+		out = append(out, connector.CalendarAttendee{Address: address, Basis: connector.AttendeeHostNamed})
+	}
+	return out, nil
+}
+
+func (c *invitationCalendar) InviteeAddress(_ context.Context, _ ids.UserID, kind string, id ids.UUID, _ []string) (string, ids.UUID, error) {
+	if kind == linkEntityLead {
+		return c.invitees[id], ids.Nil, nil
+	}
+	return c.invitees[id], id, nil
+}
+
+func (c *invitationCalendar) ReconnectedSince(_ context.Context, _ ids.UserID, _ string, since time.Time) (bool, error) {
+	return c.reconnectedAt.After(since), nil
+}
+
+// Blocker reads a refused Check as an unusable calendar, as the seam does.
+func (c *invitationCalendar) Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error) {
+	if c.judging != nil {
+		c.judging()
+	}
+	blocker := crmcontracts.SchedulingProfileBlockerNone
+	if c.checkErr != nil {
+		blocker = crmcontracts.SchedulingProfileBlockerCalendarUnavailable
+	}
+	return blocker, nil
+}
+
 func (c *invitationCalendar) List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error) {
 	if c.listErr != nil {
 		return nil, c.listErr
@@ -247,4 +323,22 @@ func (c *invitationCalendar) Inspect(context.Context, ids.UserID, string, string
 	}
 	last := c.requests[len(c.requests)-1]
 	return connector.CalendarState{Start: last.Start, End: last.End}, nil
+}
+
+func assertInvitationRefusesActivityArchive(t *testing.T, e *sendEnv, store *Store, invitationID ids.UUID) {
+	t.Helper()
+	ctx := e.asArchiver()
+	id := ids.From[ids.ActivityKind](invitationID)
+	for _, decide := range []func() error{
+		func() error { return store.RefuseArchiveActivity(ctx, id) },
+		func() error { _, err := store.ArchiveActivity(ctx, id, nil); return err },
+	} {
+		var refusal *SchedulingArgumentError
+		if err := decide(); !errors.As(err, &refusal) || refusal.Code != "calendar_managed" {
+			t.Fatalf("active invitation archive refusal: %v", err)
+		}
+	}
+	if _, err := store.GetActivity(ctx, id, storekit.LiveOnly); err != nil {
+		t.Fatalf("refused archive changed the meeting: %v", err)
+	}
 }

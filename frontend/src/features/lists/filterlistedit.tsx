@@ -16,6 +16,14 @@ import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
 import {
+  EDIT_LIST_SEGMENT,
+  type ObjectTab,
+  RESOURCE_OF,
+  TAB_LABEL,
+  tabOfListType,
+  UNIT_LABEL,
+} from "../../lib/filtersaddress";
+import {
   type List,
   useList,
   useListsAvailable,
@@ -33,19 +41,10 @@ import {
 } from "../../lib/segmentpredicate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import { FilterEditor, useRowsFocus } from "./filtereditor";
-import { useFilterExport } from "./filterexport";
 import { FilterFoot } from "./filterfoot";
 import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
 import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
-import {
-  EDIT_LIST_SEGMENT,
-  type ObjectTab,
-  RESOURCE_OF,
-  TAB_LABEL,
-  tabOfListType,
-  UNIT_LABEL,
-} from "./filtersaddress";
 import { SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
 import { useListAudienceLabel } from "./listsharing";
@@ -123,7 +122,6 @@ function ListFilter({
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
   const words = usePlainWords({ resource, dispatch });
-  const exportRun = useFilterExport();
   const focus = useRowsFocus();
   const editable = mayEditFilter(list);
   const complete = isComplete(draft.tree);
@@ -134,7 +132,6 @@ function ListFilter({
 
   const foot = editable ? (
     <FilterFoot
-      resource={resource}
       tree={draft.tree}
       mode={{
         kind: "list",
@@ -156,17 +153,14 @@ function ListFilter({
         ),
       }}
       onSave={() => setSaving(draft.tree)}
-      exportRun={exportRun}
     />
   ) : complete ? (
     // A list the reader may read but not change: its filter is theirs to
     // start from, kept the way a new filter is.
     <FilterFoot
-      resource={resource}
       tree={draft.tree}
       mode={{ kind: "new" }}
       onSave={() => setSaving(draft.tree)}
-      exportRun={exportRun}
     />
   ) : undefined;
 
@@ -219,10 +213,9 @@ export function EditingListNotice({ list }: Readonly<{ list: List }>) {
 }
 
 /**
- * "Save to <list>": the page's one emerald verb. It names the automations
- * watching the list before it writes, held to the version of `list`, and
- * hands back to the page once the list holds the tree, so the page decides
- * where the reader goes.
+ * "Save to <list>": the page's one accent verb. Before it writes, it names the
+ * automations watching the list, held to the version of `list`. Once the list
+ * holds the tree it hands back, so the page decides where the reader goes.
  */
 export function SaveToListAction({
   list,

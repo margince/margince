@@ -178,28 +178,26 @@ func (s *Store) Current(ctx context.Context, now time.Time) (Plan, error) {
 	return s.planForOwner(ctx, owner, now)
 }
 
-// PlanFor answers a named rep's current plan, for their lead.
-//
-// The SECOND reader, and the only one that names a contact. Gated on the same
-// teammate question attention.resolveOwner and notices.RaiseCoachNotice ask,
-// through the same seam — never a fourth spelling of "is this my colleague".
-//
-// A reader who is not their lead gets ErrNotFound rather than a refusal: whether
-// a contact has a plan is itself something a stranger may not learn.
+// PlanFor hides whether another reader has a plan unless the shared teammate gate allows access.
 func (s *Store) PlanFor(ctx context.Context, owner ids.UUID, now time.Time) (Plan, error) {
-	if err := auth.Require(ctx, "weekly_plan", principal.ActionRead); err != nil {
+	if err := s.requirePlanReader(ctx, owner); err != nil {
 		return Plan{}, err
+	}
+	return s.planForOwner(ctx, owner, now)
+}
+
+func (s *Store) requirePlanReader(ctx context.Context, owner ids.UUID) error {
+	if err := auth.Require(ctx, "weekly_plan", principal.ActionRead); err != nil {
+		return err
 	}
 	me, err := planUser(ctx)
 	if err != nil {
-		return Plan{}, err
+		return err
 	}
 	if owner != me {
-		if err := s.requireLeadOf(ctx, owner); err != nil {
-			return Plan{}, err
-		}
+		return s.requireLeadOf(ctx, owner)
 	}
-	return s.planForOwner(ctx, owner, now)
+	return nil
 }
 
 // requireLeadOf refuses a caller who does not lead the named rep.
@@ -214,15 +212,22 @@ func (s *Store) requireLeadOf(ctx context.Context, owner ids.UUID) error {
 	// A lead reads a colleague's plan; own-scope reaches only their own, which
 	// the caller-equals-owner case above already answered.
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Permissions.RowScope == principal.RowScopeOwn {
+	if !ok {
 		return apperrors.ErrNotFound
+	}
+	// An own-scope seat leads nobody, so this is the row scope's question, and
+	// is recorded as the check it is.
+	teamScope := auth.Check{RowScope: principal.RowScopeTeam}
+	auth.RecordDecision(ctx, teamScope, teamScope.HeldBy(actor))
+	if actor.Permissions.RowScope == principal.RowScopeOwn {
+		return auth.HideRow(ctx, "weekly_plan")
 	}
 	shares, err := s.teammates.SharesLiveTeamWithCaller(ctx, owner)
 	if err != nil {
 		return err
 	}
 	if !shares {
-		return apperrors.ErrNotFound
+		return auth.HideRow(ctx, "weekly_plan")
 	}
 	return nil
 }

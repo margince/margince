@@ -356,7 +356,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 			  JOIN relationship r ON r.contact_id = p.id
 			  JOIN company o ON o.id = r.company_id
 			 WHERE p.archived_at IS NULL
-			   AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
+			   AND `+employment.CurrentMembershipSQL("r")+`
 			   AND o.archived_at IS NULL
 			   AND %[3]s
 			 ORDER BY o.id, onEvent.role_rank, r.is_current_primary DESC
@@ -389,9 +389,10 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 // roles — is ONE subject at its best rank. Without the fold the same account
 // would appear in also_present beside itself, and a prep that lists the same
 // company twice reads as two accounts.
-// Two gates, and they answer different questions. Object RBAC asks whether the
-// caller may read that KIND of record at all, and a denied kind is absent
-// rather than a 403 — a subject is context the caller did not ask for by name.
+//
+// Two checks, and they answer different questions. Object RBAC asks whether the
+// caller may read that KIND of record at all. A denied kind is absent rather
+// than a 403, since a subject is context the caller did not ask for by name.
 // The row-scope probe then asks whether they may read THAT record.
 //
 // foldSubjects returns them in precedence order and this only ever drops, so
@@ -399,7 +400,7 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 func rankSubjects(ctx context.Context, tx pgx.Tx, candidates []activitySubject) ([]activitySubject, error) {
 	out := make([]activitySubject, 0, len(candidates))
 	for _, subject := range foldSubjects(candidates) {
-		if auth.Require(ctx, subject.entityType, principal.ActionRead) != nil {
+		if !auth.Allows(ctx, subject.entityType, principal.ActionRead) {
 			continue
 		}
 		visible, err := auth.VisibleTo(ctx, tx, subject.entityType, subject.id)

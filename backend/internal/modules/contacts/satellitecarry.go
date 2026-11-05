@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -34,6 +35,9 @@ import (
 // order (stop advisory locks, then the subject rows, then satellite rows).
 type ConsentSatelliteCarrier interface {
 	CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error
+	// BindRequestsToAddressesTx binds each unbound request of these contacts to
+	// their live addresses. A merge calls it before any address moves.
+	BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error
 }
 
 // IntroCarrier moves the introduction asks naming a retiring contact, on
@@ -89,6 +93,10 @@ func (s *Store) carryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 	if s.introCarrier != nil {
 		return s.introCarrier.CarryIntrosTx(ctx, tx, from, to)
 	}
+	return refuseUnwiredIntroCarry(ctx, tx, from)
+}
+
+func refuseUnwiredIntroCarry(ctx context.Context, tx pgx.Tx, from ids.ContactID) error {
 	var held bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM intro_request WHERE contact_id = $1 OR through_contact_id = $1)`,
@@ -123,4 +131,24 @@ func holdsAConsentSatellite(ctx context.Context, tx pgx.Tx, subject commsauthz.S
 		return false, fmt.Errorf("contacts: checking whether the retiring record holds consent links: %w", err)
 	}
 	return held, nil
+}
+
+// bindRequestsToTheirAddressesTx keeps a request with the human who made it.
+//
+// A merge says two records are one human, and a wrong merge gives one human's
+// request to the other's addresses. So before any address moves,
+// each request on either side is bound to the addresses of the record it was
+// made on (storekit.RequestAddressesSQL). A request already bound by an
+// earlier merge keeps its list.
+func (s *Store) bindRequestsToTheirAddressesTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	contacts := []ids.UUID{sourceID.UUID, targetID.UUID}
+	if _, err := tx.Exec(ctx, `
+		UPDATE contact_acquisition_evidence e SET recorded_for_addresses = `+storekit.RequestAddressesSQL("e.contact_id")+`
+		 WHERE e.contact_id = ANY($1) AND e.recorded_for_addresses IS NULL`, contacts); err != nil {
+		return fmt.Errorf("contacts: binding the acquisition requests to their addresses: %w", err)
+	}
+	if s.consentCarrier == nil {
+		return nil
+	}
+	return s.consentCarrier.BindRequestsToAddressesTx(ctx, tx, sourceID, targetID)
 }

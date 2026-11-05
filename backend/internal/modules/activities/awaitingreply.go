@@ -18,11 +18,14 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // AwaitingReplyLookbackDays is how long past its follow-up window a sent
@@ -52,6 +55,9 @@ type AwaitingReply struct {
 	// Recipients is who a meeting follow-up goes to, best first; ContactID is
 	// the first of them. Empty on a sent message.
 	Recipients []ids.UUID
+	// Precision is how to read SentAt: a logged day email or a meeting dated
+	// only by day names its date, not a moment.
+	Precision string
 }
 
 // AwaitingReplies answers which messages the reader sent that are still the
@@ -86,23 +92,40 @@ func (s *Store) AwaitingReplies(ctx context.Context, asOf time.Time) ([]Awaiting
 // customerArms renders the "is this a customer" test, one arm per kind of
 // record. An arm over a kind the reader may not read is FALSE. Whether a deal
 // is open is the deal's business, and a reminder must not disclose it.
-func customerArms(ctx context.Context, openDeal, workingLead string) (string, error) {
+func customerArms(ctx context.Context, arg func(any) int, openDeal, workingLead string) (string, error) {
+	// Bound only once an arm uses it: Postgres refuses a parameter the
+	// statement never reads.
+	engaged := ""
+	engagedLifecycle := func() string {
+		if engaged == "" {
+			engaged = fmt.Sprintf("$%d", arg(values.EngagedLifecycles()))
+		}
+		return engaged
+	}
 	arms := []struct {
 		objects []string
-		sql     string
+		sql     func() string
 	}{
-		{[]string{"company"}, `EXISTS (SELECT 1 FROM company co
+		{[]string{"company"}, func() string {
+			return `EXISTS (SELECT 1 FROM company co
 		    WHERE co.id = sales.company_id AND co.archived_at IS NULL
-		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer'))`},
-		{[]string{"company", "relationship"}, `EXISTS (SELECT 1 FROM relationship job
+		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		}},
+		{[]string{"company", "relationship"}, func() string {
+			return `EXISTS (SELECT 1 FROM relationship job
 		    JOIN company co ON co.id = job.company_id
 		    WHERE job.contact_id = sales.contact_id AND job.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("job.ended_at") + ` AND co.archived_at IS NULL
-		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer'))`},
-		{[]string{"lead"}, `EXISTS (SELECT 1 FROM lead ld
+		      AND co.lifecycle = ANY(` + engagedLifecycle() + `))`
+		}},
+		{[]string{"lead"}, func() string {
+			return `EXISTS (SELECT 1 FROM lead ld
 		    WHERE (ld.id = sales.lead_id OR ld.from_contact_id = sales.contact_id
-		           OR ld.promoted_contact_id = sales.contact_id) AND ` + workingLead + `)`},
-		{[]string{"deal"}, `EXISTS (SELECT 1 FROM deal d WHERE d.id = sales.deal_id AND ` + openDeal + `)`},
+		           OR ld.promoted_contact_id = sales.contact_id) AND ` + workingLead + `)`
+		}},
+		{[]string{"deal"}, func() string {
+			return `EXISTS (SELECT 1 FROM deal d WHERE d.id = sales.deal_id AND ` + openDeal + `)`
+		}},
 	}
 	rendered := make([]string, 0, len(arms))
 	for _, arm := range arms {
@@ -111,7 +134,7 @@ func customerArms(ctx context.Context, openDeal, workingLead string) (string, er
 			return "", err
 		}
 		if readable {
-			rendered = append(rendered, arm.sql)
+			rendered = append(rendered, arm.sql())
 		}
 	}
 	if len(rendered) == 0 {
@@ -133,35 +156,55 @@ func mayReadAll(ctx context.Context, objects ...string) (bool, error) {
 	return true, nil
 }
 
+// A follow-up statement first names its candidates, then gates every activity
+// it reads once, as followUpReadable. Postgres plans each copy of the content
+// gate, and a pooled connection keeps that memory, so each alias tests
+// membership instead of carrying a copy.
+const (
+	followUpCandidates = "follow_up_candidates"
+	followUpReadable   = "follow_up_readable"
+	followUpHeardSince = "follow_up_heard_since"
+)
+
 // followUpGates are the gate fragments both follow-up reads compose, under
 // the aliases both statements use.
 type followUpGates struct {
-	content, later, back, links, customer string
+	readable, content, later, back, links, customer string
 }
 
-func followUpGatesFor(ctx context.Context, arg func(any) int) (followUpGates, error) {
+// followUpGatesFor gates need: the statement's candidates and every activity
+// its later and back aliases may read.
+func followUpGatesFor(ctx context.Context, arg func(any) int, need string) (followUpGates, error) {
 	var g followUpGates
 	var err error
+	if g.readable, err = auth.ContentReadableActivitiesSQL(ctx, need, arg); err != nil {
+		return g, err
+	}
 	// The row publishes a message's subject and that nobody answered, both
-	// derived from the thread, so it takes the content gate.
-	if g.content, err = auth.ActivityContentClause(ctx, "a", arg); err != nil {
-		return g, err
-	}
-	// A later message the reader may not see must not decide anything.
-	if g.later, err = auth.ActivityContentClause(ctx, "later", arg); err != nil {
-		return g, err
-	}
-	if g.back, err = auth.ActivityContentClause(ctx, "back", arg); err != nil {
-		return g, err
-	}
-	if g.links, err = auth.LinkTargetVisibleClause(ctx, "wl", arg); err != nil {
+	// derived from the thread, so it takes the content gate. A later message
+	// the reader may not see must not decide anything.
+	g.content, g.later, g.back = followUpReadableSQL("a"), followUpReadableSQL("later"), followUpReadableSQL("back")
+	if g.links, err = auth.LinkTargetReadableClause(ctx, "wl", arg); err != nil {
 		return g, err
 	}
 	if g.links == "" {
 		g.links = scopeUnbounded
 	}
-	g.customer, err = customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	g.customer, err = customerArms(ctx, arg, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
 	return g, err
+}
+
+func followUpReadableSQL(alias string) string {
+	return alias + ".id IN (SELECT id FROM " + followUpReadable + ")"
+}
+
+// followUpStatement puts the candidates and the one gated set before body.
+func followUpStatement(candidates string, g followUpGates, body string, sets ...string) string {
+	with := append([]string{
+		followUpCandidates + " AS MATERIALIZED (" + candidates + ")",
+		followUpReadable + " AS MATERIALIZED (" + g.readable + ")",
+	}, sets...)
+	return "WITH " + strings.Join(with, ",\n") + "\n" + body
 }
 
 // scanFollowUps reads the rows both follow-up statements select.
@@ -170,7 +213,7 @@ func scanFollowUps(rows pgx.Rows, what string) ([]AwaitingReply, error) {
 	var out []AwaitingReply
 	for rows.Next() {
 		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID); err != nil {
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.ContactID, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
 			return nil, fmt.Errorf("activities: reading %s: %w", what, err)
 		}
 		out = append(out, r)
@@ -183,23 +226,120 @@ func (s *Store) queryAwaitingReplies(
 ) ([]AwaitingReply, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	instant := arg(asOf)
-	g, err := followUpGatesFor(ctx, arg)
+	instant, reader, addresses, window := arg(asOf), arg(readerOrNobody(ctx)), arg(readerAddresses), arg(windowDays)
+	g, err := followUpGatesFor(ctx, arg, awaitingNeedSQL())
 	if err != nil {
 		return nil, err
 	}
-	reader := arg(readerOrNobody(ctx))
-	rows, err := tx.Query(ctx, fmt.Sprintf(awaitingRepliesSQL,
-		instant, g.content, g.links, arg(readerAddresses), arg(windowDays),
+	at := fmt.Sprintf("$%d", instant)
+	sentBy := sentByReaderSQL(fmt.Sprintf("$%d", reader), fmt.Sprintf("$%d", addresses))
+	parts := []any{
+		instant, g.content, g.links, addresses, window,
 		AwaitingReplyLookbackDays, g.later, relstrength.InteractionCountsSQL("later"),
-		reader, messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), g.back),
+		reader, messageSnoozeLiftedSQL(at, g.back),
 		g.customer, AwaitingReplyScanCap,
-	), args...)
+	}
+	query := followUpStatement(awaitingCandidatesSQL(at, sentBy, fmt.Sprintf("$%d", window)), g,
+		fmt.Sprintf(awaitingRepliesSQL, parts...), fmt.Sprintf(awaitingHeardSinceSQL, parts...))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading replies the reader is waiting for: %w", err)
 	}
 	return scanFollowUps(rows, "a reply the reader is waiting for")
 }
+
+// The kinds awaitingTheirAnswerSQL judges. The follow-up lane asks after mail;
+// the History badge asks after chat messages too.
+const (
+	mailKinds         = `'email'`
+	conversationKinds = `'email', 'message'`
+)
+
+// awaitingTheirAnswerSQL is a mail on alias a the reader sent that still waits
+// on the other side, for the badge and the follow-up lane. sentByReader is
+// sentByReaderSQL. laterContent gates the later message, so a reply the reader
+// may not read decides nothing. A calendar copy asks nobody a question. A
+// thread key is chosen by the sender, so a later message counts only when
+// filed under the same record.
+func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) string {
+	return `(a.kind IN (` + kinds + `)
+	   AND a.direction = 'outbound'
+	   AND a.archived_at IS NULL
+	   AND NOT ` + ImportedHistorySQL + `
+	   AND ` + relstrength.WrittenByHumanSQL("a") + `
+	   AND NOT ` + calendarCopySQL + `
+	   AND ` + sentByReader + `
+	   AND NOT EXISTS (SELECT 1 FROM activity later
+	                    WHERE later.archived_at IS NULL
+	                      AND ` + laterContent + `
+	                      AND ` + relstrength.WrittenByHumanSQL("later") + `
+	                      AND a.thread_key IS NOT NULL AND a.thread_key <> ''
+	                      AND later.thread_key = a.thread_key
+	                      AND later.kind = a.kind
+	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
+	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+	                      AND ` + occurredday.BegunSQL("later", asOf) + `
+	                      AND EXISTS (SELECT 1 FROM activity_link heard
+	                                    JOIN activity_link sent ON sent.activity_id = a.id
+	                                   WHERE heard.activity_id = later.id
+	                                     AND (heard.contact_id = sent.contact_id
+	                                       OR heard.company_id = sent.company_id))))`
+}
+
+// sentByReaderSQL is true when the reader sent the mail on alias a. Sent and
+// captured mail stamp the sender as the seat. Mail logged by hand names one of
+// the reader's addresses. A seat row the legacy backfill guessed for bare
+// mail does not stand (auth.ParticipantStandsSQL), so its seat owes no reply.
+func sentByReaderSQL(reader, addresses string) string {
+	return `EXISTS (SELECT 1 FROM activity_participant me
+	   WHERE me.activity_id = a.id AND me.role = 'from'
+	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[]))
+	     AND ` + auth.ParticipantStandsSQL("me", "a") + `)`
+}
+
+// awaitingCandidatesSQL is the mail the follow-up lane may report: what the
+// reader sent inside the window and its lookback. Its terms are ones
+// awaitingRepliesSQL also tests, so it never drops a row the lane reports.
+func awaitingCandidatesSQL(asOf, sentByReader, window string) string {
+	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, a.occurred_at FROM activity a
+	 WHERE a.kind IN (` + mailKinds + `) AND a.direction = 'outbound' AND a.archived_at IS NULL
+	   AND ` + sentByReader + `
+	   ` + fmt.Sprintf("AND a.occurred_at <= %s::timestamptz - make_interval(days => %s::int) -- occurred_at raw: an age of whole days\n", asOf, window) + `
+	   AND ` + occurredday.FromSQL("a", fmt.Sprintf("%s::timestamptz - make_interval(days => %s::int + %d)", asOf, window, AwaitingReplyLookbackDays))
+}
+
+// awaitingNeedSQL names the activities the follow-up statement reads: each
+// candidate, its thread, and what came after it with a contact it went to.
+// Each arm keeps only terms the statement's own test also holds. A contact's
+// history is read once, from its earliest candidate, not once per mail.
+func awaitingNeedSQL() string {
+	return threadNeedSQL(followUpCandidates) + `
+	 UNION SELECT later.id FROM (
+	        SELECT sent.contact_id, min(c.occurred_at) AS since
+	          FROM ` + followUpCandidates + ` c
+	          JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
+	         GROUP BY 1) recipient
+	   JOIN activity_link heard ON heard.contact_id = recipient.contact_id
+	   JOIN activity later ON later.id = heard.activity_id AND later.restricted_at IS NULL
+	    AND later.occurred_at > recipient.since -- occurred_at raw: the statement's own after-the-mail order, which this set may not narrow
+`
+}
+
+// awaitingHeardSinceSQL lists the candidates whose recipients were in contact
+// since, on any channel: a call or a meeting with them is a follow-up already
+// made. It is one set over every candidate. Asked per candidate, it walked each
+// recipient's whole history once per mail. It reads awaitingRepliesSQL's slots.
+var awaitingHeardSinceSQL = followUpHeardSince + ` AS MATERIALIZED (
+	SELECT DISTINCT c.id FROM ` + followUpCandidates + ` c
+	  JOIN activity_link sent ON sent.activity_id = c.id AND sent.contact_id IS NOT NULL
+	  JOIN activity_link heard ON heard.contact_id = sent.contact_id
+	  JOIN activity later ON later.id = heard.activity_id
+	 WHERE later.id <> c.id
+	   AND later.archived_at IS NULL
+	   AND %[7]s
+	   AND %[8]s
+	   AND later.occurred_at > c.occurred_at -- occurred_at raw: heard after the mail, an ordering of rows
+	   AND ` + occurredday.BegunSQL("later", "$%[1]d") + `)`
 
 // awaitingRepliesSQL: every rule sits before the cap.
 //
@@ -218,52 +358,16 @@ var awaitingRepliesSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       a.occurred_precision
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
-	 WHERE a.kind = 'email'
-	   AND a.direction = 'outbound'
-	   AND a.archived_at IS NULL
-	   AND NOT ` + ImportedHistorySQL + `
-	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
-	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
+	 WHERE ` + awaitingTheirAnswerSQL("$%[1]d", sentByReaderSQL("$%[9]d", "$%[4]d"), "%[7]s", mailKinds) + `
+	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int) -- occurred_at raw: an age of whole days
+	   AND ` + occurredday.FromSQL("a", "$%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)") + `
 	   AND %[2]s
-	   -- The reader sent it. Mail sent through the product and mail captured
-	   -- from a mailbox stamp the sender as the seat with no address; mail
-	   -- logged by hand names the address.
-	   AND EXISTS (SELECT 1 FROM activity_participant me
-	                WHERE me.activity_id = a.id AND me.role = 'from'
-	                  AND (me.user_id = $%[9]d OR lower(me.address) = ANY($%[4]d::text[])))
-	   -- Still the last word on its conversation with its contacts: nothing
-	   -- newer on the thread from a record it went to. A thread key is a
-	   -- header the sender chose, so a message on it counts only when it is
-	   -- filed under the same contact or company.
-	   AND NOT EXISTS (SELECT 1 FROM activity later
-	                    WHERE later.archived_at IS NULL
-	                      AND %[7]s
-	                      AND a.thread_key IS NOT NULL AND a.thread_key <> ''
-	                      AND later.thread_key = a.thread_key
-	                      AND later.kind = a.kind
-	                      AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
-	                      AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
-	                      AND later.occurred_at <= $%[1]d
-	                      AND EXISTS (SELECT 1 FROM activity_link heard
-	                                    JOIN activity_link sent ON sent.activity_id = a.id
-	                                   WHERE heard.activity_id = later.id
-	                                     AND (heard.contact_id = sent.contact_id
-	                                       OR heard.company_id = sent.company_id)))
-	   -- Nor any contact since with someone it went to, on any channel: a call
-	   -- or a meeting with them is a follow-up already made.
-	   AND NOT EXISTS (SELECT 1 FROM activity_link sent
-	                     JOIN activity_link heard ON heard.contact_id = sent.contact_id
-	                     JOIN activity later ON later.id = heard.activity_id
-	                    WHERE sent.activity_id = a.id AND sent.contact_id IS NOT NULL
-	                      AND later.id <> a.id
-	                      AND later.archived_at IS NULL
-	                      AND %[7]s
-	                      AND %[8]s
-	                      AND later.occurred_at > a.occurred_at
-	                      AND later.occurred_at <= $%[1]d)
+	   -- Nor any contact since with someone it went to: awaitingHeardSinceSQL.
+	   AND a.id NOT IN (SELECT id FROM ` + followUpHeardSince + `)
 	   -- A customer: a lead, someone at a prospect or customer company, or a
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
@@ -271,3 +375,12 @@ var awaitingRepliesSQL = `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`
+
+// threadNeedSQL names each of candidates and the live rows on its thread. A
+// statement gates that set once when its later-message and snooze-lift tests
+// read the same thread; both match by correspondence.ThreadSQL. candidates
+// names a relation with an activity's id, thread_key, kind and channel_provider.
+func threadNeedSQL(candidates string) string {
+	return `SELECT c.id FROM ` + candidates + ` c
+	 UNION SELECT t.id FROM ` + candidates + ` c JOIN activity t ON ` + correspondence.ThreadSQL("t", "c") + ` AND t.restricted_at IS NULL`
+}

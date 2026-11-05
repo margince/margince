@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -34,7 +35,7 @@ func (s *RoutingStore) GetTaskOverrides(ctx context.Context) (TaskOverrides, err
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
-	return settings.Get(ctx, s.settings, TaskOverridesSetting)
+	return config.StoredVal(ctx, s.cfg, TaskOverridesSetting)
 }
 
 // PreviewTaskOverrides judges next without writing it. refused carries what
@@ -47,7 +48,7 @@ func (s *RoutingStore) PreviewTaskOverrides(ctx context.Context, next TaskOverri
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return TaskOverridesPreview{}, err
 	}
-	stored, err := settings.Get(ctx, s.settings, TaskOverridesSetting)
+	stored, err := config.StoredVal(ctx, s.cfg, TaskOverridesSetting)
 	if err != nil {
 		return TaskOverridesPreview{}, err
 	}
@@ -72,26 +73,32 @@ func (s *RoutingStore) ReplaceTaskOverrides(ctx context.Context, next TaskOverri
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
+	saved := next.withoutEmpty()
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		if err := settings.LockForWrite(ctx, tx, TaskOverridesKey); err != nil {
 			return err
 		}
-		current, err := settings.GetTx(ctx, tx, TaskOverridesSetting)
+		current, err := config.StoredValTx(ctx, tx, s.cfg, TaskOverridesSetting)
 		if err != nil {
 			return err
 		}
 		if expected != "" && current.Revision() != expected {
 			return apperrors.ErrVersionSkew
 		}
+		// A boot value may spell a reset task as {}, which a save drops.
+		sameOverrides := func(boot TaskOverrides) bool { return boot.withoutEmpty().Revision() == saved.Revision() }
+		if locked, err := config.LockedChange(s.cfg, TaskOverridesSetting, sameOverrides); locked || err != nil {
+			return err
+		}
 		if err := next.refusedAgainst(current); err != nil {
 			return err
 		}
-		return settings.SetTx(ctx, s.settings, tx, TaskOverridesSetting, next.withoutEmpty())
+		return config.SaveTx(ctx, s.cfg, tx, TaskOverridesSetting, saved)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return next.withoutEmpty(), nil
+	return saved, nil
 }
 
 // refusedAgainst lists the fields of v a save refuses. An override for a task

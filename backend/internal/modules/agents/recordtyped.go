@@ -85,26 +85,29 @@ const (
 	typeProject   = string(datasource.EntityProject)
 	typeActivity  = string(datasource.EntityActivity)
 	typeDeal      = string(datasource.EntityDeal)
+	typeCompany   = string(datasource.EntityCompany)
 	typeImportRun = "import_run"
 )
 
 func (promoteLead) RecordTypeOf(json.RawMessage) string          { return typeLead }
 func (disqualifyLead) RecordTypeOf(json.RawMessage) string       { return typeLead }
+func (setUpPartner) RecordTypeOf(json.RawMessage) string         { return typeCompany }
 func (demoteLead) RecordTypeOf(json.RawMessage) string           { return typeLead }
 func (advanceProjectPhase) RecordTypeOf(json.RawMessage) string  { return typeProject }
 func (commitImport) RecordTypeOf(json.RawMessage) string         { return typeImportRun }
 func (sendEmailTool) RecordTypeOf(json.RawMessage) string        { return typeActivity }
 func (sendMessageTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
 func (sendCompanyEmailTool) RecordTypeOf(json.RawMessage) string { return typeActivity }
-func (bookMeetingTool) RecordTypeOf(json.RawMessage) string      { return typeActivity }
 
-func (promoteLead) ServesRecordType(recordType string) bool     { return recordType == typeLead }
-func (disqualifyLead) ServesRecordType(recordType string) bool  { return recordType == typeLead }
-func (demoteLead) ServesRecordType(recordType string) bool      { return recordType == typeLead }
-func (commitImport) ServesRecordType(recordType string) bool    { return recordType == typeImportRun }
-func (sendEmailTool) ServesRecordType(recordType string) bool   { return recordType == typeActivity }
+func (promoteLead) ServesRecordType(recordType string) bool    { return recordType == typeLead }
+func (disqualifyLead) ServesRecordType(recordType string) bool { return recordType == typeLead }
+func (setUpPartner) ServesRecordType(recordType string) bool   { return recordType == typeCompany }
+func (demoteLead) ServesRecordType(recordType string) bool     { return recordType == typeLead }
+func (commitImport) ServesRecordType(recordType string) bool   { return recordType == typeImportRun }
+
+func (sendEmailTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
+
 func (sendMessageTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
-func (bookMeetingTool) ServesRecordType(recordType string) bool { return recordType == typeActivity }
 
 func (advanceProjectPhase) ServesRecordType(recordType string) bool {
 	return recordType == typeProject
@@ -122,8 +125,10 @@ func (relinkActivity) RecordTypeOf(json.RawMessage) string   { return typeActivi
 func (relinkThread) RecordTypeOf(json.RawMessage) string     { return typeActivity }
 func (relinkActivities) RecordTypeOf(json.RawMessage) string { return typeActivity }
 
-func (advanceDeal) ServesRecordType(recordType string) bool      { return recordType == typeDeal }
-func (progressDeal) ServesRecordType(recordType string) bool     { return recordType == typeDeal }
-func (relinkActivity) ServesRecordType(recordType string) bool   { return recordType == typeActivity }
-func (relinkThread) ServesRecordType(recordType string) bool     { return recordType == typeActivity }
+func (advanceDeal) ServesRecordType(recordType string) bool    { return recordType == typeDeal }
+func (progressDeal) ServesRecordType(recordType string) bool   { return recordType == typeDeal }
+func (relinkActivity) ServesRecordType(recordType string) bool { return recordType == typeActivity }
+
+func (relinkThread) ServesRecordType(recordType string) bool { return recordType == typeActivity }
+
 func (relinkActivities) ServesRecordType(recordType string) bool { return recordType == typeActivity }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { INTRO_STATUS_LABELS } from "../../../format/introstatus";
+
 // Where the introduction has got to, and who owes the next move.
 //
 // Four steps, drawn as an ordered list because that is what it is: a reader
@@ -12,8 +14,8 @@ import { Avatar } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
 import { useMe } from "../../../lib/session";
+import { useViewerZone } from "../../../lib/viewerzone";
 import type { IntroRequest } from "../introrequests";
 
 type StepState = "done" | "current" | "waiting";
@@ -30,7 +32,7 @@ export function RelayPanel({
 }: Readonly<{ ask: IntroRequest | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const reader = useMe().data?.user;
   const steps = stepsFor(ask, t);
   const owner =
@@ -70,10 +72,10 @@ export function RelayPanel({
           <p className="pn-relay-owner">
             <Avatar name={owner} identity={ownerIdOf(ask) ?? owner} size="sm" />
             <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
-            {ask.status === "requested" ? (
+            {ask.status === "requested" && ask.due_at ? (
               <span className="pn-relay-due t-caption">
                 {t("contact.intro.relayDue", {
-                  date: formatDate(ask.due_at, locale, recordZone),
+                  date: formatDate(ask.due_at, locale, readerZone),
                 })}
               </span>
             ) : null}
@@ -239,15 +241,4 @@ const STATE_WORD: Record<StepState, Parameters<ReturnType<typeof useT>>[0]> = {
 const ANSWER_WORD: Record<
   IntroRequest["status"],
   Parameters<ReturnType<typeof useT>>[0]
-> = {
-  requested: "contact.intro.stepAwaitingAnswer",
-  accepted: "contact.intro.stateAccepted",
-  name_drop_approved: "contact.intro.stateNameDropApproved",
-  suggest_other: "contact.intro.stateSuggestOther",
-  declined: "contact.intro.stateDeclined",
-  introduced: "contact.intro.stateIntroduced",
-  name_dropped: "contact.intro.stateNameDropped",
-  replied: "contact.intro.stateReplied",
-  expired: "contact.intro.stateExpired",
-  cancelled: "contact.intro.stateCancelled",
-};
+> = { ...INTRO_STATUS_LABELS, requested: "contact.intro.stepAwaitingAnswer" };

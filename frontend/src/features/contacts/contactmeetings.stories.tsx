@@ -1,6 +1,6 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { bookingProfile, bookingProposals } from "../../screens/book.testkit";
+import { bookingProfile, bookingProposals } from "../../testing/book.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -29,14 +29,17 @@ const view: components["schemas"]["Contact360"] = {
 // The tab's reads, with the proposals and the host's profile the story names.
 // A factory where a route answers differently on its second call, so every
 // render of the story starts again from the first page.
-function withRoutes(routes: RouteMap | (() => RouteMap)): Decorator {
+function withRoutes(
+  routes: RouteMap | (() => RouteMap),
+  locale: "en" | "de" = "en",
+): Decorator {
   return (Story) => {
     installFetchStub({
       "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
       ...(typeof routes === "function" ? routes() : routes),
     });
     return (
-      <StoryProviders>
+      <StoryProviders locale={locale}>
         <Story />
       </StoryProviders>
     );
@@ -79,9 +82,10 @@ export const WaitingOnReplyPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A contact with a week in motion: the next meeting booked through Margince
-// with its Meet link and a prep moment, a second one after it, two held and
-// one the contact missed, and two invitations still unanswered.
+// A contact with a week in motion. The next meeting is booked through Margince
+// with its Meet link and a prep moment, and a second one follows it. Two are
+// held (with the colleague who hosted them), one was missed by the contact,
+// and two invitations are still unanswered.
 type Activity = components["schemas"]["Activity"];
 function meeting(
   id: string,
@@ -91,6 +95,8 @@ function meeting(
   more: Partial<Activity> = {},
 ): Activity {
   return {
+    occurred_precision: "instant",
+    offers_email: false,
     id,
     kind: "meeting",
     subject,
@@ -127,13 +133,18 @@ const meetings: Activity[] = [
     "2026-09-24T08:00:00Z",
     "Weekly call: rollout planning",
     "held",
-    { duration_seconds: 3600, invitation_status: "confirmed" },
+    {
+      duration_seconds: 3600,
+      invitation_status: "confirmed",
+      host_user_id: "u-host",
+    },
   ),
   meeting(
     "0198f011-bbbb-7000-8000-000000000004",
     "2026-09-17T07:00:00Z",
     "Discovery call: scheduling tool",
     "held",
+    { host_user_id: "u-host" },
   ),
   meeting(
     "0198f011-bbbb-7000-8000-000000000005",
@@ -148,6 +159,7 @@ const bookedView: components["schemas"]["Contact360"] = {
   next_meeting: {
     activity_id: nextMeetingId,
     starts_at: "2026-10-02T09:00:00Z",
+    occurred_precision: "instant",
     subject: "Weekly call: rollout planning",
     participants: [
       { contact_id: "contact-2", full_name: "Sabine Mayer" },
@@ -221,6 +233,10 @@ export const Booked: Story = {
               }),
         [`GET /scheduling/invitations/${nextMeetingId}`]: () =>
           jsonResponse(nextInvitation),
+        "GET /users/names": () =>
+          jsonResponse({
+            data: [{ id: "u-host", display_name: "Lena Fischer" }],
+          }),
       };
     }),
   ],
@@ -254,4 +270,52 @@ export const WaitingFailed: StoryObj = {
     }),
   ],
   render: () => <WaitingUnreadable />,
+};
+
+// Held meetings that still owe an outcome, in German at a phone's width. Each
+// row's three verbs wrap inside the row instead of running past its edge.
+const owedMeetings: Activity[] = [
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000011",
+    "2026-09-29T08:00:00Z",
+    "Abstimmung zum Rollout",
+    "booked",
+    { awaiting_outcome: true, writable: true, version: 2 },
+  ),
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000012",
+    "2026-09-22T08:00:00Z",
+    "Erstgespräch Terminplanung",
+    "booked",
+    { awaiting_outcome: true, writable: true, version: 1 },
+  ),
+  meeting(
+    "0198f011-bbbb-7000-8000-000000000013",
+    "2026-09-15T07:00:00Z",
+    "Vorstellung der Preisstaffel",
+    "held",
+    { host_user_id: "u-host" },
+  ),
+];
+export const OutcomesOwedGermanPhone: Story = {
+  decorators: [
+    withRoutes(
+      {
+        "GET /me": meRoute(
+          { activity: ["create", "update"] },
+          { seat: "full" },
+        ),
+        "GET /scheduling/proposals": () => jsonResponse({ data: [] }),
+        "GET /activities": () =>
+          jsonResponse({ data: owedMeetings, page: { has_more: false } }),
+        "GET /users/names": () =>
+          jsonResponse({
+            data: [{ id: "u-host", display_name: "Lena Fischer" }],
+          }),
+      },
+      "de",
+    ),
+  ],
+  tags: ["uat-phone"],
+  args: { view, onBriefMeeting: () => undefined },
 };

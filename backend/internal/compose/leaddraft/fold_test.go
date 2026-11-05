@@ -51,16 +51,16 @@ var when = time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)
 // one name column, so the greeting name and the formal name both come off it.
 func TestTheLeadIsTheRecipient(t *testing.T) {
 	t.Parallel()
-	in := leaddraft.FromLead(lead(nil), nil, "", draftfloor.Envelope{})
+	in := leaddraft.FromLead(lead(nil), nil, leaddraft.Request{}, draftfloor.Envelope{})
 
 	if in.Recipient.Name != "Dung Ly Nguyen" {
 		t.Errorf("name = %q, want the lead's own", in.Recipient.Name)
 	}
-	if in.Recipient.FirstName != "Dung" {
-		t.Errorf("first name = %q, want the greeting name", in.Recipient.FirstName)
+	if in.Recipient.FirstName != "Dung Ly Nguyen" {
+		t.Errorf("first name = %q, want the whole display name, because three words do not say which is the given name", in.Recipient.FirstName)
 	}
-	if in.Recipient.LastName != "Nguyen" {
-		t.Errorf("last name = %q, want the formal name", in.Recipient.LastName)
+	if in.Recipient.LastName != "" {
+		t.Errorf("last name = %q, want none", in.Recipient.LastName)
 	}
 	if in.Recipient.Email != "dung.ly@newsky.example" {
 		t.Errorf("email = %q, want the lead's address", in.Recipient.Email)
@@ -77,7 +77,7 @@ func TestAOneWordNameGreetsAndHasNoSurname(t *testing.T) {
 	in := leaddraft.FromLead(lead(func(l *crmcontracts.Lead) {
 		only := "Dung"
 		l.FullName = &only
-	}), nil, "", draftfloor.Envelope{})
+	}), nil, leaddraft.Request{}, draftfloor.Envelope{})
 
 	if in.Recipient.FirstName != "Dung" {
 		t.Errorf("first name = %q, want the one word there is", in.Recipient.FirstName)
@@ -99,7 +99,7 @@ func TestALeadGroundsNoDealProjectOrClaim(t *testing.T) {
 		[]crmcontracts.Activity{
 			act("019fe7ae-0000-7000-8000-00000000000a", when.Add(-2*time.Hour),
 				crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost for 40 seats?"),
-		}, "", draftfloor.Envelope{})
+		}, leaddraft.Request{}, draftfloor.Envelope{})
 
 	if in.Deal != nil {
 		t.Error("a lead folded a deal; a lead has none")
@@ -125,7 +125,7 @@ func TestTheConversationReachesTheDraft(t *testing.T) {
 				crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost for 40 seats?"),
 			act("019fe7ae-0000-7000-8000-00000000000b", when.Add(-48*time.Hour),
 				crmcontracts.ActivityDirectionOutbound, "Intro", "Good to meet you at the fair."),
-		}, "", draftfloor.Envelope{})
+		}, leaddraft.Request{}, draftfloor.Envelope{})
 
 	if len(in.Recent) != 2 {
 		t.Fatalf("recent = %d exchanges, want both", len(in.Recent))
@@ -154,7 +154,7 @@ func TestEachSidesLastMessageIsDerived(t *testing.T) {
 				crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
 			act("019fe7ae-0000-7000-8000-00000000000b", when.Add(-48*time.Hour),
 				crmcontracts.ActivityDirectionOutbound, "Intro", "Good to meet you."),
-		}, "", draftfloor.Envelope{})
+		}, leaddraft.Request{}, draftfloor.Envelope{})
 
 	wantIn := when.Add(-2 * time.Hour).Format(time.RFC3339)
 	wantOut := when.Add(-48 * time.Hour).Format(time.RFC3339)
@@ -174,7 +174,7 @@ func TestADirectionThatNeverHappenedIsEmpty(t *testing.T) {
 		[]crmcontracts.Activity{
 			act("019fe7ae-0000-7000-8000-00000000000a", when.Add(-2*time.Hour),
 				crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
-		}, "", draftfloor.Envelope{})
+		}, leaddraft.Request{}, draftfloor.Envelope{})
 
 	if in.Recipient.LastOutbound != "" {
 		t.Errorf("last outbound = %q on a lead nobody has written to", in.Recipient.LastOutbound)
@@ -194,8 +194,8 @@ func TestTheConversationStateReadsTheSameTwoInstants(t *testing.T) {
 		act("019fe7ae-0000-7000-8000-00000000000a", when.Add(-2*time.Hour),
 			crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
 	}
-	got := leaddraft.ConversationState(activities, when)
-	want := convstate.Classify(when, when.Add(-2*time.Hour), time.Time{})
+	got := leaddraft.ConversationState(activities, when, time.UTC)
+	want := convstate.Classify(when, when.Add(-2*time.Hour), time.Time{}, time.UTC)
 	if got != want {
 		t.Errorf("state = %v, want %v — the envelope and the recipient read different instants", got, want)
 	}
@@ -204,7 +204,102 @@ func TestTheConversationStateReadsTheSameTwoInstants(t *testing.T) {
 // A lead with no correspondence at all is a first touch, not a failure.
 func TestALeadNobodyHasWrittenToIsAFirstTouch(t *testing.T) {
 	t.Parallel()
-	if got := leaddraft.ConversationState(nil, when); got != convstate.Classify(when, time.Time{}, time.Time{}) {
+	if got := leaddraft.ConversationState(nil, when, time.UTC); got != convstate.Classify(when, time.Time{}, time.Time{}, time.UTC) {
 		t.Errorf("state = %v on a lead with no history", got)
+	}
+}
+
+// Two words keep the documented positional split.
+func TestATwoWordNameSplitsByPosition(t *testing.T) {
+	t.Parallel()
+	in := leaddraft.FromLead(lead(func(l *crmcontracts.Lead) {
+		name := "Dung Nguyen"
+		l.FullName = &name
+	}), nil, leaddraft.Request{}, draftfloor.Envelope{})
+
+	if in.Recipient.FirstName != "Dung" || in.Recipient.LastName != "Nguyen" {
+		t.Errorf("names = %q / %q, want Dung / Nguyen", in.Recipient.FirstName, in.Recipient.LastName)
+	}
+}
+
+func TestALeadRewriteCarriesTheDraftOnScreen(t *testing.T) {
+	t.Parallel()
+	in := leaddraft.FromLead(lead(nil), nil,
+		leaddraft.Request{Intent: "shorter", RewriteOf: "  Hello, two products are missing.\n"}, draftfloor.Envelope{})
+	if in.RewriteOf != "Hello, two products are missing." || in.Intent != "shorter" {
+		t.Errorf("steering = intent %q, rewrite_of %q", in.Intent, in.RewriteOf)
+	}
+}
+
+// A colleague writing from one of our own domains arrives inbound. Read by
+// direction, that mail was the lead's last word, and a follow-up answered a
+// message we had written ourselves.
+func TestAColleaguesInboundMailIsOurSideSpeaking(t *testing.T) {
+	t.Parallel()
+	ours := act("019fe7ae-0000-7000-8000-00000000000c", when.Add(-1*time.Hour),
+		crmcontracts.ActivityDirectionInbound, "Re: Pricing", "Sending this on.")
+	ours.Voice = &crmcontracts.ActivityVoice{
+		Author: &crmcontracts.ActivityAuthor{Kind: crmcontracts.ActivityAuthorKindColleague},
+	}
+	in := leaddraft.FromLead(lead(nil), []crmcontracts.Activity{
+		ours,
+		act("019fe7ae-0000-7000-8000-00000000000d", when.Add(-5*time.Hour),
+			crmcontracts.ActivityDirectionInbound, "Pricing?", "What would this cost?"),
+	}, leaddraft.Request{}, draftfloor.Envelope{})
+
+	wantIn := when.Add(-5 * time.Hour).Format(time.RFC3339)
+	if in.Recipient.LastInbound != wantIn {
+		t.Errorf("last inbound = %q, want the lead's own message at %q", in.Recipient.LastInbound, wantIn)
+	}
+	if want := when.Add(-1 * time.Hour).Format(time.RFC3339); in.Recipient.LastOutbound != want {
+		t.Errorf("last outbound = %q, want our colleague's at %q", in.Recipient.LastOutbound, want)
+	}
+}
+
+// Each arm of the side rule, one row at a time, so the stamp it moves is the
+// only one that could have. A row read by the wrong arm lands on the wrong
+// stamp, and with several rows the newest would hide that.
+func TestWhichSideAStampLandsOnFollowsTheVoiceThenTheTransport(t *testing.T) {
+	t.Parallel()
+	at := when.Add(-1 * time.Hour)
+	voiced := func(kind crmcontracts.ActivityAuthorKind, dir crmcontracts.ActivityDirection) crmcontracts.Activity {
+		row := act("019fe7ae-0000-7000-8000-00000000000e", at, dir, "Re: Pricing", "A line.")
+		row.Voice = &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: kind}}
+		return row
+	}
+	noDirection := func() crmcontracts.Activity {
+		row := voiced(crmcontracts.ActivityAuthorKindColleague, crmcontracts.ActivityDirectionOutbound)
+		row.Direction = nil
+		return row
+	}
+	stamp := at.Format(time.RFC3339)
+	for _, c := range []struct {
+		name            string
+		row             crmcontracts.Activity
+		inbound, outbnd string
+	}{
+		{
+			"their word though it left here",
+			voiced(crmcontracts.ActivityAuthorKindContactRecord, crmcontracts.ActivityDirectionOutbound),
+			stamp, "",
+		},
+		{
+			"our word though it arrived",
+			voiced(crmcontracts.ActivityAuthorKindColleague, crmcontracts.ActivityDirectionInbound),
+			"", stamp,
+		},
+		{
+			"a machine names no side, so the transport answers",
+			voiced(crmcontracts.ActivityAuthorKindMachine, crmcontracts.ActivityDirectionInbound),
+			stamp, "",
+		},
+		{"a logged row is not a side speaking", noDirection(), "", ""},
+	} {
+		in := leaddraft.FromLead(lead(nil), []crmcontracts.Activity{c.row},
+			leaddraft.Request{}, draftfloor.Envelope{})
+		if in.Recipient.LastInbound != c.inbound || in.Recipient.LastOutbound != c.outbnd {
+			t.Errorf("%s: inbound %q outbound %q, want %q and %q", c.name,
+				in.Recipient.LastInbound, in.Recipient.LastOutbound, c.inbound, c.outbnd)
+		}
 	}
 }

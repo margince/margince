@@ -7,7 +7,12 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
+
+// directLinkArm needs none of the joins below: the foreign keys already
+// guarantee the activity, and joining it only hashes every activity.
+const directLinkArm = "FROM activity_link l"
 
 // companyArms is the three links themselves — the account an activity is filed
 // against, the account its deal belongs to, and the employer of the contact it
@@ -22,9 +27,10 @@ import (
 var companyArms = `FROM activity_link l
 		    JOIN activity la ON la.id = l.activity_id
 		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL
-		      AND ` + employment.InPlaceAtSQL("r", "la.occurred_at")
+		    LEFT JOIN relationship r ON r.contact_id = l.contact_id
+		      AND ` + employment.CurrentMembershipSQL("r") + `
+		      AND ` + employment.InPlaceForSQL("r", "la") + `
+		      AND ` + relationshipmark.ContactNotMarkedSQL("r.contact_id")
 
 // participantEmployerArm is the fourth arm: the employer of somebody who is on
 // the event as a participant rather than as a link. Without it a meeting whose
@@ -37,9 +43,10 @@ var companyArms = `FROM activity_link l
 // that deliberately stops at three arms (activities.CompanyReachSet says why).
 var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
-		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
-		        AND ` + employment.InPlaceAtSQL("emp", "a.occurred_at") + `
+		      JOIN relationship emp ON emp.contact_id = ap.contact_id
+		        AND ` + employment.CurrentMembershipSQL("emp") + `
+		        AND ` + employment.InPlaceForSQL("emp", "a") + `
+		        AND ` + relationshipmark.ContactNotMarkedSQL("emp.contact_id") + `
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
 // participantEntry is where the participant branch starts: every activity an
@@ -47,7 +54,8 @@ var participantEmployerArm = `EXISTS (
 var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
 		    JOIN activity_participant p0 ON p0.contact_id = e0.contact_id
 		    JOIN activity a ON a.id = p0.activity_id
-		    WHERE e0.company_id = %s AND e0.kind = 'employment' AND `
+		    WHERE e0.company_id = %s AND e0.kind = 'employment'
+		      AND ` + relationshipmark.ContactNotMarkedSQL("e0.contact_id") + ` AND `
 
 // activityReachesCompany is "this activity belongs to the account", for a query
 // that aliases activity as a.
@@ -73,11 +81,11 @@ var participantEntry = `SELECT a.id, e0.company_id FROM relationship e0
 // same one.
 func activityReachesCompany(companyPos int) string {
 	operand := fmt.Sprintf("$%d", companyPos)
-	linkBranch := func(column string) string {
-		return fmt.Sprintf("SELECT l.activity_id, %[1]s %[2]s\n\t\t    WHERE %[1]s = %[3]s", column, companyArms, operand)
+	linkBranch := func(column, arms string) string {
+		return fmt.Sprintf("SELECT l.activity_id, %[1]s %[2]s\n\t\t    WHERE %[1]s = %[3]s", column, arms, operand)
 	}
 	participantBranch := fmt.Sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
-	return "a.id IN (SELECT reach.id FROM (" + linkBranch("l.company_id") +
-		"\n\t\t    UNION " + linkBranch("d.company_id") + "\n\t\t    UNION " + linkBranch("r.company_id") +
+	return "a.id IN (SELECT reach.id FROM (" + linkBranch("l.company_id", directLinkArm) +
+		"\n\t\t    UNION " + linkBranch("d.company_id", companyArms) + "\n\t\t    UNION " + linkBranch("r.company_id", companyArms) +
 		"\n\t\t    UNION " + participantBranch + ") reach(id, company_id))"
 }

@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -226,7 +225,11 @@ func SubjectNameOnly(ctx context.Context, tx pgx.Tx, contactID string) (provider
 	// populated invents a worse answer than the one already on the record.
 	id.FirstName, id.LastName = derefOr(first), derefOr(last)
 	if id.FirstName == "" && id.LastName == "" {
-		id.FirstName, id.LastName = splitFullName(full)
+		// Nothing rather than a guess when the order is unknown. The LinkedIn
+		// address and company still identify the subject.
+		if first, last, ok := SplitStoredName(full); ok {
+			id.FirstName, id.LastName = first, last
+		}
 	}
 	return id, nil
 }
@@ -299,23 +302,6 @@ func SubjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID string) (provi
 		return provider.ContactIdentifiers{}, fmt.Errorf("contacts: reading the subject's LinkedIn handle: %w", err)
 	}
 	return id, nil
-}
-
-// splitFullName is the fallback for a record whose name parts were never
-// populated. One token is a first name — a mononym is a real name, and
-// assigning it to the surname would send a request nobody matches. Everything
-// after the first token is the surname, so multi-part family names ("van der
-// Berg") stay whole rather than losing their particles.
-func splitFullName(full string) (first, last string) {
-	parts := strings.Fields(full)
-	switch len(parts) {
-	case 0:
-		return "", ""
-	case 1:
-		return parts[0], ""
-	default:
-		return parts[0], strings.Join(parts[1:], " ")
-	}
 }
 
 func derefOr(s *string) string {

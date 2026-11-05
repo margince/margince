@@ -417,7 +417,7 @@ func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 	}
 
 	_, _, err := e.store(stubUnsubscribeLinker{}).LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
-		Kind: "note", Source: "manual", Links: links,
+		Kind: "note", Subject: new("Linked note"), Source: "manual", Links: links,
 	})
 
 	if _, ok := errors.AsType[*TooManyLinksError](err); !ok {

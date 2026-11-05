@@ -60,6 +60,12 @@ func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
 			t.Run(name+"/"+label, func(t *testing.T) {
 				body := maps.Clone(create.body)
 				maps.Copy(body, stated)
+				if name == "lead" && label == "absent" {
+					if status := e.CallVerbatim(t, "POST", create.path, body, nil, nil); status != http.StatusCreated {
+						t.Fatalf("POST %s with no source → %d, want 201: a lead that names none is filed as manual", create.path, status)
+					}
+					return
+				}
 				var refusal namedRefusal
 				if status := e.CallVerbatim(t, "POST", create.path, body, nil, &refusal); status != http.StatusUnprocessableEntity {
 					t.Fatalf("POST %s %v → %d, want 422", create.path, body, status)

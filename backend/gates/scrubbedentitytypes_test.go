@@ -86,10 +86,10 @@ var scrubbedEntityTypes = map[string]bool{
 	//
 	// The other readers of the boundary (compose/undoabilitypage.go,
 	// recordrestoreseam.go, magic/done.go, export.go) are each parameterised by
-	// the entity the caller named, so this tombstone is only ever seen by
-	// somebody asking about that review — and no surface offers undo or restore
-	// on one. The decider's queue and the review endpoints read the row
-	// directly and never reverse-apply an image.
+	// the entity the caller named. Only somebody asking about that review sees
+	// this tombstone. No surface offers undo or restore on
+	// one. The review endpoints read the row directly and never reverse-apply
+	// an image.
 	"communication_review":  true,
 	"voice_learning_signal": true,
 	"ai_call":               true,
@@ -98,6 +98,8 @@ var scrubbedEntityTypes = map[string]bool{
 	// The weekly review rebuilds a DEAL from its own audit images, never an
 	// evidence row. The evidence create images never carried the quotation.
 	"deal_stage_evidence": true,
+	// Notice history reads stored text directly; no restore surface may replay its erased images.
+	"notice": true,
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {

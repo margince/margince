@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -81,7 +80,7 @@ func (s *Store) ReissueByEmail(ctx context.Context, email string) ([]IssuedInvit
 func liveSeatsFor(ctx context.Context, tx pgx.Tx, email string) ([]crmcontracts.DealRoomParticipant, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	rows, err := tx.Query(ctx, storekit.SQLf(
+	query := storekit.SQLf(
 		`SELECT %s FROM %s
 		   JOIN deal_room r ON r.id = p.room_id
 		  WHERE p.email = $%d AND p.revoked_at IS NULL AND NOT p.preview
@@ -90,7 +89,8 @@ func liveSeatsFor(ctx context.Context, tx pgx.Tx, email string) ([]crmcontracts.
 		                     WHERE live.participant_id = p.id AND live.consumed_at IS NULL
 		                       AND live.superseded_at IS NULL AND live.expires_at > now())
 		  ORDER BY p.created_at`,
-		participantColumns, participantFrom, arg(email)), args...)
+		participantColumns, participantFrom, arg(email))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("find deal room seats by email: %w", err)
 	}
@@ -135,7 +135,8 @@ func reissueFor(ctx context.Context, tx pgx.Tx, seat crmcontracts.DealRoomPartic
 	// identity read by its own id rather than through the seller's scoped read.
 	var room crmcontracts.DealRoom
 	room.Id = seat.RoomId
-	if err := tx.QueryRow(ctx, `SELECT deal_id FROM deal_room WHERE id = $1`, roomID).Scan(&room.DealId); err != nil {
+	args := []any{roomID}
+	if err := tx.QueryRow(ctx, `SELECT deal_id,title FROM deal_room WHERE id = `+storekit.Placeholders(args), args...).Scan(&room.DealId, &room.Title); err != nil {
 		return IssuedInvitation{}, fmt.Errorf("read deal room for its reissue event: %w", err)
 	}
 	if err := emitCredentialReissued(ctx, tx, auditID, room, participantID, reasonResent); err != nil {
@@ -145,7 +146,7 @@ func reissueFor(ctx context.Context, tx pgx.Tx, seat crmcontracts.DealRoomPartic
 	if err != nil {
 		return IssuedInvitation{}, err
 	}
-	return IssuedInvitation{Participant: current, Credential: raw, ExpiresAt: expiresAt}, nil
+	return IssuedInvitation{Participant: current, Credential: raw, ExpiresAt: expiresAt, RoomTitle: room.Title}, nil
 }
 
 // NoteLinkRequest stamps every live seat with this address as having asked

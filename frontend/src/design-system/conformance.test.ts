@@ -280,11 +280,9 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 
-  // B-EP09.20 (Lucide-only glyphs) + B-EP09.8 (offline honesty): UI glyphs
-  // come from lucide-react — the sanctioned 🟢/🟡 autonomy semantics render
-  // through the .dot token component, so NO emoji may appear in any source
-  // string or JSX text. The service worker never caches or fabricates /v1.
-  it("uses no emoji glyphs in source strings — Lucide only (§2b)", () => {
+  // A glyph is a lucide or Material icon. The 🟢/🟡 autonomy marks are the
+  // `.dot` token component, so no emoji is ever needed in source text.
+  it("uses no emoji glyphs in source strings (§2b)", () => {
     const emoji = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
     const violations: string[] = [];
     for (const file of files) {
@@ -337,9 +335,9 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
   // the `btn` BASE token only — a `.btn-*` modifier in a STYLESHEET is how the
   // variants are declared, and a component class that merely ends in `btn`
   // (`iconbtn`) is a different control. And it matches every element
-  // EXCEPT an anchor: `Button` renders a `<button>`, so a link that looks like
-  // a button (screens/client.tsx's "create a lead" href) has no component to
-  // reach for and is legitimately styled by hand.
+  // except an anchor. `Button` renders a `<button>`, so a link that looks like
+  // a button (features/settings/client.tsx's "create a lead" href) has no component to
+  // reach for. It, and the anchor an `OffsiteLink` draws, is styled by hand.
   it("renders every button through Button — no hand-rolled btn classes", () => {
     const violations: string[] = [];
     for (const file of files) {
@@ -371,7 +369,12 @@ describe("design-system conformance gates (B-EP09.1)", scanBudget, () => {
           const handRolled = fragments.some((fragment) =>
             fragment.split(/\s+/).includes("btn"),
           );
-          if (handRolled && tag !== "a") {
+          if (
+            handRolled &&
+            tag !== "a" &&
+            tag !== "OffsiteLink" &&
+            tag !== "AppLink"
+          ) {
             const { line } = source.getLineAndCharacterOfPosition(
               node.getStart(),
             );

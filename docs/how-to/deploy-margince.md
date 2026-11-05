@@ -4,10 +4,22 @@
 Margince ships container materials that suit any container platform (Kubernetes, Nomad, Docker
 Compose, a plain host). This repo carries only the **generic** pieces. A concrete deployment (its
 domain, secrets, platform manifests) is yours to own, so keep those in your own infra repo.
+To run a release on one Linux server with no containers, read [install-on-a-server.md](install-on-a-server.md).
 
 Why a deployment is shaped this way (two database roles, one host, one release for every role) is
 in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting is in
 [reference/configuration.md](../reference/configuration.md).
+
+## The least production needs
+
+- `MARGINCE_DSN` and `MARGINCE_OWNER_DSN`: the app role and the owner role of one database.
+- `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (the setting `license.token`) or
+  `license.token_file`.
+- For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
+  `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
+
+What each other feature needs is in
+[What each feature needs](../reference/what-each-feature-needs.md).
 
 ## What ships in this repo
 
@@ -20,6 +32,14 @@ in [explanation/self-hosting.md](../explanation/self-hosting.md). Every setting 
 | `scripts/deploy/worker-entrypoint.sh` | start the worker as app (no owner credential) |
 | `scripts/deploy/db-bootstrap.sql` | one-time DB role + database + extension setup |
 | `frontend/nginx.conf` | SPA static serving (listens on 8080, non-root) |
+| `scripts/deploy/server/` | the systemd units and nginx files of a server bundle |
+
+## Pull a release
+
+Each `v*` release pushes `ghcr.io/margince/api:<tag>`, `ghcr.io/margince/worker:<tag>` and
+`ghcr.io/margince/web:<tag>`, for `linux/amd64` and `linux/arm64`. Pull each by the hash that `images.txt` on
+the release page names, so all three roles come from one release. The release page gives the `cosign verify`
+command that checks each one.
 
 ## Build the images
 
@@ -72,22 +92,45 @@ The worker does not schedule River's nightly index rebuild, which needs the inde
 fetches slow down, rebuild the index as `margince_owner`, for example
 `REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
 
+## Get a license token
+
+Outside `dev` and `test` mode, `cmd/api` and `cmd/worker` need a license token to start, even for
+one seat. A dev stack needs none.
+
+To get a token:
+
+- For up to 3 seats for your own company, ask for a free token with the
+  [free license form](https://dist.margince.com/free-license). It lasts one year.
+- For more seats, see the prices on [margince.com](https://margince.com).
+- To host Margince for other companies, you need a hosting partner contract with Gradion.
+
+To give the token to Margince, do one of these on both `cmd/api` and `cmd/worker`:
+
+- Mount it as a secret file. In the `margince.yaml` each one reads, set `license.token` to
+  `${file:/run/secrets/margince-license}`.
+- Set `MARGINCE_LICENSE`. A container that sets it needs no `license:` block.
+
+After the first boot, the api's `/metrics`, read with the `--metrics-token` bearer credential,
+reports `margince_license_posture{state="valid"} 1`. What each posture does at boot is in
+[License](../reference/storage-secrets-and-license.md#license).
+
 ## Set the environment
 
 The images bake in **no** instance configuration. All settings come from the runtime environment,
-and the binaries resolve every flag from a `MARGINCE_*` env fallback. Set at least these:
+and every setting has a variable, while only some have a flag. Most variables start with
+`MARGINCE_`, and the AI provider keys keep their vendor names, such as `ANTHROPIC_API_KEY`. Set at least the
+[least production needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin
+password itself; see
+[What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
 
-- the two DSNs and the admin password in
-  [What the image entrypoint reads](../reference/configuration.md#what-the-image-entrypoint-reads-api-and-worker);
-- `MARGINCE_REDIS`, `MARGINCE_CONFIG` and `MARGINCE_PUBLIC_BASE_URL`, in the
-  [cmd/api table](../reference/configuration.md#cmdapi-the-http-process-role).
-
-The annotated env template is [`.env.example`](../../.env.example).
+The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
+rollout, and to see which settings the app shows as locked, read
+[change-a-setting.md](change-a-setting.md). Check it with the api and the worker: each checks only
+the settings it reads.
 
 Do **not** set `MARGINCE_ENV=dev` in a deployed environment. It decides which license authorities are
-honoured, and whether the installation may run unlicensed at all. With no license configured,
-`cmd/api` and `cmd/worker` refuse to boot unless the environment says non-production (see
-[License](../reference/configuration.md#license)).
+honoured, and lets the installation run with no license (see
+[License](../reference/storage-secrets-and-license.md#license)).
 
 ## Write the first-boot config
 
@@ -98,11 +141,12 @@ On the first boot against an empty database the api bootstraps the company + adm
    [`config/margince.example.yaml`](../../config/margince.example.yaml).
 2. Set its `password_file` to `secrets/admin-password`, where the entrypoint writes the password.
 3. Set `MARGINCE_ADMIN_PASSWORD`. The example config's default path differs, so step 2 matters.
-4. To enable AI, declare the binding under `seeds.ai_routing`. Put each provider's key in under
-   Settings → AI → AI models → Providers.
-5. Keep the `mcp` block only if you serve the MCP connector. It then needs
+4. To enable AI, declare the binding under `seeds.ai_routing`; a file in
+   [`config/presets/`](../../config/presets/README.md) is a binding to copy. Put each provider's key
+   in under Settings → AI → AI models → Providers.
+5. Add an `mcp` block only if you serve the MCP connector. It then needs
    `MARGINCE_PUBLIC_BASE_URL`, or the api refuses to boot.
-6. Leave `operations:` commented out, as the example ships it.
+6. Leave `operations:` out, as the example does.
 7. Decide the retention posture before first boot, if the installation must keep everything (below).
 8. Choose the country: set `workspace.country` (below).
 
@@ -110,7 +154,7 @@ The path in step 2 is `/app/secrets/admin-password`, because the api's working d
 
 The AI binding in `seeds.ai_routing` is consumed at first boot, and the database is authoritative
 afterwards. An installation already running is rebound under Settings → AI instead. The conventional
-key variable (`GEMINI_API_KEY`, …) is read once, to seal a key into the vault on first boot. There is
+key variable (`GEMINI_API_KEY`, …) sets that key at boot and locks it in Settings. There is
 no routing file to mount for the api and the worker's serving role.
 
 The DB-less lanes still read one explicitly (`worker siteread`, `worker aitask` and the certification
@@ -152,9 +196,15 @@ mail's window closes. A change needs both the installation-settings and the rete
 
 ### Keep everything, if you must
 
-By default the shipped storage-limitation ladder runs. A meeting transcript and an AI payload are
-erased after a year, which supports the storage-limitation obligation of `Art. 5(1)(e)`. Whether a
-year is the right period is each installation's call, and the rules are editable.
+By default the shipped storage-limitation ladder runs, which supports the storage-limitation
+obligation of `Art. 5(1)(e)`. No policy in it deletes a record because it is old. Each one archives,
+and you can restore an archived record. Or it erases a second copy, or data built from a record. The
+stored copy of each message goes after 90 days, AI call payloads after 365 days and the daily
+deal-risk rows after 90 days.
+
+Transcripts and contacts with no consent and no deal start with no rule; an admin authors one where
+the installation needs it. Whether a period is right is each installation's call, and the rules are editable. The
+full list is in the [retention handbook page](../handbook/retention-exports-and-deletion.md).
 
 An unconverted lead is archived after a year (taken off every list, kept restorable). Author
 `anonymize` for that policy where the lead's identity must not be kept. The [compliance
@@ -181,7 +231,7 @@ Both services sit behind one reverse proxy / ingress, under **one host**:
 
 | path | service |
 | --- | --- |
-| `/v1`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/configuration.md#securitytxt) is set | api |
+| `/v1`, `/setup/status`, `/setup/claim`, `/healthz`, `/readyz`, `/metrics`; `/.well-known/security.txt` when [`web.security_txt`](../reference/feature-settings.md#securitytxt) is set | api |
 | `/webhooks/gmail`, `/webhooks/graph` | api (present only where that receiver's own token is set, a separate switch from whether the connector itself is configured) |
 | `/oauth/`, `/mcp`, `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource` (and its `/mcp`-suffixed form) | api (present only with the MCP connector declared) |
 | everything else, `/` included | web (the SPA, port 8080) |
@@ -219,7 +269,7 @@ During installation acceptance:
 
 A missing optional pool does not fail readiness, so a 200 alone cannot prove field creation works.
 Configuration and the 501 troubleshooting procedure are in
-[Custom-field schema pool](../reference/configuration.md#custom-field-schema-pool-api--runtime-ddl).
+[Custom-field schema pool](../reference/storage-secrets-and-license.md#custom-field-schema-pool-api--runtime-ddl).
 
 ## Alert on the agent bound, do not drain on it
 
@@ -289,3 +339,10 @@ DSN and a shell, though, so prefer the set-password link for that.
 **Restart the api after a missed MCP view.** If the api booted while the web tier was down, it logs
 the views it is without. Restart it once the web tier is up. The setting that removes this dependency,
 and its cost, is in [MCP App views read at boot](../explanation/self-hosting.md#mcp-app-views-read-at-boot).
+
+## Data tasks
+
+After an upgrade, the worker seeds and runs the release's data tasks. Watch Settings → System health
+or run `margince-migrate data-tasks status --dsn "$DSN"`. A paused or failed correction holds later
+tasks; review its status before resuming or retrying. Data tasks do not run on API
+startup. See [Background data corrections](../explanation/data-tasks.md).

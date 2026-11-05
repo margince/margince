@@ -31,17 +31,17 @@ type aiTaskVerb struct {
 	name    string
 	summary string
 	usage   string
-	flags   func() *flag.FlagSet
+	flags   func() (*flag.FlagSet, error)
 }
 
 // aiTaskVerbs is the catalog. The order is the order an operator meets them:
 // what exists, what a fixture looks like, the two ways to produce one, the verb
 // that spends the most, and the help.
 func aiTaskVerbs() []aiTaskVerb {
-	probeFlags := func(verb string) func() *flag.FlagSet {
-		return func() *flag.FlagSet {
-			fs, _, _ := aiTaskFlagSet(verb)
-			return fs
+	probeFlags := func(verb string) func() (*flag.FlagSet, error) {
+		return func() (*flag.FlagSet, error) {
+			fs, _, _, err := aiTaskFlagSet(verb)
+			return fs, err
 		}
 	}
 	return []aiTaskVerb{
@@ -59,9 +59,9 @@ func aiTaskVerbs() []aiTaskVerb {
 		},
 		{
 			verbRetrieve, "rank the shipped handbook for one question, with the production chunker and a real embed lane, and capture what a run would be handed",
-			`retrieve --question "..." --model <provider:model> [--page records.md]`, func() *flag.FlagSet {
-				fs, _, _ := aiTaskRetrieveFlagSet()
-				return fs
+			`retrieve --question "..." --model <provider:model> [--page records.md]`, func() (*flag.FlagSet, error) {
+				fs, _, _, err := aiTaskRetrieveFlagSet()
+				return fs, err
 			},
 		},
 		{
@@ -186,7 +186,10 @@ func writeAITaskVerbHelp(w io.Writer, verb aiTaskVerb) error {
 	if _, err := fmt.Fprint(w, "\nFlags:\n"); err != nil {
 		return err
 	}
-	fs := verb.flags()
+	fs, err := verb.flags()
+	if err != nil {
+		return err
+	}
 	fs.SetOutput(w)
 	fs.PrintDefaults()
 	return nil

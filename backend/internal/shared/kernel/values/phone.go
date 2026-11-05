@@ -29,23 +29,50 @@ var e164 = regexp.MustCompile(E164Pattern)
 // dependency-free kernel deliberately does not carry.
 type Phone struct{ s string }
 
-var phoneSeparators = strings.NewReplacer(" ", "", "(", "", ")", "", ".", "", "-", "", "/", "", "\t", "")
+// InternationalDialPrefix is the dialling spelling of "+". Exported, like
+// PhoneSeparators, so the gate can hold the browser mirror in contacturi.ts to it.
+const InternationalDialPrefix = "00"
+
+// NationalTrunkMarkPattern finds the trunk zero written in brackets right after
+// the country code, as in "+49 (0) 30 …". A caller from abroad never dials it,
+// so ParsePhone keeps the prefix and code and drops the mark. A "(0)" further in
+// is a digit. Exported for the browser mirror's gate.
+const NationalTrunkMarkPattern = `^(\+|00)([0-9]{1,3})[ \t.\-/]*\(0\)`
+
+var nationalTrunkMark = regexp.MustCompile(NationalTrunkMarkPattern)
+
+// PhoneSeparators are the characters ParsePhone drops as formatting.
+func PhoneSeparators() []string { return []string{" ", "\t", "(", ")", ".", "-", "/"} }
+
+var phoneSeparators = newSeparatorStripper()
+
+func newSeparatorStripper() *strings.Replacer {
+	pairs := make([]string, 0, 2*len(PhoneSeparators()))
+	for _, separator := range PhoneSeparators() {
+		pairs = append(pairs, separator, "")
+	}
+	return strings.NewReplacer(pairs...)
+}
 
 func ParsePhone(raw string) (Phone, error) {
-	cleaned := phoneSeparators.Replace(strings.TrimSpace(raw))
+	cleaned := phoneSeparators.Replace(nationalTrunkMark.ReplaceAllString(strings.TrimSpace(raw), "$1$2"))
 	if cleaned == "" {
 		return Phone{}, &ParseError{Field: "phone", Code: "phone_empty", Message: "a phone number is required"}
 	}
-	if strings.HasPrefix(cleaned, "00") {
-		cleaned = "+" + cleaned[2:]
+	if strings.HasPrefix(cleaned, InternationalDialPrefix) {
+		cleaned = "+" + cleaned[len(InternationalDialPrefix):]
 	}
 	if !strings.HasPrefix(cleaned, "+") {
-		return Phone{}, &ParseError{Field: "phone", Code: "phone_needs_country_code",
-			Message: "the number needs its country prefix (+49…, 0049…)"}
+		return Phone{}, &ParseError{
+			Field: "phone", Code: "phone_needs_country_code",
+			Message: "the number needs its country prefix (+49…, 0049…)",
+		}
 	}
 	if !e164.MatchString(cleaned) {
-		return Phone{}, &ParseError{Field: "phone", Code: "phone_malformed",
-			Message: "not an E.164 number (+ and 8–15 digits)"}
+		return Phone{}, &ParseError{
+			Field: "phone", Code: "phone_malformed",
+			Message: "not an E.164 number (+ and 8–15 digits)",
+		}
 	}
 	return Phone{s: cleaned}, nil
 }

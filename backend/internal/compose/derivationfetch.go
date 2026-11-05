@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // derivationOutcome is a resolved handle: definition, drill-through
@@ -56,8 +55,8 @@ type derivationOutcome struct {
 // the aggregate recompute run over the identical WHERE side (validated
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		if err := requireNamedRecords(ctx, tx, spec, predicatesAsFilters(plan.predicates)); err != nil {
+	return withReportSnapshot(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(plan.scope), plan.groupBy, predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}
 		var args []any
@@ -92,44 +91,21 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		whereSQL := strings.Join(where, " AND ")
 
-		// A reference this reader cannot open comes back NULL, and its row
-		// stays. That is what a normal deal read does with the same column
-		// (deals/fieldmask.go blanks the reference and keeps the deal), so the
-		// drill-through and the list its link opens describe one population.
-		//
-		// On its OWN argument slice, forked from the shared one. The mask binds
-		// the reader's scope values, and only the rows statement names them —
-		// Postgres rejects a parameter a statement never references, so letting
-		// these land in `args` would break the aggregate recompute below, which
-		// selects no reference at all.
-		rowArgs := slices.Clone(args)
-		rowArg := func(v any) int { rowArgs = append(rowArgs, v); return len(rowArgs) }
-		selects, err := maskedDerivationSelects(ctx, spec, plan, rowArg)
-		if err != nil {
+		if err := requireNoLoneColleagueIn(ctx, tx, frame, contributorsSQL(spec, where, nil), args); err != nil {
 			return err
 		}
-		rowsSQL, rowsArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
-			"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
-			strings.Join(selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), rowArgs)
-		if err != nil {
+		if err := requireSpecPopulationFloor(ctx, tx, spec, requestedReportScope(plan.scope)); err != nil {
 			return err
 		}
-		pgRows, err := tx.Query(ctx, rowsSQL, rowsArgs...)
-		if err != nil {
-			return fmt.Errorf("derivation %s rows: %w", report, err)
-		}
-		defer pgRows.Close()
-		out.Rows, err = scanDerivationRows(pgRows, plan.columns)
-		if err != nil {
+		if out.Rows, err = derivationRows(ctx, tx, frame, report, spec, plan, whereSQL, args); err != nil {
 			return err
 		}
-		pgRows.Close()
 
 		// Recompute the explained aggregates over the identical row set
 		// (count(*) rides along as the honest total behind the capped
 		// rows slice). Values are read positionally, so a caller alias
 		// cannot shadow the total.
-		aggSQL, aggArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
+		aggSQL, aggArgs, err := bindReportTokens(ctx, tx, frame, fmt.Sprintf(
 			"SELECT count(*), %s FROM %s WHERE %s",
 			strings.Join(plan.aggSelects, ", "), spec.fromClause(), whereSQL), args)
 		if err != nil {
@@ -153,6 +129,41 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		}
 		return nil
 	})
+}
+
+// derivationRows reads the drill-through's rows over the explained `WHERE`.
+//
+// A reference this reader cannot open comes back NULL, and its row stays.
+// deals/fieldmask.go does the same on a normal deal read. So the drill-through
+// and the list its link opens describe one population.
+//
+// It binds on its own argument slice, forked from the shared one. The mask
+// binds the reader's scope values, and only the rows statement names them.
+// Postgres rejects a parameter a statement never references. In the shared
+// slice they would break the aggregate recompute, which selects no reference.
+//
+//craft:ignore naked-any SQL parameters are heterogeneous values encoded by pgx
+func derivationRows(
+	ctx context.Context, tx pgx.Tx, frame reportFrame, report string, spec reportSpec, plan derivationPlan, whereSQL string, args []any,
+) ([]map[string]any, error) {
+	rowArgs := slices.Clone(args)
+	rowArg := func(v any) int { rowArgs = append(rowArgs, v); return len(rowArgs) }
+	selects, err := maskedDerivationSelects(ctx, spec, plan, rowArg)
+	if err != nil {
+		return nil, err
+	}
+	rowsSQL, rowsArgs, err := bindReportTokens(ctx, tx, frame, fmt.Sprintf(
+		"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
+		strings.Join(selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), rowArgs)
+	if err != nil {
+		return nil, err
+	}
+	pgRows, err := tx.Query(ctx, rowsSQL, rowsArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("derivation %s rows: %w", report, err)
+	}
+	defer pgRows.Close()
+	return scanDerivationRows(pgRows, plan.columns)
 }
 
 // maskedDerivationSelects is plan.selects with each REFERENCE column wrapped so
@@ -277,7 +288,7 @@ func derivationWhere(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, plan derivationPlan,
 	requested RequestedScope, arg func(any) int,
 ) ([]string, string, error) {
-	where := []string{spec.baseWhere}
+	where := []string{spec.populationWhere()}
 	for _, p := range plan.preds {
 		switch {
 		case p.threshold != nil:
@@ -320,8 +331,8 @@ func derivationWhere(
 	// And the same owner narrowing, so a breakdown's drill-through opens only
 	// the owners its headline counted. A row handle pins its owner, which
 	// requireMeasurableOwners has already judged.
-	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
-		requested.Kind == "" && breaksDownByOwner(spec, plan.groupBy) && !pinsOwner(spec, predicateFields(plan.preds)), arg)
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
+		narrowsOwnerBreakdown(requested, ownerBreakdown{breaksDownByOwner(spec, plan.groupBy), pinsOwner(spec, predicateFields(plan.preds))}), arg)
 	if err != nil {
 		return nil, "", err
 	}

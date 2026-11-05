@@ -35,6 +35,9 @@ func TestThePersonalEntryPointsRefuseAnyPrincipalThatIsNotTheContactThemselves(t
 			if _, err := store.UnreadFor(ctx, 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Fatalf("UnreadFor = %v, want the permission sentinel", err)
 			}
+			if _, err := store.UnreadWorkFor(ctx, 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Fatalf("UnreadWorkFor = %v, want permission denied", err)
+			}
 			if err := store.MarkRead(ctx, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Fatalf("MarkRead = %v, want the permission sentinel", err)
 			}

@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -98,11 +99,14 @@ func fillLinkedIn(ctx context.Context, tx pgx.Tx, subject ids.UUID, _ string, v 
 	if err := auth.HoldWritableLive(ctx, tx, entityContact, subject); err != nil {
 		return nothingFilled, err
 	}
-	handle, err := NormalizeLinkedInURL(v.linkedInURL)
+	handle, err := NormalizeContactLinkedInURL(v.linkedInURL)
 	if err != nil {
 		// A provider that answered an unreadable URL has told us nothing about
 		// this contact's profile: an empty answer, not a fault to fail on.
 		return nothingFilled, nil //nolint:nilerr // an unreadable answer is an empty answer
+	}
+	if held, err := leadHolds(ctx, tx, storekit.IdentityKeys{LinkedInURLs: []string{handle}}); err != nil || held {
+		return nothingFilled, err
 	}
 	rowID, landed, err := insertSocialHandle(ctx, tx, subject, SocialLinkedIn, handle)
 	if err != nil || !landed {
@@ -160,20 +164,33 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	// record and this one by construction is not there yet. Without this, a
 	// contact created from a business card and enriched brings a contact who
 	// exercised Art. 17 back as a live, mailable record.
-	suppressed, err := storekit.EmailSuppressed(ctx, tx, address.String())
-	if err != nil {
+	if err := storekit.RefuseErasedEmail(ctx, tx, fieldEmail, address.String()); err != nil {
+		if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+			return nothingFilled, nil
+		}
 		return nothingFilled, fmt.Errorf("contacts: checking a bought address against the erasure list: %w", err)
 	}
-	if suppressed {
+	if refuseMachineAddress(address.String()) != nil {
 		return nothingFilled, nil
 	}
+	// A live lead's address stays the lead's: a provider never makes one human
+	// a lead and a contact. The erasure check above took the subject lock.
+	if held, err := leadHolds(ctx, tx, storekit.IdentityKeys{Emails: []string{address.String()}}); err != nil || held {
+		return nothingFilled, err
+	}
+	// The base lock before the address is written. The hand-off already holds
+	// the subject's row, and a create of this address must not hold the lane
+	// while it waits on this row (lockorder.go).
+	if err := lockAddressBaseLane(ctx, tx, []string{address.String()}); err != nil {
+		return nothingFilled, err
+	}
 	rowID, landed, err := insertChildRow(ctx, tx, `
-		INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by)
-		SELECT $1, $2, 'work', true, 0, $3, $4
+		INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, email_domain_folded)
+		SELECT $1, $2, 'work', true, 0, $3, $4, $5
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM contact_email WHERE contact_id = $1 AND archived_at IS NULL)
 		ON CONFLICT DO NOTHING
-		RETURNING id`, subject, address.String(), providerName)
+		RETURNING id`, subject, address.String(), providerName, owndomain.StoredOfAddress(address.String()))
 	if err != nil {
 		return nothingFilled, fmt.Errorf("contacts: filling a bought address: %w", err)
 	}
@@ -210,11 +227,14 @@ func fillPhone(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 }
 
 // insertChildRow runs one guarded child insert and says whether it landed.
-// Shared by the address and the number, whose statements differ only in the
-// table they write and the type they stamp.
-func insertChildRow(ctx context.Context, tx pgx.Tx, statement string, subject ids.UUID, value, providerName string) (ids.UUID, bool, error) {
+// Shared by the address and the number, whose statements differ in the table
+// they write, the type they stamp, and the derived columns bound after $4.
+//
+//craft:ignore naked-any derived columns are bind parameters of whichever SQL type the child table stores
+func insertChildRow(ctx context.Context, tx pgx.Tx, statement string, subject ids.UUID, value, providerName string, derived ...any) (ids.UUID, bool, error) {
 	var rowID ids.UUID
-	err := tx.QueryRow(ctx, statement, subject, value, providerName, connectorCapturedBy(providerName)).Scan(&rowID)
+	args := append([]any{subject, value, providerName, connectorCapturedBy(providerName)}, derived...)
+	err := tx.QueryRow(ctx, statement, args...).Scan(&rowID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, false, nil
 	}

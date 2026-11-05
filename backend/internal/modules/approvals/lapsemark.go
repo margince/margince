@@ -43,8 +43,7 @@ import (
 // effect's sentence has it: a human told only that something expired would
 // reasonably decide again, and the row would refuse them as already decided. So
 // it says what did not happen, and what to do instead.
-const lapsedRedemptionSentence = "this was approved, but the assistant never came back to carry it out in time, " +
-	"so nothing was changed — ask for it again if you still want it"
+const lapsedRedemptionSentence = "Approval expired before execution. Nothing changed. Request a new proposal to try again."
 
 // lapseSweepBatch bounds one pass, for the reason expirySweepBatch does: an
 // unbounded UPDATE over a backlog holds every row it touches until it commits,

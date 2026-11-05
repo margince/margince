@@ -17,12 +17,14 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -74,14 +76,27 @@ const (
 // (compose injects it into the DSR handler) and the retention engine's
 // polymorphic due-list — both hand over a bare UUID. The subject is
 // widened to a typed contact id once here and threaded typed from then on.
+func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+	_, err := e.EraseContactCounted(ctx, contactID, reason)
+	return err
+}
+
+// EraseContactCounted is EraseContact answering the erasure's account of its
+// work, for the proof a closed privacy request keeps. The cascade runs on a
+// tallyTx, so every statement it makes is counted.
+//
+// A replay of "dsr:<id>" runs the cascade again, which is idempotent and
+// erases what was written since. It certifies once: the first tombstone stays
+// the only one, and its account is the answer.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason string) error {
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
-		return err
+		return erasureaccount.Account{}, err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	return e.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = e.db.Tx(ctx, func(raw pgx.Tx) error {
+		tx := newTallyTx(raw)
 		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
 			return err
@@ -110,7 +125,10 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
-		if err := redactSubjectReporting(ctx, tx, subject); err != nil {
+		if err := redactSubjectReporting(ctx, tx, subject, emails); err != nil {
+			return err
+		}
+		if err := e.purgePartyProjections(ctx, tx, emails); err != nil {
 			return err
 		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
@@ -126,7 +144,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
 			return err
 		}
-		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor)
+		activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, reason)
 		if err != nil {
 			return err
 		}
@@ -140,7 +158,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
 			return err
 		}
-		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason, e.payloads); err != nil {
+		if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
 			return err
 		}
 		// The messages nobody has sent yet — scheduled, or still a draft. They
@@ -186,17 +204,13 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err != nil {
 			return err
 		}
-		channelsSuppressed, err := eraseChannelIdentities(ctx, tx, identities)
-		if err != nil {
-			return err
-		}
-
-		return tombstoneContactErasure(ctx, tx, subject, reason, contactErasureCounts{
+		erased, err = certifyErasure(ctx, tx, subject, reason, identities, e.uncountedArms(), contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
-			channelIdentitiesSuppressed: channelsSuppressed,
 		})
+		return err
 	})
+	return erased, err
 }
 
 // refuseContactUnderLegalHold refuses an erasure the workspace is obliged to
@@ -253,26 +267,23 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 }
 
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction
-// just emptied: their vectors, their own audit spines, the external identities
-// they answered to, the proposals read out of them, and the transmitted copy in
-// the send log.
-func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
-	if err := redactReportingSource(ctx, tx, "activity", activities); err != nil {
+// just emptied. It removes their vectors, their own audit spines, the external
+// identities they answered to and the proposals read out of them. It also
+// clears the transmitted copy in the send log and the copies other modules
+// took of their text. Those copies go for the held activities too: the floor
+// keeps the original record, never a voice sample read from it.
+func (e *Eraser) purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities, held []ids.UUID, reason string) error {
+	if err := purgeActivityTraces(ctx, tx, activities, e.payloads); err != nil {
 		return err
 	}
-	// The vectors go with the text they were built from. purgeDerivedTraces
-	// reaches embeddings through activity_link, which by construction cannot
-	// see the unlinked mail redactSubjectTimeline now covers — and
-	// an embedding of erased text is the erased text in another shape, which
-	// a similarity probe can still reach.
-	if len(activities) > 0 {
-		if _, err := tx.Exec(ctx, `
-			DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = ANY($1)`,
-			activities); err != nil {
-			return err
-		}
+	if err := e.purgeTextCopies(ctx, tx, append(slices.Clone(activities), held...)); err != nil {
+		return err
 	}
-	if err := tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure); err != nil {
+	return tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure)
+}
+
+func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, payloads PayloadPurger) error {
+	if err := purgeActivityIndexes(ctx, tx, activities); err != nil {
 		return err
 	}
 	// The external identities of the messages just emptied. The activity-content
@@ -418,7 +429,7 @@ func purgeContactDerivedRows(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		`DELETE FROM ai_feedback WHERE subject_type = 'contact' AND subject_id = $1`, contactID); err != nil {
 		return err
 	}
-	return purgeProviderPurchases(ctx, tx, subjects)
+	return purgeProvidedValues(ctx, tx, subjects)
 }
 
 // deleteSubjectIdentifierRows drops every row that stores an identifier the
@@ -486,11 +497,4 @@ func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string
 		}
 	}
 	return nil
-}
-
-func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
-	if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
-		return err
-	}
-	return refuseContactUnderLegalHold(ctx, tx, subject)
 }

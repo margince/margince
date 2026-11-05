@@ -6,9 +6,9 @@ import { stable } from "../format/collate";
 /** The frontend's `src/`, which every path below is relative to. */
 export const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-// The folders screen code can live in. A guard that read screens/ alone would
-// lose a part moved into components/ or a feature folder and still pass.
-export const SCREEN_ROOTS = ["screens", "components", "features"];
+// The folders screen code can live in: the shared parts, a fork's screens and
+// the features. A guard with a shorter list would miss some and still pass.
+export const SCREEN_ROOTS = ["components", "custom", "features"];
 
 // screenFiles lists every `.tsx` under the screen folders at any depth, minus
 // tests, testkits and stories, as paths relative to `src/` with forward slashes.
@@ -21,8 +21,10 @@ export function screenFiles(): string[] {
 }
 
 function filesUnder(dir: string): string[] {
-  // features/ does not exist until the first feature moves into it.
-  if (!existsSync(dir)) return [];
+  // A root that is gone would read as a smaller tree and pass every guard.
+  if (!existsSync(dir)) {
+    throw new Error(`${dir} does not exist; update SCREEN_ROOTS`);
+  }
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
     return entry.isDirectory() ? filesUnder(path) : [path];

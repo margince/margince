@@ -40,7 +40,7 @@ func TestThePrivacyNoticeAsksForNoSubscription(t *testing.T) {
 	stager, vault := &recordingStager{}, &recordingVault{}
 	e.store = e.store.WithConfirmationLane(stager, vault, "https://crm.example.test/")
 
-	if _, err := e.store.IssuePrivacyNotice(e.ctx, e.contact); err != nil {
+	if _, err := e.store.IssuePrivacyNotice(e.ctx, e.contact, ""); err != nil {
 		t.Fatalf("minting the privacy notice: %v", err)
 	}
 	if stager.calls != 1 {
@@ -62,6 +62,12 @@ func TestThePrivacyNoticeAsksForNoSubscription(t *testing.T) {
 	// sees.
 	body := strings.ReplaceAll(
 		sent.Rendered.Subject+"\n"+sent.Rendered.Body, linkPlaceholder, "")
+	// A statement that no action is required must not look like a request to act.
+	const noReply = "No reply or confirmation is required."
+	if !strings.Contains(body, noReply) {
+		t.Fatal("the notice does not explain that no reply is required")
+	}
+	body = strings.ReplaceAll(body, noReply, "")
 	for _, asking := range []string{
 		"whether you want", "want to hear from us", "subscribe", "confirm",
 	} {
@@ -251,10 +257,8 @@ func TestAnUndatedAcquisitionStillDisclosesItsSource(t *testing.T) {
 	if info.AcquiredAs != "referral" {
 		t.Errorf("the notice says %q, want referral", info.AcquiredAs)
 	}
-	// captured_at stands in, so the page can still say when — it is the row's
-	// own write, which is the best this installation knows.
-	if info.AcquiredAt == nil {
-		t.Error("an undated acquisition disclosed no time at all; captured_at stands in")
+	if info.AcquiredAt != nil {
+		t.Error("an unknown acquisition date was replaced with capture time")
 	}
 }
 
@@ -373,7 +377,7 @@ func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
 	e.store = e.store.WithConfirmationLane(
 		&recordingStager{}, &recordingVault{}, "https://crm.example.test/")
 
-	if _, err := e.store.IssuePrivacyNotice(e.ctx, e.contact); err != nil {
+	if _, err := e.store.IssuePrivacyNotice(e.ctx, e.contact, ""); err != nil {
 		t.Fatalf("minting the notice: %v", err)
 	}
 
@@ -381,13 +385,9 @@ func TestTheEngineSupportsANoticeOnItsOwnLink(t *testing.T) {
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
 		gate := NewGate(e.store)
-		rules, err := e.store.packRulesFor(e.ctx, tx)
-		if err != nil {
-			return err
-		}
 		got, err = gate.validate(e.ctx, tx, commsauthz.Request{},
 			subjectRef{Kind: entityContact, ID: e.contact.String()},
-			commsauthz.CategoryPrivacyNotice, rules)
+			commsauthz.CategoryPrivacyNotice, packRulesFor(RecipientCountry{}))
 		return err
 	}); err != nil {
 		t.Fatalf("resolving the notice: %v", err)

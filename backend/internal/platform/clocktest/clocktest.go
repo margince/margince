@@ -24,18 +24,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/osenv"
 	"github.com/margince/margince/backend/internal/shared/clockskew"
 )
 
 // Skew is the offset this process was started with, read through the seam that
 // holds the product's one environment read.
 func Skew() (clockskew.Skew, error) {
-	return clockskew.Parse(config.FromOS(clockskew.EnvVar))
+	return clockskew.Parse(osenv.Get(clockskew.EnvVar))
 }
 
 // Now is the instant a fixture dates itself from: wall time on an ordinary
-// run, and wall time plus the offset under the fixture applier.
+// run, and wall time plus the offset under the fixture applier. It is cut to
+// the microsecond Postgres stores, so a fixture date reads back equal to the
+// value it wrote.
 func Now(t testing.TB) time.Time {
 	t.Helper()
 
@@ -43,5 +45,5 @@ func Now(t testing.TB) time.Time {
 	if err != nil {
 		t.Fatalf("clocktest: %v", err)
 	}
-	return time.Now().Add(skew.FixtureOffset())
+	return time.Now().Add(skew.FixtureOffset()).Truncate(time.Microsecond)
 }

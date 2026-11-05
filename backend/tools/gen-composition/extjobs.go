@@ -332,3 +332,13 @@ func mappingKeys(node *yaml.Node) []string {
 	}
 	return keys
 }
+
+// jobDeclarationsByUnit groups the composed job declarations by declaring
+// unit, so each manifest derivation sees its own and no other's.
+func jobDeclarationsByUnit(decls []extension.JobDeclaration) map[string][]extension.JobDeclaration {
+	byUnit := map[string][]extension.JobDeclaration{}
+	for _, d := range decls {
+		byUnit[string(d.Unit)] = append(byUnit[string(d.Unit)], d)
+	}
+	return byUnit
+}

@@ -9,7 +9,7 @@ visual direction is in [DESIGN.md](../DESIGN.md).
 
 ```sh
 pnpm install
-pnpm dev          # Vite dev server; proxies /v1 to http://localhost:8080 (BACKEND_PORT overrides)
+pnpm dev          # Vite dev server; proxies /v1 to http://localhost:18080 (BACKEND_PORT overrides)
 pnpm check        # the frontend gate: Biome + unit tests + tsc + build
 pnpm e2e          # build + the Playwright screen-acceptance harness
 pnpm gen:api      # regenerate src/api/schema.d.ts from ../backend/api/crm.yaml
@@ -67,11 +67,11 @@ only because that file has no `email:` block. The switch draws the link and wire
 
 The request form behind the link is the real one. So to send it to an installation with no mailer
 gets a `501 not_implemented` back, and shows it as the failure note of the form. The confirmation,
-the deep-link form and the refusal of a spent token are checked in `src/screens/auth.test.tsx`
+the deep-link form and the refusal of a spent token are checked in `src/features/sign-in/auth.test.tsx`
 instead, because no one can reach them here.
 
 When a switch is not set, it reads `undefined` and nothing changes. `src/app/ui-preview.test.ts` and
-the `federated sign-in` cases in `src/screens/auth.test.tsx` pin both positions of both switches.
+the `federated sign-in` cases in `src/features/sign-in/auth.test.tsx` pin both positions of both switches.
 The `e2e` lane builds without any of them, so `offers no identity provider that does not work` still
 measures the real default.
 
@@ -84,7 +84,7 @@ measures the real default.
   it on its own. `pnpm storybook` shows every control.
 - `src/design-system/`: tokens, building blocks and their stories. Read
   [its README](src/design-system/README.md) before you build a control. It never imports `app/`,
-  `components/` or `screens/`.
+  `components/` or `features/`.
 - `src/lib/`: shared code that draws nothing: the hash router, URL state, `theme.ts`, `capability.ts`,
   how a server problem reads, and the session. `theme.ts` resolves and applies `light` or `dark` before React
   mounts, so a screen before sign-in can be dark at all.
@@ -98,10 +98,10 @@ measures the real default.
   section at the foot of the rail is here too (`agentrail.tsx`): the one AI control in
   the frame of the app. See
   [docs/explanation/frontend-architecture.md](../docs/explanation/frontend-architecture.md).
-- `src/components/`: screen parts that many surfaces share, such as the create and edit dialogs
-  and the list query. It never imports `app/` or `screens/`.
-- `src/screens/`: one file per surface, or one folder when a surface is a state machine
-  (`onboarding-conversation/`). Routes that are not built yet render a pending state.
+- `src/components/`: screen parts that many features share, such as the create and edit dialogs
+  and the list query. It never imports `app/` or `features/`.
+- `src/features/<name>/`: one folder per feature, with its screens, tests and stories. A feature
+  never imports another feature or the shell. Routes that are not built yet render a pending state.
 - `src/i18n/`: `en.ts`, `de.ts` and `vi.ts`. Key parity is checked at compile time and at run time.
 - `src/format/`: the display edge. Money, date and duration formatting, IANA zones only, and the FX
   lineage display (it uses the IR `base_value` as it is, and never multiplies).
@@ -126,8 +126,9 @@ measures the real default.
 3. Literal colours live only in `tokens.css`.
 4. No copy typed into code. JSX text and attributes a user sees come from the `i18n` catalogs
    (checked by a walk of the TS AST).
-5. No emoji in source strings: Lucide only. The 🟢/🟡 autonomy meanings render through the `.dot`
-   token component.
+5. No emoji in source strings: a glyph is a lucide or Material icon. The 🟢/🟡 autonomy meanings render through the `.dot`
+   token component. The Material marks are SVG files in `src/design-system/material-symbols/`;
+   `materialsymbols.tsx` says how to add one.
 6. One service worker ships, and only `src/lib/pwa.ts` registers it. From Cache Storage it answers only
    two things. One is the offline page, for a page load the network could not make. The other is that
    page's own script ([pwa.md](../docs/explanation/pwa.md)).

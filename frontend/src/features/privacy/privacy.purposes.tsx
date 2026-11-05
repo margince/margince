@@ -193,7 +193,7 @@ function PurposeTable({ purposes }: Readonly<{ purposes: ConsentPurpose[] }>) {
         purpose.requires_double_opt_in ? (
           <CellStrip>
             <span>{purpose.label}</span>
-            <Badge tone="info">{t("privacy.purposeDoiBadge")}</Badge>
+            <Badge>{t("privacy.purposeDoiBadge")}</Badge>
           </CellStrip>
         ) : (
           purpose.label

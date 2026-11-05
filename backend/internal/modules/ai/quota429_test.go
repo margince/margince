@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The whole chain, over a real HTTP response: a provider answering 429 with a
@@ -41,7 +43,7 @@ func TestAQuotaRefusalReachesTheOperatorAsABudgetMessage(t *testing.T) {
 	if !errors.Is(providerErr, ErrProviderQuota) {
 		t.Fatalf("a 429 from the provider is a quota refusal: %v", providerErr)
 	}
-	message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", providerErr))
+	message := SafeVoiceBuildFailure(fmt.Errorf("voice build model call: %w", providerErr), textlang.English)
 	if !strings.Contains(strings.ToLower(message), "out of budget") {
 		t.Fatalf("the operator is told the budget ran out: %q", message)
 	}

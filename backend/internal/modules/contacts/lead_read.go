@@ -18,9 +18,11 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -40,55 +42,73 @@ const liveOnlyClause = ` AND archived_at IS NULL`
 // sorting the column means the label beside it.
 const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lead.source)`
 
+// leadWebFormNameSQL is the current name of the website form a lead came
+// through. A deleted form leaves it NULL, and the lead still reads as a web form.
+var leadWebFormNameSQL = `(SELECT f.name FROM web_form f WHERE f.id::text = ` + provenance.WebFormIDSQL("lead") + `)`
+
 // leadNextTaskDueSQL is when the next open task a reader may open falls due —
 // the deadline the Next task column prints, taking the audience for the reason
 // the pair beside it does.
-var leadTaskWorkSQL = " AND " + auth.LiveIntakeTaskClause("a")
+func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
+	identities, err := leadTaskIdentitiesSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return " AND " + auth.LiveIntakeTaskClause("a") + " AND " + storekit.CurrentTaskClause("a", slaNow(ctx), identities, arg), nil
+}
 
-var leadNextTaskDueSQL = `(SELECT a.due_at FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `
-	     AND a.audience = 'workspace'
-	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
+func leadNextTaskDueSQL(work string) string {
+	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
+	     ` + auth.AudienceWorkspaceOnly("a") + `
+	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
+}
 
-// leadLastActivitySQL is the last-touch clock, excluding system remediation and
-// called-off meetings for the same reason last_activity_of_contact does: work
-// the product files ABOUT a lead, or a meeting that did not happen, is not the
-// lead engaging.
+// leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
+// leaves out system remediation, called-off meetings and what has not happened
+// yet: none of it is the lead engaging.
 //
 // The row that PRINTS it and the expression that ORDERS BY it read this, so a
 // reader sees the instant the list was arranged by rather than a second reading
 // of the same question.
 func leadLastActivitySQL() string {
-	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND ` + relstrength.NotCalledOffSQL("a") + auth.OriginIsEngagement("a") + `)`
+	return `(SELECT max(a.occurred_at) ` + leadTouchesSQL() + `)`
 }
 
-var leadColumns = `id, full_name, email, phone, title, company_name, candidate_company_key,
+// leadLastActivityPrecisionSQL is how to read leadLastActivitySQL's instant,
+// from the activity it names.
+func leadLastActivityPrecisionSQL() string {
+	return `(SELECT ` + occurredday.LatestPrecisionSQL("a", "") + ` ` + leadTouchesSQL() + `)`
+}
+
+// leadTouchesSQL is the activities the last-touch clock reads.
+func leadTouchesSQL() string {
+	return `FROM activity_link l JOIN activity a ON a.id = l.activity_id
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
+	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a")
+}
+
+func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
+	work, err := leadTaskWorkSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return `id, full_name, email, phone, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
 	source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("lead") + `,
 	version, created_at, updated_at, archived_at,
 	routed_at, first_response_at,
-	` + leadSourceLabelSQL + `,
+	` + leadSourceLabelSQL + `, ` + leadWebFormNameSQL + `,
+	origin, origin_detail, ` + leadOriginLabelSQL + `,
 	disqualify_reason_id, disqualify_note,
 	(SELECT r.label FROM lead_disqualify_reason r WHERE r.id = lead.disqualify_reason_id),
 	status_set_by, qualified_deal_id,
-	(SELECT jsonb_build_object('trigger', CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 'meeting_held'
-	                                           WHEN a.kind = 'meeting' THEN 'meeting_booked'
-	                                           ELSE 'inbound_reply' END,
-	                           'activity_id', a.id, 'occurred_at', a.occurred_at)
-	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	  WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	    AND ((a.kind = 'email' AND a.direction = 'inbound')
-	         OR (a.kind = 'meeting'
-	             AND (a.meeting_status IS NULL OR a.meeting_status IN ('booked','held'))))
-	  ORDER BY CASE WHEN a.kind = 'meeting' AND a.meeting_status = 'held' THEN 0
-	                WHEN a.kind = 'meeting' THEN 1 ELSE 2 END, a.occurred_at DESC, a.id LIMIT 1),
-	` + leadLastActivitySQL() + `,
+	` + leadQualificationEvidenceSQL(slaNow(ctx), arg) + `,
+	` + leadLastActivitySQL() + `, ` + leadLastActivityPrecisionSQL() + `,
 	(SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `),
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `),
 	-- The next open task, as the pair it is: its title and its deadline
 	-- describe ONE task, so they select one row. The subject is content and
 	-- the due date is a marker, but splitting them by that distinction would
@@ -101,10 +121,10 @@ var leadColumns = `id, full_name, email, phone, title, company_name, candidate_c
 	-- actually open. The count and the max beside them are aggregate markers
 	-- over all tasks and owe nothing.
 	(SELECT a.subject FROM activity_link l JOIN activity a ON a.id = l.activity_id
-	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + leadTaskWorkSQL + `
-	     AND a.audience = 'workspace'
-	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1),
-	` + leadNextTaskDueSQL + `,
+	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
+	     ` + auth.AudienceWorkspaceOnly("a") + `
+	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
+	` + leadNextTaskDueSQL(work) + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (
 	     SELECT factors FROM lead_score_history
@@ -120,21 +140,34 @@ var leadColumns = `id, full_name, email, phone, title, company_name, candidate_c
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold, ` + leadHasInboundSQL
+	legal_hold, ` + leadHasInboundSQL + `, company_id, ` + leadIndustryField + `, ` + leadCompanyFactsSQL(ctx) + `,
+	partner_company_id, partner_accepted_at, partner_accepted_by`, nil
+}
 
 // readLead resolves one lead row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads whose
 // result never reaches the wire.
 func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
-	q := `SELECT ` + leadColumns + storekit.SelectSuffix(active) + ` FROM lead WHERE id = $1`
-	if archived == storekit.LiveOnly {
-		q += liveOnlyClause
-	}
-	policy, err := loadLeadSLAPolicy(ctx, tx)
+	var err error
+	ctx, err = withLeadTaskIdentities(ctx, tx)
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	l, err := scanLead(tx.QueryRow(ctx, q, id), active, policy)
+	args := []any{id}
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	columns, err := leadColumns(ctx, arg)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	q := `SELECT ` + columns + storekit.SelectSuffix(active) + ` FROM lead WHERE id = $1`
+	if archived == storekit.LiveOnly {
+		q += liveOnlyClause
+	}
+	policy, err := loadLeadSLAPolicy(ctx, tx, config.Bound())
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	l, err := scanLead(tx.QueryRow(ctx, q, args...), active, policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
@@ -145,10 +178,23 @@ func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.A
 		return crmcontracts.Lead{}, err
 	}
 	one := []crmcontracts.Lead{l}
-	if err := withholdUnreadableSourceContacts(ctx, tx, one); err != nil {
+	if err := withholdUnreadableLinks(ctx, tx, one); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	return one[0], nil
+}
+
+// withholdUnreadableLinks blanks each record id on a lead its reader cannot
+// open. Those are the contact it was worked from, its linked company and the
+// partner that referred it.
+func withholdUnreadableLinks(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) error {
+	if err := withholdUnreadableSourceContacts(ctx, tx, leads); err != nil {
+		return err
+	}
+	if err := withholdUnreadablePartners(ctx, tx, leads); err != nil {
+		return err
+	}
+	return withholdUnreadableCompanies(ctx, tx, leads)
 }
 
 // withholdUnreadableSourceContacts blanks from_contact_id on every lead whose
@@ -182,16 +228,18 @@ func withholdUnreadableSourceContacts(ctx context.Context, tx pgx.Tx, leads []cr
 func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, extra ...any) (crmcontracts.Lead, error) {
 	var l crmcontracts.Lead
 	var id ids.UUID
-	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal *ids.UUID
+	var ownerID, projectID, promotedContact, mergedInto, fromContact, disqualifyReason, qualifiedDeal, companyID, partnerCompany *ids.UUID
 	var statusSetBy *string
 	var evidence []byte
 	var email *string
 	var status string
 	var version int64
 	var openTasks int
+	var lastActivityPrecision *string
 	var hasInbound bool
 	var authorName, authorSeatName *string
 	var authorID *ids.UUID
+	var companyFacts []byte
 
 	dests := []any{
 		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
@@ -199,10 +247,11 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 		&promotedContact, &l.PromotedAt, &mergedInto, &fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,
 		&version, &l.CreatedAt, &l.UpdatedAt, &l.ArchivedAt,
-		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
+		&l.RoutedAt, &l.FirstResponseAt, &l.SourceLabel, &l.WebFormName, &l.Origin, &l.OriginDetail, &l.OriginLabel, &disqualifyReason, &l.DisqualifyNote, &l.DisqualifyReason,
 		&statusSetBy, &qualifiedDeal, &evidence,
-		&l.LastActivityAt, &openTasks,
-		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound,
+		&l.LastActivityAt, &lastActivityPrecision, &openTasks,
+		&l.NextTaskSubject, &l.NextTaskDueAt, &l.ScoreReason, &l.LegalHold, &hasInbound, &companyID,
+		&l.Industry, &companyFacts, &partnerCompany, &l.PartnerAcceptedAt, &l.PartnerAcceptedBy,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -222,6 +271,11 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	// which claims a human judged the lead not worth pursuing.
 	l.MergedIntoId = uuidPtr(mergedInto)
 	l.FromContactId = uuidPtr(fromContact)
+	l.CompanyId = uuidPtr(companyID)
+	l.PartnerCompanyId = uuidPtr(partnerCompany)
+	if err := scanLeadCompanyFacts(&l, companyFacts); err != nil {
+		return l, err
+	}
 	l.DisqualifyReasonId = uuidPtr(disqualifyReason)
 	l.QualifiedDealId = uuidPtr(qualifiedDeal)
 	if statusSetBy != nil {
@@ -242,6 +296,9 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, e
 	l.Status = crmcontracts.LeadStatus(status)
 	l.Version = &version
 	l.OpenTaskCount = &openTasks
+	if lastActivityPrecision != nil {
+		l.LastActivityPrecision = new(crmcontracts.OccurredPrecision(*lastActivityPrecision))
+	}
 	if !hasInbound {
 		policy.enabled = false
 	}

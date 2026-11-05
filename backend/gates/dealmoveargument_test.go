@@ -5,31 +5,8 @@
 
 package gates
 
-// One rule, read on both sides of a compose seam.
-//
-// H2 rather than H3 because neither side is a LIST: both are functions, and this
-// runs them over a corpus of argument shapes written down here. A shape neither
-// side has met is a shape this cannot compare, which is why the second test
-// asserts the asymmetric direction over inputs chosen to be near-misses rather
-// than trusting the corpus to be complete.
-//
-// A deal's next step names the record it acts on inside a free-form arguments
-// map, and TWO places read that key. compose/dealstatus reads it to decide which
-// records to re-gate against the caller's current activity audience;
-// compose/attention reads it to lift the id onto the wire. They cannot share the
-// function: they are sibling compose packages, and that import is the edge the
-// attention seam interface exists to avoid.
-//
-// So the obligation is stated here instead, and it is ASYMMETRIC. A
-// disagreement is harmless in one direction and a disclosure in the other:
-//
-//   - the gate reads an id the wire does not → one record judged for nothing.
-//   - the wire reads an id the gate did not → an activity id served to a reader
-//     whose audience was never checked, which is the leak the re-gate exists to
-//     close.
-//
-// This walks the corpus of shapes an arguments map can actually hold and
-// requires both sides to answer identically, so neither can be loosened alone.
+// Both readers share the kernel parser; this checks key precedence and typed operands
+// across the access gate and the final wire projection.
 
 import (
 	"testing"
@@ -37,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The shapes a card's arguments map really takes, plus the malformed ones a
@@ -50,6 +28,9 @@ var recordArgumentCases = []struct {
 	{"a well-formed record", map[string]any{"activity_id": "01a05500-0000-7000-8000-0000000000a1"}, true},
 	{"a request source", map[string]any{"request_activity_id": "01a05500-0000-7000-8000-0000000000a1"}, true},
 	{"a malformed request source", map[string]any{"request_activity_id": 42}, false},
+	{"a typed record", map[string]any{"activity_id": ids.MustParse("01a05500-0000-7000-8000-0000000000a1")}, true},
+	{"a contract record", map[string]any{"activity_id": crmcontracts.Id(ids.MustParse("01a05500-0000-7000-8000-0000000000a1"))}, true},
+	{"a malformed request wins over a different activity", map[string]any{"request_activity_id": 42, "activity_id": "01a05500-0000-7000-8000-0000000000a1"}, false},
 	// A generic task acts on its subject and links, without source evidence.
 	{"a verb with other arguments", map[string]any{"subject": "Agree the next step", "source": "manual"}, false},
 	// firstOutreach builds its move with no arguments at all; the card

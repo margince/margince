@@ -55,8 +55,7 @@ const business = (
   </Panel>
 );
 
-// A work column with a rail of context on the RIGHT — the Brief screen's shape
-// and the company record's.
+// A work column with a rail of context on the right: the Brief screen's shape.
 export const Aside: Story = {
   args: {
     shape: "aside",
@@ -66,8 +65,8 @@ export const Aside: Story = {
   },
 };
 
-// The rail on the LEFT: what the subject IS, read before what is happening to
-// it — the contact record's shape.
+// The rail on the left: what the subject is, read before what is happening to
+// it.
 export const Rail: Story = {
   args: {
     shape: "rail",
@@ -99,6 +98,19 @@ export const Single: Story = {
     main: work,
   },
 };
+
+// Each column on its own pane, the surface a record page's two cards stand on.
+export const Panes: Story = {
+  args: {
+    shape: "aside",
+    panes: true,
+    main: work,
+    aside: business,
+    asideLabel: "Context",
+  },
+};
+
+export const PanesDark: Story = { ...Panes, globals: { theme: "dark" } };
 
 /**
  * Both rails at the first fold: the work column goes full width and the two
@@ -133,6 +145,13 @@ export const Folded: Story = {
     aside: business,
     asideLabel: "Context",
   },
+};
+
+// Folded, the panes stack and keep their chrome.
+export const PanesFolded: Story = {
+  parameters: FOLDED_VIEWPORT,
+  globals: { viewport: { value: "folded" } },
+  args: { ...Panes.args },
 };
 
 /**

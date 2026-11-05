@@ -3,7 +3,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -228,8 +228,8 @@ describe("what the builder offers", () => {
       />,
     );
 
-    // The badge is what tells a reader this column is theirs rather than the
-    // product's — AC-filters-and-views-3 asks for it by name. Neutral: emerald
+    // The badge tells a reader this column is theirs and not the product's;
+    // AC-filters-and-views-3 asks for it by name. Neutral, because the accent
     // is the page's one primary action.
     const badge = screen.getByText("Custom field").closest(".badge");
     expect(badge?.className).not.toContain("badge-accent");
@@ -582,7 +582,9 @@ describe("editing the tree", () => {
 });
 
 describe("the join between conditions", () => {
-  const MATCH_ALL = "and: match all of these. Press to match any.";
+  const MATCH_ALL =
+    "and: the conditions on both sides must match. Press for or.";
+  const MATCH_ANY = "or: a match on either side is enough. Press for and.";
 
   it("draws no connector until there are two conditions", () => {
     resetIDsForTest();
@@ -593,56 +595,101 @@ describe("the join between conditions", () => {
     expect(screen.queryByRole("button", { name: MATCH_ALL })).toBeNull();
   });
 
-  it("flips the whole group from either connector", async () => {
+  const owner = { field: "owner_id", op: "eq", value: "u1" };
+  const name = { field: "full_name", op: "eq", value: "ann" };
+  const score = { field: "cf_deal_score", op: "gt", value: 3 };
+
+  function threeConditions(join: "and" | "or") {
+    return newGroup(join, [
+      newLeaf("owner_id", "eq", "u1"),
+      newLeaf("full_name", "eq", "ann"),
+      newLeaf("cf_deal_score", "gt", 3),
+    ]);
+  }
+
+  function words(): (string | null)[] {
+    return screen
+      .getAllByRole("button", { name: /^(and|or): / })
+      .map((button) => button.textContent);
+  }
+
+  it("flips only the connector pressed, and boxes the and run", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={threeConditions("and")} />);
+
+    expect(words()).toEqual(["and", "and"]);
+    await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[1]);
+
+    // "and" binds tighter, so the first two stay together as one run.
+    expect(wire()).toEqual({ or: [{ and: [owner, name] }, score] });
+    expect(words()).toEqual(["and", "or"]);
+    expect(screen.getByRole("group", { name: "All of these" })).toBeTruthy();
+  });
+
+  it("flips the first connector alone, leaving the second as it was", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={threeConditions("and")} />);
+
+    await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[0]);
+
+    expect(wire()).toEqual({ or: [owner, { and: [name, score] }] });
+    expect(words()).toEqual(["or", "and"]);
+  });
+
+  it("joins a run back from its own connector", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(<Harness start={threeConditions("and")} />);
+
+    await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[1]);
+    await user.click(screen.getByRole("button", { name: MATCH_ANY }));
+
+    expect(wire()).toEqual({ and: [owner, name, score] });
+    expect(words()).toEqual(["and", "and"]);
+    expect(screen.queryByRole("group")).toBeNull();
+  });
+
+  it("splits a run from the connector inside it", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
       <Harness
-        start={newGroup("and", [
-          newLeaf("owner_id", "eq", "u1"),
-          newLeaf("full_name", "eq", "ann"),
+        start={newGroup("or", [
+          newGroup("and", [
+            newLeaf("owner_id", "eq", "u1"),
+            newLeaf("full_name", "eq", "ann"),
+          ]),
           newLeaf("cf_deal_score", "gt", 3),
         ])}
       />,
     );
 
-    const connectors = screen.getAllByRole("button", { name: MATCH_ALL });
-    expect(connectors.map((button) => button.textContent)).toEqual([
-      "and",
-      "and",
-    ]);
-    await user.click(connectors[1]);
+    const run = screen.getByRole("group", { name: "All of these" });
+    await user.click(within(run).getByRole("button", { name: MATCH_ALL }));
 
-    // One group has one join, so every word between its rows changes at once.
-    expect(wire()).toEqual({
-      or: [
-        { field: "owner_id", op: "eq", value: "u1" },
-        { field: "full_name", op: "eq", value: "ann" },
-        { field: "cf_deal_score", op: "gt", value: 3 },
-      ],
-    });
-    const flipped = screen.getAllByRole("button", {
-      name: "or: match any of these. Press to match all.",
-    });
-    expect(flipped.map((button) => button.textContent)).toEqual(["or", "or"]);
+    expect(wire()).toEqual({ or: [owner, name, score] });
+    expect(words()).toEqual(["or", "or"]);
+  });
+
+  it("keeps an all-or filter as it was until a connector is pressed", () => {
+    resetIDsForTest();
+    render(<Harness start={threeConditions("or")} />);
+
+    expect(words()).toEqual(["or", "or"]);
+    expect(wire()).toEqual({ or: [owner, name, score] });
   });
 });
 
 describe("groups", () => {
-  it("offers a group only from two conditions, and seeds it with one", async () => {
+  it("offers a group beside the first condition, and seeds it with one", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
     );
-    expect(
-      screen.queryByRole("button", { name: "More for these conditions" }),
-    ).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Add condition" }));
-    await user.click(
-      screen.getByRole("button", { name: "More for these conditions" }),
-    );
     await user.click(screen.getByRole("button", { name: "Add a group" }));
 
     // The opposite join, holding a condition: an empty group would stop the
@@ -650,14 +697,46 @@ describe("groups", () => {
     expect(wire()).toEqual({
       and: [
         { field: "owner_id", op: "eq", value: "u1" },
-        { field: "owner_id", op: "eq", value: "" },
         { or: [{ field: "owner_id", op: "eq", value: "" }] },
       ],
     });
     expect(screen.getByRole("group", { name: "Any of these" })).toBeTruthy();
   });
 
-  it("grows a nested group from its own foot and its own menu", async () => {
+  it("offers no group in a filter with no condition yet", () => {
+    resetIDsForTest();
+    render(<Harness start={newGroup("and", [])} />);
+
+    expect(screen.getByRole("button", { name: "Add condition" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Add a group" })).toBeNull();
+  });
+
+  it("switches a one-condition group between all and any from its head", async () => {
+    resetIDsForTest();
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={newGroup("and", [
+          newLeaf("owner_id", "eq", "u1"),
+          newGroup("or", [newLeaf("full_name", "contains", "ann")]),
+        ])}
+      />,
+    );
+
+    // One condition has no connector word between rows, so the head is the
+    // only place this group's join can be seen and changed.
+    const head = screen.getByRole("group", { name: "Conditions to match" });
+    await user.click(
+      within(head).getByRole("button", { name: "All of these" }),
+    );
+
+    expect(wire().and[1]).toEqual({
+      and: [{ field: "full_name", op: "contains", value: "ann" }],
+    });
+    expect(screen.getByRole("group", { name: "All of these" })).toBeTruthy();
+  });
+
+  it("grows a nested group from its own foot", async () => {
     resetIDsForTest();
     const user = userEvent.setup();
     render(
@@ -678,9 +757,9 @@ describe("groups", () => {
         { field: "owner_id", op: "eq", value: "" },
       ],
     });
-    // The group's own menu, named apart from the root's.
+    // The group's own offer of a group, named apart from the root's.
     expect(
-      screen.getByRole("button", { name: "More for this group" }),
+      screen.getByRole("button", { name: "Add nested group" }),
     ).toBeTruthy();
   });
 
@@ -758,11 +837,9 @@ describe("groups", () => {
     // Every group holds two conditions. Depths 2 and 3 may still nest; depth 4
     // may not, or the tree is one the server refuses as filter_too_deep.
     expect(
-      screen.getAllByRole("button", { name: "More for this group" }),
+      screen.getAllByRole("button", { name: "Add nested group" }),
     ).toHaveLength(2);
-    expect(
-      screen.getByRole("button", { name: "More for these conditions" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add a group" })).toBeTruthy();
   });
 });
 
@@ -841,16 +918,24 @@ describe("the value control follows the operator, then the type", () => {
     expect(screen.getByRole("textbox", { name: "Values" })).toBeTruthy();
   });
 
-  it("takes a date box for a date field", () => {
+  it("takes a date box for a date field, with a calendar to pick the day from", async () => {
     resetIDsForTest();
+    const user = userEvent.setup();
     render(
       <Harness
         start={newGroup("and", [newLeaf("created_at", "gte", "2026-07-18")])}
       />,
     );
 
-    const value = screen.getByLabelText("Value");
-    expect(value.getAttribute("type")).toBe("date");
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Value" }).value,
+    ).toBe("18/07/2026");
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Monday, 20 July 2026" }),
+    );
+
+    expect(screen.getByTestId("wire").textContent).toContain('"2026-07-20"');
   });
 
   it("asks present-or-empty for `exists` rather than a typed value", async () => {

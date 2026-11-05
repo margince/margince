@@ -10,6 +10,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ContactDetails } from "./contactdetails";
+import { Employers } from "./contactemployers";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 
@@ -41,6 +43,7 @@ const view: Contact360 = {
     writable: true,
     version: 1,
     social: { linkedin: "https://www.linkedin.com/in/dana" },
+    primary_email: "dana@bought.example",
     emails: [
       {
         id: "e-bought",
@@ -78,10 +81,34 @@ const view: Contact360 = {
       },
     ],
     bought_fields: [
-      { target: "title", provider: "surfe", applied_at: JUNE },
-      { target: "email:e-bought", provider: "surfe", applied_at: JUNE },
-      { target: "phone:ph-bought", provider: "surfe", applied_at: JUNE },
-      { target: "employment:rel-1", provider: "surfe", applied_at: JUNE },
+      {
+        target: "title",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
+      {
+        target: "email:e-bought",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
+      {
+        target: "phone:ph-bought",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
+      {
+        target: "employment:rel-1",
+        provider: "surfe",
+        applied_at: JUNE,
+        paid: true,
+        trigger: "manual",
+      },
     ],
     ...CAPTURED,
   },
@@ -135,7 +162,30 @@ function mount(shown: Contact360 = view) {
   render(
     <StoryProviders>
       <ContactSubtitle view={shown} />
-      <ContactRail view={shown} guard={undefined} />
+      <ContactRail
+        view={shown}
+        consent={{
+          guard: undefined,
+          loading: false,
+          failed: false,
+          onRetry: () => undefined,
+        }}
+        writeRefusalId="write-refused"
+      />
+      <Employers view={shown} />
+    </StoryProviders>,
+  );
+}
+
+// What a provider sold beyond the fields is drawn with the full details on the
+// Research tab, not in the left column.
+function mountDetails() {
+  render(
+    <StoryProviders>
+      <ContactDetails
+        contact={view.contact}
+        profiles={view.provider_profiles}
+      />
     </StoryProviders>,
   );
 }
@@ -208,7 +258,7 @@ describe("bought values on the contact page", () => {
 
   it("dates each bought location and department by the run that last reported it", async () => {
     const user = userEvent.setup();
-    mount();
+    mountDetails();
     await screen.findByText("Bought from Surfe");
     // The month, in words, is what tells the two runs apart in any zone.
     for (const [value, at] of [
@@ -220,5 +270,49 @@ describe("bought values on the contact page", () => {
       const receipt = await screen.findByRole("region", { name: mark(value) });
       expect(receipt.textContent).toContain(at);
     }
+  });
+
+  it("calls a free automatic run's values from the provider and names the sweep", async () => {
+    const sweep = {
+      ...view.contact,
+      bought_fields: (view.contact.bought_fields ?? []).map((f) => ({
+        ...f,
+        paid: false,
+        trigger: "automatic_backfill" as const,
+      })),
+    };
+    render(
+      <StoryProviders>
+        <ContactSubtitle view={{ ...view, contact: sweep }} />
+        <ContactDetails contact={sweep} profiles={view.provider_profiles} />
+      </StoryProviders>,
+    );
+    await screen.findByText("From Surfe");
+    expect(screen.queryByText("Bought from Surfe")).toBeNull();
+    expect(screen.getByText("Added by the catch-up sweep")).toBeTruthy();
+    const freeChip = en["evidence.explainBeside"]
+      .replace("{label}", en["evidence.fromProvider"])
+      .replace("{value}", "Head of Revenue");
+    expect(screen.getByRole("button", { name: freeChip })).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: beside("Head of Revenue") }),
+    ).toBeNull();
+  });
+
+  it("says a seat requested a paid run and keeps the bought wording", async () => {
+    const requested = {
+      ...view.contact,
+      bought_fields: (view.contact.bought_fields ?? []).map((f) => ({
+        ...f,
+        requested_by: "u-1",
+      })),
+    };
+    render(
+      <StoryProviders>
+        <ContactDetails contact={requested} profiles={view.provider_profiles} />
+      </StoryProviders>,
+    );
+    await screen.findByText("Bought from Surfe");
+    expect(screen.getByText(/^Requested by/)).toBeTruthy();
   });
 });

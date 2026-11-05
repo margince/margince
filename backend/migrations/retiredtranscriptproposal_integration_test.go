@@ -16,11 +16,14 @@ func TestTheRetiredTranscriptProposalUpgradeClosesOnlyItsPendingProposals(t *tes
 	conn := connect(t, dsn)
 	headSchema(t, conn)
 	ctx := context.Background()
-	seed, err := conn.Exec(ctx, `INSERT INTO approval(kind,status,proposed_by,proposed_change,diff_hash,expires_at,decided_at)
- VALUES ('transcript_proposal','pending','agent:test','{}','t1',now() + interval '1 day',NULL),
-        ('transcript_proposal','pending','agent:test','{}','t2',now() + interval '2 days',NULL),
-        ('transcript_proposal','approved','agent:test','{}','t3',now() + interval '1 day',now()),
-        ('commitment_task','pending','agent:test','{}','t4',now() + interval '1 day',NULL)`)
+	if _, err := conn.Exec(ctx, `INSERT INTO app_user (email, display_name) VALUES ('decider@seed.test', 'Decider')`); err != nil {
+		t.Fatal(err)
+	}
+	seed, err := conn.Exec(ctx, `INSERT INTO approval(kind,status,proposed_by,proposed_change,diff_hash,expires_at,decided_at,requested_decider_id,requested_decider_source)
+ VALUES ('transcript_proposal','pending','agent:test','{}','t1',now() + interval '1 day',NULL,(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of'),
+        ('transcript_proposal','pending','agent:test','{}','t2',now() + interval '2 days',NULL,(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of'),
+        ('transcript_proposal','approved','agent:test','{}','t3',now() + interval '1 day',now(),(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of'),
+        ('commitment_task','pending','agent:test','{}','t4',now() + interval '1 day',NULL,(SELECT id FROM app_user WHERE email = 'decider@seed.test'),'on_behalf_of')`)
 	if err != nil || seed.RowsAffected() != 4 {
 		t.Fatalf("seeding approvals: rows=%d err=%v", seed.RowsAffected(), err)
 	}

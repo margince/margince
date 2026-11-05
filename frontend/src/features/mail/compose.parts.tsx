@@ -1,0 +1,475 @@
+import { Ellipsis, ShieldAlert, Trash2 } from "lucide-react";
+import { type ReactNode, useState } from "react";
+import { EntityRef } from "../../components/entityref";
+import { SendMark } from "../../components/sendpermission";
+import { Button, Field } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
+import { EmailText } from "../../design-system/emailtext";
+import { ErrorLine } from "../../design-system/errorline";
+import { IconAction } from "../../design-system/iconaction";
+import { RichText } from "../../design-system/richtext";
+import { Select } from "../../design-system/select";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import {
+  asksWhy,
+  type CommunicationContext,
+  contextOptions,
+} from "../../lib/compose-context";
+import {
+  authorName,
+  correspondenceSide,
+  writtenByReader,
+} from "../../lib/messagevoice";
+import type { RelinkKind } from "../../lib/recordtargets";
+import { useRichTextLabels } from "../../lib/richtextlabels";
+import { useViewerZone } from "../../lib/viewerzone";
+import type { CarriageViolation } from "./carriage";
+import type { Activity, VoiceProfile } from "./compose";
+import { AiDraftBand } from "./composeaiband";
+import { CarriageNotice } from "./composeattachments";
+import type { ComposeFields } from "./composefields";
+import { FieldNeed } from "./composehead";
+import type { useSavedDraft } from "./composesaveddraft";
+import { SavedDraftFailure } from "./composesaveddraftnotices";
+import { momentLabel, momentOf, ScheduleMenu } from "./composeschedule";
+import type { ComposeSend, MissingField } from "./composesend";
+import { SignOffPreview } from "./composesignoff";
+import type { VoiceDraft } from "./composevoicedraft";
+import { SendRefusal } from "./sendrefusal";
+
+// sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
+// A marketing send's unsubscribe link is one addressee's consent record, so a
+// second addressee is refused. The server rule stays the authority, keyed on
+// the marketing category, which a reply never carries.
+export function sharedUnsubscribeAhead(
+  to: string[],
+  cc: string[],
+  context: CommunicationContext | undefined,
+): boolean {
+  if (context !== "marketing") {
+    return false;
+  }
+  const addressees = new Set(
+    [...to, ...cc].map((address) => address.trim().toLowerCase()),
+  );
+  return addressees.size > 1;
+}
+
+// The mail-only send-time notice: a shared-unsubscribe-token risk. A channel
+// reply has no addressee list to warn about, so this renders nothing there.
+// The empty-recipient line belongs to the To field, not the foot of the drawer,
+// because that is closer to the thing to fix.
+export function MailSendNotices({
+  to,
+  cc,
+  context,
+  newContacts = [],
+}: Readonly<{
+  to: string[];
+  cc: string[];
+  context: CommunicationContext | undefined;
+  /** Addresses on no record, which the send adds as the sender's contacts. */
+  newContacts?: readonly string[];
+}>) {
+  const t = useT();
+  return (
+    <>
+      {sharedUnsubscribeAhead(to, cc, context) && (
+        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
+      )}
+      {newContacts.map((address) => (
+        <Callout
+          key={address}
+          kind="standing"
+          title={t("compose.newContact", { address })}
+        />
+      ))}
+    </>
+  );
+}
+
+// The composer's window: docked beside the page, at its own size, grown or
+// folded. Each opening starts at its own size.
+/**
+ * The record the message is filed under, as a way back to it.
+ *
+ * The window docks and outlives the page that opened it. A reader who started
+ * from the day's queue or a worklist has the record nowhere on screen.
+ *
+ * Following this costs nothing, so the link opens in place. `EntityRef` offers
+ * `newTab` for a reference inside a dialog, where following it would lose the
+ * draft. The dock makes that not so here.
+ *
+ * It renders the window beside the routed page rather than inside it. A route
+ * change leaves the window mounted, and the words are kept on the server as
+ * they are typed.
+ *
+ * Drawn wherever the composer is, the record's own page included. What sits
+ * behind the window changes while it stays open. A link that came and went with
+ * the page would be the harder of the two to read.
+ *
+ * A folded window shows its bar and not this. That bar is one button, and a
+ * link inside a button is markup no reader can use.
+ */
+export function ComposeAbout({
+  kind,
+  id,
+  name,
+}: Readonly<{
+  kind: RelinkKind;
+  id: string | null | undefined;
+  name: string | undefined;
+}>) {
+  const t = useT();
+  if (!id) {
+    return null;
+  }
+  return (
+    <span className="compose-about">
+      <span className="compose-about-label">{t("compose.filedUnder")}</span>
+      <EntityRef kind={kind} id={id} name={name} />
+    </span>
+  );
+}
+
+export function ComposeFrame({
+  title,
+  aside,
+  onClose,
+  closeDisabled,
+  bodyId,
+  openedFrom,
+  children,
+}: Readonly<{
+  title: string;
+  /** The record the draft files under, named in the bar. */
+  aside?: ReactNode;
+  onClose: () => void;
+  closeDisabled: boolean;
+  openedFrom?: HTMLElement;
+  /** The words' field, where focus lands as the window opens. */
+  bodyId: string;
+  children: ReactNode;
+}>) {
+  const [state, setState] = useState<DockState>("open");
+  return (
+    <DockedWindow
+      title={title}
+      aside={aside}
+      state={state}
+      onStateChange={setState}
+      onClose={onClose}
+      closeDisabled={closeDisabled}
+      initialFocusTo={() => document.getElementById(bodyId)}
+      openedFrom={openedFrom}
+    >
+      {children}
+    </DockedWindow>
+  );
+}
+
+// The footer: files and the draft's state on the left. The send and its other
+// moments sit at the end, where the hand ends up.
+export function ComposeFoot({
+  confirmLabel,
+  send,
+  isChannelReply,
+  held,
+  onPickMoment,
+  sendAt,
+  savedDraft,
+  busy,
+  addressRefused,
+  marksRef,
+}: Readonly<{
+  confirmLabel: string;
+  send: ComposeSend;
+  /** A channel reply goes now, and has no engine answer to mark. */
+  isChannelReply: boolean;
+  /** A write about these words is in flight, so the send waits for it. */
+  held: boolean;
+  onPickMoment: () => void;
+  sendAt: string;
+  savedDraft: ReturnType<typeof useSavedDraft>;
+  /** A send or a rejection is in flight. */
+  busy: boolean;
+  /** A recipient line holds text that is not an address. */
+  addressRefused: boolean;
+  /** The place the body's formatting marks draw, beside Send. */
+  marksRef: (node: HTMLDivElement | null) => void;
+}>) {
+  const readerZone = useViewerZone();
+  const t = useT();
+  const { locale } = useLocale();
+  const scheduled = momentOf(sendAt);
+  return (
+    <div className="compose-foot">
+      {send.sendError && <ErrorLine>{send.sendError}</ErrorLine>}
+      <SavedDraftFailure draft={savedDraft} />
+      <div className="compose-foot-row">
+        <span className="actions-split">
+          <Button
+            variant="primary"
+            onClick={send.confirm}
+            pending={send.send.isPending}
+            disabled={held}
+            reason={
+              addressRefused ? t("compose.sendWaitsForAddress") : undefined
+            }
+          >
+            {confirmLabel}
+          </Button>
+          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
+        </span>
+        {!isChannelReply && (
+          <SendMark {...send.permission} blocked={send.blocked} />
+        )}
+        <div className="compose-foot-marks" ref={marksRef} />
+        <span className="t-caption compose-foot-status" role="status">
+          {scheduled
+            ? t("compose.willGoOut", {
+                when: momentLabel(scheduled, locale, readerZone),
+              })
+            : savedDraftStatus(savedDraft, t)}
+        </span>
+        {savedDraft.enabled && (
+          <IconAction
+            label={t("compose.discardMessage")}
+            icon={<Trash2 aria-hidden="true" />}
+            onClick={savedDraft.discard}
+            disabled={busy}
+            pending={savedDraft.removing}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// What became of the draft as the reader writes: being kept, or kept.
+function savedDraftStatus(
+  savedDraft: ReturnType<typeof useSavedDraft>,
+  t: ReturnType<typeof useT>,
+): string {
+  if (savedDraft.saving) return t("compose.draftSaving");
+  if (savedDraft.kept) return t("compose.savedDraftSaved");
+  return "";
+}
+
+// What the send came back with, under the words it is about. That is a send
+// the server cannot make yet, or a refusal with what to do about it. A channel
+// reply states its one promise here too, having no checks to state it in.
+export function ComposeOutcome({
+  isChannelReply,
+  bodyKey,
+  sendUnavailable,
+  send,
+}: Readonly<{
+  isChannelReply: boolean;
+  bodyKey: MessageKey;
+  sendUnavailable: boolean;
+  send: ComposeSend;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {isChannelReply && <p>{t(bodyKey)}</p>}
+      {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
+      <SendRefusal refusal={send.refusal} />
+    </>
+  );
+}
+
+// The words the reader writes: the ask for a model's draft above them, the
+// sign-off and the thread they answer under them.
+export function ComposeBody({
+  bodyId,
+  fields,
+  mail,
+  replying,
+  earlier,
+  voiceMaturity,
+  channelLabel,
+  carriageBlocks,
+  send,
+  sendBlocked,
+  voice,
+  marksIn,
+  attach,
+}: Readonly<{
+  bodyId: string;
+  fields: ComposeFields;
+  /** Mail drafts and signs; a channel message does neither. */
+  mail: boolean;
+  replying: boolean;
+  /** The thread's earlier messages, folded under the words of a reply. */
+  earlier?: ReactNode;
+  voiceMaturity: VoiceProfile["maturity"] | undefined;
+  channelLabel: string | undefined;
+  carriageBlocks: readonly CarriageViolation[];
+  /** The fields a press of Send flagged; Cmd/Ctrl+Enter is that press. */
+  send: ComposeSend;
+  /** Cmd/Ctrl+Enter is Send, and waits whenever the Send button does. */
+  sendBlocked: boolean;
+  voice: VoiceDraft;
+  /** Where the editor's marks draw, in the foot; null until it mounts. */
+  marksIn: Element | null;
+  /** The paperclip, among the editor's own marks. */
+  attach: ReactNode;
+}>) {
+  const t = useT();
+  const richTextLabels = useRichTextLabels();
+  const frozen = voice.rejectionInFlight;
+  return (
+    <>
+      {mail && (
+        <AiDraftBand
+          replying={replying}
+          fields={fields}
+          voice={voice}
+          voiceMaturity={voiceMaturity}
+        />
+      )}
+      {/* Both renderings travel. A text client, a screen reader and a spam
+          filter read the plain part. */}
+      <RichText
+        id={bodyId}
+        value={fields.html}
+        onChange={fields.editBody}
+        label={t("compose.body")}
+        placeholder={t("compose.bodyPlaceholder")}
+        labels={richTextLabels}
+        rows={8}
+        grow
+        disabled={frozen}
+        actions={attach}
+        footIn={marksIn}
+        revealText={voice.drafted}
+        thinking={voice.control.pending ? t("compose.draftingBody") : null}
+        // A held Send still claims the keys, so they type no line break.
+        onSubmit={() => {
+          if (!sendBlocked) send.confirm();
+        }}
+        undoableRevision={fields.undoableRevision}
+      />
+      <FieldNeed
+        show={send.flagged.has("body")}
+        need={t("compose.missingBody")}
+      />
+      {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}
+      {earlier}
+      <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
+    </>
+  );
+}
+
+// Why the reader is writing, asked where the record does not answer it. A
+// reply derives its category from the thread it answers, which the checks say.
+export function ComposeWhy({
+  anchorActivity,
+  flagged,
+  context,
+  onContextChange,
+}: Readonly<{
+  anchorActivity: Activity | undefined;
+  flagged: ReadonlySet<MissingField>;
+  context: CommunicationContext | "";
+  onContextChange: (next: CommunicationContext | "") => void;
+}>) {
+  const t = useT();
+  if (!asksWhy(anchorActivity)) {
+    return null;
+  }
+  const missing = context === "";
+  // One strip in the warning band: what is missing and why it matters, with
+  // the pick that fixes it at the end. Once picked it stays, without the warning.
+  return (
+    <div
+      className={
+        missing ? "compose-strip compose-strip-warning" : "compose-strip"
+      }
+    >
+      {missing && <ShieldAlert aria-hidden="true" />}
+      <p className="compose-strip-text">
+        {missing ? (
+          <>
+            <strong>{t("compose.whyMissing")}</strong>{" "}
+            {t("compose.whyMissingText")}
+          </>
+        ) : (
+          t("compose.why")
+        )}
+      </p>
+      <Field
+        className="compose-strip-field"
+        label={t("compose.why")}
+        labelHidden
+        error={flagged.has("context") ? t("compose.missingWhy") : undefined}
+      >
+        {(control) => (
+          <Select
+            {...control}
+            options={contextOptions(t).filter((o) => o.value !== "")}
+            value={context}
+            placeholder={t("compose.whyPick")}
+            onChange={(value) =>
+              onContextChange(value as CommunicationContext | "")
+            }
+          />
+        )}
+      </Field>
+    </div>
+  );
+}
+
+export function ReplyQuote({
+  message,
+}: Readonly<{ message: Activity | undefined }>) {
+  const readerZone = useViewerZone();
+  const t = useT();
+  const { locale } = useLocale();
+  const [open, setOpen] = useState(false);
+  if (!message?.body || message.content_state === "withheld") return null;
+  const who = writtenByReader(message)
+    ? t("compose.quotedYou")
+    : (authorName(message) ??
+      (correspondenceSide(message) === "ours"
+        ? t(message.voice?.author ? "compose.quotedTeam" : "compose.quotedYou")
+        : message.email_summary?.counterparty?.trim() || t("email.received")));
+  return (
+    <div className="compose-earlier">
+      <IconAction
+        label={t(open ? "compose.selectedHide" : "compose.selectedShow")}
+        icon={
+          <span className="compose-earlier-pill">
+            <Ellipsis aria-hidden="true" />
+          </span>
+        }
+        variant="ghost"
+        pressed={open}
+        onClick={() => setOpen((was) => !was)}
+      />
+      {open && (
+        <figure className="compose-quoted">
+          <figcaption className="t-caption">
+            {t("compose.quotedHeader", {
+              when: formatActivityWhen(
+                message.occurred_at,
+                message.occurred_precision,
+                locale,
+                readerZone,
+              ),
+              who,
+            })}
+          </figcaption>
+          <blockquote>
+            <EmailText body={message.body} />
+          </blockquote>
+        </figure>
+      )}
+    </div>
+  );
+}

@@ -69,12 +69,16 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		}
 		bounded[source] = len(*lane) >= bound
 	}
+	atCap("domain_question", day.DomainQuestions, DomainQuestionLimit)
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)
 	atCap(sourceNoticeCase, day.NoticeCases, doneCap)
 	atCap("ai_work_health", day.AiWorkHealth, doneCap)
 	atCap("notice", day.Notices, doneCap)
+	if day.Notices != nil && day.NoticesMoreAvailable != nil {
+		bounded["notice"] = bounded["notice"] || *day.NoticesMoreAvailable
+	}
 	atCap("automation_run", day.AutomationHealth, doneCap)
 	atCap("bounce", day.Bounces, doneCap)
 	atCap("introduction_request", day.Introductions, doneCap)
@@ -91,16 +95,26 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// itself complete while the twelfth pushed a thirteenth off the page — the
 	// under-reading a truncation flag exists to prevent.
 	atCap(sourceMeetingOutcome, day.MeetingsUnreported, plannedCap)
+	// The forward lane keeps more than its bound when the reader still has
+	// meetings to prepare, so its length cannot say whether it cut one.
+	if day.Meetings != nil {
+		bounded[sourceMeeting] = day.MeetingsMoreAvailable == nil || *day.MeetingsMoreAvailable
+	}
 	atCap(sourceAtRisk, day.AtRisk, quietDealBound)
+	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
+		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
+	}
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
+	if day.RelationshipDecay != nil && day.RelationshipDecayMoreAvailable != nil {
+		bounded[sourceDecay] = bounded[sourceDecay] || *day.RelationshipDecayMoreAvailable
+	}
 	atCap("conversation_claim", day.Commitments, doneCap)
-	// The decision lane is read deeper than the rest, because a batch row
-	// counts a pile and a count taken from a page of ten would report ten over
-	// a hundred and fifty. Filling that bound says the LANE was truncated, so
-	// the staged proposals sharing it cannot claim to be complete — the
-	// conservative reading, since the alternative is telling a rep there are no
-	// more of a kind when there are.
-	bounded["approval"] = len(day.NeedsYou) >= batchScanDepth
+	// Approvals know their exact total too, counted under the same query the
+	// lane listed. The lane's length cannot answer this: pairs and suggestions
+	// share its depth, so a full lane says nothing about the approvals in it.
+	if day.Counts.ApprovalsOpen != nil {
+		bounded[crmcontracts.WorklistItemSourceApproval] = shownFrom(day.NeedsYou, string(crmcontracts.WorklistItemSourceApproval)) < *day.Counts.ApprovalsOpen
+	}
 	// The duplicate pairs know their own TOTAL, so they do not guess from the
 	// page, and the difference is not academic. Their read is bounded twice:
 	// once by the census depth above, and again by the page the dedupe queue
@@ -111,7 +125,10 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	// Counts.DuplicatesOpen is that total, taken by the store under the same
 	// visibility rule as the page, so the two are answering one question about
 	// one reader.
-	bounded[sourceDuplicate] = shownFrom(day.NeedsYou, sourceDuplicate) < openPairs(day)
+	// Cases count into the same total, so both sources are judged against it.
+	shownDuplicates := shownFrom(day.NeedsYou, sourceDuplicate) + shownFrom(day.NeedsYou, sourceContactCase)
+	bounded[sourceDuplicate] = shownDuplicates < openPairs(day)
+	bounded[sourceContactCase] = bounded[sourceDuplicate]
 	// Suggestions know their total too, for the same reason, and are absent
 	// when the reader may not read them.
 	if day.Counts.DealSuggestionsOpen != nil {
@@ -123,7 +140,8 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	return bounded
 }
 
-// openPairs is how many open duplicate pairs this reader has in total, which
+// openPairs is how many open duplicate pairs and contact cases this reader has
+// in total, which
 // the lane omits entirely when it has none.
 func openPairs(day crmcontracts.Attention) int {
 	if day.Counts.DuplicatesOpen == nil {
@@ -224,15 +242,28 @@ const (
 // full and the other is not, which on a quiet day is the common case rather
 // than the edge one.
 func plannedWindowAtCap(lane []crmcontracts.AttentionItem) bool {
-	var today, upcoming int
+	today, upcoming := plannedWindowsAtCap(lane, false)
+	return today || upcoming
+}
+
+// plannedWindowsAtCap reports, for each half of the planned lane, whether its
+// read came back at its cap. withReminded counts reminded rows toward their
+// window, because a window read may have returned them too. A count asks it
+// that way: a false cut costs one count, a missed cut states a wrong total.
+func plannedWindowsAtCap(lane []crmcontracts.AttentionItem, withReminded bool) (today, upcoming bool) {
+	var todays, upcomings int
 	for _, item := range lane {
-		if isUpcoming(item.DueGroup) {
-			upcoming++
+		// The reminder read is never cut, so its rows say nothing of either cap.
+		if reminded(item) && !withReminded {
 			continue
 		}
-		today++
+		if isUpcoming(item.DueGroup) {
+			upcomings++
+			continue
+		}
+		todays++
 	}
-	return today >= plannedCap || upcoming >= upcomingCap
+	return todays >= plannedCap, upcomings >= upcomingCap
 }
 
 // isUpcoming reports whether a row came from the second read. Absent means the

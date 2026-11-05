@@ -388,7 +388,7 @@ func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	if _, err := e.Owner.Exec(context.Background(),
 		`INSERT INTO offer (id, deal_id, offer_number, currency, source, captured_by)
 		 VALUES ($1, $2, $3, 'EUR', 'manual', 'human:fixture')`,
-		offer, deal, "AN-"+offer.String()); err != nil {
+		offer, deal, fixtureOfferNumber(offer)); err != nil {
 		t.Fatalf("seeding the offer: %v", err)
 	}
 

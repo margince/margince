@@ -33,6 +33,8 @@ func TestRenewalReminderObjectsMatchesFieldObjectsExactly(t *testing.T) {
 		"contract": "a custom-field target that no automation can fire on: " +
 			"taskeffect's owner read answers UnsupportedEntityError for it, and " +
 			"automations_preview's auth.ScopeClauseFor does not know the table",
+		"activity": "a custom-field target with no owner_id: automations_preview's auth.ScopeClauseFor " +
+			"refuses it as not a row-scoped table, so a reminder's preview would error",
 	}
 
 	inFields := map[string]bool{}

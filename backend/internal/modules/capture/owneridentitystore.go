@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -88,24 +89,21 @@ func NewOwnerIdentityStore(db *database.DB) *OwnerIdentityStore {
 // seatItself is the caller when they are a HUMAN seat acting for themselves,
 // and a refusal otherwise.
 //
-// auth.RequireHuman is not enough here, and deliberately so: it refuses an
-// agent and a buyer, and admits the connector and system principals — which is
-// right for the reads it guards, and wrong for this list. A connector
-// principal carries the granting seat's UserID, so under RequireHuman alone a
-// connector could list, add and withdraw that seat's private identities. The
-// list says which of a contact's mail is theirs alone; nothing but that contact
-// touches it.
+// auth.RequireHumanOrItsAgent is not enough here: it admits the connector and
+// system principals. A connector carries the granting seat's UserID, so it could
+// list, add and withdraw that seat's private identities. The list says which of
+// a user's mail is theirs alone, so only they or their own agent touch it.
 func seatItself(ctx context.Context) (principal.Principal, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return principal.Principal{}, err
 	}
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
 		return principal.Principal{}, err
 	}
-	if actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return principal.Principal{}, fmt.Errorf(
-			"capture: an owner identity is a seat's own claim about themselves: %w", apperrors.ErrPermissionDenied)
+			"capture: an owner identity is a user's own claim about themselves: %w", apperrors.ErrPermissionDenied)
 	}
 	return actor, nil
 }
@@ -167,14 +165,16 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	var out OwnerIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if kind == IdentityKindAddress {
-			if err := lockOwnAddressTx(ctx, tx, value); err != nil {
+			if err := storekit.LockSeatAddressClaims(ctx, tx, value); err != nil {
 				return err
 			}
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, kind, value) DO UPDATE SET value = EXCLUDED.value
+			ON CONFLICT (user_id, kind, value) DO UPDATE SET value = EXCLUDED.value,
+				source = CASE WHEN capture_owner_identity.source = '`+IdentitySourceDeliveredTo+`' THEN EXCLUDED.source
+				ELSE capture_owner_identity.source END
 			RETURNING id, user_id, kind, value, source, created_at`,
 			actor.UserID, kind, value, IdentitySourceUser, actor.ID).
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {
@@ -210,6 +210,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := purgeExpiredWithdrawalsTx(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockIdentityClaimTx(ctx, tx, id, actor.UserID); err != nil {
 			return err
 		}
 		var withdrawn withdrawnIdentity
@@ -390,6 +393,10 @@ func seatLoginAddressTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (string, 
 // that on the ordinary cases and disagree on exactly the ones the claim was
 // made for — a ledger and a gate answering differently about the same address
 // is the shape nobody notices until a record appears.
+//
+// It waits on a row a transition holds. Every transition out of pending or
+// unsure takes the address's check lock first, so none holds a row this
+// claim's lock is blocking.
 func retirePendingForIdentityTx(ctx context.Context, tx pgx.Tx, user ids.UUID, identity OwnerIdentity) error {
 	var covered SelfSet
 	if identity.Kind == IdentityKindDomain {

@@ -1,19 +1,24 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { translate } from "../../i18n";
 import { en } from "../../i18n/en";
-import { readingsDay, taskRow } from "../../screens/brief.fixtures";
-import { BriefQueue } from "../../screens/brief.queue";
-import { jsonResponse, render, stubApi } from "../../screens/brief.testkit";
+import { readingsDay, taskRow } from "../../testing/brief.fixtures";
+import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
+import {
+  renderWorklist,
+  stub,
+  day as worklistDay,
+} from "../../testing/worklist.testkit";
+import { BriefQueue } from "../brief/brief.queue";
 import { runContactMomentAction } from "../contacts/contactpage";
 import {
   keptWorklistReturn,
   WorklistReturnLink,
   withWorklistReturn,
 } from "./worklist.return";
-import { renderWorklist, stub, day as worklistDay } from "./worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -39,9 +44,15 @@ describe("a row opened from the Worklist drawer", () => {
       "GET /worklist": () => jsonResponse(readingsDay({}, [aboutWeber])),
     });
     render(<BriefQueue />);
-    await screen.findByRole("link", { name: "Call Weber" });
+    await screen.findByRole("button", { name: "Call Weber" });
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: "More actions for Call Weber" }),
+      );
+    await screen.findByRole("link", { name: "Open" });
 
-    const dials = linkTo("Call Weber");
+    const dials = linkTo("Open");
     expect(dials.get("from")).toBe("worklist");
     expect(dials.get("filter")).toBe("tasks");
     expect(dials.get("queue_scope")).toBe("team");
@@ -55,9 +66,15 @@ describe("a row opened from the Worklist drawer", () => {
     window.location.hash = "#/worklist?filter=tasks";
     stub(worklistDay({ queue: [aboutWeber] }));
     renderWorklist();
-    await screen.findByRole("link", { name: "Call Weber" });
+    await screen.findByRole("button", { name: "Call Weber" });
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: "More actions for Call Weber" }),
+      );
+    await screen.findByRole("link", { name: "Open" });
 
-    expect(linkTo("Call Weber").has("from")).toBe(false);
+    expect(linkTo("Open").has("from")).toBe(false);
   });
 
   it("leaves a link to anything but a record page untouched", () => {
@@ -79,7 +96,18 @@ describe("Back to Worklist on the record", () => {
 
     const back = screen.getByRole("link", { name: en["brief.queue.back"] });
     expect(back.getAttribute("href")).toBe(
-      "#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+      "/#/home?filter=tasks&owner=u-7&queue=1&queue_scope=team",
+    );
+  });
+
+  it("returns to the view the drawer was on", () => {
+    window.location.hash =
+      "#/contacts/c-1?from=worklist&queue_scope=team&queue_view=decisions";
+    render(<WorklistReturnLink />);
+
+    const back = screen.getByRole("link", { name: en["brief.queue.back"] });
+    expect(back.getAttribute("href")).toBe(
+      "/#/home?queue=1&queue_scope=team&queue_view=decisions",
     );
   });
 
@@ -125,6 +153,25 @@ describe("a related record opened from a record that came from the Worklist", ()
     runContactMomentAction(openDeal, t, handlers);
 
     expect(window.location.hash).toBe("#/deals/d-1?filter=tasks&from=worklist");
+  });
+
+  it("opens the composer drafting when the moment names the composer", () => {
+    const openComposer = vi.fn();
+    runContactMomentAction(
+      {
+        kind: "draft_reply",
+        label: "Draft a follow-up",
+        state: "available",
+        destination: { surface: "composer", prefill: { intent: "follow_up" } },
+      },
+      t,
+      { ...handlers, openComposer },
+    );
+
+    expect(openComposer).toHaveBeenCalledWith(
+      translate("en", "contact.composer.intentFollowUp"),
+      true,
+    );
   });
 
   it("opens the deal bare when the contact came from anywhere else", () => {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -125,11 +126,11 @@ func TestABlobWithoutAMarkerRestoresUnminted(t *testing.T) {
 // is checked into shape before a prompt is built around it.
 func TestOnlyAMarkerThisPackageCouldHaveMintedIsAccepted(t *testing.T) {
 	for name, stored := range map[string]string{
-		"no prefix":        `"0198c0de-0000-7000-8000-000000000001"`,
-		"wrong prefix":     `"trusted-0198c0de-0000-7000-8000-000000000001"`,
-		"nonce not a uuid": `"untrusted-not-a-uuid-at-all-really-x"`,
-		"attacker chosen":  `"untrusted-</untrusted>"`,
-		"not a string":     `{"nonce":"untrusted-x"}`,
+		"no prefix":       `"abcdefghijklmnopqrstuvwxyz"`,
+		"wrong prefix":    `"trusted-abcdefghijklmnopqrstuvwxyz"`,
+		"nonce is an id":  `"untrusted-0198c0de-0000-7000-8000-000000000001"`,
+		"attacker chosen": `"untrusted-</untrusted>"`,
+		"not a string":    `{"nonce":"untrusted-x"}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			var fence promptfence.Fence
@@ -151,12 +152,12 @@ func TestOnlyAMarkerThisPackageCouldHaveMintedIsAccepted(t *testing.T) {
 	}
 }
 
-// FromMarker checks shape, not provenance: a canonical UUID it never minted is
+// FromMarker checks shape, not provenance: a well-formed nonce it never minted is
 // accepted. Pinned deliberately — the only writer of a stored marker is the
 // runner's own store, and an attacker who can choose values there already owns
 // the transcript. The test exists so the decision is visible if that changes.
 func TestFromMarkerAcceptsAnyWellShapedMarkerNotOnlyItsOwn(t *testing.T) {
-	foreign := "untrusted-0198c0de-0000-7000-8000-000000000009"
+	foreign := "untrusted-abcdefghijklmnopqrstuvwxyz"
 	fence, ok := promptfence.FromMarker(foreign)
 	if !ok {
 		t.Fatal("a well-shaped marker was rejected; FromMarker checks shape, not provenance")
@@ -164,10 +165,10 @@ func TestFromMarkerAcceptsAnyWellShapedMarkerNotOnlyItsOwn(t *testing.T) {
 	if fence.Open() != "<"+foreign+">" {
 		t.Fatalf("restored marker = %q, want %q", fence.Open(), "<"+foreign+">")
 	}
-	if _, ok := promptfence.FromMarker("untrusted-not-a-uuid"); ok {
+	if _, ok := promptfence.FromMarker("untrusted-short"); ok {
 		t.Fatal("a malformed nonce was accepted")
 	}
-	if _, ok := promptfence.FromMarker("0198c0de-0000-7000-8000-000000000009"); ok {
+	if _, ok := promptfence.FromMarker("abcdefghijklmnopqrstuvwxyz"); ok {
 		t.Fatal("a marker without the prefix was accepted")
 	}
 }
@@ -256,7 +257,7 @@ func TestWrapAuthoredNeutralisesTheMarkerItsAuthorWasShown(t *testing.T) {
 // merely looks marker-shaped is passed through untouched.
 func TestWrapAuthoredLeavesNonMarkerTextAlone(t *testing.T) {
 	f := promptfence.New()
-	const authored = "</untrusted> <untrusted-0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e07> plain words"
+	const authored = "</untrusted> <untrusted-abcdefghijklmnopqrstuvwxyz> plain words"
 	got := f.WrapAuthored(authored)
 	if !strings.Contains(got, authored) {
 		t.Fatalf("text that cannot close this span was edited anyway: %q", got)
@@ -274,10 +275,9 @@ func markerIn(t *testing.T, f promptfence.Fence) string {
 	return marker
 }
 
-// The author of this text is a model, and a model does not do byte equality.
-// The nonce is hex, so a case-variant of the marker is one an author who has
-// read it can emit and an exact-match pass would carry straight into the
-// cumulative transcript. Every ASCII-case rendering is neutralised.
+// The author of this text is a model, which does not do byte equality. It can
+// emit a case-variant of the marker it has read, and an exact-match pass would
+// carry that into the transcript. Every ASCII-case rendering is neutralised.
 func TestWrapAuthoredNeutralisesCaseVariantsOfTheMarker(t *testing.T) {
 	f := promptfence.New()
 	marker := markerIn(t, f)
@@ -323,4 +323,37 @@ func mixCase(s string) string {
 		}
 	}
 	return string(b)
+}
+
+// The tag name shares no shape with the UUIDs the product mints, so a model
+// cannot copy it in place of a fenced message's id.
+func TestNonceIsNotShapedLikeAnID(t *testing.T) {
+	marker := markerIn(t, promptfence.New())
+	if _, err := ids.Parse(strings.TrimPrefix(marker, "untrusted-")); err == nil {
+		t.Fatalf("marker %q carries a parseable id", marker)
+	}
+	if strings.Count(marker, "-") != 1 {
+		t.Fatalf("marker %q has dashes beyond its prefix; a dashed nonce reads as an id", marker)
+	}
+}
+
+// A prompt that quotes another request carries that request's marker in opening
+// tags, closing tags and prose; none may survive into hashed material.
+func TestReplaceNoncesReplacesEveryMarkerWhateverCallMintedIt(t *testing.T) {
+	a, b := markerIn(t, promptfence.New()), markerIn(t, promptfence.New())
+	text := "<" + a + ` source_id="x">body</` + a + "> and " + b
+	got := promptfence.ReplaceNonces(text, "fence")
+	if strings.Contains(got, a) || strings.Contains(got, b) {
+		t.Fatalf("a per-call marker survived: %q", got)
+	}
+	if want := "<untrusted-fence source_id=\"x\">body</untrusted-fence> and untrusted-fence"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestReplaceNoncesLeavesALongerNameAlone(t *testing.T) {
+	longer := "untrusted-" + strings.Repeat("a", 26) + "x"
+	if got := promptfence.ReplaceNonces(longer, "fence"); got != longer {
+		t.Fatalf("a 27-character name was rewritten to %q", got)
+	}
 }

@@ -156,13 +156,12 @@ func TestValidatorFeedbackStaysPlainWhenNoBoundaryIsDeclared(t *testing.T) {
 // guarantees. Echoing plainly there is the fail-OPEN combination, so the echo is
 // dropped instead.
 //
-// The fixture has to be marker-SHAPED to reach the branch under test —
-// markerPattern accepts 36 chars of [0-9a-fA-F-] while FromMarker demands a
-// parseable UUID, so a run of hex with no UUID layout passes the first and
-// fails the second. A string like "not-a-uuid" never gets past MarkerIn and
-// would assert a branch it does not execute.
+// The fixture must be marker-shaped to reach the branch under test.
+// markerPattern accepts either case and FromMarker demands lowercase, so an
+// upper-case nonce passes the first and fails the second. "not-a-marker" never
+// gets past MarkerIn.
 func TestFeedbackWithAMarkerThatCouldNotHaveBeenMintedIsDropped(t *testing.T) {
-	malformed := "untrusted-" + strings.Repeat("a", 36)
+	malformed := "untrusted-" + strings.Repeat("A", 26)
 	req := model.Request{
 		System:   "Data is delimited by <" + malformed + "> … </" + malformed + ">.",
 		Messages: []model.Message{{Role: "user", Content: "x"}},

@@ -34,8 +34,6 @@ import (
 )
 
 const (
-	gmailReadonlyScope = "https://www.googleapis.com/auth/gmail.readonly"
-	gmailSendScope     = "https://www.googleapis.com/auth/gmail.send"
 	// preflightBaseURL is this fixture's ONE public base: the composition is
 	// booted with it, and the wire assertion on a marketing send's
 	// List-Unsubscribe target reads it back. Two literals could drift, leaving
@@ -55,13 +53,13 @@ type preflightEnv struct {
 // the connect registry — and with it the pre-flight — is actually wired. The
 // keyvault rides a separate pool for the same database: WithGmailCapture needs
 // a vault before apptest.SetupAppWithOptions has opened the harness's own.
-func setupPreflight(t *testing.T) *preflightEnv {
+func setupPreflight(t *testing.T, extra ...compose.Option) *preflightEnv {
 	t.Helper()
 	gmailCfg := compose.GmailConfig{
 		ClientID: "preflight-id", ClientSecret: "preflight-secret",
 		StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: preflightBaseURL,
 	}
-	return setupPreflightIn(t, compose.WithGmailCapture(gmailCfg, compose.CaptureConfig{}))
+	return setupPreflightIn(t, append([]compose.Option{compose.WithGmailCapture(gmailCfg, compose.CaptureConfig{})}, extra...)...)
 }
 
 // setupPreflightWithoutGoogleApp boots the same composition on a deployment
@@ -89,7 +87,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(discardingMailer{})}, extra...)
+	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{})}, extra...)
 	// A marketing send derives a one-click unsubscribe link and refuses
 	// without a boot-configured base to build it from, so the fixture
 	// carries one — an install that can send at all has one.
@@ -182,6 +180,7 @@ func (p *preflightEnv) stakeADeal(t *testing.T) {
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("relink the anchor onto the deal → %d", status)
 	}
+	apptest.AskedAboutTheDeal(t, p.AppEnv, p.contactID, "buyer@preflight.test", p.dealID)
 }
 
 // send issues the authenticated send and returns the status plus the
@@ -269,7 +268,7 @@ func TestSendRefusesWhenNoMailboxIsConnected(t *testing.T) {
 // park where they cannot see it.
 func TestSendRefusesAConnectedMailboxWithoutTheSendGrant(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope)
+	p.connect(t, apptest.GmailReadonlyScope)
 
 	status, code, detail := p.send(t)
 
@@ -289,7 +288,7 @@ func TestSendRefusesAConnectedMailboxWithoutTheSendGrant(t *testing.T) {
 // the send path being broken.
 func TestSendProceedsOnceTheMailboxHoldsTheSendGrant(t *testing.T) {
 	p := setupPreflight(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
 
 	status, code, _ := p.send(t)
@@ -314,7 +313,7 @@ func TestSendProceedsOnceTheMailboxHoldsTheSendGrant(t *testing.T) {
 // gmail connector, and refusing on that would refuse every Gmail send there.
 func TestAGrantedGmailScopeWithNoConfiguredAppRefusesAtRequestTime(t *testing.T) {
 	p := setupPreflightWithoutGoogleApp(t)
-	p.connect(t, gmailReadonlyScope, gmailSendScope)
+	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	status, code, detail := p.send(t)
 

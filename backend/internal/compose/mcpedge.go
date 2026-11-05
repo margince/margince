@@ -42,7 +42,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -119,7 +118,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
-				search.NewQuerySchemaResource(queryVocabulary(pool)), s.appViews)...,
+				search.NewQuerySchemaResource(queryVocabulary(pool)), InstallationDB(pool), s.appViews)...,
 		)),
 		// And the OTHER half of the same promise. A tool's UI.ResourceURI is a
 		// constant baked at registration; whether that document arrived is a
@@ -127,6 +126,10 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// is what makes "a tool never names a view the server does not serve"
 		// true per request rather than only at build time.
 		agents.WithHeldViews(s.heldView()),
+		// The origin the Origin guard admits is the one the app is served from.
+		// Record links and the connector's icon point at it.
+		agents.WithPublicOrigin(s.mcpAllowedOrigin),
+		agents.WithInputStateKey(s.mcpInputStateKey),
 		// The Tasks extension, which is why a confirm-first call no longer dead-ends
 		// for a client that can hold a handle. The store is composed here for the
 		// same reason the claim store is: agent_task rows are this transport's own
@@ -135,7 +138,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		// per-kind effects belong to the DECIDE path, and a task neither decides
 		// nor triggers one. What it does is read a decision and then take the
 		// ordinary redemption route through Registry.Invoke.
-		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: approvals.NewService(InstallationDB(pool))}))
+		agents.WithTaskStore(toolTasks(pool), approvalsAdapter{svc: NewApprovalsService(InstallationDB(pool))}))
 }
 
 // mcpAuthenticate binds one request to its agent principal. It runs on EVERY

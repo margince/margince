@@ -241,7 +241,7 @@ func deriveAudienceTx(
 // closed and TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay holds the two
 // modules' spellings together.
 //
-// Three writers place such a hold, and none of them is re-derivable from the
+// Four writers place such a hold, and none of them is re-derivable from the
 // row afterwards:
 //
 //   - the WORKSPACE mail-sharing floor, which holds every new email whatever
@@ -252,7 +252,9 @@ func deriveAudienceTx(
 //     lifted next week does not un-hold the mail it caught, and the subject
 //     line is content the derivation deliberately never reads;
 //   - the capture ladder, which holds a message it filed under no record at all
-//     — a suppressed newsletter, an infrastructure notice (`no_record`).
+//     — a suppressed newsletter, an infrastructure notice (`no_record`);
+//   - a mail whose every party is a member (`members_only`), decided at capture
+//     against the members' addresses of that moment.
 //
 // Read from the reason rather than re-derived, because neither condition can be
 // recovered from the row afterwards. The ladder narrows only on its TERMINAL
@@ -266,7 +268,8 @@ func rowCarriedHold(stored string, storedReason *string) (bool, string) {
 		return false, ""
 	}
 	switch why := deref(storedReason); why {
-	case ReasonNoRecord, ReasonNoCounterparty, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker:
+	case ReasonNoRecord, ReasonNoCounterparty, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker,
+		ReasonMembersOnly:
 		return true, why
 	}
 	return false, ""

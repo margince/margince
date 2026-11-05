@@ -1,0 +1,11 @@
+name: inbound_reports_colleague_promise
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: [{"direction": "inbound", "subject": "Next steps", "sent": "2026-09-07", "body": "Mira, you agreed to send the pricing by Friday. Thank you, Ines.", "participants": [{"key": "ines", "kind": "contact", "role": "from", "name": "Ines Huber", "address": ""}, {"key": "mira", "kind": "seat", "role": "to", "name": "Mira Chen", "address": ""}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "commitment_made", "message": 1, "promiser": "mira"}]
+  rubric: "Identify the promiser from the quoted clause. The expected reference is mira. Direction and CC membership alone do not assign a promise."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

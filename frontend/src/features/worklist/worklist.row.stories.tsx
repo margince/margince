@@ -25,6 +25,7 @@ type WorklistItem = components["schemas"]["WorklistItem"];
 
 function noticeItem(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "n1",
     source: "notice",
     category: "system",
@@ -131,35 +132,85 @@ export const ANoticeSettling: Story = {
 // Dated deliberately far enough out that the story is stable whenever it is
 // looked at — a fixture pinned to "today" renders differently every day and the
 // snapshot argues with itself.
+const meetingStillToConfirm: WorklistItem = {
+  occurred_precision: "instant",
+  id: "m1",
+  source: "meeting",
+  category: "meetings",
+  level: 1,
+  consequence: "meeting_unprepared",
+  title: "Quarterly review with Turbinenbau",
+  kind: "unprepared",
+  due_at: "2026-09-02T13:00:00Z",
+  because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
+  actions: [],
+  // The way into the brief, in the shape the server sends it. The subject is
+  // the activity, and the contact rides separately: the brief opens as
+  // `?prep=<activity>` on somebody's record. Without `with_contact`, moveHref
+  // returns nothing and the story would draw no control at all.
+  subject: { type: "activity", id: "m1" },
+  with_contact: "0199f5c0-0000-7000-8000-0000000009a1",
+  move: {
+    action: "open_meeting_brief",
+    activity_id: "m1",
+    arguments: { contact_id: "0199f5c0-0000-7000-8000-0000000009a1" },
+  },
+  preparation: {
+    activity_id: "m1",
+    state: "needs_review",
+    revision: "rev-1",
+    changed: [],
+  },
+};
+
 export const AMeetingWithItsStartTime: Story = {
   args: {
     ...baseArgs,
+    item: meetingStillToConfirm,
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// The same meeting once the reader said they are ready. It stays a reminder
+// with its start time and a Ready mark, and has no button left to press.
+export const AMeetingTheReaderIsReadyFor: Story = {
+  args: {
+    ...baseArgs,
     item: {
-      id: "m1",
-      source: "meeting",
-      category: "meetings",
-      level: 1,
-      consequence: "meeting_unprepared",
-      title: "Quarterly review with Turbinenbau",
-      kind: "unprepared",
-      due_at: "2026-09-02T13:00:00Z",
-      because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
-      actions: [],
-      // The way into the brief, in the shape the server actually sends it.
-      //
-      // The subject stays the ACTIVITY — the row is about the appointment —
-      // and the contact rides separately, because the brief is not a page of
-      // its own: it opens as `?prep=<activity>` on somebody's record. Writing
-      // this fixture with a contact SUBJECT instead would draw no control at
-      // all, since moveHref reads `with_contact` and returns nothing without
-      // it, and the story would look identical to its sibling below while
-      // claiming to show the opposite.
-      subject: { type: "activity", id: "m1" },
-      with_contact: "0199f5c0-0000-7000-8000-0000000009a1",
-      move: {
-        action: "open_meeting_brief",
+      ...meetingStillToConfirm,
+      level: 4,
+      consequence: "none",
+      kind: "prepared",
+      because: [{ kind: "meeting_soon" }],
+      preparation: {
         activity_id: "m1",
-        arguments: { contact_id: "0199f5c0-0000-7000-8000-0000000009a1" },
+        state: "ready",
+        revision: "rev-1",
+        changed: [],
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A meeting the reader was ready for until the organizer moved it and changed
+// the invite: the row asks again and names what changed.
+export const AMeetingThatChangedSinceTheReaderWasReady: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...meetingStillToConfirm,
+      preparation: {
+        activity_id: "m1",
+        state: "needs_review",
+        revision: "rev-2",
+        changed: ["start_time", "agenda"],
       },
     },
   },
@@ -185,6 +236,7 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "m2",
       source: "meeting",
       category: "meetings",
@@ -196,6 +248,12 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
       because: [{ kind: "meeting_soon" }],
       actions: [],
       subject: { type: "activity", id: "m2" },
+      preparation: {
+        activity_id: "m2",
+        state: "needs_review",
+        revision: "rev-1",
+        changed: [],
+      },
     },
   },
   render: (args) => {
@@ -212,6 +270,7 @@ export const ATaskNobodyOwnsBeingPutDown: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000a1",
       source: "task",
       category: "tasks",
@@ -254,6 +313,7 @@ export const AWaitingBuyerWithEveryVerb: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000a1",
       source: "customer_waiting",
       category: "customer_waiting",
@@ -285,12 +345,13 @@ export const AWaitingBuyerWithEveryVerb: Story = {
 // The hand-off, opened.
 //
 // It is a line of the row's menu, and pressing it opens the picker and its
-// confirm on the row. Only a task can be handed on: a group row names no single
-// activity to move.
+// confirm on the row. Only a task the reader may change can be handed on: a
+// group row names no single activity to move.
 export const ATaskBeingHandedOn: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000a2",
       source: "task",
       category: "tasks",
@@ -299,7 +360,7 @@ export const ATaskBeingHandedOn: Story = {
       title: "Send the retrofit quote",
       due_at: "2026-09-02T15:00:00Z",
       because: [{ kind: "due_today" }],
-      actions: [],
+      actions: ["complete", "snooze"],
     },
   },
   render: (args) => {
@@ -328,6 +389,7 @@ export const ABriefItemToAdvance: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "bi1",
       source: "brief_item",
       category: "deals_at_risk",
@@ -356,6 +418,7 @@ export const APromiseWithItsEvidence: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "cc1",
       source: "conversation_claim",
       category: "tasks",
@@ -383,6 +446,7 @@ export const AQuietContactToSetAside: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000aa",
       source: "relationship_decay",
       category: "customer_waiting",
@@ -410,6 +474,7 @@ export const AnApprovedThingThatDidNotRun: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "fa1",
       source: "failed_approval",
       category: "system",
@@ -438,6 +503,7 @@ export const AMailboxThatStopped: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "sh1",
       source: "capture_health",
       category: "system",
@@ -463,6 +529,7 @@ export const ACalendarThatStopped: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "sh2",
       source: "capture_health",
       category: "system",
@@ -487,6 +554,7 @@ export const ALeadWaitingOnAFirstReply: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "lr1",
       source: "lead_response",
       category: "leads",
@@ -515,6 +583,7 @@ export const APrivacyRequestOnItsClock: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "dsr1",
       source: "dsr",
       category: "system",
@@ -543,6 +612,7 @@ export const ADisclosureThisContactIsOwed: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "notice1",
       source: "notice_case",
       category: "system",
@@ -573,6 +643,7 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "m2",
       source: "meeting_outcome",
       category: "meetings",
@@ -581,7 +652,8 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       title: "Quarterly review with Turbinenbau",
       occurred_at: "2026-09-02T09:00:00Z",
       because: [{ kind: "outcome_unrecorded" }],
-      actions: [],
+      // The seat may answer it, so the row draws Held, Add notes and Cancel.
+      actions: ["decide", "cancel"],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
     },
   },
@@ -596,6 +668,7 @@ export const AMeetingNamingItsCustomerAndHost: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       ...AMeetingWithNoOutcomeRecorded.args?.item,
       id: "m3",
       source: "meeting_outcome",
@@ -635,6 +708,7 @@ export const AWaitingBuyerAsTheMessage: Story = {
     ...baseArgs,
     onOpenEmail: () => undefined,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000e1",
       source: "customer_waiting",
       category: "customer_waiting",
@@ -649,6 +723,7 @@ export const AWaitingBuyerAsTheMessage: Story = {
         subject: "Re: pricing for the retrofit",
         preview: "Can you confirm the lead time before Friday?",
         occurred_at: "2026-09-01T07:42:00Z",
+        occurred_precision: "instant",
         direction: "inbound",
         counterparty: "Kirsten Vogel",
         attachment_count: 1,
@@ -700,6 +775,7 @@ export const AMessageOnALimitedThread: Story = {
     ...baseArgs,
     onOpenEmail: () => undefined,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000e2",
       source: "customer_waiting",
       category: "customer_waiting",
@@ -713,6 +789,7 @@ export const AMessageOnALimitedThread: Story = {
         subject: "Re: the amended terms",
         preview: "Legal has one more question on clause 4.",
         occurred_at: "2026-09-01T15:10:00Z",
+        occurred_precision: "instant",
         direction: "inbound",
         counterparty: "Ana Sommer",
         attachment_count: 0,
@@ -743,6 +820,7 @@ export const ADecisionToAnswerOnTheRow: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000d2",
       source: "approval",
       category: "decisions",
@@ -787,10 +865,39 @@ export const TheRowInHand: Story = {
 // the FOLD, holding the reasons past the third together with why this row beat
 // the one below it — one press for a reader who disagrees with the order, and
 // no line of height for the many who do not.
+// One open customer-support review: its task and the deal's quiet row fold
+// into this one row, which stays while the review is open.
+export const ADealUnderReview: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "01a05500-0000-7000-8000-0000000000db",
+      source: "deal_review",
+      category: "deals_at_risk",
+      level: 4,
+      consequence: "deal_drifts",
+      title: "Turbinenbau retrofit",
+      because: [{ kind: "quiet_days", value: { kind: "days", days: 196 } }],
+      actions: ["open"],
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000da",
+        label: "Turbinenbau retrofit",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 export const ADealAtRiskWithItsFigures: Story = {
   args: {
     ...baseArgs,
     item: {
+      occurred_precision: "instant",
       id: "01a05500-0000-7000-8000-0000000000da",
       source: "deal_at_risk",
       category: "deals_at_risk",

@@ -307,7 +307,8 @@ func TestCompanyContextScopesAreBoundedOverHTTP(t *testing.T) {
 // human-only is the point: an agent may PROPOSE the company (/coldstart/preview)
 // but never make it true, exactly as it may stage an approval and never approve
 // it. A write-scoped passport is still refused.
-func TestCompanyPutRefusesAnAgentPassport(t *testing.T) {
+// Renaming the installation stays an administrator's, so a human names it first.
+func TestAnAgentSavesTheCompanyAsAgentNotAsAHuman(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -322,12 +323,48 @@ func TestCompanyPutRefusesAnAgentPassport(t *testing.T) {
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
 	var problem companyProblem
-	status := e.Call(t, "PUT", "/v1/company", wellFormedCompany(), bearer, &problem)
-	if status != http.StatusForbidden || problem.Code != "permission_denied" {
-		t.Fatalf("agent PUT /company → %d %q, want 403 permission_denied", status, problem.Code)
+	if status := e.Call(t, "PUT", "/v1/company", wellFormedCompany(), nil, nil); status != http.StatusOK {
+		t.Fatalf("the admin's first save → %d, want 200", status)
 	}
-	// Refused means refused: the agent's submission did not become the company.
-	if getStatus := e.Call(t, "GET", "/v1/company", nil, nil, nil); getStatus != http.StatusNotFound {
-		t.Fatalf("the agent's refused PUT still saved a company (GET → %d, want 404)", getStatus)
+	edit := wellFormedCompany()
+	edit["offer_summary"] = "Forecasting software"
+	if status := e.Call(t, "PUT", "/v1/company", edit, bearer, &problem); status != http.StatusOK {
+		t.Fatalf("agent PUT /company → %d %+v, want 200", status, problem)
+	}
+	var source string
+	if err := e.Owner.QueryRow(t.Context(), `SELECT source FROM company_profile_field WHERE field = 'offer_summary'`).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if source != "agent" {
+		t.Errorf("the agent's value is stamped source=%q, want agent", source)
+	}
+}
+
+// A null on a profile field clears it, as an empty string does. A null on the
+// website names nothing the company can be without, so it is refused.
+func TestACompanyProfileFieldClearsOnNull(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	body := wellFormedCompany()
+	body["usp"] = "Ships in a week"
+	if status := e.Call(t, "PUT", "/v1/company", body, nil, nil); status != http.StatusOK {
+		t.Fatalf("seeding the company = %d, want 200", status)
+	}
+
+	body["usp"] = nil
+	var cleared companyProfileDTO
+	if status := e.Call(t, "PUT", "/v1/company", body, nil, &cleared); status != http.StatusOK || cleared.Usp != nil {
+		t.Fatalf("usp: null = %d, usp %v; want 200 and no usp", status, cleared.Usp)
+	}
+
+	for _, field := range []string{"website", "display_name"} {
+		refused := wellFormedCompany()
+		refused[field] = nil
+		var problem companyProblem
+		status := e.Call(t, "PUT", "/v1/company", refused, nil, &problem)
+		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) != 1 ||
+			problem.Details.Errors[0].Field != field || problem.Details.Errors[0].Code != "field_not_clearable" {
+			t.Errorf("%s: null = %d %+v, want 422 field_not_clearable on %s", field, status, problem, field)
+		}
 	}
 }

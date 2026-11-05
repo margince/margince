@@ -287,12 +287,16 @@ func materialEventsRung(out Rung, v view, facts *activities.PipelineFacts, readi
 // what has happened to it.
 func threadRefusal(reading ThreadReading) (trace.Reason, bool) {
 	switch {
+	case !reading.HasAHumanSender:
+		return trace.ReasonFromSendingSystems, true
 	case !reading.ReachesOneAccount:
 		return trace.ReasonNoSingleAccount, true
 	case !reading.IsOneBodyOfWork:
 		return trace.ReasonTwoBodiesOfWork, true
 	case !reading.IsFullyOpen:
 		return trace.ReasonThreadNotAllOpen, true
+	case !reading.IsFullyRead:
+		return trace.ReasonThreadNotAllRead, true
 	case !reading.HasANamedReader:
 		return trace.ReasonNoNamedReader, true
 	case !reading.HasSettled:

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // Which part of a query is matched whole, and which is offered as a prefix.
@@ -112,7 +114,7 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 	headPos, tailPos := arg(head), arg(tail)
 	identifierPos := bindIdentifier("acme ein", arg)
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, identifierPos, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, identifierPos, true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -138,7 +140,7 @@ func TestABranchWithNoIdentifierBindsNone(t *testing.T) {
 	headPos, tailPos := arg(""), arg("anna@example.com")
 
 	branches, err := admittedBranchSQL(teamReaderFor("deal"), []string{"deal"}, headPos, tailPos, true,
-		bindIdentifier("anna@example.com", arg), arg)
+		bindIdentifier("anna@example.com", arg), true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -159,7 +161,7 @@ func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 	headPos, tailPos := arg("acme"), arg("ein")
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, bindIdentifier("acme ein", arg), arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, bindIdentifier("acme ein", arg), true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -197,7 +199,7 @@ func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	}
 	headPos := arg(head)
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, bindIdentifier(head, arg), arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, bindIdentifier(head, arg), true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -254,7 +256,7 @@ func TestMailMatchesTheFragmentWholeAndRecordsByPrefix(t *testing.T) {
 		var bound []any
 		arg := func(v any) int { bound = append(bound, v); return len(bound) }
 		headPos, tailPos := arg(""), arg("study")
-		branches, err := admittedBranchSQL(ctx, []string{entity}, headPos, tailPos, true, bindIdentifier("study", arg), arg)
+		branches, err := admittedBranchSQL(ctx, []string{entity}, headPos, tailPos, true, bindIdentifier("study", arg), true, arg)
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
@@ -321,7 +323,7 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 		var bound []any
 		arg := func(v any) int { bound = append(bound, v); return len(bound) }
 		headPos := arg("contract")
-		branches, err := admittedBranchSQL(teamReaderFor(entity), []string{entity}, headPos, 0, false, bindIdentifier("contract", arg), arg)
+		branches, err := admittedBranchSQL(teamReaderFor(entity), []string{entity}, headPos, 0, false, bindIdentifier("contract", arg), true, arg)
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
@@ -334,6 +336,23 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 		}
 		if sampled != wantSample {
 			t.Errorf("%s branch ranks a sample of %d: %v, want %v:\n%s", entity, activityRankSample, sampled, wantSample, sql)
+		}
+	}
+}
+
+// A pasted address finds a company by its domain and a lead by its address, as
+// the entity lists do.
+func TestIdentifierBinderAndLeadBranch(t *testing.T) {
+	t.Parallel()
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	bind := bindIdentifier("weber@exam", arg)
+	if whole, domain := bind.position(false), bind.position(true); whole == domain || args[domain-1] != "exam" || args[whole-1] != "weber@exam" {
+		t.Errorf("binder bound %v (whole %d, domain %d)", args, whole, domain)
+	}
+	for _, b := range searchBranches {
+		if b.entity == "lead" && b.identifier != storekit.LeadEmails {
+			t.Errorf("the lead branch does not search the lead address")
 		}
 	}
 }

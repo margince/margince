@@ -305,25 +305,17 @@ describe("the waiter-budget reader", () => {
     expect(probe?.waiterBudgetMs).toBe(25_000);
   });
 
-  it("reports two same-named helpers only when their budgets disagree", () => {
-    // Same cost either way is not an ambiguity that matters; a different cost
-    // is, and picking one silently under-counted a whole suite.
-    const agree = read(
-      `describe("a", () => { const settle = () => waitFor(() => {}, { timeout: 2000 });
-         it("x", async () => { await settle(); }); });
-       describe("b", () => { const settle = () => waitFor(() => {}, { timeout: 2000 });
-         it("y", async () => { await settle(); }); });`,
-      "agree.test.tsx",
-    );
-    const differ = read(
+  it("charges each call the same-named helper its own suite declares", () => {
+    // Picking one declaration for every call under-counted a whole suite.
+    const found = read(
       `describe("a", () => { const settle = () => waitFor(() => {}, { timeout: 8000 });
          it("x", async () => { await settle(); }); });
        describe("b", () => { const settle = () => waitFor(() => {}, { timeout: 2000 });
          it("y", async () => { await settle(); }); });`,
       "differ.test.tsx",
     );
-    expect(agree.map((probe) => probe.waiterBudgetMs)).toEqual([2_000, 2_000]);
-    expect(differ.every((probe) => probe.unresolved.length === 1)).toBe(true);
+    expect(found.map((probe) => probe.waiterBudgetMs)).toEqual([8_000, 2_000]);
+    expect(found.flatMap((probe) => probe.unresolved)).toEqual([]);
   });
 
   it("folds a ceiling written as an expression, rather than ignoring it", () => {
@@ -338,17 +330,25 @@ describe("the waiter-budget reader", () => {
     expect(probe?.ceilingIsStated).toBe(true);
   });
 
-  it("reports a constant this file gives two different values", () => {
-    // No scope information, so two suites each declaring their own SETTLE_MS
-    // collapsed to whichever came last in source order — the same last-wins
-    // defect that crossed the import boundary, one hop closer.
-    const [probe] = read(
-      `const SETTLE_MS = 9000;
-       function helper() { const SETTLE_MS = 1; return SETTLE_MS; }
-       it("x", async () => { await waitFor(() => {}, { timeout: SETTLE_MS }); });`,
+  it("folds the constant in scope, not a same-named one beside it", () => {
+    // Two suites each declaring their own SETTLE_MS collapsed to whichever came
+    // last in source order: the same last-wins defect as across an import.
+    const found = read(
+      `describe("a", () => { const SETTLE_MS = 9000;
+         it("x", async () => { await waitFor(() => {}, { timeout: SETTLE_MS }); }); });
+       describe("b", () => { const SETTLE_MS = 1000;
+         it("y", async () => { await waitFor(() => {}, { timeout: SETTLE_MS }); }); });`,
       "shadowed-const.test.tsx",
     );
-    expect(probe?.unresolved).toEqual(["SETTLE_MS"]);
+    expect(found.map((probe) => probe.waiterBudgetMs)).toEqual([9_000, 1_000]);
+    // A parameter of that name is not the module's constant, so it is reported.
+    const [shadowed] = read(
+      `const SETTLE_MS = 9000;
+       const wait = (SETTLE_MS: number) => waitFor(() => {}, { timeout: SETTLE_MS });
+       it("x", async () => { await wait(1); });`,
+      "param-const.test.tsx",
+    );
+    expect(shadowed?.unresolved).toEqual(["SETTLE_MS"]);
   });
 
   it("does not charge a method call the budget of a same-named helper", () => {

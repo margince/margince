@@ -334,6 +334,13 @@ func TestEveryJoinedVocabularyDeclaresADefence(t *testing.T) {
 				if _, via := spec.scopeVia[field]; via {
 					continue
 				}
+				if _, own := activityOwnRowFields[report][field]; own {
+					if !spec.activityWalk {
+						t.Errorf("report %q reads %q off the activity's own rows but does not walk "+
+							"activities, so nothing applies the activity's scope to them", report, field)
+					}
+					continue
+				}
 				if freelyReadableJoins.Waived(t, aliases[alias]) {
 					continue
 				}
@@ -355,17 +362,10 @@ func TestEveryJoinedVocabularyDeclaresADefence(t *testing.T) {
 }
 
 // freelyReadableJoins are the joined tables no seat is kept out of, so a
-// vocabulary entry reading one owes neither a grant nor a row scope.
-//
-// By TABLE rather than by field: what makes a stage freely readable is a fact
-// about stages, and a waiver written per field would need restating for every
-// vocabulary entry that reads one.
-var freelyReadableJoins = gatekit.Waive(map[string]string{
-	"stage": "pipeline configuration. A stage's name and win_probability are the board every " +
-		"seat already works on, and the forecast reads win_probability to weight a deal the " +
-		"caller has passed the deal gate for — there is no seat that may see the deal and not " +
-		"the stage it sits in",
-})
+// vocabulary entry reading one owes neither a grant nor a row scope. None
+// today: the win probability reads its stage inside the deal's own
+// expression, which the deal gate already covers.
+var freelyReadableJoins = gatekit.Waive(map[string]string{})
 
 // rowScopedTable asks the row-scope machinery itself whether a table has a
 // scope, rather than keeping a second copy of its registry.

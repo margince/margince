@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import {
   installFetchStub,
   jsonResponse,
@@ -12,6 +11,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { RequestsPanel } from "../settings/settings.privacy";
 
 // WHAT CONTACTS TYPED INTO THE LINK WE MAILED THEM, and who decides it.
 //

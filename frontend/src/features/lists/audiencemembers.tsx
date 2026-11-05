@@ -13,7 +13,12 @@
 // names are being picked here or resolved for a chip somewhere else.
 
 import type { components } from "../../api/schema";
-import { type RosterKind, useRoster } from "../../components/entityref";
+import {
+  RosterFailedLine,
+  type RosterKind,
+  type RosterRead,
+  useRoster,
+} from "../../components/entityref";
 import { Checkbox } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -80,6 +85,7 @@ export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
   verdict: "compose.reason.verdict",
   counterparty: "compose.reason.counterparty",
   explicitly_confidential: "compose.reason.explicitlyConfidential",
+  members_only: "compose.reason.membersOnly",
   no_counterparty: "compose.reason.noCounterparty",
 };
 
@@ -100,11 +106,11 @@ export function memberKey(member: AudienceMember): string {
  *
  * Agent seats are excluded for the reason the share picker excludes them: a
  * message is limited to contacts and teams, never to an agent. The rule is spelled
- * here rather than borrowed, because share.tsx's copy answers a different
- * question — who a RECORD is shared with — and one changing is no reason for
+ * here rather than borrowed, because share.parts.tsx's copy answers a different
+ * question: who a record is shared with. One changing is no reason for
  * the other to.
  */
-export function useAudienceCandidates(enabled: boolean): Candidate[] {
+export function useAudienceCandidates(enabled: boolean): AudienceCandidates {
   const users = useRoster("user", enabled);
   const teams = useRoster("team", enabled);
   const seats = ((users.data ?? []) as User[])
@@ -120,8 +126,15 @@ export function useAudienceCandidates(enabled: boolean): Candidate[] {
   const groups = ((teams.data ?? []) as Team[]).map(
     (team): Candidate => ({ kind: "team", id: team.id, name: team.name }),
   );
-  return [...seats, ...groups];
+  return { list: [...seats, ...groups], users, teams };
 }
+
+/** The candidates, with the two roster reads behind them for their failures. */
+export type AudienceCandidates = {
+  list: Candidate[];
+  users: RosterRead;
+  teams: RosterRead;
+};
 
 /**
  * The member picker, as a checklist.
@@ -139,7 +152,7 @@ export function AudienceMembers({
   chosen,
   onChange,
 }: Readonly<{
-  candidates: Candidate[];
+  candidates: AudienceCandidates;
   chosen: readonly AudienceMember[];
   onChange: (next: AudienceMember[]) => void;
 }>) {
@@ -156,7 +169,8 @@ export function AudienceMembers({
         : [...chosen, member],
     );
   };
-  if (candidates.length === 0) {
+  const failed = candidates.users.isError || candidates.teams.isError;
+  if (candidates.list.length === 0 && !failed) {
     // The list has not answered yet, or answered with nobody. Either way the
     // reader is told rather than shown an empty box that reads as an
     // company with no contacts in it.
@@ -165,7 +179,9 @@ export function AudienceMembers({
   return (
     <fieldset className="compose-audience-members">
       <legend className="t-label">{t("compose.audienceMembersLegend")}</legend>
-      {candidates.map((candidate) => {
+      <RosterFailedLine kind="user" roster={candidates.users} />
+      <RosterFailedLine kind="team" roster={candidates.teams} />
+      {candidates.list.map((candidate) => {
         const key = `${candidate.kind}:${candidate.id}`;
         return (
           <Checkbox

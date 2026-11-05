@@ -11,6 +11,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
@@ -75,7 +76,7 @@ func TestANotesTextReachesTheBuiltRequest(t *testing.T) {
 func TestALoggedMeetingsTextIsFolded(t *testing.T) {
 	recent := FoldRecent([]crmcontracts.Activity{
 		logged(crmcontracts.ActivityKindMeeting, draftedAt.Add(-time.Hour), "Agreed to send the pilot scope by Friday."),
-	}, draftedAt)
+	}, draftedAt, time.UTC)
 	if len(recent) != 1 || recent[0].Record != "Agreed to send the pilot scope by Friday." {
 		t.Errorf("the meeting's record = %+v", recent)
 	}
@@ -84,10 +85,10 @@ func TestALoggedMeetingsTextIsFolded(t *testing.T) {
 // A note's text is bounded, so a long meeting log does not fill the prompt.
 func TestANotesTextIsBounded(t *testing.T) {
 	recent := FoldRecent([]crmcontracts.Activity{
-		logged(crmcontracts.ActivityKindNote, draftedAt, strings.Repeat("slot ", draftInputRecordRunes)),
-	}, draftedAt)
-	if got := len([]rune(recent[0].Record)); got > draftInputRecordRunes {
-		t.Errorf("the note's record is %d runes, bounded at %d", got, draftInputRecordRunes)
+		logged(crmcontracts.ActivityKindNote, draftedAt, strings.Repeat("slot ", draftcore.TurnTextRunes)),
+	}, draftedAt, time.UTC)
+	if got := len([]rune(recent[0].Record)); got > draftcore.TurnTextRunes {
+		t.Errorf("the note's record is %d runes, bounded at %d", got, draftcore.TurnTextRunes)
 	}
 }
 
@@ -96,7 +97,7 @@ func TestANotesTextIsBounded(t *testing.T) {
 func TestANoteOnlyContactIsNotAFirstTouch(t *testing.T) {
 	view := viewWith(logged(crmcontracts.ActivityKindNote, draftedAt.Add(-10*24*time.Hour), fairNote))
 
-	state := ConversationState(view, draftedAt)
+	state := ConversationState(view, draftedAt, time.UTC)
 	if state.Band == convstate.BandNone {
 		t.Fatal("a contact with a logged note was drafted as a first touch")
 	}
@@ -126,11 +127,11 @@ func notContact() []crmcontracts.Activity {
 
 // None of them lifts a contact out of state none.
 func TestOnlyAPastNoteOrMeetingThatHappenedCountsAsContact(t *testing.T) {
-	if state := ConversationState(viewWith(notContact()...), draftedAt); state.Band != convstate.BandNone {
+	if state := ConversationState(viewWith(notContact()...), draftedAt, time.UTC); state.Band != convstate.BandNone {
 		t.Errorf("state = %v for a contact with no contact that happened", state.Band)
 	}
 	held := viewWith(meetingWith(crmcontracts.ActivityMeetingStatusHeld, draftedAt.Add(-24*time.Hour), "Demo"))
-	if state := ConversationState(held, draftedAt); state.Band == convstate.BandNone {
+	if state := ConversationState(held, draftedAt, time.UTC); state.Band == convstate.BandNone {
 		t.Error("a held meeting did not count as contact")
 	}
 }
@@ -138,7 +139,7 @@ func TestOnlyAPastNoteOrMeetingThatHappenedCountsAsContact(t *testing.T) {
 // None of them reaches the model as a record, and the meetings take no slot
 // in the window a real exchange could fill.
 func TestOnlyAPastNoteOrMeetingThatHappenedIsSentAsARecord(t *testing.T) {
-	for _, act := range FoldRecent(notContact(), draftedAt) {
+	for _, act := range FoldRecent(notContact(), draftedAt, time.UTC) {
 		if act.Kind == string(crmcontracts.ActivityKindMeeting) || act.Record != "" {
 			t.Errorf("a %s that records no contact reached the window: %+v", act.Kind, act)
 		}

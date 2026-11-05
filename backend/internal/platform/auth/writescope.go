@@ -223,7 +223,27 @@ func EnsureWritableForSubjectRights(ctx context.Context, tx pgx.Tx, table string
 // is not a match they may merge into, and the conflict must still be reported
 // without disclosing the id.
 func WritableBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
-	err := EnsureWritable(ctx, tx, table, id)
+	return writableAnswer(EnsureWritable(withoutRecorder(ctx), tx, table, id))
+}
+
+// WritableLiveBy is WritableBy for a row that must also be live, asked with no
+// handler gate in front. So it checks the seat and the read and update verbs
+// itself. A read seat's role may hold update; only the HTTP clamp refuses it.
+func WritableLiveBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !p.SeatType.CanMutate() ||
+		!p.Permissions.Allows(table, principal.ActionRead) || !p.Permissions.Allows(table, principal.ActionUpdate) {
+		return false, nil
+	}
+	return writableAnswer(EnsureWritableLive(withoutRecorder(ctx), tx, table, id))
+}
+
+// writableAnswer turns a write probe's refusal into "no", hiding which it was.
+// The probe ran unrecorded, because a "no" here is an answer and not a refusal.
+func writableAnswer(err error) (bool, error) {
 	switch {
 	case err == nil:
 		return true, nil
@@ -284,7 +304,7 @@ func ensureWriteAuthority(ctx context.Context, tx pgx.Tx, table string, id ids.U
 	if err != nil {
 		return err
 	}
-	if Unbounded(p) || !shareableTables[table] {
+	if Unbounded(p) || !shareableTables[table] || admittedCaseMember(ctx, table, id) {
 		return nil
 	}
 	var args []any
@@ -299,7 +319,7 @@ func ensureWriteAuthority(ctx context.Context, tx pgx.Tx, table string, id ids.U
 		return err
 	}
 	if !permitted {
-		return apperrors.ErrPermissionDenied
+		return refuseRowChange(ctx, table)
 	}
 	return nil
 }
@@ -356,14 +376,8 @@ func writeAuthorityPredicateAs(p principal.Principal, table, alias string, arg f
 		return "(" + owner + ")"
 	}
 	me, teams := arg(p.UserID), arg(p.TeamIDs)
-	return fmt.Sprintf(`(%s OR EXISTS (
-		   SELECT 1 FROM record_grant rg
-		   WHERE rg.record_type = '%s' AND rg.record_id = %s.id
-		     AND rg.access = '%s'
-		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
-		     AND ((rg.subject_type = 'user' AND rg.subject_id = $%d)
-		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-		owner, table, alias, grantAccessWrite, me, teams)
+	return fmt.Sprintf(`(%s OR %s)`, owner,
+		liveGrantSQL(table, alias+".id", "\n\t\t     AND rg.access = '"+grantAccessWrite+"'", me, teams))
 }
 
 // EnsureClaimable is the gate in front of taking ownership of a row. A claim
@@ -396,7 +410,7 @@ func EnsureClaimable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) 
 		return err
 	}
 	if !permitted {
-		return apperrors.ErrPermissionDenied
+		return refuseRowChange(ctx, table)
 	}
 	return nil
 }

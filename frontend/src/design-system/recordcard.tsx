@@ -25,6 +25,7 @@
  */
 
 import type { ReactNode } from "react";
+import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
 import { ContactLink } from "./contactlink";
 import "./recordcard.css";
@@ -86,9 +87,9 @@ export function RecordCard({
       {/* Labelled with the name alone: the monogram inside is TEXT, so it
           would otherwise lead the computed name and a screen reader would
           announce two initials before the contact they stand for. */}
-      <a className="record-card-open" href={href} aria-label={name}>
+      <AppLink className="record-card-open" href={href} aria-label={name}>
         {mark}
-      </a>
+      </AppLink>
       {(position || email) && (
         <div className="record-card-facts">
           {position && <p className="record-card-position">{position}</p>}
@@ -106,4 +107,14 @@ export function RecordCard({
       {aside && <div className="record-card-aside">{aside}</div>}
     </div>
   );
+}
+
+/**
+ * A stack of `RecordCard`s, each in its own `<li>`. The list owns the gap, so
+ * a surface that stacks cards never draws them edge to edge.
+ */
+export function RecordCardList({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  return <ul className="record-card-list">{children}</ul>;
 }

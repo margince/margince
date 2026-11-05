@@ -18,9 +18,8 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
-// A mailbox's posture lives in the drawer its row's chevron opens.
+// A mailbox's posture sits under its account on Connections.
 async function openMailboxPosture(page: Page) {
-  await page.getByRole("button", { name: /^Gmail.* öffnen$/ }).click();
   const row = page.getByTestId("connector-gmail-mail-posture");
   await expect(row).toBeVisible();
   return row;
@@ -35,7 +34,7 @@ test("AC-mailbox-1: a mailbox says who may read it, and refuses shared without t
 
   // The stored posture, and the sentence saying what it does.
   await expect(row).toContainText("Sichtbarkeit der E-Mails");
-  await expect(row).toContainText("Bis zur Einstufung zurückgehalten");
+  await expect(row).toContainText("Bis zur Prüfung zurückgehalten");
   await expect(row).toContainText(
     "Neue Nachrichten bleiben auf die Beteiligten beschränkt",
   );
@@ -61,19 +60,30 @@ test("AC-mailbox-2: narrowing the posture offers to narrow the history too", asy
   await row.getByRole("combobox").click();
   await page.getByRole("option", { name: "Immer zurückgehalten" }).click();
 
-  const dialog = page.getByRole("dialog", {
-    name: "Auf erfasste E-Mails anwenden?",
+  // Only a narrowing asks about history, and it asks unticked: reaching back
+  // into mail already brought in is the reader's call, never the default.
+  const history = page.getByTestId("connector-gmail-mail-posture-history");
+  await expect(history).toContainText(
+    de["connectors.mailPosture.historyTitle"],
+  );
+  const alsoHistory = history.getByRole("checkbox", {
+    name: de["connectors.mailPosture.historyApply"],
   });
-  await expect(dialog).toContainText("Auf erfasste E-Mails anwenden?");
-  // One question and one modifier, never two rival verbs: the German labels do
-  // not both fit the compact confirm, and a clipped primary button is what the
-  // three-button version shipped as.
-  const alsoHistory = dialog.getByRole("checkbox");
   await expect(alsoHistory).not.toBeChecked();
   await alsoHistory.check();
-  await dialog
-    .getByRole("button", { name: "E-Mail-Sichtbarkeit ändern" })
+  const posture = page.waitForRequest(
+    (req) =>
+      req.method() === "PUT" &&
+      req.url().endsWith("/connectors/gmail/mail-posture"),
+  );
+  await page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true })
     .click();
+  expect((await posture).postDataJSON()).toEqual({
+    posture: "held",
+    apply_to_history: true,
+  });
 
   await expect(row).toContainText("Immer zurückgehalten");
   await expect(row).toContainText("unabhängig von der Einstufung");
@@ -98,8 +108,9 @@ test("AC-mailbox-3: the admin opt-in states what turning it on asserts", async (
   await expect(page.getByText(/Margince prüft das nicht/)).toBeVisible();
 });
 
-// The senders list opens from its row on the outcomes card, in a drawer.
+// The senders list opens in a drawer from its summary row on Capture activity.
 async function openSenders(page: Page) {
+  await page.goto("/#/settings/capture-activity");
   await page
     .getByRole("button", {
       name: de["connectionOutcomes.viewNamed"].replace(
@@ -123,8 +134,8 @@ async function openRowMenu(page: Page, address: string) {
 test("AC-mailbox-4: the Senders page shows every decision and takes an overrule", async ({
   page,
 }) => {
-  await page.goto("/#/settings/connections");
   const senders = await openSenders(page);
+  await expect(senders).toBeVisible();
   await expect(senders).toContainText(de["senders.kind.contact"]);
   await expect(senders).toContainText(de["senders.kind.newsletter"]);
   await expect(senders).toContainText(de["senders.kind.personal"]);
@@ -146,7 +157,6 @@ test("AC-mailbox-4: the Senders page shows every decision and takes an overrule"
 test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
   page,
 }) => {
-  await page.goto("/#/settings/connections");
   const senders = await openSenders(page);
   await expect(senders).toContainText("anne@hotmail.com");
   await openRowMenu(page, "anne@hotmail.com");
@@ -168,8 +178,15 @@ test("AC-mailbox-6: the connect form says what happens before it asks for a pass
   page,
 }) => {
   await page.goto("/#/settings/connections");
-  await page.getByRole("button", { name: "Connector hinzufügen" }).click();
-  await page.getByTestId("connector-add-imap").getByRole("button").click();
+  await page.getByRole("button", { name: de["connectors.addOpen"] }).click();
+  await page.getByRole("radio", { name: de["connectFlow.otherHost"] }).click();
+  // Account, then what it brings in: the IMAP form is the sign-in step.
+  const next = page.getByRole("button", {
+    name: de["connectFlow.next"],
+    exact: true,
+  });
+  await next.click();
+  await next.click();
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Margince liest dieses Postfach");

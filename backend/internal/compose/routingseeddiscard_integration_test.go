@@ -8,9 +8,9 @@ package compose
 // A declared binding that did NOT store must say so, and this is the one seed
 // where silence is dangerous.
 //
-// `setting` is not workspace-scoped, so a bootstrap over a database still
-// holding a previous installation's rows keeps the old binding — and ai.Routing
-// is installation identity, so a data reset spares it too. The operator's file
+// `setting` is not workspace-scoped, so a bootstrap over a previous
+// installation's rows keeps the old binding. ai.Routing survives a data reset,
+// so a reset keeps it too. The operator's file
 // can say `sovereign`, meaning zero egress, while the installation serves a
 // cloud vendor the previous installation chose. Nothing else in the boot would
 // mention it.
@@ -27,9 +27,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
-	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 const seedDoc = `version: 1
@@ -46,7 +45,7 @@ seeds:
 
 func declaredFromFile(t *testing.T) yaml.Node {
 	t.Helper()
-	cfg, err := deployconfig.Parse([]byte(seedDoc))
+	cfg, err := bootstrapFrom(t, seedDoc)
 	if err != nil {
 		t.Fatalf("the declared binding does not parse: %v", err)
 	}
@@ -67,7 +66,7 @@ func TestADeclaredBindingSeedsAnInstallationThatHoldsNone(t *testing.T) {
 		t.Errorf("reported %v discarded on an installation that held nothing", discarded)
 	}
 
-	stored, err := settings.Get(ctx, NewSettingsStore(e.Pool), ai.Routing)
+	stored, err := config.StoredVal(ctx, StoredConfig(e.Pool), ai.Routing)
 	if err != nil {
 		t.Fatalf("reading the seeded binding: %v", err)
 	}
@@ -97,7 +96,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 		t.Fatalf("building the surviving binding: %v", err)
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(ctx, tx, ai.Routing, surviving)
+		_, err := config.SeedTx(ctx, tx, nil, ai.Routing, surviving)
 		return err
 	}); err != nil {
 		t.Fatalf("storing the surviving binding: %v", err)
@@ -113,7 +112,7 @@ embeddings: {provider: gemini, model: survivor-embed, dimensions: 8}
 	if !strings.Contains(strings.Join(discarded, ","), ai.RoutingKey) {
 		t.Errorf("discarded = %v; a declaration the database refused must be reported, or the file and the served vendor disagree in silence", discarded)
 	}
-	stored, err := settings.Get(ctx, NewSettingsStore(e.Pool), ai.Routing)
+	stored, err := config.StoredVal(ctx, StoredConfig(e.Pool), ai.Routing)
 	if err != nil {
 		t.Fatalf("reading the binding back: %v", err)
 	}

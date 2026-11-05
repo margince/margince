@@ -59,10 +59,12 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 	var offers []crmcontracts.Offer
 	var page storekit.Page
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		// The deal is the offer's visibility anchor: out of the caller's
-		// row scope, the whole listing answers 404, never an empty page
-		// that discloses the deal exists.
-		if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
+		// The deal is the offer's visibility anchor. Out of the caller's row
+		// scope, the whole listing answers 404, never an empty page that
+		// discloses the deal exists. An archived deal still lists its offers,
+		// as the single-offer read serves them. Reading them links nothing to
+		// the deal.
+		if err := auth.EnsureVisibleExisting(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
 
@@ -157,7 +159,7 @@ func attachOfferLines(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offe
 const offerColumns = `id, deal_id, offer_number, revision, status, currency,
 	buyer_company_id, buyer_snapshot, issuer_snapshot, valid_until, intro_text, terms_text,
 	net_minor, tax_minor, gross_minor, fx_rate_to_base::text, fx_rate_date, pdf_asset_ref,
-	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at`
+	template_id, accepted_at, source, captured_by, version, created_at, updated_at, archived_at, legal_entity_id, language`
 
 // withholdUnreadableBuyer removes an offer's buyer company from the
 // response when the caller could not open that company.
@@ -302,7 +304,7 @@ func recurringInputsOf(lines []crmcontracts.OfferLineItem) []RecurringLineInput 
 func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	var o crmcontracts.Offer
 	var id, dealID ids.UUID
-	var buyerCompanyID, templateID *ids.UUID
+	var buyerCompanyID, templateID, legalEntityID *ids.UUID
 	var offerNumber string
 	var revision int
 	var status string
@@ -315,7 +317,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	err := row.Scan(&id, &dealID, &offerNumber, &revision, &status, &o.Currency,
 		&buyerCompanyID, &buyerSnapshot, &issuerSnapshot, &validUntil, &o.IntroText, &o.TermsText,
 		&netMinor, &taxMinor, &grossMinor, &o.FxRateToBase, &fxRateDate, &o.PdfAssetRef,
-		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt)
+		&templateID, &o.AcceptedAt, &o.Source, &capturedBy, &version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &legalEntityID, &o.Language)
 	if err != nil {
 		return o, err
 	}
@@ -324,6 +326,7 @@ func scanOffer(row pgx.Row) (crmcontracts.Offer, error) {
 	o.DealId = openapi_types.UUID(dealID)
 	o.BuyerCompanyId = uuidPtr(buyerCompanyID)
 	o.TemplateId = uuidPtr(templateID)
+	o.LegalEntityId = uuidPtr(legalEntityID)
 	o.OfferNumber = &offerNumber
 	o.Revision = &revision
 	o.Status = crmcontracts.OfferStatus(status)
@@ -347,7 +350,7 @@ func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmc
 	rows, err := tx.Query(ctx,
 		`SELECT id, position, product_id, description, unit, quantity::text, unit_price_minor,
 		        discount_pct::text, tax_rate::text, evidence, price_grounded, version, created_at, updated_at,
-		        billing_model, billing_interval_months, interval_count
+		        billing_model, billing_interval_months, interval_count, tax_category
 		 FROM offer_line_item WHERE offer_id = $1 ORDER BY position, id`, offerID)
 	if err != nil {
 		return nil, fmt.Errorf("read offer lines: %w", err)
@@ -363,15 +366,19 @@ func readOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]crmc
 		var evidence *map[string]any
 		var priceGrounded bool
 		var version int64
-		var billingModel *string
+		var billingModel, taxCategory *string
 		if err := rows.Scan(&id, &l.Position, &productID, &l.Description, &l.Unit, &quantity,
 			&l.UnitPriceMinor, &discount, &taxRate, &evidence, &priceGrounded, &version, &l.CreatedAt, &l.UpdatedAt,
-			&billingModel, &l.BillingIntervalMonths, &l.IntervalCount); err != nil {
+			&billingModel, &l.BillingIntervalMonths, &l.IntervalCount, &taxCategory); err != nil {
 			return nil, err
 		}
 		if billingModel != nil {
 			model := crmcontracts.OfferLineItemBillingModel(*billingModel)
 			l.BillingModel = &model
+		}
+		if taxCategory != nil {
+			category := crmcontracts.OfferLineItemTaxCategory(*taxCategory)
+			l.TaxCategory = &category
 		}
 		fig, err := LineTotals(OfferLineInput{
 			Quantity: quantity, UnitPriceMinor: l.UnitPriceMinor, DiscountPct: discount, TaxRate: taxRate,

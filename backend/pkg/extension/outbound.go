@@ -36,10 +36,13 @@ package extension
 // are copies that stop being equal to the published list the moment it moves.
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -90,29 +93,75 @@ func RefuseNonPublic(_, address string, _ syscall.RawConn) error {
 	return nil
 }
 
+// Egress is what the core binds at boot for every unit's outbound call. A unit
+// never binds it, and TestNoUnitDialsAroundTheInstallationsEgressPolicy refuses
+// one that does.
+type Egress struct {
+	// AdmitLoopback lets a transport built after the binding dial 127.0.0.0/8
+	// and ::1, so a unit under development reaches a provider stand-in on the
+	// developer's machine. True only under MARGINCE_ENV=dev; every other
+	// non-public range stays refused in every posture.
+	AdmitLoopback bool
+	// UserAgent is the installation's one name for a unit's outbound request,
+	// declared in the core's list of outbound identities.
+	UserAgent string
+}
+
+var boundEgress atomic.Pointer[Egress]
+
+// BindEgress records the core's egress binding, once at boot before any unit runs.
+// A transport reads it when built, so one built earlier keeps refusing loopback.
+func BindEgress(egress Egress) { boundEgress.Store(&egress) }
+
+func currentEgress() Egress {
+	if bound := boundEgress.Load(); bound != nil {
+		return *bound
+	}
+	return Egress{}
+}
+
+// NewRequest builds a request that names the installation to the provider, the
+// way every outbound request of the core does. A request with no name goes out
+// as Go's default agent, which tells the provider's operator nothing they can
+// act on.
+func NewRequest(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
+	request, err := http.NewRequestWithContext(ctx, method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	if agent := currentEgress().UserAgent; agent != "" {
+		request.Header.Set("User-Agent", agent)
+	}
+	return request, nil
+}
+
+// egressControl is the dial check a transport is built with: RefuseNonPublic,
+// with loopback carved out of it when admitLoopback is set.
+func egressControl(admitLoopback bool) func(network, address string, conn syscall.RawConn) error {
+	if !admitLoopback {
+		return RefuseNonPublic
+	}
+	return func(network, address string, conn syscall.RawConn) error {
+		host, _, err := net.SplitHostPort(address)
+		if ip := net.ParseIP(host); err == nil && ip != nil && ip.IsLoopback() {
+			return nil
+		}
+		return RefuseNonPublic(network, address, conn)
+	}
+}
+
 // OutboundTransport answers a transport whose dials the egress policy admits.
-//
-// A fresh one per call, and the reason is connection pooling: a shared
-// transport keeps idle connections, and two units sharing them would share a
-// pool sized for neither. A unit builds one and holds it — the same rule any
-// http.Transport carries — rather than building one per request.
+// A fresh one per call, so two units never share a pool of idle connections;
+// a unit builds one and holds it.
 func OutboundTransport() *http.Transport {
 	transport, _ := http.DefaultTransport.(*http.Transport)
 	guarded := transport.Clone()
-	dialer := &net.Dialer{Timeout: outboundDialTimeout, KeepAlive: 30 * time.Second, Control: RefuseNonPublic}
+	dialer := &net.Dialer{
+		Timeout: outboundDialTimeout, KeepAlive: 30 * time.Second, Control: egressControl(currentEgress().AdmitLoopback),
+	}
 	guarded.DialContext = dialer.DialContext
-	// NO PROXY, and this is the line that decides whether the guard means
-	// anything. The stdlib default is ProxyFromEnvironment, and a proxy turns
-	// the check inside out: the dial goes to the PROXY's address — public, so
-	// admitted — and the proxy is then asked to CONNECT to the target, which
-	// this side never sees. Every internal address the hook refuses is
-	// reachable that way by any deployment with HTTPS_PROXY set.
-	//
-	// So the clone's inherited proxy is dropped rather than trusted. A
-	// deployment that must egress through a proxy has to enforce the
-	// destination policy AT that proxy, which is the only place that can see
-	// the destination — and is a deployment decision rather than something
-	// this package can make on its behalf.
+	// A proxy dials its own public address and reaches the target out of this
+	// check's sight. A deployment that needs one enforces the policy there.
 	guarded.Proxy = nil
 	return guarded
 }

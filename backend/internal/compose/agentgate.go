@@ -52,11 +52,11 @@ func gatedBodyLimit(spec mcp.ToolSpec) int64 {
 	return max(maxGatedBody, spec.MaxArgsBytes)
 }
 
-func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, ownership agents.FieldOwnership, imports agents.Imports, tags agents.Tags, gate *auth.Gate) func(http.Handler) http.Handler {
+func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.StageResolver, records datasource.SystemOfRecordProvider, imports agents.Imports, tags agents.Tags, leadReasons agents.DisqualifyReasons, invitations agents.InvitationRoster, gate *auth.Gate) func(http.Handler) http.Handler {
 	// ONE set of read-side dependencies for both questions this door asks of a
 	// command: what tier it runs at, and what an approval of it would bind to.
 	// They were two structs while the tier had its own table to feed.
-	deps := restCommandDeps{records: records, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, language: reg.BaseLanguage()}
+	deps := restCommandDeps{records: records, invitations: invitations, stages: stages, channels: channelKinds{}, imports: imports, tags: tags, leadReasons: leadReasons, language: reg.BaseLanguage()}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -103,7 +103,7 @@ func agentGate(reg *agents.Registry, staging agents.Approvals, stages agents.Sta
 				}
 			}
 			admitAgentCall(w, r, next, admissionOutcome{
-				staging: staging, ownership: ownership, pol: pol, body: body,
+				staging: staging, pol: pol, body: body,
 				commands: deps, err: err, spec: spec, registry: reg,
 			})
 		})
@@ -226,8 +226,7 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 // admissionOutcome carries the result of the autonomy gate's Admit call
 // (err) plus the fields needed to act on it.
 type admissionOutcome struct {
-	staging   agents.Approvals
-	ownership agents.FieldOwnership
+	staging agents.Approvals
 	// commands carries what a staged call's own resolver needs to answer for
 	// itself, so the target the REST door stages is the one the tool door would
 	// have staged for the same operation.

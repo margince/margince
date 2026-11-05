@@ -80,15 +80,22 @@ func (r *ApprovalNoticeRetract) HandleEvent(ctx context.Context, env events.Enve
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: approvalNoticeRetractActor,
 	})
-	return r.db.Tx(ctx, func(tx pgx.Tx) error {
-		taken, err := r.notices.Retract(ctx, tx, approvalNoticeDedupeKey(env.Entity.ID))
+	_, err = r.retract(ctx, env.Entity.ID)
+	return err
+}
+
+func (r *ApprovalNoticeRetract) retract(ctx context.Context, id ids.UUID) (int64, error) {
+	var taken int64
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		taken, err = r.notices.Retract(ctx, tx, approvalNoticeDedupeKey(id))
 		if err != nil {
 			return fmt.Errorf("approval notice retract: %w", err)
 		}
-		if taken > 0 {
-			r.log.InfoContext(ctx, "took back pending-decision notices for a settled approval",
-				"approval_id", env.Entity.ID, "notices", taken)
-		}
 		return nil
 	})
+	if err == nil && taken > 0 {
+		r.log.InfoContext(ctx, "took back pending-decision notices for a settled approval", "approval_id", id, "notices", taken)
+	}
+	return taken, err
 }

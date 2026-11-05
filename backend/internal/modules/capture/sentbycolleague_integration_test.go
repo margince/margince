@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -61,8 +62,8 @@ func seedSeat(ctx context.Context, t *testing.T, db *database.DB, email, status 
 	t.Helper()
 	id := ids.NewV7()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name, status) VALUES ($1, $2, $2, $3)`,
-			id, email, status)
+		_, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name, status, email_domain_folded)
+			VALUES ($1, $2, $2, $3, $4)`, id, email, status, owndomain.StoredOfAddress(email))
 		return err
 	}); err != nil {
 		t.Fatalf("seeding %s: %v", email, err)
@@ -108,6 +109,25 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 	}
 	if seatRole != "to" {
 		t.Errorf("the seat that held the copy is stamped %q, want only \"to\": it received the mail and did not write it", seatRole)
+	}
+}
+
+// A colleague whose login names its domain in Unicode wrote the mail its
+// punycode spelling sent. Both spellings are one mailbox.
+func TestAColleaguesLoginInEitherSpellingIsTheSender(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com", "bücher.example")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	colleague := seedSeat(ctx, t, db, "sam@bücher.example", "invited")
+	copied := colleagueCopy("colleague-idna", "Sam@xn--bcher-kva.example")
+	copied.SenderAuthentication.DMARCPassDomain = "xn--bcher-kva.example"
+
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, copied)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	if got := storedMailFor(ctx, t, db, "colleague-idna"); got.colleague == nil || *got.colleague != colleague {
+		t.Errorf("sent_by_colleague = %v, want the colleague %v whose login is the Unicode spelling", got.colleague, colleague)
 	}
 }
 
@@ -208,6 +228,61 @@ func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
 			}
 		})
 	}
+}
+
+// An invitation a colleague organised is received mail: whom they invited is
+// not whom they wrote to. It stays inbound, but its From names the colleague,
+// so no reader credits it to the other side. Invited seats count.
+func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
+	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
+	ws, _ := principal.WorkspaceID(ctx)
+	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
+	colleague := seedSeat(ctx, t, db, "sam@acme.com", "invited")
+	rec := colleagueCopy("invite-1", "sam@acme.com")
+	fields, ok := rec.Fields.(capture.ActivityFields)
+	if !ok {
+		t.Fatalf("the fixture carries %T, want capture.ActivityFields", rec.Fields)
+	}
+	fields.HasCalendarPart = true
+	rec.Fields = fields
+
+	for range 2 {
+		if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, rec)); err != nil {
+			t.Fatalf("Upsert: %v", err)
+		}
+	}
+
+	got := storedMailFor(ctx, t, db, "invite-1")
+	if got.direction != connector.DirectionInbound || got.colleague != nil {
+		t.Errorf("stored as %s with sent_by_colleague %v, want the received invitation it is", got.direction, got.colleague)
+	}
+	if got.fromUser != nil {
+		t.Errorf("the From participant names seat %v; a participant row would let the author read the copy", got.fromUser)
+	}
+	if sender := invitationSenderOf(ctx, t, db, "invite-1"); sender == nil || *sender != colleague {
+		t.Errorf("invitation_sender is %v, want the colleague %v who organised it", sender, colleague)
+	}
+
+	unauth := colleagueCopy("invite-unauth", "sam@acme.com")
+	unauth.SenderAuthentication = connector.SenderAuthentication{}
+	unauth.Fields = fields
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, unauth)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	if sender := invitationSenderOf(ctx, t, db, "invite-unauth"); sender != nil {
+		t.Errorf("an unauthenticated invitation credited seat %v; a sender types From", sender)
+	}
+}
+
+func invitationSenderOf(ctx context.Context, t *testing.T, db *database.DB, sourceID string) *ids.UUID {
+	t.Helper()
+	var sender *ids.UUID
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT invitation_sender FROM activity WHERE source_id = $1`, sourceID).Scan(&sender)
+	}); err != nil {
+		t.Fatalf("reading the invitation's sender: %v", err)
+	}
+	return sender
 }
 
 // capturedAs is rec as the seat's own connector hands it to the sink: the

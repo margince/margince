@@ -338,6 +338,10 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	if err != nil {
 		return err
 	}
+	rowsBefore, err := readProfileFieldImages(ctx, tx, in.CompanyID)
+	if err != nil {
+		return err
+	}
 	appliedFields, err := applyEvidenceFields(ctx, tx, wsID, in.CompanyID, by, fields)
 	if err != nil {
 		return err
@@ -352,19 +356,28 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	if err := fillSizeBandFromFacts(ctx, tx, in, by, appliedFacts); err != nil {
 		return err
 	}
+	for _, fact := range []string{FactPhone, FactContactEmail} {
+		if err := fillCompanyColumnFromFact(ctx, tx, in, by, appliedFacts, fact); err != nil {
+			return err
+		}
+	}
 	after, err := readColdStartColumnImages(ctx, tx, in.CompanyID)
 	if err != nil {
 		return err
 	}
-	before, after = storekit.ChangedColumns(before, after)
+	rowsAfter, err := readProfileFieldImages(ctx, tx, in.CompanyID)
+	if err != nil {
+		return err
+	}
+	before, after = changedColdStartColumns(before, after)
 	// The facts and the profile-field evidence are NOT column images — they
 	// live in their own sidecar tables — so they ride the evidence column with
 	// the rest of the operation's metadata. Only what changed on the
 	// company row itself belongs in before/after.
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "company", in.CompanyID.UUID, before, after, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "company", in.CompanyID.UUID, before, after, withProfileFieldReceipts(map[string]any{
 		auditKeySource: companySourceSiteRead, auditKeySourceURL: in.SourceURL,
 		auditKeyFields: appliedFields, auditKeyFacts: appliedFacts,
-	})
+	}, profileFieldReceipts(rowsBefore, rowsAfter, after)))
 	if err != nil {
 		return fmt.Errorf("audit deepread apply: %w", err)
 	}
@@ -376,7 +389,7 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	}); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
-	return nil
+	return s.locateLandedAddress(ctx, tx, in.CompanyID, after)
 }
 
 // upsertCompanyFacts lands the category facts, refreshing an
@@ -401,7 +414,7 @@ func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by 
 			              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
 			              source = EXCLUDED.source, captured_by = EXCLUDED.captured_by,
 			              site_read_id = EXCLUDED.site_read_id, captured_at = now()
-			WHERE company_fact.source NOT IN ('human', 'agent')`,
+			WHERE `+companyFactReplaceableSQL,
 			in.CompanyID, f.Category, f.Field, f.Value, f.ValueKey,
 			f.EvidenceSnippet, f.SourceURL, f.Confidence, by, siteReadID)
 		if err != nil {
@@ -413,3 +426,5 @@ func upsertCompanyFacts(ctx context.Context, tx pgx.Tx, in DeepReadProposal, by 
 	}
 	return applied, nil
 }
+
+const companyFactReplaceableSQL = "company_fact.source NOT IN ('human', 'agent')"

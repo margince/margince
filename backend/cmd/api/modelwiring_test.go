@@ -147,12 +147,10 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 
 // A STORED binding outranks --ai-fake, and nothing else in this package says so.
 //
-// The desktop launcher leans on exactly this: it passes --ai-fake on every boot
-// so a fresh install's AI surfaces answer instead of reading as broken, and it
-// relies on a binding the user sets in Settings -> AI overriding that without a
-// restart. Were the precedence the other way round, the launcher would pin every
-// desktop installation to canned answers and the settings screen would look
-// broken while being obeyed.
+// An installation started with --ai-fake answers from canned text until its
+// admin binds a model in Settings -> AI. That binding must win without a
+// restart. With the precedence reversed, the flag would pin the installation to
+// canned answers. The settings screen would then look broken while obeyed.
 func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 	cfg := fakeRouting(t)
 	_, state, profile, _, err := modelPathFor(
@@ -215,8 +213,9 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 var coldStartSurfaces = []string{
 	"cold-start", "scrape", "morning brief", "account brief", "company dossier",
 	"growth fit", "reply draft", "account draft", "contact draft", "lead draft",
-	"next move", "meeting brief", "relationship brief", "role proposals",
-	"plain-words filter", "intro request", "intro note",
+	"next move", "meeting brief", "relationship brief", "room brief", "role proposals",
+	"plain-words filter", "intro request", "intro note", "card photo", "reviewed message classification",
+	"sales assessment", "report setup", "reader rendering",
 }
 
 // TestColdStartOptionsRespectsResolvedPath proves coldStartOptions is a pure
@@ -294,22 +293,24 @@ func TestJobEnqueueOptionsGatesVatCheckOnConfiguredBaseURL(t *testing.T) {
 // contacts.GeocodeFailed — a confident wrong answer about why geocoding does not
 // work.
 func TestGeocodeEnqueueOptionsRespectsConfiguredBaseURL(t *testing.T) {
-	if got := geocodeEnqueueOptions(nil, ""); got != nil {
-		t.Fatalf("geocodeEnqueueOptions(unconfigured) = %d options, want 0", len(got))
+	if got := geocodeEnqueueOptions(nil, "off"); got != nil {
+		t.Fatalf("geocodeEnqueueOptions(off) = %d options, want 0", len(got))
 	}
-	if got := geocodeEnqueueOptions(nil, "public"); len(got) != 1 {
-		t.Fatalf("geocodeEnqueueOptions(configured) = %d options, want 1 (geocode enqueue)", len(got))
+	for _, setting := range []string{"", "  ", "public", "https://nominatim.internal"} {
+		if got := geocodeEnqueueOptions(nil, setting); len(got) != 1 {
+			t.Fatalf("geocodeEnqueueOptions(%q) = %d options, want 1 (geocode enqueue)", setting, len(got))
+		}
 	}
 }
 
 // The call site, for the reason the VAT one above gives: a regression that
 // stops passing the base URL through would leave that helper's own test green.
 func TestJobEnqueueOptionsGatesGeocodingOnConfiguredBaseURL(t *testing.T) {
-	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
+	unconfigured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "off"})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(unconfigured): %v", err)
 	}
-	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "public"})
+	configured, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(configured): %v", err)
 	}
@@ -334,13 +335,13 @@ func TestAnUnconfiguredGateAnnouncesItselfAtBoot(t *testing.T) {
 		quiet []string
 	}{
 		{
-			name:  "neither register configured",
-			gates: queueGates{},
+			name:  "VAT unset, geocoding off",
+			gates: queueGates{geocode: "off"},
 			wants: []string{"MARGINCE_VAT_CHECK_BASE_URL", "MARGINCE_GEOCODE_BASE_URL"},
 		},
 		{
-			name:  "geocoding configured, VAT not",
-			gates: queueGates{geocode: "public"},
+			name:  "geocoding unset (on), VAT not",
+			gates: queueGates{},
 			wants: []string{"MARGINCE_VAT_CHECK_BASE_URL"},
 			quiet: []string{"MARGINCE_GEOCODE_BASE_URL"},
 		},
@@ -374,7 +375,7 @@ func TestAnUnconfiguredGateAnnouncesItselfAtBoot(t *testing.T) {
 // switch wearing two names: an installation that consults a VAT register and
 // geocodes nothing must get the consultation enqueue and not the lookup one.
 func TestTheTwoQueueGatesAnswerSeparately(t *testing.T) {
-	neither, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{})
+	neither, err := jobEnqueueOptions(nil, discardLogger(), nil, queueGates{geocode: "off"})
 	if err != nil {
 		t.Fatalf("jobEnqueueOptions(neither): %v", err)
 	}

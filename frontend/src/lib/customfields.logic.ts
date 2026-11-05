@@ -20,10 +20,6 @@ export type CfType =
 // The four below shipped while the engine had already grown to six, and a field
 // an admin could create on a project or a contract was one this screen refused
 // to name, with no way to reach it but the API.
-//
-// `activity` is absent because the engine itself stopped accepting it: the
-// target set (customfields.FieldObjects) is the objects whose stores read cf_*
-// columns AND whose contract schemas carry them, and an activity has neither.
 // The parity test in customfields.logic.test.ts is what holds the two equal.
 export const CF_OBJECTS: readonly CfObject[] = [
   "deal",
@@ -32,6 +28,7 @@ export const CF_OBJECTS: readonly CfObject[] = [
   "lead",
   "project",
   "contract",
+  "activity",
 ];
 
 export const CF_TYPES: readonly CfType[] = [

@@ -217,3 +217,70 @@ SELECT d.id::text, c.id::text, e.id::text, task.id::text FROM d, c, e, task`).
 	}
 	return f
 }
+
+func TestASignalGoesWithItsRecord(t *testing.T) {
+	owner := shapeConn(t)
+	contact := seedAppliedFieldContact(t, owner, "Sigrid Holm")
+
+	insert := func(entityType string) error {
+		_, err := owner.Exec(context.Background(), `
+			INSERT INTO signal (kind, entity_type, entity_id, summary, source, captured_by)
+			VALUES ('risk', $1, $2, 'Went quiet', 'test', 'human:seed')`, entityType, contact)
+		return err
+	}
+	expectRefusedAs(t, insert("deal"), "signal_entity_deal_id_fkey")
+	if err := insert("contact"); err != nil {
+		t.Fatalf("a signal on a contact that exists was refused: %v", err)
+	}
+	deleteAndExpectGone(t, owner, `DELETE FROM contact WHERE id = $1`, contact,
+		`SELECT count(*) FROM signal WHERE entity_id = $1`)
+}
+
+// A commitment is the rep's record of the week, so the record it links to
+// takes only the link with it when it goes.
+func TestACommitmentLetsGoOfADeletedRecord(t *testing.T) {
+	owner := shapeConn(t)
+	ctx := context.Background()
+	rep := seedShapeUser(t, owner, "commitment")
+	var plan, lead string
+	if err := owner.QueryRow(ctx, `
+		INSERT INTO weekly_plan (owner_id, local_week_start, captured_by)
+		VALUES ($1, date '2026-10-19', 'human:seed') RETURNING id::text`, rep).Scan(&plan); err != nil {
+		t.Fatalf("seeding the plan: %v", err)
+	}
+	if err := owner.QueryRow(ctx, `
+		INSERT INTO lead (full_name, source, captured_by)
+		VALUES ('Lena Brandt', 'manual', 'human:seed') RETURNING id::text`).Scan(&lead); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+	insert := func(recordType string) error {
+		_, err := owner.Exec(ctx, `
+			INSERT INTO weekly_plan_commitment (plan_id, label, linked_record_type, linked_record_id, captured_by)
+			VALUES ($1, 'Call Lena back', $2, $3, 'human:seed')`, plan, recordType, lead)
+		return err
+	}
+	expectRefusedAs(t, insert("deal"), "weekly_plan_commitment_linked_deal_id_fkey")
+	if err := insert("lead"); err != nil {
+		t.Fatalf("a commitment on a lead that exists was refused: %v", err)
+	}
+	var keyed *string
+	if err := owner.QueryRow(ctx, `SELECT linked_lead_id::text FROM weekly_plan_commitment WHERE plan_id = $1`,
+		plan).Scan(&keyed); err != nil || keyed == nil || *keyed != lead {
+		t.Fatalf("the commitment's lead key = %v (err %v), want the lead the pair names", keyed, err)
+	}
+
+	if _, err := owner.Exec(ctx, `DELETE FROM lead WHERE id = $1`, lead); err != nil {
+		t.Fatalf("deleting the lead a commitment links to: %v", err)
+	}
+	var label string
+	var linkedType, linkedID *string
+	if err := owner.QueryRow(ctx, `
+		SELECT label, linked_record_type, linked_record_id::text FROM weekly_plan_commitment WHERE plan_id = $1`,
+		plan).Scan(&label, &linkedType, &linkedID); err != nil {
+		t.Fatalf("the commitment did not outlive the lead: %v", err)
+	}
+	if linkedType != nil || linkedID != nil || label != "Call Lena back" {
+		t.Errorf("after the lead went the commitment reads %q linked to %v/%v, want the label kept and no link",
+			label, linkedType, linkedID)
+	}
+}

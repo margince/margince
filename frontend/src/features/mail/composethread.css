@@ -1,0 +1,207 @@
+/* Which thread the message goes into: the bar under the window's title, and
+ * the list it opens. Tokens only (ds-purity). */
+
+/* The bar: one press target across the window, on a strip so it reads as the
+   window's own band rather than a field. Marked in the accent tint while the
+   draft answers a thread. */
+.compose-threadbar-wrap {
+  flex: none;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.compose-threadbar.popover-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--groundStrip);
+  color: var(--textPrimary);
+}
+.compose-threadbar.popover-trigger:hover {
+  background: var(--groundHover);
+}
+.compose-threadbar > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--textSecondary);
+}
+.compose-threadbar-text {
+  flex: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The subject gives way first, so the date stays beside it on a narrow bar. */
+.compose-threadbar-text:has(+ .compose-threadbar-when) {
+  flex: 0 1 auto;
+}
+.compose-threadbar-when {
+  flex: none;
+  margin-inline-end: auto;
+  white-space: nowrap;
+}
+.compose-threadbar-text > strong {
+  font-weight: var(--fontWeightBold);
+}
+.compose-threadbar-count {
+  margin-inline-start: var(--space-2);
+  color: var(--textSecondary);
+}
+.compose-threadbar-action {
+  flex: none;
+  color: var(--accentText);
+  font-weight: var(--fontWeightBold);
+}
+
+/* The list the bar opens: the way out to a new thread, then the threads. */
+/* Wide enough for a subject to read whole: the panel's own 20rem cap is for
+   asides, and this is a list to choose from. */
+.popover-panel.compose-threadmenu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  inline-size: min(32rem, calc(100vw - var(--space-5) * 2));
+  max-inline-size: none;
+  overflow: hidden;
+}
+.compose-threadmenu > * {
+  margin: 0;
+}
+/* The way out to a new thread, as the list's first row; tinted while the draft
+   starts one. */
+.compose-threadmenu-new {
+  justify-content: flex-start;
+  inline-size: 100%;
+  font-weight: var(--fontWeightMedium);
+}
+.compose-threadmenu-new[aria-pressed="true"] {
+  background: var(--bgInset);
+}
+/* The list's name, as a quiet label over the rows rather than a title. */
+.compose-threadmenu-title {
+  padding-inline: var(--space-3);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.compose-threadlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  /* A record with a hundred threads scrolls here, under the search, rather
+     than growing the menu past the window. It is the menu's one scroller. */
+  flex: 0 1 auto;
+  min-block-size: 0;
+  max-block-size: 20rem;
+  overflow-y: auto;
+  /* The rows' screen-reader text is placed absolutely. Held here, it scrolls
+     with its row instead of stretching the menu below the list. */
+  position: relative;
+}
+.compose-threadmenu-more {
+  align-self: flex-start;
+  color: var(--accentText);
+}
+.compose-threadrow[data-selected="true"] {
+  border-radius: var(--r-sm);
+  background: var(--bgInset);
+}
+/* The marked thread's other messages, set in under it. */
+.compose-threadlist-others {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+.compose-threadlist-others > .compose-message {
+  display: block;
+  padding: 0;
+}
+
+/* A thread is one conversation rather than a record's whole chronology, so
+   the date gutter that keeps an account's timeline in a column buys nothing
+   here and costs a third of the measure. */
+.compose-thread-list {
+  padding-inline-start: 0;
+}
+
+/* A thread read without its summary: the design system's button laid out as
+   a two-line row, stacked and as wide as the list. Two classes, so it outranks
+   .btn and .btn-ghost in any sheet order. */
+.btn.compose-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  inline-size: 100%;
+  block-size: auto;
+  text-align: start;
+  background: none;
+  border-color: transparent;
+  padding: var(--space-2) var(--space-3);
+}
+.compose-choice-subject {
+  color: var(--textPrimary);
+}
+
+.compose-message-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+  padding: 0 var(--space-3) var(--space-2);
+}
+
+/* In the thread menu a thread reads as one compact row: its subject with the
+   time at the end, its newest words under it with what it waits on. Who it
+   was with is the menu's own heading, so the row leaves it out. */
+.compose-threadmenu .emailentry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-3); /* ds:ignore the thread menu's two-line row */
+  padding: var(--space-2) var(--space-3); /* ds:ignore the thread menu's two-line row */
+}
+.compose-threadmenu .emailentry__lead {
+  display: contents;
+}
+.compose-threadmenu .emailentry__lead > svg,
+.compose-threadmenu .emailentry__who,
+.compose-threadmenu .emailentry__marks > .visibility {
+  display: none;
+}
+.compose-threadmenu .emailentry__subject {
+  grid-row: 1;
+  grid-column: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--fontWeightMedium);
+}
+.compose-threadmenu .emailentry__when {
+  grid-row: 1;
+  grid-column: 2;
+  margin: 0;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.compose-threadmenu .emailentry__preview {
+  grid-row: 2;
+  grid-column: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.compose-threadmenu .emailentry__marks {
+  grid-row: 2;
+  grid-column: 2;
+  justify-content: flex-end;
+}

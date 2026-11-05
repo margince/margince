@@ -102,3 +102,40 @@ func TestAServedBriefDropsAnActivityNarrowedAfterTheRunCitedIt(t *testing.T) {
 		t.Errorf("the served evidence lost the deal's own id: %v", item.EvidenceIDs)
 	}
 }
+
+func TestAServedFindingFollowsItsEvidenceAudience(t *testing.T) {
+	b := setupBrief(t)
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	items := itemsByDeal(t, run)
+	first, kept := items[b.dealA], items[b.dealB]
+	if !slices.Contains(first.EvidenceIDs, b.activityOnA) {
+		t.Fatal("the snapshot must cite the activity before its audience changes")
+	}
+	const finding = "The buyer requested a revised proposal."
+	if err := b.engine.AnnotateCurrentRun(b.repCtx, Annotation{Items: []ItemAnnotation{
+		{ItemID: first.ID, Finding: finding, CitedEvidence: []ids.UUID{b.activityOnA}},
+		{ItemID: kept.ID, Finding: "Review the deal value.", CitedEvidence: []ids.UUID{b.dealB}},
+	}}, briefClock); err != nil {
+		t.Fatal(err)
+	}
+	before, err := b.engine.LatestRun(b.repCtx, briefClock)
+	if err != nil || itemsByDeal(t, before)[b.dealA].Finding != finding {
+		t.Fatalf("the visible finding was not served: err=%v", err)
+	}
+	narrowAwayFromTheRep(t, b)
+	after, err := b.engine.LatestRun(b.repCtx, briefClock.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	served := itemsByDeal(t, after)
+	if served[b.dealA].Finding != "" || served[b.dealB].Finding == "" {
+		t.Fatal("findings did not follow their own evidence visibility")
+	}
+	marked, err := b.engine.MarkDismissed(b.repCtx, first.ID, briefClock.Add(time.Hour))
+	if err != nil || marked.Finding != "" {
+		t.Fatalf("the mark read-back exposed a finding outside the audience: err=%v", err)
+	}
+}

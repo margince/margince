@@ -72,6 +72,7 @@ var (
 		var req crmcontracts.CreateDealRequest
 		return Decode(w, r, &req)
 	}
+	// The activity create body takes cf_ keys, so it decodes the way its doors do.
 	intoCreateActivity = func(w http.ResponseWriter, r *http.Request) bool {
 		var req crmcontracts.CreateActivityRequest
 		return Decode(w, r, &req)
@@ -293,7 +294,7 @@ func TestClassify_seamFieldDecodeIsRestatedButNeverOverwritten(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var req crmcontracts.CreateActivityRequest
-			err := datasource.StrictDecode(json.RawMessage(tc.fields), &req)
+			err := datasource.StrictCustomFieldDecode(json.RawMessage(tc.fields), &req)
 			if err == nil {
 				t.Fatalf("fields %s were accepted", tc.fields)
 			}
@@ -321,7 +322,7 @@ func TestClassify_theSeamsMaskedCauseStillReachesTheLog(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(restore) })
 
 	var req crmcontracts.CreateActivityRequest
-	err := datasource.StrictDecode(json.RawMessage(`{"assignee_id":"abcdef"}`), &req)
+	err := datasource.StrictCustomFieldDecode(json.RawMessage(`{"assignee_id":"abcdef"}`), &req)
 	if err == nil {
 		t.Fatal("a malformed uuid was accepted")
 	}
@@ -348,7 +349,7 @@ func TestClassify_theSeamsOwnRefusalIsNotLoggedAsUnnamed(t *testing.T) {
 	t.Cleanup(func() { slog.SetDefault(restore) })
 
 	var req crmcontracts.CreateActivityRequest
-	err := datasource.StrictDecode(json.RawMessage(`{"subjekt":"x"}`), &req)
+	err := datasource.StrictCustomFieldDecode(json.RawMessage(`{"subjekt":"x"}`), &req)
 	if err == nil {
 		t.Fatal("an unknown key was accepted")
 	}

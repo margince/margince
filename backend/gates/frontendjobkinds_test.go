@@ -7,7 +7,7 @@ package gates
 
 // System health names every declared job kind in words, with the kind under it.
 //
-// The names live in frontend/src/format/jobkinds.ts. A declared kind missing
+// The names live in frontend/src/features/settings/jobkinds.ts. A declared kind missing
 // there shows an operator a bare key. A name for a kind no longer declared says
 // the list is not maintained. So both directions fail.
 
@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-var frontendJobKinds = filepath.Join(repoRoot, "frontend", "src", "format", "jobkinds.ts")
+var frontendJobKinds = filepath.Join(repoRoot, "frontend", "src", "features", "settings", "jobkinds.ts")
 
 var tsCommentInJobKinds = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 

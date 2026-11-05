@@ -29,6 +29,7 @@ import {
   walkedTo,
 } from "./suggestlist";
 import "./listpopover.css";
+import { holdsEveryWord, searchWords } from "../format/collate";
 
 export type ListPopoverOption = Readonly<{
   id: string;
@@ -77,6 +78,12 @@ type ListPopoverProps = Readonly<{
   error?: ReactNode;
   /** What an empty list says, where "No match" is not the whole answer. */
   empty?: ReactNode;
+  /**
+   * What the reader can do instead when a typed term matches nothing, given
+   * that term and `done`. Drawn under the list, outside the live status, so
+   * it can hold a control. Not drawn while the box is empty.
+   */
+  emptyAction?: (term: string, done: () => void) => ReactNode;
   footer?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -181,6 +188,7 @@ function ListSearch({
     | "pending"
     | "error"
     | "empty"
+    | "emptyAction"
     | "footer"
   >;
   done: () => void;
@@ -291,6 +299,10 @@ function ListSearch({
           ))}
         </div>
       </div>
+      {list.emptyAction &&
+        term.trim() !== "" &&
+        nothingMatched(list, found, rows.length) &&
+        list.emptyAction(term.trim(), done)}
       {list.error && <ErrorLine>{list.error}</ErrorLine>}
       {list.footer}
     </div>
@@ -303,14 +315,12 @@ function matchingTerm(
   options: readonly ListPopoverOption[],
   term: string,
 ): readonly ListPopoverOption[] {
-  const needle = term.trim().toLowerCase();
-  if (needle === "") {
+  const words = searchWords(term);
+  if (words.length === 0) {
     return options;
   }
   return options.filter((option) =>
-    [option.name, ...(option.keywords ?? [])].some((text) =>
-      text.toLowerCase().includes(needle),
-    ),
+    holdsEveryWord(words, [option.name, ...(option.keywords ?? [])]),
   );
 }
 
@@ -324,6 +334,21 @@ function listKeyOf(key: string): ListKey | null {
     default:
       return null;
   }
+}
+
+// The list has answered and holds no row: not still loading, not still
+// asking the server.
+function nothingMatched(
+  list: Pick<ListPopoverProps, "options" | "search">,
+  found: CandidateSearch<ListPopoverOption>,
+  rows: number,
+): boolean {
+  if (rows > 0) {
+    return false;
+  }
+  return list.search
+    ? found.answered && !found.pending
+    : list.options !== undefined;
 }
 
 function statusOf({

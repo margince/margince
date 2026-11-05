@@ -1,16 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package contact360 assembles the contact record page in one round trip —
-// the contact half of the one-composite-read doctrine (PO-EXT-3).
-//
-// It is the company 360's sibling and deliberately its mirror: one
-// workspace transaction so the sections describe one moment, a mandatory
-// root read whose refusal is the whole read's refusal, and every other
-// section attempted independently and OMITTED-AND-NAMED when the caller
-// lacks its grant. Empty and forbidden are different facts, and a page
-// that renders them the same way tells the reader the relationship is
-// cold when it is only invisible.
+// Package contact360 names section denials instead of presenting them as empty records.
+// Record sections share a workspace transaction; mail coverage carries its own observation clock.
 package contact360
 
 import (
@@ -22,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/mailcoverage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -58,7 +51,11 @@ type Service struct {
 	now      func() time.Time
 	// providers is the adapter registry the provider section reads its
 	// category vocabulary from. Nil where no adapter is compiled in.
-	providers providerDescriptors
+	providers    providerDescriptors
+	mailCoverage mailcoverage.Reader
+	// activities reads the activity custom-field catalog. Nil leaves the
+	// timeline rows without their custom-field values.
+	activities *activities.Store
 }
 
 // NewService binds the composite read to its module stores. now is the
@@ -93,6 +90,22 @@ func (s *Service) WithProviders(reg providerDescriptors) *Service {
 	return s
 }
 
+// WithActivityFields lets the timeline sections carry the activities' custom
+// field values.
+func (s *Service) WithActivityFields(store *activities.Store) *Service {
+	s.activities = store
+	return s
+}
+
+// activityColumns reads the timeline's custom-field columns. The catalog opens
+// a connection of its own, so this runs before the page's transaction.
+func (s *Service) activityColumns(ctx context.Context) (activities.CustomColumns, error) {
+	if s.activities == nil {
+		return activities.CustomColumns{}, nil
+	}
+	return s.activities.ActiveActivityColumns(ctx)
+}
+
 // providerDescriptors is the slice of the adapter registry this package
 // needs. Narrowed to one method so contact360 does not depend on the
 // integrations module for a read that only wants a category list.
@@ -109,9 +122,21 @@ type AssembleOptions struct {
 	// The rule is activities.ActivityWithinProject; the identity, employment
 	// and network sections describe the contact, not a project, and stay whole.
 	ProjectID *ids.ProjectID
+	// WrittenByHumanOnly narrows the recent timeline to rows a human wrote
+	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
+	// drafts. The page itself keeps every record.
+	WrittenByHumanOnly bool
+	// AsOf is the instant LastTouchFor measures from: an activity dated after
+	// it has not happened yet. Zero reads the database's own now(), which is
+	// what the page wants. A reader with its own clock, the quiet lane, passes
+	// that clock so its window and its touches agree.
+	AsOf time.Time
+	// activityColumns are the activity custom fields the timeline rows carry,
+	// read above the page's transaction.
+	activityColumns activities.CustomColumns
 }
 
-// Assemble reads the whole contact page inside ONE workspace transaction.
+// Assemble keeps denied sections distinct from empty records.
 func (s *Service) Assemble(ctx context.Context, contactID ids.ContactID) (crmcontracts.Contact360, error) {
 	return s.AssembleScoped(ctx, contactID, AssembleOptions{})
 }
@@ -126,6 +151,9 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 		return crmcontracts.Contact360{}, err
 	}
 	now := s.now().UTC()
+	if opts.AsOf.IsZero() {
+		opts.AsOf = now
+	}
 	out := crmcontracts.Contact360{
 		AsOf:            now,
 		SectionsOmitted: []crmcontracts.Contact360SectionsOmitted{},
@@ -137,12 +165,16 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 	if err != nil {
 		return crmcontracts.Contact360{}, err
 	}
+	if opts.activityColumns, err = s.activityColumns(ctx); err != nil {
+		return crmcontracts.Contact360{}, err
+	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		contact, err := s.contacts.GetContactTx(ctx, tx, contactID, storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
 		out.Contact = contact
+		out.CreatedBy = contact.CreatedBy
 		// The scope is a read of the project, gated before any section
 		// filters on it — and as the whole read's refusal, not a section's:
 		// a page narrowed to a project the caller may not see has no honest
@@ -179,6 +211,14 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 	if err != nil {
 		return crmcontracts.Contact360{}, err
 	}
+	if s.mailCoverage != nil {
+		var from *time.Time
+		if out.LastContactPrecision != nil && *out.LastContactPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+			from = out.LastContactAt
+		}
+		coverage := mailcoverage.Read(ctx, s.mailCoverage, from, s.now().UTC())
+		out.MailCoverage = &coverage
+	}
 	return out, nil
 }
 
@@ -194,7 +234,7 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 			return s.strengthSection(ctx, tx, contactID, now, opts.ProjectID, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedRelationshipChanges, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
-			return s.relationshipChangesSection(ctx, tx, contactID, now, opts.ProjectID, out)
+			return s.relationshipChangesSection(ctx, tx, contactID, now, opts, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedEmployments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.employmentsSection(ctx, tx, contactID, out)
@@ -219,6 +259,9 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNetwork, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.networkSection(ctx, tx, contactID, now, out)
+		}},
+		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedPrivacyNoticeDuties, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
+			return s.noticeDutiesSection(ctx, tx, contactID, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.consentSection(ctx, tx, contactID, out)

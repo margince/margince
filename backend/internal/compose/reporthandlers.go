@@ -68,6 +68,7 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 		TotalRows:            &totalRows,
 		ExcludedByPermission: outcome.ExcludedByPermission,
 		PopulationNarrowed:   populationNarrowedWire(outcome.PopulationNarrowed),
+		ScopeHoldsDeals:      outcome.ScopeHoldsDeals,
 		GeneratedAt:          &outcome.GeneratedAt,
 		DerivationUrl:        &resultURL,
 

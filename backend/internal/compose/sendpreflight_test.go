@@ -13,7 +13,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -143,7 +146,7 @@ func TestMailboxAuthoritySendCapableBranches(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			authority := mailboxAuthority{
 				grants:            tc.grants,
-				mailAppConfigured: func(string) bool { return !tc.appMissing },
+				mailAppConfigured: func(context.Context, string) (bool, error) { return !tc.appMissing, nil },
 			}
 
 			got, err := authority.SendCapable(tc.ctx, tc.provider)
@@ -229,7 +232,7 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			declaresTransport(t, "mine", tc.channel)
 			grants := &stubGrants{channelBound: true}
-			authority := mailboxAuthority{grants: grants, mailAppConfigured: func(string) bool { return false }}
+			authority := mailboxAuthority{grants: grants, mailAppConfigured: func(context.Context, string) (bool, error) { return false, nil }}
 
 			got, err := authority.SendCapable(human, "mine_chat")
 
@@ -290,7 +293,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 		t.Run(name, func(t *testing.T) {
 			authority := mailboxAuthority{
 				grants:            &stubGrants{grantedFor: tc.grantedFor},
-				mailAppConfigured: func(string) bool { return true },
+				mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 			}
 			got, err := authority.SendableMailProvider(human)
 			if err != nil {
@@ -313,7 +316,7 @@ func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T
 	wantErr := errors.New("the grant table is unreachable")
 	authority := mailboxAuthority{
 		grants:            &stubGrants{err: wantErr},
-		mailAppConfigured: func(string) bool { return true },
+		mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 	}
 	got, err := authority.SendableMailProvider(human)
 	if !errors.Is(err, wantErr) {
@@ -321,5 +324,189 @@ func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T
 	}
 	if got != "" {
 		t.Errorf("SendableMailProvider = %q on a fault, want none", got)
+	}
+}
+
+// The connect flow and the worker both resolve an app set in Settings. A
+// pre-flight that read the environment alone would refuse every send from a
+// mailbox holding the send scope.
+func TestMailAppConfiguredAsksTheStoredAppToo(t *testing.T) {
+	stored := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
+	})
+	unreadable := errors.New("the stored app's secret will not unseal")
+	broken := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{}, false, unreadable
+	})
+
+	for name, tc := range map[string]struct {
+		server   Server
+		provider string
+		want     bool
+		wantErr  error
+	}{
+		"a stored Google app":             {Server{googleAppResolver: stored}, providerGmail, true, nil},
+		"a stored Microsoft app":          {Server{microsoftAppResolver: stored}, providerGraph, true, nil},
+		"the environment's app":           {Server{gmailAppConfigured: true, googleAppResolver: broken}, providerGmail, true, nil},
+		"no app from either source":       {Server{}, providerGmail, false, nil},
+		"the other vendor's app":          {Server{microsoftAppResolver: stored}, providerGmail, false, nil},
+		"a stored app that is unreadable": {Server{googleAppResolver: broken}, providerGmail, false, unreadable},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := tc.server.mailAppConfigured(context.Background(), tc.provider)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("mailAppConfigured error = %v, want %v", err, tc.wantErr)
+			}
+			if got != tc.want {
+				t.Errorf("mailAppConfigured = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// Through the authority the api installs: a mailbox holding the send scope on a
+// stored-app installation is told it can send, not to reconnect.
+func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+	})
+	scope, _ := comms.SendScopeFor(providerGmail)
+	s := Server{googleAppResolver: func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
+	}}
+	authority := mailboxAuthority{grants: &stubGrants{granted: []string{scope}}, mailAppConfigured: s.mailAppConfigured}
+
+	got, err := authority.SendableMailProvider(human)
+	if err != nil {
+		t.Fatalf("SendableMailProvider: %v", err)
+	}
+	if got != providerGmail {
+		t.Errorf("SendableMailProvider = %q, want %q", got, providerGmail)
+	}
+}
+
+// The pre-flight and connector registration answer one question, whether this
+// installation has a vendor's app. A source one of them counts and the other
+// does not is a mailbox that connects and then cannot send, or the reverse.
+func TestThePreflightAndRegistrationAgreeOnEveryAppSource(t *testing.T) {
+	stored := appResolver(func(context.Context) (capture.ConnectorApp, bool, error) {
+		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
+	})
+	vendors := map[string]func(env bool, resolve appResolver) Server{
+		providerGmail: func(env bool, resolve appResolver) Server {
+			return Server{gmailAppConfigured: env, googleAppResolver: resolve}
+		},
+		providerGraph: func(env bool, resolve appResolver) Server {
+			return Server{graphAppConfigured: env, microsoftAppResolver: resolve}
+		},
+	}
+	sources := map[string]struct {
+		env     bool
+		resolve appResolver
+		want    bool
+	}{
+		"the environment": {true, nil, true},
+		"Settings":        {false, stored, true},
+		"neither":         {false, nil, false},
+	}
+	for provider, build := range vendors {
+		for name, src := range sources {
+			t.Run(provider+" from "+name, func(t *testing.T) {
+				s := build(src.env, src.resolve)
+				sends, err := s.mailAppConfigured(context.Background(), provider)
+				if err != nil {
+					t.Fatalf("mailAppConfigured: %v", err)
+				}
+				registers := appReachable(src.resolve, src.env)
+				if sends != src.want || registers != src.want {
+					t.Errorf("pre-flight says %v and registration says %v, want both %v", sends, registers, src.want)
+				}
+			})
+		}
+	}
+}
+
+// The QC mailbox is gated on its deployment flag alone. A provider that cannot
+// send has no app to ask about.
+func TestMailAppConfiguredWithoutAnAppToResolve(t *testing.T) {
+	for name, tc := range map[string]struct {
+		server   Server
+		provider string
+		want     bool
+	}{
+		"the test mailbox, allowed":    {Server{captureConfig: CaptureConfig{AllowTestMailbox: true}}, testmailbox.Name, true},
+		"the test mailbox, disallowed": {Server{}, testmailbox.Name, false},
+		"a provider that cannot send":  {Server{gmailAppConfigured: true}, "imap", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := tc.server.mailAppConfigured(context.Background(), tc.provider)
+			if err != nil {
+				t.Fatalf("mailAppConfigured: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("mailAppConfigured = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// A pre-flight that cannot tell whether the app exists must not answer, and
+// it must not read the grant either.
+func TestSendCapableReportsAnAppLookupFault(t *testing.T) {
+	human := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
+	})
+	unreadable := errors.New("the stored app's secret will not unseal")
+	grants := &stubGrants{}
+	authority := mailboxAuthority{grants: grants, mailAppConfigured: func(context.Context, string) (bool, error) {
+		return false, unreadable
+	}}
+
+	got, err := authority.SendCapable(human, providerGmail)
+
+	if !errors.Is(err, unreadable) || got {
+		t.Fatalf("SendCapable = %v, %v; want false and the lookup fault", got, err)
+	}
+	if grants.calls != 0 {
+		t.Errorf("the grant lookup was asked %d time(s) after the app lookup failed", grants.calls)
+	}
+}
+
+// The worker answers from the connectors its registry holds, which is what it
+// can actually transmit through.
+func TestWorkerMailAuthorityAnswersFromItsRegistry(t *testing.T) {
+	withGoogle := CaptureSyncRegistry(&pgxpool.Pool{}, fakeVault{},
+		GmailConfig{ClientID: "id", ClientSecret: "sec"}, GraphConfig{}, CaptureConfig{}, nil)
+
+	for name, tc := range map[string]struct {
+		registry *capture.Registry
+		provider string
+		want     bool
+	}{
+		"no registry":                  {nil, providerGmail, false},
+		"a registered connector":       {withGoogle, providerGmail, true},
+		"a connector never registered": {withGoogle, "no_such_mailbox", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := workerMailAuthority(tc.registry).mailAppConfigured(context.Background(), tc.provider)
+			if err != nil {
+				t.Fatalf("mailAppConfigured: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("mailAppConfigured = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// With no app from either source, the Microsoft connectors are not registered,
+// so the connect surface keeps its declared 501.
+func TestNoMicrosoftAppRegistersNoMicrosoftConnector(t *testing.T) {
+	reg := NewCaptureRegistry(&pgxpool.Pool{}, fakeVault{}, CaptureConfig{})
+	registerMicrosoftConnectors(reg, nil, GraphConfig{}, nil)
+	for _, descriptor := range reg.Connectors() {
+		if descriptor.Name == providerGraph || descriptor.Name == providerGraphCal {
+			t.Errorf("%s was registered with no Microsoft app to run on", descriptor.Name)
+		}
 	}
 }

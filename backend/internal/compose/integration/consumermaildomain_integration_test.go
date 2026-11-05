@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -168,5 +169,46 @@ func TestConsumerMailListRefusesWhatTheMatcherCouldNeverRead(t *testing.T) {
 	}
 	if _, err := store.Add(ctx, "acme.example", "maybe"); err == nil {
 		t.Error("a kind outside extra|never must be refused")
+	}
+}
+
+func TestCarveOutOfASubdomainBaselineEntryRemovesOnlyThatEntry(t *testing.T) {
+	e := Setup(t)
+	ctx := listAdminCtx(e.WS, e.Rep1, adminGrant)
+	store := capture.NewFreemailDomains(e.DB())
+
+	var entry string
+	for _, d := range freemail.Domains() {
+		if freemail.Registrable(d) != d {
+			entry = d
+			break
+		}
+	}
+	if entry == "" {
+		t.Fatal("the baseline holds no subdomain entry")
+	}
+	sibling := "unrelated-sibling." + freemail.Registrable(entry)
+
+	stored, err := store.Add(ctx, entry, capture.FreemailKindNever)
+	if err != nil {
+		t.Fatalf("carving out %s: %v", entry, err)
+	}
+	if stored.Domain != entry {
+		t.Errorf("stored carve-out = %q, want the baseline entry %q", stored.Domain, entry)
+	}
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		matcher, err := capture.MatcherTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if matcher.IsConsumer(entry) {
+			t.Errorf("%s is still consumer mail after its carve-out", entry)
+		}
+		if matcher.IsConsumer(sibling) != freemail.New(nil, nil).IsConsumer(sibling) {
+			t.Errorf("the carve-out of %s changed %s", entry, sibling)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }

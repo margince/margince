@@ -11,12 +11,12 @@ import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
 
 // Two places decide, on their own, where a session belongs when the
-// installation has not described itself, and each rewrites the hash to say so:
+// installation has not described itself, and each rewrites the hash to say so.
 // AuthedApp's onboarding gate sends every route back to onboarding while
-// GET /company answers 404, and the conversational shell's restore
-// (screens/onboarding-conversation/restore.ts) decides whether the journey is
-// finished and leaves. Those are the only two automatic navigators in the app;
-// every other navigate() answers a click.
+// GET /company answers 404. The conversational shell's restore
+// (features/onboarding/onboarding-conversation/restore.ts) decides whether the
+// journey is finished and leaves. Those are the only two automatic navigators
+// in the app; every other navigate() answers a click.
 //
 // When they disagree they rewrite the hash AT each other, and that is not a
 // cosmetic redirect flicker. `useRoute` is a useSyncExternalStore over
@@ -505,6 +505,41 @@ describe("onboarding gate", () => {
       expect(companyReads()).toHaveLength(0);
     },
   );
+
+  // Sign out lives on Settings > Account, so a reader stuck mid-journey can
+  // still leave; the rest of settings waits for the journey to finish.
+  it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
+    // Routing is under test; wait for the real lazy module before timing UI queries.
+    await import("./features/settings/settings");
+    window.location.hash = "#/settings/account";
+    stubCompany(
+      403,
+      { row: wizardRow("voice"), status: 200 },
+      {
+        roles: ["rep"],
+      },
+    );
+    mount();
+    expect(
+      await screen.findByRole("button", { name: "Sign out" }),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/settings/account");
+  });
+
+  it("still sends a non-admin mid-journey away from any other settings page", async () => {
+    window.location.hash = "#/settings/notifications";
+    stubCompany(
+      403,
+      { row: wizardRow("voice"), status: 200 },
+      {
+        roles: ["rep"],
+      },
+    );
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
 
   // ops holds automation:update, so its journey names the configured model:
   // the model read follows the grant, not the admin role.

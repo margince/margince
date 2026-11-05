@@ -284,6 +284,22 @@ func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
 	}
 }
 
+// A `[]` path names every element's id, so one hidden contact among the edges
+// refuses the replay rather than riding out beside the visible ones.
+func TestReplayReadsEveryCompanionAnArrayNames(t *testing.T) {
+	body := `{"data":[{"contact_id":"01a00000-0000-7000-8000-000000000001"},{"contact_id":null},` +
+		`{"contact_id":"01a00000-0000-7000-8000-000000000002"}]}`
+	got := companionIDsAt(body, "data[].contact_id")
+	want := []string{"01a00000-0000-7000-8000-000000000001", "01a00000-0000-7000-8000-000000000002"}
+	if !slices.Equal(got, want) {
+		t.Errorf("ids = %v, want %v", got, want)
+	}
+	target := replayableOperations["POST /v1/companies/{id}/link-contacts"]
+	if err := ensureCompanionsVisible(context.Background(), nil, target, `{"data":[{"contact_id":"not-an-id"}]}`); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("err = %v, want not found for an element whose id does not parse", err)
+	}
+}
+
 // replayTableFor is the choice of WHICH table a body's record lives in, and it
 // has three answers with three different failure modes.
 //

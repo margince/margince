@@ -5,8 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import { mount, view } from "../../testing/contactpage.testkit";
 import { jsonResponse } from "../../testing/story-utils";
-import { mount, view } from "./contactpage.testkit";
 
 // A draft an agent left for the reader waits on the contact's page, and opening
 // it opens the page's own composer with the saved words in it.

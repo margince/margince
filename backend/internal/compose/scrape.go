@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -57,21 +56,9 @@ type scrapeEngine struct {
 // row-scoped: a company the caller cannot see is ErrNotFound), extracts
 // evidence-grounded fields, and stages an "enrich" approval bound to the company.
 func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override string) (crmcontracts.EnrichmentProposal, error) {
-	rawURL := override
-	if rawURL == "" {
-		var err error
-		// EnrichTargetURL enforces visibility AND yields the domain.
-		rawURL, err = e.contacts.EnrichTargetURL(ctx, ids.From[ids.CompanyKind](companyID))
-		if err != nil {
-			return crmcontracts.EnrichmentProposal{}, err
-		}
-	} else {
-		// An override skips the domain lookup, so visibility must be proven
-		// on its own — reading the company row-scoped 404s a hidden id before any
-		// egress happens on the caller's behalf.
-		if _, err := e.contacts.GetCompany(ctx, ids.From[ids.CompanyKind](companyID), storekit.LiveOnly); err != nil {
-			return crmcontracts.EnrichmentProposal{}, err
-		}
+	rawURL, err := e.contacts.ResolveEnrichTargetURL(ctx, ids.From[ids.CompanyKind](companyID), override)
+	if err != nil {
+		return crmcontracts.EnrichmentProposal{}, err
 	}
 
 	// The company the extraction is filed against. This lane has one; the

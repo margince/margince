@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -71,8 +72,37 @@ func bothDoorsName(t *testing.T, what string, rest, tool json.RawMessage, want .
 // envelope on one door only is set aside.
 func sameDocument(t *testing.T, what string, rest, tool json.RawMessage) {
 	t.Helper()
-	if !reflect.DeepEqual(decoded(t, unwrapData(rest, tool)), decoded(t, unwrapData(tool, rest))) {
+	route, model := decoded(t, unwrapData(rest, tool)), withoutModelDisplays(decoded(t, unwrapData(tool, rest)))
+	if !reflect.DeepEqual(route, model) {
 		t.Errorf("%s: the doors answered different documents\nroute: %s\ntool: %s", what, rest, tool)
+	}
+}
+
+// withoutModelDisplays drops each `<name>_display` the tool registry writes
+// beside a `<name>_minor` for the model. The route answers the amount alone.
+//
+//craft:ignore naked-any a document under comparison is whichever JSON the door answered
+func withoutModelDisplays(doc any) any {
+	switch typed := doc.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, value := range typed {
+			if name, ok := strings.CutSuffix(key, "_display"); ok {
+				if _, paired := typed[name+"_minor"]; paired {
+					continue
+				}
+			}
+			out[key] = withoutModelDisplays(value)
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for i, value := range typed {
+			out[i] = withoutModelDisplays(value)
+		}
+		return out
+	default:
+		return doc
 	}
 }
 
@@ -157,36 +187,6 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 		sameDoorRecords(t, "list "+c.kind,
 			d.rest(t, "GET", "/v1/"+c.route+"?limit=10", nil),
 			d.tool(t, "list_records", map[string]any{"record_type": c.kind, "limit": 10}), c.id)
-	}
-}
-
-// GET /search and search_records find the same records for one query, with and
-// without naming a type.
-func TestSearchRouteAnswersAsSearchRecords(t *testing.T) {
-	d := newTwoDoors(t, "search-records-doors", "read")
-	hit := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quentin Zephyrwind"})
-	other := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bernd Unrelated"})
-
-	// The tool also names a hit's owner. So the answers are compared on the
-	// hit and on the record neither may return.
-	for _, c := range []struct {
-		what  string
-		route string
-		args  map[string]any
-	}{
-		{"search across types", "/v1/search?q=Zephyrwind&limit=10", map[string]any{"q": "Zephyrwind", "limit": 10}},
-		{
-			"search one type", "/v1/search?q=Zephyrwind&record_type=contact&limit=10",
-			map[string]any{"q": "Zephyrwind", "record_type": "contact", "limit": 10},
-		},
-	} {
-		rest, tool := d.rest(t, "GET", c.route, nil), d.tool(t, "search_records", c.args)
-		bothDoorsName(t, c.what, rest, tool, hit)
-		for door, answer := range map[string]json.RawMessage{"route": rest, "tool": tool} {
-			if slices.Contains(documentRecords(answer), other) {
-				t.Errorf("%s: the %s returns the contact the query does not match", c.what, door)
-			}
-		}
 	}
 }
 

@@ -396,31 +396,6 @@ func promptCalleeOf(
 	return funcKey{}, false
 }
 
-// promptReceiverType names the type a method hangs off, without its pointer star.
-func promptReceiverType(fn *ast.FuncDecl) string {
-	if fn.Recv == nil || len(fn.Recv.List) == 0 {
-		return ""
-	}
-	return promptTypeName(fn.Recv.List[0].Type)
-}
-
-// promptTypeName reduces a type expression to the bare identifier a receiver carries.
-func promptTypeName(expr ast.Expr) string {
-	switch t := expr.(type) {
-	case *ast.Ident:
-		return t.Name
-	case *ast.StarExpr:
-		return promptTypeName(t.X)
-	case *ast.IndexExpr:
-		return promptTypeName(t.X)
-	case *ast.IndexListExpr:
-		return promptTypeName(t.X)
-	case *ast.SelectorExpr:
-		return t.Sel.Name
-	}
-	return ""
-}
-
 // localReceiverTypes maps the names a function binds to VALUES OF A KNOWN TYPE:
 // its own receiver, and any local bound to a composite literal, a &T{}, or a
 // new(T). A name bound to anything else is deliberately absent — an unknown

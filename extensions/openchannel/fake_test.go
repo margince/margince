@@ -96,6 +96,15 @@ func (r *fakeRuntime) Secrets() extension.Secrets { return r.secrets }
 
 func (r *fakeRuntime) Caller() extension.Caller { return r.caller }
 
+// The batch pair is unused by this unit; the seam's shape is all it answers for.
+func (r *fakeRuntime) IngestBatch(context.Context, extension.UserID, extension.SourceName, []extension.Record, extension.BatchPosition) ([]extension.Result, error) {
+	return nil, nil
+}
+
+func (r *fakeRuntime) IngestPosition(context.Context, extension.SourceName) (extension.BatchPosition, error) {
+	return "", nil
+}
+
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, extension.Tx) error) error {
 	if r.txErr != nil {
 		return r.txErr
@@ -447,6 +456,21 @@ func (*fakeRuntime) SyncNow(_ context.Context, job extension.JobName) error {
 	}
 	return nil
 }
+
+// openchannel declares no OAuth app, so the core refuses every provider it names.
+func (*fakeRuntime) OAuthAccessToken(context.Context, extension.OAuthProvider) (string, error) {
+	return "", extension.ErrNoSuchOAuthApp
+}
+
+func (*fakeRuntime) OAuthDisconnect(context.Context, extension.OAuthProvider) error {
+	return extension.ErrNoSuchOAuthApp
+}
+
+// This unit makes no system read. A handler that starts making one fails here
+// on a nil port, never against an answer nothing scripted.
+func (*fakeRuntime) Deals() extension.Deals         { return nil }
+func (*fakeRuntime) Authority() extension.Authority { return nil }
+func (*fakeRuntime) Directory() extension.Directory { return nil }
 
 // declaredJob is the job named in api/jobs.yaml, spelled here so the fake
 // refuses exactly what the core refuses.

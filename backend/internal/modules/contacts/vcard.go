@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -43,10 +44,19 @@ type VCardEntry struct {
 	Phones  []VCardChannel
 	URL     string
 	Address string
+	// PostalAddress is the same ADR property in its parts, as the record's
+	// address columns hold them.
+	PostalAddress crmcontracts.Address
+	// addressRank is how strongly the card prefers the ADR read so far; zero
+	// until one is read.
+	addressRank int
 	// Revised is what the card's REV property states: when this card was last
 	// changed. Nil where it states none, and the import then dates the card
 	// from its own clock.
 	Revised *time.Time
+	// ModelRead marks a card a model read off a photo. importOneVCard never
+	// writes such a card, on any arm: it is reported for approval or skipped.
+	ModelRead bool `json:"model_read,omitempty"`
 }
 
 // VCardChannel is one address or number with the kind the card gave it.
@@ -100,9 +110,16 @@ func (e *TooManyCardsError) FieldFault() (field, code, message string) {
 // that refuses, because the reader has no way to notice the contact who is
 // missing.
 func ParseVCards(r io.Reader) ([]VCardEntry, error) {
-	lines, err := unfoldVCardLines(io.LimitReader(r, vcardMaxBytes+1))
+	raw := &countingReader{r: io.LimitReader(r, vcardMaxBytes+1)}
+	lines, err := unfoldVCardLines(raw)
 	if err != nil {
 		return nil, err
+	}
+	// The line scanner drops the carriage return of a CRLF line, so its own
+	// count is short by one byte per line. The bytes actually read are the
+	// bound: one past it means the file was cut, and a prefix is not the file.
+	if raw.n > vcardMaxBytes {
+		return nil, fmt.Errorf("contacts: the vCard file exceeds %d bytes", vcardMaxBytes)
 	}
 	var out []VCardEntry
 	var current *VCardEntry
@@ -157,13 +174,28 @@ func ParseVCards(r io.Reader) ([]VCardEntry, error) {
 	return out, nil
 }
 
+// countingReader counts the bytes that pass through it.
+type countingReader struct {
+	r io.Reader
+	n int
+}
+
+func (c *countingReader) Read(p []byte) (int, error) {
+	n, err := c.r.Read(p)
+	c.n += n
+	return n, err
+}
+
 // unfoldVCardLines joins continuation lines, which is the first thing any vCard
 // reader must do: a long value is split across lines and the continuations are
 // marked by a leading space or tab, so a parser reading raw lines sees half an
 // address and a fragment.
 func unfoldVCardLines(r io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
+	// A line may be as long as the file may be. An embedded photo on one unfolded
+	// line imports as it does folded. A file past the bound is refused below in
+	// the product's words, not the scanner's.
+	scanner.Buffer(make([]byte, 0, 64*1024), vcardMaxBytes+2)
 	var lines []string
 	// The line under construction is built in ONE builder rather than by
 	// re-appending to the slice's last element: `lines[n-1] += x` copies the
@@ -275,9 +307,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 			entry.URL = strings.TrimSpace(value)
 		}
 	case "ADR":
-		if entry.Address == "" {
-			entry.Address = addressFromStructured(params, raw)
-		}
+		readVCardAddress(entry, params, raw)
 	case "REV":
 		if entry.Revised == nil {
 			entry.Revised = parseVCardRevision(value)
@@ -339,8 +369,9 @@ func storableRevision(at time.Time) *time.Time {
 	return &at
 }
 
-// decodeVCardValue undoes the two encodings a real-world card carries: the
-// quoted-printable of a 2.1-era exporter, and vCard's own backslash escapes.
+// decodeVCardValue undoes the encodings a real-world card carries: the
+// quoted-printable of a 2.1-era exporter, its CHARSET, and vCard's own
+// backslash escapes.
 func decodeVCardValue(params []string, raw string) string {
 	value := raw
 	for _, p := range params {
@@ -354,7 +385,7 @@ func decodeVCardValue(params []string, raw string) string {
 			}
 		}
 	}
-	return unescapeVCardText(value)
+	return unescapeVCardText(vcardText(params, value))
 }
 
 func decodeQuotedPrintable(s string) string {
@@ -427,22 +458,4 @@ func nameFromStructured(params []string, raw string) string {
 		ordered = append(ordered, parts[0])
 	}
 	return strings.Join(ordered, " ")
-}
-
-// addressFromStructured reads ADR: pobox;ext;street;locality;region;code;country
-// into one line, dropping the components a card left empty.
-func addressFromStructured(params []string, raw string) string {
-	parts := splitVCardComponents(params, raw)
-	var kept []string
-	for i, p := range parts {
-		// The first two components are a post-office box and an extended
-		// address; neither belongs in the one line a record shows.
-		if i < 2 {
-			continue
-		}
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			kept = append(kept, trimmed)
-		}
-	}
-	return strings.Join(kept, ", ")
 }

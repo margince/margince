@@ -3,9 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
+import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
-import { completenessText } from "./worklist.copy";
+import { completenessText, pillCount } from "./worklist.completeness";
 
 // What the page says about the work it is NOT showing.
 //
@@ -30,7 +31,7 @@ function stub(day: Worklist) {
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       return url.includes("/worklist")
-        ? jsonResponse(day)
+        ? jsonResponse(echoView(url, day))
         : jsonResponse({ data: [] });
     }),
   );
@@ -43,6 +44,7 @@ function day(counts: WorklistCount[], shown = 1): Worklist {
     scope_options: ["mine"],
     queue: Array.from({ length: shown }, (_, i) => ({
       id: `row-${i}`,
+      occurred_precision: "instant",
       source: "task" as const,
       category: "tasks" as const,
       level: 4,
@@ -82,7 +84,13 @@ function renderWorklist() {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  globalThis.location.hash = "";
 });
+
+/** Opens the Worklist on the Decisions view, where approvals are counted. */
+function onDecisions() {
+  globalThis.location.hash = "#/worklist?view=decisions";
+}
 
 describe("what the page says about what it is not showing", () => {
   it("counts each cut on the pill that opens it", async () => {
@@ -100,10 +108,10 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     // The number rides inside the button, so it joins the accessible name: a
-    // reader hears "Approvals, 12" rather than meeting a bare figure.
+    // reader hears "Decisions, 12" rather than meeting a bare figure.
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: /Approvals.*12/ }),
+        screen.getByRole("button", { name: /Decisions.*12/ }),
       ).toBeTruthy();
     });
   });
@@ -119,7 +127,7 @@ describe("what the page says about what it is not showing", () => {
     // One row drawn out of nine read. Before this line the reader had no way
     // to tell that page from a finished day.
     await waitFor(() => {
-      expect(screen.getByText(/1 of 9 shown/)).toBeTruthy();
+      expect(screen.getByText(/1 of 9 items loaded/)).toBeTruthy();
     });
   });
 
@@ -152,11 +160,11 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Approvals/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /Decisions/ })).toBeTruthy();
     });
     // The server knows a floor, not a total. A floor printed as a count is a
-    // wrong number rather than a missing one, so the pill draws none.
-    expect(screen.queryByRole("button", { name: /Approvals.*200/ })).toBeNull();
+    // wrong number rather than a missing one, so the button draws none.
+    expect(screen.queryByRole("button", { name: /Decisions.*200/ })).toBeNull();
   });
 
   it("does not print a fraction whose denominator is a floor", async () => {
@@ -170,20 +178,21 @@ describe("what the page says about what it is not showing", () => {
         },
       ]),
     );
+    onDecisions();
     renderWorklist();
 
-    // ONE bounded source, so the sentence is the singular arm. Waited on the
-    // caveat rather than on the page, so the absence below is asserted over a
-    // sentence that has actually been drawn.
+    // Waited on the caveat, so the absence below is asserted over a drawn line.
     await waitFor(() => {
-      expect(screen.getByText(/1 source has more/)).toBeTruthy();
+      expect(
+        screen.getByText(/Approvals \(200\+\) may have more items/),
+      ).toBeTruthy();
     });
     // "200 of 200 shown - 1 source has more" contradicts itself in one
     // sentence: the number it divides by is a floor, not a total.
     expect(screen.queryByText(/200 of 200/)).toBeNull();
   });
 
-  it("says a source has more rather than claiming a total", async () => {
+  it("names the cut whose read hit its limit", async () => {
     stub(
       day([
         {
@@ -194,33 +203,49 @@ describe("what the page says about what it is not showing", () => {
         },
       ]),
     );
+    onDecisions();
     renderWorklist();
 
-    // Exactly the singular. The wording used to be hedged here because one
-    // bounded source drew "1 sources have more" — the count picked no form at
-    // all — and a regexp that accepts both is a test that cannot fail on the
-    // half of the pair that was wrong.
     await waitFor(() => {
-      expect(screen.getByText(/1 source has more/)).toBeTruthy();
+      expect(
+        screen.getByText(
+          "1 item loaded · Approvals (200+) may have more items than this list shows.",
+        ),
+      ).toBeTruthy();
     });
-    expect(screen.queryByText(/1 sources/)).toBeNull();
   });
 
-  // The other arm, which nothing held: the singular alone passes just as well
-  // over a sentence that says "source" whatever the figure is.
-  it("says sources have more where several are bounded", async () => {
+  it("names every limited cut where several are bounded", async () => {
     stub(
       day([
         {
-          category: "decisions",
+          category: "deals_at_risk",
           considered: 200,
           shown: 1,
           more_available: true,
         },
+        { category: "tasks", considered: 40, shown: 2, more_available: true },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /Deals at risk \(200\+\), Tasks \(40\+\) may have more/,
+        ),
+      ).toBeTruthy();
+    });
+  });
+
+  it("names a bounded cut that read nothing without a zero beside it", async () => {
+    stub(
+      day([
+        { category: "tasks", considered: 40, shown: 1, more_available: true },
         {
-          category: "tasks",
-          considered: 40,
-          shown: 2,
+          category: "deals_at_risk",
+          considered: 0,
+          shown: 0,
           more_available: true,
         },
       ]),
@@ -228,8 +253,34 @@ describe("what the page says about what it is not showing", () => {
     renderWorklist();
 
     await waitFor(() => {
-      expect(screen.getByText(/2 sources have more/)).toBeTruthy();
+      expect(
+        screen.getByText(
+          "1 item loaded · Tasks (40+), Deals at risk may have more items than this list shows.",
+        ),
+      ).toBeTruthy();
     });
+  });
+
+  // A view counts only its own categories: an approval read to its bound is
+  // the Decisions view's caveat, never Today's.
+  it("keeps another view's limit off Today's line", async () => {
+    stub(
+      day([
+        { category: "tasks", considered: 1, shown: 1, more_available: false },
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 0,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.getByText("Task 0")).toBeTruthy();
+    });
+    expect(screen.queryByText(/Approvals/)).toBeNull();
   });
 
   // A narrowed page reads only the cut the reader is looking at.
@@ -263,31 +314,170 @@ describe("what the page says about what it is not showing", () => {
     expect(unfiltered).toContain("5/35");
   });
 
-  // The two link-only narrowings say NOTHING, and for one reason each.
-  //
-  // `changed_since_brief` cuts across every category on a per-row freshness the
-  // counts do not carry. `except_decisions` excludes by SOURCE — the approvals a
-  // brief draws as cards — and these figures are keyed by category, so the
-  // near-miss complement of the `decisions` category would undercount: it drops
-  // an introduction request, which is a decision and is not an approval, that
-  // the server keeps.
-  //
-  // Silence is the honest answer. The danger is silence arrived at by accident,
-  // which is what the per-category lookup produced before — it found nothing,
-  // summed zero considered, and reported a truncated page as complete.
-  it("says nothing where the counts cannot describe the narrowing", () => {
+  // `changed_since_brief` cuts across categories on a per-row freshness the
+  // counts do not carry. `except_decisions` excludes by source, not category.
+  // Its category complement would drop an introduction request the server keeps.
+  // So neither gets a figure; a bounded day still says it may hold more.
+  it("gives no figure where the counts cannot describe the narrowing", () => {
     const page = day([
       { category: "tasks", considered: 30, shown: 5, more_available: true },
       { category: "decisions", considered: 4, shown: 4, more_available: false },
     ]);
     const t = ((key: string, vars?: Record<string, string>) =>
-      `${key}:${vars?.shown}/${vars?.considered}`) as never;
+      vars ? `${key}:${vars.shown}/${vars.considered}` : key) as never;
 
-    expect(completenessText(page, "changed_since_brief", t, "en")).toBeNull();
+    expect(completenessText(page, "changed_since_brief", t, "en")).toBe(
+      "worklist.completeness.boundedSome",
+    );
     // Not "5/30" either: that is the category complement, which is a DIFFERENT
     // population from the one the server returns.
-    expect(completenessText(page, "except_decisions", t, "en")).toBeNull();
+    expect(completenessText(page, "except_decisions", t, "en")).toBe(
+      "worklist.completeness.boundedSome",
+    );
     // The control: the same day, asked a question the counts DO answer, speaks.
-    expect(completenessText(page, "tasks", t, "en")).not.toBeNull();
+    expect(completenessText(page, "tasks", t, "en")).toContain("bounded");
   });
+
+  it("says nothing under such a narrowing when no category was bounded", () => {
+    const page = day([
+      { category: "tasks", considered: 30, shown: 5, more_available: false },
+    ]);
+    const t = ((key: string) => key) as never;
+
+    expect(completenessText(page, "urgent", t, "en")).toBeNull();
+  });
+});
+
+// Cards and items are two units: a folded group is one card and many items.
+describe("the line compares items with items", () => {
+  type Item = Worklist["queue"][number];
+  const pairs = (count: number, atLeast = false): Item => ({
+    occurred_precision: "instant",
+    id: "duplicates",
+    source: "batch",
+    category: "decisions",
+    destination: "review",
+    level: 6,
+    consequence: "data_drifts",
+    because: [],
+    actions: [],
+    batch: { key: "duplicates", count, at_least: atLeast },
+  });
+  const task = (i: number): Item => ({
+    occurred_precision: "instant",
+    id: `task-${i}`,
+    source: "task",
+    category: "tasks",
+    level: 4,
+    consequence: "task_slips",
+    title: `Task ${i}`,
+    because: [],
+    actions: [],
+  });
+  const t = ((key: string, vars?: Record<string, string>) =>
+    translate("en", key as never, vars)) as never;
+
+  it("calls eight pairs on one card complete, on the line and in review", async () => {
+    const page = day([
+      { category: "decisions", considered: 8, shown: 8, more_available: false },
+    ]);
+    page.queue = [pairs(8)];
+    page.summary.buckets = { urgent: 0, due_today: 0, planned: 0, review: 8 };
+    stub(page);
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(screen.getByText(/8 possible duplicates/)).toBeTruthy();
+    });
+    expect(screen.queryByText(/of 8/)).toBeNull();
+  });
+
+  it("states items and cards once a group sits among partly loaded work", () => {
+    const page = day([
+      { category: "decisions", considered: 8, shown: 8, more_available: false },
+      { category: "tasks", considered: 30, shown: 2, more_available: false },
+    ]);
+
+    expect(
+      completenessText(page, "all", t, "en", [pairs(8), task(1), task(2)]),
+    ).toBe("10 of 38 items loaded · 3 cards on screen");
+  });
+
+  it("prints no fraction over a group cut at its read limit", () => {
+    const page = day([
+      { category: "decisions", considered: 8, shown: 8, more_available: false },
+    ]);
+
+    expect(completenessText(page, "all", t, "en", [pairs(8, true)])).toBe(
+      "8 items loaded · 1 card on screen",
+    );
+  });
+
+  it("does not fall silent over a source that did not load", () => {
+    const page = day([
+      { category: "tasks", considered: 1, shown: 1, more_available: false },
+    ]);
+    page.sources_unavailable = [
+      { source: "task", category: "tasks", reason: "failed" },
+      {
+        source: "calendar",
+        category: "meetings",
+        reason: "failed",
+        contributes_rows: false,
+      },
+    ];
+
+    expect(completenessText(page, "all", t, "en", [task(1)])).toBe(
+      "1 of 1 items loaded · 1 source did not load",
+    );
+    page.sources_unavailable = page.sources_unavailable.slice(1);
+    expect(completenessText(page, "all", t, "en", [task(1)])).toBeNull();
+  });
+
+  it("names no limit on a category the server counted in full", () => {
+    const page = day([
+      {
+        category: "decisions",
+        considered: 200,
+        shown: 25,
+        more_available: true,
+        total: 340,
+      },
+    ]);
+    const line = completenessText(page, "decisions", t, "en") ?? "";
+    expect(line).toMatch(/^25 of 340 items loaded/);
+    expect(line).not.toContain("200");
+  });
+});
+
+it("does not print an exact pill total over a failed or withheld source", () => {
+  const page = day([
+    { category: "tasks", considered: 0, shown: 0, more_available: false },
+  ]);
+  for (const reason of ["failed", "withheld"] as const) {
+    page.sources_unavailable = [{ source: "task", category: "tasks", reason }];
+    expect(pillCount(page, "tasks")).toBeUndefined();
+    expect(pillCount(page, "all")).toBeUndefined();
+  }
+  page.sources_unavailable = [];
+  expect(pillCount(page, "tasks")).toBe(0);
+});
+
+it("prints the server's exact total over a category read short of it", () => {
+  const page = day([
+    {
+      category: "decisions",
+      considered: 200,
+      shown: 25,
+      more_available: true,
+      total: 340,
+    },
+    { category: "tasks", considered: 3, shown: 3, more_available: false },
+  ]);
+  expect(pillCount(page, "decisions")).toBe(340);
+  expect(pillCount(page, "all")).toBe(343);
+
+  page.counts[0] = { ...page.counts[0], total: undefined };
+  expect(pillCount(page, "decisions")).toBeUndefined();
+  expect(pillCount(page, "all")).toBeUndefined();
 });

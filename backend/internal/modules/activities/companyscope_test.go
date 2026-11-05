@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -127,8 +128,8 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 // own arm, bound to the account the branch started from.
 func TestTheReachedSetIsThePredicatesArmsOneBranchEach(t *testing.T) {
 	set := CompanyReachedActivities(1)
-	if got := strings.Count(set, companyArms); got != 3 {
-		t.Errorf("the reached set carries the shared arms %d times, want one per link branch:\n%s", got, set)
+	if got := strings.Count(set, companyArms); got != 2 {
+		t.Errorf("the reached set carries the shared arms %d times, want one per joined link branch:\n%s", got, set)
 	}
 	for _, column := range []string{"l.company_id", "d.company_id", "r.company_id"} {
 		if !strings.Contains(set, column+" = ANY($1)") {
@@ -244,7 +245,7 @@ func TestTheAssigneeClauseStaysExact(t *testing.T) {
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	assignee := ids.From[ids.UserKind](ids.MustParse("01a05500-0000-7000-8000-000000000001"))
 
-	if clause := openTaskAssigneeClause(&assignee, arg); strings.Contains(clause, "IS NULL") {
+	if clause := openTaskAssigneeClause(&assignee, new(time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)), nil, arg); !strings.HasPrefix(clause, "a.assignee_id = $1 AND a.kind") {
 		t.Fatalf("the exact-assignee clause %q now admits unassigned work", clause)
 	}
 }
@@ -258,15 +259,15 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
-	source, err := os.ReadFile("waiting.go")
+	source, err := os.ReadFile("waitingslots.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
 	}
 	if !strings.Contains(string(source), "auth.ActivityContentClause") {
 		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
 	}
-	if !strings.Contains(string(source), "auth.LinkTargetVisibleClause") {
-		t.Fatal("the waiting read returns links without checking the reader may see what they point at")
+	if !strings.Contains(string(source), "auth.LinkTargetReadableClause") {
+		t.Fatal("the waiting read returns links without checking the reader may read what they point at")
 	}
 }
 

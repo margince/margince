@@ -14,7 +14,7 @@ import (
 // FloorDraft is the no-model draft of a reply to one activity. The HTTP route
 // and the agent tool both fall back to it, so the greeting and the thread they
 // answer cannot differ by transport.
-func (s *Store) FloorDraft(ctx context.Context, anchor ids.UUID, activity crmcontracts.Activity, intent string) (subject, body string) {
+func (s *Store) FloorDraft(ctx context.Context, anchor ids.UUID, activity crmcontracts.Activity) (subject, body string) {
 	answering := DraftContext{
 		Band:      convstate.BandFresh,
 		Threaded:  IsMailThread(activity.Kind, activity.Direction),
@@ -26,5 +26,5 @@ func (s *Store) FloorDraft(ctx context.Context, anchor ids.UUID, activity crmcon
 	if activity.Body != nil {
 		answering.Body = *activity.Body
 	}
-	return DeterministicEmailDraft(answering, intent)
+	return DeterministicEmailDraft(answering)
 }

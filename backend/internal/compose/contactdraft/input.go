@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // DraftInputActivities bounds how much of the conversation the draft reads. A
@@ -38,19 +39,6 @@ const DraftInputActivities = 6
 // prompt is choosing between claims rather than writing from them, and the one
 // it picks is no longer the newest.
 const draftInputClaims = 6
-
-// draftInputSnippetRunes bounds how much of the newest inbound message the
-// draft reads.
-//
-// Enough for the opening of a real business email — a greeting, the reason for
-// writing, and the ask. Past that an email is detail, which a reply asks about
-// rather than repeats, and every rune of it is prompt cost on every draft.
-const draftInputSnippetRunes = 400
-
-// draftInputRecordRunes bounds the text of one logged note or meeting. Longer
-// than a snippet: a note is written for the rep, and the slots or the ask it
-// records sit anywhere in it rather than in an opening.
-const draftInputRecordRunes = 800
 
 // Input is the contact, narrowed to what an outbound message can honestly stand
 // on. It is a projection of the caller's own 360 — nothing here re-queries, so
@@ -102,8 +90,11 @@ type Input struct {
 
 // RecipientIn is who the draft is addressed to and how we stand with them.
 type RecipientIn struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID string `json:"id"`
+	// Kind is the type of record the draft is written for. A lead's draft folds
+	// into this input too, so the model, the citation and the grounding read it here.
+	Kind datasource.EntityType `json:"entity_type"`
+	Name string                `json:"name"`
 	// FirstName is what a familiar greeting uses. Split here rather than in
 	// the prompt: a model asked to shorten a name will shorten "Dr. Anne-Marie
 	// Weiß-Konrad" differently on every call.
@@ -225,27 +216,33 @@ type ActIn struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
 	At      string `json:"at"`
-	// Inbound says who spoke. A draft that answers what THEY said reads very
-	// differently from one that follows up on what we said, and the direction
-	// is the only thing that tells them apart.
+	// Inbound says the other side wrote it. The turn answers that from the
+	// row's voice where it names a side, and from the transport otherwise.
+	//
+	// A draft answering them reads differently from one following up on us.
+	// Read as the wrong side's word, a row writes the wrong message.
 	Inbound bool `json:"inbound"`
 	// Snippet is the opening of the newest INBOUND message on this contact's
 	// timeline. A subject line says a message happened; the words say what it
 	// was about, and a draft grounded in subjects alone can only gesture at a
 	// conversation it never read.
 	//
-	// It is what the message SAYS, not a claim about who wrote it. An activity
-	// reaches a contact through activity_link, which records what a message
-	// concerns rather than who authored it — a colleague's introduction that
-	// copies a prospect is linked to that prospect — and the 360 does not carry
-	// participants, so authorship is not knowable here. The prompt beside it
-	// says "a message on this thread" rather than "what they wrote", because
-	// the stronger sentence would be one the data cannot support.
+	// Reaching a contact is not authorship. An activity reaches one through
+	// activity_link, which records what a message concerns, so a colleague's
+	// introduction copying a prospect is linked to that prospect.
+	//
+	// The row's voice names the author, so the arm filling this reads the side
+	// rather than the direction. The prompt beside it still says "a message on
+	// this thread", which holds where a voice names no side.
 	//
 	// The opening rather than the whole message: an email says why it was sent
 	// in its first lines and spends the rest on detail, and the detail is what
 	// a reply should ask about rather than repeat back.
 	Snippet string `json:"snippet,omitempty"`
+	// Said is the opening of a message our side sent, bounded like every turn
+	// (draftcore.TurnText). A follow-up has to know what we already said and
+	// asked, or it invents a new pitch on top of the old one.
+	Said string `json:"said,omitempty"`
 	// Record is what the rep logged on a note or meeting: our side's own
 	// account of contact that happened outside the mailbox, such as where they
 	// met and the slots offered. Fenced with the rest of the input.

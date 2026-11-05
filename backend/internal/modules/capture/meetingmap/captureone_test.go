@@ -133,14 +133,14 @@ func TestALiveEventIsCapturedAndCancelsNothing(t *testing.T) {
 }
 
 // An event that was never worth capturing is neither written nor cancelled.
-// Cancelling it would be a lookup per internal meeting per sync, forever.
+// Cancelling it would be a lookup per solo block per sync, forever.
 func TestADroppedEventReachesNeitherVerb(t *testing.T) {
 	t.Parallel()
 	sink := &recordingSink{}
 	internal := Event{
-		ID: "evt-standup", Subject: "Standup", StartsAt: startsAt,
+		ID: "evt-focus", Subject: "Focus", StartsAt: startsAt,
 		Organizer: Actor{Email: owner},
-		Attendees: []Actor{{Email: owner}, {Email: "peer@myco.com"}},
+		Attendees: []Actor{{Email: owner}},
 	}
 	if err := CaptureOne(context.Background(), rawEvent(t, internal), sink, owner, captureConnector, testDecode); err != nil {
 		t.Fatalf("CaptureOne: %v", err)

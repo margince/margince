@@ -15,16 +15,16 @@ import {
   UsersRound,
   Wrench,
 } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { PageHeadAction } from "../components/pageheadaction";
 import { Button, Card } from "../design-system/atoms";
+import { SettingsSearchBox } from "../features/settings/settingssearchbox";
 import type { Locale } from "../i18n";
 import { en } from "../i18n/en";
 import type { Route } from "../lib/router";
-import { SETTINGS_PAGES } from "../screens/settingscatalog";
-import { SettingsSearchBox } from "../screens/settingssearchbox";
+import { SETTINGS_PAGES } from "../lib/settingscatalog";
 import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -32,17 +32,23 @@ import {
   meRoute,
   type RouteMap,
   StoryProviders,
-  WithInstallationBrand,
 } from "../testing/story-utils";
 import type { NavSection } from "./nav";
-import { CommandPalette, useBuiltinCommands } from "./palette";
-import { PageTitle, Shell, WorkspaceRail } from "./shell";
+import { PageTitle, Shell } from "./shell";
+import {
+  COUNTS,
+  SeedInstallation,
+  SHELL_ROUTES,
+  ShellExample,
+  usePaletteSeam,
+} from "./shell.storykit";
+import { WorkspaceRail } from "./shellrail";
 import { TopBar } from "./topbar";
 // The settings stack's own sheet. A screen sheet loads with its screen, and the
 // settings frame below stands the stack under the shell WITHOUT that screen —
 // so without this the frame would draw an uncapped column and quietly
 // misrepresent the one thing it exists to show.
-import "../screens/settings.css";
+import "../features/settings/settings.css";
 
 // fullscreen: the shell sizes itself to the viewport, so Storybook's default
 // canvas padding would clip the sidebar foot and misrepresent the layout — and
@@ -62,11 +68,6 @@ const meta: Meta<typeof Shell> = {
 export default meta;
 type Story = StoryObj<typeof Shell>;
 
-// What is waiting, spelled once and handed to BOTH halves of the chrome the way
-// the shell hands it: the Decisions row's badge in the panel and the mark's chip
-// in the strip are two readings of one queue, and a frame that fed one and left
-// the other at nothing would draw the same queue as 12 and as empty at once.
-const COUNTS = { inbox: 12, tasks: 4 };
 const COMPANY_WORDMARK =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 700 200'%3E%3Crect width='700' height='200' fill='white'/%3E%3Ctext x='350' y='125' text-anchor='middle' font-family='sans-serif' font-size='92' font-weight='700' fill='%23ff6500'%3EGRADION%3C/text%3E%3C/svg%3E";
 // The same company's square badge. It exists because the wordmark above is
@@ -87,95 +88,10 @@ const COMPANY_BADGE =
  */
 function stubSession(allow: GrantSpec = {}, about: RouteMap = {}) {
   installFetchStub({
+    ...SHELL_ROUTES,
     "GET /me": meRoute(allow),
-    "GET /ai/usage": () =>
-      jsonResponse({
-        days: [],
-        budget: { monthly_tokens: 100, spent_tokens: 20, band: "normal" },
-      }),
     ...about,
   });
-}
-
-// The brand block reads the installation's brand off /me in the real app; a
-// story puts it on the stubbed /me so the company heads
-// the rail the way it does for every reader of a live installation. Without it
-// the block honestly falls back to the product's own mark and name.
-//
-// No logo_url: Storybook serves no object store, and what a broken image would
-// draw here is the monogram anyway. The monogram IS the case worth framing —
-// the mark a company gets when its site declared no icon.
-function SeedInstallation({
-  children,
-  logoUrl,
-  logoIconUrl,
-}: Readonly<{
-  children: ReactNode;
-  logoUrl?: string;
-  logoIconUrl?: string;
-}>) {
-  return (
-    <WithInstallationBrand
-      brand={{
-        display_name: "Gradion GmbH",
-        logo_url: logoUrl,
-        logo_icon_url: logoIconUrl,
-      }}
-    >
-      {children}
-    </WithInstallationBrand>
-  );
-}
-
-/**
- * The search row wired to the thing it actually opens.
- *
- * `onOpenSearch` is not a decorative prop: the top bar's field is the only
- * pointer route into the command palette, so a story that stubbed it would show
- * a control that does nothing and prove nothing. The app mounts the palette
- * beside the shell (App.tsx) — so does this, off the same builtin command list.
- */
-function usePaletteSeam() {
-  const [open, setOpen] = useState(false);
-  const commands = useBuiltinCommands();
-  const palette = (
-    <CommandPalette
-      open={open}
-      onClose={() => setOpen(false)}
-      commands={commands}
-    />
-  );
-  return { openSearch: () => setOpen(true), palette };
-}
-
-function ShellExample({
-  at = "#/",
-  children,
-}: Readonly<{
-  // The address this frame stands on. Stated on every frame rather than left to
-  // whatever the last one visited: the catalog keeps one iframe across a walk
-  // between stories, so a frame that named a route used to rename the page in
-  // every frame opened after it. `#/` is the product's own first destination.
-  at?: string;
-  children: ReactNode;
-}>) {
-  // Where the frame OPENS, once, and not where it is held: the rail's rows are
-  // real links, so a frame that restated its address on every render would drag
-  // a reader back the instant they used the navigation it is a picture of.
-  const opened = useRef(false);
-  if (!opened.current) {
-    opened.current = true;
-    globalThis.location.hash = at;
-  }
-  const { openSearch, palette } = usePaletteSeam();
-  return (
-    <>
-      <Shell onOpenSearch={openSearch} counts={COUNTS}>
-        {children}
-      </Shell>
-      {palette}
-    </>
-  );
 }
 
 export const Default: Story = {
@@ -286,9 +202,9 @@ export const SettingsHeadWithActionPhone: Story = {
   render: () => <SettingsHeadWithVerb />,
 };
 
-/** A company's wide logo owns the expanded head, with Margince credited on the
- * line beneath it. This is deliberately not an Avatar story: squeezing this
- * asset into the navigation rows' square is the failure this state catches. */
+/** A company with only a wide wordmark wears its monogram in the head. A
+ * wordmark contained into the head's square renders as a smear, not as a
+ * missing image, and that smear is the failure this state catches. */
 export const CompanyWordmark: Story = {
   render: () => {
     stubSession();
@@ -357,11 +273,9 @@ function SidebarExample({
 // Margince" with the version badge beside it; at 56px the attribution goes and
 // the badge stays, shortened to one glyph.
 //
-// What is NOT in either panel: the search and the account block. Both moved to
+// Neither panel holds the search or the account block. Both live in
 // the strip above (app/topbar.tsx), which is why these frames render that strip
-// rather than the sidebar alone — and the current row's own signal is now a tint
-// plus a weight plus the accent on its glyph, with the indicator bar that used to
-// sit in the gutter gone.
+// rather than the sidebar alone.
 export const SidebarStates: Story = {
   name: "sidebar — expanded and collapsed",
   render: () => {
@@ -383,17 +297,19 @@ export const SidebarStates: Story = {
   },
 };
 
+export const SidebarStatesDark: Story = {
+  ...SidebarStates,
+  name: "sidebar — expanded and collapsed, dark",
+  globals: { theme: "dark" },
+};
+
 /**
- * The two marks in the two panels that ask for them, side by side.
- *
- * This is the frame the second slot exists for: the same company, wordmark
- * across the open head and badge alone in the 56px rail. Reading them together
- * is the only way to see that the swap happens at all, and the only way to
- * catch the failure it replaced — a wordmark contained into a 32px square,
- * which renders as a smear rather than as a missing image.
+ * The company's square icon in both panels, side by side: the open head's
+ * card beside the 56px rail. The wide wordmark is seeded too, and appears in
+ * neither, because the head draws one square mark at every width.
  */
 export const CompanyMarksAtBothWidths: Story = {
-  name: "sidebar — wordmark expanded, badge collapsed",
+  name: "sidebar — the company's square icon at both widths",
   render: () => {
     stubSession();
     return (
@@ -402,6 +318,32 @@ export const CompanyMarksAtBothWidths: Story = {
           logoUrl={COMPANY_WORDMARK}
           logoIconUrl={COMPANY_BADGE}
         >
+          <div style={{ display: "flex", height: "100vh" }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed={false} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SidebarExample initiallyCollapsed />
+            </div>
+          </div>
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * A company name near the 200 characters the installation allows. The head
+ * keeps one line at every width and ends the name in an ellipsis; hovering or
+ * focusing the name shows the whole of it.
+ */
+export const LongCompanyName: Story = {
+  name: "sidebar — a very long company name",
+  render: () => {
+    stubSession();
+    return (
+      <StoryProviders>
+        <SeedInstallation displayName="Bundesverband der mittelständischen Industrie- und Handelsunternehmen für erneuerbare Energien, nachhaltige Technologien und die digitale Transformation e. V.">
           <div style={{ display: "flex", height: "100vh" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <SidebarExample initiallyCollapsed={false} />
@@ -507,7 +449,7 @@ const SETTINGS_SECTION: NavSection = {
   lead: <SettingsSearchBox pages={SETTINGS_PAGES} />,
   groups: [
     // The group that carries the level's NAME, and the Overview row with it.
-    // Production builds this from the catalog (screens/settingsnav.tsx); here it
+    // Production builds this from the catalog (features/settings/settingsnav.tsx). Here it
     // is spelled out, because a level with no first heading would be a picture
     // of an unnamed panel.
     {
@@ -696,30 +638,11 @@ export const ThirdLevel: Story = {
 };
 
 /**
- * A section at phone width, where the sidebar does NOT hand its bar over.
- *
- * The bar keeps the four destinations plus More on a section route — handing them
- * to a section's entries lost the whole product's navigation and left two
- * controls floating in a card — so the section lives in the PAGE HEAD here: the
- * heading names it, and the switcher under the heading names the entry the reader
- * is on and opens the rest as a sheet.
- *
- * Rendered from the parts rather than through `Shell`, because the real settings
- * section is published from live grants: the rail and the head are both handed the
- * fixture, which is what keeps this a picture of the CHROME.
- *
- * The bar itself carries five glyphs and no captions — four destinations and
- * More. Every row keeps its name in `aria-label`, so nothing is lost to a screen
- * reader or a voice-control user; the words are simply not drawn at a size where
- * they would be legible, and the sheet behind More is where they come back.
- *
- * One thing about the viewport tool is worth knowing before trusting a picture
- * of this: it is applied by the MANAGER, which resizes the preview iframe, and
- * these are viewport media queries — so a story opened as a bare `iframe.html`,
- * which is how the fe-uat capture gate renders, would get the harness's own width
- * and draw the SIDEBAR. `uat-phone` is what stops that: the gate reads the tag and
- * drives the browser itself to 390px. Without it every story named for a phone was
- * captured at 1024px, which is how three of them once shipped showing a sidebar.
+ * A section at phone width: the bar keeps its destinations, and the section
+ * lives in the page head, whose switcher opens the other entries. Rendered from
+ * the parts, because the real settings section comes from live grants.
+ * `uat-phone` makes the capture gate drive the browser to 390px; the viewport
+ * tool alone resizes only the manager's iframe.
  */
 function PhoneSectionExample() {
   const route: Route = { screen: "settings", id: "privacy" };
@@ -758,7 +681,7 @@ export const SectionPhone: Story = {
 };
 
 /** The same head in German: the badge moves under the switcher, the name wraps
- *  with the chevron on its first line, and the trail above shows only the page. */
+ *  with the chevron on its first line, and the bar above carries no trail. */
 export const SectionPhoneGerman: Story = {
   name: "a section — the head's switcher, a German name that wraps",
   globals: { viewport: { value: "phone" } },
@@ -783,10 +706,7 @@ export const SectionPhoneGerman: Story = {
         name.getBoundingClientRect().top + firstLine / 2,
         0,
       );
-      const stops = [...canvasElement.querySelectorAll(".topbar .crumbs li")];
-      expect(
-        stops.filter((stop) => getComputedStyle(stop).display !== "none"),
-      ).toHaveLength(1);
+      expect(canvasElement.querySelector(".topbar .crumbs")).toBeNull();
     });
   },
 };
@@ -806,53 +726,10 @@ export const SectionSwitcherOpen: Story = {
 };
 
 /**
- * The More sheet, open — the phone's whole sidebar.
- *
- * The bar it grew out of is five cells with no captions, which is all a 390px
- * row can hold; the sheet is where the ten destinations become a LIST again, and
- * everything the bar had to give up comes back with them:
- *
- * - a head, with the installation's mark and name — the bar has no room for one,
- *   so this is the only place at this width that says which workspace this is;
- * - the labels themselves, at body size, with each row's glyph on the left and
- *   the whole width as its target;
- * - the group headings, spelled out where the collapsed sidebar draws none,
- *   because the sheet is 600px wide whatever the desktop preference it
- *   inherited was left at;
- * - the badge as a TRAILING figure in its row rather than a chip pinned to a
- *   tab — a list row has somewhere to put a number.
- *
- * What does NOT come back is the agent. It is a cell of the BAR, and the bar is
- * not on screen while this is; a row for it in a list of ten places would file
- * the one thing in the chrome that reports rather than navigates as an eleventh
- * place to go. What the cell it left behind buys the sheet is the room for the
- * whole list: the ceiling is the viewport less the ledge it stands on and the
- * same air again at the top, and the ten destinations now sit inside it without
- * scrolling. It is still a scroller — a longer locale or a level with more rows
- * will reach that ceiling.
- *
- * The close control is the same More button in its other state, renamed, and it
- * is PINNED to the head's corner rather than left at the end of a scrolling list
- * — a reader who opened the sheet by mistake should not have to walk ten rows to
- * leave it. There is deliberately no grab handle: a handle is a control on every
- * platform that documents one, and this sheet has one height and no drag, so
- * drawing it would promise a gesture that does nothing.
- *
- * The route is Reports, which the bar does not carry. That is the case the sheet
- * exists to answer: the current page's own row is `display: none` in the bar, so
- * the closed bar reports it through More instead, and opening the sheet is what
- * makes it visible. It is also why the scrim and the `inert` content column are
- * part of the frame rather than decoration — the page under a sheet this size has
- * to stop being reachable by Tab, not merely be dimmed.
- *
- * `uat-phone` is what makes the capture gate drive the browser to 390px, and the
- * `play` below opens the sheet the way a reader does; there is no prop that forces
- * it open, and adding one would put a control in the product that exists only for
- * the catalog. The focus ring on the first row in the captured frame is that
- * opening, not a stray state: a sheet that covers the page has to take focus with
- * it, or a keyboard reader is left tabbing through a page they can no longer see.
+ * The More menu open over the bar on Analytics, which the bar does not carry.
+ * The bar stays live, More reads Close, and the menu's own row is current.
  */
-function PhoneSheetExample() {
+function PhoneMenuExample() {
   const route: Route = { screen: "analytics" };
   const { openSearch, palette } = usePaletteSeam();
   return (
@@ -863,7 +740,7 @@ function PhoneSheetExample() {
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">
-            <Card as="div">The page the sheet covers.</Card>
+            <Card as="div">The page under the menu.</Card>
           </div>
         </div>
       </main>
@@ -872,20 +749,49 @@ function PhoneSheetExample() {
   );
 }
 
-export const PhoneMoreSheet: Story = {
-  name: "phone — the More sheet as a list",
+export const PhoneMoreMenu: Story = {
+  name: "phone — the More menu above the bar",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    // The burger and the cross, as drawn once the turn between them settles.
+    const glyphs = () =>
+      [".railmore-open", ".railmore-close"].map((glyph) => {
+        const drawn = canvasElement.querySelector(glyph);
+        return drawn ? getComputedStyle(drawn).opacity : "missing";
+      });
+    const turned = (burger: string, cross: string) =>
+      waitFor(() => expect(glyphs()).toEqual([burger, cross]));
+    await turned("1", "0");
     await userEvent.click(canvas.getByRole("button", { name: "More" }));
+    await turned("0", "1");
+    await userEvent.click(canvas.getByRole("button", { name: "Close" }));
+    await turned("1", "0");
+    await userEvent.click(canvas.getByRole("button", { name: "More" }));
+    await turned("0", "1");
+    const close = await canvas.findByRole("button", { name: "Close" });
+    await expect(close).toHaveAttribute("aria-expanded", "true");
+    const menu = canvasElement.querySelector(".railmenu");
+    const bar = canvasElement.querySelector(".rail > .navlevel .navitem");
+    if (!(menu instanceof HTMLElement) || !(bar instanceof HTMLElement)) {
+      throw new Error("the open menu or the bar under it is missing");
+    }
+    await expect(menu.getBoundingClientRect().bottom).toBeLessThan(
+      bar.getBoundingClientRect().top,
+    );
+    await expect(
+      within(menu).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("aria-current", "page");
+    // The company's mark stands in the top bar at this width, not in the menu.
+    await expect(menu.querySelector(".railhead")).toBeNull();
   },
   render: () => {
     stubEntitlement(WITHIN_CAP);
     return (
       <StoryProviders>
         <SeedInstallation>
-          <PhoneSheetExample />
+          <PhoneMenuExample />
         </SeedInstallation>
       </StoryProviders>
     );
@@ -893,25 +799,10 @@ export const PhoneMoreSheet: Story = {
 };
 
 /**
- * The phone bar, closed — three destinations, the agent, and More.
- *
- * Five cells of equal width, and only three of them are places to go. The middle
- * one is the agent, and everything about how it is drawn is one claim: it is a
- * different KIND of thing from the four glyphs around it. It rises out of the
- * bar's top edge in a round well of the bar's own material, it carries the only
- * lit object in the chrome, and it has no caption — the bar has no captions at
- * all, and a word under the one cell with room for one would read as a label for
- * the bar rather than for the agent. Its accessible name says the rest.
- *
- * The Worklist is what the bar gave up for that cell. It is a tap away in the
- * sheet, which is the same distance the other six destinations already are.
- *
- * Position is load-bearing twice over. It is the CENTRE because the agent
- * belongs to the whole session rather than to any destination, so it stands
- * outside the row of them rather than at one end. And it is the third cell in
- * the DOM as well as on screen (app/navlevel.tsx renders it into the row stream),
- * so a thumb and a Tab key read the bar in the same order — a cell placed by a
- * grid column alone would have been third to the eye and last to the keyboard.
+ * The phone bar, closed: three destinations, the agent in the middle, and More.
+ * The agent is the centre cell because it belongs to the whole session, not to
+ * one destination. It is third in the DOM too, so a thumb and Tab read the bar
+ * in the same order.
  */
 function PhoneBarExample() {
   const route: Route = { screen: "home" };
@@ -949,25 +840,16 @@ export const PhoneBar: Story = {
   },
 };
 
+export const PhoneBarDark: Story = {
+  ...PhoneBar,
+  name: "phone — the bar, dark",
+  globals: { viewport: { value: "phone" }, theme: "dark" },
+};
+
 /**
- * The agent's panel, open over the phone bar.
- *
- * The same panel the sidebar opens beside its own card, in the only place a
- * bottom bar leaves for it: above. Two things make it read as this cell's panel
- * rather than as a sheet that arrived from nowhere.
- *
- * It is MEASURED from the well, not from the cell behind it — the well rises
- * clear of the bar, and a frame taken from the cell would open the panel across
- * the orb it belongs to. And it carries a notch that points back down at that
- * well, drawn on the portalled wrapper rather than on the panel, because the
- * panel scrolls its own body and would clip anything outside it. The notch's x
- * is the measured middle of the well, so it still lands if the bar's cells ever
- * stop being even.
- *
- * There is no scrim. This is a popover, not the More sheet: the page behind it
- * stays live and readable, an outside tap or Escape closes it, and focus goes
- * back to the orb. A dimmed page would claim the reader has to answer something
- * before carrying on, and there is nothing here to answer.
+ * The agent's panel, open over the phone bar and measured from the well, with a
+ * notch pointing back at it. There is no scrim: this is a popover, and the page
+ * behind it stays live.
  */
 export const PhoneAgentPanel: Story = {
   name: "phone — the agent's panel over the bar",

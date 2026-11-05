@@ -7,14 +7,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -32,22 +31,32 @@ type CreateLeadInput struct {
 	Title               *string
 	CompanyName         *string
 	CandidateCompanyKey *string
-	LinkedInURL         *string
-	Status              string
-	OwnerID             *ids.UserID
-	ProjectID           *ids.ProjectID
-	SourceSystem        *string
-	SourceID            *string
-	Source              string
+	// Industry is a code by the time it reaches the column (leadIndustryWrite).
+	Industry     *string
+	LinkedInURL  *string
+	Status       string
+	OwnerID      *ids.UserID
+	ProjectID    *ids.ProjectID
+	SourceSystem *string
+	SourceID     *string
+	// Source is how the row reached Margince; it never scores.
+	Source string
+	// Origin is where the lead came from: a lead_origin key. OriginHint is
+	// the raw wording only an importer sets; it resolves to a key, or stays in
+	// OriginDetail with Origin left nil (admitLeadOrigin).
+	Origin       *string
+	OriginDetail *string
+	OriginHint   string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// PartnerCompanyID names the partner that referred the lead (ensureLeadPartner).
+	PartnerCompanyID *ids.CompanyID
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
-	// FromContactID names a contact whose identity fills the fields left
-	// out (leadfromcontact.go).
-	FromContactID *ids.ContactID
+	// RequestedContactID is the deprecated contact_id request field. It is
+	// retained only to return the contact-held refusal older clients understand.
+	RequestedContactID *ids.ContactID
 }
 
 // CreateLead inserts into the segregated lead table — never contact, never
@@ -56,10 +65,6 @@ type CreateLeadInput struct {
 // existing row instead of erroring, so bulk sourcing can re-run.
 func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontracts.Lead, bool, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionCreate); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	in, err := s.fillLeadFromContact(ctx, in)
-	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
 	in, by, err := s.readyLeadCreate(ctx, in)
@@ -81,7 +86,19 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 		}
 		return s.recordLeadNearMatch(ctx, tx, out, by)
 	})
-	return out, created, err
+	return out, created, s.TellContactOwnerOfLead(ctx, err, in, arrivalOrigin(ctx, in.Source))
+}
+
+// arrivalOrigin names the door a lead came through, for the contact owner's
+// task: an agent, or the source the request declared.
+func arrivalOrigin(ctx context.Context, source string) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return "an agent"
+	}
+	if source == "" {
+		return "the API"
+	}
+	return source
 }
 
 // CreateLeadTx is CreateLead inside a transaction the caller opened, whose own
@@ -96,12 +113,6 @@ func (s *Store) CreateLeadTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput,
 	}
 	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Lead{}, false, err
-	}
-	// Reading the contact takes a connection of its own, which is what this
-	// seam exists not to do; a caller holding a transaction fills the lead itself.
-	if in.FromContactID != nil {
-		return crmcontracts.Lead{}, false, httperr.Validation(contactIDField, "unsupported",
-			"a lead created inside another write cannot be filled from a contact")
 	}
 	in, by, err := s.readyLeadCreate(ctx, in)
 	if err != nil {
@@ -158,41 +169,12 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if replay != nil {
 		return *replay, false, nil
 	}
-	// The LinkedIn claim is locked before either probe reads, so two
-	// creates racing on the same contact answer with the same key rather
-	// than whichever one they happened to lose.
-	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
+	if err := admitLeadCreate(ctx, tx, in); err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
-	if err := ensureLeadEmailUnclaimed(ctx, tx, in.Email); err != nil {
+	in, err = admitLeadOrigin(ctx, tx, in)
+	if err != nil {
 		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-
-	if in.ProjectID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {
-			return crmcontracts.Lead{}, false, err
-		}
-	}
-	// A named owner on a create is an assignment, and it is checked here
-	// rather than in readyLeadCreate because the question needs a
-	// transaction. Both entry points reach this body — CreateLead and
-	// CreateLeadTx, the latter being what CSV and mirror imports call — so
-	// this is the one place that sees every created lead. Omitting the owner
-	// stays the unassigned queue's own case and asks nothing. An invited
-	// colleague may be named, as on every other record's create.
-	if in.OwnerID != nil {
-		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
-			return crmcontracts.Lead{}, false, err
-		}
 	}
 	id, err := insertLeadRow(ctx, tx, in, active, by)
 	if err != nil {
@@ -200,7 +182,10 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "lead", id.UUID, nil,
-		map[string]any{leadEmailColumn: in.Email, leadPhoneColumn: in.Phone, leadCompanyColumn: in.CompanyName})
+		map[string]any{
+			leadEmailColumn: in.Email, leadPhoneColumn: in.Phone, leadCompanyColumn: in.CompanyName,
+			leadOriginField: in.Origin, leadOriginDetailField: in.OriginDetail,
+		})
 	if err != nil {
 		return crmcontracts.Lead{}, false, fmt.Errorf("audit lead create: %w", err)
 	}
@@ -216,31 +201,37 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 
 // insertLeadRow writes the lead row itself and answers with its id.
 func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []fieldcatalog.Column, by string) (ids.LeadID, error) {
-	if err := ensureHumanSourceAllowed(ctx, tx, in.Source); err != nil {
-		return ids.LeadID{}, err
+	if in.Email != nil {
+		if err := storekit.RefuseErasedEmail(ctx, tx, leadEmailColumn, *in.Email); err != nil {
+			return ids.LeadID{}, err
+		}
 	}
-	intents, err := loadSourceIntents(ctx, tx)
+	fit, err := initialLeadScore(ctx, tx, in)
 	if err != nil {
 		return ids.LeadID{}, err
 	}
 	id := ids.New[ids.LeadKind]()
-	// The initial score is the §3 fit component — a fresh lead has no
-	// behavioral history yet; signal recompute moves it later.
-	fit := ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Now().UTC())
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return ids.LeadID{}, err
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
+	fixed := []any{
 		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
-		in.FromContactID, in.Phone,
-	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
+		in.Phone, in.Origin, in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID, in.PartnerCompanyID,
+	}
+	holders := strings.Split(storekit.Placeholders(fixed), ",")
+	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
+	holders[2] = "lower(" + holders[2] + ")"
+	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, fixed)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	if err != nil {
+		return ids.LeadID{}, err
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
-		                   from_contact_id, phone`+authorCols+cfCols+`)
-		 VALUES ($1, $2, lower($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17`+authorHolders+cfHolders+`)`,
+		                   phone, origin, origin_detail, email_domain_folded, `+leadIndustryField+`, `+arrivalOwnerColumn+`, `+leadPartnerField+authorCols+cfCols+`)
+		 VALUES (`+strings.Join(holders, ", ")+authorHolders+cfHolders+`)`,
 		args...)
 	if err != nil {
 		// Race behind the pre-checks: the constraint name tells an
@@ -290,12 +281,17 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 		in.Phone = &normalized
 	}
 	if in.LinkedInURL != nil {
-		normalized, err := NormalizeLinkedInURL(*in.LinkedInURL)
+		normalized, err := NormalizeContactLinkedInURL(*in.LinkedInURL)
 		if err != nil {
 			return CreateLeadInput{}, err
 		}
 		in.LinkedInURL = &normalized
 	}
+	industry, err := leadIndustryWrite(in.Industry)
+	if err != nil {
+		return CreateLeadInput{}, err
+	}
+	in.Industry = industry
 	return in, nil
 }
 
@@ -347,7 +343,7 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	normalized, err := NormalizeLinkedInURL(rawURL)
+	normalized, err := NormalizeContactLinkedInURL(rawURL)
 	if err != nil {
 		return nil, err
 	}
@@ -361,14 +357,23 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 
 	var out *crmcontracts.Lead
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		ctx, err = withLeadTaskIdentities(ctx, tx)
+		if err != nil {
+			return err
+		}
 		// A dedupe probe for the capture path — its result is not rendered
 		// with custom fields, so no catalog columns are carried (nil active).
-		policy, err := loadLeadSLAPolicy(ctx, tx)
+		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
+		if err != nil {
+			return err
+		}
+		columns, err := leadColumns(ctx, arg)
 		if err != nil {
 			return err
 		}
 		l, err := scanLead(tx.QueryRow(ctx,
-			`SELECT `+leadColumns+` FROM lead
+			`SELECT `+columns+` FROM lead
 			 WHERE linkedin_url = $1 AND archived_at IS NULL AND `+scope+`
 			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -396,59 +401,10 @@ func (s *Store) GetLead(ctx context.Context, id ids.LeadID, archived storekit.Ar
 		if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}
-		out, err = readLead(ctx, tx, id, archived, active)
+		out, err = readLeadOffered(ctx, tx, id, archived, active)
 		return err
 	})
 	return out, err
-}
-
-type ListLeadsInput struct {
-	Cursor *string
-	Limit  *int
-	Status *string
-	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
-	// owner-scoped list carries (DM-VOCAB-OWN-1), bound through
-	// storekit.OwnershipClause as contact and company bind them.
-	OwnerID         *ids.UserID
-	OwnerTeamID     *ids.TeamID
-	Unassigned      *bool
-	Query           *string
-	IncludeArchived bool
-	// CapturedByKind filters on the captured_by prefix (ADR-0075/A121 §3a).
-	CapturedByKind *string
-	// AiWritten filters on whether an AI wrote into the record (§3a).
-	AiWritten *bool
-	// MinScore is the triage floor: a lead list is read to work the warmest
-	// rows first, so a reader asking for a score keeps the colder rows off
-	// the page rather than scanning past them.
-	MinScore *int
-	// OwedAReply keeps only the leads nobody has answered.
-	//
-	// A QUERY dial rather than something a caller filters afterwards, and the
-	// difference is the whole point: the page is bounded, so a caller cutting
-	// answered rows off the end of it loses the unanswered leads that were
-	// behind them — and reports the shortfall as "none owed" rather than as a
-	// page that was cut.
-	OwedAReply *bool
-	// Source narrows to one capture source (inbound, webform, referral,
-	// import, crawl, manual, ...): the exact stored value, no prefix match.
-	Source *string
-	// TagIDs narrows to the leads carrying these tags, combined by TagMode.
-	TagIDs  []ids.UUID
-	TagMode storekit.TagMode
-	// FromContactID narrows to the leads worked from one contact.
-	FromContactID *ids.ContactID
-	// SLAState narrows to leads in one first-response state (formulas
-	// §18.1); breached is the overdue queue.
-	SLAState *crmcontracts.ListLeadsParamsSlaState
-	// Sort is the contract's sort spec, validated against the lead
-	// vocabulary plus the workspace's active cf_ columns.
-	Sort *string
-	// Membership narrows to one list's members (list_id).
-	Membership storekit.ListMemberFilter
-	// MemberOf is the list a seam caller narrowed to; the provider resolves it
-	// into Membership before the read.
-	MemberOf *ids.UUID
 }
 
 // leadUniqueViolation maps a lead write's unique-index violation to the
@@ -463,9 +419,6 @@ func leadUniqueViolation(err error, email *string) (error, bool) {
 	if name == "uq_lead_email_dedupe" {
 		return &DuplicateLeadError{Email: deref(email)}, true
 	}
-	if name == "uq_lead_from_contact_live" {
-		return &DuplicateContactLeadError{}, true
-	}
 	return apperrors.ErrConflict, true
 }
 
@@ -474,4 +427,37 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
+	if err := refuseRequestedContact(ctx, tx, in.RequestedContactID, leadKeys(in.Email, in.LinkedInURL)); err != nil {
+		return err
+	}
+	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
+		return err
+	}
+	if err := ensureLeadEmailUnclaimed(ctx, tx, in.Email); err != nil {
+		return err
+	}
+	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
+		return err
+	}
+	if err := refuseContactHolders(ctx, tx, leadKeys(in.Email, in.LinkedInURL), nil); err != nil {
+		return err
+	}
+
+	if in.ProjectID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
+			return err
+		}
+	}
+	if in.OwnerID != nil {
+		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
+			return err
+		}
+	}
+	if in.PartnerCompanyID != nil {
+		return ensureLeadPartner(ctx, tx, *in.PartnerCompanyID)
+	}
+	return nil
 }

@@ -24,6 +24,7 @@ var leadHandovers = map[string]string{
 	"ensureLeadUpdateAuthority": "an owner set by an update, a bulk reassignment or an assignment",
 	"RouteLead":                 "automatic routing",
 	"mergeLeadTx":               "a lead merged into another, by a human or an accepted merge proposal",
+	"linkableLead":              "a lead linked to a company a human confirmed",
 }
 
 // The hold is one shared check, and every handover calls it.

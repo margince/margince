@@ -3,6 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { IconAction } from "./iconaction";
 
@@ -101,5 +102,27 @@ describe("a glyph verb that opens a region", () => {
     const control = screen.getByRole("button", { name: "Call" });
     expect(control.hasAttribute("aria-expanded")).toBe(false);
     expect(control.hasAttribute("aria-controls")).toBe(false);
+  });
+});
+
+describe("a glyph that goes somewhere", () => {
+  it("is a link with the name, the tip and the word of the press form", async () => {
+    const user = userEvent.setup();
+    render(
+      <IconAction
+        label="Call"
+        word="Call"
+        href="tel:+493012345678"
+        icon={<span aria-hidden="true">c</span>}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Call" });
+    expect(link.getAttribute("href")).toBe("tel:+493012345678");
+    expect(link.querySelector(".verb-word")?.textContent).toBe("Call");
+    expect(screen.queryByRole("button")).toBeNull();
+
+    await user.tab();
+    expect(link).toBe(document.activeElement);
+    expect(screen.getByRole("tooltip").textContent).toBe("Call");
   });
 });

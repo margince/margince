@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -43,11 +44,21 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 		t.Fatalf("staging reviews: %v", err)
 	}
 	approvalID := stagedProposalID(t, e, dispositionID)
+	assertSenderReviewCount(t, e, e.Rep1, 1)
 
 	// A REAL app_user with the create grants the mapping demands — the point
 	// being that an actual human can decide this kind. (e.Admin() mints a
 	// synthetic id, which the approval's decided_by foreign key rejects.)
 	decider := e.As(e.Rep1, nil, integration.AdminPerms)
+	status := "pending"
+	offers, _, err := svc.List(decider, approvals.ListInput{Status: &status})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(offers) != 1 || offers[0].ID.UUID != approvalID {
+		t.Fatalf("mailbox owner's decisions = %+v, want counted proposal %s", offers, approvalID)
+	}
+
 	if _, err := svc.Decide(decider, ids.From[ids.ApprovalKind](approvalID), true, nil); err != nil {
 		t.Fatalf("approving the counterparty proposal: %v", err)
 	}
@@ -60,6 +71,7 @@ func TestCounterpartyAcceptCreatesTheRecordsAndClosesTheDisposition(t *testing.T
 	if got := dispositionStatus(t, e, dispositionID); got != capture.PendingStatusReal {
 		t.Fatalf("disposition status after accept = %q, want real", got)
 	}
+	assertSenderReviewCount(t, e, e.Rep1, 0)
 	// Accepting ADDS; it never touches the message.
 	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, activityID); n != 1 {
 		t.Fatal("accepting a counterparty proposal archived the message")
@@ -344,4 +356,81 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 	if got := dispositionStatus(t, e, dispositionID); got == capture.PendingStatusRejected {
 		t.Fatal("the sweep overwrote a decision a human had already made")
 	}
+}
+
+// A sender question goes only to the colleague whose mail it came from. When
+// that colleague has left, the question is staged for nobody. The row also
+// leaves the backlog, so it cannot hold up senders who can still be asked.
+func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
+	e := integration.Setup(t)
+	askable := seedPendingDisposition(t, e, "erin@stays.example", "stays.example", seedCapturedMail(t, e, "erin@stays.example", "hello"))
+	orphaned := seedPendingDisposition(t, e, "finn@left.example", "left.example", seedCapturedMail(t, e, "finn@left.example", "hello"))
+	retireToUnsure(t, e, askable)
+	retireToUnsure(t, e, orphaned)
+	e.WsExec(t, `UPDATE capture_pending_counterparty SET owner_id = $2 WHERE id = $1`, orphaned, e.Rep3)
+	e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3)
+
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("staging reviews: %v", err)
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM capture_pending_counterparty WHERE id = $1 AND proposal_id IS NOT NULL`, askable); n != 1 {
+		t.Fatal("the question for a colleague who can be asked was not staged; the case below would prove nothing")
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 1 {
+		t.Fatalf("%d sender questions staged, want only the one for the colleague still here", n)
+	}
+	awaiting, err := capture.NewPendingStore(InstallationDB(e.Pool)).AwaitingReview(e.Admin(), 50)
+	if err != nil {
+		t.Fatalf("reading the review backlog: %v", err)
+	}
+	for _, row := range awaiting {
+		if row.ID == orphaned {
+			t.Fatal("the backlog still offers a question whose mailbox owner cannot be asked")
+		}
+	}
+}
+
+func assertSenderReviewCount(t *testing.T, e *integration.Env, owner ids.UUID, want int) {
+	t.Helper()
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		owners, err := captureOwnerReviews(e.Admin(), tx)
+		if err != nil {
+			return err
+		}
+		if want == 0 && len(owners) != 0 {
+			t.Errorf("owners after resolution = %+v, want none", owners)
+		}
+		if want > 0 && (len(owners) != 1 || ids.UUID(owners[0].UserId) != owner || owners[0].SenderDecisions != want) {
+			t.Errorf("actionable owner reviews = %+v, want mailbox owner with %d", owners, want)
+		}
+		categories, err := capture.ReadOperationalCategoriesTx(e.Admin(), tx)
+		if err == nil && categories.SenderReviews != want {
+			t.Errorf("actionable sender count = %d, want %d", categories.SenderReviews, want)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSenderReviewHealthFollowsTheOfferExpiryAndDecider(t *testing.T) {
+	e := integration.Setup(t)
+	activityID := seedCapturedMail(t, e, "dana@offerco.example", "about your services")
+	dispositionID := seedPendingDisposition(t, e, "dana@offerco.example", "offerco.example", activityID)
+	retireToUnsure(t, e, dispositionID)
+	assertSenderReviewCount(t, e, e.Rep1, 0)
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatal(err)
+	}
+	approvalID := stagedProposalID(t, e, dispositionID)
+	assertSenderReviewCount(t, e, e.Rep1, 1)
+	e.WsExec(t, `UPDATE approval SET expires_at=now()-interval '1 hour' WHERE id=$1`, approvalID)
+	assertSenderReviewCount(t, e, e.Rep1, 0)
+	e.WsExec(t, `UPDATE approval SET expires_at=now()+interval '1 hour', requested_decider_id=$2 WHERE id=$1`, approvalID, e.Rep2)
+	assertSenderReviewCount(t, e, e.Rep2, 1)
+	e.WsExec(t, `UPDATE app_user SET status='deactivated' WHERE id=$1`, e.Rep2)
+	assertSenderReviewCount(t, e, e.Rep2, 0)
 }

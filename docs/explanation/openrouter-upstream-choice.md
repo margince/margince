@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/ai/openrouterrouting.go backend/internal/modules/ai/openroutervalidate.go backend/internal/modules/ai/openaicompat.go config/presets/openrouter_cloud.yaml config/presets/openrouter_cloud_eu.yaml -->
 # OpenRouter: choosing the upstream
 
 **A dated measurement, from 2026-09-02.** It records how OpenRouter chose hosts

@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
@@ -44,6 +45,8 @@ type dealFacts struct {
 	status      string
 	companyID   ids.UUID
 	lastTouchAt time.Time
+	// lastTouchDateOnly says the activity behind lastTouchAt names only a date.
+	lastTouchDateOnly bool
 	// everTouched says an activity has actually been captured against the
 	// deal, which lastTouchAt cannot answer: it coalesces to the creation
 	// date, so a deal nobody has contacted and one contacted the day it was
@@ -64,10 +67,10 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 	var out dealFacts
 	var company *ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT status, company_id, %s,
+		SELECT status, company_id, %s, %s,
 		       last_activity_at IS NOT NULL, now()
-		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).
-		Scan(&out.status, &company, &out.lastTouchAt, &out.everTouched, &out.asOf)
+		  FROM deal WHERE id = $1`, idlebase.SQL(""), deals.LastActivityDaySQL("deal")), dealID).
+		Scan(&out.status, &company, &out.lastTouchAt, &out.lastTouchDateOnly, &out.everTouched, &out.asOf)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}

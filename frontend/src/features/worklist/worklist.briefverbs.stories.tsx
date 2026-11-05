@@ -10,12 +10,9 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  BriefAct,
-  BriefSetAsides,
-  useBriefAnswer,
-} from "./worklist.briefverbs";
+import { BriefAct, useBriefAnswer } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
+import { rowAnswer } from "./worklist.row.answer";
 // The row's own line: `.worklist-row-acts` carries the trailing alignment, the
 // wrapping and the interval, so without it the three draw as a bare inline run.
 import "./worklist.row.css";
@@ -32,6 +29,7 @@ import "./worklist.row.css";
 // `worklist.dispositions.stories.tsx` gives the judgements sharing it.
 
 const ITEM: WorklistItem = {
+  occurred_precision: "instant",
   id: "01a05500-0000-7000-8000-0000000000b1",
   source: "brief_item",
   category: "deals_at_risk",
@@ -68,10 +66,12 @@ function neverSettles() {
 // acting and then dismissing would answer one item twice.
 function Line({ item }: Readonly<{ item: WorklistItem }>) {
   const brief = useBriefAnswer(item);
+  const answer = rowAnswer(item, brief);
   return (
     <div className="worklist-row-acts">
-      <BriefSetAsides item={item} brief={brief} />
-      {brief.offered("act") ? <BriefAct item={item} brief={brief} /> : null}
+      {answer.equals}
+      {answer.primary}
+      {answer.below}
     </div>
   );
 }

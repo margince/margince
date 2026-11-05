@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,7 +83,6 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT p.id, p.owner_id, pe.email,
-			       coalesce(nullif(split_part(pe.email, '@', 2), ''), ''),
 			       coalesce(p.full_name, ''),
 			       (SELECT a.id
 			          FROM activity_link l
@@ -104,7 +104,7 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 			                    WHERE q.email = pe.email)
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
 			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
-			                      AND al.actor_type = 'human')
+			                      AND `+storekit.AuditForAUser("al")+`)
 			   -- The message the projection above looks for, asked here as a
 			   -- FILTER so a contact the engine cannot judge does not consume
 			   -- the page. A contact known only from a meeting has no such
@@ -128,10 +128,10 @@ func (s *PendingStore) StrandedContacts(ctx context.Context, limit int) ([]Stran
 		for rows.Next() {
 			var c StrandedContact
 			var activity *ids.UUID
-			if err := rows.Scan(&c.ContactID, &c.OwnerID, &c.Email,
-				&c.Domain, &c.DisplayName, &activity); err != nil {
+			if err := rows.Scan(&c.ContactID, &c.OwnerID, &c.Email, &c.DisplayName, &activity); err != nil {
 				return err
 			}
+			c.Domain = owndomain.OfAddress(c.Email)
 			if activity == nil {
 				// No captured message left to ask about — erased, archived, or
 				// under a hold. The question needs one: the ledger row names
@@ -209,7 +209,7 @@ func (s *PendingStore) NoiseJudgedContacts(ctx context.Context, limit int) ([]No
 			   AND `+noiseJudgedStandsSQL("pe.email", "p.owner_id")+`
 			   AND NOT EXISTS (SELECT 1 FROM audit_log al
 			                    WHERE al.entity_type = 'contact' AND al.entity_id = p.id
-			                      AND al.actor_type = 'human')
+			                      AND `+storekit.AuditForAUser("al")+`)
 			 ORDER BY random()
 			 LIMIT $1`, limit)
 		if err != nil {

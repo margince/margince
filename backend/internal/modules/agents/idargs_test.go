@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -114,8 +115,8 @@ func (seamProbeProvider) StageSemantic(context.Context, ids.UUID) (string, ids.U
 	return "", ids.UUID{}, errSeamReached
 }
 
-func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.EntityRef, error) {
-	return datasource.EntityRef{}, errSeamReached
+func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInput) (datasource.AdvanceDealResult, error) {
+	return datasource.AdvanceDealResult{}, errSeamReached
 }
 
 // The RecordArchiverV2 half. It is on the SHARED stub rather than on the
@@ -144,7 +145,7 @@ func (seamProbeProvider) Merge(context.Context, datasource.MergeInput) (datasour
 	return datasource.EntityRef{}, errSeamReached
 }
 
-func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64) (datasource.EntityRef, bool, error) {
+func (seamProbeProvider) PromoteLead(context.Context, ids.UUID, string, *string, *int64, datasource.PromotionDealChoice) (datasource.EntityRef, bool, error) {
 	return datasource.EntityRef{}, false, errSeamReached
 }
 
@@ -192,11 +193,21 @@ func (seamProbeRetriever) AssembleContext(context.Context, datasource.EntityRef,
 // them" — the whole point of the probe.
 type seamProbeLifecycle struct{}
 
-func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
-	return nil, errSeamReached
+func (seamProbeLifecycle) CheckDisqualifyReason(context.Context, ids.UUID) error { return nil }
+
+func (seamProbeLifecycle) Read(context.Context, ids.UUID) (MeetingPreparationResult, bool, error) {
+	return MeetingPreparationResult{}, false, errSeamReached
 }
 
-func (seamProbeLifecycle) RelinkThread(context.Context, string, string, ids.UUID, bool) (json.RawMessage, error) {
+func (seamProbeLifecycle) Confirm(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, errSeamReached
+}
+
+func (seamProbeLifecycle) Withdraw(context.Context, ids.UUID, string) (MeetingPreparationResult, error) {
+	return MeetingPreparationResult{}, errSeamReached
+}
+
+func (seamProbeLifecycle) RelinkActivity(context.Context, ids.UUID, string, ids.UUID, bool, *int64) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 
@@ -204,7 +215,13 @@ func (seamProbeLifecycle) RelinkActivities(context.Context, []ids.UUID, string, 
 	return nil, errSeamReached
 }
 
-func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, *int64) (json.RawMessage, error) {
+func (seamProbeLifecycle) DisqualifyLead(context.Context, ids.UUID, LeadDisqualification, *int64) (json.RawMessage, error) {
+	return nil, errSeamReached
+}
+
+func (seamProbeLifecycle) Check(context.Context, ids.UUID, *string) error { return errSeamReached }
+
+func (seamProbeLifecycle) SetUp(context.Context, ids.UUID, PartnerSetUpFields) (json.RawMessage, error) {
 	return nil, errSeamReached
 }
 
@@ -276,7 +293,7 @@ func (seamProbeDocuments) MaxBytes(context.Context) int64 { return 0 }
 func idProbeDispatcher(t *testing.T) *Dispatcher {
 	t.Helper()
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, noConflicts{}, nil, nil, nil)
+	RegisterCoreTools(r, seamProbeProvider{}, seamProbeProvider{}, nil, nil, nil, nil)
 	RegisterReportingTool(r, func(context.Context, ReportingRead) (ReportingAnswer, error) {
 		return ReportingAnswer{}, errSeamReached
 	})
@@ -287,6 +304,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	}, probeReportCatalog, probeReportPlan)
 	RegisterAnalyticsReportTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
+	})
+	RegisterReportDraftTool(r, func(context.Context, ReportDraftRequest) (crmcontracts.ReportingReport, error) {
+		return crmcontracts.ReportingReport{}, errSeamReached
 	})
 	RegisterAnalyticsQueryTool(r, func(context.Context, json.RawMessage) (json.RawMessage, error) {
 		return nil, errSeamReached
@@ -301,13 +321,13 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterAssuranceTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterInputChecksTool(r, func(context.Context) (json.RawMessage, error) {
+	RegisterInputChecksTool(r, func(context.Context, InputChecksArgs) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
 	RegisterCoverageTool(r, func(context.Context) (json.RawMessage, error) {
 		return nil, errSeamReached
 	})
-	RegisterIntentTools(r, inertRetriever{}, nil, nil)
+	RegisterIntentTools(r, inertRetriever{}, nil, nil, nil, seamProbeLifecycle{})
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, errSeamReached },
@@ -330,7 +350,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 		func(context.Context) (AtRiskReport, error) { return AtRiskReport{}, errSeamReached })
 	RegisterCommsTools(r, &recordingComms{}, seamProbeProvider{})
 	RegisterLifecycleTools(r, seamProbeProvider{},
-		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
+		seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{}, seamProbeLifecycle{})
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
 	RegisterBulkTool(r, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
@@ -341,6 +361,9 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
+	RegisterRecordSearchTool(r, seamProbeProvider{}, func(context.Context, RecordSearchQuery) (RecordSearchPage, error) {
+		return RecordSearchPage{}, nil
+	})
 	RegisterReportEvidenceTool(r, seamProbeProvider{}, func(context.Context, ReportEvidenceQuery) (ReportEvidence, error) {
 		return ReportEvidence{}, errSeamReached
 	})
@@ -350,10 +373,14 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterWhoamiTool(r, func(context.Context) (ActingIdentity, error) { return ActingIdentity{}, nil })
 	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
 	RegisterTagTools(r, stubTags{})
+	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb, revertStageVerb, downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
+		return json.RawMessage(`{}`), nil
+	})
 	RegisterDocumentTools(r, seamProbeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})
 	RegisterImportTools(r, stubImports{})
+	RegisterMemberTools(r, seamProbeMembers{})
 	RegisterListTool(r, seamProbeProvider{}, probeVocabulary{})
 	RegisterRecordPartsTool(r, seamProbeRecordParts{})
 	RegisterReadViewTool(r, probeViews, func(context.Context, ReadView, map[string]string, url.Values) (json.RawMessage, error) {
@@ -635,6 +662,11 @@ func absentIDArgs(t *testing.T, tool string, inputSchema json.RawMessage, omit s
 }
 
 type seamProbeInviter struct{}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (seamProbeInviter) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
+}
 
 func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
 	return crmcontracts.MeetingInvitation{}, errSeamReached

@@ -21,7 +21,7 @@ import type { RelinkKind } from "./recordtargets";
  * own — the contact page, whose drawer also offers chat transports — answers
  * the same call with that one through `WriteToProvider`, so its address and
  * its header verb open the same drawer rather than two.
- * The host is `WriteToHost` in `screens/writetohost.tsx`.
+ * The host is `WriteToHost` in `features/settings/writetohost.tsx`.
  *
  * Only while the reader has a mailbox the product can write from. The composer
  * sends from the reader's own connected mailbox and can only refuse without
@@ -42,7 +42,13 @@ export type WriteToRecord = Readonly<{
  * written to yet has no thread to resolve an addressee from, so the address
  * the reader pressed is the one the composer offers.
  */
-export type WriteToTarget = WriteToRecord & Readonly<{ address?: string }>;
+export type WriteToTarget = WriteToRecord &
+  Readonly<{
+    address?: string;
+    // Set by an AI verb: the composer drafts on arrival, steered by these
+    // words. An empty string still drafts; only an absent one opens empty.
+    draftIntent?: string;
+  }>;
 
 export type WriteTo = (target: WriteToTarget) => void;
 

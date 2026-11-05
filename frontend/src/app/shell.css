@@ -15,8 +15,7 @@
      touches it: the strip, the heading, the screen's block, and the air under the
      strip — which the SCROLLER carries rather than each screen's own block, so a
      heading, a record's identity block and a full-height list all begin at the
-     same distance from the rule. The same number at every width; a phone is a
-     narrower column, not a different layout. */
+     same distance from the rule. */
   --pageGutter: var(--space-5);
   --pageGapTop: var(--space-5);
 }
@@ -32,11 +31,9 @@
 }
 
 /* App shell — a labeled sidebar collapsing to the canonical 56px rail, and the
- * content column beside it. The chrome is GLASS over the lit ground (DESIGN.md
- * §6), not §2b's deep ink-green field: the sidebar and the strip are the page's
- * own pane with a blur behind it, so rail icons read as ordinary theme tokens
- * rather than white-alpha on a dark ground. The ink-green field keeps the
- * marketing surfaces. */
+ * content column beside it. The chrome is the pane over the page ground
+ * (DESIGN.md §6), never a dark green column, so rail icons read as ordinary
+ * theme tokens rather than white-alpha on a dark ground. */
 
 /* The skip link (WCAG 2.4.1). Off-screen until it has focus, and moved with a
  * transform rather than hidden: `display: none`, `visibility: hidden` and a zero
@@ -97,11 +94,7 @@
   grid-template-columns: var(--railW) 1fr;
   height: 100vh;
   box-sizing: border-box;
-  /* The lit ground (DESIGN.md §2): the emerald light behind the sidebar at the
-     top-left, the indigo one at the top-right, painted into the page colour.
-     Declared once in tokens.css, because the buyer's Deal Room stands on the
-     same ground from outside this shell. */
-  background: var(--groundLit);
+  background: var(--bgPage);
   /* `viewport-fit=cover` exposes the horizontal insets too, and this layout is
      the one that applies in landscape — where the notch sits over the sidebar's
      own edge, on top of the brand chip and the column of icons. */
@@ -112,7 +105,7 @@
   transition: --railW var(--dur-move) var(--ease-out);
 }
 /* The frame every screen sits in, INCLUDING the rail-less auth surface — which
-   sizes itself in dvh for a reason (screens/auth.css: on iOS, 100vh subtracts the
+   sizes itself in dvh for a reason (features/sign-in/auth.css: on iOS, 100vh subtracts the
    browser chrome from the wrong side and the primary action lands under the
    keyboard). A 100vh ancestor silently defeats that: the child asks for the
    visible viewport while the parent is sized to the larger one, so the document
@@ -257,7 +250,7 @@
 }
 /* Except where the page's body is the settings stack, which takes a narrower
    measure than the page's — so there the page's measure IS that stack's, read
-   from the one token both sheets read (--settingsColumn, screens/settings.css).
+   from the one token both sheets read (--settingsColumn, features/settings/settings.css).
    Plus the gutter on each side, because that is padding these boxes carry and
    the stack inside them does not.
 
@@ -345,24 +338,19 @@
 }
 
 /* ===== sidebar =====
- * The ground is the pane — glass over the emerald light — in BOTH states. The
- * collapsed state matches the canonical rail's geometry — 56px, the logomark
- * chip, the same rows — but not its ink-green field: a sidebar that changed
- * colour on collapse would read as two shells.
+ * The ground is the pane in BOTH states, so collapsing to 56px changes the
+ * width and never the colour: a sidebar that changed colour on collapse would
+ * read as two shells.
  *
  * Top to bottom: brand, the destinations (or the entries of a section the
  * reader walked into), More at phone width, then the agent (app/agentrail.tsx)
  * pinned to the foot. */
 .rail {
-  /* Glass over the glow: the pane's translucent ground with the blur that lets
-     the emerald light behind it show through as a tint rather than as a shape.
-     The two glows are the chrome (DESIGN.md §2) — there is no coloured bar. */
-  background: var(--pane);
-  backdrop-filter: blur(20px);
+  background-color: var(--ground);
   /* One hairline, on the side that separates it from the content. No radius and
      no shadow: the sidebar is not a card floating on the page, it is the page's
      left edge, and it runs the full height of the viewport. */
-  border-right: 1px solid var(--paneEdge);
+  border-right: 1px solid var(--groundEdge);
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -413,182 +401,143 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
-/* The head: the brand block, then the line that says what it runs on and what
-   stage it is at. TWO ROWS, so the marker stands beside the attribution instead
-   of at the foot of a column a demo never scrolls to — and the control that
-   collapses this panel is not among them, it stands in the top bar
-   (app/topbar.css) where it does not travel with the panel it opens.
-   Its FLOOR is the strip's height, so a head with nothing to attribute still
-   reaches the line the strip ends on; a head with more to say takes the rows
-   below it down rather than being clipped by the box. */
+/* The head: a mark and a name, and under the name the line that says what an
+   installation runs on. The control that collapses this panel is not here: it
+   stands in the top bar (app/topbar.css), where it does not travel with the
+   panel it opens.
+   A grid, so the mark spans both lines when there are two and the name and
+   attribution share one left edge whatever the mark's size. */
 .rail .railhead {
-  display: flex;
-  /* A COLUMN: the mark and the name are one lockup, and what runs under them is
-     a line of its own. `stretch` so both rows start at the panel's own left
-     edge — the marker then trails the attribution on the same baseline grid the
-     rows below stand on. */
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-1);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "mark name";
+  align-items: center;
+  column-gap: var(--space-2);
+  /* The containing block of the name's stretched link (`.rail .ws::after`). */
+  position: relative;
   /* Never shrinks. The panel is a flex COLUMN, and on a window shorter than the
      navigation is tall the default `flex-shrink: 1` took the overflow out of the
-     tallest item that could give it — this one, silently, 14px of it. The head
-     then stood shorter than the strip it is aligned to and every icon below it
-     rode up by that much, so collapsing the panel (which stops scrolling, so
-     stops shrinking) moved the whole column, which the rows must not do. */
+     tallest item that could give it — this one. The head then stood shorter than
+     the strip it is aligned to and every icon below it rode up by that much. */
   flex: none;
-  /* The strip's height as a FLOOR, so the head reaches the line the strip ends
-     on however little it has to say and the first destination starts under that
-     line. Never a ceiling: the box has to be as tall as what stands in it, and
-     any less puts the attribution and the marker outside their own head. */
+  /* The strip's height as a FLOOR, never a ceiling: the box has to be as tall as
+     what stands in it, or the attribution falls outside it. */
   min-height: var(--topbarH);
-  /* A breath between the head and the first destination: with the marker on the
-     head's last line the row under it read as one more item in its stack. */
+  /* A breath between the head and the first destination: without it the row
+     under the head reads as one more item in its stack. */
   margin-block-end: var(--space-5);
-  /* The rows' own inset, matched. The panel's padding stands every child
-     --space-2 in from the edge, and then every ROW adds --space-2 of its own
-     (`.rail .navitem`, `.rail .navheading`) — so the head alone sat 8px out
-     from the column of words it heads. This is that second inset, on the one
-     child that had no reason to be exempt from it. Collapsed it is taken back
-     below: 56px less the panel's padding is a 40px column, and 8px off each
-     side of that is the mark's own box. */
-  margin-inline: var(--space-2);
 }
-/* Collapsed the head is the mark and the marker under it, and neither has a
-   text column to stand on: at 56px the axis is the column's own centre, which is
-   the axis every row glyph below them stands on too. */
+/* Only an installation's head has the second line. A head without it stays one
+   row, so the name centres on the mark instead of sitting in an empty half. */
+.rail .railhead-attributed {
+  grid-template-areas:
+    "mark name"
+    "mark by";
+}
+/* Expanded, the head is a card: one bordered object that holds the company and
+   what it runs on, the same width as the rows' pills so its mark stands on the
+   axis of their glyphs. */
+.rail.expanded .railhead {
+  padding: var(--space-2);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-sm);
+}
+/* Collapsed the head is the mark alone, centred on the 56px column's axis,
+   which is the axis every row glyph below stands on too. No card: a border
+   around one square would be a second frame for the same thing. */
 .rail.collapsed .railhead {
-  align-items: center;
-  /* The expanded head's second inset would eat the 40px the mark stands in. */
-  margin-inline: 0;
+  grid-template-columns: 1fr;
+  grid-template-areas: "mark";
+  justify-items: center;
 }
 /* brand block */
 .rail .ws {
+  grid-area: name;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
   text-decoration: none;
   color: var(--textPrimary);
   border-radius: var(--r-sm);
-  /* No inset of its own: the head owns the air around both of its rows, and a
-     padding here would indent the mark from the line under it. */
   min-width: 0;
   overflow: hidden;
 }
-/* A company logo is the expanded rail's identity, not a row-sized avatar.
-   Wordmarks take the column's width and the product attribution sits beneath,
-   exactly as one lockup. The no-logo path below keeps the compact monogram and
-   company name because initials do not identify a company on their own. */
-.rail.expanded .railhead:has(.ws-logo) {
-  min-height: 80px;
-  margin-top: 0;
+/* The name is the link, stretched over the whole head, so a press anywhere on
+   the card goes home. The focus ring is drawn on the stretch for the same
+   reason: it rings the card, not the word. */
+.rail .ws::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
-.rail .ws-logo {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: var(--space-1);
-  height: 100%;
-  box-sizing: border-box;
-  /* Breathing room on all four sides. The lockup used to run edge to edge of
-     the head, which read as a banner pasted over the panel rather than as the
-     company's mark standing in it — and left the wordmark's own whitespace
-     touching the first nav row. */
-  padding: var(--space-2);
+.rail .ws:focus-visible {
+  outline: none;
 }
-.rail .ws-logo .company-logo {
-  width: 100%;
-  /* The mark is the panel's identity, not its headline. At 56px it was the
-     largest object on the screen and out-weighed the destinations underneath,
-     which are what the panel is for; 40px is still comfortably above the 20px
-     row glyphs and leaves the padding above room to be seen. */
-  height: 40px;
+.rail .ws:focus-visible::after {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
 }
-.rail .ws-logo .company-logo-img {
-  object-position: left center;
-}
-.rail .ws-logo .company-logo-fallback b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.rail .ws-logo-product {
-  font-family: var(--fontFamilyHeading);
-  color: var(--textPrimary);
-}
-.rail.collapsed .ws-logo {
-  width: 40px;
-  height: 40px;
-  flex: none;
-  padding: var(--space-1);
-}
-.rail.collapsed .ws-logo .company-logo {
-  width: 32px;
-  height: 32px;
-}
-/* What stands here is the square badge (app/shellrail.tsx picks it), so it is
-   centred rather than flush left: the wide mark's left alignment is what lines
-   a wordmark up with the labels beside it, and a square has nothing to line up
-   with. An installation that uploaded no badge lands its wide mark here, and
-   centred is the better of the two for that too. */
-.rail.collapsed .ws-logo .company-logo-img {
-  object-position: center;
+/* Collapsed the name has no column, so its link stands in the mark's cell and
+   the stretch still covers the head. */
+.rail.collapsed .ws {
+  grid-area: mark;
 }
 .rail .ws-chip {
-  /* The workspace's mark is the one picture in the chrome, and at 32px it read
-     as one more row glyph. 40px is the collapsed column's own width less the
-     rail's 8px inset either side, so this is as large as the mark can be
-     without touching the rail's edge. */
+  grid-area: mark;
+}
+/* The chip is drawn in the rail's head and, at phone width, in the top bar. */
+.ws-chip {
+  /* 40px is the collapsed column's own width less the rail's 8px inset either
+     side, so this is as large as the mark can be without touching the rail's
+     edge, and expanded it holds both lines of text beside it. */
   width: 40px;
   height: 40px;
-  flex: none;
   border-radius: var(--r-control);
-  /* Flat brand emerald, no gradient and no lift: the mark is the one filled
-     thing in the chrome, and a lit, shadowed chip beside quiet rows was the
-     loudest object on the screen. */
+  overflow: hidden;
+  /* Flat brand fill, no gradient and no lift: the mark is the one filled
+     thing in the chrome. */
   background: var(--accentBrand);
   color: var(--textOnAccent);
   display: grid;
   place-items: center;
-  /* The mark holds the block's first line, not its middle: beside a name that
-     wraps to two lines a centred chip drifts down the head and off the axis the
-     strip's own glyphs stand on. */
-  align-self: start;
-}
-/* Collapsed there is no first line to hold — the name gives up its box (below)
-   and the mark IS the head, so it takes the axis every glyph in the column
-   below it stands on. The `.ws` inset is zeroed in the same state, so nothing
-   else offsets it. */
-.rail.collapsed .ws-chip {
-  align-self: center;
 }
 /* The same slot holding the COMPANY's mark. The chip's own ground goes: what
-   stands here is a logo drawn for its own background, or the monogram Avatar
-   tints from the record's identity, and either one on the brand emerald would
-   be a second surface behind a finished mark. The avatar fills the slot so the
-   collapsed rail keeps centring the same 40px box on the rows' glyph axis. */
-.rail .ws-chip-company {
+   stands here is an icon drawn for its own background, or the monogram Avatar
+   tints from the record's identity, and either one on the brand fill would
+   be a second surface behind a finished mark. The avatar takes the chip's
+   square, because a company's icon is drawn square and a circle crops it. */
+.ws-chip-company {
   background: none;
 }
-.rail .ws-chip-company .avatar {
+.ws-chip-company .avatar {
   width: 100%;
   height: 100%;
+  /* Square, so the chip's own corner (and its clip) is the only one drawn. */
+  border-radius: 0;
+}
+/* An icon fills its square edge to edge: it is drawn for one, and the round
+   chip's inset would frame it in a ring of ground. */
+.ws-chip-company .avatar-img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
 }
 /* The head row is a column when collapsed, so flex-basis cannot squeeze this
    shut the way it does the nav labels — the width has to be explicit, or the
    faded-out text keeps its intrinsic width and pushes the logomark off centre.
    It is one element, so animating its width is cheap and keeps the brand block
    closing in step with the column. */
+/* One line, whatever the name: an installation name runs to 200 characters,
+   and a head that grew with it pushed every destination below it down. The
+   whole name is the link's tooltip (shellrail.tsx). */
 .rail .ws-name {
-  display: flex;
-  flex-direction: column;
-  /* The two lines are one lockup, not a stack: the name and what it runs on
-     belong together, and set solid they read as one word wrapped. */
-  gap: var(--space-1);
   min-width: 0;
   width: auto;
   opacity: 1;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   transition:
     opacity var(--dur-state) var(--ease-in-out),
     width var(--dur-move) var(--ease-out);
@@ -602,54 +551,30 @@
     transition: opacity var(--dur-state) var(--ease-in-out);
   }
 }
-/* Collapsed the name is gone in BOTH axes. Width alone left its block height
-   standing — a name that wraps to two lines expanded held that much air open in
-   the 56px column, so the head's height (and every row under it) depended on how
-   long the installation's name is on a rail nobody can read it in. */
+/* Collapsed the name is gone in BOTH axes. Width alone left its line box
+   standing, air held open under the mark in a column nobody can read it in. */
 .rail.collapsed .ws-name {
   width: 0;
   height: 0;
   opacity: 0;
 }
-/* The head's second line: what this installation runs on, and what stage that
-   product is at. One row for both, because they are one statement.
-   It is a SIBLING of the brand anchor and not a child of it: the marker is a
-   fact about the build, and a fact inside a link is a fact a press carries you
-   away from. */
+/* The head's second line: what this installation runs on. It is a SIBLING of
+   the brand anchor and not a child of it: the press target is the name, and
+   the attribution is not somewhere it should lead. */
+/* Body S, because this is the attribution under the name and not a second
+   name. At the body size it reads as a peer of the heading above it. */
 .rail .ws-company {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-/* The ellipsis is the TEXT's, not the row's: an installation name is user data
-   of unbounded length in a narrow column, and a row that clipped itself would
-   take the marker with it — the one thing on this line that must always be
-   legible.
-
-   Body S, because this is the attribution UNDER the name and not a second name:
-   at the body size it read as a peer of the heading above it and the head had
-   two titles. */
-.rail .ws-company-text {
+  grid-area: by;
+  min-width: 0;
   font: var(--fontBodySmall);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* Only the attribution gives way. Whatever else stands on this line is sized by
-   its own words, and one squeezed to buy the name room loses its label to the
-   ellipsis above — where the name can afford the ellipsis and still be read.
-   Said of the row's other children rather than of any one class, so the marker
-   beside it can be replaced or removed without taking its sizing with it; the
-   same direction `.panel-head` takes with its own title. */
-.rail .ws-company > :not(.ws-company-text) {
-  flex-shrink: 0;
-}
 /* Collapsed there is no room for the attribution and no need for it: the mark
-   above says whose installation this is, and 56px is one glyph wide. The marker
-   stays — it is the whole reason this line survives the collapse — at its full
-   word, which is short enough for the column, and centred under the mark by the
-   head's own `align-items`. */
-.rail.collapsed .ws-company-text {
+   says whose installation this is, and 56px is one glyph wide. The head has no
+   `by` area then, so the row goes rather than being placed in an implicit one. */
+.rail.collapsed .ws-company {
   display: none;
 }
 
@@ -712,12 +637,9 @@
   display: flex;
 }
 /* Collapsed, the brand's words have no width, so the gap that separated them
-   from the logomark would be a 9px indent on a centred glyph.
-   `:not(.sheetopen)` rather than a restatement in the phone block below: the
-   sheet is 600px wide and spells the name out whatever the desktop rail was left
-   at, and a rule that closed the gap there put the name against the mark. Scoped
-   here, the gap has ONE spelling and the sheet cannot fall out of step with it. */
-.rail.collapsed:not(.sheetopen) .ws {
+   from the logomark would be a 9px indent on a centred glyph. Not in the phone
+   menu, which spells the name out whatever the desktop rail was left at. */
+.rail.collapsed:not(.menuopen) .ws {
   gap: 0;
   /* The chip is the only thing left, so the box's own inset would push it off
      the axis every glyph below it stands on. */
@@ -772,28 +694,22 @@
   padding: 0;
   justify-content: center;
 }
-/* A pointer resting on a row takes the accent wash the current row is painted
-   in, one step quieter: hover and current are then one gesture read at two
-   strengths rather than two unrelated tints. */
+/* Not --groundHover: on the rail it is a --hoverShade tint close to the current
+   row's ground. */
 .rail .navitem:hover {
-  background: color-mix(in srgb, var(--accentLight) 50%, transparent);
-  color: var(--textPrimary);
+  background: color-mix(in srgb, var(--textPrimary) 4%, var(--ground));
+  color: var(--accentText);
 }
-/* The current row is one more pane on the glass: the pane's ground with the
-   pane's hairline as an EDGE, which is what makes it a surface with a boundary
-   rather than a smudge, and quieter than hover's tint so the two states are
-   never the same gesture read twice.
-   Three signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
-   the accent wash, semibold weight, and the accent on the glyph. The INK stays
-   neutral: the accent as 14px text measures under the 4.5:1 AA needs on the
-   dark theme, and weight does not rescue that below 18.66px. The glyph is where
-   the accent goes, and at 3:1 non-text (1.4.11) it clears. */
+/* Declared after hover, so a pointer on the current row keeps this. A tint
+   alone is colour-only (WCAG 1.4.1, Level A): a labelled row adds weight, an
+   icon-only one adds an edge, since weight has no label to act on. */
 .rail .navitem.active {
   background: var(--accentLight);
-  color: var(--textPrimary);
-}
-.rail .navitem.active svg {
   color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
+}
+.rail.collapsed:not(.menuopen) .navitem.active {
+  box-shadow: inset 0 0 0 1px var(--accentText);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -856,8 +772,8 @@
   top: 50%;
   transform: translateY(-50%);
   margin-left: 8px;
-  background: var(--bgRail);
-  color: var(--railIconActive);
+  background: var(--bgInkField);
+  color: var(--textOnInkField);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
   white-space: nowrap;
@@ -872,7 +788,7 @@
  * places to go.
  *
  * The rows are the same `.navitem`s as the destinations, deliberately: every
- * state the sidebar already describes — collapsed, the phone bar, the sheet —
+ * state the sidebar already describes — collapsed, the phone bar, the menu —
  * then holds for a level without a second vocabulary to keep in step with it. */
 .rail .navlevel {
   display: flex;
@@ -923,17 +839,14 @@
   margin-bottom: var(--space-2);
   /* Filled rather than outlined: it is the way OUT of a level, standing above a
      column of rows, and a hairline would read as a field at the head of them. A
-     recessed ground says "control" in a different word than a border does.
-     Only the RESTING ground is stated here. This element carries `navitem` too,
-     so `.rail .navitem:hover` already gives it the panel's one hover — it used to
-     restate that in --bgHover, which is LIGHTER than the sidebar's ground, and so
-     this control was the single thing in the rail that brightened under a pointer
-     while every row beside it darkened. A second spelling of one hover is how the
-     two got to disagree; there is one now. */
+     recessed ground says "control" in a different word than a border does. */
   background: var(--bgInset);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
   text-align: left;
+}
+.rail .navback:hover {
+  background: color-mix(in srgb, var(--textPrimary) 4%, var(--bgInset));
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */
@@ -1070,7 +983,7 @@
   cursor: pointer;
 }
 .pageswitch:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 /* Pressed, it says so before the sheet arrives — the one frame of feedback a
    touch control owes the thumb that is still on it. */
@@ -1121,15 +1034,12 @@
 .sectionpickgroup a svg {
   flex: none;
 }
-/* The entry the reader came from, in the same signals the sidebar's rows use —
-   a tint and the accent on the glyph — because a tint alone is colour-only
-   (WCAG 1.4.1). */
+/* The entry the reader came from, on a neutral inset ground like every selected
+   state. */
 .sectionpickgroup a[aria-current="page"] {
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
-}
-.sectionpickgroup a[aria-current="page"] svg {
-  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* ===== ⌘K palette ===== */
@@ -1139,7 +1049,6 @@
 }
 .palette {
   width: min(560px, calc(100vw - 40px));
-  background: var(--bgElevated);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   overflow: hidden;
@@ -1202,7 +1111,7 @@
 }
 .palette-row.selected,
 .palette-row:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .palette-row .label,
@@ -1298,13 +1207,13 @@
   background: var(--bgPage);
 }
 .client-bar {
-  background: var(--bgRail);
+  background: var(--bgInkField);
   padding: var(--space-3) var(--space-4);
   position: sticky;
   top: 0;
 }
 .client-back {
-  color: var(--railIconActive);
+  color: var(--textOnInkField);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -1341,14 +1250,14 @@
  * constant, so the number is spelled twice on purpose: change one, change both.
  * ===== */
 @media (max-width: 700px) {
+  :root {
+    --pageGutter: var(--space-3);
+    --pageGapTop: var(--space-3);
+  }
   /* At phone width the sidebar becomes a bottom nav in both states — the
      expanded column and the sidebar-only regions (labels, group headings, the
      agent panel, the collapse control) do not apply. The BODY never scrolls
      horizontally; wide content scrolls inside its own container. */
-  /* At phone width the sidebar becomes a fixed bottom bar carrying four
-     destinations plus More. Ten icons on one row would need horizontal
-     scrolling, and a nav you have to scroll is a nav you cannot see. More
-     expands the same element into a sheet with everything in it. */
   .app,
   .app.railexpanded {
     grid-template-columns: 1fr;
@@ -1407,22 +1316,13 @@
     /* Here the panel IS a floating object — it hovers over the content rather
        than bounding it — so it takes the chrome the flush sidebar gives up: all
        four sides, the pane's corner, and the one shadow a layer over the page
-       may cast. The ground stays the same glass, so the bar is visibly the
+       may cast. The ground stays the same pane, so the bar is visibly the
        sidebar in its other shape rather than a second surface. */
-    border: 1px solid var(--paneEdge);
+    border: 1px solid var(--groundEdge);
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
   }
-  /* The current cell takes the accent tint rather than the desktop row's grey
-     one — the same signal `.railmore.active` below already uses for a
-     destination that lives in the sheet, so the bar has ONE way of saying "this
-     one", whichever cell is carrying it. The weight and the accent glyph from
-     the desktop rule still apply, so the state keeps its three signals. */
-  .rail .navitem.active {
-    background: var(--accentLight);
-    border-color: transparent;
-  }
-  /* The layer the sheet sits on. It fades in rather than appearing, because the
+  /* The layer the menu sits on. It fades in rather than appearing, because the
      page under it does not move and an instant dim reads as a flash. */
   .railscrim {
     position: fixed;
@@ -1461,26 +1361,14 @@
   .rail.collapsed .navlevel {
     display: contents;
   }
-  /* The bottom bar carries destinations and nothing else. The brand block and
-     the group headings belong to a column with room for them, so the sheet
-     below is where they come back; the spacer and tooltips stay hidden. */
-  .rail .navheading,
-  .rail .ws,
   .rail .grow,
   .rail .navtip {
-    display: none;
-  }
-  /* The head is the brand block's box, and the brand block is hidden above: what
-     is left is an empty cell, which a flex row gave no width and this grid would
-     give a whole column. The sheet brings the head back (below), where there is
-     a row for it to stand on. */
-  .rail .railhead {
     display: none;
   }
   /* No captions in the bar. Five glyphs at 9.5px carried five words nobody
      reads at that size, and the words are still there for anyone who needs them
      — every row carries its name in `aria-label`, which is what a screen reader
-     and a voice-control user were using anyway. The SHEET spells them out, where
+     and a voice-control user were using anyway. The MENU spells them out, where
      there is room for a word to be legible.
      The collapsed selector is listed explicitly: the sidebar preference survives
      a resize, and `.rail.collapsed .navlabel` outranks a bare `.rail .navlabel`
@@ -1488,10 +1376,6 @@
   .rail .navlabel,
   .rail.collapsed .navlabel,
   .rail .railmore .navlabel {
-    display: none;
-  }
-  /* Only the primary destinations ride the bar; the rest live in the sheet. */
-  .rail .navwrap:not(.primary) {
     display: none;
   }
   .rail .railmore {
@@ -1514,6 +1398,40 @@
   .rail .railmore svg {
     width: 20px;
     height: 20px;
+  }
+  /* The burger turns into the cross as the menu opens, and back as it closes. */
+  .rail .railmore-glyphs {
+    display: grid;
+  }
+  .rail .railmore-glyphs svg {
+    grid-area: 1 / 1;
+    transition:
+      opacity var(--dur-move) var(--ease-out),
+      transform var(--dur-move) var(--ease-out);
+  }
+  .rail .railmore .railmore-close,
+  .rail .railmore[aria-expanded="true"] .railmore-open {
+    opacity: 0;
+  }
+  .rail .railmore .railmore-close {
+    transform: rotate(-90deg);
+  }
+  .rail .railmore[aria-expanded="true"] .railmore-open {
+    transform: rotate(90deg);
+  }
+  .rail .railmore[aria-expanded="true"] .railmore-close {
+    opacity: 1;
+    transform: none;
+  }
+  /* A plain crossfade, after the turns it removes. */
+  @media (prefers-reduced-motion: reduce) {
+    .rail .railmore-glyphs svg {
+      transition: opacity var(--dur-move) var(--ease-out);
+    }
+    .rail .railmore .railmore-close,
+    .rail .railmore[aria-expanded="true"] .railmore-open {
+      transform: none;
+    }
   }
   .rail .navwrap {
     display: flex;
@@ -1543,179 +1461,106 @@
     right: 6px;
     margin-left: 0;
   }
-  /* A destination inside the More sheet is still the current one; without this
+  /* A destination inside the More menu is still the current one; without this
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
     color: var(--accentText);
-  }
-  .rail .railmore.active {
+    font-weight: var(--fontWeightMedium);
     background: var(--accentLight);
     border-radius: var(--r-md);
   }
+  /* The bar's cells are icon-only; the menu's rows carry their label. */
+  .rail > .navlevel .navitem.active,
+  .rail:not(.menuopen) .railmore.active {
+    box-shadow: inset 0 0 0 1px var(--accentText);
+  }
 
-  /* the sheet: the same element, every destination, thumb-reachable */
-  .rail.sheetopen,
-  .rail.sheetopen.expanded,
-  .rail.sheetopen.collapsed {
-    /* The sheet is a COLUMN of rows, not a bar of cells: the grid above is the
-       bar's arrangement and says nothing about a list of ten places. */
+  /* Clear of the agent's well, so the bar stays whole and pressable under it. */
+  .rail .railmenu {
+    position: absolute;
+    /* The bar's border box: an absolute box spans only its padding box. */
+    left: -1px;
+    right: -1px;
+    bottom: calc(100% + var(--phoneAgentRise) + var(--space-2));
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 1px;
-    padding: var(--space-2) var(--space-2)
-      max(var(--space-2), env(safe-area-inset-bottom));
-    /* Everything between the two ledges. The sheet already stands on the bar's
-       own bottom inset, so what it may take is the viewport less that, less the
-       same air again at the top — a sheet that ended flush with the top edge
-       would read as a page rather than as a layer over one, and would leave the
-       reader nothing to press to dismiss it. Ten destinations do not fill it, so
-       this is a CEILING for the locales and the levels that come closer.
-       dvh, not vh: on iOS the browser chrome is subtracted from the wrong side
-       of vh, and a sheet measured against the larger viewport runs its last row
-       under the address bar. */
+    gap: var(--space-2);
+    /* dvh, not vh: iOS subtracts its browser chrome from the wrong side of vh. */
     max-height: calc(
       100dvh -
+      var(--phoneNavClearance) -
       max(var(--space-2), env(safe-area-inset-bottom)) -
-      var(--space-6)
+      max(var(--space-2), env(safe-area-inset-top))
     );
+    /* The cap is the whole box's room, so padding and border count inside it. */
+    box-sizing: border-box;
     overflow-y: auto;
-    /* The page behind is already locked; this stops the scroll chaining into
-       the page's scroller when the sheet itself hits its end. */
     overscroll-behavior: contain;
+    padding: var(--space-2);
+    border: 1px solid var(--groundEdge);
+    border-radius: var(--r-lg);
+    background-color: var(--ground);
+    box-shadow: var(--shadow-pop);
+    transform-origin: bottom center;
+    animation: railmenu-up var(--dur-state) var(--ease-out);
   }
-  /* The sheet's head: the product's own mark on the left, the close control on
-     the right. The bar has no head — there is no room for one — so both come
-     back only here, and the close control is the same More button in its other
-     state (app/shell.tsx renames it), pinned rather than left at the end of a
-     scrolling list where a reader would have to walk the whole sheet to leave
-     it. */
-  .rail.sheetopen .railhead {
-    display: flex;
-    order: -1;
-    /* Both rows flush left, the way the expanded sidebar draws them: the sheet
-       inherits `.rail.collapsed` whenever that is what the desktop was left at,
-       and the centring that column needs would indent the name and the
-       attribution from the rows under them here. */
-    align-items: stretch;
-    min-height: 44px;
-    margin: 0 0 var(--space-2);
-    padding-right: var(--space-12);
+  @keyframes railmenu-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
   }
-  .rail.sheetopen .ws {
-    display: flex;
+  @media (prefers-reduced-motion: reduce) {
+    .rail .railmenu {
+      animation: none;
+    }
   }
-  /* Every axis the collapsed sidebar closes this block on, opened again: the
-     sheet inherits `.rail.collapsed` whenever that is what the desktop was left
-     at, and the head is the only thing at this width that says which workspace
-     this is — so a `height` left at 0 would empty it. */
-  .rail.sheetopen .ws-name {
-    width: auto;
-    height: auto;
-    opacity: 1;
-  }
-  /* And the attribution beside the marker: the sheet is 600px wide, so the row
-     the 56px rail reduces to one badge is spelled out in full here. */
-  .rail.sheetopen .ws-company-text {
-    display: block;
-  }
-  /* The close control keeps its glyph and drops its word: pinned in the corner
-     there is no room for one, and "Close" is what its `aria-label` says. */
-  .rail.sheetopen .railmore .navlabel,
-  .rail.sheetopen.collapsed .railmore .navlabel {
-    display: none;
-  }
-  .rail.sheetopen .railmore {
-    position: absolute;
-    top: var(--space-2);
-    right: var(--space-2);
-    width: 44px;
-    min-height: 44px;
-    border-radius: var(--r-md);
-  }
-  /* No grab handle. A handle is a CONTROL — the platforms that document it give
-     it a touch target, a tap behaviour and an assistive-tech affordance for
-     resizing — and this sheet has one height and no drag. Drawn as decoration it
-     promises a gesture that does nothing; the close control in the header is
-     what this sheet actually offers. */
-  .rail.sheetopen .navgroup {
+  /* Each `.rail.collapsed` axis is restated: the desktop preference survives a
+     resize, and the menu must not follow it. */
+  .rail .railmenu .navlevel,
+  .rail .railmenu .navgroup {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
   }
-  .rail.sheetopen .navgroup + .navgroup {
-    margin-top: var(--space-6);
+  .rail .railmenu .navgroup + .navgroup {
+    margin-top: var(--space-2);
   }
-  .rail.sheetopen .navwrap,
-  .rail.sheetopen .navwrap:not(.primary) {
+  .rail .railmenu .navheading {
     display: flex;
-    flex: none;
-    justify-content: flex-start;
+    padding: 0 var(--space-3);
   }
-  /* Inside the sheet a row is a row again: the glyph on the left, the name
-     beside it, the whole width as the target. The bar's arrangement above is a
-     row of five cells and says nothing about a list of ten places — restated
-     against every `.rail.collapsed` variant, because the desktop preference
-     survives a resize and outranks a bare `.rail` selector. */
-  .rail.sheetopen .navitem,
-  .rail.sheetopen.expanded .navitem,
-  .rail.sheetopen.collapsed .navitem {
-    flex-direction: row;
+  .rail .railmenu .navwrap {
+    justify-content: stretch;
+  }
+  .rail .railmenu .navitem {
     justify-content: flex-start;
     gap: var(--space-3);
-    min-height: 48px;
     padding: 0 var(--space-3);
     border-radius: var(--r-md);
   }
-  .rail.sheetopen .navitem svg,
-  .rail.sheetopen.expanded .navitem svg,
-  .rail.sheetopen.collapsed .navitem svg {
-    width: 20px;
-    height: 20px;
-  }
-  .rail.sheetopen .navlabel,
-  .rail.sheetopen.collapsed .navlabel {
+  .rail .railmenu .navlabel {
     display: block;
-    /* `.rail.collapsed .navlabel` hides the label out of flow, and a desktop
-       rail left collapsed must not open the sheet to unlabelled glyphs. */
-    opacity: 1;
     position: static;
-    left: auto;
-    right: auto;
-    top: auto;
     transform: none;
-    max-width: none;
+    opacity: 1;
+    overflow: visible;
     white-space: normal;
-    text-align: left;
+    text-align: start;
   }
-  /* The count is a trailing figure in a list row, not a badge pinned to a tab. */
-  .rail.sheetopen .navitem .count,
-  .rail.sheetopen.expanded .navitem .count {
+  .rail .railmenu .navitem .count {
     position: static;
     margin-left: auto;
   }
-  /* The sheet is 600px wide even when the desktop preference it inherits is the
-     56px rail, which is why this restates `display` at all: the collapsed
-     sidebar draws no heading, and the sheet has room to spell every group name
-     out. Later in the file than that rule and weighing the same, so it wins. */
-  .rail.sheetopen .navheading {
-    display: block;
-  }
-  /* In the sheet the level is a column again — the sheet is the phone's whole
-     sidebar, and a bar's row of tabs is not a list of ten places. The collapsed
-     variant is restated for the reason above: the sheet is 600px wide whatever
-     the desktop rail was left at. */
-  .rail.sheetopen .navlevel,
-  .rail.sheetopen.collapsed .navlevel {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-  /* Open, the sheet shows the active row itself, and More has become its close
+  /* Open, the menu shows the active row itself, and More has become its close
      control — a state on a close button would name the wrong thing. */
-  .rail.sheetopen .railmore.active {
+  .rail.menuopen .railmore.active {
     background: transparent;
+    color: inherit;
   }
 
   /* the bar floats over the content, and the agent stands above the bar, so the
@@ -1764,6 +1609,15 @@
 .wrap:has(> .lt) > .lt {
   flex: 1;
   min-height: 0;
+}
+/* At the width where the list's rows become cards (listtable.css), the page
+ * scrolls instead of the list's body, so the surface is as tall as its cards. */
+@media (max-width: 720px) {
+  .wrap:has(> .lt),
+  .wrap:has(> .lt) > .lt {
+    flex: none;
+    min-height: auto;
+  }
 }
 
 /* The shell banners' slot: outside the scroller, so a state that blocks work
@@ -1897,7 +1751,6 @@
   padding: var(--controlGap);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   max-height: 60vh;
   overflow-y: auto;
@@ -1930,9 +1783,24 @@
    option through `aria-activedescendant` whichever input moved it. */
 .settingssearch-hit.active,
 .settingssearch-hit:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 .settingssearch-empty {
   padding: var(--space-1) var(--space-2);
+}
+/* A question's answer sits between the box and the rows, on the list's own
+   inset, so the record rows below it still read as the palette's list. */
+.palette-answer {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.palette-answer-sections {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }

@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { LocaleProvider } from "../../i18n";
+import { WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
 import { ContactsScreen } from "./contacts";
 
@@ -101,6 +102,35 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     expect(window.location.hash).toBe("#/contacts/p-1");
   });
 
+  it("writes to a row's address in the composer, without opening the row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ ...anna, primary_email: "anna.weber@brandt.example" }],
+          page: { next_cursor: null },
+        }),
+      ),
+    );
+    const writeTo = vi.fn();
+    render(
+      <WriteToProvider writeTo={writeTo}>
+        <ContactsScreen />
+      </WriteToProvider>,
+    );
+    await waitFor(() => expect(window.location.hash).toContain("sort="));
+    const listed = window.location.hash;
+    await userEvent.click(
+      await screen.findByRole("button", { name: "anna.weber@brandt.example" }),
+    );
+    expect(writeTo).toHaveBeenCalledWith({
+      entityType: "contact",
+      entityId: "p-1",
+      address: "anna.weber@brandt.example",
+    });
+    expect(window.location.hash).toBe(listed);
+  });
+
   it("says a row is unassigned rather than leaving the owner blank", async () => {
     vi.stubGlobal(
       "fetch",
@@ -177,13 +207,13 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     render(<ContactsScreen />);
 
     const company = await screen.findByRole("link", { name: "Brandt AG" });
-    expect(company.getAttribute("href")).toBe("#/companies/o-1");
+    expect(company.getAttribute("href")).toBe("/#/companies/o-1");
     // The row's own identity link still goes to the contact. Asserting BOTH is
     // what says these are two destinations rather than one of them having
     // quietly taken the other's place.
     const links = await screen.findAllByRole("link");
     const hrefs = links.map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/contacts/p-1");
+    expect(hrefs).toContain("/#/contacts/p-1");
   });
 
   it("renders the honest error state with the RFC7807 detail", async () => {
@@ -477,6 +507,53 @@ describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
     );
     await userEvent.click(screen.getByText("View existing record"));
     expect(window.location.hash).toBe("#/contacts/01X");
+  });
+});
+
+describe("ContactsScreen — a colleague holds the contact", () => {
+  async function createHeld(shareRequested: boolean) {
+    stubFetch(async (url, method) => {
+      if (method === "POST" && url.includes("/contacts")) {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            detail: "a colleague already has this contact",
+            code: "contact_held_by_colleague",
+            details: { share_requested: shareRequested },
+          },
+          409,
+        );
+      }
+      return emptyPage();
+    });
+    render(<ContactsScreen />);
+    await userEvent.click(screen.getByTestId("new-record"));
+    await userEvent.type(screen.getByLabelText("Full name *"), "Pat Example");
+    await userEvent.click(screen.getByText("Add email"));
+    await userEvent.type(screen.getByLabelText("Email *"), "pat@example.test");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  }
+
+  it("says the colleague was asked to share the contact", async () => {
+    await createHeld(true);
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "A colleague already has this contact. Margince asked them to share it with you.",
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText("View existing record")).toBeNull();
+  });
+
+  it("drops the request once the colleague declined it", async () => {
+    await createHeld(false);
+    await waitFor(() =>
+      expect(
+        screen.getByText("A colleague already has this contact."),
+      ).toBeTruthy(),
+    );
   });
 });
 

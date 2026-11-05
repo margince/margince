@@ -21,6 +21,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -116,7 +117,7 @@ func legalReviewOnForDecision(ctx context.Context, tx pgx.Tx) (bool, error) {
 	if err := settings.ShareLockForDecision(ctx, tx, LegalReviewEnabled.Key()); err != nil {
 		return false, err
 	}
-	return settings.ApplyTx(ctx, tx, LegalReviewEnabled)
+	return config.StoredApplyTx(ctx, tx, config.Bound(), LegalReviewEnabled)
 }
 
 type reviewStanding struct {

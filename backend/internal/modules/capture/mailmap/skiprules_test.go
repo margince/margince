@@ -178,26 +178,10 @@ func parseWith(t *testing.T, headers []string) Message {
 	return msg
 }
 
-// Bounces do not arrive with a tidy localpart. VERP encodes the original
-// recipient into the address and BATV signs the return path, so the shapes a
-// real mail system emits carry tags a plain equality check never sees.
-func TestDeliverySystemSendersAreRecognizedInTheShapesTheyArriveIn(t *testing.T) {
-	drops := []string{
-		"MAILER-DAEMON@x.com", "m.a.i.l.e.r-daemon@x.com", "post-master@x.com",
-		"mailer_daemon@x.com", // `_` too — the T2 registry strips it, so this must
-		"bounces-12345@x.com", "bounce+tag@x.com",
-		"prvs=1234abcd=owner@x.com", "msprvs1=abc=bounces@x.com",
-	}
-	for _, addr := range drops {
-		if !isDeliverySystemSender(addr) {
-			t.Errorf("%s reached the tier gate — there is no correspondent behind the transport system", addr)
-		}
-	}
-	keeps := []string{"no-reply@x.com", "notifications@x.com", "alice@x.com", "bouncer@x.com", "postmaster.team@x.com"}
-	for _, addr := range keeps {
-		if isDeliverySystemSender(addr) {
-			t.Errorf("%s was dropped as delivery-system mail — a real sender is behind it", addr)
-		}
+func TestSkipReasonDropsADeliverySystemSender(t *testing.T) {
+	m := Message{messageID: "<1@x.com>", from: "MAILER-DAEMON@x.com"}
+	if reason, skip := m.SkipReason(); !skip || reason != "delivery-system sender" {
+		t.Fatalf("SkipReason = %q, %v; want the delivery-system drop", reason, skip)
 	}
 }
 

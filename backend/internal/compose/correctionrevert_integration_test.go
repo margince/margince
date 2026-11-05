@@ -281,6 +281,12 @@ func TestTheReceiptOffersUndoOnARealCorrection(t *testing.T) {
 	if !ok {
 		t.Fatal("the correction the sweep made is not on the receipt's done lane")
 	}
+	if line.Summary.Key != "magic.action.forecast_changed" || line.Reason == nil || line.Reason.Key != "magic.why.forecast_date_basis" {
+		t.Fatalf("real forecast correction has no readable reason: %+v", line)
+	}
+	if line.Reason.Values == nil || (*line.Reason.Values)["sample_count"] != "20" || (*line.Reason.Values)["median_days"] != "14" || (*line.Reason.Values)["remaining_stages"] != "2" {
+		t.Fatalf("receipt lost the native estimate basis: %+v", line.Reason)
+	}
 	if line.Undo == nil || !line.Undo.Undoable {
 		reason := "<nil>"
 		if line.Undo != nil && line.Undo.Reason != nil {

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -27,6 +28,13 @@ To attach or upload a file to a contact in Margince, open the contact, choose it
 The file then shows under **Documents**; click its title to download it. On an archived contact, or one you may not edit, **Add document** is turned off.
 Also called: upload a file to a contact, add an attachment to a contact, store a CV.
 
+### Which email did a file come from?
+To see which email a file came from in Margince, open the contact's or the company's **Documents** tab. A file that arrived with a captured email shows that email under its name: "From {who} · {subject}". Click the line to open the email.
+- The line shows only when you may read the email. A file from an email kept to a smaller audience is not listed for anyone outside that audience.
+- A calendar invitation's file, such as `invite.ics`, is not listed on any **Documents** tab or in a deal room. Small images in a signature are not listed either. Both stay on the email in **History**.
+- An uploaded file has no such line.
+Also called: email attachment sender, where a document came from.
+
 ### How do I upload a PDF to a deal?
 To upload a PDF to a deal in Margince, open the deal, choose its **Documents** tab and click **Add document** in the **Files** panel.
 1. Open **Deals** in the sidebar and open the deal.
@@ -35,6 +43,15 @@ To upload a PDF to a deal in Margince, open the deal, choose its **Documents** t
    Drop the PDF on **File**, and click **Upload**.
 A file on a deal can be read for deal fields, and can be added to the deal's [Deal Room](deal-rooms.md).
 Also called: attach a proposal to a deal, add a file to an opportunity.
+
+### How do I attach a file to a meeting or call?
+To attach a file to a meeting, call or note in Margince, add it while you log the activity.
+1. In the **Log activity** form, drop the files on **Attach files**, or click it to choose them.
+2. Choose **Log**. The files are uploaded once the activity is logged.
+If a file is refused, a message names it and says why. The others are still attached.
+
+If an upload does not finish, Margince checks the activity's files first, so no message asks you to add a file that is already there. To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
+Also called: attach a document to a meeting, add a file to a call, meeting attachments.
 
 ### What is the maximum file size for an upload?
 The largest document you can upload in Margince is **25 MB by default**. Whoever runs your installation can change it to anything between 1 MB and 100 MB.

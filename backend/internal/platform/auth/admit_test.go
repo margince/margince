@@ -125,6 +125,42 @@ func TestDynamicTierIsResolvedPerCall(t *testing.T) {
 	}
 }
 
+// An agent on a colleague's passport does what the colleague could do unaided: a
+// confirm-first call runs, with or without a version to bind.
+func TestAnAgentOnAColleaguesPassportRunsAConfirmFirstCall(t *testing.T) {
+	onPassport := agentCtxWithPassport(ids.NewV7(), principal.ScopeWrite)
+	static := mcp.ToolSpec{Name: "merge_tags", RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired}
+	if _, err := fullSeatGate().Admit(onPassport, static, noResolve); err != nil {
+		t.Errorf("a confirm-first call on a colleague's passport → %v, want it admitted", err)
+	}
+	dynamic := mcp.ToolSpec{
+		Name: "advance_deal", RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		TierResolver: func(mcp.TierResolverInput) mcp.RiskTier { return mcp.TierConfirmationRequired },
+	}
+	pinned := func() (mcp.TierResolverInput, error) {
+		return mcp.TierResolverInput{TargetStageSemantic: "won", ObservedVersion: new(int64(4))}, nil
+	}
+	admitted, err := fullSeatGate().Admit(onPassport, dynamic, pinned)
+	if err != nil {
+		t.Errorf("a move to won on a colleague's passport → %v, want it admitted", err)
+	}
+	if _, pinned := AutoExecutePin(admitted); pinned {
+		t.Error("a lifted won move carries the open-move pin, so the store refuses it")
+	}
+	webRead := mcp.ToolSpec{
+		Name: "enrich", RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true,
+	}
+	if _, err := fullSeatGate().Admit(onPassport, webRead, noResolve); !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Errorf("a web read whose address the model picks → %v, want it to wait", err)
+	}
+	unpinned := func() (mcp.TierResolverInput, error) {
+		return mcp.TierResolverInput{TargetStageSemantic: "won"}, nil
+	}
+	if _, err := fullSeatGate().Admit(onPassport, dynamic, unpinned); err != nil {
+		t.Errorf("a batch move naming no version on a colleague's passport → %v, want it admitted", err)
+	}
+}
+
 func TestDynamicWithoutResolverFailsClosed(t *testing.T) {
 	spec := mcp.ToolSpec{Name: "broken", RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic}
 	_, err := fullSeatGate().Admit(agentCtx(principal.ScopeWrite), spec, noResolve)

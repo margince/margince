@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,7 +96,8 @@ func (s *Store) Connect(ctx context.Context, provider string) (crmcontracts.Fina
 	conn := SourceConnection{ID: id.String(), ConnectedAt: s.now().UTC()}
 	reader, known := s.open(provider, conn)
 	if !known {
-		return crmcontracts.FinanceSourceState{}, fmt.Errorf("%w: no accounting source %q is installed", apperrors.ErrInvalidArgument, provider)
+		return crmcontracts.FinanceSourceState{}, httperr.Validation("provider", "unsupported",
+			fmt.Sprintf("no accounting source %q is installed", provider))
 	}
 	// Asked before any row exists, so a source that cannot be read leaves
 	// nothing behind for the sweep to fail on every six hours.
@@ -148,7 +150,7 @@ func insertConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, connectedAt t
 // Disconnect stops the sync. The mirrored rows stay, labelled with their
 // source, so the history a reader came for is not lost with the connection.
 func (s *Store) Disconnect(ctx context.Context) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionDelete); err != nil {
@@ -189,7 +191,7 @@ func (s *Store) Disconnect(ctx context.Context) error {
 // RequireConnected answers ErrNotFound when no source is connected, for a
 // caller about to queue a sync that would find nothing to do.
 func (s *Store) RequireConnected(ctx context.Context) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionUpdate); err != nil {

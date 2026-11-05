@@ -2,15 +2,17 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { ContactLink } from "../../design-system/contactlink";
 import { StoryProviders } from "../../testing/story-utils";
-import { BoughtMark, BoughtText } from "./boughtmarks";
+import { type BoughtField, BoughtMark, BoughtText } from "./boughtmarks";
 
 // The two shapes a bought value takes: plain text underlined in place, and a
 // value that is already a control, with the mark beside it rather than inside.
 
-const bought = {
+const bought: BoughtField = {
   target: "phone:ph-1",
   provider: "surfe",
   applied_at: "2026-06-02T12:00:00Z",
+  paid: true,
+  trigger: "manual",
 };
 
 function Marks() {
@@ -20,12 +22,20 @@ function Marks() {
         <BoughtText value="Head of Revenue" bought={bought} />
       </p>
       <p className="fieldgrid-handle">
-        <ContactLink kind="phone" value="+4915112345678" />
+        <ContactLink
+          kind="phone"
+          value="+4915112345678"
+          record={{ entityType: "contact", entityId: "p-1" }}
+        />
         <BoughtMark bought={bought} subject="+4915112345678" />
       </p>
       {/* Not bought: the same value with nothing behind it draws no mark. */}
       <p className="fieldgrid-handle">
-        <ContactLink kind="phone" value="+4930123456" />
+        <ContactLink
+          kind="phone"
+          value="+4930123456"
+          record={{ entityType: "contact", entityId: "p-1" }}
+        />
         <BoughtMark bought={undefined} subject="+4930123456" />
       </p>
     </StoryProviders>

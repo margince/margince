@@ -42,7 +42,7 @@ func storedTask(assignee *ids.UUID, links *[]crmcontracts.ActivityLink) crmcontr
 // in front of the reader, so who owns it is not decoration.
 func TestTheHolderOfATaskCrossesTheSeam(t *testing.T) {
 	holder := ids.NewV7()
-	task := taskFromActivity(storedTask(&holder, nil))
+	task := taskFromActivity(storedTask(&holder, nil), ids.UUID{}, time.Time{})
 
 	if task.AssigneeID == nil {
 		t.Fatal("the stored assignee did not reach the queue task — every held task then " +
@@ -56,7 +56,7 @@ func TestTheHolderOfATaskCrossesTheSeam(t *testing.T) {
 // An unheld task crosses as unheld rather than as a zero id, which is a value a
 // client would try to resolve to a contact who does not exist.
 func TestAnUnheldTaskCrossesTheSeamCarryingNoHolder(t *testing.T) {
-	if task := taskFromActivity(storedTask(nil, nil)); task.AssigneeID != nil {
+	if task := taskFromActivity(storedTask(nil, nil), ids.UUID{}, time.Time{}); task.AssigneeID != nil {
 		t.Fatalf("an unheld task crossed naming %v as its holder", *task.AssigneeID)
 	}
 }
@@ -69,7 +69,7 @@ func TestATaskCrossesTheSeamWithTheFactsTheRowNeeds(t *testing.T) {
 		{EntityType: entityDeal, EntityId: openapi_types.UUID(deal)},
 	})
 
-	task := taskFromActivity(row)
+	task := taskFromActivity(row, ids.UUID{}, time.Time{})
 
 	if task.ID != ids.UUID(row.Id) {
 		t.Errorf("the task's id is %v, want the activity's %v", task.ID, row.Id)
@@ -84,5 +84,28 @@ func TestATaskCrossesTheSeamWithTheFactsTheRowNeeds(t *testing.T) {
 	// cannot act on, and the lane knew which deal it meant all along.
 	if task.LinkType != string(entityDeal) || task.LinkID != deal {
 		t.Errorf("the task is filed under %s/%v, want the deal %v", task.LinkType, task.LinkID, deal)
+	}
+}
+
+// A due reminder crosses only for the reader the seam names, its assignee.
+func TestADueReminderCrossesTheSeamOnlyForItsAssignee(t *testing.T) {
+	assignee := ids.NewV7()
+	row := storedTask(&assignee, nil)
+	row.Kind = crmcontracts.ActivityKindTask
+	asOf := time.Date(2026, 6, 18, 9, 0, 0, 0, time.UTC)
+	row.RemindAt = new(asOf.Add(-time.Minute))
+
+	if task := taskFromActivity(row, assignee, asOf); !task.ReminderDue {
+		t.Error("the assignee's due reminder did not reach the queue task")
+	}
+	if task := taskFromActivity(row, ids.NewV7(), asOf); task.ReminderDue {
+		t.Error("another reader's queue task carries the assignee's reminder")
+	}
+	if task := taskFromActivity(row, ids.UUID{}, asOf); task.ReminderDue {
+		t.Error("a scope with no reminder reader carries a reminder")
+	}
+	row.ContentState = new(crmcontracts.ActivityContentStateWithheld)
+	if task := taskFromActivity(row, assignee, asOf); task.ReminderDue {
+		t.Error("a task whose content is withheld from the assignee is raised as their reminder")
 	}
 }

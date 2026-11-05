@@ -32,7 +32,7 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
 	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
-	at.contract_id, at.bytes_withheld`
+	at.contract_id, at.bytes_withheld, at.url`
 
 // attachmentSource marks how the row was captured; a direct upload is "upload".
 const attachmentSource = "upload"
@@ -41,6 +41,7 @@ const attachmentSource = "upload"
 const (
 	fieldEntityType = "entity_type"
 	fieldEntityID   = "entity_id"
+	fieldCategory   = "category"
 )
 
 // ensureAttachmentParentVisible enforces that the caller can see the parent
@@ -52,7 +53,7 @@ func ensureAttachmentParentVisible(ctx context.Context, tx pgx.Tx, entityType st
 	if entityType == "activity" {
 		return auth.EnsureActivityContentVisible(ctx, tx, id)
 	}
-	return auth.EnsureVisible(ctx, tx, entityType, id)
+	return auth.EnsureVisibleExisting(ctx, tx, entityType, id)
 }
 
 // ensureAttachmentParentWritable gates every change to a file already on a
@@ -107,31 +108,14 @@ func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityTy
 	return auth.HoldWritableLive(ctx, tx, entityType, id)
 }
 
-// requireParentOrHide checks the parent object grant AFTER the attachment row
-// was found (so it exists in this workspace). A caller lacking the grant must
-// not learn the attachment exists, so object denial reads as not-found — the
-// same 404 a row-scope miss returns (existence-hiding). Upload checks the
-// grant before any lookup, so it keeps its plain 403.
-func requireParentOrHide(ctx context.Context, entityType string, action principal.Action) error {
-	if err := auth.Require(ctx, entityType, action); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return apperrors.ErrNotFound
-		}
-		return err
-	}
-	return nil
-}
-
-// resolveAttachmentParent is the ONE spelling of "find a live attachment's
-// parent, then require the caller hold `action` on the parent object type and
-// the matching authority over the parent ROW" — GetAttachmentMeta and
-// ArchiveAttachment both need exactly this. Object denial and row-scope miss
-// both surface as ErrNotFound (existence-hiding), and so does a missing or
-// already-archived row: a soft-deleted attachment has no live parent to
-// resolve against. OpenAttachment does NOT call this: it fetches storage_key
-// in the same round trip, so the key it hands the object store comes from the
-// same snapshot the visibility gates just read rather than from a second query
-// against a row that may have moved since.
+// resolveAttachmentParent finds a live attachment's parent and requires the
+// caller hold `action` on the parent's object type and authority over its row.
+// GetAttachmentMeta and ArchiveAttachment both need this. A row-scope miss is
+// ErrNotFound, and so is an object denial to a caller who cannot read the
+// parent. One who can is refused a change with ErrPermissionDenied. A missing
+// or archived row is ErrNotFound too, having no live parent to resolve.
+// OpenAttachment does not call this. It reads storage_key in the same round
+// trip, so the key it opens is from the snapshot the gates read.
 //
 // The row gate follows the ACTION rather than being visibility for everyone: a
 // read needs only to see the parent, while archiving a file off a record
@@ -150,14 +134,16 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 		return "", scanErr
 	}
 	if err := requireParentOrHide(ctx, entityType, action); err != nil {
-		return "", err
+		if action == principal.ActionRead || !errors.Is(err, apperrors.ErrNotFound) {
+			return "", err
+		}
+		return "", deniedChange(ctx, tx, entityType, entityID)
 	}
-	// This branch is WAIVED in backend/gates/writeauthority_test.go under
-	// readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible,
-	// because that gate walks the call graph and cannot see which arm a caller
-	// takes. The waiver excuses the FUNCTION, so it would keep passing if the
-	// visibility probe were ever moved onto a write path — read the waiver
-	// before adding a third arm here, and revisit it rather than extend it.
+	// The visibility probe is WAIVED in backend/gates/writeauthority_test.go
+	// under readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible.
+	// It admits only this read arm; a write reaches it only through deniedChange
+	// above, after the write is refused, to choose 403 over 404. The waiver
+	// excuses the FUNCTION, so read it before giving the probe any other write reach.
 	if action == principal.ActionRead {
 		if err := ensureAttachmentParentVisible(ctx, tx, entityType, entityID); err != nil {
 			return "", err
@@ -274,8 +260,19 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 	lim := storekit.ClampLimit(limit)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where := sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
-		arg(entityType), arg(entityID))
+	var where string
+	if entityType == holderContact {
+		// A contact's Documents also holds the files of mails linked to it, each
+		// gated on its own mail.
+		visible, err := visibleParentClause(ctx, arg)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		where = documentMembership(holderContact, arg(entityID)) + " AND " + visible
+	} else {
+		where = sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
+			arg(entityType), arg(entityID))
+	}
 	if cursor != nil && *cursor != "" {
 		c, err := storekit.DecodeCursor(*cursor)
 		if err != nil {
@@ -309,6 +306,9 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 			return nil, storekit.Page{}, err
 		}
 		page = storekit.Page{HasMore: true, NextCursor: next}
+	}
+	if err := withMailOrigins(ctx, tx, out); err != nil {
+		return nil, storekit.Page{}, err
 	}
 	return out, page, nil
 }
@@ -350,6 +350,7 @@ type attachmentScan struct {
 	contractID  *ids.UUID
 
 	bytesWithheld bool
+	url           *string
 }
 
 // targets are the Scan destinations, in attachmentColumns order.
@@ -358,7 +359,7 @@ func (c *attachmentScan) targets() []any {
 		&c.aid, &c.entityType, &c.entityID, &c.att.Filename,
 		&c.contentType, &c.byteSize, &c.checksum, &c.att.Source, &c.capturedBy, &c.att.CreatedAt,
 		&c.category, &c.att.Title, &c.docState, &c.att.Pinned, &c.supersedes, &c.companyID, &c.contractID,
-		&c.bytesWithheld,
+		&c.bytesWithheld, &c.url,
 	}
 }
 
@@ -382,6 +383,7 @@ func (c *attachmentScan) attachment() crmcontracts.Attachment {
 	att.ContractId = uuidOrNil(c.contractID)
 	withheld := c.bytesWithheld
 	att.BytesWithheld = &withheld
+	att.Url = c.url
 	return att
 }
 

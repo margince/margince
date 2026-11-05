@@ -28,7 +28,7 @@ func (s *Service) Stage(ctx context.Context, in StageInput) (ids.ApprovalID, err
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	var id ids.ApprovalID
@@ -53,7 +53,7 @@ func (s *Service) StageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.stageOrJoinPendingInTx(ctx, tx, in)
@@ -172,6 +172,16 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, joinArgs...).Scan(&id)
 	switch {
 	case err == nil:
+		stale, err := s.withdrawStalePendingInTx(ctx, tx, id)
+		if err != nil {
+			return ids.ApprovalID{}, err
+		}
+		if stale {
+			id, err = s.insertProposalInTx(ctx, tx, in)
+			if err != nil {
+				return ids.ApprovalID{}, err
+			}
+		}
 		if err := s.rebundleJoinedInTx(ctx, tx, in, id); err != nil {
 			return ids.ApprovalID{}, err
 		}
@@ -345,7 +355,7 @@ func (s *Service) StageInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.
 		return ids.ApprovalID{}, errors.New(
 			"crmapprovals: StageInTx always creates a row — use StageOrJoinPendingInTx to join or supersede")
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.insertProposalInTx(ctx, tx, in)
@@ -361,22 +371,20 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// The summary is prose, and several stagers build it out of record text
 	// the agent or an inbound sender could have written. Sanitizing at the
 	// one place every staging passes through means no stager can bypass it.
-	in.Summary = sanitizeSummary(in.Summary)
-	current, pinned, err := resolveTargetVersion(ctx, tx, in)
+	in.Summary = SanitizeSummary(in.Summary)
+	in.SummaryParts = SanitizeSummaryParts(in.SummaryParts)
+	summaryParts, err := marshalSummaryParts(in.SummaryParts)
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	in.TargetVersion = nil
-	if pinned {
-		in.TargetVersion = &current
-	}
-	coVersion, coPinned, err := resolveCoTargetVersion(ctx, tx, in)
+	pins, err := s.resolveStagingPins(ctx, tx, in)
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	var coTargetVersion *int64
-	if coPinned {
-		coTargetVersion = &coVersion
+	in.TargetVersion = pins.target
+	decider, err := resolveDecider(ctx, tx, p, in)
+	if err != nil {
+		return ids.ApprovalID{}, err
 	}
 	id := ids.New[ids.ApprovalKind]()
 	evidence, err := marshalEvidence(in.Evidence)
@@ -400,16 +408,18 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 			                       target_entity_type, target_entity_id, target_version,
 			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
-			                       bundle_id, evidence)
+			                       bundle_id, evidence, requested_decider_id, requested_decider_source,
+			                       staged_in_conversation_of, context_digest, summary_parts)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-			         now() + $17::interval, $18, $19)
+			         now() + $17::interval, $18, $19, $20, $21, $22, $23, $24)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID), nullUUID(p.ConnectionID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
-		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
+		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), pins.coTarget,
 		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
-		nullUUID(in.BundleID), evidence).Scan(&expiresAt); err != nil {
+		nullUUID(in.BundleID), evidence, decider.member, string(decider.source),
+		nullUUID(conversationOf(ctx, p)), nullStr(pins.context), summaryParts).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()

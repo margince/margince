@@ -19,10 +19,11 @@ import (
 //nolint:goconst // the map keys are wire field names and the values are COLUMN names; each is its own vocabulary, and the constants goconst names are filter params and report fields that spell the same words by coincidence
 func clearableContactColumns(current crmcontracts.Contact) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"first_name": {Column: "first_name", Current: current.FirstName},
-		"last_name":  {Column: "last_name", Current: current.LastName},
-		"title":      {Column: "title", Current: current.Title},
-		"owner_id":   {Column: ownerIDColumn, Current: current.OwnerId},
+		"first_name":        {Column: "first_name", Current: current.FirstName},
+		"last_name":         {Column: "last_name", Current: current.LastName},
+		"title":             {Column: "title", Current: current.Title},
+		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
+		"relationship_mark": {Column: fieldRelationshipMark, Current: current.RelationshipMark},
 	}
 }
 
@@ -34,13 +35,16 @@ func clearableContactColumns(current crmcontracts.Contact) map[string]storekit.C
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearableContactColumns
 func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"legal_name":        {Column: "legal_name", Current: current.LegalName},
-		"description":       {Column: "description", Current: current.Description},
-		"industry":          {Column: "industry", Current: current.Industry},
-		"size_band":         {Column: "size_band", Current: current.SizeBand},
-		"linkedin_url":      {Column: "linkedin_url", Current: current.LinkedinUrl},
-		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
-		"parent_company_id": {Column: "parent_company_id", Current: current.ParentCompanyId},
+		"legal_name":               {Column: "legal_name", Current: current.LegalName},
+		"description":              {Column: "description", Current: current.Description},
+		"industry":                 {Column: "industry", Current: current.Industry},
+		"size_band":                {Column: "size_band", Current: current.SizeBand},
+		"linkedin_url":             {Column: "linkedin_url", Current: current.LinkedinUrl},
+		"phone":                    {Column: columnCompanyPhone, Current: current.Phone},
+		"email":                    {Column: columnCompanyEmail, Current: current.Email},
+		"owner_id":                 {Column: ownerIDColumn, Current: current.OwnerId},
+		"parent_company_id":        {Column: "parent_company_id", Current: current.ParentCompanyId},
+		"assess_against_entity_id": {Column: "assess_against_entity_id", Current: current.AssessAgainstEntityId},
 	}
 }
 
@@ -57,8 +61,12 @@ func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearab
 		"phone":                 {Column: leadPhoneColumn, Current: current.Phone},
 		"title":                 {Column: "title", Current: current.Title},
 		"company_name":          {Column: leadCompanyColumn, Current: current.CompanyName},
+		"industry":              {Column: leadIndustryField, Current: current.Industry},
 		"candidate_company_key": {Column: "candidate_company_key", Current: current.CandidateCompanyKey},
 		"project_id":            {Column: "project_id", Current: current.ProjectId},
 		"owner_id":              {Column: ownerIDColumn, Current: current.OwnerId},
+		"origin":                {Column: leadOriginField, Current: current.Origin},
+		"origin_detail":         {Column: leadOriginDetailField, Current: current.OriginDetail},
+		"partner_company_id":    {Column: leadPartnerField, Current: current.PartnerCompanyId},
 	}
 }

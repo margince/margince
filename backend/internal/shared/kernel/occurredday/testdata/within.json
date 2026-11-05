@@ -1,0 +1,13 @@
+[
+  {"name": "a Sunday day meeting in its own Auckland week", "at": "2026-10-25T12:00:00Z", "precision": "day", "from": "2026-10-18T11:00:00Z", "to": "2026-10-25T11:00:00Z", "zone": "Pacific/Auckland", "within": true},
+  {"name": "a Sunday day meeting not in the next Auckland week", "at": "2026-10-25T12:00:00Z", "precision": "day", "from": "2026-10-25T11:00:00Z", "to": "2026-11-01T11:00:00Z", "zone": "Pacific/Auckland", "within": false},
+  {"name": "a day call on the last date of a Kiritimati 30-day window", "at": "2026-10-25T12:00:00Z", "precision": "day", "from": "2026-09-25T10:00:00Z", "to": "2026-10-25T10:00:00Z", "zone": "Pacific/Kiritimati", "within": true},
+  {"name": "a day call the date after a Kiritimati 30-day window", "at": "2026-10-26T12:00:00Z", "precision": "day", "from": "2026-09-25T10:00:00Z", "to": "2026-10-25T10:00:00Z", "zone": "Pacific/Kiritimati", "within": false},
+  {"name": "a day call on the first date of a Kiritimati 30-day window", "at": "2026-09-26T12:00:00Z", "precision": "day", "from": "2026-09-25T10:00:00Z", "to": "2026-10-25T10:00:00Z", "zone": "Pacific/Kiritimati", "within": true},
+  {"name": "a day call the date before a Kiritimati 30-day window", "at": "2026-09-25T12:00:00Z", "precision": "day", "from": "2026-09-25T10:00:00Z", "to": "2026-10-25T10:00:00Z", "zone": "Pacific/Kiritimati", "within": false},
+  {"name": "a day note on the first date of a week at UTC-12", "at": "2026-10-19T12:00:00Z", "precision": "day", "from": "2026-10-19T12:00:00Z", "to": "2026-10-26T12:00:00Z", "zone": "Etc/GMT+12", "within": true},
+  {"name": "a day note on the date a week at UTC-12 ends", "at": "2026-10-26T12:00:00Z", "precision": "day", "from": "2026-10-19T12:00:00Z", "to": "2026-10-26T12:00:00Z", "zone": "Etc/GMT+12", "within": false},
+  {"name": "a day call dated today in a window ending now", "at": "2026-10-22T12:00:00Z", "precision": "day", "from": "2026-09-22T20:00:00Z", "to": "2026-10-22T20:00:00Z", "zone": "America/Los_Angeles", "within": true},
+  {"name": "an instant at the start of a period", "at": "2026-10-18T11:00:00Z", "precision": "instant", "from": "2026-10-18T11:00:00Z", "to": "2026-10-25T11:00:00Z", "zone": "Pacific/Auckland", "within": true},
+  {"name": "an instant at the end of a period", "at": "2026-10-25T11:00:00Z", "precision": "instant", "from": "2026-10-18T11:00:00Z", "to": "2026-10-25T11:00:00Z", "zone": "Pacific/Auckland", "within": false}
+]

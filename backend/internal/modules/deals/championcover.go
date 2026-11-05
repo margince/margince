@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // ChampionCover is what one deal's committee says about its champion seat.
@@ -289,13 +290,13 @@ func engagedAmong(
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
+			  AND %[2]s AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')`,
-		dealsPos, windowPos, bound, healthInteraction), args...)
+			  AND %[2]s AND a.direction = 'outbound')`,
+		dealsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading engagement across a set of deals: %w", err)
 	}

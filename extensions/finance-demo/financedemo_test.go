@@ -54,6 +54,16 @@ func TestTheDeclarationIsAValidFinanceSource(t *testing.T) {
 	}
 }
 
+func TestTheDeclarationIsAValidOAuthApp(t *testing.T) {
+	apps := New().OAuthApps
+	if len(apps) != 1 {
+		t.Fatalf("declares %d OAuth apps, want 1", len(apps))
+	}
+	if err := apps[0].Validate(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTheDirectoryListsDistinctCustomers(t *testing.T) {
 	listed, err := customers(context.Background(), nil, accounting.Connection{})
 	if err != nil {

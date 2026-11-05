@@ -1,0 +1,11 @@
+name: named_copied_colleague_promise
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: [{"direction": "outbound", "subject": "Next steps", "sent": "2026-09-07", "body": "Theo Bauer agreed to send the pricing by Friday. Ines, please expect it then.", "participants": [{"key": "mira", "kind": "seat", "role": "from", "name": "Mira Chen", "address": ""}, {"key": "ines", "kind": "contact", "role": "to", "name": "Ines Huber", "address": ""}, {"key": "theo", "kind": "seat", "role": "cc", "name": "Theo Bauer", "address": ""}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "commitment_made", "message": 1, "promiser": "theo"}]
+  rubric: "Identify the promiser from the quoted clause. The expected reference is theo. Direction and CC membership alone do not assign a promise."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

@@ -1,13 +1,122 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { useRoster, useRosterPartial, useRosterPartialHint } from "./entityref";
+import {
+  RosterFailedLine,
+  useRoster,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "./entityref";
+import { useEveryMember } from "./roster";
 
 /** A workspace user as a picker option. */
 export type UserOption = { value: string; label: string };
+
+/**
+ * Picker options with the roster read behind them, so a picker can say when
+ * that read failed instead of offering an empty list (`RosterFailedLine`).
+ */
+export type UserOptions = {
+  options: UserOption[];
+  roster: ReturnType<typeof useRoster>;
+};
+
+type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
+type MemberStatus = components["schemas"]["User"]["status"];
+
+/**
+ * Whether the server says the reader may make this entry a record's owner.
+ *
+ * The rule is the server's and depends on the reader's own write scope. So the
+ * roster answers it per row (`assignable`) and the client does not re-derive it.
+ * An entry without the answer (an older server) is offered, and the write
+ * decides.
+ */
+export function mayOwnRecords(entry: RosterEntry): boolean {
+  if (!("display_name" in entry) || entry.is_agent) {
+    return false;
+  }
+  return entry.assignable !== false;
+}
+
+/**
+ * The colleagues the reader may make a record's owner: an active human seat
+ * that can write, inside the reader's own write scope. Every owner picker reads
+ * this, so a picker never offers somebody the owner change then refuses.
+ */
+export function useRecordOwnerOptions(enabled = true): UserOptions {
+  const roster = useRoster("user", enabled);
+  const options = (roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
+    value: entry.id,
+    label: "display_name" in entry ? entry.display_name : entry.id,
+  }));
+  return { options, roster };
+}
+
+/**
+ * The colleagues a configured intake may hand its records to: the seat half of
+ * `useRecordOwnerOptions`, without the reader's own scope. A website form's
+ * owner of new leads reads this, because the installation writes those leads.
+ */
+export function useSeatedOwnerOptions(enabled = true): UserOptions {
+  const roster = useRoster("user", enabled);
+  const options = (roster.data ?? [])
+    .filter(
+      (entry) =>
+        "display_name" in entry &&
+        !entry.is_agent &&
+        entry.can_own_records !== false,
+    )
+    .map((entry) => ({
+      value: entry.id,
+      label: "display_name" in entry ? entry.display_name : entry.id,
+    }));
+  return { options, roster };
+}
+
+const STATUS_SUFFIX: Partial<
+  Record<
+    MemberStatus,
+    "list.ownerDeactivated" | "list.ownerSuspended" | "list.ownerInvited"
+  >
+> = {
+  deactivated: "list.ownerDeactivated",
+  suspended: "list.ownerSuspended",
+  invited: "list.ownerInvited",
+};
+
+/**
+ * Every member a list can be filtered by owner, those who left included and
+ * named as such. That is how a former colleague's records are found to hand on.
+ */
+export function useMemberFilterOptions(enabled: boolean) {
+  const t = useT();
+  const walk = useEveryMember(enabled);
+  const options: UserOption[] = (walk.data?.entries ?? []).flatMap((entry) => {
+    if (!("display_name" in entry) || entry.is_agent) {
+      return [];
+    }
+    const suffix = STATUS_SUFFIX[entry.status];
+    return [
+      {
+        value: entry.id,
+        label: suffix
+          ? t(suffix, { name: entry.display_name })
+          : entry.display_name,
+      },
+    ];
+  });
+  return {
+    options,
+    loading: walk.isPending,
+    failed: walk.isError,
+    partial: walk.data?.partial === true,
+  };
+}
 
 /**
  * The workspace's contacts as assignment options — everyone the roster carries
@@ -26,14 +135,15 @@ export type UserOption = { value: string; label: string };
  * list — a composer whose assignee picker only applies to a task has no reason
  * to walk `/users` while a note is being written.
  */
-export function useAssignableUserOptions(enabled = true): UserOption[] {
+export function useAssignableUserOptions(enabled = true): UserOptions {
   const roster = useRoster("user", enabled);
-  return (roster.data ?? [])
+  const options = (roster.data ?? [])
     .filter((entry) => !("is_agent" in entry && entry.is_agent))
     .map((entry) => ({
       value: entry.id,
       label: ("display_name" in entry ? entry.display_name : null) ?? entry.id,
     }));
+  return { options, roster };
 }
 
 /**
@@ -57,21 +167,24 @@ export function TaskAssigneeField({
   onChange: (next: string) => void;
 }>) {
   const t = useT();
-  const options = useAssignableUserOptions(active);
+  const { options, roster } = useAssignableUserOptions(active);
   const partialHint = useRosterPartialHint(useRosterPartial("user", active));
   if (!active) {
     return null;
   }
   return (
-    <Field label={t("log.assignee")} hint={partialHint}>
-      {(control) => (
-        <Select
-          {...control}
-          options={[{ value: "", label: t("log.unassigned") }, ...options]}
-          value={value}
-          onChange={onChange}
-        />
-      )}
-    </Field>
+    <>
+      <Field label={t("log.assignee")} hint={partialHint}>
+        {(control) => (
+          <Select
+            {...control}
+            options={[{ value: "", label: t("log.unassigned") }, ...options]}
+            value={value}
+            onChange={onChange}
+          />
+        )}
+      </Field>
+      <RosterFailedLine kind="user" roster={roster} />
+    </>
   );
 }

@@ -4,7 +4,10 @@
 package activities
 
 import (
+	"time"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // CheckKindFields is the one rule for which fields an activity's kind may carry.
@@ -14,11 +17,14 @@ import (
 // The order is the order a caller fixes things in: the kind, what only a
 // meeting carries, the transport, then the duration. The wire mapper asks the
 // same four checks one at a time, where its own earlier errors win.
-func CheckKindFields(kind string, durationSeconds *int, meetingStatus *string, channelProvider string) error {
+func CheckKindFields(kind string, durationSeconds *int, meetingStatus, callOutcome *string, channelProvider string) error {
 	if err := checkKind(kind); err != nil {
 		return err
 	}
 	if err := checkMeetingStatusKind(kind, meetingStatus); err != nil {
+		return err
+	}
+	if err := checkCallOutcomeKind(kind, callOutcome); err != nil {
 		return err
 	}
 	if err := refuseKindProviderMismatch(kind, channelProvider); err != nil {
@@ -42,9 +48,75 @@ func checkKind(kind string) error {
 	return nil
 }
 
+// fieldCallOutcome is how a call ended; only a call carries one.
+const fieldCallOutcome = "call_outcome"
+
+// checkCallOutcomeKind refuses an outcome outside the contract's list, naming
+// the field, and an outcome on anything but a call.
+func checkCallOutcomeKind(kind string, callOutcome *string) error {
+	if callOutcome == nil {
+		return nil
+	}
+	if !crmcontracts.ActivityCallOutcome(*callOutcome).Valid() || *callOutcome == "" {
+		return &callOutcomeValueError{}
+	}
+	if kind != string(crmcontracts.ActivityKindCall) {
+		return &KindFieldError{Field: fieldCallOutcome, Only: "a call"}
+	}
+	return nil
+}
+
+// callOutcomeValueError is an outcome the fixed list does not hold.
+type callOutcomeValueError struct{}
+
+func (e *callOutcomeValueError) Error() string {
+	return "call_outcome takes one of reached, not_reached, voicemail, call_back_later, put_through"
+}
+
+// FieldFault names call_outcome on every surface.
+func (e *callOutcomeValueError) FieldFault() (string, string, string) {
+	return fieldCallOutcome, faultInvalid, e.Error()
+}
+
 func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 	if meetingStatus != nil && kind != KindMeeting {
 		return &MeetingStatusKindError{Kind: kind}
+	}
+	return nil
+}
+
+const (
+	fieldDueAt    = "due_at"
+	fieldRemindAt = "remind_at"
+)
+
+// taskFields are the update's members that only a task carries. The
+// activity_task_fields CHECK refuses them on any other kind, with an answer
+// that names no field.
+type taskFields struct {
+	dueAt, remindAt *time.Time
+	assignee        *ids.UserID
+	isDone          *bool
+}
+
+// checkTaskFieldsKind refuses a task-only field on another kind, naming it. A
+// false is_done is what such a row already holds, so only true is refused.
+func checkTaskFieldsKind(kind string, f taskFields) error {
+	if kind == string(crmcontracts.ActivityKindTask) {
+		return nil
+	}
+	for _, set := range []struct {
+		field string
+		is    bool
+	}{
+		{fieldDueAt, f.dueAt != nil},
+		{fieldRemindAt, f.remindAt != nil},
+		{fieldAssignee, f.assignee != nil},
+		{auditFieldIsDone, f.isDone != nil && *f.isDone},
+	} {
+		if set.is {
+			return &KindFieldError{Field: set.field, Only: "a task"}
+		}
 	}
 	return nil
 }
@@ -90,7 +162,7 @@ func CheckLinkTypes(kind string, entityTypes []string) error {
 		if linkColumn(entityType) == "" {
 			return &InvalidLinkTypeError{EntityType: entityType}
 		}
-		if err := refuseACompanyMeeting(kind, ActivityLinkInput{EntityType: entityType}); err != nil {
+		if err := CheckActivityLinkKind(kind, ActivityLinkInput{EntityType: entityType}); err != nil {
 			return err
 		}
 	}

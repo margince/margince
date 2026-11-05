@@ -67,11 +67,12 @@ func (e *Engine) measureTeamNumeric(
 	}
 	// Every member, read or not: won and held above are measured over the team
 	// scope itself, and an unread member is reported in RepsUnread, not here.
-	numeric.Summary.FigureCoverage, err = figureCoverageOf(ctx, tx, owners, start, end)
+	words := teamCopyFor(review.Language)
+	numeric.Summary.FigureCoverage, err = words.figureCoverageOf(ctx, tx, owners, start, end)
 	if err != nil {
 		return err
 	}
-	numeric.Summary.FigureCoverage.Commitments = plans.coverage(start, end)
+	numeric.Summary.FigureCoverage.Commitments = plans.coverage(start, end, words)
 	review.NumericSummary = &numeric.Summary
 	review.Counts.DealsWon = numeric.Won
 	review.Counts.MeetingsHeld = numeric.Held

@@ -1,4 +1,8 @@
-import type { Provenance, SourceAuthor } from "./trust";
+import type { components } from "../api/schema";
+import type { Provenance, RelaySend, SourceAuthor } from "./trust";
+
+type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
+type ControllerSend = components["schemas"]["ControllerSend"];
 
 // captured_by is server-stamped from the authenticated principal, so it carries
 // that principal's kind. The contract lists four
@@ -90,29 +94,65 @@ export function provenanceOf(
   return { kind: "unknown" };
 }
 
-// What an `agent:<rest>` principal is called on screen.
-//
-// A passport call stamps `agent:<passport_id>`, a uuid with no name behind it
-// on this side. The design system holds no record lookups, so there is
-// nothing here to resolve it to. The tag then says only what the wire
-// says (an agent produced this) instead of printing an identifier. A named
-// tool (`agent:enrich`) keeps its name.
-function agentProvenance(rest: string): Provenance {
-  const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
-  return { kind: "agent", agent: named && humanizeAgent(named) };
+/**
+ * An agent's tag with what its audit row adds: the tool it was typed through
+ * and the colleague it worked for. captured_by and actor_id name only a
+ * passport, so without the row the tag can say neither.
+ */
+export function withCreator(
+  provenance: Provenance,
+  attribution: PrincipalAttribution | undefined,
+): Provenance {
+  if (provenance.kind !== "agent" || attribution?.actor_type !== "agent") {
+    return provenance;
+  }
+  return {
+    ...provenance,
+    agent: attribution.agent_client ?? provenance.agent,
+    forName: attribution.on_behalf_of_name ?? undefined,
+  };
 }
 
-// A tool's own name, in words.
-//
-// The wire spells a job the way the code does: `capture_counterparty_verdict`.
-// Printing that at a reader shows them the plumbing and calls it information.
-// The underscores go and the name stays, because the name identifies the tool.
-//
-// The case is left alone. A one-word tool reads as `capture`, and changing
-// that is a separate decision from removing an identifier's punctuation.
-function humanizeAgent(name: string): string {
-  const words = name.replaceAll("_", " ").trim();
-  return words === "" ? name : words;
+// A mail the installation's relay sent reads as the relay's, never as the
+// member's own; that member is "you" only when captured_by names the reader.
+export function withControllerSend(
+  provenance: Provenance,
+  send: ControllerSend | null | undefined,
+  viewerUserId?: string,
+): Provenance {
+  if (!send) {
+    return provenance;
+  }
+  const member = provenance.kind === "human" ? provenance.userId : undefined;
+  return relayProvenance(send, relayMemberFor(member, viewerUserId));
+}
+
+/** The relay arm for a caller that knows the member another way. */
+export function relayProvenance(
+  send: ControllerSend,
+  member: RelaySend["member"],
+): Provenance {
+  return { kind: "system", relay: { member, fromAddress: send.from_address } };
+}
+
+/** Whom a relay send was for: the reader only when the member is the reader. */
+export function relayMemberFor(
+  memberId: string | null | undefined,
+  viewerId: string | undefined,
+): RelaySend["member"] {
+  if (!memberId || !viewerId) {
+    return "unknown";
+  }
+  return memberId === viewerId ? "self" : "colleague";
+}
+
+// What an `agent:<rest>` principal is called on screen. A passport uuid names
+// nothing on this side, so the tag says only that an agent acted. A named tool
+// (`agent:signal-scan`) is handed on as `job`, which the tag reads through the
+// catalogue; the identifier itself is never printed.
+function agentProvenance(rest: string): Provenance {
+  const named = rest === "" || OPAQUE_ID.test(rest) ? undefined : rest;
+  return { kind: "agent", job: named };
 }
 
 /** A uuid: an identifier with no name in it, so no tag may print it. */

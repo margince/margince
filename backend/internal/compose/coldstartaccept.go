@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -63,26 +66,39 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
-	svc := approvals.NewService(InstallationDB(pool)).
+	captureConfig := CaptureConfig{}
+	if loaded := config.Bound(); loaded != nil {
+		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
+	}
+	svc := NewApprovalsService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)
 	svc.WithEffect("coldstart", coldstartAcceptEffect(svc, store))
 	svc.WithEffect(enrichProposalKind, scrapeAcceptEffect(svc, store))
 	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, store))
 	svc.WithEffect(siteLeadProposalKind,
-		siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{}), pool, notices))
+		siteLeadAcceptEffect(svc, newCaptureSink(pool, captureConfig), pool, notices))
 	svc.WithPrecheck(siteLeadProposalKind, siteLeadPrecheck(notices))
-	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
+	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, newConnectorTagFiler(pool), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default(), captureConfig.SkipReservedDomainProposals)))
+	svc.WithPrecheck(counterpartyProposalKind, counterpartyPrecheck(store))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
-	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))
+	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
+	svc.WithPrecheck(linkedInMatchKind, linkedInMatchPrecheck(store))
 	// Both halves, like the held message above and for the same reason: the
 	// subject of this card is a row that is already sitting in a state, and a
 	// card whose buttons only dismissed it would report a decision the record
 	// never heard.
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
-	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
-	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, contacts.NewStore(InstallationDB(pool))))
+	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
+	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
+		newContactsStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
+	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
+	// Both halves: the colleague who asked is told how their request ended.
+	transfers := newOwnershipTransfers(pool)
+	svc.WithEffect(ownershipTransferKind, ownershipTransferAcceptEffect(svc, transfers))
+	svc.WithPrecheck(ownershipTransferKind, transfers.transferPrecheck())
+	svc.WithDeclinedEffect(ownershipTransferKind, declineTransferEffect())
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its
 	// subject is already waiting: Accept re-arms it, Reject abandons it, and a
@@ -101,10 +117,12 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool))))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
-	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
-	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(commitmentTasks))
+	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, newContactsStore(InstallationDB(pool))))
+	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
+	svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
-		deals.NewStore(InstallationDB(pool), DealsInstallation())))
+		deals.NewStore(InstallationDB(pool), DealsInstallation()).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))})))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	return svc
@@ -115,15 +133,9 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 // registration because the two services run in different processes — the
 // sweep is a worker job — and a hook registered only on the deciding one
 // would be absent exactly where the expiry happens.
-//
-// No kind registers one today. Project attribution was the only one that did —
-// its expiry released the candidate row it had reserved — and that whole rung
-// is retired. The sweep still runs and still expires overdue stagings of every
-// kind; what no longer exists is a kind with cleanup of its own to do when the
-// window closes. The builder stays because the sweep needs a service and the
-// next kind that owns expiry state registers here.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return approvals.NewService(InstallationDB(pool))
+	return NewApprovalsService(InstallationDB(pool)).
+		WithExpiredEffect(ownershipTransferKind, expireTransferEffect())
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose

@@ -21,7 +21,8 @@ var listApprovalsCopy = toolCopy{
 		"unsent is not one that needs writing again.",
 	Limits: "It lists what the colleague you act for could decide themselves; anything else is absent " +
 		"rather than refused. A proposal past its expiry reads as expired and can no longer be " +
-		"answered. Each item carries its one-line summary, not the change itself.",
+		"answered. Personal mutes hide eligible pending rows, so a bundle may be partial. " +
+		"Use include_muted for a complete authorized bundle review. Each item carries its one-line summary, not the change itself.",
 	Instead: "read_approval opens one and shows what it holds; decide_approvals answers it.",
 	Retain:  "Keep the staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.",
 }
@@ -59,7 +60,8 @@ var decideBundleCopy = toolCopy{
 		"that proposed six corrections is six proposals under one bundle_id.",
 	Limits: "Each member is answered on its own terms and reported on its own; one already decided, " +
 		"or lapsed, is left as it is. Members the colleague could not decide alone are not decided " +
-		"here, and a bundle holding none of theirs reads as not found.",
+		"here, and a bundle holding none of theirs reads as not found. Review with include_muted " +
+		"before deciding a bundle: personal mutes do not narrow this explicit decision.",
 	Instead: "decide_approval answers a single item; list_approvals is where a bundle_id comes from.",
 	Retain:  "Each member carries its own outcome — decided here, already decided, or expired.",
 }

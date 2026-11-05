@@ -17,20 +17,21 @@ GO ?= go
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
   test-dev-cleanup test-disk-headroom \
-  test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict \
+  test-golangci-guard test-scheduled-report test-renovate-liveness test-main-health-pace test-ci-verdict test-merge-verdict \
   test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
-  make-target-parity contract-breaking-check contract-frontend-drift \
+  make-target-parity test-make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
   comment-budget test-comment-budget comment-density \
-  check-extension-modules \
+  check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
-  pkg-freeze test-desktop-launcher changelog-sections \
-  test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
+  pkg-freeze \
+  test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
-  test-published-tag \
-  test-craft-review test-release-tag-version test-release-license-stamped
+  test-docs-describing \
+  test-craft-review test-release-tag-version test-release-license-stamped \
+  test-release-notes test-release-bundle embedded-binary-licenses
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -66,14 +67,20 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition check-static test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln vendor-live tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-license-stamped test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: gate-timings
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-main-health-pace test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
-## help — list every available command (the default goal): the root targets
-## below, then the backend targets `make <name>` delegates into.
+## help — the everyday commands in groups (the default goal); the groups are
+## in scripts/make-help.sh.
 help:
-	@echo "Margince — make commands"
+	@bash scripts/make-help.sh
+
+## help-all — every command: the root targets below, then the backend targets
+## `make <name>` delegates into.
+help-all:
+	@echo "Margince — every make command"
 	@echo ""
 	@echo "Root:"
 	@grep -hE '^## [A-Za-z0-9_-]+ —' $(MAKEFILE_LIST) | sed -E 's/^## /  /'
@@ -205,14 +212,19 @@ check-go:
 check-gates:
 	@cd backend && $(GO) test -count=1 -run 'TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture|TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce|TestGatekitServesTestsOnly|TestEveryVersionPinnedTableBumpsItsVersion|TestEveryToolRegistrarIsInvokedByEveryFullRegistry|TestAPublishedFieldNameIsAFieldNameNotProse|TestEveryValidationFieldLiteralNamesAContractField|TestSeamReachableModulesCarryTheirOwnFieldVerdict|TestEveryStoreEntryPointIsAuthGated' ./gates
 
-## infra-up / infra-down — aliases for the dev stack (some deploy tooling and
-## UAT guides call the infra lane by these names). infra-up
-## is `db-up`; infra-down STOPS the containers but keeps the data volumes — use
-## `make clean` to also drop them.
-infra-up: db-up
+## gate-timings — where the gates lane spent its time, gate by gate. The lane
+## already runs its gates in parallel, so what a run costs is the sum of their
+## work over the cores it is given: this prints both, and the costliest gates,
+## so an optimization starts from a reading rather than from a guess.
+gate-timings:
+	@mkdir -p backend/.tmp
+	@cd backend && $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
+	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
+		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
-infra-down:
-	$(MAKE) -C backend infra-down
+## infra-up — `db-up` under the name some deploy tooling and UAT guides call
+## (infra-down is backend's own). The root's only alias.
+infra-up: db-up
 
 ## dev — the full local COLD-START stack in a real browser: Postgres + Redis, the api, the
 ## background worker (cmd/worker — outbox relay + Surface-B runner, always on),
@@ -283,8 +295,20 @@ dev-sweep:
 dev-logs:
 	@bash scripts/dev-logs.sh
 
-build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch bench-daily bench-daily-clean perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed drift composition check-composition check-static test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down migrate-create run psql redis-cli tidy clean vuln vendor-live tools tools-go infra-logs infra-reset:
+# Every name this file does not define runs in backend/, so a target added
+# there is reachable from here with no edit, and a typo fails with backend's own
+# "No rule to make target". FORCE makes the rule run even where a root folder
+# shares the name (tools/, composition/). A forwarded name must stay out of
+# .PHONY: make looks for no pattern rule for a phony target, so it would do
+# nothing and exit 0.
+%: FORCE
 	$(MAKE) -C backend $@
+
+.PHONY: FORCE
+FORCE:
+
+# The match-anything rule above would otherwise try to remake this file.
+Makefile: ;
 
 ## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
 ## if the frontend deps are missing rather than skipping — a set-up worktree has
@@ -301,12 +325,6 @@ check-fe: fe-typecheck-composed
 	$(MAKE) fe-test-ext
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
-## fitness-jurisdiction — no country strings in core (alias for no-jurisdiction).
-fitness-jurisdiction: no-jurisdiction
-## gen-types — regenerate the contract types (alias for gen).
-gen-types: gen
-## gen-types-check — fail if generated types drifted (alias for drift).
-gen-types-check: drift
 
 ## fe-lint — Biome lint the frontend.
 fe-lint:
@@ -419,8 +437,9 @@ ds-spacing-roles:
 ## drawer clipped its own heading against the viewport edge.
 space-tokens:
 	frontend/scripts/check-space-tokens.sh
-## native-controls — no browser-drawn dropdown: `<select>`, `<option>` or
-## `<optgroup>` anywhere under frontend/src or extensions/*/frontend. It is a
+## native-controls — no browser-drawn control: `<select>`, `<option>`,
+## `<optgroup>` or a native date input (`type="date"` on `input` or
+## `TextInput`) anywhere under frontend/src or extensions/*/frontend. It is a
 ## vitest fitness function over the TypeScript AST now — see
 ## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
 ## with the rest of the suite. This target keeps its name for anyone who runs
@@ -459,6 +478,19 @@ ext-imports:
 seed-dev:
 	./scripts/seed-dev.sh
 	$(MAKE) -C backend seed-dev-db
+
+## seed-analytics — invented records for every Analytics Overview state,
+## through the public API, on a stack that `make seed-dev` already seeded.
+## Variants by ANALYTICS_WORKFLOW, ANALYTICS_TARGET, ANALYTICS_INDIVIDUAL and
+## ANALYTICS_FISCAL_START_MONTH (see the script's header). Idempotent.
+seed-analytics:
+	./scripts/seed-analytics.sh
+
+## check-config — run --check-config for the api and the worker on the dev
+## files (or CONFIG=, CONFIG_FILE=, ENV_FILE=), and fail when either refuses
+## them. Each program checks only the settings it reads. Opens no database.
+check-config:
+	@./scripts/check-config.sh
 
 ## verify-boot — prove a running, seeded stack end to end: seeded-admin
 ## login, seeded contacts visible over /v1, frontend production build.
@@ -697,7 +729,7 @@ fe-typecheck-composed: composition
 	@[ -f build/composition-frontend/schema.d.ts ] || { echo "fe-typecheck-composed: pnpm gen:composed-types produced no schema.d.ts — the composed lane would silently typecheck against the committed contract" >&2; exit 1; }
 	cd frontend && pnpm exec tsc -p tsconfig.composed.json
 	# And the composed lane's TESTS, which no other project compiles: the app
-	# and node projects exclude src/screens/ext/ (it cannot typecheck there),
+	# and node projects do not include extensions/ (it cannot typecheck there),
 	# and tsconfig.composed.json excludes *.test.*. Without this line a unit
 	# screen's test fixtures are checked by nothing, since vitest transpiles
 	# without typechecking.
@@ -722,20 +754,33 @@ frontend-e2e:
 	cd frontend && pnpm install --frozen-lockfile && pnpm e2e $(E2E_ARGS)
 
 ## bench-mobile — MOBILE-AC-2: record open p95 under the 300ms PERCEIVED budget
-## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). A measurement run
-## BY HAND, like the backend bench-* targets: `pnpm e2e` does not collect this
-## spec and this target collects nothing else. It is the ONLY place that budget
-## is asserted: throttled p95 is the harder of the two conditions, so a budget
-## that holds here holds unthrottled by construction.
+## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). Run by hand and by
+## the weekly scheduled job, which proposes the record as a pull request:
+## `pnpm e2e` does not collect this spec and this target collects nothing else.
+## It is the ONLY place that budget is asserted: throttled p95 is the harder of
+## the two conditions, so a budget that holds here holds unthrottled by
+## construction.
+BENCH_RENDER ?= 1
 bench-mobile:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD=1 pnpm exec playwright test
-	@$(MAKE) --no-print-directory perfdoc
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-## bench-mobile-check — the same measurement, writing NOTHING: what the weekly
-## scheduled workflow runs. The budget gets a heartbeat without a machine
-## publishing its own numbers, which is the rule bench-perf-check states and the
-## reason that target exists beside bench-perf.
+## bench-home — R01 and R07: a full load of Home, a return to it and a
+## refresh of it, on a production build against a running stack's api, timed
+## by the app's own journey marks and judged by the answers the page received.
+## BENCH_API_PORT is the api port that stack's banner prints.
+## It records nothing and `pnpm e2e` does not collect its spec. BASE_URL and
+## the mobile switch are cleared, so it always measures the build it made.
+bench-home:
+	@test -n "$(BENCH_API_PORT)" || { echo "bench-home: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
+	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
+		env -u BASE_URL -u MARGINCE_BENCH_MOBILE MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) \
+		pnpm exec playwright test
+
+## bench-mobile-check — the same measurement, writing NOTHING: a check run by
+## hand without touching the published page, as bench-perf-check is beside
+## bench-perf.
 ##
 ## MARGINCE_BENCH_RECORD is CLEARED rather than left unset, for the reason
 ## spelled out on bench-perf-check: "writes nothing" must be a property of the
@@ -744,9 +789,7 @@ bench-mobile:
 ## rewrite the published record from a runner's numbers.
 ##
 ## perfdoc is not run here either. It re-renders the published page from the
-## COMMITTED records, so a machine that has recorded nothing has nothing to
-## re-render — and running it would only restate the last human's measurement
-## under this run's name.
+## COMMITTED records, so a run that recorded nothing has nothing to re-render.
 bench-mobile-check:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 MARGINCE_BENCH_RECORD= pnpm exec playwright test
@@ -762,7 +805,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
 # stack is resolved.
-## e2e-llm — the six use cases driven by a REAL assistant, against a dedicated
+## e2e-llm — every scenario in e2e/llm/scenarios driven by a REAL assistant, against a dedicated
 ## stack. This is the half the Go suite cannot answer: those tests pin the
 ## payloads, the refusals and the legibility fields; this asks whether a model
 ## can actually drive the surface and say something true.
@@ -921,7 +964,7 @@ fe-edge-padding:
 ## repository root, where it runs.
 craft-static: test-craft-pin
 	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base origin/main \
-		backend extensions fixtures desktop frontend tools
+		backend extensions fixtures frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
 ## this branch's diff to an external model API and get a reading of what a
@@ -946,27 +989,6 @@ craft-review: test-craft-pin
 ## request to assert on a refusal that never gets that far.
 test-craft-review:
 	@./scripts/test-craft-review.sh
-
-## test-desktop-launcher — the launcher's own suite. It exists because a test
-## lane that cannot reach a module is a test lane that proves nothing about it,
-## and this module hid that longer than any other: desktop/launcher is its own
-## module and deliberately OUTSIDE go.work,
-## since it supervises the shipped binaries as child processes rather than
-## importing them. So `./...` inside backend cannot reach it, the workspace
-## cannot reach it, and the seven test files it already carried ran nowhere —
-## which is indistinguishable from carrying none. The program every desktop user
-## meets first was the one package with no lane.
-##
-## GOWORK=off for the reason its go.mod states: inside a workspace that does not
-## list the module, every package fails to resolve.
-##
-## LAUNCHER_COVER_OUT (optional): also write a coverage profile there. It exists
-## because the product profile CANNOT contain a launcher line — that one is
-## `go test -coverpkg=./...` over the backend module, and this module is not in
-## it — so the number reported for shipped code a user runs was 0% whatever the
-## suite did. A profile of its own is what makes the figure real.
-test-desktop-launcher:
-	GOWORK=off go test -C desktop/launcher -count=1 	  $(if $(LAUNCHER_COVER_OUT),-covermode=atomic -coverprofile=$(abspath $(LAUNCHER_COVER_OUT))) ./...
 
 ## craft-residue — fail if any unresolved CRAFT-FIX/CRAFT-DISPUTE marker was
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI
@@ -1037,6 +1059,32 @@ test-sbom-sign:
 test-sbom-census:
 	@./scripts/test-sbom-census.sh
 
+## test-sbom-license-parity — prove the licence comparison inside
+## `sbom-parity` fails on each way the three signed documents can disagree,
+## and passes on the ways they differ harmlessly. Planted documents, and the
+## real script: a comparison nothing tests is one that can quietly compare
+## the intersection and report a pass.
+test-sbom-license-parity:
+	@./scripts/test-sbom-license-parity.sh
+
+## embedded-binary-licenses — refuse an embedded binary whose source license
+## nothing declares. The license gate reads each dependency's own license, which
+## says nothing about compiled code it carries: a `.wasm` is a build output, so
+## the SBOM sees the Go module and never what the wasm was built from. The
+## corpus is the packages `go list -json -deps ./cmd/...` reports, so a new
+## dependency is covered the day it is added. It is a root script gate as well:
+## the license gate runs only on a manifest change, and a file embedded under
+## backend/ changes no manifest.
+embedded-binary-licenses:
+	@./scripts/embedded-binary-licenses.sh
+
+## test-embedded-binary-licenses — prove `embedded-binary-licenses` refuses an
+## undeclared binary, a license the allow list does not carry, a declaration
+## with no license, an entry the build no longer carries, and an allow list it
+## cannot read. Planted declarations against the live scan.
+test-embedded-binary-licenses:
+	@./scripts/test-embedded-binary-licenses.sh
+
 ## test-api-entrypoint — prove the container entrypoint writes the bootstrap
 ## credential ONLY onto an unprovisioned installation, retires a spent one, and
 ## refuses to start when it cannot tell which it is. Every failure on that path
@@ -1096,7 +1144,9 @@ test-disk-headroom:
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
 ## failure it replaces was an api or a Vite outliving the run on the PRIMARY
-## stack, which the next `make dev` reported as a port already in use.
+## stack, which the next `make dev` reported as a port already in use. It also
+## proves a process that dies during boot ends the readiness wait at once and
+## is reported with its own last log lines.
 test-dev-cleanup:
 	@./scripts/test-dev-cleanup.sh
 
@@ -1119,6 +1169,12 @@ test-scheduled-report:
 ## would never reach the cases that matter.
 test-renovate-liveness:
 	@./scripts/check-renovate-liveness.test.sh
+
+## test-main-health-pace — prove the pacer starts main-health when a run is due and
+## holds off when one is not. On main it answers only for the pushes that happen,
+## so a pacer that never starts looks the same as a quiet day.
+test-main-health-pace:
+	@./scripts/main-health-pace.test.sh
 
 ## test-ci-verdict — prove the single required check still refuses to read a
 ## skipped job as a passing one on the merge queue. GitHub counts a skipped
@@ -1183,13 +1239,17 @@ check-host-ports:
 ci-doc-parity:
 	@./scripts/check-ci-doc-parity.sh
 
-## make-target-parity — every backend target `make help` advertises resolves
-## from the repo root, which is what the help text tells a reader (and a CI
-## step) it does. The root delegation list is hand-maintained, so a new backend
-## target is one edit away from being advertised and unreachable at once — how
-## the scheduled govulncheck lane came to report red daily without ever running.
+## make-target-parity — every backend target `make help-all` advertises runs
+## from the repo root, a typo fails there, and `make help` prints. The root
+## forwards through one pattern rule, and a forwarded name added to the root
+## .PHONY list turns into a silent no-op that exits 0.
 make-target-parity:
 	@./scripts/check-make-target-parity.sh
+
+## test-make-target-parity — the gate's own test: the shipped Makefiles pass and
+## each planted forwarding mistake fails.
+test-make-target-parity:
+	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — oasdiff severity gate on backend/api/crm.yaml vs
 ## origin/main: a breaking change (removed op, narrowed type…) fails; additive
@@ -1279,6 +1339,19 @@ fe-file-length:
 test-budget:
 	@./scripts/check-test-budget.sh $(LOG)
 
+## test-input-census — every cached unit-test package that reads a file outside
+## its module also reads that file's tree digest, or a replayed pass outlives an
+## edit to it. Judged on a real run, since such paths are mostly built at run
+## time; a failing test does not decide it. CI's backend-lint job and
+## cache-warm both run it.
+test-input-census:
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
+	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
+	fi; \
+	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.
 test-test-budget:
@@ -1313,7 +1386,7 @@ comment-density:
 ## comments improving. A run that measures under 10,000 files fails, because a
 ## wrong path would otherwise report a pass. Re-pin with `make comment-stats-pin`
 ## in the change that lowers a number.
-COMMENT_STATS_PATHS := backend extensions fixtures desktop frontend tools
+COMMENT_STATS_PATHS := backend extensions fixtures frontend tools
 comment-stats: test-craft-pin
 	@"$$(./scripts/craft-pin.sh)" stats --min-files 10000 \
 		--baseline scripts/comment-stats-baseline.json $(COMMENT_STATS_PATHS)
@@ -1358,18 +1431,6 @@ test-e2e-llm-check:
 test-dev-postgres-container:
 	@./scripts/test-dev-postgres-container.sh
 
-## changelog-sections — Keep a Changelog: one section per change type per
-## release. Three `### Changed` sections shipped under [Unreleased], each
-## appended by an author who had no signal the others existed.
-changelog-sections:
-	@./scripts/check-changelog-sections.sh
-
-## test-changelog-sections — prove that gate fires on each duplicate shape and
-## stays silent on the lookalikes: the same type under two RELEASES, a heading
-## above the first release, and a file it can read nothing out of.
-test-changelog-sections:
-	@./scripts/test-check-changelog-sections.sh
-
 ## test-release-version-stamped — prove the release bake refuses to publish a set
 ## that carries no release version. An empty or "dev" VERSION builds and pushes
 ## perfectly well and ships a fleet whose mixed-release guard is inert, which
@@ -1387,24 +1448,25 @@ test-release-version-stamped:
 test-closing-declaration:
 	@./scripts/check-closing-declaration.test.sh
 
-## test-release-patch-base — prove a release patch is cut from what was last
-## PUBLISHED, not from this push's previous tip. The two agree only while every
-## lane publishes, and a cancelled or failed one drops its commit's files from
-## every patch a consumer will ever apply — silently, and identically to a
-## correct run from the publishing side. The case that matters walks the
-## sequence that made it a defect: publish, skip, publish.
+## docs-describing — list the explanation and handbook pages whose describes
+## line names code this branch changes. Each one goes in the pull request body
+## as `- <page>: still true` or `- <page>: updated`; docs-describing.yml asks.
+docs-describing:
+	@base="$$(git merge-base origin/main HEAD)" && \
+	DOCS_DESCRIBING_CHANGED="$$( { git diff --name-only "$$base"; git ls-files --others --exclude-standard; } | sort -u)" \
+	./scripts/check-docs-describing.sh
+
+## test-docs-describing — prove the docs-describing check asks about a page whose
+## code changed, and accepts only an answer it can read.
+test-docs-describing:
+	@./scripts/check-docs-describing.test.sh
+
+## test-release-patch-base — prove the patch base reader the release workflow
+## calls accepts only a checked record from the release CLI: a base, or the
+## first-release mark. Every other record fails before a patch is cut. It feeds
+## the reader fixed records; it runs neither the workflow nor the CLI.
 test-release-patch-base:
 	@./scripts/release-patch-base.test.sh
-
-## test-published-tag — prove the tag that base is read from only ever moves
-## FORWARD. The move is a job outside the publish concurrency group, so two
-## releases in flight are serialized at the publish and not at the tag: an older
-## one's move landing last would point the tag backward, and every later patch
-## would then be cut from a base ahead of what consumers actually have. The case
-## that matters records an older release after a newer one already recorded
-## itself.
-test-published-tag:
-	@./scripts/publish-released-tag.test.sh
 
 ## test-release-tag-version — the release tag reader's own test: what the
 ## grammar accepts, and what shelf each accepted tag lands on. The reader has
@@ -1419,6 +1481,18 @@ test-release-tag-version:
 test-release-license-stamped:
 	@./scripts/release-license-stamped.test.sh
 
+## test-release-notes — the release notes builder's own test: which merge
+## subjects a release lists, in which section, and what the size budget cuts.
+## Its one caller is a tag push, like the tag reader's.
+test-release-notes:
+	@./scripts/release-notes.test.sh
+
+## test-release-bundle — the server bundle packer's own test: what each Linux
+## tarball holds (programs, VERSION, a web.conf off the api's port), and the
+## missing platform or program it refuses. Its one caller is a tag push.
+test-release-bundle:
+	@./scripts/release-bundle.test.sh
+
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
 ## in core CODE — Go AND SQL — only in the jurisdiction seam
@@ -1431,8 +1505,8 @@ no-jurisdiction:
 	@./scripts/check-no-jurisdiction.sh
 
 ## test-no-jurisdiction — the jurisdiction gate's own test. It is a SEPARATE
-## target like every other gate-plus-test pair here (migration-versions,
-## changelog-sections) so the fan-out runs them side by side and a reader can
+## target like every other gate-plus-test pair here (migration-versions)
+## so the fan-out runs them side by side and a reader can
 ## see from the list that this gate is tested.
 test-no-jurisdiction:
 	@./scripts/check-no-jurisdiction.test.sh
@@ -1465,6 +1539,12 @@ check-ext-migrations:
 check-extension-modules:
 	@./scripts/check-extension-modules.sh
 
+## go-work-sum — go.work.sum is what `make install` leaves behind. A stale one is
+## rewritten on a fresh checkout's first install, which dirties every submodule
+## consumer that requires this tree to stay unmodified.
+go-work-sum:
+	@./scripts/check-go-work-sum.sh
+
 ## pkg-freeze — published-surface freeze gate (ADR-0120 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF
 ## in CI; locally the extensions integration branch, else origin/main).
@@ -1481,114 +1561,6 @@ pkg-freeze:
 hooks:
 	git config core.hooksPath .githooks
 	@echo "installed: core.hooksPath=.githooks (pre-commit runs gofmt + the license-header gate)"
-
-# --- Desktop build (macOS arm64) ---
-# The self-contained folder a non-technical user runs with no Docker: a
-# custom Postgres+pgvector, the event bus, the three process roles, the SPA,
-# and the launcher that supervises them. Output lands in build/desktop/
-# (ignored). Why it needs its own Postgres, and the update contract the folder
-# layout encodes: docs/explanation/desktop-distribution.md.
-#
-# These targets declare themselves HERE rather than joining the big .PHONY list
-# at the top. make accumulates .PHONY, so the effect is identical — and the
-# shared line is a single line every branch appends to, which makes it conflict
-# on every rebase. A section that declares its own targets beside them cannot
-# collide with a section that does the same.
-.PHONY: desktop desktop-deps desktop-postgres desktop-valkey desktop-app desktop-dist desktop-rebuild desktop-clean
-DESKTOP_STAGE := build/desktop/.stage
-
-## desktop — build the whole desktop folder (build/desktop/margince/).
-## Reuses an already-built Postgres and bus; use desktop-rebuild to force them.
-##
-## Sequential recipe, not a prerequisite list: prerequisites express dependency,
-## and under `make -j` make is free to run independent ones at once — so
-## desktop-dist would start assembling a tree the app stage had not finished
-## staging, and fail intermittently for a reason nothing in the output names.
-## The edges cannot be declared on the stage targets themselves either, because
-## each is documented as doing JUST its own step (`make desktop-dist` assembles
-## and verifies; it does not rebuild the app).
-desktop:
-	@$(MAKE) desktop-deps
-	@$(MAKE) desktop-app
-	@$(MAKE) desktop-dist
-
-## desktop-deps — build Postgres+pgvector and the bus ONLY if they are missing.
-## Compiling Postgres takes ~5 minutes and changes only when its pinned version
-## does, so a routine rebuild of the app must not pay for it.
-desktop-deps:
-	@test -x $(DESKTOP_STAGE)/pgsql/bin/postgres || $(MAKE) desktop-postgres
-	@test -x $(DESKTOP_STAGE)/valkey/valkey-server || $(MAKE) desktop-valkey
-
-## desktop-postgres — build the relocatable Postgres 16 + pgvector + contrib (~5 min).
-## Rerun after bumping the pinned versions in the script.
-desktop-postgres:
-	@bash desktop/build/build-postgres.sh
-
-## desktop-valkey — build the event bus (Valkey, BSD-licensed drop-in for Redis).
-desktop-valkey:
-	@bash desktop/build/build-valkey.sh
-
-## desktop-app — build api/worker/migrate (through build/composition/, so the
-## enabled extensions/ units are linked), the frontend, and the launcher.
-desktop-app:
-	@bash desktop/build/build-app.sh
-
-## desktop-dist — assemble build/desktop/margince/ and verify its signatures.
-desktop-dist:
-	@bash desktop/build/build-dist.sh
-
-## desktop-rebuild — force a full rebuild including Postgres and the bus.
-## Sequential for the same reason as `desktop` above.
-desktop-rebuild:
-	@$(MAKE) desktop-postgres
-	@$(MAKE) desktop-valkey
-	@$(MAKE) desktop-app
-	@$(MAKE) desktop-dist
-
-## desktop-clean — remove all desktop build output (build/desktop/).
-desktop-clean:
-	@rm -rf build/desktop
-	@echo "desktop-clean: removed build/desktop"
-
-# --- Desktop build (Windows x64) ---
-# The same folder for Windows, built by desktop/build/*.ps1. These targets MUST
-# RUN ON WINDOWS: pgvector has no build system other than nmake against MSVC,
-# and Redis needs the MSYS2 toolchain, so neither half cross-builds from macOS.
-# A Windows host is not required to have GNU make either, which is why
-# desktop/build/build-windows.ps1 is the primary entry point and these are the
-# convenience wrapper. Output lands in build/desktop/margince-windows/.
-#
-# Declared here for the same reason the macOS block declares its own: make
-# accumulates .PHONY, and a section that owns its targets cannot conflict with
-# every other branch appending to one shared line.
-.PHONY: desktop-win desktop-win-rebuild desktop-win-postgres desktop-win-bus desktop-win-app desktop-win-dist
-PWSH := pwsh
-DESKTOP_WIN := desktop/build
-
-## desktop-win — build the whole Windows folder (build/desktop/margince-windows/).
-## Reuses an already-staged Postgres and bus; use desktop-win-rebuild to force them.
-desktop-win:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-windows.ps1
-
-## desktop-win-rebuild — force a full rebuild including Postgres and the bus.
-desktop-win-rebuild:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-windows.ps1 -Force
-
-## desktop-win-postgres — stage PostgreSQL 16 + build pgvector against it (needs MSVC).
-desktop-win-postgres:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-postgres.ps1
-
-## desktop-win-bus — build the event bus (Redis 7.2, the last BSD-3 line; needs MSYS2).
-desktop-win-bus:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-bus.ps1
-
-## desktop-win-app — build api/worker/migrate + frontend + launcher for Windows.
-desktop-win-app:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-app.ps1
-
-## desktop-win-dist — assemble build/desktop/margince-windows/ and verify it runs standalone.
-desktop-win-dist:
-	@$(PWSH) -NoProfile -File $(DESKTOP_WIN)/build-dist.ps1
 
 # --- SBOM (software bill of materials, issue #331) ---
 # Repo-wide (backend + frontend + extensions), so it lives at the root, not
@@ -1684,8 +1656,10 @@ sbom:
 sbom-supplement:
 	@test -f $(SBOM_DIR)/margince.cdx.json || { echo "FAIL: no SBOM found — run 'make sbom' first"; exit 1; }
 	@set -e; cdx=$(SBOM_DIR)/margince.cdx.json; s22=$(SBOM_DIR)/margince.spdx221.json; \
+	  s30=$(SBOM_DIR)/margince.spdx300.json; \
 	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .components |= map(((.purl // "") | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then .licenses = [{"license": {"id": $$map[$$k]}}] else . end)' "$$cdx" > "$$cdx.tmp" && mv "$$cdx.tmp" "$$cdx"; \
-	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22"
+	  jq --slurpfile m sbom-schemas/license-supplement.json '$$m[0] as $$map | .packages |= map((([.externalRefs[]? | select(.referenceType == "purl") | .referenceLocator] | (.[0] // "")) | sub("@[^@]*$$"; "")) as $$k | if $$map[$$k] != null then (.licenseConcluded = $$map[$$k] | .licenseDeclared = $$map[$$k]) else . end)' "$$s22" > "$$s22.tmp" && mv "$$s22.tmp" "$$s22" ; \
+	  jq --slurpfile m sbom-schemas/license-supplement.json -f sbom-schemas/spdx30-licenses.jq "$$s30" > "$$s30.tmp" && mv "$$s30.tmp" "$$s30"
 
 ## sbom-normalize — reconcile syft's three writers so all three SBOMs describe one
 ## tree, the invariant the constellation dist gate enforces. syft scans the export
@@ -1725,6 +1699,10 @@ sbom-parity:
 	  else \
 	    echo "FAIL: SBOM file sets differ — see the diff above"; exit 1; \
 	  fi
+	@# The packages and their licenses, which the file sets above say nothing
+	@# about: a supplement that reached two of the three documents drifted
+	@# under this target for as long as it compared files alone.
+	@bash scripts/sbom-license-parity.sh $(SBOM_DIR)
 
 ## sbom-census — the license gate's coverage check: every package a committed
 ## pnpm-lock.yaml resolves must be an npm component of the CycloneDX SBOM,
@@ -1763,7 +1741,7 @@ sbom-validate:
 	@$(CYCLONEDX) validate --input-file $(SBOM_DIR)/margince.cdx.json --fail-on-errors
 	@echo "validating $(SBOM_DIR)/margince.spdx221.json (SPDX 2.2.1, pyspdxtools)"
 	@$(PYSPDX) bash -c '\
-	  pip install --require-hashes --quiet --no-cache-dir --disable-pip-version-check -r $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
+	  bash scripts/install-sbom-python.sh $(SBOM_SCHEMA_DIR)/spdx-tools-requirements.txt \
 	    || { echo "FAIL: could not install the pinned SPDX validator"; exit 1; }; \
 	  if ! pyspdxtools -i $(SBOM_DIR)/margince.spdx221.json; then echo "FAIL: $(SBOM_DIR)/margince.spdx221.json is not a valid SPDX 2.2.1 document"; exit 1; fi'
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"
@@ -1811,6 +1789,24 @@ sbom-sign: $(SBOM_SIGN_DEPS)
 	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f"; \
 	done
 	@echo "signed: $(addsuffix .cosign.bundle,$(SBOM_FILES))"
+
+## release-sign — keyless-sign a tagged release: each image by digest, and the
+## SHA256SUMS that covers every file on the release page, so one signature
+## vouches for the bundles and the SBOMs. CI only: it needs the OIDC token, and
+## release-tag.yml runs it after the build. The images are signed with the
+## registry login the job wrote under $(COSIGN_HOME), because cosign runs in its
+## own container and sees no other.
+RELEASE_DIR ?= dist/release
+COSIGN_REGISTRY ?= $(DOCKER_SBOM) -u $(shell id -u):$(shell id -g) -e HOME=/src/$(COSIGN_HOME) -e DOCKER_CONFIG=/src/$(COSIGN_HOME)/docker -e SIGSTORE_ID_TOKEN -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN $(COSIGN_IMAGE)
+release-sign:
+	@test -s $(RELEASE_DIR)/SHA256SUMS || { echo "FAIL: no $(RELEASE_DIR)/SHA256SUMS; the release build writes it"; exit 1; }
+	@test -s $(RELEASE_DIR)/images.txt || { echo "FAIL: no $(RELEASE_DIR)/images.txt; the release build writes it"; exit 1; }
+	@mkdir -p $(COSIGN_HOME)
+	$(COSIGN) sign-blob --yes --bundle $(RELEASE_DIR)/SHA256SUMS.cosign.bundle $(RELEASE_DIR)/SHA256SUMS
+	@set -e; while read -r ref; do \
+	  echo "signing $$ref"; \
+	  $(COSIGN_REGISTRY) sign --yes "$$ref"; \
+	done < $(RELEASE_DIR)/images.txt
 
 ## sbom-check — license gate: grant fails if any bundled dependency uses a non-allowed license (.grant.yaml).
 sbom-check:

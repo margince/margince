@@ -15,11 +15,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -57,28 +59,77 @@ import (
 // the order: a rule that demoted every reply would have refused a prospect who
 // wrote first and got answered, which is the most ordinary shape there is.
 func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
+	if normalizeEmail(email) == "" {
 		return false, nil
 	}
+	// Every spelling a stored counterparty_email may hold: the column keeps the
+	// address as its header spelled it, so one address has two stored forms.
+	return correspondedBeforeTx(ctx, tx, storedSpellings(email), time.Time{})
+}
+
+// correspondedBeforeTx is correspondencePositiveTx over several spellings of
+// one address, counting only outbound mail strictly before `before`. A zero
+// `before` counts all of it.
+func correspondedBeforeTx(ctx context.Context, tx pgx.Tx, addresses []string, before time.Time) (bool, error) {
+	var bound *time.Time
+	if !before.IsZero() {
+		bound = &before
+	}
+	// The LIMIT 2 is why this is safe on a high-volume address: one outbound
+	// versus more than one is the only distinction writesTo draws.
+	sent, err := outboundToTx(ctx, tx, `
+		  AND ($2::timestamptz IS NULL OR occurred_at < $2) -- occurred_at raw: mail sent before the bound, an instant
+		 LIMIT 2`, addresses, bound)
+	if err != nil {
+		return false, err
+	}
+	return writesTo(sent), nil
+}
+
+// correspondingSinceTx returns the instant after which correspondedBeforeTx
+// answers yes for these spellings, or false when it never does. Only the
+// two earliest outbound mails decide it, read in the order they were sent.
+func correspondingSinceTx(ctx context.Context, tx pgx.Tx, addresses []string) (time.Time, bool, error) {
+	sent, err := outboundToTx(ctx, tx, ` ORDER BY occurred_at LIMIT 2`, addresses)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	for n := 1; n <= len(sent); n++ {
+		if writesTo(sent[:n]) {
+			return sent[n-1].at, true, nil
+		}
+	}
+	return time.Time{}, false, nil
+}
+
+// outboundMail is one attested outbound mail as the correspondence test reads
+// it: when it was sent, and what its sender wrote.
+type outboundMail struct {
+	at    time.Time
+	words string
+}
+
+// outboundToTx reads the attested outbound mail to any of these spellings.
+// tail continues the `WHERE` clause with arguments from $2 on.
+func outboundToTx(ctx context.Context, tx pgx.Tx, tail string, addresses []string, args ...any) ([]outboundMail, error) {
 	// Body and subject travel SEPARATELY because only the body carries a quoted
 	// thread. Concatenating them first would leave no way to strip the sender's
 	// own words out of our reply.
 	rows, err := tx.Query(ctx, `
-		SELECT COALESCE(subject, ''), COALESCE(body, '')
+		SELECT occurred_at, COALESCE(subject, ''), COALESCE(body, '')
 		  FROM activity
-		 WHERE counterparty_email = $1 AND counterparty_outbound_attested
-		   AND `+auth.ActivityAvailableClause("activity")+`
-		 LIMIT 2`, normalized)
+		 WHERE counterparty_email = ANY($1::text[]) AND counterparty_outbound_attested
+		   AND `+auth.ActivityAvailableClause("activity")+tail, append([]any{addresses}, args...)...)
 	if err != nil {
-		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
 	defer rows.Close()
-	var texts []string
+	var sent []outboundMail
 	for rows.Next() {
+		var mail outboundMail
 		var subject, body string
-		if err := rows.Scan(&subject, &body); err != nil {
-			return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		if err := rows.Scan(&mail.at, &subject, &body); err != nil {
+			return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 		}
 		// Only what the SENDER of this outbound message wrote. A stored body
 		// keeps the quoted thread beneath the reply (mailmap caps it at 8000
@@ -86,23 +137,27 @@ func correspondencePositiveTx(ctx context.Context, tx pgx.Tx, email string) (boo
 		// in their own mail would otherwise put those words into our reply the
 		// moment somebody hits Reply — and talk themselves out of the CRM by
 		// feeding this gate a decline the mailbox owner never wrote.
-		texts = append(texts, subject+" "+textlang.NewTextOnly(body))
+		mail.words = subject + " " + textlang.NewTextOnly(body)
+		sent = append(sent, mail)
 	}
 	if err := rows.Err(); err != nil {
-		return false, fmt.Errorf("capture: correspondence-positive gate: %w", err)
+		return nil, fmt.Errorf("capture: correspondence-positive gate: %w", err)
 	}
-	switch len(texts) {
+	return sent, nil
+}
+
+// writesTo reports whether these outbound mails make the workspace one that
+// writes to their address. A single mail that declines does not.
+func writesTo(sent []outboundMail) bool {
+	switch len(sent) {
 	case 0:
-		return false, nil
+		return false
 	case 1:
-		return !isDecliningReply(texts[0]), nil
+		return !isDecliningReply(sent[0].words)
 	default:
-		// The LIMIT 2 above is why this is safe on a high-volume address: the
-		// query stops at the only distinction that matters, one outbound versus
-		// more than one, and never loads a whole correspondence to count it.
 		// Two or more outbound messages are a correspondence whatever any one of
 		// them says; nobody declines twice and keeps writing.
-		return true, nil
+		return true
 	}
 }
 
@@ -146,7 +201,7 @@ func (s *PendingStore) CorrespondsWith(ctx context.Context, tx pgx.Tx, email str
 	// never see it — so the two serialize on one key rather than on luck. The
 	// writers take it in capture's sink and in the activities store.
 	if err := storekit.LockWriteIdentity(ctx, tx,
-		correspondence.LockEntity, correspondence.LockIdentity(email)); err != nil {
+		correspondence.LockEntity, mailidentity.CorrespondenceLockKey(email)); err != nil {
 		return false, err
 	}
 	return correspondencePositiveTx(ctx, tx, email)
@@ -206,27 +261,40 @@ func wroteBackTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 		return false, nil
 	}
 	var replied bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1
-		    FROM activity inbound
-		   WHERE inbound.counterparty_email = $1
-		     AND inbound.direction = 'inbound'
-		     AND NOT inbound.bulk_mail_attested
-		     AND inbound.thread_key <> ''
-		     AND `+auth.ActivityAvailableClause("inbound")+`
-		     AND EXISTS (
-		           SELECT 1
-		             FROM activity ours
-		            WHERE ours.thread_key = inbound.thread_key
-		              AND ours.counterparty_email = $1
-		              AND ours.kind = inbound.kind
-		              AND ours.counterparty_outbound_attested
-		              AND `+auth.ActivityAvailableClause("ours")+`))`,
-		normalized).Scan(&replied); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+wroteBack(), normalized).Scan(&replied); err != nil {
 		return false, fmt.Errorf("capture: reading whether the address wrote back: %w", err)
 	}
 	return replied, nil
+}
+
+// wroteBack is wroteBackTx's question, with $1 the folded address.
+func wroteBack() string {
+	return `EXISTS (
+		SELECT 1 FROM activity inbound
+		 WHERE ` + answeredExchange("inbound", "$1") + `
+		   AND ` + auth.ActivityAvailableClause("inbound") + `)`
+}
+
+// answeredExchange is an exchange. The message at alias is an inbound, non-bulk
+// reply from address. Its thread holds attested mail of the same kind that
+// this workspace sent to the same address. wroteBack and the publication
+// evidence (addressAnswered) both start from it; only the second adds the
+// holds. address is a placeholder or column, never request text.
+//
+// Held by: TestBothExchangeQuestionsAreBuiltFromOnePredicate
+// (backend/internal/modules/capture/answeredexchange_test.go)
+func answeredExchange(alias, address string) string {
+	return fmt.Sprintf(`%[1]s.counterparty_email = %[2]s
+		   AND %[1]s.direction = 'inbound'
+		   AND NOT %[1]s.bulk_mail_attested
+		   AND %[1]s.thread_key <> ''
+		   AND EXISTS (
+		         SELECT 1 FROM activity ours
+		          WHERE ours.thread_key = %[1]s.thread_key
+		            AND ours.counterparty_email = %[2]s
+		            AND ours.kind = %[1]s.kind
+		            AND ours.counterparty_outbound_attested
+		            AND `, alias, address) + auth.ActivityAvailableClause("ours") + `)`
 }
 
 // wroteOnTwoThreadsTx reports whether this workspace has written to the address
@@ -243,8 +311,7 @@ func wroteBackTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 // else does), so a blank key is a record from somewhere else, and guessing it
 // apart from its neighbours would invent a second conversation.
 func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	normalized := normalizeEmail(email)
-	if normalized == "" {
+	if normalizeEmail(email) == "" {
 		return false, nil
 	}
 	var threads int
@@ -252,11 +319,11 @@ func wroteOnTwoThreadsTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 		SELECT count(*) FROM (
 		  SELECT DISTINCT thread_key
 		    FROM activity
-		   WHERE counterparty_email = $1
+		   WHERE counterparty_email = ANY($1::text[])
 		     AND counterparty_outbound_attested
 		     AND thread_key <> ''
 		     AND `+auth.ActivityAvailableClause("activity")+`
-		   LIMIT 2) AS distinct_threads`, normalized).Scan(&threads); err != nil {
+		   LIMIT 2) AS distinct_threads`, storedSpellings(email)).Scan(&threads); err != nil {
 		return false, fmt.Errorf("capture: counting the threads this workspace wrote on: %w", err)
 	}
 	return threads >= 2, nil
@@ -322,12 +389,13 @@ func metInPersonTx(
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) > 0, count(*) FILTER (WHERE a.id <> $3) > 0
 		    FROM activity a
-		    JOIN activity_participant p ON p.activity_id = a.id
+		    JOIN activity_participant p ON p.activity_id = a.id AND NOT p.past_party_cap
 		   WHERE a.kind = 'meeting'
+ AND `+meetingPartyEligibleSQL("a", "p")+`
 		     AND a.archived_at IS NULL
 		     AND a.captured_by LIKE 'connector:%'
 		     AND (a.meeting_status IS NULL OR a.meeting_status NOT IN ('no_show', 'canceled'))
-		     AND a.occurred_at <= now() + $2::interval
+		     AND a.occurred_at <= now() + $2::interval -- occurred_at raw: a 90-day diary horizon; a day entry near its far edge decides nothing
 		     AND (
 		          -- The BARE invitation address, bounded by the address's own
 		          -- tenure. An activity_participant row records what the
@@ -340,7 +408,7 @@ func metInPersonTx(
 		          -- are the new holder's, meetings before it are not anybody's
 		          -- to inherit. An address that never changed hands has no such
 		          -- row and is unaffected.
-		          (lower(p.address) = $1 AND a.occurred_at > COALESCE(
+		          (lower(p.address) = $1 AND a.occurred_at > COALESCE( -- occurred_at raw: after the address changed hands
 		             (SELECT max(pe.archived_at) FROM contact_email pe
 		               WHERE lower(pe.email) = $1 AND pe.archived_at IS NOT NULL),
 		             '-infinity'::timestamptz))

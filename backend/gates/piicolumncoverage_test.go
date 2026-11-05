@@ -58,10 +58,25 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// A voice sample's closed vocabularies (kind, origin, register, source), the
+	// builder's version, the owner's actor stamp, and the sent-mail:<activity id>
+	// key. None carries what the mail said; the erasure clears the text, the
+	// label that holds its subject line, and the hash of the text.
+	"voice_corpus_source": {"kind", "origin", "register", "source", "extractor_version", "captured_by", "source_ref"},
+	// Provider is connector provenance from the installed adapter, never subject-authored text.
+	"capture_party_source": {"provider"},
+	// The hash identifies the promise; the version and actor identify its reader.
+	// Retained work needs this provenance after the summary and quotation are cleared.
+	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},
 	// Metric/type enums, generated UUID grouping and opaque context/contribution hashes contain no subject prose.
 	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
+	// A revision's selection is the report's public structure: metrics, period,
+	// scope and card shapes. Filters stay in question_bindings, which the
+	// redaction rewrites, so no subject value reaches the selection. The metric
+	// versions map metric ids to definition version numbers.
+	"report_definition_revision": {"selection", "metric_versions"},
 	// The evidence ledger's closed vocabularies: source kind, author side,
 	// commitment and writer. The snippet is the column that quotes the subject,
 	// and the redaction clears it.
@@ -82,6 +97,8 @@ var erasureColumnBaseline = map[string][]string{
 		// requires the erasure to keep.
 		"execution_authority",
 		"legacy_verdict",
+		// A key from the workspace's own purpose list, never subject text.
+		"purpose_key",
 		"mode",
 		"phase",
 		"reason_code",
@@ -139,9 +156,14 @@ var erasureColumnBaseline = map[string][]string{
 		// subject wrote nor anything written about them — it is a reading OF the
 		// text, and the text itself is cleared on its own terms.
 		"owed_verdict",
+		// instant or day: how to read occurred_at, which the redaction keeps.
+		"occurred_precision",
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
+		// One of four words, enforced by a CHECK: how much of
+		// the mail's text the parser decoded. Nothing the subject wrote.
+		"body_completeness",
 		// A digest of the product's own classifier prompt, naming which rules
 		// reached the verdict beside it. Nothing the subject wrote and nothing
 		// derived from what they wrote — the same string on every row one build
@@ -157,6 +179,10 @@ var erasureColumnBaseline = map[string][]string{
 		"direction",
 		"kind",
 		"meeting_status",
+		// How a call ended: a closed list (reached, voicemail, ...) about
+		// the call, never words the subject wrote, so erasure has nothing to
+		// clear here.
+		"call_outcome",
 		// Who caused the row to exist — human, agent, or the product's own
 		// remediation work. A closed enum about the WRITER, never about the
 		// subject, so erasure has nothing to clear here.
@@ -165,6 +191,7 @@ var erasureColumnBaseline = map[string][]string{
 		"source_system",
 	},
 	"activity_participant": {
+		"response",
 		"role",
 	},
 	"approval": {
@@ -178,6 +205,11 @@ var erasureColumnBaseline = map[string][]string{
 		// outside this gate's subject.
 		"target_entity_type",
 		"co_target_entity_type",
+		// Which staging rule named the decider: one of four fixed words.
+		"requested_decider_source",
+		// A hex hash of the facts a kind's approval was staged on; it holds
+		// nothing a subject wrote and cannot be read back into them.
+		"context_digest",
 	},
 	"comms_outbound": {
 		// The delivery's half of the decision vocabulary, read by the worker
@@ -203,6 +235,9 @@ var erasureColumnBaseline = map[string][]string{
 		// which put the address back on the one table whose whole point is that
 		// the address copy is scrubbed.
 		"from_name",
+		// The installation's own relay address a controller delivery was
+		// staged with, the same on every one of them.
+		"from_address",
 		// The storage key of the workspace's own logo the markup embeds. It
 		// names the workspace's mark and is the same on every delivery.
 		"inline_logo_key",
@@ -217,6 +252,14 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
+		// A code of the closed industry list, which names no one.
+		"industry",
+		// A key of the closed lead_origin list, which names no one. The note
+		// beside it, origin_detail, is free text and the redaction clears it.
+		"origin",
+		// The seat that accepted the lead for its partner, spelled as
+		// captured_by is: a colleague, never the lead's subject.
+		"partner_accepted_by",
 		"source",
 		"source_id",
 		"source_system",
@@ -225,6 +268,10 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"contact": {
 		"captured_by",
+		// A closed vocabulary and the principal that chose it; neither holds
+		// anything a subject wrote.
+		"relationship_mark",
+		"relationship_mark_set_by",
 		"source",
 		// Which system the record was imported FROM — a system's name, not the
 		// subject's, drawn from the closed set an importer writes. What the
@@ -232,6 +279,10 @@ var erasureColumnBaseline = map[string][]string{
 		// it, source_author_name, which is a human's name. `lead` carries the
 		// same column and the same reading, a few entries up.
 		"source_system",
+		// The id the other system issued for this record: an opaque key that
+		// system chose, kept so a re-import finds the row. `lead` carries the
+		// same column and the same reading.
+		"source_id",
 		"visibility",
 		// Why an owner-scoped contact is its owner's: one of five values the
 		// column's CHECK closes, none of them anything about the subject.

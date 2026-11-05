@@ -1,0 +1,508 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
+import { LeadBoard, scoreTone } from "./leadpresentation";
+
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
+vi.mock("../../lib/router", async (actual) => ({
+  ...(await actual<typeof import("../../lib/router")>()),
+  navigate,
+}));
+
+type Lead = components["schemas"]["Lead"];
+
+function renderBoard(ui: ReactNode) {
+  return renderBoardWithClient(ui).rendered;
+}
+
+// The same render, recording what the board invalidated. A drag is a WRITE,
+// and what it makes stale is not visible on the board itself — which is
+// exactly how the defect below survived: the board refetched, looked right,
+// and the detail page behind it did not.
+function renderBoardWithClient(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const invalidated: unknown[] = [];
+  const real = client.invalidateQueries.bind(client);
+  client.invalidateQueries = ((filters?: { queryKey?: unknown }) => {
+    invalidated.push(filters?.queryKey);
+    return real(filters as Parameters<typeof real>[0]);
+  }) as typeof client.invalidateQueries;
+  const rendered = render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return { rendered, invalidated };
+}
+
+/** Drops the card for `leadId` on the column whose stage is `stage`. */
+function dropOn(stage: string, leadId: string) {
+  const column = document.querySelector(`.board-col[data-stage="${stage}"]`);
+  if (column === null) {
+    throw new Error(`no board column for stage ${stage}`);
+  }
+  fireEvent.drop(column, {
+    dataTransfer: { getData: () => leadId },
+  });
+}
+
+const lead: Lead = {
+  id: "00000000-0000-0000-0000-000000000001",
+  full_name: "Jonas Petersen",
+  company_name: "Nordwind Logistik",
+  title: "VP Sales",
+  status: "new",
+  score: 72,
+  score_reason: "manual:employees",
+  sla_state: "breached",
+  source: "webform",
+  origin: "website",
+  origin_label: "Website",
+  next_task_subject: "Call about the pilot",
+  open_task_count: 1,
+  captured_by: "human:user-1",
+  version: 1,
+  created_at: "2026-08-18T08:00:00Z",
+  updated_at: "2026-08-18T08:00:00Z",
+};
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  navigate.mockReset();
+});
+
+describe("lead work-board presentation", () => {
+  it("uses neutral styling for a low score", () => {
+    expect(scoreTone(0)).toBeUndefined();
+  });
+
+  it("uses lead-specific counts and shows work context on every card", () => {
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    // A column of one says it in the singular.
+    expect(screen.getByText("1 lead")).toBeTruthy();
+    expect(screen.queryByText("1 leads")).toBeNull();
+    expect(screen.getAllByText("0 leads").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/deals/i)).toBeNull();
+    expect(screen.getByText("Overdue")).toBeTruthy();
+    expect(screen.getByText("Website")).toBeTruthy();
+    expect(
+      screen.getByText(/Call about the pilot · 1 open task$/),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /next page/i })).toBeNull();
+  });
+
+  it("opens a linked company from the card under its own name, without opening the lead", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (request: Request) =>
+          companyNamesAnswer(request.url, { "c-7": "Nordwind Holding SE" }) ??
+          jsonOk({ rows: [] }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[{ ...lead, company_id: "c-7" }]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    const link = await screen.findByRole("link", {
+      name: "Nordwind Holding SE",
+    });
+    expect(link.getAttribute("href")).toContain("c-7");
+    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
+    fireEvent.click(link);
+    expect(navigate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Jonas Petersen" }));
+    expect(navigate).toHaveBeenCalledWith({ screen: "leads", id: lead.id });
+  });
+
+  it("opens the lead from the keyboard, with Enter and with Space", async () => {
+    const user = userEvent.setup();
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    const opener = screen.getByRole("button", { name: "Jonas Petersen" });
+    opener.focus();
+    await user.keyboard("{Enter}");
+    expect(navigate).toHaveBeenCalledTimes(1);
+    await user.keyboard(" ");
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenLastCalledWith({ screen: "leads", id: lead.id });
+  });
+
+  it("drags the lead from anywhere on the card, the company link included", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async (request: Request) =>
+          companyNamesAnswer(request.url, { "c-7": "Nordwind Holding SE" }) ??
+          jsonOk({ rows: [] }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[{ ...lead, company_id: "c-7" }]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    const link = await screen.findByRole("link", {
+      name: "Nordwind Holding SE",
+    });
+    const card = document.querySelector(`.deal-card[data-lead="${lead.id}"]`);
+    if (card === null) throw new Error("the board drew no card for the lead");
+    for (const from of [card, link]) {
+      const setData = vi.fn();
+      fireEvent.dragStart(from, { dataTransfer: { setData } });
+      expect(setData).toHaveBeenCalledWith("text/plain", lead.id);
+    }
+  });
+
+  it("names an unlinked lead's company as plain text", () => {
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+    expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[
+          {
+            ...lead,
+            origin: null,
+            origin_label: null,
+            source: "mirror:csv:pipedrive-export:lead:l-7",
+          },
+        ]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("Not set")).toBeTruthy();
+    expect(screen.queryByText(/mirror|pipedrive|imported/i)).toBeNull();
+  });
+
+  // Dragging a card WRITES the lead. The board reads `["leads", query]`; the
+  // detail page reads the sibling `["lead", id]`, and prefix invalidation does
+  // not walk sideways — so naming only the list left an open detail page
+  // showing the status the reader had just dragged away from.
+  it("invalidates the MOVED lead, not only the list it was dragged on", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ...lead, status: "contacted" }), {
+            status: 200,
+            headers: { "content-type": "application/json", etag: '"2"' },
+          }),
+      ),
+    );
+    const { invalidated } = renderBoardWithClient(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    dropOn("contacted", lead.id);
+
+    await waitFor(() => expect(invalidated).toContainEqual(["lead", lead.id]));
+    expect(invalidated).toContainEqual(["leads"]);
+    expect(invalidated).toContainEqual(["record-history", "lead", lead.id]);
+  });
+
+  // The refused arm owes the same. A move the server turned down means the row
+  // on screen may no longer be what the server holds, which is precisely when
+  // a stale detail page misleads — and the original code did name the list
+  // here, so the omission was of the detail page specifically, not of
+  // invalidation as an idea.
+  it("invalidates the moved lead when the move is REFUSED too", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              code: "version_skew",
+              detail: "Somebody else moved this lead.",
+            }),
+            { status: 409, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    const { invalidated } = renderBoardWithClient(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    dropOn("contacted", lead.id);
+
+    await waitFor(() => expect(invalidated).toContainEqual(["lead", lead.id]));
+    expect(await screen.findByText(en["common.versionSkew"])).toBeTruthy();
+  });
+  // The two terminal columns exist, are folded, and state a figure the board's
+  // own page cannot see.
+  //
+  // A promoted or disqualified lead is ARCHIVED, and `rows` never contains
+  // one — so a column counting its cards would read 0 however many leads had
+  // passed through. The figure comes from the leads-by-status report, which is
+  // the only lead read that counts archived rows.
+  it("folds the terminal columns and counts them from the report, not the page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonOk({
+          rows: [
+            { status: "promoted", leads: 12 },
+            { status: "disqualified", leads: 7 },
+          ],
+        }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    const qualified = await waitFor(() => {
+      const column = document.querySelector(
+        '.board-col[data-stage="promoted"]',
+      );
+      if (column === null) throw new Error("no Qualified column");
+      if (!column.textContent?.includes("12")) {
+        throw new Error(`Qualified reads ${column.textContent}`);
+      }
+      return column;
+    });
+    // Folded, and holding no cards: `rows` has none to give it.
+    expect(qualified.classList.contains("board-col-collapsed")).toBe(true);
+    expect(qualified.querySelector(".deal-card")).toBeNull();
+
+    const disqualified = document.querySelector(
+      '.board-col[data-stage="disqualified"]',
+    );
+    expect(disqualified?.textContent).toContain("7");
+    expect(disqualified?.classList.contains("board-col-collapsed")).toBe(true);
+  });
+
+  // Dropping on a terminal column opens its DIALOG and sends no PATCH.
+  //
+  // Neither transition is a status change: qualifying promotes the lead into a
+  // contact and maybe a deal, disqualifying records a reason. The server refuses
+  // a bare status PATCH into either, so a board that sent one would put a
+  // refusal in front of a reader who did the ordinary thing.
+  it("opens the qualify dialog on a drop, instead of patching the status", async () => {
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/reports/")) {
+          return jsonOk({ rows: [{ status: "promoted", leads: 3 }] });
+        }
+        return jsonOk({ data: [] });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    dropOn("promoted", lead.id);
+
+    // The dialog is up.
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+    // And nothing was PATCHed. A status PATCH here is the defect: the board
+    // would be asking the server for a transition it refuses by design.
+    for (const call of fetchMock.mock.calls) {
+      // The METHOD LIVES ON THE REQUEST, not on init. openapi-fetch builds a
+      // Request and passes only a signal in init, so reading init.method here
+      // always saw undefined and this assertion passed however the board
+      // behaved — it guarded nothing.
+      const [input, init] = call as [
+        RequestInfo | URL,
+        RequestInit | undefined,
+      ];
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      expect(method.toUpperCase()).not.toBe("PATCH");
+    }
+  });
+
+  // A collapsed column is still a DROP TARGET, which is the whole reason it
+  // keeps its height. Folded to a strip it would still have to take a card.
+  it("keeps the folded column droppable", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonOk({ rows: [{ status: "disqualified", leads: 1 }] }),
+      ),
+    );
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[lead]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    await waitFor(() => {
+      const column = document.querySelector(
+        '.board-col[data-stage="disqualified"]',
+      );
+      if (column === null) throw new Error("no Disqualified column");
+      if (!column.classList.contains("board-col-collapsed")) {
+        throw new Error("Disqualified is not folded");
+      }
+    });
+    dropOn("disqualified", lead.id);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+  });
+
+  // An archived lead does not drag, and is not acted on if one arrives anyway.
+  //
+  // Every destination refuses it: UpdateLead reads live rows only, so a drop on
+  // an open stage would 409, and the other terminal dialog's own mutation
+  // rejects it too. Offering the gesture and then failing it is worse than not
+  // offering it — so the card carries no drag handlers AND the drop decision
+  // refuses a terminal source, because a drop carries an id through a
+  // dataTransfer string that no card had to originate.
+  it("neither drags a terminal lead nor acts on one that is dropped", async () => {
+    const terminal: Lead = { ...lead, status: "disqualified" };
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, _init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes("/reports/")) {
+          return jsonOk({ rows: [{ status: "disqualified", leads: 1 }] });
+        }
+        return jsonOk({
+          data: [terminal],
+          page: { has_more: false, next_cursor: null },
+        });
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderBoard(
+      <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
+        rows={[]}
+        onMoved={() => undefined}
+        hasMore={false}
+        loadMore={() => undefined}
+      />,
+    );
+
+    const head = await waitFor(() => {
+      const found = document.querySelector(
+        '.board-col[data-stage="disqualified"] .board-col-head',
+      );
+      if (found === null) throw new Error("no Disqualified head");
+      return found;
+    });
+    fireEvent.click(head);
+
+    const card = await waitFor(() => {
+      const found = document.querySelector(
+        `.deal-card[data-lead="${terminal.id}"]`,
+      );
+      if (found === null) throw new Error("the opened column drew no card");
+      return found;
+    });
+    expect(card.getAttribute("draggable")).not.toBe("true");
+
+    // And a drop naming it anyway moves nothing: no PATCH, no dialog.
+    dropOn("contacted", terminal.id);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    for (const call of fetchMock.mock.calls) {
+      // The METHOD LIVES ON THE REQUEST, not on init. openapi-fetch builds a
+      // Request and passes only a signal in init, so reading init.method here
+      // always saw undefined and this assertion passed however the board
+      // behaved — it guarded nothing.
+      const [input, init] = call as [
+        RequestInfo | URL,
+        RequestInit | undefined,
+      ];
+      const method =
+        input instanceof Request ? input.method : (init?.method ?? "GET");
+      expect(method.toUpperCase()).not.toBe("PATCH");
+    }
+  });
+});
+
+// jsonOk is one JSON 200, spelled once — every stub in the new tests answers
+// the same shape and a second spelling is a second thing to keep in step.
+function jsonOk(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+}

@@ -9,10 +9,15 @@
 // would eventually disagree with this one about what the ask's state means.
 
 import { useState } from "react";
+import { EntityRef } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { useT } from "../../i18n";
+import { formatDate } from "../../format/format";
+import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
+import { useLocale, useT } from "../../i18n";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { IntroDecisionDrawer } from "./introdecision";
 import {
   type IntroRequest,
@@ -64,6 +69,28 @@ export function IntroAsksPanel({
   const complete = useCompleteIntroRequest(contactId);
   const cancel = useCancelIntroRequest(contactId);
 
+  // A failed read keeps the card, because no card at all reads as no asks.
+  if (asks.isError) {
+    return (
+      <Panel title={t("contact.intro.asksTitle")}>
+        <PanelBody>
+          <ErrorLine
+            actions={
+              <Button
+                variant="link"
+                pending={asks.isFetching}
+                onClick={() => asks.refetch()}
+              >
+                {t("common.retry")}
+              </Button>
+            }
+          >
+            {t("contact.intro.asksFailed")}
+          </ErrorLine>
+        </PanelBody>
+      </Panel>
+    );
+  }
   const rows = asks.data ?? [];
   if (rows.length === 0) {
     return null;
@@ -140,7 +167,7 @@ function AskRow({
   // press on each before the first answer returns cannot fire both at once.
   return (
     <li>
-      <Badge>{t(STATUS_LABEL[ask.status])}</Badge> {ask.internal_reason}
+      <Badge>{t(STATUS_LABEL[ask.status])}</Badge> <AskSummary ask={ask} />
       {mine && ask.status === "requested" ? (
         <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
       ) : null}
@@ -177,6 +204,42 @@ function AskRow({
   );
 }
 
+function AskSummary({ ask }: Readonly<{ ask: IntroRequest }>) {
+  return ask.origin === "recorded" ? (
+    <RecordedLine ask={ask} />
+  ) : (
+    ask.internal_reason
+  );
+}
+
+// An introduction recorded after the fact has no reason to show. It says who
+// introduced whom, when and how. It also marks that nobody asked for it here.
+function RecordedLine({ ask }: Readonly<{ ask: IntroRequest }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const channel = ask.recorded_channel;
+  return (
+    <>
+      <EntityRef kind="user" id={ask.introducer_user_id} />{" "}
+      {t("contact.intro.recordedIntroduced")}{" "}
+      <EntityRef kind="user" id={ask.requester_user_id} />
+      {ask.introduced_at
+        ? `, ${formatDate(ask.introduced_at, locale, zone)}`
+        : ""}
+      {channel ? ` · ${t(CHANNEL_LABEL[channel])}` : ""}{" "}
+      <Badge>{t("contact.intro.recordedBadge")}</Badge>
+    </>
+  );
+}
+
+const CHANNEL_LABEL = {
+  in_person: "contact.intro.channelInPerson",
+  email: "contact.intro.channelEmail",
+  call: "contact.intro.channelCall",
+  other: "contact.intro.channelOther",
+} as const;
+
 // Which outcome the row offers, if any — the handshake, which either party
 // may report because either may be the one who sees it happen, or the
 // name-drop, which is the requester's own act and so only they may report.
@@ -202,18 +265,3 @@ function outcomeFor(
 // Every status the contract admits has words here, so a state the server can
 // send cannot reach a reader as a raw enum. A name-drop and an introduction
 // read differently on purpose: they are different events.
-const STATUS_LABEL: Record<
-  IntroRequest["status"],
-  Parameters<ReturnType<typeof useT>>[0]
-> = {
-  requested: "contact.intro.stateRequested",
-  accepted: "contact.intro.stateAccepted",
-  name_drop_approved: "contact.intro.stateNameDropApproved",
-  suggest_other: "contact.intro.stateSuggestOther",
-  declined: "contact.intro.stateDeclined",
-  introduced: "contact.intro.stateIntroduced",
-  name_dropped: "contact.intro.stateNameDropped",
-  replied: "contact.intro.stateReplied",
-  expired: "contact.intro.stateExpired",
-  cancelled: "contact.intro.stateCancelled",
-};

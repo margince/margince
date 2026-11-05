@@ -1,0 +1,211 @@
+import { useId, useState } from "react";
+import { Button, Radio } from "../../../design-system/atoms";
+import { STAGE_TITLE_ID } from "../../../design-system/onboarding-stage";
+import { useT } from "../../../i18n";
+import type { ConversationQuestion } from "./conversation-machine";
+
+// A decision as the whole work surface: the question is the headline, the
+// candidates are cards, and the answer is chosen THEN confirmed — a decision
+// this size deserves a look at one's own choice before it goes on record.
+// The dismiss escape stays subordinate: dashed, at the list's foot, and it
+// resolves immediately because "I will set it myself" needs no second look.
+
+/**
+ * What the read knows about one candidate, beyond its name. Every part is
+ * optional because the read prints only what the page printed: a candidate
+ * with no registry number renders none rather than an empty slot, and one
+ * with no verbatim quote offers no evidence toggle at all.
+ */
+export type CandidateFacts = Readonly<{
+  /** The reading-size line under the name (a registered address). */
+  meta?: string;
+  /** The identifier line under the name (registry / VAT number). */
+  identifier?: string;
+  /** The verbatim quote and the page it was read from. */
+  snippet?: string;
+  source?: string;
+}>;
+
+export function DecisionScene({
+  question,
+  onAnswer,
+  onDismiss,
+  factsOf,
+}: Readonly<{
+  question: ConversationQuestion;
+  onAnswer: (questionId: string, value: string) => void;
+  onDismiss?: (questionId: string) => void;
+  /** The read's own detail for a candidate, keyed by the option value. */
+  factsOf?: (value: string) => CandidateFacts | null;
+}>) {
+  const t = useT();
+  const group = useId();
+  const [picked, setPicked] = useState("");
+  return (
+    <div className="ob-scene ob-decision">
+      {/* No heading of its own: the room's title IS this question, and the
+          count of candidates is the first thing that title says. A scene that
+          repeated both put the same sentence on screen twice and pushed the
+          cards a screenful further down. */}
+      <div
+        role="radiogroup"
+        aria-labelledby={STAGE_TITLE_ID}
+        className="ob-decision-options"
+      >
+        {/* What each answer puts on the record, stated BEFORE it is given.
+            The choices used to be names with evidence behind them, which asks
+            somebody to decide without showing the consequence: two candidates
+            can read almost identically and write very different strings into a
+            profile every later screen quotes. Only rendered where the question
+            actually writes something. See `QuestionOption.writes`. */}
+        {question.options.map((option) => (
+          <CandidateCard
+            key={option.value}
+            group={group}
+            value={option.value}
+            writes={option.writes}
+            label={
+              option.labelKey ? t(option.labelKey, option.params) : option.label
+            }
+            detail={
+              option.detailKey ? t(option.detailKey, option.params) : undefined
+            }
+            facts={factsOf?.(option.value) ?? null}
+            picked={picked === option.value}
+            onPick={() => setPicked(option.value)}
+          />
+        ))}
+        {question.dismissLabelKey !== undefined && onDismiss !== undefined && (
+          <button
+            type="button"
+            className="ob-decision-skip"
+            onClick={() => onDismiss(question.id)}
+          >
+            <span aria-hidden>+</span> {t(question.dismissLabelKey)}
+          </button>
+        )}
+      </div>
+      <div className="ob-decision-acts">
+        <Button
+          variant="primary"
+          disabled={picked === ""}
+          onClick={() => {
+            // The attribute keeps the pointer out; this keeps a programmatic
+            // click from answering with a choice nobody made.
+            if (picked !== "") {
+              onAnswer(question.id, picked);
+            }
+          }}
+        >
+          {t("ob.conv.scene.continue")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// One candidate: the choice row (disc, name, the read's detail lines) with
+// the evidence toggle on the right, and the quote itself revealed under it.
+// The evidence toggle sits OUTSIDE the tick's own label, because a control
+// inside a label also activates the radio the label is for.
+function CandidateCard({
+  group,
+  value,
+  writes,
+  label,
+  detail,
+  facts,
+  picked,
+  onPick,
+}: Readonly<{
+  group: string;
+  value: string;
+  /** The exact string this answer records, where it records one. */
+  writes?: string;
+  label: string;
+  detail?: string;
+  facts: CandidateFacts | null;
+  picked: boolean;
+  onPick: () => void;
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const panel = useId();
+  const hasEvidence = facts?.snippet !== undefined && facts.snippet !== "";
+  return (
+    <div className={`ob-decision-card${picked ? " is-picked" : ""}`}>
+      <div className="ob-decision-row">
+        <Radio
+          name={group}
+          value={value}
+          checked={picked}
+          onChange={onPick}
+          label={
+            <span className="ob-decision-body">
+              <b>{label}</b>
+              {facts?.meta !== undefined && facts.meta !== "" && (
+                <span>{facts.meta}</span>
+              )}
+              {((facts?.identifier !== undefined && facts.identifier !== "") ||
+                (detail !== undefined && detail !== "")) && (
+                <small className="t-caption">
+                  {facts?.identifier || detail}
+                </small>
+              )}
+            </span>
+          }
+        />
+        {writes !== undefined && writes !== "" && (
+          // The consequence, beside the choice rather than after it. Two
+          // candidates can read almost identically and put very different
+          // strings on a record every later screen quotes, so the string itself
+          // is shown, verbatim, before the answer is given.
+          <span className="ob-decision-writes">
+            <span>{t("ob.conv.scene.writes")}</span>
+            <code>{writes}</code>
+          </span>
+        )}
+        {hasEvidence && (
+          <button
+            type="button"
+            className="ob-decision-toggle"
+            aria-expanded={open}
+            aria-controls={panel}
+            onClick={() => setOpen((prev) => !prev)}
+          >
+            {t(open ? "ob.conv.scene.hideEvidence" : "ob.conv.scene.evidence")}
+          </button>
+        )}
+      </div>
+      {hasEvidence && open && (
+        <div className="ob-decision-proof" id={panel}>
+          <p className="ob-decision-proof-head t-eyebrow">
+            {t("ob.conv.scene.whyThis")}
+          </p>
+          <blockquote>{facts?.snippet}</blockquote>
+          {facts?.source !== undefined && facts.source !== "" && (
+            <>
+              <p className="ob-decision-proof-head t-eyebrow">
+                {t("ob.conv.scene.foundOn")}
+              </p>
+              <span className="ob-decision-path t-caption">
+                {pathOf(facts.source)}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The page a quote was read from, as the path chip the reader recognises.
+// A malformed URL degrades to the raw string rather than throwing.
+function pathOf(source: string): string {
+  try {
+    const url = new URL(source);
+    return `${url.host}${url.pathname}`;
+  } catch {
+    return source;
+  }
+}

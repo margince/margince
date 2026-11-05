@@ -17,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -122,7 +121,7 @@ func (d documentSeam) MaxBytes(context.Context) int64 {
 	if d.srv != nil {
 		return d.srv.uploadLimits.Attachment
 	}
-	return deployconfig.Config{}.EffectiveUploads().Attachment
+	return DefaultUploadLimits().Attachment
 }
 
 // attachedDocument is the wire row without what an agent has no use for; the
@@ -137,7 +136,10 @@ func attachedDocument(att crmcontracts.Attachment) agents.AttachedDocument {
 		Checksum:     orZero(att.Checksum),
 		CapturedBy:   orZero(att.CapturedBy),
 		CreatedAt:    att.CreatedAt,
+		Category:     string(orZero(att.Category)),
+		URL:          orZero(att.Url),
 		ContractID:   (*ids.UUID)(att.ContractId),
+		Origin:       documentOrigin(att.Origin),
 	}
 }
 
@@ -147,4 +149,25 @@ func orZero[T any](field *T) T {
 		return zero
 	}
 	return *field
+}
+
+// documentOrigin is the wire origin in the tool's flat shape.
+func documentOrigin(origin *crmcontracts.AttachmentOrigin) *agents.DocumentOrigin {
+	if origin == nil {
+		return nil
+	}
+	out := &agents.DocumentOrigin{
+		ActivityID: ids.UUID(origin.ActivityId),
+		Kind:       origin.Kind,
+		Subject:    orZero(origin.Subject),
+		OccurredAt: origin.OccurredAt,
+	}
+	if origin.OccurredPrecision == crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		out.OccurredPrecision = string(origin.OccurredPrecision)
+	}
+	if origin.Sender != nil {
+		out.SenderName = orZero(origin.Sender.DisplayName)
+		out.SenderAddress = origin.Sender.Address
+	}
+	return out
 }

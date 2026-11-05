@@ -29,10 +29,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -154,7 +156,10 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 	// commits; the object-store fetches, and then a transaction per card, all
 	// happen after. A check here — before the writes, however close to them —
 	// would leave exactly the gap it looks like it closes.
-	store := contacts.NewStore(InstallationDB(w.pool))
+	// The verdict reader decides whether a human's correction still stands
+	// against a mailed card, as it does for an uploaded one.
+	store := newContactsStore(InstallationDB(w.pool)).
+		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(w.pool)))
 	results, err := store.ImportVCardsFromMessage(actorCtx, entries, args.Activity)
 	if err != nil {
 		return err
@@ -190,9 +195,15 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// exists to prevent, and it would drift silently — a workspace that has never
 	// touched the switch would follow one answer for signatures and another for
 	// cards.
-	defaultRaw, err := capture.SignatureEnrich.DefaultJSON()
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the declared mail-reading default: %w", err)
+	declared, hasDefault := capture.SignatureEnrich.Spec().Default.Get()
+	if !hasDefault {
+		return nil, errors.New("compose: capture.signature_enrich declares no default for a mailbox that never chose")
+	}
+	// A boot value wins over the row, as it does for the signature pass. NULL
+	// when no boot source sets it, so the COALESCE reads on to the row.
+	var booted *bool
+	if v, ok := config.BootVal(loadedConfig(), capture.SignatureEnrich); ok {
+		booted = &v
 	}
 	var grantedBy ids.UUID
 	var provider string
@@ -212,7 +223,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// DISCONNECTED without archiving is a grant they took back. The signature
 	// pass reads the same connection for its own switch, and this path writes
 	// contacts rather than filling a field, so it may not be the looser of the two.
-	err = w.pool.QueryRow(ctx, `
+	err := w.pool.QueryRow(ctx, `
 		SELECT cc.user_id, cc.provider
 		  FROM activity a
 		  JOIN capture_connection cc
@@ -234,10 +245,10 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 		   -- DECIDES whether to build a principal — it cannot use the one it
 		   -- gates. capture.SignatureEnrich is declared MachineryApplied for
 		   -- exactly this: candidate selection reads it per mailbox, in SQL.
-		   AND COALESCE(cc.signature_enrich_enabled, (
-		       SELECT coalesce((SELECT value FROM setting WHERE key = $2),
-		                       $3::jsonb)::boolean))`,
-		args.Activity, capture.SignatureEnrich.Key(), string(defaultRaw)).Scan(&grantedBy, &provider)
+		   AND COALESCE(cc.signature_enrich_enabled, $4::boolean,
+		                (SELECT value FROM setting WHERE key = $2)::boolean,
+		                $3::boolean)`,
+		args.Activity, capture.SignatureEnrich.Key(), declared, booted).Scan(&grantedBy, &provider)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("no live mailbox grants this message's import: %w", apperrors.ErrNotFound)

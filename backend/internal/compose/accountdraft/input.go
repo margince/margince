@@ -17,8 +17,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -163,9 +166,11 @@ type ActIn struct {
 	Kind    string `json:"kind"`
 	Subject string `json:"subject,omitempty"`
 	At      string `json:"at"`
-	// Inbound says who spoke. A draft that answers what THEY said reads very
-	// differently from one that follows up on what we said, and the direction
-	// is the only thing that tells them apart.
+	// Inbound says the other side wrote it, from the row's voice where that
+	// names a side and from the transport otherwise.
+	//
+	// A draft answering them reads differently from one following up on us.
+	// Read as the wrong side's word, a row writes the wrong message.
 	Inbound bool `json:"inbound"`
 	// Snippet is the opening of what this message says.
 	//
@@ -221,7 +226,7 @@ func FromView(
 		Commitment: foldCommitment(view),
 	}
 	if view.Company.Industry != nil {
-		in.Industry = *view.Company.Industry
+		in.Industry = contacts.IndustryWords(string(*view.Company.Industry), req.Envelope.Lang())
 	}
 	if view.Company.Description != nil {
 		in.Description = *view.Company.Description
@@ -309,39 +314,6 @@ func recipientOf(contact crmcontracts.Company360Contact) RecipientIn {
 
 const rfc3339 = "2006-01-02T15:04:05Z"
 
-// firstName is what the greeting uses. Everything before the first space, or
-// the whole name when it has none — a one-word name is a name, not a mistake.
-func firstName(full string) string {
-	if cut, _, found := strings.Cut(strings.TrimSpace(full), " "); found && cut != "" {
-		return cut
-	}
-	return strings.TrimSpace(full)
-}
-
-// lastName is what follows the FIRST space in the display name, which is the
-// surname for a two-word name and not always one otherwise: "Dr. Anne Weiss"
-// yields "Anne Weiss", a given name inside the result. No rule over display
-// names gets every name right, and this input carries no name columns to
-// consult — the 360 contact it folds has a full name and nothing else.
-//
-// A single-word name yields empty, which sends the greeting to the familiar
-// form rather than to a formal one addressed to a first name.
-//
-// contactdraft.surname answers the same question from a Contact record and
-// prefers that record's own last_name, which is the better answer where it
-// exists. The two are not shared because their INPUTS differ, not their
-// answer: unifying them would mean passing a Contact into a fold that has none.
-//
-// The prompt rule is what protects the output where this is wrong: a formal
-// greeting is used only where a surname was given, and the model is told never
-// to complete or invent one.
-func lastName(full string) string {
-	if _, rest, found := strings.Cut(strings.TrimSpace(full), " "); found {
-		return strings.TrimSpace(rest)
-	}
-	return ""
-}
-
 // foldCommitment takes the soonest open task. `next_steps.data` arrives
 // ordered overdue → due → undated, so the head is it and this makes no
 // ordering decision of its own.
@@ -364,12 +336,12 @@ func foldCommitment(view crmcontracts.Company360) *TaskIn {
 // first touch. That is the conservative end of the axis and the right answer
 // here: a caller who cannot see the history has no basis for a draft that
 // refers to it.
-func ConversationState(view crmcontracts.Company360, now time.Time) convstate.State {
+func ConversationState(view crmcontracts.Company360, now time.Time, zone *time.Location) convstate.State {
 	var activities []crmcontracts.Activity
 	if view.Activities != nil {
 		activities = view.Activities.Data
 	}
-	return draftcore.ClassifyWithLogged(now, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
+	return draftcore.ClassifyWithLogged(now, zone, instant(view.LastInboundAt), instant(view.LastOutboundAt), activities)
 }
 
 // instant reads one optional stamp, treating an absent one as never.
@@ -380,31 +352,14 @@ func instant(at *time.Time) time.Time {
 	return *at
 }
 
-// CorrespondenceText is what this account has been written to and from,
-// newest first, for detecting the language its correspondence runs in.
-//
-// Subjects and bodies both, because a subject line rarely carries enough words
-// to clear the detector's floor on its own. This drafter opens a new
-// conversation, so the text is evidence about the ACCOUNT's language rather
-// than about a thread being answered — a German account gets a German first
-// touch even though nothing is being replied to.
-func CorrespondenceText(view crmcontracts.Company360) string {
+// languageEvidence is what the account's correspondence language is read from.
+// This drafter opens a new conversation, so the text is evidence about the
+// ACCOUNT's language rather than about a thread being answered.
+func languageEvidence(view crmcontracts.Company360, now time.Time, zone *time.Location) []string {
 	if view.Activities == nil {
-		return ""
+		return nil
 	}
-	var text strings.Builder
-	for i, act := range view.Activities.Data {
-		if i == draftInputActivities {
-			break
-		}
-		if act.Subject != nil {
-			text.WriteString(*act.Subject + "\n")
-		}
-		if act.Body != nil {
-			text.WriteString(*act.Body + "\n\n")
-		}
-	}
-	return text.String()
+	return draftcore.LanguageEvidenceOf(view.Activities.Data, now, zone)
 }
 
 func foldRecent(view crmcontracts.Company360) []ActIn {
@@ -419,8 +374,8 @@ func foldRecent(view crmcontracts.Company360) []ActIn {
 		item := ActIn{
 			ID:      act.Id.String(),
 			Kind:    string(act.Kind),
-			At:      act.OccurredAt.UTC().Format(rfc3339),
-			Inbound: act.Direction != nil && *act.Direction == crmcontracts.ActivityDirectionInbound,
+			At:      activitywhen.Text(act),
+			Inbound: theirWord(act),
 		}
 		if act.Subject != nil {
 			item.Subject = *act.Subject
@@ -492,6 +447,19 @@ func (in Input) String() string {
 // method exists so the shared check reads the same shape from every surface.
 func (Input) Threaded() bool { return false }
 
+// ThreadSubject is false: this surface opens a conversation.
+func (Input) ThreadSubject() (string, bool) { return "", false }
+
 // Booked is false: an account draft folds no meeting, so nothing here can
 // support a day. A surface that gains one answers from it rather than here.
 func (Input) Booked() bool { return false }
+
+// theirWord says the other side wrote this row, which is what the draft reads
+// to tell answering them from following up on ourselves.
+//
+// A row whose author names no side reads the transport. One that neither can
+// answer is not theirs, so a draft that cannot tell treats it as context.
+func theirWord(act crmcontracts.Activity) bool {
+	ours, known := activities.WroteItOurSide(act)
+	return known && !ours
+}

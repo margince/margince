@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -57,6 +58,10 @@ type entry struct {
 	// Evidence is the audit row's own account of why: the policy behind a
 	// retention action, the page a fact was read from.
 	Evidence []byte
+	// BatchID is the bulk change the row belongs to. A data task stamps its
+	// step's run id here (datatask.Execute), so two runs of one correction are
+	// told apart. Nil on rows no batch wrote.
+	BatchID *ids.UUID
 }
 
 // recordLabels is the name column of each placed record, the expression the
@@ -154,22 +159,22 @@ func doneSince(
 //
 // The count is installation-wide, not the reader's own, so it is a diagnostic: a
 // seat without ai_diagnostics read gets no entry and the query never runs.
-func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, error) {
+func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, bool, error) {
 	notShown := map[string]int{}
 	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return notShown, nil
+			return notShown, true, nil
 		}
-		return nil, err
+		return nil, false, err
 	}
 	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
-	return notShown, nil
+	return notShown, false, nil
 }
 
 // armOf names the read an entry came from, which is what a cut is recorded
@@ -219,7 +224,7 @@ func doneForType(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sinceAt := arg(since)
-	actors := arg(machineActors())
+	actors := arg(MachineActors())
 	actionsAt := arg(actions)
 	typeAt := arg(entityType)
 	scope, err := auth.ScopeClauseFor(ctx, table, "e", arg)
@@ -249,13 +254,13 @@ func doneForType(
 	// off a request — the one form of identifier interpolation this tree allows.
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
-		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
-		       NULLIF(%s, ''), a.evidence
+		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
+		       NULLIF(%s, ''), a.evidence, a.batch_id
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, recordLabels[entityType], table, where, arg(readCap))
+		 LIMIT $%d`, groupingImages, recordLabels[entityType], table, where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
 }
 
@@ -286,7 +291,7 @@ func doneForActivities(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	sinceAt := arg(since)
-	actors := arg(machineActors())
+	actors := arg(MachineActors())
 	actionsAt := arg(actions)
 	content, err := auth.ActivityContentClause(ctx, "e", arg)
 	if err != nil {
@@ -303,14 +308,72 @@ func doneForActivities(
 	}
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
-		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
-		       NULLIF(%s, ''), a.evidence
+		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
+		       NULLIF(%s, ''), a.evidence, a.batch_id
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, recordLabels[typeActivity], where, arg(readCap))
+		 LIMIT $%d`, groupingImages, recordLabels[typeActivity], where, arg(readCap))
 	return scanEntries(ctx, tx, query, args)
+}
+
+// groupingImages reads an arm row's images only where describe needs them to
+// group the row. An update's sentence names the fields it moved. An arm reads
+// up to readCap rows, and every other row's images are shown on at most one
+// line, so they wait for loadDeferredImages.
+var groupingImages = fmt.Sprintf(
+	`CASE WHEN a.action = '%[1]s' THEN a.before END, CASE WHEN a.action = '%[1]s' THEN a.after END`, actionUpdate)
+
+// imagesDeferred reports a row whose images groupingImages left unread and a
+// line still shows. A bulk verb's images are never shown.
+func imagesDeferred(action string) bool {
+	return action != actionUpdate && !bulkActions[action]
+}
+
+// loadDeferredImages reads the images the arms left unread, for the entries a
+// page shows, in one statement, inside the snapshot the scoped arms read. The
+// erasure boundary and a message's hold are asked again all the same. A row it
+// no longer serves keeps no images.
+func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
+	at := map[ids.UUID]int{}
+	for i, e := range entries {
+		if imagesDeferred(e.Action) {
+			at[e.ID] = i
+		}
+	}
+	if len(at) == 0 {
+		return nil
+	}
+	auditIDs := make([]ids.UUID, 0, len(at))
+	for id := range at {
+		auditIDs = append(auditIDs, id)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// A message put on hold since the arm read it is withheld like an erased one.
+	query := fmt.Sprintf(`
+		SELECT entry.id, entry.before, entry.after
+		  FROM audit_log entry
+		 WHERE entry.id = ANY($%d) AND %s
+		   AND (entry.entity_type <> 'activity' OR EXISTS (
+		         SELECT 1 FROM activity held WHERE held.id = entry.entity_id AND %s))`,
+		arg(auditIDs), privacy.UnscrubbedImageSQL("entry", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs()))),
+		auth.ActivityAvailableClause("held"))
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("read the shown machine actions' images: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		var before, after []byte
+		if err := rows.Scan(&id, &before, &after); err != nil {
+			return fmt.Errorf("read a shown machine action's images: %w", err)
+		}
+		entries[at[id]].Before, entries[at[id]].After = before, after
+	}
+	return rows.Err()
 }
 
 // scanEntries reads the rows one arm returned.
@@ -326,7 +389,7 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 		if err := rows.Scan(
 			&e.ID, &e.OccurredAt, &e.Action, &e.EntityType, &e.EntityID,
 			&e.ActorType, &e.ActorID, &e.OnBehalfOf, &e.Before, &e.After,
-			&e.Label, &e.Evidence,
+			&e.Label, &e.Evidence, &e.BatchID,
 		); err != nil {
 			return nil, fmt.Errorf("read a machine action: %w", err)
 		}
@@ -351,17 +414,17 @@ func admittedActions(bulk bool) []string {
 	return actions
 }
 
-// unplaceableSince counts the admitted machine actions this build cannot place.
+// unplaceableSince counts admitted CRM changes this build cannot place.
+// Infrastructure and configuration audits are not unfinished business work;
+// their writers share the maintenance classification with this read.
 //
 // An entity type absent from every arm above has no table this read knows to
 // join, and therefore no gate it can apply. Such a row is never served — serving
 // it would serve a row this read cannot prove the reader may see — but it is
 // COUNTED, so the receipt can say how much it is not showing.
 //
-// Creates and archives are not counted. They are admitted for the records this
-// page places, and every other kind of row — a tag, a list membership, an
-// approval — is created and archived by the machinery as bookkeeping, which is
-// not a change to a record the reader keeps.
+// Creation and archive of unplaced types include bookkeeping, so only the
+// ordinary change actions contribute to this diagnostic.
 //
 // The count is deliberately coarse: it does not name the types, because naming
 // them would say which kinds of record exist and were touched, which is a fact
@@ -380,8 +443,9 @@ func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, err
 		 WHERE a.occurred_at >= $%d
 		   AND a.actor_type = ANY($%d)
 		   AND a.action = ANY($%d)
+		   AND NOT (a.entity_type = ANY($%d))
 		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(machineActors()), arg(admittedActions(false)), arg(placed))
+		arg(since), arg(MachineActors()), arg(admittedActions(false)), arg(auditentity.MaintenanceTypes()), arg(placed))
 	var count int
 	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)

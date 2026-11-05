@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -35,7 +36,9 @@ import (
 //
 // The vocabulary comes FIRST, so a collision resolves to it — see composeResources
 // for why the order is stated rather than incidental.
-func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.ResourceProvider, views *apps.Provider) []mcp.ResourceProvider {
+func mcpResourceProviders(
+	capabilities mcp.ResourceProvider, vocabulary mcp.ResourceProvider, db *database.DB, views *apps.Provider,
+) []mcp.ResourceProvider {
 	// The write vocabulary is unconditional where the query vocabulary is not:
 	// it is composed from the contract alone, so it has no pool to be missing
 	// and no deployment that can lack it. A record type this build can write is
@@ -75,7 +78,7 @@ func mcpResourceProviders(capabilities mcp.ResourceProvider, vocabulary mcp.Reso
 		agents.RecordFieldsResource{},
 		agents.NewReportVocabularyResource(reportToolCatalog()),
 		agents.NewReportBlocksResource(reportBlockGrammar()),
-		analyticsSchemaResource{},
+		analyticsSchemaResource{db: db},
 	}
 	// views is nil for a role that composes none — a worker, or an api whose
 	// connector gate is off. composeResources drops it, which is the same

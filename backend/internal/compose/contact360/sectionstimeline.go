@@ -21,9 +21,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // contactReachesActivity is the reachability predicate every contact-360 section
@@ -67,9 +69,8 @@ func activityScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityContentClause)
 }
 
-// activityDiscoverScope is the DISCOVER gate for the sections that disclose a
-// date and a direction and nothing else (last touch): a limited conversation
-// still counts as a touch, its content stays withheld.
+// activityDiscoverScope is the DISCOVER gate for the timeline rows: a limited
+// conversation still shows as a row, its content withheld.
 func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityDiscoverClause)
 }
@@ -104,7 +105,11 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID id
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, "", byRecency)
+	extra := ""
+	if opts.WrittenByHumanOnly {
+		extra = " AND " + relstrength.WrittenByHumanSQL("a")
+	}
+	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, extra, byRecency)
 	if err != nil {
 		return err
 	}
@@ -159,9 +164,9 @@ func (s *Service) nextStepsSection(ctx context.Context, tx pgx.Tx, contactID ids
 // section does when it runs out of room.
 type sectionOrder string
 
-const (
+var (
 	byRecency sectionOrder = "a.occurred_at DESC, a.id DESC"
-	byUrgency sectionOrder = "a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC"
+	byUrgency sectionOrder = sectionOrder(storekit.TaskDueSQL("a") + " ASC NULLS LAST, a.occurred_at ASC, a.id ASC")
 )
 
 // byUrgencyHumanFirst is byUrgency with work a colleague filed ahead of work
@@ -187,8 +192,7 @@ const (
 // expression: spelling the namespace inline to keep it constant is exactly the
 // second copy the helper exists to prevent.
 var byUrgencyHumanFirst = sectionOrder(
-	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " +
-		"a.due_at ASC NULLS LAST, a.occurred_at ASC, a.id ASC",
+	"(CASE WHEN " + activities.SystemMintedExpr("a") + " THEN 1 ELSE 0 END) ASC, " + string(byUrgency),
 )
 
 // sectionPage is the section's edge in the activities list's own cursor
@@ -213,18 +217,6 @@ func sectionPage(ctx context.Context, rows []crmcontracts.Activity, hasMore bool
 	return info, nil
 }
 
-// timelineProjection is the shared select list plus this page's one extra.
-//
-// A function rather than a literal in the query, so the composition is a thing
-// a test can hold: the shared list first and whole, then exactly one column
-// the scan knows to expect last. Read off the query string, a test would be
-// asserting against the WHERE clause and the ORDER BY as well.
-func timelineProjection(contentArm string) string {
-	return activities.ActivityProjection(contentArm) + `,
-		       EXISTS (SELECT 1 FROM activity_link fl
-		                WHERE fl.activity_id = a.id AND fl.contact_id = $%[1]d) AS filed_here`
-}
-
 // readActivities is the shared body of the timeline and next-step reads.
 //
 // What it selects is the activities module's projection, and what it adds is
@@ -234,39 +226,58 @@ func timelineProjection(contentArm string) string {
 // a row off /activities answers, because it is read by the same list and
 // folded by the same scan.
 func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, extra string, order sectionOrder) ([]crmcontracts.Activity, bool, error) {
+	forDraft := opts.WrittenByHumanOnly && order == byRecency
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
+	if order != byRecency {
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return nil, false, err
+		}
+		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
+	}
 	// DISCOVER-gated, like the activities list: a limited conversation on
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader
 	// cannot tell from silence.
-	scope, err := activityDiscoverScope(ctx, arg)
+	gate := activityDiscoverScope
+	if forDraft {
+		// A draft reads content, so a row withheld from this reader must leave
+		// before the cap rather than occupy a slot the draft then discards.
+		gate = activityScope
+		extra += " AND " + relstrength.HappenedByNowSQL("a", bind(arg(s.now().UTC())))
+	}
+	scope, err := gate(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
-	contentArm, err := auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, false, err
+	// A draft's rows passed the content gate, which holds the audience arm, so
+	// each is readable. Projecting the arm again would plan a second copy.
+	contentArm := "TRUE"
+	if !forDraft {
+		if contentArm, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, false, err
+		}
 	}
-	// The SELECT list is the activities module's, with this page's one extra
-	// column after it. Everything before the extra is scanned by the shared
-	// projection, so there is no list here to fall behind that one.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+timelineProjection(contentArm)+`
+	// The SELECT list and its scan are the activities module's, so there is no
+	// list here to fall behind that one.
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM activity a
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s %s
 		ORDER BY %s
 		LIMIT %d`,
-		contactPos, fmt.Sprintf(contactReachesActivity, bind(contactPos)),
-		scope, projectScope(opts, arg), extra, order, sectionCap+1), args...)
+		activities.ActivityProjection(contentArm), fmt.Sprintf(contactReachesActivity, bind(contactPos)),
+		scope, projectScope(opts, arg), extra, order, sectionCap+1)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, err
 	}
 	defer rows.Close()
 	out := make([]crmcontracts.Activity, 0, sectionCap)
 	for rows.Next() {
-		a, err := scanTimelineRow(rows, contactID)
+		a, err := activities.ScanActivityRow(rows)
 		if err != nil {
 			return nil, false, err
 		}
@@ -279,36 +290,18 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if hasMore {
 		out = out[:sectionCap]
 	}
-	// AFTER the cap, so the statement counts the rows this page returns rather
-	// than the extra one read to detect hasMore. Same reason the summary above
-	// is composed from the shared helper: a contact page whose mail showed no
-	// paperclip while the same rows off /activities showed one is the drift
-	// this twin exists to avoid.
-	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
+	// After the cap, so the statements count the rows this page returns rather
+	// than the extra one read to detect hasMore. The finish is the one
+	// /activities runs, so a row means the same on either page.
+	if err := activities.FinishActivityRows(ctx, tx, opts.activityColumns, out, s.now()); err != nil {
+		return nil, false, err
+	}
+	// A row reaches this page through a Cc or an attendance too, so each row
+	// says which part this contact had in it.
+	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
 		return nil, false, err
 	}
 	return out, hasMore, nil
-}
-
-// lastTouchSection reads the two directions separately. Folding them into
-// one "last touch" hides the only distinction a reader acts on: a contact
-// we mailed a fortnight ago with no reply and one who wrote to us this
-// morning have the same last-touch date and opposite meanings.
-//
-// The set reader over a set of one: this page and a queue row naming the same
-// contact are answered by the statement in lasttouch.go, under the same
-// scopes. The record read above already admitted the contact, so the set
-// reader's own row scope narrows nothing here.
-func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
-	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
-	if err != nil {
-		return err
-	}
-	touch := touched[contactID]
-	out.LastInboundAt = touch.InboundAt
-	out.LastOutboundAt = touch.OutboundAt
-	out.LastLiveInboundAt = touch.LiveInboundAt
-	return nil
 }
 
 // networkSection answers "who here knows them", warmest first — the
@@ -395,11 +388,12 @@ func (s *Service) sinceLastVisitSection(ctx context.Context, tx pgx.Tx, contactI
 	if err != nil {
 		return err
 	}
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg)), args...).
+		sincePos, fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg))
+	if err := tx.QueryRow(ctx, query, args...).
 		Scan(&view.NewActivities); err != nil {
 		return fmt.Errorf("count new activities: %w", err)
 	}

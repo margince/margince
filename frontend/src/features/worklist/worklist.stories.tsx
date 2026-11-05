@@ -119,6 +119,7 @@ export const AFullDay: Story = {
       ],
       queue: [
         {
+          occurred_precision: "instant",
           id: "waiting-1",
           band: "now",
           source: "customer_waiting",
@@ -148,6 +149,7 @@ export const AFullDay: Story = {
           actions: ["open"],
         },
         {
+          occurred_precision: "instant",
           id: "deal-1",
           band: "now",
           source: "deal_at_risk",
@@ -171,6 +173,7 @@ export const AFullDay: Story = {
           actions: ["open"],
         },
         {
+          occurred_precision: "instant",
           id: "task-1",
           band: "keep_momentum",
           source: "task",
@@ -190,6 +193,7 @@ export const AFullDay: Story = {
           },
         },
         {
+          occurred_precision: "instant",
           id: "approval-1",
           band: "review",
           source: "approval",
@@ -240,6 +244,7 @@ export const WorkDueLater: Story = {
       bands: [{ band: "now", shown: 4 }],
       queue: [
         {
+          occurred_precision: "instant",
           id: "overdue-1",
           band: "now",
           source: "task",
@@ -254,6 +259,7 @@ export const WorkDueLater: Story = {
           actions: ["complete"],
         },
         {
+          occurred_precision: "instant",
           id: "today-1",
           band: "now",
           source: "task",
@@ -268,6 +274,7 @@ export const WorkDueLater: Story = {
           actions: ["complete"],
         },
         {
+          occurred_precision: "instant",
           id: "tomorrow-1",
           band: "now",
           source: "task",
@@ -282,6 +289,7 @@ export const WorkDueLater: Story = {
           actions: ["complete"],
         },
         {
+          occurred_precision: "instant",
           id: "week-1",
           band: "now",
           source: "task",
@@ -402,6 +410,7 @@ export const ALeadsDay: Story = {
       ],
       queue: [
         {
+          occurred_precision: "instant",
           id: "task-1",
           source: "task",
           category: "tasks",
@@ -541,6 +550,7 @@ export const WhatWentWrong: Story = {
       counts: [],
       queue: [
         {
+          occurred_precision: "instant",
           id: "b1",
           source: "bounce",
           category: "customer_waiting",
@@ -552,6 +562,7 @@ export const WhatWentWrong: Story = {
           actions: [],
         },
         {
+          occurred_precision: "instant",
           id: "u1",
           source: "undelivered",
           category: "customer_waiting",
@@ -563,6 +574,7 @@ export const WhatWentWrong: Story = {
           actions: [],
         },
         {
+          occurred_precision: "instant",
           id: "g1",
           source: "automation_run",
           category: "system",
@@ -578,6 +590,7 @@ export const WhatWentWrong: Story = {
           },
         },
         {
+          occurred_precision: "instant",
           id: "c1",
           source: "capture_health",
           category: "system",
@@ -593,6 +606,7 @@ export const WhatWentWrong: Story = {
         // it sits with the decisions, and the domain itself is the title
         // because that name is the whole of what the reader recognises.
         {
+          occurred_precision: "instant",
           id: "mckinsey.com",
           source: "domain_question",
           category: "decisions",
@@ -605,6 +619,7 @@ export const WhatWentWrong: Story = {
           actions: ["keep", "discard"],
         },
         {
+          occurred_precision: "instant",
           id: "w1",
           source: "ai_work_health",
           category: "system",
@@ -616,6 +631,7 @@ export const WhatWentWrong: Story = {
           actions: [],
         },
         {
+          occurred_precision: "instant",
           id: "i1",
           source: "introduction_request",
           category: "decisions",
@@ -669,6 +685,7 @@ function aDayWithMore(): Worklist {
     next_cursor: "page-2",
     queue: [
       {
+        occurred_precision: "instant",
         id: "waiting-1",
         source: "customer_waiting",
         category: "customer_waiting",
@@ -680,6 +697,7 @@ function aDayWithMore(): Worklist {
         actions: [],
       },
       {
+        occurred_precision: "instant",
         id: "pair-1",
         source: "dedupe_candidate",
         category: "decisions",

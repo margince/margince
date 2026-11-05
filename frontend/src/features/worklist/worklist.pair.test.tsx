@@ -25,6 +25,7 @@ const RIGHT = "01a05500-0000-7000-8000-0000000000a2";
 
 function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000ff",
     source: "dedupe_candidate",
     category: "decisions",
@@ -111,6 +112,15 @@ describe("deciding a duplicate pair on the row", () => {
   it("names the record each verb would keep", () => {
     draw(pairRow());
     expect(screen.getByRole("button", { name: "Keep Acme GmbH" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
+  });
+
+  // A reader who may change only one record may only give it away, so only
+  // the other record offers Keep.
+  it("offers only the record the server says must survive", () => {
+    const row = pairRow();
+    draw({ ...row, pair: row.pair && { ...row.pair, keep_id: RIGHT } });
+    expect(screen.queryByRole("button", { name: "Keep Acme GmbH" })).toBeNull();
     expect(screen.getByRole("button", { name: "Keep ACME Gmbh" })).toBeTruthy();
   });
 

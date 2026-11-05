@@ -25,7 +25,7 @@ import (
 type RetentionScope struct {
 	ObjectType string
 	// Category is empty for a bare object-type policy, which is stored as SQL
-	// NULL — DM-SEED-2's ('activity', NULL) row is the one that ships.
+	// NULL. The seeded ('activity', NULL) row is the one that ships.
 	Category string
 }
 

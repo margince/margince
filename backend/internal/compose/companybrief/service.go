@@ -126,7 +126,7 @@ func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane 
 func (s *Service) assemble(
 	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID,
 ) (Input, *crmcontracts.ProjectScope, error) {
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID})
+	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return Input{}, nil, err
 	}
@@ -157,9 +157,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 func (s *Service) GetScoped(
 	ctx context.Context, companyID ids.CompanyID, force bool, projectID *ids.ProjectID,
 ) (crmcontracts.CompanyBrief, error) {
-	// A brief is a reading aid for a contact; an agent reading records
-	// through a passport has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
 	userID, err := actingUser(ctx)
@@ -174,6 +172,7 @@ func (s *Service) GetScoped(
 		return crmcontracts.CompanyBrief{}, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
+	in = in.WordedIn(lang)
 	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
@@ -194,7 +193,8 @@ func (s *Service) GetScoped(
 	// the name the product shows for it everywhere else: the router sees only
 	// a task and a prompt, so without this the reader's rail could say "this
 	// company" and nothing more.
-	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, companyID.String(), in, lang)
+	lane, withheld := ai.ReadLane(ctx, s.lane)
+	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
@@ -207,6 +207,9 @@ func (s *Service) GetScoped(
 		// cosmetic, read from the input the brief was written from rather
 		// than trusted from the model's own reply.
 		Sections: withSectionEvidenceNames(sections, in),
+	}
+	if withheld {
+		return s.enrich(ctx, written.wire(companyID, scope))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {
 		return crmcontracts.CompanyBrief{}, err
@@ -230,9 +233,9 @@ func (s *Service) Ask(
 func (s *Service) AskScoped(
 	ctx context.Context, companyID ids.CompanyID, raw crmcontracts.CompanyQuestion, projectID *ids.ProjectID,
 ) (crmcontracts.CompanyAnswer, error) {
-	// A prepared question is a reading aid for a contact; an agent asking about
-	// an account has the records themselves.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A prepared question is a reading aid for the user, or for their agent;
+	// automatic work with no passport has the records themselves.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	question, err := ParseQuestion(raw)
@@ -246,8 +249,8 @@ func (s *Service) AskScoped(
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
-	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in,
-		identity.BaseLanguageForPrompt(ctx, s.pool))
+	lang := s.answerLanguage(ctx)
+	sentences, by, err := Answer(ai.WithSubject(ctx, companyID.Ref(), in.Name), s.lane, question, companyID.String(), in.WordedIn(lang), lang)
 	if err != nil {
 		return crmcontracts.CompanyAnswer{}, err
 	}
@@ -263,6 +266,13 @@ func (s *Service) AskScoped(
 		return crmcontracts.CompanyAnswer{}, err
 	}
 	return out, nil
+}
+
+// answerLanguage is the language a prepared answer is written in: the
+// reader's own, because the answer goes to them alone and nothing stores it.
+// The standing brief above keeps the base language and its fingerprint.
+func (s *Service) answerLanguage(ctx context.Context) string {
+	return identity.ReaderLanguageForPrompt(ctx, s.pool)
 }
 
 // storedVersion is the cached payload's shape version. A row written before

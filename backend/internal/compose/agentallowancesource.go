@@ -32,7 +32,7 @@ func (s AgentAllowanceSource) Policy(ctx context.Context) (agentvolume.Policy, e
 	var policy agentvolume.Policy
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
-		policy, err = identity.AgentPolicyTx(ctx, tx)
+		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig())
 		return err
 	})
 	if err != nil {

@@ -16,8 +16,8 @@
   gap: var(--space-1);
 }
 
-/* Top-aligned like `.record-head-wide`, so a wrapped name keeps its verbs
-   beside its first line; one 32px line box matches one 32px control. */
+/* Top-aligned, so a wrapped name keeps its verbs beside its first line; one
+   32px line box matches one 32px control. */
 .lists-head-row {
   display: flex;
   flex-wrap: wrap;
@@ -26,8 +26,7 @@
   padding-block-end: var(--space-1);
 }
 
-/* The 16rem floor is the one `.record-head .record-id` holds
-   (design-system/composed.css): below it the verbs take their own line. */
+/* Below the 16rem floor the verbs take their own line. */
 .lists-head-title {
   display: flex;
   align-items: center;

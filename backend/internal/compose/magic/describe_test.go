@@ -5,6 +5,8 @@ package magic
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -251,5 +253,112 @@ func TestALineFromACompleteReadStatesItsCountFlat(t *testing.T) {
 	}
 	if lines[0].CountIsFloor != nil {
 		t.Errorf("a line from an uncut contact read claims its count is a floor; only the deal arm was cut")
+	}
+}
+
+func TestForecastCorrectionExplainsReviewWithoutRepeatingPrivateBasis(t *testing.T) {
+	row := auditRow("system:close-date", `{"win_probability_override":90}`, `{"win_probability_override":45}`,
+		`{"close_date_correction":"downgrade_and_review","basis":"Restricted correspondence"}`, whenStaged)
+	row.EntityType = typeDeal
+	line, _, ok := lineOf(unmasked(t), row)
+	if !ok || line.Summary.Key != "magic.action.forecast_changed" || line.Reason == nil || line.Reason.Key != "magic.why.forecast_review" || line.Reason.Values != nil {
+		t.Fatalf("forecast reason = %+v, admitted = %v", line.Reason, ok)
+	}
+	changes := changesOf(row)
+	if len(changes) != 1 || changes[0].Field != "win_probability_override" || fmt.Sprint(changes[0].Before) != "90" || fmt.Sprint(changes[0].After) != "45" {
+		t.Fatalf("forecast changes = %+v", changes)
+	}
+}
+
+func TestUnknownForecastEvidenceKeepsTheActualFieldChange(t *testing.T) {
+	for _, evidence := range []string{
+		`{"close_date_correction":true}`,
+		`{"close_date_correction":"unknown_action"}`,
+	} {
+		row := auditRow("system:close-date", `{"win_probability_override":90}`, `{"win_probability_override":45}`, evidence, whenStaged)
+		row.EntityType = typeDeal
+		line, _, ok := lineOf(unmasked(t), row)
+		if !ok || line.Summary.Key != "magic.action.fields_changed" || line.Reason != nil {
+			t.Fatalf("evidence %s: summary=%+v reason=%+v admitted=%v", evidence, line.Summary, line.Reason, ok)
+		}
+	}
+}
+
+func TestReceiptOmitsInternalFieldsFromSummaryAndDetails(t *testing.T) {
+	for _, after := range []string{
+		`{"reply_verdict":"needs_reply"}`,
+		`{"commitment_admission":{"status":"admitted"}}`,
+		`{"task_activity_id":"internal-link"}`,
+	} {
+		row := auditRow("system:owed_verdict", "", after, "", whenStaged)
+		if _, ok := describe(row); ok || len(changesOf(row)) != 0 {
+			t.Fatalf("internal update was described: %s", after)
+		}
+	}
+	row := auditRow("system:owed_verdict", `{"title":"Old"}`,
+		`{"title":"New","reply_verdict":"needs_reply","task_activity_id":"internal-link","commitment_admission":{"status":"admitted"}}`, "", whenStaged)
+	description, ok := describe(row)
+	if !ok || description.summary.Values == nil || (*description.summary.Values)["fields"] != "title" {
+		t.Fatalf("business change missing or internal names exposed: %+v", description)
+	}
+	changes := changesOf(row)
+	if len(changes) != 1 || changes[0].Field != "title" || changes[0].After != "New" {
+		t.Fatalf("business change detail = %+v", changes)
+	}
+}
+
+func TestForecastReceiptUsesOnlyRecordedNumericBasis(t *testing.T) {
+	for _, action := range []string{"auto_apply", "provisional_confirm"} {
+		evidence := `{"close_date_correction":"` + action + `","close_date_sample_count":24,"close_date_median_stage_days":12.5,"close_date_remaining_stages":2}`
+		reason := forecastCorrectionReason(objectOf([]byte(evidence)))
+		if reason == nil || reason.Key != "magic.why.forecast_date_basis" || reason.Values == nil {
+			t.Fatalf("numeric basis not described: %+v", reason)
+		}
+		values := *reason.Values
+		if values["sample_count"] != "24" || values["median_days"] != "12.5" || values["remaining_stages"] != "2" {
+			t.Fatalf("invented or missing basis: %v", values)
+		}
+	}
+	for _, basis := range []string{
+		`{}`, `{"close_date_sample_count":24}`,
+		`{"close_date_sample_count":19,"close_date_median_stage_days":12,"close_date_remaining_stages":2}`,
+		`{"close_date_sample_count":24,"close_date_median_stage_days":0,"close_date_remaining_stages":2}`,
+		`{"close_date_sample_count":"24","close_date_median_stage_days":12,"close_date_remaining_stages":2}`,
+		`{"close_date_sample_count":24,"close_date_median_stage_days":12,"close_date_remaining_stages":1.5}`,
+	} {
+		reason := forecastDateReason(objectOf([]byte(basis)))
+		if reason.Key != "magic.why.forecast_date" || reason.Values != nil {
+			t.Fatalf("unrecorded basis invented from %s: %+v", basis, reason)
+		}
+	}
+}
+
+// The arms read a row's images only when it is an update. No other admitted
+// action may need them to say what it did or to fold with its job's rows.
+func TestOnlyAnUpdateNeedsItsImagesToBeDescribedAndGrouped(t *testing.T) {
+	types := []string{typeDeal, typeCompany, typeContact, typeLead, typeProject, typeActivity}
+	for action := range admitted {
+		if action == actionUpdate {
+			continue
+		}
+		for _, entityType := range types {
+			read := entry{
+				Action: action, EntityType: entityType, ActorID: "agent:enrich",
+				Before: []byte(`{"next_step": "Qualify"}`), After: []byte(`{"next_step": "Propose"}`),
+			}
+			unread := read
+			unread.Before, unread.After = nil, nil
+			withImages, describedWith := describeEntry(read)
+			without, describedWithout := describeEntry(unread)
+			if describedWith != describedWithout || !reflect.DeepEqual(withImages, without) {
+				t.Errorf("%s on %s: described %v %+v with images, %v %+v without",
+					action, entityType, describedWith, withImages, describedWithout, without)
+			}
+			keyWith, _ := groupKeyOf(read)
+			keyWithout, _ := groupKeyOf(unread)
+			if keyWith != keyWithout {
+				t.Errorf("%s on %s groups as %q with images and %q without", action, entityType, keyWith, keyWithout)
+			}
+		}
 	}
 }

@@ -56,7 +56,7 @@ func patchOperations(t *testing.T, e *integration.Env, h installationSettingsHan
 
 func TestTheWorkerSchedulesAndPacesByWhatAnAdminSaved(t *testing.T) {
 	e := integration.Setup(t)
-	h := installationSettingsHandlers{store: identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool))}
+	h := installationSettingsHandlers{store: identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 	// The settings are installation-wide and this database is shared, so the
 	// defaults go back through the same surface when the test ends.
 	t.Cleanup(func() {
@@ -97,7 +97,7 @@ func TestTheWorkerSchedulesAndPacesByWhatAnAdminSaved(t *testing.T) {
 // under five minutes is refused rather than run as a near-busy loop.
 func TestAnOperatingValueOutsideItsRangeIsRefused(t *testing.T) {
 	e := integration.Setup(t)
-	h := installationSettingsHandlers{store: identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool))}
+	h := installationSettingsHandlers{store: identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool))}
 	for _, body := range []string{
 		`{"geocode_backfill_interval_seconds":100}`,
 		`{"retention_sweep_interval_seconds":0}`,

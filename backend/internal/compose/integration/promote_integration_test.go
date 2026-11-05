@@ -39,10 +39,21 @@ func seedLead(t *testing.T, e *Env, name, email string, owner *ids.UUID) ids.Lea
 	return leadIDOf(ids.UUID(l.Id))
 }
 
+func seedHistoricalLeadAtContactEmail(t *testing.T, e *Env, name, email string, owner *ids.UUID) ids.LeadID {
+	t.Helper()
+	leadID := seedLead(t, e, name, ids.NewV7().String()+"@fixture.example", owner)
+	e.WsExec(t, `UPDATE lead SET email = $2 WHERE id = $1`, leadID, email)
+	return leadID
+}
+
 func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 	e := Setup(t)
 	leadID := seedLead(t, e, "Ada Prospect", "ada@prospect.test", &e.Rep1)
 	admin := e.Admin()
+	reply := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, direction, occurred_at, source, captured_by, counterparty_email)
+	             VALUES ($1, 'email', 'Re: outreach', 'inbound', now(), 'manual', 'human:x', 'ada@prospect.test')`, reply)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, reply, leadID)
 
 	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{
 		Trigger: "inbound_reply", EvidenceNote: new("replied to outreach"),
@@ -90,11 +101,12 @@ func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 		PromotedContactID ids.UUID `json:"promoted_contact_id"`
 		DedupeOutcome     string   `json:"dedupe_outcome"`
 		Trigger           string   `json:"trigger"`
+		EvidenceRef       ids.UUID `json:"evidence_ref"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		t.Fatal(err)
 	}
-	if p.PromotedContactID != ids.UUID(contact.Id) || p.DedupeOutcome != "created" || p.Trigger != "inbound_reply" {
+	if p.PromotedContactID != ids.UUID(contact.Id) || p.DedupeOutcome != "created" || p.Trigger != "inbound_reply" || p.EvidenceRef != reply {
 		t.Errorf("lead.promoted payload %s", payload)
 	}
 	if err := owner.QueryRow(context.Background(),
@@ -129,9 +141,9 @@ func TestPromoteMergesIntoAnExistingContactNotADuplicate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	leadID := seedLead(t, e, "G. Known", "grace@known.test", &e.Rep2)
+	leadID := seedHistoricalLeadAtContactEmail(t, e, "G. Known", "grace@known.test", &e.Rep2)
 
-	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{Trigger: "meeting_booked"})
+	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote-with-match: %v", err)
 	}
@@ -165,10 +177,10 @@ func TestPromoteDoesNotDiscloseAnOutOfScopeMergeTarget(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	leadID := seedLead(t, e, "Mine", "match@foreign.test", &e.Rep1)
+	leadID := seedHistoricalLeadAtContactEmail(t, e, "Mine", "match@foreign.test", &e.Rep1)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCapture())
-	if _, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "inbound_reply"}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify"}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("promote into an out-of-scope match → %v, want bare ErrConflict (a merge is a read)", err)
 	}
 }

@@ -57,9 +57,12 @@ type customFieldWire struct {
 	ColumnName  string   `json:"column_name"`
 	Currency    *string  `json:"currency"`
 	Options     []string `json:"options"`
-	CreatedBy   string   `json:"created_by"`
-	ArchivedAt  *string  `json:"archived_at"`
-	Version     *int64   `json:"version"`
+	// A pointer so a response that drops the field fails the assertion
+	// instead of decoding as false.
+	ShowInCreate *bool   `json:"show_in_create"`
+	CreatedBy    string  `json:"created_by"`
+	ArchivedAt   *string `json:"archived_at"`
+	Version      *int64  `json:"version"`
 }
 
 type customFieldListWire struct {
@@ -152,6 +155,10 @@ func TestCustomFieldsHTTP(t *testing.T) {
 
 	t.Run("rename keeps column_name stable", func(t *testing.T) {
 		assertRenameStable(t, e)
+	})
+
+	t.Run("show_in_create defaults on, creates off, and patches back on", func(t *testing.T) {
+		assertShowInCreateRoundTrip(t, e)
 	})
 
 	t.Run("retire flips status, archived_at stays null", func(t *testing.T) {

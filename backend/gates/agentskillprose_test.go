@@ -24,7 +24,22 @@ import (
 
 func TestTheSkillBundleReadsLikeTheDocs(t *testing.T) {
 	t.Parallel()
-	archive, err := (&agentbundle.Builder{}).Build("https://crm.example.test/v1")
+	// Both READMEs are prose of their own. With the connector on it leads with
+	// connecting a tool; off, it sends the reader to a passport.
+	for name, builder := range map[string]*agentbundle.Builder{
+		"connector off": {},
+		"connector on":  {MCPURL: "https://crm.example.test/mcp"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			checkSkillBundle(t, builder)
+		})
+	}
+}
+
+func checkSkillBundle(t *testing.T, builder *agentbundle.Builder) {
+	t.Helper()
+	archive, err := builder.Build("https://crm.example.test/v1")
 	if err != nil {
 		t.Fatalf("building the skill bundle: %v", err)
 	}

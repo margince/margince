@@ -107,7 +107,7 @@ only for `contains(document.activeElement)`, and the menu moves focus to a row
 when it opens. A `tabIndex` on the container would add a second tab stop in
 front of the item that already has one. Or it would be a value nothing uses.
 
-## `typescript:S8786`: `stripEveryKeyTag` in `frontend/src/screens/projectrecord.ts`
+## `typescript:S8786`: `stripEveryKeyTag` in `frontend/src/features/projects/projectrecord.ts`
 
 **What the rule wants.** The rule says ` ?\[[^\]]*\] ?` can take time that
 grows much faster than the input. It does: a subject of 20 000 `[` with no

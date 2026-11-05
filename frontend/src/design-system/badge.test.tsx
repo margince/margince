@@ -163,6 +163,18 @@ describe("Badge", () => {
     expect(badgeFor("Closed").querySelector(".badge-live-dot")).toBeNull();
   });
 
+  it("rests the dot of a status that waits on the reader", () => {
+    render(
+      <Badge tone="warning" dot>
+        Your move
+      </Badge>,
+    );
+    const dot = badgeFor("Your move").firstElementChild;
+    expect(dot).toHaveClass("badge-dot");
+    expect(dot).not.toHaveClass("badge-live-dot");
+    expect(dot).toHaveAttribute("aria-hidden");
+  });
+
   it("refuses an icon and a live dot together, and the retired quiet prop", () => {
     render(
       <>
@@ -205,9 +217,7 @@ describe("Badge", () => {
     });
 
     it("edges every soft tone in its own token, and primary in transparent", () => {
-      expect(declared(".badge", "border")).toBe(
-        "1px solid var(--borderSubtle)",
-      );
+      expect(declared(".badge", "border")).toBe("1px solid var(--groundEdge)");
       const edges: Record<string, string> = {
         ".badge-info": "var(--infoBorder)",
         ".badge-success": "var(--successBorder)",

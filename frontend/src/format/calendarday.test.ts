@@ -6,18 +6,16 @@ import {
   calendarDay,
   calendarMonth,
   dueInstant,
+  isoDay,
+  isoWeekOf,
   isRealCalendarDay,
   localDateTimeValue,
   middayInstant,
   sameCalendarDay,
-  today,
+  todayIn,
 } from "./calendarday";
-import { viewerZone } from "./timezone";
-
-vi.mock("./timezone", async (importOriginal) => {
-  const real = await importOriginal<typeof import("./timezone")>();
-  return { ...real, viewerZone: vi.fn(real.viewerZone) };
-});
+import { displayDay } from "./format.dates";
+import { AI_RATE_DAY_ZONE, dueTimeOf } from "./timezone";
 
 // The zone the machine running this suite happens to be in. Every assertion
 // below is written against it rather than against a fixed offset, because the
@@ -52,22 +50,18 @@ describe("sameCalendarDay", () => {
   });
 });
 
-describe("today", () => {
+describe("todayIn", () => {
   afterEach(() => {
     vi.useRealTimers();
-    vi.mocked(viewerZone).mockReset();
   });
 
-  // The reader's calendar, not UTC's: 02:00 UTC on the 5th is still the
-  // evening of the 4th in New York, and a date box floored on UTC's day would
-  // refuse the day that reader can see on their wall.
-  it("is the reader's own calendar day", () => {
+  // The day in the zone asked about, never the runner's: 02:00 UTC on the 5th
+  // is still the evening of the 4th in New York.
+  it("is the calendar day in the zone it is asked for", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-05T02:00:00Z"));
-    vi.mocked(viewerZone).mockReturnValue("America/New_York");
-    expect(today()).toBe("2026-07-04");
-    vi.mocked(viewerZone).mockReturnValue("Asia/Tokyo");
-    expect(today()).toBe("2026-07-05");
+    expect(todayIn("America/New_York")).toBe("2026-07-04");
+    expect(todayIn(AI_RATE_DAY_ZONE)).toBe("2026-07-05");
   });
 });
 
@@ -159,6 +153,84 @@ describe("dueInstant", () => {
   });
 });
 
+describe("dueInstant with a callback time", () => {
+  it("is due at that wall-clock time in the record's zone", () => {
+    expect(dueInstant("2026-10-27", "Europe/Berlin", "15:00")).toBe(
+      "2026-10-27T14:00:00.000Z",
+    );
+    expect(dueInstant("2026-07-05", "America/Los_Angeles", "09:30")).toBe(
+      "2026-07-05T16:30:00.000Z",
+    );
+  });
+
+  it("without a time is due at the end of the day, as before", () => {
+    expect(dueInstant("2026-10-27", "Europe/Berlin", "")).toBe(
+      dueInstant("2026-10-27", "Europe/Berlin"),
+    );
+  });
+
+  // 02:30 does not exist in Berlin on 29 March 2026: the clock jumps to 03:00.
+  // The time field says so under the box (followuptaskfields.test.tsx), so
+  // the rep sees the 03:00 the task will carry.
+  it("puts a skipped time on the first minute after the gap", () => {
+    expect(dueInstant("2026-03-29", "Europe/Berlin", "02:30")).toBe(
+      "2026-03-29T01:00:00.000Z",
+    );
+  });
+
+  // 02:30 happens twice in Berlin on 25 October 2026: the earlier one counts.
+  it("puts a repeated time on its first reading", () => {
+    expect(dueInstant("2026-10-25", "Europe/Berlin", "02:30")).toBe(
+      "2026-10-25T00:30:00.000Z",
+    );
+  });
+
+  it("refuses a time that is not HH:MM", () => {
+    for (const bad of ["24:00", "9:00", "15:60", "15:00:00", "noon"]) {
+      expect(() => dueInstant("2026-10-27", "Europe/Berlin", bad)).toThrow();
+    }
+  });
+
+  it("keeps a picked 23:59 as a time, apart from the no-time end of day", () => {
+    const due = dueInstant("2026-10-27", "Europe/Berlin", "23:59");
+    expect(due).toBe("2026-10-27T22:59:00.000Z");
+    expect(dueTimeOf(due, true, "Europe/Berlin")).toBe("23:59");
+  });
+});
+
+describe("dueTimeOf", () => {
+  it("reads no time on a task due by its day, whatever its stored hour", () => {
+    expect(
+      dueTimeOf(
+        dueInstant("2026-10-27", "Europe/Berlin"),
+        false,
+        "Europe/Berlin",
+      ),
+    ).toBe("");
+    expect(dueTimeOf("2026-10-27T14:00:00.000Z", false, "Europe/Berlin")).toBe(
+      "",
+    );
+    expect(
+      dueTimeOf("2026-10-27T14:00:00.000Z", undefined, "Europe/Berlin"),
+    ).toBe("");
+  });
+
+  it("reads back the time of day the task was minted with", () => {
+    for (const zone of ["Europe/Berlin", "America/Los_Angeles"]) {
+      expect(
+        dueTimeOf(dueInstant("2026-10-27", zone, "15:00"), true, zone),
+      ).toBe("15:00");
+    }
+  });
+
+  it("reads the time on the record's clock, not on UTC's", () => {
+    expect(dueTimeOf("2026-10-27T14:00:00Z", true, "Europe/Berlin")).toBe(
+      "15:00",
+    );
+    expect(dueTimeOf("2026-10-27T14:00:00Z", true, "UTC")).toBe("14:00");
+  });
+});
+
 describe("localDateTimeValue", () => {
   it("yields the shape a datetime-local input accepts", () => {
     expect(localDateTimeValue("2026-07-05T09:07:00Z")).toMatch(
@@ -197,7 +269,25 @@ describe("localDateTimeValue", () => {
   });
 });
 
+describe("isoDay", () => {
+  it("names a local date's own day, its year written in four digits", () => {
+    const early = new Date(2000, 0, 1);
+    early.setFullYear(99, 8, 9);
+
+    expect(isoDay(new Date(2026, 4, 6, 23, 59))).toBe("2026-05-06");
+    expect(isoDay(early)).toBe("0099-09-09");
+  });
+});
+
 describe("middayInstant", () => {
+  it("renders an unreal day by rolling it over instead of throwing", () => {
+    // The write path refuses such a day; a screen showing one must not crash.
+    expect(displayDay("2026-02-30", "Europe/Berlin").toISOString()).toBe(
+      "2026-03-02T12:00:00.000Z",
+    );
+    expect(() => middayInstant("0099-09-09", "Europe/Berlin")).not.toThrow();
+  });
+
   it("lands at the zone's own noon of the picked day, either side of a DST switch", () => {
     // Berlin is +01:00 in January and +02:00 in July.
     expect(middayInstant("2026-01-15", "Europe/Berlin")).toBe(
@@ -291,5 +381,18 @@ describe("isRealCalendarDay", () => {
     expect(isRealCalendarDay("2026-9-27")).toBe(false);
     expect(isRealCalendarDay("2026-09-27T00:00:00Z")).toBe(false);
     expect(isRealCalendarDay("")).toBe(false);
+  });
+});
+
+// ISO 8601 weeks at the year's edges, where a naive count goes wrong. Late
+// December can open next year's week 1, and early January can be week 53.
+describe("isoWeekOf", () => {
+  it("numbers a week by its Thursday, across the year's edges", () => {
+    expect(isoWeekOf("2026-06-29")).toBe(27);
+    expect(isoWeekOf("2026-01-01")).toBe(1);
+    expect(isoWeekOf("2025-12-29")).toBe(1);
+    expect(isoWeekOf("2026-12-31")).toBe(53);
+    expect(isoWeekOf("2027-01-01")).toBe(53);
+    expect(isoWeekOf("2021-01-03")).toBe(53);
   });
 });

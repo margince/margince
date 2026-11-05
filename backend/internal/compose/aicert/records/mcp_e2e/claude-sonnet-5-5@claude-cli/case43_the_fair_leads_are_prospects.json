@@ -2,8 +2,7 @@
   "scenario": "case43_the_fair_leads_are_prospects",
   "criteria": [
     1,
-    2,
-    3
+    2
   ],
   "passed": 2,
   "runs": 2,
@@ -14,12 +13,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 20,
-    "output_tokens": 3796,
-    "cache_creation_input_tokens": 43582,
-    "cache_read_input_tokens": 540421,
+    "input_tokens": 14,
+    "output_tokens": 3430,
+    "cache_creation_input_tokens": 55405,
+    "cache_read_input_tokens": 560151,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.2664
+    "cost_usd": 0.312
   }
 }

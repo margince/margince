@@ -10,8 +10,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { formatMoneyOrAbsent } from "../format/format";
+import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
+import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
@@ -159,7 +160,7 @@ function coerceWrite(field: CustomField, raw: string): unknown {
     case "currency": {
       // NaN is never sent: it serialises to null, and a null PATCH clears the
       // column. The control's validate refuses such a figure before it gets
-      // here; past it, the typed text goes and the store drops the key.
+      // here; past it, the typed text goes and the store refuses it by name.
       const minor = toMinorUnits(Number(value), field.currency ?? "");
       if (Number.isNaN(minor)) {
         return value;
@@ -246,9 +247,9 @@ export function customFieldDisplay(
         : opts.boolLabels.no;
     case "multiselect":
       return Array.isArray(raw) && raw.length ? raw.join(", ") : null;
+    case "date":
+      return formatDateAbbrev(String(raw), opts.locale, browserZone());
     default:
-      // text / picklist / number / date (a plain YYYY-MM-DD, shown verbatim to
-      // avoid a timezone shift a datetime formatter would introduce).
       return String(raw);
   }
 }
@@ -309,10 +310,53 @@ export type ObjectCustomFields = {
 
 const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
 
+// Which form the fields are drawn into. A create dialog leaves out the fields an
+// admin keeps off it. The record page shows every active field, because a value
+// that exists must stay readable and editable where the record is.
+export type CustomFieldSurface = "create" | "record";
+
+// Which activity a form's fields are for. A field narrowed to other kinds stays
+// out. The exception is a value in `held`, the row the form opened on: the form
+// shows that field so the reader can clear it.
+export type ActivityNarrowing = Readonly<{
+  kind: string;
+  held?: Record<string, unknown>;
+}>;
+
+/** Whether a field applies to an activity of `kind`; no kinds is every kind. */
+export function appliesToKind(field: CustomField, kind: string): boolean {
+  return (
+    !field.activity_kinds ||
+    field.activity_kinds.some((applies) => applies === kind)
+  );
+}
+
+// The active fields one surface offers. `!== false` rather than a truthy check:
+// a server older than the setting sends no `show_in_create`, and every field
+// showed in create dialogs then.
+export function fieldsForSurface(
+  fields: CustomField[],
+  surface: CustomFieldSurface,
+  activity?: ActivityNarrowing,
+): CustomField[] {
+  return fields.filter(
+    (field) =>
+      field.status === "active" &&
+      (surface === "record" || field.show_in_create !== false) &&
+      (activity === undefined ||
+        appliesToKind(field, activity.kind) ||
+        (activity.held?.[field.column_name] ?? null) !== null),
+  );
+}
+
 // Live active custom fields for one object, shaped for the record forms. A read
 // failure (or the schema-pool-less deployment) degrades to no custom fields —
 // the core form still works — rather than blocking the record's own edit.
-export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
+export function useObjectCustomFields(
+  object: CfObject,
+  surface: CustomFieldSurface = "record",
+  activity?: ActivityNarrowing,
+): ObjectCustomFields {
   const t = useT();
   const query = useQuery({
     queryKey: ["custom-fields", object],
@@ -327,8 +371,10 @@ export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
     },
   });
 
-  const fields = (query.data?.data ?? EMPTY_CUSTOM_FIELDS).filter(
-    (field) => field.status === "active",
+  const fields = fieldsForSurface(
+    query.data?.data ?? EMPTY_CUSTOM_FIELDS,
+    surface,
+    activity,
   );
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 

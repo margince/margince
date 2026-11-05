@@ -40,6 +40,7 @@ const NOTES: ExtensionDescriptor = {
   name: "notes",
   title: "",
   secretScope: "workspace",
+  panels: [],
   verbs: [
     {
       operationId: "notesList",
@@ -56,6 +57,7 @@ const NOTES: ExtensionDescriptor = {
       rbacObject: "ext_notes_note",
     },
   ],
+  entries: [],
 };
 
 const COMPOSED: readonly ExtensionDescriptor[] = [NOTES];
@@ -138,14 +140,18 @@ describe("placing a unit by its declared secret scope", () => {
     name: "dispact-connector",
     title: "extDispactConnector.title",
     secretScope: "user",
+    panels: [],
     verbs: [],
+    entries: [],
   };
   // A unit declaring no secret: de in the shipped tree.
   const YOGI: ExtensionDescriptor = {
     name: "yogi",
     title: "",
     secretScope: "",
+    panels: [],
     verbs: [],
+    entries: [],
   };
   const REGISTRY = [DISPACT, NOTES, YOGI];
 
@@ -188,7 +194,9 @@ describe("naming a unit", () => {
     name: "dispact-connector",
     title: "extDispactConnector.title",
     secretScope: "user",
+    panels: [],
     verbs: [],
+    entries: [],
   };
   const REGISTRY = [DISPACT, NOTES];
 

@@ -1,27 +1,23 @@
 import type { ReactNode } from "react";
+import {
+  CompanyMark,
+  employerFacts,
+  hasEmployerFacts,
+  useEmployerSummary,
+} from "../../components/contactemployersummary";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { CompanyCard } from "../../design-system/companycard";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineText } from "../../design-system/inlinetext";
 import { formatDateAbbrev } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Employment, EmploymentActions } from "./contactemployers";
-import {
-  EmploymentLogo,
-  employerFacts,
-  hasEmployerFacts,
-  useEmployerSummary,
-} from "./contactemployersummary";
 import { stillHeld } from "./employmentcurrency";
 
-// One employment edge: the company it names, the role at that company (inline-
-// editable — this is the ONE place a per-company title is corrected;
-// `contact.title` is a different field, edited in Details above), the dates,
-// and the row's own verbs folded behind an OverflowMenu — this row already
-// carries a focusable inline-edit control, so the verbs stay out of the way
-// until the row is hovered or that control (or the trigger itself) has
-// focus, the same reveal the company page's task rows use for theirs.
+// One employment edge: its company, the role there, the dates and a verb menu.
+// The only place a per-company title is corrected; `contact.title` is another.
 export function EmploymentRow({
   employment,
   canEdit,
@@ -46,7 +42,7 @@ export function EmploymentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const detail = employmentDetail(employment, t, locale, zone);
   const summary = useEmployerSummary(employment.company_id);
   const company = summary.data;
@@ -60,79 +56,28 @@ export function EmploymentRow({
     actions.end.isError &&
     actions.end.variables?.relationship_id === employment.relationship_id;
   return (
-    <div className="pe-employment">
-      <EmploymentLogo
-        employment={employment}
-        company={company}
-        show={showCompany}
-        t={t}
-      />
-      <span className="pe-employment-body">
-        <span className="pe-employment-company">
-          {showCompany &&
-            (employment.company_name ? (
-              <button
-                type="button"
-                className="pe-meta-link"
-                onClick={() =>
-                  navigate({
-                    screen: "companies",
-                    id: employment.company_id,
-                  })
-                }
-              >
-                {employment.company_name}
-              </button>
-            ) : (
-              <span className="inlinetext">{t("field.unset")}</span>
-            ))}
-          {mark}
-          {stillHeld(employment) && (
-            <span className="pe-rail-value-good">{t("rel.current")}</span>
-          )}
-          {!stillHeld(employment) && (
-            <span className="t-caption">
-              {t(
-                employment.employment_status === "unknown"
-                  ? "employment.status.unknown"
-                  : "employment.status.former",
-              )}
-            </span>
-          )}
-        </span>
-        {hasFacts && company && (
-          <span className="pe-employment-facts t-caption">
-            {employerFacts(company, t, locale)}
-          </span>
-        )}
-        <span className="pe-employment-role">
-          <InlineText
-            label={t("rel.role")}
-            value={employment.role ?? ""}
-            // The contact's own title stands in for a role nobody has
-            // recorded on THIS employment yet: as `placeholder`, not
-            // `value`, so it reads the way InlineText already draws an
-            // unset field (muted) rather than as a fact this edge has
-            // actually stored. The ordinary "Add title" invitation only
-            // applies when there is nothing else to suggest.
-            placeholder={t("field.addTitle")}
-            suggested={fallbackRole}
-            canEdit={canEdit}
-            readOnlyReason={readOnlyReason}
-            onSave={(next) =>
-              actions.update.mutateAsync({
-                employment,
-                body: { role: next || null },
-              })
-            }
+    <CompanyCard
+      // Only the first row naming a company carries its mark; the slot stays
+      // so every row's name and role line up under one another.
+      logo={
+        showCompany && (
+          <CompanyMark
+            companyId={employment.company_id}
+            name={employment.company_name ?? t("field.unset")}
+            logoUrl={company?.logo_url}
           />
-        </span>
-        {detail && (
-          <span className="pe-colleague-proof t-caption">{detail}</span>
-        )}
-      </span>
-      {canEdit && (
-        <span className="pe-employment-actions">
+        )
+      }
+      title={showCompany && <EmployerName employment={employment} />}
+      badges={
+        <>
+          {mark}
+          <EmploymentStatus employment={employment} />
+        </>
+      }
+      facts={hasFacts && company ? employerFacts(company, t, locale) : null}
+      actions={
+        canEdit && (
           <OverflowMenu label={t("record.moreActions")}>
             <Button onClick={onEdit}>{t("employment.edit")}</Button>
             {stillHeld(employment) && (
@@ -147,12 +92,69 @@ export function EmploymentRow({
               {t("rel.remove")}
             </Button>
           </OverflowMenu>
-        </span>
-      )}
+        )
+      }
+    >
+      <span className="pe-employment-role">
+        <InlineText
+          label={t("rel.role")}
+          value={employment.role ?? ""}
+          // The contact's own title stands in for a role nobody has recorded
+          // on this employment yet. It goes in `suggested`, so it reads as
+          // InlineText draws an unset field (muted) and not as a stored fact.
+          // The ordinary "Add title" invitation applies only when there is
+          // nothing else to suggest.
+          placeholder={t("field.addTitle")}
+          suggested={fallbackRole}
+          canEdit={canEdit}
+          readOnlyReason={readOnlyReason}
+          onSave={(next) =>
+            actions.update.mutateAsync({
+              employment,
+              body: { role: next || null },
+            })
+          }
+        />
+      </span>
+      {detail && <span className="pe-colleague-proof t-caption">{detail}</span>}
       {endFailed && <ErrorLine error={actions.end.error} />}
-    </div>
+    </CompanyCard>
   );
 }
+function EmployerName({ employment }: Readonly<{ employment: Employment }>) {
+  const t = useT();
+  return employment.company_name ? (
+    <button
+      type="button"
+      onClick={() =>
+        navigate({ screen: "companies", id: employment.company_id })
+      }
+    >
+      {employment.company_name}
+    </button>
+  ) : (
+    <span className="inlinetext">{t("field.unset")}</span>
+  );
+}
+
+function EmploymentStatus({
+  employment,
+}: Readonly<{ employment: Employment }>) {
+  const t = useT();
+  if (stillHeld(employment)) {
+    return <span className="pe-rail-value-good">{t("rel.current")}</span>;
+  }
+  return (
+    <span className="t-caption">
+      {t(
+        employment.employment_status === "unknown"
+          ? "employment.status.unknown"
+          : "employment.status.former",
+      )}
+    </span>
+  );
+}
+
 function employmentDetail(
   employment: Employment,
   t: ReturnType<typeof useT>,

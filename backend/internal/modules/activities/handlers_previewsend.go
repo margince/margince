@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -98,7 +99,8 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 // refusal is anybody's to lift. Both are answers this engine already holds, and
 // a surface that re-derived either would be a second implementation of a rule
 // that decides whether mail reaches a contact.
-func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationPreview {
+func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview {
+	set := preview.Decisions
 	out := crmcontracts.SendAuthorizationPreview{
 		Allowed:    set.Allowed(),
 		Recipients: make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),
@@ -112,6 +114,17 @@ func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationP
 		if d.Resolved != "" {
 			resolved := crmcontracts.CommunicationContext(d.Resolved)
 			entry.ResolvedCategory = &resolved
+		}
+		// The sender's own pick, beside the engine's reading. An unproven claim
+		// never reaches Resolved, so the composer reads this one to name the
+		// gap the sender can close, such as the deal a follow-up needs.
+		if d.Requested != "" {
+			requested := crmcontracts.CommunicationContext(d.Requested)
+			entry.RequestedCategory = &requested
+		}
+		if preview.NewContacts[correspondence.Fold(d.Recipient.Email)] {
+			newContact := true
+			entry.NewContact = &newContact
 		}
 		if d.Basis != "" {
 			basis := string(d.Basis)
@@ -137,7 +150,9 @@ func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationP
 		// mail reaches a contact.
 		refuses := d.WouldRefuse(d.Mode)
 		entry.WouldRefuse = &refuses
-		overrulable := d.CanBeOverruled()
+		// By category, because the reason a rep records names one category, and an
+		// unknown purpose resolved to none: the record would be refused.
+		overrulable := d.CanBeOverruledByCategory()
 		entry.CanBeOverruled = &overrulable
 		out.Recipients = append(out.Recipients, entry)
 	}

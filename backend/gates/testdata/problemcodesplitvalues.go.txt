@@ -1,0 +1,18 @@
+package plantedsplit
+
+import "github.com/margince/margince/backend/internal/platform/httperr"
+
+var declared = &httperr.DetailedError{}
+
+func fillDeclared() { declared.Code = "planted_split_var" }
+
+func fillAsserted(err error) { err.(*httperr.DetailedError).Code = "planted_split_asserted" }
+
+func fillAssertedLocal(err error) {
+	refusal := err.(*httperr.DetailedError)
+	refusal.Code = "planted_split_asserted_local"
+}
+
+func buildAliased() *aliased { return &aliased{Code: "planted_split_aliased_literal"} }
+
+func buildDefined() defined { return defined{Code: "planted_split_defined_literal"} }

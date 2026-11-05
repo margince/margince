@@ -41,7 +41,7 @@ import (
 
 const (
 	analyticsCatalog     = "../frontend/src/i18n/en.ts"
-	analyticsVocabMirror = "../frontend/src/screens/analytics.questions.vocab.ts"
+	analyticsVocabMirror = "../frontend/src/features/analytics/analytics.questions.vocab.ts"
 )
 
 // analyticsFieldLabel reads one field's catalog key. Anchored at a line's start,

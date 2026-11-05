@@ -53,10 +53,17 @@ type Handlers struct {
 	// no mailer still needs it, and that is exactly where the admin-issued
 	// link lives. Empty means no link of either kind can be built.
 	passwordLinkBaseURL string
+	// confirmLaneWired says whether the installation can mail a contact a
+	// one-time link. A boolean rather than the lane itself, because the lane
+	// belongs to a module this one may not import.
+	confirmLaneWired bool
 	// resetSendStarted is a test seam: the async reset send signals here
 	// when it finishes, so a test can wait for the captured mail without
 	// sleeping. Nil in production.
 	resetSendStarted func()
+	// sendBudget is a test seam: a shorter budget for the invitation send, so
+	// a test can see a send run out of time. Zero in production.
+	sendBudget time.Duration
 
 	// The unauthenticated endpoints carry their own throttles: login
 	// attempts cost a full Argon2 verification each and reset requests
@@ -85,11 +92,12 @@ type Handlers struct {
 	// session. Both take the login pair's numbers — the challenge guards the
 	// same account the password does and arrives from the same anonymous edge,
 	// so a looser bound here would just move the brute force one step right.
-	// mfaFailures is keyed by the USER ID off the VERIFIED challenge signature
-	// (or the session), never off the request body: a body-chosen key would
-	// let an attacker rotate keys per guess, and an email-keyed one would let
-	// ten bogus posts lock the real owner out.
-	mfaFailures *ratelimit.Limiter // 10 failures/min per user
+	// mfaAttempts is keyed by the user id from the verified challenge signature
+	// (or the session), never from the request body. A body-chosen key would
+	// let an attacker rotate keys per guess. An email-keyed one would let ten
+	// bogus posts lock the real owner out. It counts attempts, not failures, so
+	// the check and the count are one step a burst cannot split.
+	mfaAttempts *ratelimit.Limiter // 10 attempts/min per user
 	mfaPerIP    *ratelimit.Limiter // 30/min per client IP
 
 	// Issuing a set-password link is authenticated and admin-only, so these
@@ -128,8 +136,12 @@ type Handlers struct {
 	listsAvailable bool
 
 	// installationBrand reads the anchor company's name and marks for /me.
-	// Nil omits them (installationbrand.go).
+	// Nil omits them (meparts.go).
 	installationBrand InstallationBrand
+	// refusedDealFilters and refusedLeadFilters name the deal and lead list
+	// filters the caller is refused. Nil omits them (meparts.go).
+	refusedDealFilters RefusedFilters
+	refusedLeadFilters RefusedFilters
 	// mcpResource is the canonical MCP server URL (public_base_url +
 	// "/mcp"), injected by the composition root from deployment config.
 	// The RFC 9728 protected-resource document advertises this verbatim
@@ -171,6 +183,10 @@ type Handlers struct {
 	// because a Settings-configured Google app can change after boot without
 	// a restart. Nil reports no providers.
 	oidcProvidersEnabledFn func(context.Context) ([]OIDCProviderConfig, error)
+	// registrationDeployment and registrationSwitches decide which automatic
+	// client registration methods are on (oauth_registrationsettings.go).
+	registrationDeployment *RegistrationMethods
+	registrationSwitches   AdminRegistrationSwitches
 	// capabilitiesPerIP bounds the ANONYMOUS capabilities probe, which reaches
 	// the database once the provider policy is wired: a pool connection, a
 	// transaction and a row per request, for a caller with no cookie and no
@@ -203,7 +219,7 @@ func NewHandlers(svc *Service) Handlers {
 		resetPerEmail:         ratelimit.New("identity/reset-per-address", ratelimit.FailClosed, 3, time.Hour),
 		resetPerIP:            ratelimit.New("identity/reset-per-ip", ratelimit.FailClosed, 30, time.Hour),
 		changeFailures:        ratelimit.New("identity/password-change-failures", ratelimit.FailClosed, 10, time.Minute),
-		mfaFailures:           ratelimit.New("identity/mfa-failures", ratelimit.FailClosed, 10, time.Minute),
+		mfaAttempts:           ratelimit.New("identity/mfa-attempts", ratelimit.FailClosed, 10, time.Minute),
 		mfaPerIP:              ratelimit.New("identity/mfa-per-ip", ratelimit.FailClosed, 30, time.Minute),
 		passwordLinkPerActor:  ratelimit.New("identity/password-link-per-actor", ratelimit.FailClosed, 20, time.Hour),
 		passwordLinkPerTarget: ratelimit.New("identity/password-link-per-target", ratelimit.FailClosed, 5, time.Hour),
@@ -223,7 +239,7 @@ func NewHandlers(svc *Service) Handlers {
 // is a reset handler whose panic would reach an operator as an opaque 500 on a
 // wipe that had otherwise finished.
 func (h *Handlers) ResetRateLimits() {
-	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.mfaFailures, h.mfaPerIP, h.oidcPerIP, h.capabilitiesPerIP} {
+	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.mfaAttempts, h.mfaPerIP, h.oidcPerIP, h.capabilitiesPerIP} {
 		if bucket != nil {
 			bucket.Reset()
 		}

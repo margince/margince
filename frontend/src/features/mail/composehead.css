@@ -1,0 +1,93 @@
+/* The mail head: the rows above the body, and the two controls that only exist
+ * up here. Everything else the head draws — the rows themselves, the field
+ * frame, the tokens, the select trigger — comes from the design system. */
+
+/* The transport dial, with the mark for the one it is on in front of it: a rep
+   glancing at the head should be able to tell mail from a chat channel without
+   reading the dial's face. */
+.compose-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.compose-transport > :last-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* One ruled row per address line: a small label in its column, the tokens
+   on a bare line beside it. */
+.compose-address-field {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  /* The label, the first row of tokens and the Cc and Bcc link share one
+     line; further recipients wrap under the first. */
+  align-items: start;
+  gap: 0 var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.compose-address-field > :not(label) {
+  grid-column: 2;
+  min-inline-size: 0;
+}
+.compose-address-field > label {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--inputHeight);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+/* Each row of tokens is centred on the label's line: the pill is 24px, so the
+   field's padding makes up the rest of the line's height. */
+.compose-address-field .token-input {
+  /* ds:ignore a bare address row centres each token row on the label's line */
+  padding-block: calc((var(--inputHeight) - var(--space-6)) / 2);
+}
+/* Baseline, so the Cc and Bcc link reads on the first row of tokens. */
+.compose-address-field .field-shell {
+  align-items: baseline;
+}
+/* The Cc and Bcc link keeps its own room at the end of the To line; the tokens
+   wrap before they reach it. */
+.compose-address-field .field-shell > .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.compose-address-field .input,
+.compose-address-field .field-shell {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* The subject and the project whose tag it carries, on one ruled line. The
+   subject is a bare line of text, named by its placeholder. */
+.compose-subject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.compose-subject > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.compose-subject > .compose-subject-field + :not(.compose-subject-under) {
+  flex: none;
+  inline-size: 11.875rem;
+}
+/* What the subject carries, on its own line so a long label never squeezes the
+   subject; it starts where the subject's text does. */
+.compose-subject-under {
+  flex-basis: 100%;
+  padding-inline-start: var(--inputPaddingX);
+}
+.compose-subject-field .input {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-weight: var(--fontWeightMedium);
+}

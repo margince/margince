@@ -22,7 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 type weeklyPlanOutcome struct{ store *weeklyplan.Store }
@@ -94,6 +96,13 @@ func (c weeklyPlanCapacity) ForWeek(
 			Scan(&start, &end); err != nil {
 			return fmt.Errorf("compose: bounding next week: %w", err)
 		}
+		args := []any{start, end, owner}
+		arg := func(value any) int { args = append(args, value); return len(args) }
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		current := storekit.CurrentTaskClause("t", start, identities, arg)
 		return tx.QueryRow(ctx, `
 			SELECT
 			  (SELECT count(*) FROM activity m
@@ -104,22 +113,16 @@ func (c weeklyPlanCapacity) ForWeek(
 			      -- whose week syncs automatically planning against a week
 			      -- that looked freer than it was.
 			      AND (m.meeting_status IS NULL OR m.meeting_status = 'booked')
-			      -- By HOST, falling back to the capturer only where no host is
-			      -- recorded. A meeting a colleague booked or a calendar
-			      -- connector imported is still this rep's time, and reading
-			      -- the capturer alone left it out of the capacity they plan
-			      -- against — the emptier the calendar looks, the more they
-			      -- commit to. An imported row naming a source author is
-			      -- not its importer's: with no host, nobody here held it.
-			      AND (m.host_user_id = $4
-			           OR (m.host_user_id IS NULL AND m.captured_by = $3
-			               AND m.source_author_id IS NULL AND m.source_author_name IS NULL))
-			      AND m.occurred_at >= $1 AND m.occurred_at < $2),
+			      -- By the one meeting-responsibility rule the Worklist and the
+			      -- weekly review read: a meeting this rep hosts, attends or
+			      -- booked is their time. Filing or importing a copy is not.
+			      AND `+storekit.MeetingResponsibilitySQL("m", "$3")+`
+			      AND `+occurredday.WithinSQL("m", "$1", "$2")+`),
 			  (SELECT count(*) FROM activity t
 			    WHERE t.kind = 'task' AND t.archived_at IS NULL
-			      AND NOT t.is_done AND t.assignee_id = $4
-			      AND t.due_at >= $1 AND t.due_at < $2)`,
-			start, end, "human:"+owner.String(), owner).
+			      AND NOT t.is_done AND t.assignee_id = $3 AND `+current+`
+			      AND `+storekit.TaskDueSQL("t")+` >= $1 AND `+storekit.TaskDueSQL("t")+` < $2)`,
+			args...).
 			Scan(&out.Meetings, &out.Tasks)
 	})
 	if err != nil {

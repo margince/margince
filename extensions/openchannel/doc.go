@@ -29,7 +29,8 @@
 // later, under the owner's own live authority — which is why receiving and
 // acting are two steps here and not one.
 //
-// Tables owned:
+// The unit's tables are the ones its migrations/ create. Two need a word on
+// why:
 //
 //   - ext_openchannel_endpoint — one row per member per declared edge: which
 //     edge it belongs to, the minted address senders are pointed at, whose

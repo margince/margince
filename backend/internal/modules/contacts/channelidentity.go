@@ -50,6 +50,9 @@ func ResolveOrCreateChannelIdentity(ctx context.Context, tx pgx.Tx, contactID id
 	if ci.Provider == "" || ci.ChannelUserID == "" {
 		return ids.ContactID{}, errors.New("contacts: a channel identity needs both a provider and a channel user id")
 	}
+	if err := storekit.RefuseErasedChannelIdentity(ctx, tx, "channel_identity", ci.Provider, ci.ChannelUserID); err != nil {
+		return ids.ContactID{}, err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return ids.ContactID{}, err

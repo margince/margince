@@ -1,0 +1,13 @@
+/* The OAuth app setup drawer and the card that opens it. */
+
+.oauthapp-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.oauthapp-unlocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

@@ -11,6 +11,8 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -64,13 +66,9 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // honest answer: the alternative is a merge button over a record they cannot
 // read.
 //
-// The verbs need MORE than that read, and this is where the two questions part.
-// Deciding a pair either way writes it, so both verbs are offered only to a
-// reader who could change BOTH records — the records' owner, or a seat that
-// writes the whole workspace. Everyone else sees the pair and no verb, because
-// they are the ones who cannot act on it. Offered on visibility alone, the
-// button refused every press on a pair whose two records had different owners,
-// and the surface then advised trying again.
+// The verbs need more than that read. Dismissing writes both records, so it is
+// offered only to a reader who could change both. Merging is offered by
+// contacts.MayMergePair, the rule the merge itself asks of a filed pair.
 func (s *Service) duplicateItem(
 	pair DuplicatePair, known pairFaces, decidable pairAuthority, settleable map[ids.UUID]bool,
 ) crmcontracts.AttentionItem {
@@ -106,9 +104,10 @@ func (s *Service) duplicateItem(
 	// from here.
 	if decidable.both(pair.EntityType, pair.LeftID, pair.RightID) {
 		item.Actions = append(item.Actions, actionDismiss)
-		if settleable[pair.ID] {
-			item.Actions = append(item.Actions, "merge")
-		}
+	}
+	if offer := decidable.mergeOffer(pair.EntityType, pair.LeftID, pair.RightID); offer.May && settleable[pair.ID] {
+		item.Actions = append(item.Actions, "merge")
+		item.Pair.KeepId = (*openapi_types.UUID)(offer.Keep)
 	}
 	return item
 }
@@ -126,6 +125,12 @@ type pairAuthority map[string]map[ids.UUID]bool
 func (a pairAuthority) both(entityType string, left, right ids.UUID) bool {
 	rows := a[entityType]
 	return rows[left] && rows[right]
+}
+
+// mergeOffer is the merge's own question of a filed pair.
+func (a pairAuthority) mergeOffer(entityType string, left, right ids.UUID) contacts.MergeOffer {
+	rows := a[entityType]
+	return contacts.OfferMerge(left, right, contacts.PairWriters{Left: rows[left], Right: rows[right]}, true)
 }
 
 func (f pairFaces) side(entityType string, id ids.UUID) (crmcontracts.AttentionPairSide, bool) {
@@ -250,12 +255,17 @@ func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
 func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcontracts.AttentionItem {
 	kind := approval.Kind
 	item := crmcontracts.AttentionItem{
-		Id:      approval.Id.String(),
-		Source:  crmcontracts.AttentionItemSource("approval"),
-		Kind:    &kind,
-		Title:   approval.Summary,
-		Actions: []crmcontracts.AttentionItemActions{"decide"},
+		Id:           approval.Id.String(),
+		Source:       crmcontracts.AttentionItemSource("approval"),
+		Kind:         &kind,
+		Title:        approval.Summary,
+		SummaryParts: approval.SummaryParts,
+		Actions:      []crmcontracts.AttentionItemActions{"decide"},
 	}
+	if approvals.PreviewRefusal(approval.Preview) != nil {
+		item.Actions = []crmcontracts.AttentionItemActions{}
+	}
+	item.RequestedDeciderId = approval.RequestedDeciderId
 	if approval.ExpiresAt != nil {
 		item.DueAt = approval.ExpiresAt
 	}
@@ -264,6 +274,12 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 	}
 	if staged, ok := stagedFacts(approval, machine); ok {
 		item.Staged = &staged
+	}
+	if accountTerminationPreview(approval) && len(item.Actions) > 0 {
+		if item.Staged == nil {
+			item.Staged = &crmcontracts.AttentionStagedFacts{}
+		}
+		item.Staged.AccountTermination = new(true)
 	}
 	return item
 }
@@ -316,13 +332,14 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Id:      task.ID.String(),
 		Source:  crmcontracts.AttentionItemSource("task"),
 		Title:   &subject,
-		Subject: subjectOf(task.LinkType, task.LinkID),
-		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
+		Subject: subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,
+		Actions: taskActions(task),
 	}
-	// Both verbs PATCH the task, so a reader who may not change it is offered
-	// neither.
-	if task.ReadOnly {
-		item.Actions = []crmcontracts.AttentionItemActions{}
+	if task.SourceActivityID != nil {
+		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
+	}
+	if len(task.Recipients) > 0 {
+		item.PromiseRecipients = &task.Recipients
 	}
 	if task.LeadResponseEscalation {
 		kind := "lead_response_escalation"
@@ -331,6 +348,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due
+		item.DueHasTime = new(task.DueHasTime)
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
 		// Which run of the page it heads. Only dated rows carry one, which is
@@ -427,6 +445,9 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 			actionOpen,
 		},
 	}
+	if !promise.ActivityID.IsZero() {
+		item.SourceRecord = subjectOf("activity", promise.ActivityID)
+	}
 	if promise.ReadOnly {
 		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}
 	}
@@ -435,46 +456,4 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		item.Kind = &label
 	}
 	return item
-}
-
-// subjectOf names the record an item concerns, when the producer named one.
-//
-// The label is deliberately absent here: resolving a display name is a read of
-// that record, and this feed does not hold the grants to make it. A client
-// showing the subject asks the record's own endpoint, which answers under the
-// reader's scope rather than this assembler's.
-func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
-	kind, ok := subjectKinds[entityType]
-	if !ok {
-		return nil
-	}
-	return &crmcontracts.AttentionSubject{Type: kind, Id: openapi_types.UUID(id)}
-}
-
-// subjectKinds maps a staged target's entity type onto the contract's subject
-// enum. A type absent here yields no subject rather than a guess: a card that
-// pointed a reader at the wrong record would be worse than one that pointed
-// nowhere.
-var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	subjectCompany: subjectCompany,
-	"contact":      "contact",
-	"deal":         "deal",
-	"lead":         "lead",
-	"activity":     "activity",
-	"project":      "project",
-}
-
-// openableSubject reports whether a subject names a record with a page of its
-// own — the only kind `open` may be offered on. An activity is a timeline
-// entry: naming it on the card is honest, promising navigation to it is not,
-// and the client's router answers exactly this set.
-func openableSubject(subject *crmcontracts.AttentionSubject) bool {
-	if subject == nil {
-		return false
-	}
-	switch subject.Type {
-	case subjectCompany, subjectContact, subjectDeal, "lead", "project":
-		return true
-	}
-	return false
 }

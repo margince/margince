@@ -47,9 +47,9 @@ func captureItem(concern CaptureConcern) crmcontracts.AttentionItem {
 		started := *concern.FailingSince
 		item.OccurredAt = &started
 	}
-	// A good sync after a Done means the concern cleared and came back.
-	if concern.LastSyncedAt != nil {
-		synced := *concern.LastSyncedAt
+	// Only changed evidence can reopen a concern marked Done.
+	if concern.SubjectMovedAt != nil {
+		synced := *concern.SubjectMovedAt
 		item.SubjectMovedAt = &synced
 	}
 	return item
@@ -101,6 +101,7 @@ func aiWorkItem(run TroubledRun) crmcontracts.AttentionItem {
 		if name := ai.DisplayName(ai.Task(run.Kind)); name != "" {
 			label := name
 			item.CauseLabel = &label
+			item.AiTask = new(crmcontracts.AiTask(run.Kind))
 		}
 	}
 	if run.Summary != "" {

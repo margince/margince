@@ -1,0 +1,7 @@
+/* The view dial. It wraps on a phone rather than scrolling: a dial the reader
+   has to pan to reach is a dial they will not use. */
+.brief-dials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

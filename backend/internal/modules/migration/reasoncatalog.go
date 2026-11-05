@@ -16,6 +16,10 @@ const (
 	ReasonDuplicateEmail             ReasonCode = "duplicate_email"
 	ReasonContactUnnamed             ReasonCode = "contact_unnamed"
 	ReasonContactEmailHeld           ReasonCode = "contact_email_held"
+	ReasonContactHoldsLead           ReasonCode = "contact_holds_lead"
+	ReasonAddressErased              ReasonCode = "address_erased"
+	ReasonEmployerRefused            ReasonCode = "employer_refused"
+	ReasonEmployerWillCreate         ReasonCode = "employer_will_create"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
 	ReasonLinkedinHeld               ReasonCode = "linkedin_held"
@@ -43,6 +47,7 @@ const (
 	ReasonFieldInactive              ReasonCode = "field_inactive"
 	ReasonValueUnreadable            ReasonCode = "value_unreadable"
 	ReasonPhoneNeedsCountry          ReasonCode = "phone_needs_country"
+	ReasonAddressNotSplit            ReasonCode = "address_not_split"
 	ReasonValueRefused               ReasonCode = "value_refused"
 	ReasonOptionNotAllowed           ReasonCode = "option_not_allowed"
 	ReasonOptionNotInList            ReasonCode = "option_not_in_list"
@@ -54,6 +59,7 @@ const (
 	ReasonNotADate                   ReasonCode = "not_a_date"
 	ReasonCannotWriteType            ReasonCode = "cannot_write_type"
 	ReasonNotAnEmail                 ReasonCode = "not_an_email"
+	ReasonEmailNamesNoContact        ReasonCode = "email_names_no_contact"
 	ReasonNotADomain                 ReasonCode = "not_a_domain"
 	ReasonDescriptionTooLong         ReasonCode = "description_too_long"
 	ReasonSizeBandInvalid            ReasonCode = "size_band_invalid"
@@ -109,6 +115,17 @@ const (
 )
 
 var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+	ReasonEmployerRefused: {text: map[textlang.Lang]string{
+		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
+		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
+		textlang.Vietnamese: "Không thể xác định công ty. Hãy chọn một công ty rõ ràng mà bạn được phép liên kết.",
+	}},
+	ReasonEmployerWillCreate: {params: []string{paramName}, text: map[textlang.Lang]string{
+		textlang.English:    "The employer {name} will be created if it is still missing when this row is imported.",
+		textlang.German:     "Der Arbeitgeber {name} wird erstellt, falls er beim Import dieser Zeile noch fehlt.",
+		textlang.Vietnamese: "Công ty {name} sẽ được tạo nếu chưa có khi nhập hàng này.",
+	}},
+
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row has no fields.",
 		textlang.German:     "Die Zeile enthält keine Felder.",
@@ -133,6 +150,16 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
 		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
 		textlang.Vietnamese: "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
+	}},
+	ReasonContactHoldsLead: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Somebody with this address is already a contact, so the row does not create a lead. The contact’s owner is told; new business with a contact is a deal.",
+		textlang.German:     "Mit dieser Adresse gibt es bereits einen Kontakt, daher legt die Zeile keinen Lead an. Wer für den Kontakt verantwortlich ist, wird informiert; ein neues Geschäft mit einem Kontakt ist ein Deal.",
+		textlang.Vietnamese: "Địa chỉ này đã thuộc về một liên hệ nên hàng không tạo lead. Chủ sở hữu liên hệ được báo; việc kinh doanh mới với một liên hệ là một deal.",
+	}},
+	ReasonAddressErased: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Whoever owns this email address asked to be erased and not to be stored again, so the row was not imported.",
+		textlang.German:     "Wer diese E-Mail-Adresse besitzt, hat die Löschung verlangt und darf nicht erneut gespeichert werden, daher wurde die Zeile nicht importiert.",
+		textlang.Vietnamese: "Chủ của địa chỉ email này đã yêu cầu xóa và không được lưu lại, nên hàng không được nhập.",
 	}},
 	ReasonCompanyNameEmpty: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The mapped display_name is empty, so the row names no company.",
@@ -166,13 +193,13 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonOwnerRefused: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot make this user an owner, so you become the owner of their rows.",
-		textlang.German:     "Sie dürfen dieses Mitglied nicht als zuständig eintragen, daher sind Sie für dessen Zeilen zuständig.",
-		textlang.Vietnamese: "Bạn không thể đặt người dùng này làm chủ sở hữu nên bạn trở thành chủ sở hữu các hàng của họ.",
+		textlang.German:     "Sie dürfen dieses Mitglied nicht als verantwortlich eintragen, daher sind Sie für dessen Zeilen verantwortlich.",
+		textlang.Vietnamese: "Bạn không thể đặt người dùng này làm người chịu trách nhiệm nên bạn trở thành người chịu trách nhiệm các hàng của họ.",
 	}},
 	ReasonOwnerUnknown: {params: []string{"rows"}, text: map[textlang.Lang]string{
 		textlang.English:    "No user has this email, so you become the owner; a lead stays unassigned. Rows naming it: {rows}.",
-		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie zuständig; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
-		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành chủ sở hữu; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
+		textlang.German:     "Kein Mitglied hat diese E-Mail-Adresse, daher sind Sie verantwortlich; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+		textlang.Vietnamese: "Không có người dùng nào có email này nên bạn trở thành người chịu trách nhiệm; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
 	}},
 	ReasonTagNew: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "No tag has this name yet, so the import creates it.",
@@ -264,6 +291,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "{value:q} kann nicht gelesen werden.",
 		textlang.Vietnamese: "Không đọc được {value:q}.",
 	}},
+	ReasonAddressNotSplit: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Address could not be split into street, postal code and city, so it stays in the first address line.",
+		textlang.German:     "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
+		textlang.Vietnamese: "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
+	}},
 	ReasonPhoneNeedsCountry: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” needs its country code, like +49 30 1234567.",
 		textlang.German:     "{value:q} braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
@@ -324,6 +356,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "{value:q} ist keine E-Mail-Adresse, die gespeichert werden kann.",
 		textlang.Vietnamese: "{value:q} không phải địa chỉ email có thể ghi.",
 	}},
+	ReasonEmailNamesNoContact: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” belongs to a sending system, not a human, so it does not become a contact.",
+		textlang.German:     "{value:q} gehört zu einem Versandsystem, nicht zu einem Menschen, und wird darum kein Kontakt.",
+		textlang.Vietnamese: "{value:q} thuộc về một hệ thống gửi thư, không phải của một cá nhân, nên không trở thành liên hệ.",
+	}},
 	ReasonNotADomain: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a domain that can be written.",
 		textlang.German:     "{value:q} ist keine Domain, die gespeichert werden kann.",
@@ -335,9 +372,9 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Mô tả dài {length} ký tự; mô tả công ty tối đa {max}.",
 	}},
 	ReasonSizeBandInvalid: {params: []string{paramValue, "allowed"}, text: map[textlang.Lang]string{
-		textlang.English:    "Size_band “{value}” is not one of {allowed}.",
-		textlang.German:     "Die Größenklasse {value:q} gehört nicht zu: {allowed}",
-		textlang.Vietnamese: "Nhóm quy mô {value:q} không thuộc: {allowed}",
+		textlang.English:    "Employees “{value}” is not one of {allowed}.",
+		textlang.German:     "Mitarbeitende {value:q} gehört nicht zu: {allowed}",
+		textlang.Vietnamese: "Số nhân viên {value:q} không thuộc: {allowed}",
 	}},
 	ReasonTagNameInvalid: {params: []string{paramName, "detail"}, text: map[textlang.Lang]string{
 		textlang.English:    "The tag “{name}” cannot be created: its name {detail}.",

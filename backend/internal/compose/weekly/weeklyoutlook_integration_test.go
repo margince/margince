@@ -29,6 +29,7 @@ import (
 // what the review does with an outlook, not about how forecasting computes one.
 // The figures below are therefore fixtures, not a second implementation.
 type stubForecast struct {
+	coverage  []Coverage
 	outlooks  []Outlook
 	movements []Movement
 	drivers   []Driver
@@ -53,7 +54,7 @@ func (s *stubForecast) CloseTeamWeek(
 ) (TeamClose, error) {
 	s.teamCalls++
 	s.teamID = teamID
-	return TeamClose{Outlooks: s.outlooks, Movements: s.movements, Drivers: s.drivers}, nil
+	return TeamClose{Outlooks: s.outlooks, Movements: s.movements, Drivers: s.drivers, Coverage: s.coverage}, nil
 }
 
 func oneHorizon(openingID, closingID ids.UUID) *stubForecast {
@@ -65,8 +66,7 @@ func oneHorizon(openingID, closingID ids.UUID) *stubForecast {
 			Opening:        OutlookSide{Known: true, SnapshotID: openingID, LandingMinor: 300_00},
 			Closing:        OutlookSide{Known: true, SnapshotID: closingID, LandingMinor: 420_00},
 			ForwardMeasure: "commit_evidence", BaseCurrency: "EUR",
-			WonMinor: 180_00, CommitMinor: 120_00,
-			BestCaseMinor: 390_00, WeightedMinor: 240_00,
+			WonMinor: 180_00, LikelyMinor: 120_00, WeightedMinor: 240_00,
 		}},
 		movements: []Movement{
 			{PeriodKind: "quarter", Bar: BarCreated, DeltaMinor: 90_00},
@@ -115,12 +115,12 @@ func TestDeletingTheSnapshotsLeavesTheReviewsOutlookReadable(t *testing.T) {
 	if got.Closing.LandingMinor != 420_00 {
 		t.Errorf("the closing landing read back as %d, want 42000", got.Closing.LandingMinor)
 	}
-	if got.ForwardMeasure != "commit_evidence" {
-		t.Errorf("the frozen measure read back as %q, want commit_evidence — a past week "+
-			"must keep saying what it was read under", got.ForwardMeasure)
+	if got.ForwardMeasure != "likely" {
+		t.Errorf("the frozen measure read back as %q, want likely — a week frozen under the old "+
+			"spelling keeps saying what it was read under, in today's word", got.ForwardMeasure)
 	}
-	if got.BestCaseMinor != 390_00 {
-		t.Errorf("best case read back as %d, want 39000", got.BestCaseMinor)
+	if got.LikelyMinor != 120_00 {
+		t.Errorf("Likely read back as %d, want 12000", got.LikelyMinor)
 	}
 }
 

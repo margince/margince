@@ -25,14 +25,14 @@ import (
 type summaryCopy struct {
 	// Record writes. A record type reads as the language's noun (recordnouns.go);
 	// labels, field names and ids pass through.
-	archive, createHead, updateHead, logHead, settingFields, moreFields, overwriteHuman, merge,
-	enrich, ownDomain string
+	archive, createHead, updateHead, logHead, settingFields, moreFields, merge,
+	mergeCase, previewCase, enrich, ownDomain string
 
 	// Writes nested under a parent record, named by id.
 	onDeal, applyTag, addLineItem, updateLineItem, removeLineItem,
 	setStakeholder, removeStakeholder, setCompany, removeCompany,
 	confirmFact, updateFact, createFact, deleteFact, confirmProfileField, updateProfileField,
-	mergeTags, changeList, dismissDuplicate, reopenDuplicate string
+	mergeTags, mergeMembers, changeList, dismissDuplicate, reopenDuplicate, setUpPartner string
 
 	// Lifecycle moves. A deal's target and source are stage semantics and pass
 	// through.
@@ -42,7 +42,7 @@ type summaryCopy struct {
 	// Correspondence. Addresses, subjects and bodies pass through, quoted where
 	// the sentence quotes them.
 	sendEmail, cc, sendSubject, sendMessage, draftReply, accountSend, accountSendFiled, booking,
-	bookingHost, bookingLinks, noSubject, relinkActivity, relinkActivities string
+	bookingHost, bookingLinks, hostNamed, noSubject, relinkActivity, relinkActivities string
 
 	// Imports. The counts are the report's; the record type reads as a noun.
 	importPreview, importCommit, importCreate, importUpdate, importUnchanged, importSkip,
@@ -50,7 +50,7 @@ type summaryCopy struct {
 
 	// The agent's own work: decisions, reports, the morning brief and a volume
 	// step-up.
-	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, bulkChange,
+	approveWord, rejectWord, decideApproval, decideBundle, runReport, composeReport, draftReport, bulkChange,
 	analyticsQuery, annotateNothing, annotateNarrative, annotateBoth, annotateFindings,
 	stepUpChanges string
 
@@ -72,8 +72,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Log a %s",
 		settingFields:       ", setting %s",
 		moreFields:          "+%d more",
-		overwriteHuman:      "Update %s %s: overwrite human-edited %s",
 		merge:               "Merge %s %s into %s",
+		mergeCase:           "Merge %d contacts into %s",
+		previewCase:         "Preview merging %d contacts into %s",
 		enrich:              "Read %s from %s and propose enrichment of %s",
 		ownDomain:           "its own domain",
 		onDeal:              "%s on deal %s",
@@ -95,6 +96,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Confirm profile field %s on company %s",
 		updateProfileField:  "Update profile field %s on company %s",
 		mergeTags:           "Fold tag %q into %q, releasing the name %q",
+		mergeMembers:        "Merge member %q (%s) into %q (%s). The duplicate is removed, and personal record access and correspondence follow the surviving account.",
+		setUpPartner:        "Set up a partner program on company %s (kinds: %s), with no margin tier",
 		promoteLead:         "Promote lead %s to a contact (%s)",
 		disqualifyLead:      "Disqualify lead %s",
 		demoteLead:          "Reverse the promotion of lead %s",
@@ -114,6 +117,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Book %q from %s to %s",
 		bookingHost:         " on %s's calendar",
 		bookingLinks:        ", attached to %d record(s)",
+		hostNamed:           "%s (entered address)",
 		noSubject:           "(no subject)",
 		relinkActivity:      "Re-associate activity %s to %s %s",
 		relinkActivities:    "Re-associate %d activities to %s %s",
@@ -130,6 +134,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s every waiting proposal of act %s",
 		runReport:           "Run report %s",
 		composeReport:       "Compose a report of %d block(s)",
+		draftReport:         "Save a draft on report %s, which readers see only once it is published",
 		bulkChange:          "Change %d records at once",
 		analyticsQuery:      "Run an analytics query over %s",
 		annotateNothing:     "Record that tonight's pass ran and found nothing to say",
@@ -146,8 +151,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "%s erfassen",
 		settingFields:       ", Felder: %s",
 		moreFields:          "+%d weitere",
-		overwriteHuman:      "%s %s ändern: manuell bearbeitete Felder überschreiben (%s)",
 		merge:               "%s zusammenführen: %s in %s",
+		mergeCase:           "%d Kontakte in %s zusammenführen",
+		previewCase:         "Zusammenführung von %d Kontakten in %s prüfen",
 		enrich:              "%s von %s lesen und eine Anreicherung für %s vorschlagen",
 		ownDomain:           "seiner eigenen Domain",
 		onDeal:              "%s (Deal %s)",
@@ -169,6 +175,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Profilfeld %s zum Unternehmen %s bestätigen",
 		updateProfileField:  "Profilfeld %s zum Unternehmen %s ändern",
 		mergeTags:           "Tag %q in %q überführen und den Namen %q freigeben",
+		mergeMembers:        "Mitglied %q (%s) mit %q (%s) zusammenführen. Das Duplikat wird entfernt und der persönliche Zugriff auf Datensätze und Korrespondenz geht auf das verbleibende Konto über.",
+		setUpPartner:        "Partnerprogramm für Firma %s einrichten (Arten: %s), ohne Margenstufe",
 		promoteLead:         "Lead %s zum Kontakt überführen (%s)",
 		disqualifyLead:      "Lead %s disqualifizieren",
 		demoteLead:          "Überführung von Lead %s rückgängig machen",
@@ -188,6 +196,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Termin buchen: %q von %s bis %s",
 		bookingHost:         " im Kalender von %s",
 		bookingLinks:        ", verknüpfte Datensätze: %d",
+		hostNamed:           "%s (eingegebene Adresse)",
 		noSubject:           "(kein Betreff)",
 		relinkActivity:      "Aktivität %s neu zuordnen: %s %s",
 		relinkActivities:    "%d Aktivitäten neu zuordnen: %s %s",
@@ -204,6 +213,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s: alle wartenden Vorschläge des Vorgangs %s",
 		runReport:           "Bericht %s ausführen",
 		composeReport:       "Bericht aus %d Baustein(en) erstellen",
+		draftReport:         "Entwurf für den gespeicherten Bericht %s zur Veröffentlichung vorbereiten",
 		bulkChange:          "%d Datensätze auf einmal ändern",
 		analyticsQuery:      "Analyseabfrage über %s ausführen",
 		annotateNothing:     "Festhalten, dass der nächtliche Durchlauf lief und nichts zu berichten hatte",
@@ -220,8 +230,9 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Ghi nhận %s",
 		settingFields:       ", các trường: %s",
 		moreFields:          "+%d trường khác",
-		overwriteHuman:      "Cập nhật %s %s: ghi đè các trường đã được chỉnh sửa thủ công (%s)",
 		merge:               "Hợp nhất %s: %s vào %s",
+		mergeCase:           "Hợp nhất %d liên hệ vào %s",
+		previewCase:         "Xem trước việc hợp nhất %d liên hệ vào %s",
 		enrich:              "Đọc %s từ %s và đề xuất làm giàu dữ liệu cho %s",
 		ownDomain:           "tên miền của chính công ty",
 		onDeal:              "%s (deal %s)",
@@ -243,6 +254,8 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		confirmProfileField: "Xác nhận trường hồ sơ %s của công ty %s",
 		updateProfileField:  "Cập nhật trường hồ sơ %s của công ty %s",
 		mergeTags:           "Gộp thẻ %q vào %q, giải phóng tên %q",
+		mergeMembers:        "Gộp thành viên %q (%s) vào %q (%s). Tài khoản trùng bị xóa và tài khoản giữ lại kế thừa quyền truy cập bản ghi cá nhân cùng thư từ.",
+		setUpPartner:        "Thiết lập chương trình đối tác cho công ty %s (loại: %s), chưa có bậc biên lợi nhuận",
 		promoteLead:         "Chuyển lead %s thành liên hệ (%s)",
 		disqualifyLead:      "Loại lead %s",
 		demoteLead:          "Hoàn tác việc chuyển đổi lead %s",
@@ -262,6 +275,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Đặt lịch %q từ %s đến %s",
 		bookingHost:         " trên lịch của %s",
 		bookingLinks:        ", gắn với %d bản ghi",
+		hostNamed:           "%s (địa chỉ được nhập)",
 		noSubject:           "(không có tiêu đề)",
 		relinkActivity:      "Liên kết lại hoạt động %s với %s %s",
 		relinkActivities:    "Liên kết lại %d hoạt động với %s %s",
@@ -278,6 +292,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		decideBundle:        "%s mọi đề xuất đang chờ của lượt %s",
 		runReport:           "Chạy báo cáo %s",
 		composeReport:       "Soạn một báo cáo gồm %d khối",
+		draftReport:         "Chuẩn bị bản nháp cho báo cáo đã lưu %s để chờ xuất bản",
 		bulkChange:          "Thay đổi %d bản ghi cùng lúc",
 		analyticsQuery:      "Chạy truy vấn phân tích trên %s",
 		annotateNothing:     "Ghi nhận rằng lượt chạy đêm nay đã chạy và không có gì để báo cáo",

@@ -1,0 +1,855 @@
+/** @vitest-environment happy-dom */
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { useRecordTimeline } from "../design-system/recordtimeline";
+import { writeMessage } from "../design-system/richtext-testing";
+import { pickOption } from "../design-system/select-testing";
+import { calendarDay } from "../format/calendarday";
+import { formatTimeOfDay } from "../format/format";
+import { LogActivity } from "./logactivity";
+import { LogActivityAction } from "./logactivity.action";
+import {
+  type Captured,
+  contact,
+  createdActivity,
+  jsonResponse,
+  READER_ZONE,
+  render,
+  stubApi,
+} from "./logactivity.testkit";
+
+// Logging from a 360 (the "you can actually add to the timeline" acceptance):
+// the POST body carries the contract's shape (kind, subject, the viewed
+// record as the link, source stamped manual), a success refetches the
+// screen's activities query, a 422 renders its RFC 7807 detail verbatim, and
+// the due-date input exists only for a task.
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  // A case that pins the clock or pretends to be in another zone hands both
+  // back, so the next case reads the machine it is actually running on.
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+// The viewer's zone as the composer asks for it. `calendarDay` takes its zone as
+// an argument and never consults resolvedOptions, so this redirects only the
+// screen's own lookup — which is what a test of the zone CHOICE needs.
+function pretendViewerZone(timeZone: string): void {
+  const real = Intl.DateTimeFormat().resolvedOptions();
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+    ...real,
+    timeZone,
+  });
+}
+
+const dayBox = (label: string) =>
+  screen.getByRole<HTMLInputElement>("textbox", { name: label });
+
+// A day as an English reader sees and types it.
+const shown = (day: string) => day.split("-").reverse().join("/");
+
+async function typeDay(user: UserEvent, box: HTMLInputElement, day: string) {
+  await user.tripleClick(box);
+  await user.keyboard(shown(day));
+}
+
+// One day, picked in the form and asserted against — and the zone the machine
+// running this suite is in, because the invariant is "the day the writer picked
+// is the day the reader reads", which has to hold on every laptop rather than
+// only on one that runs UTC.
+const PICKED_DAY = "2026-07-10";
+
+// An instant off a captured body, narrowed so a missing one cannot pass as `undefined`.
+function postedInstant(body: unknown, key: "due_at" | "occurred_at"): string {
+  const instant: unknown =
+    body && Object.getOwnPropertyDescriptor(body, key)?.value;
+  if (typeof instant !== "string") {
+    throw new Error(`expected the logged activity to carry ${key}`);
+  }
+  return instant;
+}
+
+describe("log activity from a 360", () => {
+  it("posts a note linked to the viewed contact and refetches the timeline", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<ContactActivity />);
+    await userEvent.type(
+      await screen.findByLabelText("Subject *"),
+      "Call recap",
+    );
+    writeMessage("Details", "Agreed next step");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "note",
+      subject: "Call recap",
+      body: "Agreed next step",
+      links: [{ entity_type: "contact", entity_id: "p1" }],
+      source: "manual",
+    });
+    if (!post) throw new Error("expected a POST /activities to be captured");
+    const { occurred_at } = post.body as { occurred_at: string };
+    expect(occurred_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    // the invalidation refetches the timeline the screen already loaded once
+    await waitFor(() =>
+      expect(
+        captured.filter((entry) => entry.key === "GET /activities").length,
+      ).toBeGreaterThanOrEqual(2),
+    );
+    // a successful log clears the draft for the next entry
+    expect((screen.getByLabelText("Subject *") as HTMLInputElement).value).toBe(
+      "",
+    );
+  });
+
+  // The API has always accepted `kind: "call"`; no frontend surface could send
+  // one, because the draft's type, the picker and the clamp each stopped at
+  // note/task/meeting. A rep logging a call attempt is ordinary work.
+  it("posts a call, so the kind the API accepts is one a rep can write", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" />);
+
+    await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Call");
+    // A call's subject is not required: an outcome alone says what happened.
+    await userEvent.type(screen.getByLabelText("Subject"), "No answer");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "call",
+      subject: "No answer",
+      links: [{ entity_type: "lead", entity_id: "l1" }],
+      source: "manual",
+    });
+    // `meeting_status: held` belongs to a meeting. A call carrying it would
+    // tell the lead ladder a meeting took place.
+    expect(post?.body).not.toHaveProperty("meeting_status");
+    // And it carries no due date: a call happened, it is not owed.
+    expect(post?.body).not.toHaveProperty("due_at");
+    // "No outcome" is said, not left out: an explicit null.
+    expect(post?.body).toHaveProperty("call_outcome", null);
+  });
+
+  // A caller that already knows which verb the reader came to perform hands it
+  // over, rather than opening on a note they have to change.
+  it("opens on the kind the caller named", async () => {
+    stubApi({ "GET /contacts/p1": () => jsonResponse(contact) });
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+
+    expect(screen.getByLabelText("Type").textContent).toContain("Call");
+    // A call's date is the day it happened, not a deadline — the same field
+    // a note gets, under the same label.
+    expect(screen.getByLabelText("Date")).toBeTruthy();
+  });
+
+  // How a call ended, picked with one click: five outcomes and "No outcome".
+  it("offers a call the five outcomes and posts the one picked", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+    const user = userEvent.setup();
+    const outcomes = screen.getByRole("group", { name: "Outcome" });
+    expect(
+      within(outcomes)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual([
+      "No outcome",
+      "Reached",
+      "Not reached",
+      "Left a voicemail",
+      "Call back later",
+      "Put through",
+    ]);
+    const log = screen.getByRole("button", { name: "Log" });
+    expect(log.hasAttribute("disabled")).toBe(true);
+
+    // An outcome alone is a whole call: no subject, no body.
+    await user.click(
+      within(outcomes).getByRole("button", { name: "Not reached" }),
+    );
+    expect(log.hasAttribute("disabled")).toBe(false);
+    await user.click(log);
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "call",
+      call_outcome: "not_reached",
+    });
+  });
+
+  it("offers a note no outcome, and sends none after a switch from Call", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
+    const user = userEvent.setup();
+    await user.click(
+      within(screen.getByRole("group", { name: "Outcome" })).getByRole(
+        "button",
+        {
+          name: "Reached",
+        },
+      ),
+    );
+    await pickOption(user, screen.getByLabelText("Type"), "Note");
+    expect(screen.queryByRole("group", { name: "Outcome" })).toBeNull();
+    await user.type(screen.getByLabelText("Subject *"), "Spoke at the fair");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({ kind: "note" });
+    expect(post?.body).not.toHaveProperty("call_outcome");
+  });
+
+  it("renders the server's 422 detail verbatim", async () => {
+    stubApi({
+      "POST /activities": () =>
+        jsonResponse(
+          { title: "Unprocessable", detail: "subject must not be blank" },
+          422,
+        ),
+    });
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await userEvent.type(screen.getByLabelText("Subject *"), "x");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(screen.getByText("subject must not be blank")).toBeTruthy(),
+    );
+  });
+
+  it("offers one date box for every kind: prefilled today, relabeled per kind, the day kept across a switch", async () => {
+    stubApi({ "POST /activities": createdActivity });
+    // Read the clock on both sides of the render: a run that straddles
+    // midnight would otherwise fail on which "today" the prefill caught. The
+    // zone is the installation's record zone because a note's day is the timeline heading it will
+    // file under, and the timeline groups there.
+    const dayBeforeRender = calendarDay(new Date(), READER_ZONE);
+    render(<LogActivity entityType="company" entityId="o1" />);
+    const dayAfterRender = calendarDay(new Date(), READER_ZONE);
+    // A note's date is the day it happened, live from the start and showing
+    // the today that would otherwise be assumed invisibly at submit.
+    const noteDay = dayBox("Date");
+    expect(noteDay.hasAttribute("disabled")).toBe(false);
+    expect([dayBeforeRender, dayAfterRender].map(shown)).toContain(
+      noteDay.value,
+    );
+    // Becoming a task turns the same box into the due date, keeping the day
+    // the writer picked instead of resetting it under them.
+    const user = userEvent.setup();
+    await typeDay(user, noteDay, PICKED_DAY);
+    await pickOption(user, screen.getByLabelText("Type"), "Task");
+    expect(dayBox("Due date").value).toBe(shown(PICKED_DAY));
+  });
+
+  it("posts a backdated note as its picked date alone", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="company" entityId="o1" />);
+    const user = userEvent.setup();
+    await typeDay(user, dayBox("Date"), PICKED_DAY);
+    await user.type(screen.getByLabelText("Subject *"), "Call recap");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    if (!post) throw new Error("expected a POST /activities to be captured");
+    // A backdated note names its date and no time. The server reads the date
+    // in the value's own offset, so UTC noon names the picked day.
+    expect(post.body).toHaveProperty("occurred_at", `${PICKED_DAY}T12:00:00Z`);
+    expect(post.body).toHaveProperty("occurred_precision", "day");
+    expect(post.body).not.toHaveProperty("due_at");
+  });
+
+  it("offers the day a note logged right now will actually file under, from a zone where the two disagree", async () => {
+    // The branch the backdated case never reaches: the writer accepts the
+    // offered day and the entry is stamped at the moment of logging.
+    //
+    // 23:00Z on 21 August is 16:00 the same afternoon in Los Angeles and 01:00
+    // the NEXT day in Berlin. Offered the writer's own today, the composer
+    // named 21 August and the record timeline — which groups in that zone —
+    // then filed the entry under 22 August: the composer promised a day it did
+    // not deliver.
+    // `toFake: ["Date"]` and not the default set: the default ALSO replaces
+    // Intl.DateTimeFormat, and the replacement does not carry resolvedOptions on
+    // the prototype the zone spy patches — so the spy silently stops redirecting
+    // and the case quietly runs in the machine's own zone, proving nothing. The
+    // clock is the only thing this needs frozen; every timer stays real, so the
+    // interactions below need no advancing.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-21T23:00:00Z"));
+    pretendViewerZone("America/Los_Angeles");
+    const user = userEvent.setup();
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="company" entityId="o1" />);
+    expect(dayBox("Date").value).toBe("22/08/2026");
+    // The ceiling moves with the offer, so the offered day is not refused.
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    await screen.findByRole("button", { name: "Saturday, 22 August 2026" });
+    await user.keyboard("{Escape}");
+    await user.type(screen.getByLabelText("Subject *"), "Called back");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    if (!post) throw new Error("expected a POST /activities to be captured");
+    const occurred = new Date(postedInstant(post.body, "occurred_at"));
+    // The day the composer offered IS the day the timeline files it under.
+    expect(calendarDay(occurred, READER_ZONE)).toBe("2026-08-22");
+    expect(post.body).toHaveProperty("occurred_precision", "instant");
+  });
+
+  // A meeting and a call are WITH A CONTACT, and the server refuses either one
+  // linked to a company — per link, so naming the company alongside the contact
+  // is refused too. Opened on a company the form offered no way to say who was
+  // there, and the reader met a 422 with no field to correct.
+  describe("a meeting logged from a company", () => {
+    const contacts = {
+      // full_name, the field the contract sends — a fixture naming a contact by
+      // display_name would pass here and find nothing against the real API.
+      data: [
+        { ...contact, id: "p1", full_name: "Frédéric de Gombert" },
+        { ...contact, id: "p2", full_name: "Marie Lefevre" },
+      ],
+      page: { next_cursor: null },
+    };
+
+    it("asks who was there, and refuses to send until it is answered", async () => {
+      const user = userEvent.setup();
+      stubApi({
+        "POST /activities": createdActivity,
+        "GET /contacts": () => jsonResponse(contacts),
+      });
+      render(<LogActivity entityType="company" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Subject *"), "Kickoff");
+
+      // The subject alone is not enough here, unlike every other kind.
+      const log = screen.getByRole("button", { name: "Log" });
+      expect(log.hasAttribute("disabled")).toBe(true);
+
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
+      await user.click(
+        await screen.findByRole("button", { name: "Frédéric de Gombert" }),
+      );
+      await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+    });
+
+    it("links the contact and NOT the company, which the server refuses", async () => {
+      const user = userEvent.setup();
+      const captured: Captured[] = [];
+      stubApi(
+        {
+          "POST /activities": createdActivity,
+          "GET /contacts": () => jsonResponse(contacts),
+        },
+        captured,
+      );
+      render(<LogActivity entityType="company" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Subject *"), "Kickoff");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
+      await user.click(
+        await screen.findByRole("button", { name: "Frédéric de Gombert" }),
+      );
+      await user.click(screen.getByRole("button", { name: "Log" }));
+
+      await waitFor(() =>
+        expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+          true,
+        ),
+      );
+      const post = captured.find((entry) => entry.key === "POST /activities");
+      if (!post) throw new Error("expected a POST /activities to be captured");
+      const links = (
+        post.body as { links: { entity_type: string; entity_id: string }[] }
+      ).links;
+      // One link, the contact. A company link alongside it is refused by
+      // the database trigger whatever else is present, and a frontend test
+      // whose POST is stubbed cannot see that refusal — so the shape is
+      // asserted here rather than trusted to a green submit.
+      expect(links).toEqual([{ entity_type: "contact", entity_id: "p1" }]);
+    });
+
+    it("files a note on the company after a meeting's attendee was picked", async () => {
+      const user = userEvent.setup();
+      const captured: Captured[] = [];
+      stubApi(
+        {
+          "POST /activities": createdActivity,
+          "GET /contacts": () => jsonResponse(contacts),
+        },
+        captured,
+      );
+      render(<LogActivity entityType="company" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Attendees"), "Fré");
+      await user.click(
+        await screen.findByRole("button", { name: "Frédéric de Gombert" }),
+      );
+
+      // Switching kind hides the picker but does not forget the contact: the
+      // reader answered a question the form stopped asking.
+      await pickOption(user, screen.getByLabelText("Type"), "Note");
+      expect(screen.queryByLabelText("Attendees")).toBeNull();
+      await user.type(screen.getByLabelText("Subject *"), "Pricing thoughts");
+      await user.click(screen.getByRole("button", { name: "Log" }));
+
+      await waitFor(() =>
+        expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+          true,
+        ),
+      );
+      const post = captured.find((entry) => entry.key === "POST /activities");
+      if (!post) throw new Error("expected a POST /activities to be captured");
+      const links = (
+        post.body as { links: { entity_type: string; entity_id: string }[] }
+      ).links;
+      // The company, not the contact. A note carries no contact rule, so a
+      // stale attendee would file it against the contact and take it off the
+      // company screen the reader wrote it on.
+      expect(links).toEqual([{ entity_type: "company", entity_id: "o1" }]);
+    });
+
+    it("asks nobody for a note, which a company can hold on its own", async () => {
+      stubApi({ "POST /activities": createdActivity });
+      render(<LogActivity entityType="company" entityId="o1" />);
+      expect(screen.queryByLabelText("Attendees")).toBeNull();
+    });
+
+    it("says the company has no contacts rather than offering none silently", async () => {
+      const user = userEvent.setup();
+      stubApi({
+        "POST /activities": createdActivity,
+        "GET /contacts": () =>
+          jsonResponse({ data: [], page: { next_cursor: null } }),
+      });
+      render(<LogActivity entityType="company" entityId="o1" />);
+      await pickOption(user, screen.getByLabelText("Type"), "Meeting");
+      await user.type(screen.getByLabelText("Attendees"), "any");
+      // The picker's own empty-search wording, so a company with nobody on it
+      // reads as an answered question rather than a field that never responded.
+      expect(await screen.findByText(/no match/i)).toBeTruthy();
+    });
+  });
+
+  it("files a note on the day the writer overrode to, when the record's clock already calls it yesterday", async () => {
+    // The other side of the same boundary. At 16:00 in Los Angeles the record's
+    // clock has already turned over, so the writer's own today is the record's
+    // yesterday. Deciding "today" on the writer's clock made this look like
+    // no backdating at all: the entry was stamped at the moment of logging and
+    // filed under the day AFTER the one the writer had typed.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-21T23:00:00Z"));
+    pretendViewerZone("America/Los_Angeles");
+    const user = userEvent.setup();
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="company" entityId="o1" />);
+    const writersOwnToday = "2026-08-21";
+    await typeDay(user, dayBox("Date"), writersOwnToday);
+    await user.type(screen.getByLabelText("Subject *"), "Called back");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    if (!post) throw new Error("expected a POST /activities to be captured");
+    const occurred = new Date(postedInstant(post.body, "occurred_at"));
+    expect(calendarDay(occurred, READER_ZONE)).toBe(writersOwnToday);
+  });
+
+  it("marks the record's today, under the cap, while the browser is a day ahead", async () => {
+    // 10:00Z is the 23rd at 23:00 in Pago Pago and the 24th from UTC-10 eastward.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-24T10:00:00Z"));
+    const user = userEvent.setup();
+    stubApi({});
+    render(
+      <LogActivity entityType="company" entityId="o1" />,
+      "Pacific/Pago_Pago",
+    );
+    await typeDay(user, dayBox("Date"), "2026-10-20");
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    const today = await screen.findByRole("button", { name: "Today" });
+    expect(today).toHaveProperty("disabled", false);
+    await user.click(today);
+    expect(dayBox("Date").value).toBe("23/10/2026");
+  });
+  it("refuses a future day for a note but not for a task's due date", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="company" entityId="o1" />);
+    const user = userEvent.setup();
+    // A note is capped at today: a day typed past it fails the form's own
+    // validation, so the POST never leaves.
+    const noteDay = dayBox("Date");
+    await typeDay(user, noteDay, "2199-01-01");
+    await user.type(screen.getByLabelText("Subject *"), "Time travel");
+    expect(noteDay.getAttribute("aria-invalid")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+      false,
+    );
+    // A due date has no ceiling — tasks are usually for the future.
+    await pickOption(user, screen.getByLabelText("Type"), "Task");
+    const dueDay = dayBox("Due date");
+    await typeDay(user, dueDay, "2199-01-01");
+    await user.tab();
+    expect(dueDay.getAttribute("aria-invalid")).not.toBe("true");
+  });
+
+  it("posts a task's due_at as the END of the picked day in the record's zone", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-05T05:00:00Z"));
+    const user = userEvent.setup();
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="company" entityId="o1" />);
+    await pickOption(user, screen.getByLabelText("Type"), "Task");
+    await user.click(screen.getByRole("button", { name: /^Choose date/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Friday, 10 July 2026" }),
+    );
+    await user.type(screen.getByLabelText("Subject *"), "Send proposal");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "task",
+      subject: "Send proposal",
+      links: [{ entity_type: "company", entity_id: "o1" }],
+      source: "manual",
+    });
+    if (!post) throw new Error("expected a POST /activities to be captured");
+    const dueAt = new Date(postedInstant(post.body, "due_at"));
+    // The instant has to fall on the day the writer picked, read in the zone
+    // the deadline is ANCHORED to — the bare `yyyy-mm-dd` handed to `new Date`
+    // is UTC midnight, which is the previous calendar day for every writer west
+    // of UTC.
+    expect(calendarDay(dueAt, READER_ZONE)).toBe(PICKED_DAY);
+    // And at that day's END, because a task picked for today is due all day.
+    // Read as a wall clock in that same zone: `getHours()` answers for the
+    // machine running the test, so it agreed only where the record zone and the
+    // runner's zone happened to be the same one.
+    expect(
+      formatTimeOfDay(postedInstant(post.body, "due_at"), "en", READER_ZONE),
+    ).toBe("23:59");
+  });
+
+  it("keeps ordinary meeting notes as notes: unchecked, the field stays Details and no source_system is sent", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    // The checkbox is unchecked by default: this is still a note field, not
+    // a transcript field, even though the kind is "meeting" — typing here
+    // must never silently carry source_system: transcript.
+    expect(screen.queryByLabelText("Transcript")).toBeNull();
+    await userEvent.type(screen.getByLabelText("Subject *"), "Quick sync");
+    writeMessage("Details", "discussed pricing, follow up Tuesday");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).not.toHaveProperty("source_system");
+    expect(post?.body).toMatchObject({
+      kind: "meeting",
+      body: "discussed pricing, follow up Tuesday",
+      // A hand-logged meeting already took place, and `held` is what lets
+      // the lead status ladder read it as engagement.
+      meeting_status: "held",
+    });
+  });
+
+  it("sends no meeting_status for a note — the server refuses the pairing as a 422", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await userEvent.type(screen.getByLabelText("Subject *"), "Just a note");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).not.toHaveProperty("meeting_status");
+  });
+
+  it("posts source_system: transcript only once the writer checks 'this text is a transcript'", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    // The label swaps once checked — pasting is a transcript, not "details".
+    expect(screen.queryByLabelText("Details")).toBeNull();
+    await userEvent.type(screen.getByLabelText("Subject *"), "Kickoff call");
+    await userEvent.type(
+      screen.getByLabelText("Transcript"),
+      "Anna: hello\nBen: hi",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({
+      kind: "meeting",
+      subject: "Kickoff call",
+      body: "Anna: hello\nBen: hi",
+      source_system: "transcript",
+      links: [{ entity_type: "deal", entity_id: "d1" }],
+    });
+  });
+
+  it("sends a checked transcript's text raw, not trimmed, so an agent posting the identical paste normalizes it the same way", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    await userEvent.type(screen.getByLabelText("Subject *"), "Kickoff call");
+    // fireEvent rather than userEvent.type: a leading space/newline is
+    // exactly the thing under test, and userEvent.type mangles literal
+    // leading whitespace in a textarea.
+    fireEvent.change(screen.getByLabelText("Transcript"), {
+      target: { value: "  Anna: hello" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({ body: "  Anna: hello" });
+  });
+
+  it("reads an uploaded .txt transcript into the transcript field", async () => {
+    stubApi({ "POST /activities": createdActivity });
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    const file = new File(["Anna: hello from a file"], "meeting.txt", {
+      type: "text/plain",
+    });
+    const input = screen.getByLabelText("Or upload a file") as HTMLInputElement;
+    await userEvent.upload(input, file);
+    await waitFor(() =>
+      expect(
+        (screen.getByLabelText("Transcript") as HTMLTextAreaElement).value,
+      ).toBe("Anna: hello from a file"),
+    );
+  });
+
+  it("rejects a non-.txt upload with a visible reason, and leaves the transcript field untouched", async () => {
+    stubApi({ "POST /activities": createdActivity });
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    const file = new File(
+      ["WEBVTT\n\n00:00.000 --> 00:01.000\nhi"],
+      "meeting.vtt",
+      {
+        type: "text/vtt",
+      },
+    );
+    const input = screen.getByLabelText("Or upload a file") as HTMLInputElement;
+    // fireEvent rather than userEvent.upload: accept is advisory (a real
+    // browser's file picker can be switched to "All files"), and
+    // userEvent.upload refuses to fire a change event for a file it judges
+    // against `accept` itself — which would test user-event, not the
+    // component's own rejection path.
+    Object.defineProperty(input, "files", { value: [file] });
+    fireEvent.change(input);
+    await waitFor(() =>
+      expect(screen.getByText("Only a .txt file is accepted.")).toBeTruthy(),
+    );
+    expect(
+      (screen.getByLabelText("Transcript") as HTMLTextAreaElement).value,
+    ).toBe("");
+  });
+
+  it("surfaces a failed file read instead of leaving the writer guessing", async () => {
+    stubApi({ "POST /activities": createdActivity });
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+    const file = new File(["Anna: hello"], "meeting.txt", {
+      type: "text/plain",
+    });
+    vi.spyOn(file, "text").mockRejectedValue(new Error("unreadable"));
+    const input = screen.getByLabelText("Or upload a file") as HTMLInputElement;
+    await userEvent.upload(input, file);
+    await waitFor(() =>
+      expect(
+        screen.getByText("File could not be read. Paste the text instead."),
+      ).toBeTruthy(),
+    );
+    expect(
+      (screen.getByLabelText("Transcript") as HTMLTextAreaElement).value,
+    ).toBe("");
+  });
+});
+
+// In the drawer Details is the rich editor and takes the drawer's height. The
+// card in a record's rail keeps three lines. A transcript is never formatted,
+// because a citation points at its lines.
+describe("the Details field", () => {
+  it("is a growing rich editor in the drawer, not the three-row box", () => {
+    stubApi({});
+    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
+    const details = screen.getByRole("textbox", { name: "Details" });
+
+    expect(details.getAttribute("contenteditable")).toBe("true");
+    expect(details.closest(".richtext")?.classList).toContain("is-growing");
+    expect(details.style.minHeight).toBe("12em");
+    expect(details.style.height).toBe("");
+  });
+
+  it("keeps its compact height on the record's card", () => {
+    stubApi({});
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    const details = screen.getByRole("textbox", { name: "Details" });
+
+    expect(details.style.height).toBe("4.5em");
+    expect(details.closest(".richtext")?.classList).not.toContain("is-growing");
+  });
+
+  it("sends the formatting as markdown", async () => {
+    const captured: Captured[] = [];
+    stubApi({ "POST /activities": createdActivity }, captured);
+    render(<LogActivity entityType="deal" entityId="d1" />);
+    await userEvent.type(screen.getByLabelText("Subject *"), "Recap");
+    const details = screen.getByRole("textbox", { name: "Details" });
+    details.innerHTML = "<p><b>Summary</b></p><ul><li>first point</li></ul>";
+    fireEvent.input(details);
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+
+    await waitFor(() =>
+      expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
+        true,
+      ),
+    );
+    const post = captured.find((entry) => entry.key === "POST /activities");
+    expect(post?.body).toMatchObject({ body: "**Summary**\n\n- first point" });
+  });
+
+  it("stays a plain textarea for a transcript, in the drawer too", async () => {
+    stubApi({});
+    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
+    await pickOption(
+      userEvent.setup(),
+      screen.getByLabelText("Type"),
+      "Meeting",
+    );
+    await userEvent.click(screen.getByLabelText("This text is a transcript"));
+
+    expect(screen.getByLabelText("Transcript").tagName).toBe("TEXTAREA");
+    expect(screen.queryByRole("toolbar")).toBeNull();
+  });
+});
+
+function ContactActivity() {
+  useRecordTimeline("contact", "p1");
+  return <LogActivity entityType="contact" entityId="p1" />;
+}

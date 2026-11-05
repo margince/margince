@@ -94,7 +94,7 @@ func admit(ctx context.Context, actor Identity, object string, action principal.
 func lockTargetGrants(ctx context.Context, tx pgx.Tx, userID ids.UserID) (seatGrants, error) {
 	var exists bool
 	switch err := tx.QueryRow(ctx,
-		`SELECT true FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+		`SELECT true FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
 		userID).Scan(&exists); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return seatGrants{}, apperrors.ErrNotFound
@@ -136,8 +136,23 @@ const (
 // buy nothing and would tell an operator their own action failed for the wrong
 // reason.
 func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Identity, targetID ids.UserID, reach targetReach) error {
+	if err := refuseAgentMemberReach(ctx, tx, targetID); err != nil {
+		return err
+	}
 	if actor.hasRole(roleAdmin) {
 		return nil
+	}
+	// A service member runs a feed nobody is watching, so only an installation
+	// admin may change or stop it through the member routes.
+	var service bool
+	switch err := tx.QueryRow(ctx,
+		`SELECT service_extension IS NOT NULL FROM app_user WHERE id = $1`, targetID).Scan(&service); {
+	case errors.Is(err, pgx.ErrNoRows):
+		// lockTargetGrants answers not-found below.
+	case err != nil:
+		return err
+	case service:
+		return apperrors.ErrPermissionDenied
 	}
 	target, err := lockTargetGrants(ctx, tx, targetID)
 	if err != nil {
@@ -233,6 +248,9 @@ func masksContained(caller, target []principal.FieldMask) bool {
 // cannot be archived between this read and the assignment. An archived role
 // answers errUnknownRole — it is not a role anybody can be given.
 func roleForAssignment(ctx context.Context, tx pgx.Tx, actor Identity, roleKey string, teams []ids.TeamID) (ids.UUID, error) {
+	if err := refuseAgentAdminRole(ctx, roleKey); err != nil {
+		return ids.UUID{}, err
+	}
 	var roleID ids.UUID
 	var raw []byte
 	err := tx.QueryRow(ctx,
@@ -312,9 +330,15 @@ func refuseWhileHoldingArchivedRole(ctx context.Context, tx pgx.Tx, userID ids.U
 
 // archivedRoleHolders reports which of these members hold an archived role.
 func archivedRoleHolders(ctx context.Context, tx pgx.Tx, users []ids.UUID) (map[ids.UUID]bool, error) {
-	rows, err := tx.Query(ctx,
+	return usersMatching(ctx, tx,
 		`SELECT DISTINCT ra.user_id FROM role_assignment ra JOIN role r ON r.id = ra.role_id
 		  WHERE ra.user_id = ANY($1) AND r.archived_at IS NOT NULL`, users)
+}
+
+// usersMatching reads the members of users a query selects, as a set. The
+// query takes the user ids as $1 and returns user ids.
+func usersMatching(ctx context.Context, tx pgx.Tx, query string, users []ids.UUID) (map[ids.UUID]bool, error) {
+	rows, err := tx.Query(ctx, query, users)
 	if err != nil {
 		return nil, err
 	}
@@ -350,3 +374,26 @@ func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
 // object added later is inside this ceiling without anybody remembering to add
 // it — the way a hand-kept list silently stops covering the newest authority.
 var administrationObjects = policy.AdministrationObjects()
+
+// AdmitMemberHandover gates handing a member's work on, inside the handover's
+// transaction. It asks the user_admin update grant, a live member (404
+// otherwise), and the ceiling every member verb carries. The member's row stays
+// locked until that transaction ends, so a role change cannot land in between.
+// The caller comes off the principal, whose role keys and grants the ceiling reads.
+func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
+	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
+		return err
+	}
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	target, err := lockTargetGrants(ctx, tx, member)
+	if err != nil {
+		return err
+	}
+	if err := refuseAgentMemberReach(ctx, tx, member); err != nil {
+		return err
+	}
+	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)
+}

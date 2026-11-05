@@ -79,9 +79,14 @@ func sectionOfCategory(category crmcontracts.WorklistItemCategory) crmcontracts.
 		return crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations
 	case crmcontracts.WorklistItemCategoryDecisions, crmcontracts.WorklistItemCategorySystem:
 		return crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair
-	case crmcontracts.WorklistItemCategoryDealsAtRisk, crmcontracts.WorklistItemCategoryTasks:
+	case crmcontracts.WorklistItemCategoryRelationships:
+		// The section the quiet-relationship row had while it was filed as
+		// system: the new badge changes the filter, not the morning's order.
+		return crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair
+	case crmcontracts.WorklistItemCategoryDealsAtRisk, crmcontracts.WorklistItemCategoryTasks,
+		crmcontracts.WorklistItemCategoryUpcoming:
 		// The two that are revenue to move: a deal drifting, and the work
-		// somebody agreed to do about one.
+		// somebody agreed to do about one. Upcoming work is that same agreed work.
 		return crmcontracts.WorklistItemBriefSectionBriefSectionMoveRevenue
 	default:
 		// A category this build does not place. Empty rather than a guess, so

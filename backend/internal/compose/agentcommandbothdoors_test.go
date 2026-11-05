@@ -49,6 +49,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -136,6 +137,27 @@ func mergeDoors(collection, recordType string) bothDoorsFixture {
 		args: func(primary, secondary ids.UUID) string {
 			return `{"record_type":"` + recordType + `","source_id":"` + primary.String() +
 				`","target_id":"` + secondary.String() + `"}`
+		},
+	}
+}
+
+func caseDoors(action string, preview bool) bothDoorsFixture {
+	body := func(member, survivor ids.UUID) string {
+		return `"member_ids":["` + member.String() + `","` + survivor.String() + `"],"survivor_id":"` +
+			survivor.String() + `","owner_id":"` + survivor.String() + `","revision":"r1"`
+	}
+	return bothDoorsFixture{
+		rest: func(primary, secondary ids.UUID) (*http.Request, []byte) {
+			payload := "{" + body(primary, secondary) + "}"
+			req := httptest.NewRequest(http.MethodPost,
+				"/v1/dedupe/contact-cases/"+primary.String()+"/"+action, strings.NewReader(payload))
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("contact_id", primary.String())
+			return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx)), []byte(payload)
+		},
+		args: func(primary, secondary ids.UUID) string {
+			return `{"record_type":"contact","contact_id":"` + primary.String() + `",` + body(primary, secondary) +
+				fmt.Sprintf(`,"preview":%t}`, preview)
 		},
 	}
 }
@@ -232,7 +254,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 
 	"updateContact":      updateDoors("contacts", "contact", `{"title":"CTO"}`),
 	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
-	"updateDeal":         updateDoors("deals", "deal", `{"forecast_category":"commit"}`),
+	"updateDeal":         updateDoors("deals", "deal", `{"win_probability":95}`),
 	"updateLead":         updateDoors("leads", "lead", `{"status":"contacted"}`),
 	"updateActivity":     updateDoors("activities", "activity", `{"subject":"Renewal call"}`),
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
@@ -250,6 +272,10 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 
 	"mergeContact": mergeDoors("contacts", "contact"),
 	"mergeCompany": mergeDoors("companies", "company"),
+
+	// A case decision names the case by any member and binds to the survivor.
+	"mergeContactCase":        caseDoors("merge", false),
+	"previewContactCaseMerge": caseDoors("preview", true),
 
 	// The tag merge does NOT reuse mergeDoors: that one is a record merge typed
 	// by record_type and resolved through the SoR provider, and this one folds a
@@ -354,18 +380,6 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 			return doorRequest(http.MethodPost, "/v1/scheduling/invitations", ids.UUID{}, invitationDoorBody(primary))
 		},
 		args: func(primary, _ ids.UUID) string { return invitationDoorBody(primary) },
-	},
-	"bookMeeting": {
-		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {
-			return doorRequest(http.MethodPost, "/v1/bookings", ids.UUID{},
-				`{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z","subject":"Renewal review",`+
-					`"links":[{"entity_type":"deal","entity_id":"`+primary.String()+`"}]}`)
-		},
-		args: func(primary, _ ids.UUID) string {
-			return `{"start":"2026-08-10T09:00:00Z","end":"2026-08-10T09:30:00Z",` +
-				`"subject":"Renewal review","links":[{"entity_type":"deal","entity_id":"` +
-				primary.String() + `"}]}`
-		},
 	},
 }
 
@@ -492,9 +506,9 @@ func bothDoorsRegistry(staging agents.Approvals) *agents.Registry {
 		agents.WithTierFloor(func(string, string) (mcp.RiskTier, bool) {
 			return mcp.TierConfirmationRequired, true
 		}))
-	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
 	agents.RegisterEnrichTool(reg, channelAnchor{}, nil)
-	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, channelAnchor{}, nil, nil, nil, nil, nil)
 	agents.RegisterCommsTools(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterMeetingInvitationTool(reg, bothDoorsComms{}, channelAnchor{})
 	agents.RegisterImportTools(reg, bothDoorsImports{})
@@ -576,7 +590,7 @@ type channelAnchor struct{ seamRecord }
 func (channelAnchor) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return datasource.Record{
 		Ref:       ref,
-		Fields:    json.RawMessage(`{"name":"Acme","kind":"message","channel_provider":"telegram"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","kind":"message","channel_provider":"telegram","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}, nil
@@ -618,10 +632,6 @@ func (bothDoorsComms) SendMessage(context.Context, ids.UUID, agents.SendMessageA
 
 func (bothDoorsComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, int) (agents.AvailabilityResult, error) {
 	return agents.AvailabilityResult{}, errBothDoorsExecuted
-}
-
-func (bothDoorsComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, errBothDoorsExecuted
 }
 
 // agentDoorCtx is a passport principal holding every cap, so admission turns on
@@ -790,6 +800,11 @@ func stageToolSubject(ctx context.Context, r *agents.Registry, tool string, args
 
 func invitationDoorBody(contact ids.UUID) string {
 	return `{"contact_id":"` + contact.String() + `","attendee_email":"buyer@example.test","start":"2026-10-05T09:00:00Z","end":"2026-10-05T09:30:00Z","subject":"Discovery","description":"Project scope","location":"Video call"}`
+}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (bothDoorsComms) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
 }
 
 func (bothDoorsComms) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {

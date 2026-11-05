@@ -58,11 +58,104 @@ func EscapeLikeSQL(expr string) string {
 // erasure gate, and the expensive mistake is a later reader assuming
 // something narrower already scoped it.
 func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
-	var suppressed bool
-	err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'email' AND value_hash = $1)`,
-		SuppressionHash(email)).Scan(&suppressed)
-	return suppressed, err
+	suppressed, err := SuppressedEmails(ctx, tx, []string{email})
+	return suppressed[strings.ToLower(strings.TrimSpace(email))], err
+}
+
+// SuppressedEmails batches durable erasure checks before a participant list is admitted.
+func SuppressedEmails(ctx context.Context, tx pgx.Tx, emails []string) (map[string]bool, error) {
+	result := map[string]bool{}
+	if len(emails) == 0 {
+		return result, nil
+	}
+	hashes := make([]string, 0, len(emails))
+	for _, email := range emails {
+		hashes = append(hashes, SuppressionHash(email))
+	}
+	args := []any{hashes}
+	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT value_hash FROM erasure_suppression WHERE kind='email' AND value_hash=ANY($%d::text[])`, len(args)), args...)
+	if err != nil {
+		return nil, err
+	}
+	found, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	held := map[string]bool{}
+	for _, hash := range found {
+		held[hash] = true
+	}
+	for _, email := range emails {
+		if held[SuppressionHash(email)] {
+			result[strings.ToLower(strings.TrimSpace(email))] = true
+		}
+	}
+	return result, nil
+}
+
+// ErasedIdentifierCode is the contract's machine code for a write refused
+// because the identifier belongs to an erased subject.
+const ErasedIdentifierCode = "address_erased"
+
+// ErasedIdentifierError refuses a write that would store an erased subject's
+// address or channel account again. It names the field and nothing else: the
+// caller typed the value, and whose record it once was is gone.
+type ErasedIdentifierError struct {
+	Field string
+}
+
+func (e *ErasedIdentifierError) Error() string {
+	return "storekit: " + e.Field + " is on the erasure list and is not stored again"
+}
+
+// FieldFault answers 422 naming the field the caller must leave out.
+func (e *ErasedIdentifierError) FieldFault() (field, code, message string) {
+	return e.Field, ErasedIdentifierCode,
+		"This address is on the erasure list and is not stored again. Leave the address out."
+}
+
+// ErasureAdmission says whether a contact write may store an address the
+// erasure list names. Every write refuses one, except a public booking.
+type ErasureAdmission int
+
+const (
+	// RefuseErased is the default for a contact write.
+	RefuseErased ErasureAdmission = iota
+	// AdmitSelfBooking is the public booking page alone. A refusal there would
+	// tell an anonymous caller that the address was erased. Booking a meeting
+	// with consent is the admission, and the host sees a real meeting. The erasure list keeps the address.
+	AdmitSelfBooking
+)
+
+// RefuseErasedEmail is RefuseErasedEmails for one address.
+func RefuseErasedEmail(ctx context.Context, tx pgx.Tx, field, email string) error {
+	return RefuseErasedEmails(ctx, tx, field, []string{email})
+}
+
+// RefuseErasedEmails is the check every writer of an address runs: a hit on
+// any address is an *ErasedIdentifierError naming field.
+//
+// It takes the eraser's subject lock over all the addresses at once, in
+// LockSubjectKeys' one order, before it reads the list. Without the lock an
+// erasure can commit between this read and the caller's insert, and the
+// erased address lands anyway. The lock is held to commit.
+func RefuseErasedEmails(ctx context.Context, tx pgx.Tx, field string, emails []string) error {
+	if len(emails) == 0 {
+		return nil
+	}
+	if err := LockSubjectKeys(ctx, tx, nil, emails); err != nil {
+		return err
+	}
+	for _, email := range emails {
+		suppressed, err := EmailSuppressed(ctx, tx, email)
+		if err != nil {
+			return fmt.Errorf("storekit: checking an address against the erasure list: %w", err)
+		}
+		if suppressed {
+			return &ErasedIdentifierError{Field: field}
+		}
+	}
+	return nil
 }
 
 // ChannelIdentityHash is the suppression key for a messaging-channel
@@ -93,6 +186,22 @@ func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channel
 		`SELECT EXISTS (SELECT 1 FROM erasure_suppression WHERE kind = 'channel_identity' AND value_hash = $1)`,
 		ChannelIdentityHash(provider, channelUserID)).Scan(&suppressed)
 	return suppressed, err
+}
+
+// RefuseErasedChannelIdentity is RefuseErasedEmail for a channel account,
+// under the same lock.
+func RefuseErasedChannelIdentity(ctx context.Context, tx pgx.Tx, field, provider, channelUserID string) error {
+	if err := LockChannelIdentities(ctx, tx, []ChannelIdentityKey{{Provider: provider, ChannelUserID: channelUserID}}); err != nil {
+		return err
+	}
+	suppressed, err := ChannelIdentitySuppressed(ctx, tx, provider, channelUserID)
+	if err != nil {
+		return fmt.Errorf("storekit: checking a channel account against the erasure list: %w", err)
+	}
+	if suppressed {
+		return &ErasedIdentifierError{Field: field}
+	}
+	return nil
 }
 
 // ChannelIdentityKey names one channel account for the lock below: the same

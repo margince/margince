@@ -5,12 +5,21 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
+
+const fieldWinProbabilityBand = "win_probability_band"
 
 // The activity report's own vocabulary. Spelled here rather than borrowed from
 // an unrelated surface that happens to use the same words: renaming a report
 // dimension must never rename a capture target type.
+
+// colMeetingCreditedSeat is the one seat a meeting is listed under where a
+// report filters by colleague (storekit.MeetingCreditedSeatSQL); NULL for every
+// other kind of activity.
+var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " + storekit.MeetingCreditedSeatSQL("t") + " END)"
+
 const (
 	fieldKind          = "kind"
 	fieldMeetingStatus = "meeting_status"
@@ -19,7 +28,6 @@ const (
 	fieldProject       = "project"
 	colKind            = "t.kind"
 	colMeetingStatus   = "t.meeting_status"
-	colHostUserID      = "t.host_user_id"
 	colDirection       = "t.direction"
 
 	// activityProjectIDExpr is the project an activity is filed under, read
@@ -77,7 +85,12 @@ var prebuiltReports = map[string]reportSpec{
 			fieldOwnerID:   colOwnerID,
 			fieldCurrency:  colCurrency,
 		},
-		measures:       map[string]string{fieldAmountMinor: colAmountMinor},
+		// The base measure answers "how much is open at this company" across
+		// currencies, priced the way pipeline-current prices a deal.
+		measures: map[string]string{
+			fieldAmountMinor:     colAmountMinor,
+			fieldAmountBaseMinor: pipelineBaseValueExpr,
+		},
 		nativeMeasures: nativeMoney(fieldAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,
@@ -153,7 +166,7 @@ var prebuiltReports = map[string]reportSpec{
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
 		baseWhere: whereArchivedNull,
-		basePlain: "live (unarchived) deals",
+		basePlain: "live (unarchived) deals; native money requires a currency split, while base money uses the shared as-of valuation",
 		// The Pipeline board's column totals, over the same deals the board
 		// draws as cards: every deal the reader may see. Its owner dial goes
 		// through the owner gate (reportownergate.go).
@@ -170,10 +183,10 @@ var prebuiltReports = map[string]reportSpec{
 			// could not answer while partner_sourced was a filter alone.
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
-		measures: map[string]string{
+		measures: baseMoneyMeasures(map[string]string{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
-		},
+		}),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
@@ -183,11 +196,12 @@ var prebuiltReports = map[string]reportSpec{
 		// the engine's generic `expr = $n` rendering already handles with no
 		// special-casing.
 		filters: map[string]string{
-			fieldPipelineID:     colPipelineID,
-			fieldStatus:         colStatus,
-			fieldOwnerID:        colOwnerID,
-			fieldCompanyID:      colCompanyID,
-			fieldPartnerSourced: deals.PartnerSourcedSQL("t"),
+			fieldWinProbabilityBand: winProbabilityBandExpr,
+			fieldPipelineID:         colPipelineID,
+			fieldStatus:             colStatus,
+			fieldOwnerID:            colOwnerID,
+			fieldCompanyID:          colCompanyID,
+			fieldPartnerSourced:     deals.PartnerSourcedSQL("t"),
 			// Narrowing to ONE partner, beside the boolean that asks whether
 			// there is one. The board's totals are read from this report with
 			// the deals screen's own filter dials, so a dial the screen offers
@@ -243,12 +257,14 @@ var prebuiltReports = map[string]reportSpec{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
 			fieldSource:  colSource,
+			fieldOrigin:  colOrigin,
 		},
 		measures: map[string]string{},
 		filters: map[string]string{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
 			fieldSource:  colSource,
+			fieldOrigin:  colOrigin,
 		},
 		defaultBy: []string{fieldStatus},
 		defaultAggs: []reportAggregate{
@@ -269,7 +285,7 @@ var prebuiltReports = map[string]reportSpec{
 		// scope and not the identity-table TRUE a deal's is.
 		population:   measureEveryReadableRow,
 		baseWhere:    whereArchivedNull,
-		basePlain:    "live (unarchived) activities",
+		basePlain:    "live (unarchived) meetings and tasks; email, messages, calls and notes are not counted",
 		activityWalk: true,
 		dimensions: map[string]string{
 			fieldKind:      colKind,
@@ -292,12 +308,12 @@ var prebuiltReports = map[string]reportSpec{
 			fieldKind:          colKind,
 			fieldDirection:     colDirection,
 			fieldMeetingStatus: colMeetingStatus,
-			// The seat hosting the meeting — the one per-contact handle the
-			// activity table itself carries, set exactly for meetings. Not
-			// owner-gated: it narrows WITHIN rows the caller's activity clause
-			// already admits, and the ordinary activities list serves host and
-			// standing on each of those rows one by one.
-			fieldHostUserID: colHostUserID,
+			// The seat a meeting is listed under by the meeting credit rule:
+			// the colleague the attendance evidence credits, not whoever
+			// imported the calendar. Not owner-gated: it narrows WITHIN rows
+			// the caller's activity clause already admits. The ordinary
+			// activities list serves host and standing on each of those rows.
+			fieldHostUserID: colMeetingCreditedSeat,
 			fieldProjectID:  activityProjectIDExpr,
 		},
 		filterScopes: projectFilterScope,
@@ -345,14 +361,14 @@ var prebuiltReports = map[string]reportSpec{
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
 		baseWhere: whereOpenDeal,
-		basePlain: "open, unarchived deals (win probability read live from the deal's current stage; a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11)",
+		basePlain: "open, unarchived deals (win probability is the deal's own where set, else its current stage's)",
 		dimensions: map[string]string{
-			fieldOwnerID:        colOwnerID,
-			fieldStageID:        colStageID,
-			fieldPipelineID:     colPipelineID,
-			"forecast_category": forecastCategoryExpr,
-			fieldCurrency:       colCurrency,
-			fieldWinProbability: colWinProbability,
+			fieldOwnerID:            colOwnerID,
+			fieldStageID:            colStageID,
+			fieldPipelineID:         colPipelineID,
+			fieldWinProbabilityBand: winProbabilityBandExpr,
+			fieldCurrency:           colCurrency,
+			fieldWinProbability:     colWinProbability,
 			// The same question deals-by-stage answers, asked of the pipeline
 			// rather than of what already landed: what is a partner bringing
 			// us THIS quarter. It was on one of the two deal reports and not
@@ -368,29 +384,26 @@ var prebuiltReports = map[string]reportSpec{
 		// because its default grouping does not, and offering it there would
 		// let a caller sum minor units across currencies.
 		//
-		// The BASE pair is what lets the forecast be read as ONE answer instead
-		// of one answer per currency. A screen drawing the five categories had
-		// to band by currency — a slot carries a single figure, and adding
-		// euros to dong is the unit-less total data-semantics §1 r4 forbids —
-		// so a manager comparing commit against best case compared them inside
-		// each currency and never across the business.
+		// The BASE pair lets the forecast be read as one answer instead of one
+		// answer per currency. Without it a screen drawing the probability
+		// bands would band by currency. A slot carries a single figure, and
+		// euros added to dong is a total with no unit. Bands could then be
+		// compared only inside each currency.
 		//
 		// Priced through the SAME expressions pipeline-current uses, so the two
 		// reports cannot value one deal differently.
-		measures: map[string]string{
+		measures: baseMoneyMeasures(map[string]string{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
-			fieldAmountBaseMinor:     pipelineBaseValueExpr,
-			fieldWeightedBaseMinor:   pipelineWeightedBaseExpr,
-		},
+		}),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
-			fieldOwnerID:        colOwnerID,
-			fieldStageID:        colStageID,
-			fieldPipelineID:     colPipelineID,
-			"forecast_category": forecastCategoryExpr,
-			fieldCurrency:       colCurrency,
-			fieldProjectID:      colProjectID,
+			fieldOwnerID:            colOwnerID,
+			fieldStageID:            colStageID,
+			fieldPipelineID:         colPipelineID,
+			fieldWinProbabilityBand: winProbabilityBandExpr,
+			fieldCurrency:           colCurrency,
+			fieldProjectID:          colProjectID,
 			// Narrowing to ONE partner, the dial the deals screen now offers.
 			// partner_sourced is deliberately absent here and present on
 			// deals-by-stage: that report's filters mirror the board's dials,
@@ -403,7 +416,7 @@ var prebuiltReports = map[string]reportSpec{
 		// per row when the caller cannot open it, so grouping by it must not
 		// name one they could not have seen.
 		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
-		defaultBy:       moneyDefaultBy("forecast_category"),
+		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "unweighted_minor"},

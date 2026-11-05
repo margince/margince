@@ -362,7 +362,7 @@ func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
 		 VALUES ($1, $2, 'manual', 'human:x')`,
 		contactID, twinEmail)
-	leadID := seedLead(t, e, "Selma Subject", twinEmail, nil)
+	leadID := seedHistoricalLeadAtContactEmail(t, e, "Selma Subject", twinEmail, nil)
 
 	activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: new("Call with Selma"), Source: "manual",

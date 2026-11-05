@@ -183,10 +183,8 @@ func TestEveryRecordTheBriefNamesIsChargedToTheReadBound(t *testing.T) {
 func TestAMeetingNamedInWordsIsBriefedUnderTheResolvedAnchor(t *testing.T) {
 	meeting := ids.NewV7()
 	stub := &briefStub{answer: aBrief(meeting)}
-	provider := &searchingProvider{hits: []datasource.Record{
-		{Ref: datasource.EntityRef{Type: datasource.EntityActivity, ID: meeting}},
-	}}
-	tool := prepForMeeting{retriever: inertRetriever{}, brief: stub.read, p: provider}
+	engine := rankedHits(datasource.EntityRef{Type: datasource.EntityActivity, ID: meeting})
+	tool := prepForMeeting{retriever: inertRetriever{}, brief: stub.read, search: engine.search}
 
 	in, err := json.Marshal(map[string]any{
 		"record_type": string(datasource.EntityActivity),
@@ -195,7 +193,7 @@ func TestAMeetingNamedInWordsIsBriefedUnderTheResolvedAnchor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	raw, err := tool.Handle(context.Background(), in)
+	raw, err := tool.Handle(searchReader(string(datasource.EntityActivity)), in)
 	if err != nil {
 		t.Fatalf("prep_for_meeting: %v", err)
 	}

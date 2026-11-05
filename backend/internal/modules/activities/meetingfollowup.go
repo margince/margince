@@ -15,7 +15,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -24,15 +26,15 @@ import (
 // customer had nothing from the reader since. Each ended at least the
 // follow-up window before asOf, inside the lookback. SentAt is when it started.
 func (s *Store) MeetingsAwaitingFollowUp(ctx context.Context, asOf time.Time) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) string { return scopeUnbounded })
+	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) (string, error) { return scopeUnbounded, nil })
 }
 
 // MeetingsAwaitingFollowUpOnDeal is MeetingsAwaitingFollowUp narrowed to the
 // meetings filed under one deal, so the deal page and Home name the same ones.
 func (s *Store) MeetingsAwaitingFollowUpOnDeal(ctx context.Context, asOf time.Time, dealID ids.UUID) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) string {
+	return s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
 		return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_link on_deal
-		    WHERE on_deal.activity_id = a.id AND on_deal.deal_id = $%d)`, arg(dealID))
+		    WHERE on_deal.activity_id = a.id AND on_deal.deal_id = $%d)`, arg(dealID)), nil
 	})
 }
 
@@ -43,8 +45,8 @@ func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Tim
 	if len(meetingIDs) == 0 {
 		return owed, nil
 	}
-	rows, err := s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) string {
-		return fmt.Sprintf(`a.id = ANY($%d)`, arg(meetingIDs))
+	rows, err := s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
+		return fmt.Sprintf(`a.id = ANY($%d)`, arg(meetingIDs)), nil
 	})
 	for _, row := range rows {
 		owed[row.ActivityID] = true
@@ -55,7 +57,7 @@ func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Tim
 // readMeetingFollowUps runs the one follow-up query; narrow renders the extra
 // predicate on alias a that limits which meetings it considers.
 func (s *Store) readMeetingFollowUps(
-	ctx context.Context, asOf time.Time, narrow func(arg func(any) int) string,
+	ctx context.Context, asOf time.Time, narrow func(arg func(any) int) (string, error),
 ) ([]AwaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -73,43 +75,17 @@ func (s *Store) readMeetingFollowUps(
 }
 
 func (s *Store) queryMeetingFollowUps(
-	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, narrow func(arg func(any) int) string,
+	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, narrow func(arg func(any) int) (string, error),
 ) ([]AwaitingReply, error) {
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	instant := arg(asOf)
-	g, err := followUpGatesFor(ctx, arg)
+	query, args, err := meetingFollowUpsStatement(ctx, asOf, windowDays, narrow, AwaitingReplyScanCap)
 	if err != nil {
 		return nil, err
 	}
-	addressable, err := addressableContactClause(ctx, arg)
-	if err != nil {
-		return nil, err
-	}
-	narrowed := narrow(arg)
-	at := fmt.Sprintf("$%d", instant)
-	rows, err := tx.Query(ctx, fmt.Sprintf(meetingFollowUpsSQL,
-		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
-		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
-		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		relstrength.MeetingTookPlaceSQL("a", at), addressable, maxActivityLinks, narrowed,
-	), args...)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
 	}
-	defer rows.Close()
-	var out []AwaitingReply
-	for rows.Next() {
-		var r AwaitingReply
-		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID); err != nil {
-			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
-		}
-		if len(r.Recipients) > 0 {
-			r.ContactID = r.Recipients[0]
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	return collectMeetingFollowUps(rows)
 }
 
 // addressableContactClause is which contacts under alias rc this reader may
@@ -127,7 +103,13 @@ func addressableContactClause(ctx context.Context, arg func(any) int) (string, e
 }
 
 // meetingEndSQL is when the meeting under alias a ended.
-const meetingEndSQL = `(a.occurred_at + make_interval(secs => coalesce(a.duration_seconds, 0)))`
+var meetingEndSQL = occurredday.EndSQL("a")
+
+// followUpFromSQL is where a follow-up to the meeting under alias a may start:
+// its end for an hour, its date's start for a day. A later touch is placed by
+// its own date too (occurredday.FromSQL).
+var followUpFromSQL = `(CASE WHEN a.occurred_precision = 'day' THEN ` + occurredday.StartSQL("a") +
+	` ELSE ` + meetingEndSQL + ` END)`
 
 // meetingFollowUpsSQL: every rule sits before the cap.
 //
@@ -136,7 +118,8 @@ const meetingEndSQL = `(a.occurred_at + make_interval(secs => coalesce(a.duratio
 //  7. what counts as contact for later, 8. the reader, 9. a snooze lifted,
 //  10. the customer arms the reader may read, 11. the cap, 12. the meeting
 //     took place, 13. the contacts the reader may write to, 14. the recipient
-//     cap, 15. which meetings the caller narrowed the read to.
+//     cap, 15. which meetings the caller narrowed the read to, 16. later comes
+//     after the meeting.
 //
 // The attendees are read once, in the LATERAL, and both the recipient list and
 // the "nothing sent since" test use that one set.
@@ -148,7 +131,8 @@ var meetingFollowUpsSQL = `
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
-	                '00000000-0000-0000-0000-000000000000'::uuid)
+	                '00000000-0000-0000-0000-000000000000'::uuid),
+	       a.occurred_precision
 	  FROM activity a
 	  -- Who it was with: the contacts it is filed under first, then the ones
 	  -- its attendee list resolved to. A merged contact counts as its survivor.
@@ -178,33 +162,120 @@ var meetingFollowUpsSQL = `
 	   AND ` + meetingEndSQL + ` <= $%[1]d::timestamptz - make_interval(days => $%[4]d::int)
 	   AND ` + meetingEndSQL + ` >= $%[1]d::timestamptz - make_interval(days => $%[4]d::int + %[5]d)
 	   AND %[2]s
-	   -- The reader was in it: they held it, their calendar imported it, or
-	   -- they are one of its attendees. The last two are auth's
-	   -- activityMembershipArm; change them there and here.
-	   AND (a.host_user_id = $%[8]d
-	        OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $%[8]d)
-	        OR EXISTS (SELECT 1 FROM activity_participant me
-	                    WHERE me.activity_id = a.id AND me.user_id = $%[8]d))
+	   -- The reader took part in it, by the one meeting-responsibility rule.
+	   -- Importing a copy or being copied on its mail is not taking part.
+	   AND ` + storekit.MeetingResponsibilitySQL("a", "$%[8]d") + `
 	   -- Nothing from our side since to anyone it was with, filed under them
 	   -- or addressed to them: a message, a call or a later meeting is a
 	   -- follow-up already made. Only the recipients count, uncapped: a
 	   -- contact the reader cannot see must not make a row vanish. Their own
 	   -- mail after it is the waiting queue's business, not this reminder's.
-	   AND NOT EXISTS (SELECT 1 FROM (SELECT heard.activity_id FROM activity_link heard
+	   -- The recipient set must not be scanned once per later activity.
+	   AND NOT EXISTS (WITH touched AS MATERIALIZED (SELECT heard.activity_id FROM activity_link heard
 	                                   WHERE heard.contact_id = ANY(attendees.recipients)
 	                                  UNION ALL
 	                                  SELECT reached.activity_id FROM activity_participant reached
-	                                   WHERE reached.contact_id = ANY(attendees.recipients)) touched
-	                     JOIN activity later ON later.id = touched.activity_id
+	                                   WHERE reached.contact_id = ANY(attendees.recipients))
+	                   SELECT 1 FROM touched JOIN activity later ON later.id = touched.activity_id
 	                    WHERE later.id <> a.id
 	                      AND later.archived_at IS NULL
 	                      AND later.direction IS DISTINCT FROM 'inbound'
 	                      AND %[6]s
 	                      AND %[7]s
-	                      AND later.occurred_at >= ` + meetingEndSQL + `
-	                      AND later.occurred_at <= $%[1]d)
+	                      AND %[16]s
+	                      AND ` + occurredday.BegunSQL("later", "$%[1]d::timestamptz") + `)
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[10]s)
 	   AND NOT ` + readerSetAsideSQL("$%[8]d", "%[9]s") + `
-	 GROUP BY a.id, a.subject, a.occurred_at, attendees.recipients
+	 GROUP BY a.id, a.subject, a.occurred_at, a.occurred_precision, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[11]d`
+
+// meetingHeldSQL is a meeting somebody said took place: its outcome was saved
+// as held, and it has started (occurredday.BegunSQL). A booked or unmarked
+// past meeting owes an outcome, which the outcome lane asks for once; it owes
+// no follow-up yet.
+func meetingHeldSQL(alias, now string) string {
+	return "(" + alias + ".meeting_status = 'held' AND " + occurredday.BegunSQL(alias, now) + ")"
+}
+
+func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	instant, reader, window := arg(asOf), arg(readerOrNobody(ctx)), arg(windowDays)
+	g, err := followUpGatesFor(ctx, arg, meetingNeedSQL())
+	if err != nil {
+		return "", nil, err
+	}
+	addressable, err := addressableContactClause(ctx, arg)
+	if err != nil {
+		return "", nil, err
+	}
+	narrowed, err := narrow(arg)
+	if err != nil {
+		return "", nil, err
+	}
+	at := fmt.Sprintf("$%d", instant)
+	held := meetingHeldSQL("a", at)
+	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
+	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
+		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
+		g.later, relstrength.InteractionCountsSQL("later"), reader,
+		messageSnoozeLiftedSQL(at, g.back), g.customer, limit,
+		held, addressable, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
+	)), args, nil
+}
+
+// meetingCandidatesSQL is the meetings the lane may report: held, inside the
+// window, and the reader took part. The caller's narrowing stays out, since it
+// may name the attendees or an outer row. follow_from is where a later contact
+// starts to count.
+func meetingCandidatesSQL(asOf, window, reader, held string) string {
+	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, ` + followUpFromSQL + ` AS follow_from
+	  FROM activity a
+	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND NOT ` + ImportedHistorySQL + `
+	   AND ` + held + `
+	   AND ` + meetingEndSQL + ` <= ` + asOf + `::timestamptz - make_interval(days => ` + window + `::int)
+	   AND ` + meetingEndSQL + fmt.Sprintf(` >= %s::timestamptz - make_interval(days => %s::int + %d)`, asOf, window, AwaitingReplyLookbackDays) + `
+	   AND ` + storekit.MeetingResponsibilitySQL("a", reader)
+}
+
+// meetingNeedSQL names the activities the meeting statement reads: each
+// candidate, its thread, and what reached a contact it was with after it. A
+// contact merged away counts as its survivor, as the statement's recipients do.
+// Each arm keeps only terms the statement's own test also holds. A contact's
+// history is read once, from its earliest candidate, not once per meeting.
+// Each meeting's attendees are looked up by its id, never by a scan of every
+// link and participant.
+func meetingNeedSQL() string {
+	return threadNeedSQL(followUpCandidates) + `
+	 UNION SELECT later.id FROM (
+	        SELECT COALESCE(named.merged_into_id, named.id) AS contact_id, min(c.follow_from) AS since
+	          FROM ` + followUpCandidates + ` c
+	          CROSS JOIN LATERAL (SELECT l.contact_id FROM activity_link l WHERE l.activity_id = c.id AND l.contact_id IS NOT NULL
+	                UNION ALL SELECT p.contact_id FROM activity_participant p
+	                 WHERE p.activity_id = c.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL) met
+	          JOIN contact named ON named.id = met.contact_id
+	         GROUP BY 1) recipient
+	   JOIN (SELECT heard.activity_id, heard.contact_id FROM activity_link heard WHERE heard.contact_id IS NOT NULL
+	         UNION ALL SELECT reached.activity_id, reached.contact_id FROM activity_participant reached
+	          WHERE reached.contact_id IS NOT NULL) touched ON touched.contact_id = recipient.contact_id
+	   JOIN activity later ON later.id = touched.activity_id AND later.restricted_at IS NULL
+	    AND later.occurred_at >= recipient.since -- occurred_at raw: FromSQL implies it, so the set is never narrower
+`
+}
+
+func collectMeetingFollowUps(rows pgx.Rows) ([]AwaitingReply, error) {
+	defer rows.Close()
+	var out []AwaitingReply
+	for rows.Next() {
+		var r AwaitingReply
+		if err := rows.Scan(&r.ActivityID, &r.Subject, &r.SentAt, &r.Recipients, &r.CompanyID, &r.DealID, &r.Precision); err != nil {
+			return nil, fmt.Errorf("activities: reading a meeting the reader owes a follow-up: %w", err)
+		}
+		if len(r.Recipients) > 0 {
+			r.ContactID = r.Recipients[0]
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}

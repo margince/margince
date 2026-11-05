@@ -3,111 +3,166 @@
 
 package contacts
 
-// The open domain questions belonging to ONE colleague's mail.
-//
-// The admin list beside this file (domainadmissionlist.go) answers "what has
-// this installation decided, and what is still open" for an operator looking at
-// capture posture. This answers a different question for a different reader:
-// which of these are MINE to answer. A domain's question is opened by a
-// message, and the mailbox owner that message reached is recorded on the row —
-// so the question has an addressee, and asking it of everybody is how it came
-// to be asked of nobody.
-
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// DomainQuestion is one undecided domain as its owner sees it.
+// DomainQuestionLimit bounds the attention projection; the review route remains paged.
+const DomainQuestionLimit = 100
+
 type DomainQuestion struct {
-	Domain string
-	// Reason is the machine's grounds for stopping, already in prose. It comes
-	// from the same CASE the admin list renders, so the two surfaces cannot
-	// come to describe one withholding differently.
-	Reason  string
-	AskedAt time.Time
+	ID         ids.UUID
+	Domain     string
+	Reason     string
+	ReasonCode string
+	AskedAt    time.Time
+	EvidenceAt *time.Time
+	Deferred   bool
+	Forward    *DomainForwardEvidence
+	// Note is the site triage's own sentence on a vendor question, so the
+	// reader sees why the machine called the domain a vendor.
+	Note    string
+	Context DomainQuestionContext
 }
 
-// OpenDomainQuestionsForOwner lists the undecided domains whose mail belongs to
-// the calling human, oldest question first.
-//
-// OLDEST FIRST, unlike the admin list's newest-first. That list is a log
-// somebody scans for what just happened; this is a backlog somebody works
-// through, and the question that has waited longest is the one most likely to
-// be holding a company out of the CRM.
-//
-// Read-gated on companies, like the admin list: what this exposes is that a
-// company is missing and why. A caller with no human behind it gets NOTHING
-// rather than everything — a connector or an agent has no mail of its own, so
-// there is no set of questions that is "theirs", and answering with every open
-// question would turn one colleague's backlog into the shared pile this exists
-// to replace.
 func (s *Store) OpenDomainQuestionsForOwner(ctx context.Context) ([]DomainQuestion, error) {
+	rows, _, err := s.listReaderDomainQuestions(ctx, "", DomainQuestionLimit, false, "")
+	return rows, err
+}
+
+// DomainQuestionsForOwner includes deferred questions so readers can restore them.
+// A non-empty domain narrows the page to that one question.
+func (s *Store) DomainQuestionsForOwner(ctx context.Context, cursor string, limit int, domain string) ([]DomainQuestion, storekit.Page, error) {
+	// A value that is no domain matches no question, so the reply is the same
+	// empty page a domain the reader does not hold gets.
+	if base, ok := freemail.Hostname(domain); ok {
+		domain = base
+	}
+	return s.listReaderDomainQuestions(ctx, cursor, limit, true, domain)
+}
+
+func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, limit int, includeDeferred bool, domain string) ([]DomainQuestion, storekit.Page, error) {
 	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
-		return nil, err
+		return nil, storekit.Page{}, err
 	}
 	owner := actingHuman(ctx)
 	if owner == nil {
-		// REFUSED, not empty. A connector or an agent has no mail of its own, so
-		// there is no set of questions that is theirs — and the lane's contract
-		// says such a caller is named in `lanes_omitted` rather than told they
-		// have nothing waiting. Answering with an empty list would report a
-		// cleared backlog to a caller that was never eligible for one.
-		return nil, apperrors.ErrPermissionDenied
+		return nil, storekit.Page{}, apperrors.ErrPermissionDenied
 	}
+	limit = storekit.ClampLimit(&limit)
 	var out []DomainQuestion
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// A domain this reader has already discarded is ANSWERED, even though
-		// the disposition row still says pending: the answer was recorded as a
-		// capture exclusion rather than as a company verdict, because "not for
-		// me" is a statement about one colleague's mail and not about what the
-		// domain IS. Without this the discard verb writes its rule and the same
-		// question returns on the next read, which is the whole feature failing
-		// quietly.
-		//
-		// Scoped the way the capture sink scopes it (sinkexclusion.go): a
-		// workspace rule binds every reader, a user rule binds only its own.
-		//
-		// EQUALITY ALONE, where the sink also matches subdomains, and the
-		// difference is in the left-hand side rather than in the rule. The sink
-		// compares the domain read off a mail header, so `mail.acme.com`
-		// reaches it unfolded and a rule naming `acme.com` has to cover it.
-		// This column is always the registrable domain — ensure folds it
-		// through freemail.Hostname before the question is ever opened — and an
-		// exclusion value is registrable too, since ValidOwnDomain refuses a
-		// public suffix. So the subdomain arm could match nothing here, and
-		// carrying it would be a line no case can reach.
-		rows, err := tx.Query(ctx, `
-			SELECT domain, `+domainPendingReason+`, COALESCE(admission_at, updated_at)
-			  FROM company_domain_disposition d
-			 WHERE d.pending_reason IS NOT NULL AND d.owner_id = $1
-			   AND NOT EXISTS (
-			         SELECT 1 FROM capture_exclusion e
-			          WHERE e.kind = 'domain' AND e.value = d.domain
-			            AND (e.scope = 'workspace' OR e.user_id = $1))
-			 ORDER BY COALESCE(admission_at, updated_at) ASC`, *owner)
+		var args []any
+		bind := func(value any) int { args = append(args, value); return len(args) }
+		arg := func(value any) string { return fmt.Sprintf("$%d", bind(value)) }
+		ownerArg := arg(*owner) + "::uuid"
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, bind)
 		if err != nil {
-			return fmt.Errorf("contacts: listing open domain questions: %w", err)
+			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var q DomainQuestion
-			if err := rows.Scan(&q.Domain, &q.Reason, &q.AskedAt); err != nil {
-				return fmt.Errorf("contacts: reading an open domain question: %w", err)
+		// One instant for the whole read, so the decider and the freshness
+		// below agree on which mail is inside the horizon.
+		asOf := s.clock()
+		open, err := openQuestionForReaderSQL(ctx, "d.domain", ownerArg, identities, asOf, bind)
+		if err != nil {
+			return err
+		}
+		// The question's freshness is the newest mail the decider reads, not a
+		// reader row. The sole direct recipient may hold no row at all.
+		latest := `(SELECT max(question_mail.occurred_at) FROM activity question_mail WHERE ` +
+			vendorMailSQL("question_mail", "d.domain", asOf, bind) + `)`
+		deferred := `EXISTS (SELECT 1 FROM worklist_done wd WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (` + latest + ` IS NULL OR ` + latest + ` <= wd.done_at))`
+		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + open + `
+	  AND NOT EXISTS (SELECT 1 FROM capture_exclusion e WHERE e.kind = 'domain' AND e.value = d.domain
+	   AND (e.scope = 'workspace' OR e.user_id = ` + ownerArg + `))`
+		if !includeDeferred {
+			where += ` AND NOT ` + deferred
+		}
+		if domain != "" {
+			where += ` AND d.domain = ` + arg(domain)
+		}
+		if cursor != "" {
+			after, err := storekit.DecodeCursor(cursor)
+			if err != nil {
+				return err
 			}
-			out = append(out, q)
+			where += ` AND (d.created_at, d.id) > (` + arg(after.CreatedAt) + `, ` + arg(after.ID) + `)`
 		}
-		return rows.Err()
+		query := `SELECT d.id, d.domain, ` + domainPendingReason + `, d.pending_reason,
+	  d.created_at, ` + latest + `, COALESCE(d.evidence, ''), ` + deferred + `,
+	  d.candidate_company_id, d.site_unreadable
+	  FROM company_domain_disposition d WHERE ` + where + `
+	  ORDER BY d.created_at, d.id LIMIT ` + arg(limit+1)
+		var known map[string]domainQuestionEvidence
+		out, known, err = scanDomainQuestionsTx(ctx, tx, query, args)
+		if err != nil {
+			return err
+		}
+		contexts, err := domainQuestionContextTx(ctx, tx, known, asOf)
+		if err != nil {
+			return err
+		}
+		for i := range out {
+			out[i].Context = contexts[out[i].Domain]
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, storekit.Page{}, err
 	}
-	return out, nil
+	page := storekit.Page{HasMore: len(out) > limit}
+	if page.HasMore {
+		out = out[:limit]
+		last := out[len(out)-1]
+		page.NextCursor, err = storekit.EncodeCursor(last.AskedAt, last.ID)
+	}
+	return out, page, err
+}
+
+// scanDomainQuestionsTx reads the listed questions and, beside them, the
+// stored evidence their context read needs.
+func scanDomainQuestionsTx(ctx context.Context, tx pgx.Tx, query string, args []any) ([]DomainQuestion, map[string]domainQuestionEvidence, error) {
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	var out []DomainQuestion
+	known := map[string]domainQuestionEvidence{}
+	for rows.Next() {
+		var q DomainQuestion
+		var evidence string
+		var row domainQuestionEvidence
+		if err := rows.Scan(&q.ID, &q.Domain, &q.Reason, &q.ReasonCode, &q.AskedAt, &q.EvidenceAt, &evidence, &q.Deferred,
+			&row.nameTwin, &row.siteUnreadable); err != nil {
+			return nil, nil, err
+		}
+		if q.ReasonCode == PendingVendorVerdict {
+			q.Note = evidence
+		}
+		if q.ReasonCode == PendingForwardedIdentity {
+			q.Forward = &DomainForwardEvidence{}
+			if err := json.Unmarshal([]byte(evidence), q.Forward); err != nil {
+				slog.WarnContext(ctx, "domain forwarding evidence could not be decoded", "domain", q.Domain, "err", err)
+				q.Forward = nil
+			}
+		}
+		row.reasonCode, row.redirectTarget = q.ReasonCode, redirectTargetOf(q.Forward)
+		known[q.Domain] = row
+		out = append(out, q)
+	}
+	return out, known, rows.Err()
 }

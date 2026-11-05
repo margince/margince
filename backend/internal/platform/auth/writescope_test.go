@@ -187,7 +187,7 @@ func TestTheWriteArmKeepsTheOwnerScopeItNarrows(t *testing.T) {
 	// the write arm has no `owner_id IS NULL` branch while the read arm keeps
 	// it (an unowned row is still the workspace's to see).
 	sql := writeArm(human(principal.RowScopeTeam), "deal")
-	for _, want := range []string{"deal.owner_id = $", "team_membership"} {
+	for _, want := range []string{"deal.owner_id IN (SELECT unnest(member_identity_family(", "team_membership"} {
 		if !strings.Contains(sql, want) {
 			t.Errorf("the write arm dropped %q from the owner scope, so it narrows more than the "+
 				"grant column: %s", want, sql)

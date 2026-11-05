@@ -189,14 +189,22 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		t.Error("a limited message reports eligible — the reader and the backlog disagree, so the shared predicate is no longer shared")
 	}
 
-	// Half one: the classifier's own backlog selects EXACTLY the eligible row.
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 50, 200)
+	// Half one: of the rows seeded here, the classifier's own backlog selects
+	// the eligible one and no other. The package shares one database, so a sibling
+	// test's rows are in the backlog too and are not this test's to count.
+	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
-	if len(backlog) != 1 || backlog[0].ID != eligible {
-		t.Fatalf("the backlog selected %d row(s), want exactly the eligible one (%s)",
-			len(backlog), eligible)
+	var selected []ids.UUID
+	for _, row := range backlog {
+		if _, seeded := want[row.ID]; seeded || row.ID == limited {
+			selected = append(selected, row.ID)
+		}
+	}
+	if len(selected) != 1 || selected[0] != eligible {
+		t.Fatalf("the backlog selected %v of the seeded rows, want exactly the eligible one (%s)",
+			selected, eligible)
 	}
 
 	// Half two: the reader names the exclusion that applied to each of the rest,
@@ -332,7 +340,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 	// The model call happens here, in production. The narrowing lands during it.
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, open)
 
-	applied, err := e.store.SetCaptureLabel(ctx, open, "commitment")
+	applied, err := labelCurrent(ctx, e.store, open, "commitment")
 	if err != nil {
 		t.Fatalf("writing the label: %v", err)
 	}
@@ -351,7 +359,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 	// An open message still gets its label: a re-check that refused everything
 	// would pass every assertion above and stop attention routing entirely.
 	stillOpen := e.seed(t, capturedRow{kind: "email"})
-	if wrote, err := e.store.SetCaptureLabel(ctx, stillOpen, "commitment"); err != nil || !wrote {
+	if wrote, err := labelCurrent(ctx, e.store, stillOpen, "commitment"); err != nil || !wrote {
 		t.Errorf("an open message was not labelled (wrote=%v err=%v) — the re-check refuses more than the audience", wrote, err)
 	}
 }
@@ -386,7 +394,7 @@ func TestTheLabelWriteLosesToAnArchiveThatLandedWhileTheModelThought(t *testing.
 	// The model call happens here, in production. The archive lands during it.
 	e.exec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, open)
 
-	applied, err := e.store.SetCaptureLabel(ctx, open, "commitment")
+	applied, err := labelCurrent(ctx, e.store, open, "commitment")
 	if err != nil {
 		t.Fatalf("writing the label: %v", err)
 	}

@@ -19,19 +19,51 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
+func TestAnOmittedColleagueIsNamed(t *testing.T) {
 	t.Parallel()
 	present := openapi_types.UUID(ids.NewV7())
-	for field, body := range map[string]crmcontracts.DraftIntroRequestJSONRequestBody{
-		"contact_id":  {ViaUserId: present},
-		"via_user_id": {ContactId: present},
-	} {
-		_, err := introRequestFrom(body)
-		if err == nil {
-			t.Fatalf("an omitted %s was accepted; the zero UUID would reach a lookup", field)
-		}
-		assertNamesIntroField(t, err, field)
+	_, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{ContactId: &present})
+	if err == nil {
+		t.Fatal("an omitted via_user_id was accepted; the zero UUID would reach a lookup")
 	}
+	assertNamesIntroField(t, err, "via_user_id")
+}
+
+// An absent contact_id is the ask for somebody at the account. A present but
+// zero one is a client bug, refused by name like any other zero id.
+func TestAnAbsentContactAsksAtTheAccountAndAZeroOneIsRefused(t *testing.T) {
+	t.Parallel()
+	present := openapi_types.UUID(ids.NewV7())
+	zero := openapi_types.UUID(ids.UUID{})
+
+	req, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{ViaUserId: present})
+	if err != nil {
+		t.Fatalf("an absent contact_id must be accepted as an ask at the account: %v", err)
+	}
+	if req.ContactID != nil {
+		t.Fatalf("an absent contact_id became %v, want none", req.ContactID)
+	}
+
+	_, err = introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{
+		ContactId: &zero, ViaUserId: present,
+	})
+	if err == nil {
+		t.Fatal("a zero contact_id was accepted")
+	}
+	assertNamesIntroField(t, err, "contact_id")
+}
+
+func TestAnUnknownFunctionIsRefusedByName(t *testing.T) {
+	t.Parallel()
+	present := openapi_types.UUID(ids.NewV7())
+	unknown := crmcontracts.LinkedInReachFunction("astrology")
+	_, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{
+		ViaUserId: present, Function: &unknown,
+	})
+	if err == nil {
+		t.Fatal("an unknown function was accepted")
+	}
+	assertNamesIntroField(t, err, "function")
 }
 
 // A null deal_id means "the account in general" and is an ordinary case. A
@@ -43,7 +75,7 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	zero := openapi_types.UUID(ids.UUID{})
 
 	_, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{
-		ContactId: present, ViaUserId: present, DealId: &zero,
+		ContactId: &present, ViaUserId: present, DealId: &zero,
 	})
 	if err == nil {
 		t.Fatal("a zero deal_id was accepted")
@@ -51,7 +83,7 @@ func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
 	assertNamesIntroField(t, err, "deal_id")
 
 	req, err := introRequestFrom(crmcontracts.DraftIntroRequestJSONRequestBody{
-		ContactId: present, ViaUserId: present,
+		ContactId: &present, ViaUserId: present,
 	})
 	if err != nil {
 		t.Fatalf("an absent deal_id must be accepted as the whole account: %v", err)

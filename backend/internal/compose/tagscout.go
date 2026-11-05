@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 const (
@@ -126,7 +127,8 @@ func tagScoutSQL(since, now time.Time) (string, []any) {
 	    JOIN activity_link l ON l.activity_id = a.id AND l.entity_type IN ('contact', 'company')
 	    JOIN phrases p ON position(p.phrase IN lower(coalesce(a.subject, '') || ' ' || coalesce(a.body, ''))) > 0
 	   WHERE ` + tagScoutCitable("a") + `
-	     AND a.occurred_at > $1 AND a.occurred_at <= $2
+	     AND a.occurred_at > $1 -- occurred_at raw: the window starts where the previous pass stopped
+	     AND ` + occurredday.BegunSQL("a", "$2") + `
 	), ` + tagScoutRankedSQL()
 	return query, args
 }
@@ -136,8 +138,9 @@ func tagScoutRankedSQL() string {
 	candidate := func(entityType string) string {
 		return `(ev.entity_type = '` + entityType + `' AND ` +
 			collections.SuggestableTagClause(entityType, "ev.tag_id", "ev.record") +
-			` AND ev.occurred_at > coalesce(` + collections.TagSuggestionFloorExpr(entityType, "ev.tag_id", "ev.record") +
-			`, '-infinity'::timestamptz))`
+			` AND coalesce(` + collections.TagSuggestionFloorExpr(entityType, "ev.tag_id", "ev.record") +
+			`, '-infinity'::timestamptz) < ev.occurred_at -- occurred_at raw: past the suggestion floor, a window's lower edge
+			)`
 	}
 	return `ranked AS (
 	  SELECT ev.*, row_number() OVER (PARTITION BY ev.tag_id, ev.entity_type, ev.record

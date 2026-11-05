@@ -5,35 +5,19 @@ package ai
 
 // Putting a BYOK key in, taking one out, and saying which vendors have one.
 //
-// The vault has been where these keys LIVE since providerkeys.go landed, but
-// the only way one could arrive was an environment variable the seeder picked
-// up at boot. So an admin could not add a vendor without an operator, a
-// restart, and a shell — and deploymentsecretseal.go's justification for
-// letting the vault outrank a declaration ("a provider key has a human write
-// path — the routing surface") named a path nothing had built.
-//
-// This is that path. It owns what a transport must not: the RBAC gate, the
-// refusal of a provider this build cannot serve, sealing the bytes before they
-// are recorded, and retiring the ref that was there — in that order, because a
-// ref recorded before its blob exists points at nothing, and a blob left behind
-// after its ref is replaced is a credential no reader can find and no operator
-// can delete.
+// It owns what a transport must not: the RBAC gate and the lock a boot-set key
+// holds. It refuses a provider this build cannot serve, and a key it cannot
+// use. Sealing, rotation and retiring the old blob are config.Save's.
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"maps"
 	"strings"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -82,19 +66,14 @@ type ProviderCredential struct {
 	ServiceAccountJSON string
 }
 
-// ProviderKeyStore reads and changes the sealed BYOK credentials.
+// ProviderKeyStore reads and changes the BYOK credentials.
 //
-// The workspace is NOT held here: it comes off each request's context, the way
-// every other tenant read resolves it. Binding one at construction would make a
-// request's answer depend on which workspace happened to be resolved when the
-// process booted, which is the shape of bug that only appears on the day there
-// is a second one.
+// The workspace is not held here: the vault takes it off each request's
+// context, the way every other tenant read resolves it.
 type ProviderKeyStore struct {
-	settings *settings.Store
-	vault    keyvault.Vault
-	// log carries the one failure this store cannot report to its caller: a
-	// superseded blob it could not delete after the write already committed.
-	log *slog.Logger
+	// cfg reads and saves each key's setting, and seals through the vault
+	// compose gave it. One with no sealer is a role that seals nothing.
+	cfg *config.Config
 	// selectBrain builds the client a service-account key is checked through;
 	// the zero value is SelectBrain.
 	selectBrain brainSelector
@@ -103,39 +82,24 @@ type ProviderKeyStore struct {
 	profile func(context.Context) (Profile, error)
 }
 
-// NewProviderKeyStore builds the store over the settings catalog and the vault.
-// A nil vault is a role that seals nothing: every write refuses rather than
-// recording a ref to a blob that was never written.
-func NewProviderKeyStore(s *settings.Store, vault keyvault.Vault, log *slog.Logger) *ProviderKeyStore {
-	if log == nil {
-		log = slog.New(slog.DiscardHandler)
-	}
-	return &ProviderKeyStore{settings: s, vault: vault, log: log, profile: func(ctx context.Context) (Profile, error) {
-		cfg, err := settings.Get(ctx, s, Routing)
-		return cfg.Profile, err
+// NewProviderKeyStore builds the store over cfg, which carries the database
+// and, where the role has a vault, the sealer.
+func NewProviderKeyStore(cfg *config.Config) *ProviderKeyStore {
+	return &ProviderKeyStore{cfg: cfg, profile: func(ctx context.Context) (Profile, error) {
+		binding, err := config.StoredVal(ctx, cfg, Routing)
+		return binding.Profile, err
 	}}
 }
 
-// credentialWorkspace is the caller's tenant, or a refusal. A credential write outside
-// a workspace has no tenant to belong to, and the vault would refuse the ref
-// later anyway — so it is refused here, where the message can say why.
-func credentialWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
-	raw, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return ids.WorkspaceID{}, errors.New("ai: a provider key outside a workspace context")
-	}
-	return ids.From[ids.WorkspaceKind](raw), nil
-}
-
-// ErrVaultUnavailable is the refusal when this installation seals nothing.
-// Separate from a validation error because the fix is the operator's — the
-// vault root key — and not anything the caller sent.
+// ErrVaultUnavailable is the refusal when this installation seals nothing. It
+// is apart from a validation error because the fix is the operator's vault root
+// key, and not anything the caller sent.
 var ErrVaultUnavailable = errors.New("this installation has no key vault configured, so a provider key cannot be stored: set the vault root key on the api and worker, then try again")
 
 // List reports every cloud provider this build can serve and whether each holds
 // a key, in the routing table's own order.
 //
-// It lists the providers rather than the stored refs, so a vendor with no
+// It lists the providers rather than the stored keys, so a vendor with no
 // credential is visible as something an admin could configure. A list of what
 // happens to be stored would show an empty screen on the installation that most
 // needs the screen.
@@ -143,16 +107,16 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 	if err := auth.Require(ctx, providerKeysObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
-	refs, err := settings.Get(ctx, s.settings, ProviderKeys)
-	if err != nil {
-		return nil, err
-	}
 	providers := CloudProvidersNeedingKeys()
 	out := make([]ProviderKeyStatus, 0, len(providers))
 	for _, provider := range providers {
+		held, err := keyHeld(ctx, s.cfg, keySettings[provider])
+		if err != nil {
+			return nil, err
+		}
 		out = append(out, ProviderKeyStatus{
 			Provider:       provider,
-			Configured:     refs[provider] != "",
+			Configured:     held,
 			EnvVar:         KeyEnvVarFor(provider),
 			Optional:       keyIsOptional(provider),
 			CredentialKind: credentialKindFor(provider),
@@ -162,40 +126,42 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 	return out, nil
 }
 
-// Set seals a key for one provider and records the ref, replacing whatever was
-// there.
-//
-// The new blob is written BEFORE the ref is moved and the old one is retired
-// only after the move commits, so no window exists in which the recorded ref
-// names nothing. A failure part-way leaves the previous credential serving.
+// Set seals a key for one provider, replacing whatever was there. A key a boot
+// source sets is refused as locked before the one sent is judged, so a caller
+// learns the lock whatever they sent.
 func (s *ProviderKeyStore) Set(ctx context.Context, provider string, sent ProviderCredential) error {
 	if err := auth.Require(ctx, providerKeysObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	if _, cloud := cloudKeyEnv[provider]; !cloud {
-		return keyRefused(fmt.Sprintf("%q takes no credential — it is served without one", provider))
+	setting, cloud := keySettings[provider]
+	if !cloud {
+		return keyRefused(provider, fmt.Sprintf("%q takes no credential — it is served without one", provider))
+	}
+	if _, err := config.LockedChange(s.cfg, setting, func(string) bool { return false }); err != nil {
+		return err
 	}
 	secret, err := s.acceptedCredential(ctx, provider, sent)
 	if err != nil {
 		return err
 	}
-	if s.vault == nil {
+	if !s.cfg.Seals() {
 		return ErrVaultUnavailable
 	}
-	ws, err := credentialWorkspace(ctx)
-	if err != nil {
+	return config.Save(ctx, s.cfg, setting, secret)
+}
+
+// LockFirst answers the lock of a boot-set key in place of err, a refusal of
+// what was sent for it. The update gate comes first, as on a save, so a caller
+// without the grant learns nothing of the lock.
+func (s *ProviderKeyStore) LockFirst(ctx context.Context, provider string, err error) error {
+	setting, cloud := keySettings[provider]
+	if err == nil || !cloud {
 		return err
 	}
-	ref, err := s.vault.Put(ctx, ws, []byte(secret))
-	if err != nil {
-		return fmt.Errorf("ai: sealing the %s key: %w", provider, err)
+	if gateErr := auth.Require(ctx, providerKeysObject, principal.ActionUpdate); gateErr != nil {
+		return gateErr
 	}
-	previous, err := s.swapRef(ctx, ws, provider, string(ref))
-	if err != nil {
-		return err
-	}
-	s.retire(ctx, ws, previous, "provider key rotated")
-	return nil
+	return s.cfg.LockFirst(setting.Key(), err)
 }
 
 // acceptedCredential is the one field this provider takes, trimmed, or a
@@ -209,15 +175,15 @@ func (s *ProviderKeyStore) acceptedCredential(ctx context.Context, provider stri
 	serviceAccount := credentialKindFor(provider) == CredentialKindServiceAccount
 	switch {
 	case apiKey != "" && keyFile != "":
-		return "", keyRefused("send api_key or service_account_json, not both")
+		return "", keyRefused(provider, "send api_key or service_account_json, not both")
 	case serviceAccount && apiKey != "":
-		return "", keyRefused(fmt.Sprintf("%q takes a service_account_json — the service-account key file — not an api_key", provider))
+		return "", keyRefused(provider, fmt.Sprintf("%q takes a service_account_json — the service-account key file — not an api_key", provider))
 	case !serviceAccount && keyFile != "":
-		return "", keyRefused(fmt.Sprintf("%q takes an api_key, not a service_account_json", provider))
+		return "", keyRefused(provider, fmt.Sprintf("%q takes an api_key, not a service_account_json", provider))
 	case serviceAccount && keyFile == "":
-		return "", keyRefused("the service-account key is empty — remove the credential instead of storing nothing")
+		return "", keyRefused(provider, "the service-account key is empty — remove the credential instead of storing nothing")
 	case !serviceAccount && apiKey == "":
-		return "", keyRefused("the api key is empty — remove the credential instead of storing nothing")
+		return "", keyRefused(provider, "the api key is empty — remove the credential instead of storing nothing")
 	case !serviceAccount:
 		return apiKey, nil
 	}
@@ -228,10 +194,10 @@ func (s *ProviderKeyStore) acceptedCredential(ctx context.Context, provider stri
 		return "", err
 	}
 	if profile == ProfileSovereign {
-		return "", keyRefused(fmt.Sprintf("profile sovereign forbids reaching Google, so a %q key cannot be checked or used — change the profile first", provider))
+		return "", keyRefused(provider, fmt.Sprintf("profile sovereign forbids reaching Google, so a %q key cannot be checked or used — change the profile first", provider))
 	}
 	if err := s.verifyServiceAccount(ctx, keyFile); err != nil {
-		return "", keyRefused(err.Error())
+		return "", keyRefused(provider, err.Error())
 	}
 	return keyFile, nil
 }
@@ -257,120 +223,32 @@ func (s *ProviderKeyStore) verifyServiceAccount(ctx context.Context, keyFile str
 	return nil
 }
 
-func keyRefused(reason string) error {
-	return settings.InvalidValue{Setting: ProviderKeysKey, Code: settings.CodeInvalidValue, Reason: reason}
-}
-
-// swapRef moves one provider's ref inside a single locked transaction and
-// returns the ref it displaced.
-//
-// The value is a provider→ref MAP, so read-modify-write is the whole operation
-// and doing the read outside the write's transaction is a lost update, not a
-// conflict: two admins keying two different vendors both read the same map, and
-// the second write drops the first's provider entirely. The lock is taken before
-// the read for that reason — SetTx takes the same one, but by then both readers
-// already hold the same snapshot.
-func (s *ProviderKeyStore) swapRef(ctx context.Context, ws ids.WorkspaceID, provider, ref string) (previous string, err error) {
-	// Three states, not two. `entered` records that the closure ran at all,
-	// because WriteTx also fails BEFORE it — an unresolved workspace, a failed
-	// Begin, a failed GUC bind — and every one of those provably did not commit.
-	// Treating them as ambiguous would keep a blob that is definitionally an
-	// orphan and send an operator to reconcile it.
-	var (
-		entered bool
-		bodyErr error
-	)
-	txErr := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
-		entered = true
-		if bodyErr = settings.LockForWrite(ctx, tx, ProviderKeysKey); bodyErr != nil {
-			return bodyErr
-		}
-		var refs map[string]string
-		if refs, bodyErr = settings.GetTx(ctx, tx, ProviderKeys); bodyErr != nil {
-			return bodyErr
-		}
-		previous = refs[provider]
-		next := copyRefs(refs)
-		if ref == "" {
-			delete(next, provider)
-		} else {
-			next[provider] = ref
-		}
-		bodyErr = settings.SetTx(ctx, s.settings, tx, ProviderKeys, next)
-		return bodyErr
-	})
-	if txErr == nil {
-		return previous, nil
+// keyRefused names the provider's own setting as the field at fault, or the
+// provider word itself for one that takes no key.
+func keyRefused(provider, reason string) error {
+	field := provider
+	if setting, cloud := keySettings[provider]; cloud {
+		field = setting.Key()
 	}
-	// A blob was sealed for a write that may not have landed. Whether it is safe
-	// to drop turns on WHICH half failed, and getting that backwards is the
-	// worse outcome in one direction only.
-	//
-	// The closure ran and returned nil, yet the call failed: the only thing left
-	// is COMMIT, and a commit that reports failure may still have committed.
-	// Deleting then would leave the stored ref naming a blob that is gone — an
-	// AI lane that cannot be repaired by re-entering the key, because the ref
-	// would still read as configured. So the blob stays: unreferenced ciphertext
-	// is inert, and an orphan is recoverable where a dangling ref is not.
-	//
-	// Every other shape — the body refused, or it never ran — certainly rolled
-	// back, so nothing can reference the new blob and dropping it is safe.
-	if entered && bodyErr == nil && ref != "" {
-		s.log.WarnContext(ctx,
-			"a provider key was sealed but the settings transaction did not report a clean commit; the blob is KEPT because the write may have landed, so it is either live or an orphan to reconcile",
-			// The refs whole, not masked: this line exists so an operator can
-			// FIND the blob to reconcile, and a ref with its token elided names
-			// nothing they can act on. Same choice keyvault.DeleteDetached makes
-			// for the same reason, and a test there holds it.
-			"provider", provider, "credential_ref", ref,
-			"superseded_ref", previous, "err", txErr)
-		return "", txErr
-	}
-	if ref != "" {
-		s.retire(ctx, ws, ref, "provider key write refused")
-	}
-	return "", txErr
+	return settings.InvalidValue{Setting: field, Code: settings.CodeInvalidValue, Reason: reason}
 }
 
 // Remove retires a provider's credential. Removing one that was never there
-// succeeds: the caller asked for a state, and that state already holds.
+// succeeds: the caller asked for a state, and that state already holds. A key
+// a boot source sets is locked, and its removal refused.
 func (s *ProviderKeyStore) Remove(ctx context.Context, provider string) error {
 	if err := auth.Require(ctx, providerKeysObject, principal.ActionUpdate); err != nil {
 		return err
 	}
-	ws, err := credentialWorkspace(ctx)
-	if err != nil {
+	setting, cloud := keySettings[provider]
+	if !cloud {
+		return nil
+	}
+	if _, err := config.LockedChange(s.cfg, setting, func(string) bool { return false }); err != nil {
 		return err
 	}
-	// Through the same locked swap, with an empty ref meaning "drop the entry":
-	// a Remove read outside the write would lose a concurrent Set on another
-	// provider exactly as a Set would.
-	previous, err := s.swapRef(ctx, ws, provider, "")
-	if err != nil {
-		return err
+	if !s.cfg.Seals() {
+		return ErrVaultUnavailable
 	}
-	s.retire(ctx, ws, previous, "provider key removed")
-	return nil
-}
-
-// retire deletes a blob nothing references any more, through the shared
-// helper for a detached credential (keyvault.DeleteDetached).
-//
-// Not a hand-rolled delete, because that helper already answers the three
-// questions this call raises and answers them the same way for every custodian
-// in the tree: the caller's write has committed so the failure must not be
-// reported as theirs; the blob is inert and its REF is safe to log, so a
-// failure is logged at ERROR for cleanup rather than swallowed; and the delete
-// is detached from the request's cancellation under its own deadline, so a
-// client that hangs up the instant it has its answer does not strand the blob.
-func (s *ProviderKeyStore) retire(ctx context.Context, ws ids.WorkspaceID, ref, lifecycle string) {
-	keyvault.DeleteDetached(ctx, s.vault, s.log, ws.UUID, keyvault.Ref(ref), lifecycle)
-}
-
-// copyRefs takes a copy before mutating, so a failed write leaves the map the
-// caller read unchanged.
-func copyRefs(in map[string]string) map[string]string {
-	out := make(map[string]string, len(in)+1)
-	maps.Copy(out, in)
-	return out
+	return config.RemoveSecret(ctx, s.cfg, setting)
 }

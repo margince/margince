@@ -14,14 +14,14 @@
 // What is actually wrong is arithmetic between two budgets that were never
 // compared. A test built from N sequential waits may legitimately spend N times
 // the per-waiter budget (ASYNC_UTIL_TIMEOUT_MS below) without any single wait
-// failing. `company-act.test.tsx`'s "re-arms Continue once a skew refetch
+// failing. `company-act.recovery.test.tsx`'s "re-arms Continue once a skew refetch
 // actually lands a NEW hash" chains six of them. Against a five-second ceiling
 // that test can fail while every assertion in it is passing, and the failure
 // names the test rather than the wait that was slow.
 //
-// The repo had already found this once and written it down — in
-// src/screens/company-context.test.tsx, which pins its own
-// `TEST_MS = SETTLE_MS * 4` with the reason spelled out: "it must cover EVERY
+// The repo had already found this once and written it down: the test file
+// src/features/companies/company-context.test.tsx pins its own `TEST_MS` and
+// says why. `TEST_MS = SETTLE_MS * 4`, because "it must cover every
 // waiter in there: four run in sequence, each bounded by SETTLE_MS. A test whose
 // own limit is smaller than the sum lets vitest fire while a waiter still has
 // budget, and what surfaces then is an opaque timeout rather than the assertion

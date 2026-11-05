@@ -132,10 +132,14 @@ func (p *OfflineProvider) Descriptor() provider.Descriptor {
 			"current_employment", "job_history", "personal_email",
 		},
 		Presets: map[string][]provider.Category{
-			"full": {"professional_email", "mobile", "linkedin_profile",
-				"current_employment", "job_history", "personal_email"},
-			"professional_only": {"professional_email", "linkedin_profile",
-				"current_employment", "job_history"},
+			"full": {
+				"professional_email", "mobile", "linkedin_profile",
+				"current_employment", "job_history", "personal_email",
+			},
+			"professional_only": {
+				"professional_email", "linkedin_profile",
+				"current_employment", "job_history",
+			},
 		},
 		DefaultPreset: "full",
 		// Mirrors Surfe's correspondence, like the rest of this descriptor: a

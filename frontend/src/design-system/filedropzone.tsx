@@ -4,6 +4,7 @@
 import { type DragEvent, useState } from "react";
 import { Field, type FieldControl } from "./atoms";
 import "./filedropzone.css";
+import type { Glyph } from "./materialsymbols";
 
 // FileDropzone: choosing a file, by drop AND by click, from one control.
 //
@@ -42,6 +43,7 @@ export function FileDropzone({
   multiple,
   files,
   accept,
+  disabled,
 }: Readonly<{
   label: string;
   hint?: string;
@@ -61,6 +63,8 @@ export function FileDropzone({
   // filtered by it — the browser applies it to the picker only — so a caller
   // that can only read some types still checks what it was handed.
   accept?: string;
+  // Takes no file, by click or by drop: for a form whose write is out.
+  disabled?: boolean;
 }>) {
   return (
     <Field label={label} hint={hint}>
@@ -73,6 +77,7 @@ export function FileDropzone({
           multiple={multiple}
           files={files}
           accept={accept}
+          disabled={disabled}
         />
       )}
     </Field>
@@ -94,6 +99,8 @@ export function FileDropzoneControl({
   multiple,
   files,
   accept,
+  disabled,
+  icon: Icon,
 }: Readonly<{
   control: FieldControl;
   emptyLabel: string;
@@ -102,6 +109,9 @@ export function FileDropzoneControl({
   multiple?: boolean;
   files?: readonly File[];
   accept?: string;
+  disabled?: boolean;
+  // A mark above the prompt, for a zone tall enough to stand as a panel.
+  icon?: Glyph;
 }>) {
   const [over, setOver] = useState(false);
 
@@ -110,7 +120,7 @@ export function FileDropzoneControl({
   // so a single-file caller must still be handed exactly one — the browser
   // does not enforce that for us.
   const take = (chosen: FileList | null) => {
-    if (!chosen) {
+    if (!chosen || disabled) {
       return;
     }
     if (multiple) {
@@ -151,6 +161,7 @@ export function FileDropzoneControl({
         // fails. Without this the second pick is silently inert.
         multiple={multiple}
         accept={accept}
+        disabled={disabled}
         onChange={(event) => {
           const chosen = event.target.files;
           take(chosen);
@@ -163,7 +174,7 @@ export function FileDropzoneControl({
           // Without this the browser navigates to the dropped file, which
           // loses both the file and the form the reader had filled in.
           event.preventDefault();
-          setOver(true);
+          setOver(!disabled);
         }}
         onDragLeave={() => setOver(false)}
         onDrop={(event: DragEvent<HTMLInputElement>) => {
@@ -172,6 +183,11 @@ export function FileDropzoneControl({
           take(event.dataTransfer.files);
         }}
       />
+      {Icon && (
+        <span className="fdz-icon" aria-hidden="true">
+          <Icon size={20} />
+        </span>
+      )}
       {/* A live region, and it has to be: the input's value is cleared
               after every pick (see above), so the control itself announces "no
               file chosen" whatever is actually held. This text is the only

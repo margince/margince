@@ -10,10 +10,8 @@ import { LocaleProvider } from "../../i18n";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { OAuthAppCard } from "./oauth-app";
 
-// The card has THREE states, and the middle one is why it was rewritten: an app
-// the DEPLOYMENT supplies is neither a stored app nor the absence of one, and
-// reporting it as absent told operators Gmail could not be connected on
-// installations where it demonstrably could.
+// The card has THREE states: a stored app, none, and an app the DEPLOYMENT
+// supplies, which is neither and locks the form.
 //
 // It is now ONE component rendered per vendor, so the Microsoft story is not a
 // duplicate: it carries a state Google cannot have — a directory pin — and its
@@ -71,14 +69,13 @@ function Served({
   );
 }
 
-/** An app saved through this surface, which wins over the deployment's. */
+/** An app saved through this surface, used where the deployment supplies none. */
 export const Stored: Story = {
   render: () => (
     <Served
       app={{
         configured: true,
         client_id: CLIENT_ID,
-        source: "stored",
         redirect_uris: URIS,
       }}
     >
@@ -87,14 +84,20 @@ export const Stored: Story = {
   ),
 };
 
-/** The deployment's own credentials, used because nothing is stored. */
+/** The deployment's own credentials. They win over a stored app, so the form is
+ * locked and says where they are set. */
 export const FromEnvironment: Story = {
   render: () => (
     <Served
       app={{
         configured: true,
         client_id: CLIENT_ID,
-        source: "environment",
+        locks: [
+          {
+            key: "capture.google_app",
+            origin: { source: "env", name: "MARGINCE_GMAIL_CLIENT_ID" },
+          },
+        ],
         redirect_uris: URIS,
       }}
     >
@@ -112,7 +115,6 @@ export const Absent: Story = {
       app={{
         configured: false,
         client_id: "",
-        source: "none",
         redirect_uris: URIS,
       }}
     >
@@ -146,7 +148,6 @@ export const MicrosoftPinnedToADirectory: Story = {
         configured: true,
         client_id: ENTRA_ID,
         tenant: "99999999-8888-7777-6666-555555555555",
-        source: "stored",
         redirect_uris: GRAPH_URIS,
       }}
     >
@@ -163,7 +164,12 @@ export const MicrosoftAnyCompany: Story = {
       app={{
         configured: true,
         client_id: ENTRA_ID,
-        source: "environment",
+        locks: [
+          {
+            key: "capture.microsoft_app",
+            origin: { source: "env", name: "MARGINCE_GRAPH_CLIENT_ID" },
+          },
+        ],
         redirect_uris: GRAPH_URIS,
       }}
     >
@@ -199,7 +205,6 @@ export const LongAddressesPhone: Story = {
       app={{
         configured: true,
         client_id: CLIENT_ID,
-        source: "stored",
         redirect_uris: LONG_URIS,
       }}
     >
@@ -217,7 +222,6 @@ export const CopyRefused: Story = {
       app={{
         configured: true,
         client_id: CLIENT_ID,
-        source: "stored",
         redirect_uris: LONG_URIS,
       }}
     >

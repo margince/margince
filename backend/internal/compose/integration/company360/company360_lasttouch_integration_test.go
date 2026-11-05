@@ -39,8 +39,10 @@ func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
 	chased := company360Clock.AddDate(0, 0, -5)
 	stale := integration.AccountMailDirectedAt(t, owner, e.WS, "First contact", "inbound", firstReply)
 	integration.LinkActivity(t, owner, stale, "contact", contact)
+	integration.LinkActivitySender(t, owner, stale, contact)
 	inbound := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal", "inbound", replied)
 	integration.LinkActivity(t, owner, inbound, "contact", contact)
+	integration.LinkActivitySender(t, owner, inbound, contact)
 	outbound := integration.AccountMailDirectedAt(t, owner, e.WS, "Following up", "outbound", chased)
 	integration.LinkActivity(t, owner, outbound, "contact", contact)
 

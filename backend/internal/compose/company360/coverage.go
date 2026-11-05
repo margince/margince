@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -61,7 +62,7 @@ func (s *Service) Coverage(
 		if _, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
 			return err
 		}
-		all, err := contacts.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
+		all, err := companyContactStrengths(ctx, tx, companyID, now, nil)
 		if err != nil {
 			return err
 		}
@@ -131,6 +132,8 @@ func (s *Service) fillBestWayIn(
 		Title:         who.title,
 		Engagement:    crmcontracts.ContactEngagement(contacts.EngagementOf(best.Strength)),
 		LastInboundAt: best.Strength.LastInbound,
+
+		LastInboundPrecision: activitywhen.Stated(best.Strength.LastInboundPrecision),
 	}
 	return nil
 }

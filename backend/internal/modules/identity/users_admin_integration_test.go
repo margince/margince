@@ -104,7 +104,7 @@ func TestReactivateRefusalNamesEveryStateItCanBeReachedFrom(t *testing.T) {
 		SELECT pg_get_constraintdef(c.oid)
 		FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid
 		WHERE t.relname = 'app_user' AND c.contype = 'c'
-		  AND pg_get_constraintdef(c.oid) LIKE '%status%'`).Scan(&check); err != nil {
+		  AND c.conkey = ARRAY(SELECT a.attnum FROM pg_attribute a WHERE a.attrelid=t.oid AND a.attname='status')`).Scan(&check); err != nil {
 		t.Fatalf("reading the app_user status constraint: %v", err)
 	}
 	// The statuses the refusal and the contract account for. Compared as a SET
@@ -226,6 +226,8 @@ func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-mail")
 	mail := &capturedMail{}
 	h := NewHandlers(e.svc).WithPasswordReset(mail).WithPasswordLinkBase("https://crm.example.test")
+	sent := make(chan struct{})
+	h.resetSendStarted = func() { close(sent) }
 
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
 	body := `{"email":"invited@acme.test","display_name":"Invited Rep","role":"rep"}`
@@ -234,6 +236,7 @@ func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
 	}
+	<-sent
 
 	if mail.sent != 1 || mail.to != "invited@acme.test" {
 		t.Fatalf("mail = %+v, want one message to the invited address", mail)

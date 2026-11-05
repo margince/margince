@@ -36,6 +36,7 @@ type recordHistoryEntryWire struct {
 	OnBehalfOf        *string        `json:"on_behalf_of"`
 	ActorName         *string        `json:"actor_name"`
 	OnBehalfOfName    *string        `json:"on_behalf_of_name"`
+	PassportID        *string        `json:"passport_id"`
 	Action            string         `json:"action"`
 	OccurredAt        time.Time      `json:"occurred_at"`
 	AuthorizationRule *string        `json:"authorization_rule"`
@@ -184,6 +185,9 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 	}
 	if agent.Summary != "Ada Authority, via an agent, updated the record" {
 		t.Errorf("agent summary = %q, want the granting human named first (PD-002)", agent.Summary)
+	}
+	if agent.PassportID != nil {
+		t.Errorf("agent passport_id = %v, want absent: the row presented no passport", *agent.PassportID)
 	}
 	if agent.ActorName != nil {
 		t.Errorf("agent actor_name = %v, want null for a machine actor", agent.ActorName)

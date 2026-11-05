@@ -47,29 +47,24 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 		}
 		// And held, for the reason SetLeadManualSignal states
 		// (leadmanualsignal.go).
-		return recomputeLeadScoreTx(ctx, tx, leadID, now, false)
+		return recomputeLeadScoreTx(ctx, tx, leadID, now)
 	})
 }
 
-// recomputeLeadScoreTx is the §3 recompute inside an open transaction —
-// shared by the SYSTEM workflow lane and the override-clear path in
-// UpdateLead. When a Commercial Judgement override is in force (a
-// non-empty score_override_reason) it NEVER overwrites lead.score: the
-// human value is sticky (formulas §3.1, AC-S1) and the freshly machine
-// value is retained in score_computed instead. With no override, score
-// tracks the machine value directly (score_computed stays null).
-// clearedOverride tells this recompute it is the one a withdrawn
-// Commercial Judgement override triggered — the single case where an
-// unmoved score still has to be recorded (see below).
-func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, clearedOverride bool) error {
-	var title, source, overrideReason *string
+// recomputeLeadScoreTx is the weighted-signal recompute inside an open
+// transaction, shared by the system workflow lane and the manual-signal paths.
+// Under a Commercial Judgement override (a non-empty score_override_reason) the
+// human's lead.score is sticky and the machine value goes to score_computed.
+// With no override, score tracks the machine value and score_computed is null.
+func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time) error {
+	var title, origin, overrideReason *string
 	var currentScore int
 	var currentComputed *int
 	var status string
 	err := tx.QueryRow(ctx,
-		`SELECT title, source, score, score_override_reason, score_computed, status
+		`SELECT title, origin, score, score_override_reason, score_computed, status
 		   FROM lead WHERE id = $1 AND archived_at IS NULL`,
-		leadID).Scan(&title, &source, &currentScore, &overrideReason, &currentComputed, &status)
+		leadID).Scan(&title, &origin, &currentScore, &overrideReason, &currentComputed, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil // archived or gone: nothing to score
 	}
@@ -80,21 +75,10 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 		return nil // promoted/disqualified leads keep their last score
 	}
 
-	signals, err := leadBehavioralSignals(ctx, tx, leadID)
+	scored, err := scoreLeadFor(ctx, tx, leadID, now, title, origin)
 	if err != nil {
 		return err
 	}
-	// A rep's own inputs count toward the same weighted total — that is the
-	// point of supplying them — and stay their own labelled rows.
-	manual, err := leadManualFactors(ctx, tx, leadID)
-	if err != nil {
-		return err
-	}
-	intents, err := loadSourceIntents(ctx, tx)
-	if err != nil {
-		return err
-	}
-	scored := ScoreLeadDetail(deref(title), intents.Of(deref(source)), signals, now).withManual(manual)
 	machine := scored.Score
 
 	// Sticky override: the machine value moves score_computed, never score.
@@ -108,17 +92,8 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 	// Unchanged score, no entry: history records the number MOVING, which is
 	// what a trend plots and what a rep asks about. Appending on every decay
 	// tick would bury that under drift nobody reads (ADR-0105 §5).
-	//
-	// The exception is the recompute that a CLEARED override triggers. That
-	// clear has already set score back to the retained machine value, so the
-	// number has not moved by the time this runs — yet the newest entry still
-	// carries the override's reason and its two divergent numbers. Left out,
-	// the series would say a withdrawn override is still in force.
 	if machine == currentScore {
-		if !clearedOverride {
-			return nil
-		}
-		return appendLeadScoreHistory(ctx, tx, leadID, machine, scored, nil)
+		return nil
 	}
 	// Same CAS, same reason: machine was computed from the score this run
 	// read, so a concurrent recompute that already moved it wins.
@@ -141,6 +116,30 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 	return storekit.EmitEvent(ctx, tx, auditID, leadID.UUID, crmcontracts.PublicEventLeadUpdated{
 		ChangedFields: map[string]any{"delta": map[string]any{"score": machine}},
 	})
+}
+
+// scoreLeadFor is the weighted-signal formula over a lead's title and origin,
+// plus the signals the database holds for it. The title and origin are
+// arguments because an edit scores the values it is about to write. The row's
+// source (how it reached Margince) is not an input.
+func scoreLeadFor(
+	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, title, origin *string,
+) (LeadScoring, error) {
+	signals, err := leadBehavioralSignals(ctx, tx, leadID)
+	if err != nil {
+		return LeadScoring{}, err
+	}
+	// A rep's own inputs count toward the same weighted total, and stay their
+	// own labelled rows.
+	manual, err := leadManualFactors(ctx, tx, leadID)
+	if err != nil {
+		return LeadScoring{}, err
+	}
+	intents, err := LoadOriginIntents(ctx, tx)
+	if err != nil {
+		return LeadScoring{}, err
+	}
+	return ScoreLeadDetail(deref(title), intents.Of(origin), signals, now).withManual(manual), nil
 }
 
 // fieldKeyScoreComputed names the machine score on the audit trail and
@@ -194,11 +193,12 @@ func recomputeUnderOverrideTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID,
 }
 
 // leadBehavioralSignals derives the §3.1 signal rows from the lead's
-// linked activities: an inbound email is a reply, a meeting counts by
-// its recorded status.
+// linked activities: an inbound reply is a reply, a meeting counts by
+// what meetingProof says it proves. Signals decay by age, so they take no
+// waiting horizon.
 func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([]BehavioralSignal, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.meeting_status, ''), a.occurred_at
+		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.meeting_status, ''), a.occurred_at, `+leadDeclinedSQL("$1", "a")+`
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL AND `+auth.ActivityAvailableClause("a")+`
@@ -212,17 +212,16 @@ func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([
 		var id ids.ActivityID
 		var kind, direction, meetingStatus string
 		var occurredAt time.Time
-		if err := rows.Scan(&id, &kind, &direction, &meetingStatus, &occurredAt); err != nil {
+		var declined bool
+		if err := rows.Scan(&id, &kind, &direction, &meetingStatus, &occurredAt, &declined); err != nil {
 			return nil, err
 		}
 		var signalKind string
-		switch {
-		case kind == "email" && direction == "inbound":
+		switch proof, proves := meetingProof(meetingStatus, declined); {
+		case storekit.IsInboundReply(kind, direction):
 			signalKind = "reply"
-		case kind == "meeting" && meetingStatus == "held":
-			signalKind = "meeting_held"
-		case kind == "meeting" && meetingStatus == "booked":
-			signalKind = "meeting_booked"
+		case kind == "meeting" && proves:
+			signalKind = string(proof)
 		default:
 			continue
 		}

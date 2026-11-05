@@ -31,9 +31,6 @@
 # tree it describes.
 # wording it used to miss finds claims that were already here, and this file
 # written by somebody who has not audited the claims would be worse than an
-../desktop/launcher/console.go#func say
-../desktop/launcher/main.go#type stack
-../desktop/launcher/postgres.go#type cluster.connArgs
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
 gates/aiactivitycatalogparity_test.go#func producedKinds
@@ -63,7 +60,6 @@ internal/compose/agentcommand.go#const block at const opApproveApproval
 internal/compose/agentcommand_integration_test.go#func archivableRecordTypes
 internal/compose/agentgatecanon.go#const keyBindsTheRetry
 internal/compose/agentgatestaging.go#func resolveStagedTarget
-internal/compose/agentsplit.go#const block at const opApplyTag
 internal/compose/agenttasks.go#const taskColumns
 internal/compose/aicert/record.go#type Record.Scenarios
 internal/compose/aicert/reportcmd/report.go#var reportColumns
@@ -128,7 +124,6 @@ internal/compose/dbhandle.go#func ProjectsStore
 internal/compose/dealstatus/grounding.go#func knownIDs
 internal/compose/deepread_integration_test.go#func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames
 internal/compose/deepreadprincipal.go#func withClaimedRequester
-internal/compose/deploymentsecretseal.go#func resolveSecret
 internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/documentextract.go#func documentFieldOrder
@@ -162,8 +157,6 @@ internal/compose/integration/channels/telegram_fixture_integration_test.go#type 
 internal/compose/integration/channels/telegram_identity_integration_test.go#func TestErasedSubjectsNextMessageIsAcceptedAndPersistsNothing
 internal/compose/integration/collections/linkedleaves_integration_test.go#method fixture.customerAndSupplier
 internal/compose/integration/declaredfilters_integration_test.go#func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue
-internal/compose/integration/deploymentsecretseal_integration_test.go#func TestARotatedDeclarationIsResealed
-internal/compose/integration/deploymentsecretseal_integration_test.go#func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense
 internal/compose/integration/employment_dedupe_integration_test.go#func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount
 internal/compose/integration/harness.go#func ProjectsStore
 internal/compose/integration/offertemplate_http_integration_test.go#func assertRenderOfferNotImplementedWithoutBlobstore
@@ -174,7 +167,6 @@ internal/compose/integration/recordhistory_http_integration_test.go#const record
 internal/compose/integration/requiredbodyids_http_integration_test.go#func requiredIDCases
 internal/compose/integration/scheduledsend_integration_test.go#method preflightEnv.seedConsentedRecipient
 internal/compose/integration/searchenv.go#var searchObjects
-internal/compose/integration/seatmatrix_integration_test.go#func seededRoles
 internal/compose/integration/workflow_replay_integration_test.go#const block at const routeLeadHandler
 internal/compose/integration/writeauthorityreview_integration_test.go#func TestAReadShareOfADealCannotRewriteItsContracts
 internal/compose/integrationswiring.go#func NewProviderRunService
@@ -195,7 +187,6 @@ internal/compose/meetingbrief/sections.go#var specSequence
 internal/compose/networkseams.go#func toAgentRisks
 internal/compose/oauthedge.go#func sessionDigest
 internal/compose/offerdraft.go#const offerDraftAgentID
-internal/compose/offeringconfirmed.go#func offeringConfirmed
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner
@@ -231,7 +222,6 @@ internal/compose/transcriptproposetransport.go#func TranscriptReadOnLanding
 internal/modules/activities/activity.go#const block at const fieldKind
 internal/modules/activities/activitylinks.go#func insertActivityLinks
 internal/modules/activities/activityread.go#func scanActivity
-internal/modules/activities/attachment.go#func resolveAttachmentParent
 internal/modules/activities/channelsend.go#method outboundChannelMessage.activity
 internal/modules/activities/companyscope.go#func ActivityWithinProject
 internal/modules/activities/companyscope.go#func CompanyLinkedActivityExists
@@ -289,7 +279,6 @@ internal/modules/agents/reserved.go#const block at const approvalIDArg
 internal/modules/agents/runner/window.go#const triggerProvenance
 internal/modules/agents/schemacheck.go#func ResultDefect
 internal/modules/agents/toollist.go#func invocableByCaller
-internal/modules/agents/tools_enrich.go#func readEnrichArgs
 internal/modules/agents/tools_import.go#const block at const importObjectCompany
 internal/modules/agents/tools_import.go#const block at const importOnDuplicateCreate
 internal/modules/agents/tools_lifecycle_test.go#func advertisedEnum
@@ -314,7 +303,6 @@ internal/modules/approvals/expiry.go#func neverExpiringKinds
 internal/modules/approvals/inbox.go#func approvalWhere
 internal/modules/approvals/stageagentcall.go#method Service.StageAgentCall
 internal/modules/approvals/staging.go#func withCanonicalIdentity
-internal/modules/approvals/targetvisibility.go#func targetDecidable
 internal/modules/automation/automations_catalog_renewal.go#func RenewalReminderObjects
 internal/modules/automation/automations_preview.go#const previewBaseWhereNotArchived
 internal/modules/automation/engine.go#const systemSource
@@ -331,8 +319,8 @@ internal/modules/capture/channelconnfixture_test.go#method fakeTelegram.clearedW
 internal/modules/capture/channelsend.go#method Registry.liveChannelBindings
 internal/modules/capture/freemaildomain.go#const block at const auditKeyDomain
 internal/modules/capture/gmail/send.go#method Connector.stampedIdentity
+internal/modules/capture/htmltext/htmltext.go#func linkText
 internal/modules/capture/lifecycleaudit.go#func connectionAuditImage
-internal/modules/capture/mailmap/htmltext.go#func linkText
 internal/modules/capture/mailmap/mailmap.go#method Message.Addresses
 internal/modules/capture/mailmap/mailmap.go#type Message.addresses
 internal/modules/capture/oauthflow/oauthflow.go#package oauthflow
@@ -411,7 +399,6 @@ internal/modules/customfields/engine.go#func quoteIdentifier
 internal/modules/customfields/engine.go#type FieldSpec
 internal/modules/customfields/engine.go#var FieldObjects
 internal/modules/customfields/service.go#const catalogColumns
-internal/modules/dealrooms/document_read.go#const inTheDealsFilesArea
 internal/modules/dealrooms/document_read.go#func documentIDOf
 internal/modules/dealrooms/errors.go#const block at const codeTooLong
 internal/modules/dealrooms/errors.go#const codeRequired
@@ -466,7 +453,6 @@ internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes
 internal/modules/privacy/retentionscope.go#func ParseRetentionScope
 internal/modules/privacy/retentionscope_test.go#func TestAuthorableScopesIsTheSelectorTableInWireSpelling
-internal/modules/projects/handlers.go#func refuseCallerChosenKey
 internal/modules/projects/keymint.go#const projectKeyField
 internal/modules/projects/keymint.go#func mintProjectKey
 internal/modules/projects/listfilters.go#const block at const filterKey
@@ -492,7 +478,6 @@ internal/modules/search/queryvocab.go#const block at const OpEq
 internal/modules/signals/audiencerescope.go#const block at const rescopeImageArchivedAt
 internal/modules/signals/derived.go#const block at const columnStatus
 internal/modules/signals/derived.go#type DerivedSignal.PrivateTo
-internal/modules/signals/signal.go#func OfCompanyWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes
@@ -509,7 +494,6 @@ internal/platform/auth/rbac.go#func UpsertAction
 internal/platform/auth/rbac.go#func refuseBuyer
 internal/platform/auth/rowscope.go#var ownerPrivateTables
 internal/platform/auth/writescope.go#const grantAccessWrite
-internal/platform/cliflags/cliflags.go#method Env.Items
 internal/platform/database/statementbudget.go#func BoundStatement
 internal/platform/database/storekit/claim.go#func ClaimOwnership
 internal/platform/database/storekit/customcolumns.go#func quoteColumnIdentifier

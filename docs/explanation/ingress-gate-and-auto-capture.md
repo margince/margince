@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
 # The ingress gate, auto-capture, and the verdict engine
 
 What happens to a message **after** a connector pulled it from an outside provider, and before it
@@ -180,7 +181,7 @@ must get the question later. Channel records skip it; see the end of this sectio
 | **T1** | Have we and this address sent mail to each other? | **Create the contact.** Wins over every rule below |
 | **T2** | Is this a mail system (DocuSign, SendGrid…)? | Keep the message, create no contact and no company |
 | **T2.5** | Did we already decide about this address? | Use that decision again. No new question, no model call |
-| **T3** | Is it a personal mail domain (`gmail.com`…)? | Create the contact, but no company |
+| **T3** | Is it a personal mail domain (`gmail.com`…)? | No company. The contact waits for the verdict engine, unless T1 or T2.5 already let it in |
 | **T4** | Nobody knows who this is | Create nothing yet. Write a row for the verdict engine |
 
 Notes on some tiers:
@@ -191,12 +192,11 @@ Notes on some tiers:
 - **T1 only trusts proof that *we* sent the mail.** It does not look at the `From` header, which
   someone can forge. An outbound message whose text says no (`not interested`, `unsubscribe`,
   `kein Interesse`) is no evidence of intent at all.
-- **T1 needs two-way mail**, and a single send is not that. Writing to someone shows intent, and intent
-  many times gets no answer. The owner of a new company mails 40 companies about an event, and 6
-  write back. So the ladder creates a contact at once only in two cases. They wrote back on a thread we
-  wrote on, or we wrote to them on two separate threads, which nobody does without meaning to. A single send
-  is not refused: it falls to T4, and the verdict engine reads the message and decides on what it
-  says.
+- **An attested send records an outside recipient.** The provider must prove that the
+  capturing seat sent it, or Margince must hold a sent delivery receipt. A draft,
+  failed delivery or untrusted direction field is no proof. To and Cc share this rule;
+  Bcc is never admitted. A live lead stays a lead. Without a trusted send or an eligible
+  meeting, a sender still passes through the other tiers.
 - **Mail to a list is no reply.** An address we wrote to once that then sends a newsletter has
   added us to a list; it has not answered us.
 - **T1 also wins over an old verdict.** A reply to a sender we once marked as noise returns
@@ -246,13 +246,22 @@ account the erase list never named.
 
 ## 4. The verdict engine
 
-The rows that T4 created are processed every hour, per workspace.
+The rows that T3 and T4 wrote are processed every 10 minutes, in one pass that walks every workspace.
 
 **How the work is claimed.** Workers claim rows 8 at a time with a token and a time limit. So many workers
 can run at once, and a worker that fails before it ends leaves no row claimed for good. Each decision
 commits on its own, so a failure keeps whatever was already decided. The decision and what it does
 share a transaction, so a row can
 never say `real` without the contact it promised.
+
+**Meeting mail from Google is never noise.** Mail from `calendar-notification@google.com`,
+`gemini-notes@google.com` and `meetings-noreply@google.com` is settled as a `role_mailbox` with no
+model call. It counts only when the Gmail receiving server passed DMARC for `google.com`, which is the
+activity's `inbound_sender_authenticated` stamp. A forged From is judged like any other sender.
+
+A `noise` or `personal` answer stored for one of these addresses hides or destroys none of its mail
+that passed that check. It keeps none of that mail's files out of storage either. The next such
+message asks the question again. The list is in `capture/googlemeetingmail.go`.
 
 **The AI call: `capture_counterparty_verdict`.** One sender per call, never a group. Only the text
 of that sender is in the prompt, so an attack message cannot answer for anyone else. SQL first limits
@@ -323,6 +332,23 @@ mailbox owner alone:
   colleague which companies this user is going after. The record opens up on its own the first time that address replies.
 - **The thread is on a privacy hold.** A contact visible to the whole workspace, created from mail on
   hold, would show the counterparty that the hold exists to keep private.
+
+A privacy hold on a contact ends when nothing holds it any more. That happens when the thread
+verdict answers `ordinary` or the owner shares the thread. The same contact then opens to the workspace,
+with its ID and its mail. Every check that kept it private is asked again first:
+
+- Every live message with any of the contact's addresses must have stopped holding it. That covers a
+  colleague's mailbox, a legal hold and a marked subject. It also covers a held conversation that
+  started after the sender was judged.
+- Every address of the contact must have been judged a business contact, and nothing else. A
+  sender question still open, an erased address or any other answer keeps the contact private.
+- A contact a user made private stays private, and so does a contact with no record of why it is
+  private.
+- Mail the owner wrote to an address that never answered keeps the contact private for that reason
+  instead. It opens up when the address replies, as above.
+
+The engine checks this when a thread clears, and its next pass checks what that missed. A background
+data task checks the contacts held before this check existed.
 
 Marking the domain is a separate step from hiding the mail. A newsletter company has a real web
 site. Without the mark, the company check would create it the next time someone from that company
@@ -410,7 +436,7 @@ path that later deletes content, and only after the undo window.
 | Setting | Where | Controls |
 |---|---|---|
 | Own mail domains | Capture settings (admins write, every user reads) | Which messages count as internal, and so are dropped |
-| Personal mail domains | `POST /v1/capture/consumer-mail-domains`: added domains and exceptions on top of a built-in list of ~8,700 domains | T3: create a contact but no company |
+| Personal mail domains | `POST /v1/capture/consumer-mail-domains`: added domains and exceptions on top of a built-in list of ~8,700 domains | T3: no company, and the contact waits for the verdict engine |
 | `auto_enrich` | `PATCH /v1/capture/settings` | Whether new companies get more data on their own |
 | Approved sender domains | Contacts settings | Lets an admin approve a domain a verdict blocked |
 
@@ -514,7 +540,7 @@ Say `acme.com` is a registered own domain, and the client is `dana@client.io`.
 | …score below 0.7 twice | `unsure`: a proposal goes to the review queue. Rejecting it changes nothing |
 | A DocuSign mail comes in | Message kept, **T2**: no contact, and `eu.docusign.net` never becomes a company |
 | A newsletter from someone you have emailed | **T1 keeps them.** A known contact is not a mail system |
-| A first-time sender at `gmail.com` | **T3**: contact created, no company |
+| A first-time sender at `gmail.com` | **T3**: no company. No contact until the verdict engine answers |
 | Someone mails you from 60 new addresses on one domain | The first 50 get queued. The rest come in with no decision, and a `capture_deferral_capped` log row |
 | The same message is read twice | Nothing happens the second time |
 | A user's permissions were made smaller after they connected | Their next pull runs with the smaller permissions |
@@ -562,7 +588,7 @@ has a right to.
 | The ledger of decisions and its caps | `backend/internal/modules/capture/pending.go`, `pendingcap.go` |
 | Review queue and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
 | Own domains, personal mail list, settings | `owndomainstore.go`, `freemaildomain.go`, `baselinelist.go`, `settings.go` |
-| T2 registry and its config keys | `capture/transactional.go`, `platform/deployconfig/capture.go` |
+| T2 registry and its config keys | `capture/transactional.go`, `compose/capturesettings.go` |
 | Verdict engine, prompt, sweeps, accept | `backend/internal/compose/captureverdict{,ask,sweeps,accept}.go` |
 | AI task names and routing | `internal/modules/ai/tasks_gen.go` (generated), `internal/compose/brain.go` |
 | What starts the company check | `backend/internal/compose/capturedomaintriage.go` |

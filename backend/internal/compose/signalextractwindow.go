@@ -13,13 +13,20 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // threadMessages reads one window of a conversation, oldest first, so the
@@ -57,6 +64,7 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 	if err != nil {
 		return nil, err
 	}
+	covered := len(messages) < extractThreadMessages
 	// Nothing older LEFT is not the same as nothing to read. A thread grows at
 	// the same instant as its newest message — the count moves and the clock
 	// does not — and one whose history is fully covered has an empty older
@@ -68,7 +76,31 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 			return nil, err
 		}
 	}
-	return finishThreadWindow(ctx, thread, messages), nil
+	messages = finishThreadWindow(ctx, thread, messages)
+	if covered {
+		coverThreadStart(thread)
+	}
+	if olderThan != nil {
+		return withCurrentThreadContext(ctx, tx, thread.Key, messages)
+	}
+	return messages, nil
+}
+
+// coverThreadStart lowers the read's cursor to the thread's oldest message.
+// A window short of its limit holds all the mail this read may reach.
+// threadHasMoved compares the cursor with every message on the key, but the
+// window reads only one correspondence. Without this, older mail of another
+// correspondence keeps the thread due, and every pass re-reads the same window.
+func coverThreadStart(thread *settledThread) {
+	if thread.Oldest == nil || thread.OldestID == nil {
+		return
+	}
+	if thread.ReadFromNow != nil && thread.ReadFromIDNow != nil &&
+		(thread.ReadFromNow.Before(*thread.Oldest) ||
+			(thread.ReadFromNow.Equal(*thread.Oldest) && thread.ReadFromIDNow.String() <= thread.OldestID.String())) {
+		return
+	}
+	thread.ReadFromNow, thread.ReadFromIDNow = thread.Oldest, thread.OldestID
 }
 
 // threadWindow reads one window, oldest first. olderThan bounds it above; nil
@@ -77,6 +109,10 @@ func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]th
 func threadWindow(
 	ctx context.Context, tx pgx.Tx, key string, olderThan *time.Time, olderThanID, through *ids.UUID,
 ) ([]threadMessage, error) {
+	anchor, domain, err := windowAnchor(ctx, tx, key, through)
+	if err != nil || anchor == nil {
+		return nil, err
+	}
 	// The remainder is measured in the same statement that cuts the body:
 	// asked for afterwards it would be a second read of a row that may have
 	// changed, and the number would then describe a different message from the
@@ -84,8 +120,9 @@ func threadWindow(
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
 		       coalesce(left(body, $1), ''),
-		       greatest(coalesce(char_length(body), 0) - $1, 0), occurred_at
-		  FROM (SELECT id, direction, subject, body, occurred_at
+		       coalesce(substring(body FROM $1 + 1), ''), occurred_at, NOT complete
+		  FROM (SELECT id, direction, subject, body, occurred_at,
+		               `+provenance.MailBodyCompleteSQL("activity")+` AS complete
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
 		           -- The audience, tested HERE and not only in the pass that
@@ -100,7 +137,9 @@ func threadWindow(
 		           -- refuses a conversation any of whose messages is limited, so
 		           -- this arm only ever fires on a narrowing that landed inside
 		           -- the pass, and a short window is the right answer to it.
-		           AND audience = 'workspace'
+		           AND `+activities.AutomaticMailContent+`
+		           AND (id = $7 OR EXISTS (SELECT 1 FROM activity window_anchor
+		                 WHERE window_anchor.id = $7 AND `+activities.SameCorrespondenceSQL("activity", "window_anchor", "$8::text", "")+`))
 		           -- Null means no bound: the newest window, which is the
 		           -- ordinary case and the one a thread starts from.
 		           --
@@ -113,7 +152,7 @@ func threadWindow(
 		         ORDER BY occurred_at DESC, id DESC
 		         LIMIT $3) tail
 		 ORDER BY occurred_at, id`, extractBodyLimit, key, extractThreadMessages,
-		olderThan, olderThanID, through)
+		olderThan, olderThanID, through, *anchor, domain)
 	if err != nil {
 		return nil, fmt.Errorf("read the conversation: %w", err)
 	}
@@ -121,16 +160,64 @@ func threadWindow(
 	var out []threadMessage
 	for rows.Next() {
 		var message threadMessage
+		var remainder string
 		if err := rows.Scan(&message.ID, &message.Direction, &message.Subject,
-			&message.Body, &message.UnreadRunes, &message.At); err != nil {
+			&message.Body, &remainder, &message.At, &message.Incomplete); err != nil {
 			return nil, err
 		}
+		message.UnreadRunes = utf8.RuneCountInString(remainder)
+		message.QuotedRemainder = quotedRemainder(message.Body, remainder)
 		out = append(out, message)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return out, nil
+}
+
+// windowAnchor is the message a window's correspondence is bound to, and that
+// correspondence's company domain. It is through when set, else the
+// thread's newest proven message, else its newest. Nil when none is readable.
+func windowAnchor(ctx context.Context, tx pgx.Tx, key string, through *ids.UUID) (*ids.UUID, string, error) {
+	var anchor ids.UUID
+	var counterparty string
+	err := tx.QueryRow(ctx, `
+		SELECT id, coalesce(counterparty_email, '') FROM activity
+		 WHERE thread_key = $1 AND kind = 'email' AND archived_at IS NULL
+		   AND `+activities.AutomaticMailContent+` AND ($2::uuid IS NULL OR id = $2)
+		 ORDER BY `+correspondence.ProvenSQL("activity")+` DESC, occurred_at DESC, id DESC
+		 LIMIT 1`, key, through).Scan(&anchor, &counterparty)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, "", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("read the conversation's anchor: %w", err)
+	}
+	own, err := capture.TrustedOwnDomainsTx(ctx, tx)
+	if err != nil {
+		return nil, "", err
+	}
+	consumer, err := capture.MatcherTx(ctx, tx)
+	if err != nil {
+		return nil, "", err
+	}
+	domain, err := activities.CorrespondenceDomainTx(ctx, tx, counterparty, consumer, own.Domains())
+	return &anchor, domain, err
+}
+
+func quotedRemainder(head, tail string) bool {
+	if tail == "" {
+		return true
+	}
+	// Include the start of the cut line: a mid-line cut must not hide its quote marker.
+	lastLine := head[strings.LastIndexByte(head, '\n')+1:]
+	for line := range strings.SplitSeq(lastLine+tail, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" && !strings.HasPrefix(trimmed, ">") {
+			return false
+		}
+	}
+	return true
 }
 
 // finishThreadWindow records where the window started and reports what the
@@ -164,4 +251,25 @@ func finishThreadWindow(ctx context.Context, thread *settledThread, out []thread
 			"body_limit", extractBodyLimit, "unread_runes", unread)
 	}
 	return out
+}
+
+const extractContextMessages = 2 * extractThreadMessages
+
+// withCurrentThreadContext keeps the history cursor separate from the recent evidence used to judge it.
+func withCurrentThreadContext(ctx context.Context, tx pgx.Tx, key string, messages []threadMessage) ([]threadMessage, error) {
+	newest, err := threadWindow(ctx, tx, key, nil, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[ids.UUID]bool, len(messages))
+	for _, message := range messages {
+		seen[message.ID] = true
+	}
+	for _, message := range newest {
+		if !seen[message.ID] {
+			messages = append(messages, message)
+		}
+	}
+	inTimeOrder(messages)
+	return messages, nil
 }

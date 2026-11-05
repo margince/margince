@@ -31,6 +31,7 @@ type RestrictedRecord struct {
 	ActivityID      ids.UUID
 	Kind            string
 	OccurredAt      time.Time
+	Precision       string
 	RestrictedAt    time.Time
 	RestrictedUntil time.Time
 	Class           string
@@ -65,16 +66,16 @@ type RestrictedPage struct {
 // ListRestrictedActivities reads the held records, oldest obligation first.
 //
 // Gated on the retention-policy authority's READ, the same object that governs
-// the ladder — held admin-only by the seeded roles. Human-only like every
-// governance read beside it: which records an erasure could not destroy is not
-// reconnaissance to hand an agent, even one carrying an admin's passport.
+// the ladder, held admin-only by the seeded roles. An agent reads it only on the
+// passport of a user who holds that grant. Releasing a held record stays with the
+// user, so an agent can see what an erasure could not destroy and cannot free it.
 //
 // The keyset is (restricted_at, id): the cursor codec's created_at slot carries
 // the restriction instant, which is what the page is ordered by.
 func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *string, limit *int) (RestrictedPage, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return RestrictedPage{}, fmt.Errorf("human-only compliance read: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return RestrictedPage{}, fmt.Errorf("this compliance read is for a user or their agent: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionRead); err != nil {
 		return RestrictedPage{}, err
@@ -91,7 +92,7 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 		// record is small, and one round trip keeps the page consistent with
 		// itself.
 		rows, err := tx.Query(ctx, `
-			SELECT a.id, a.kind, a.occurred_at, a.restricted_at, a.restricted_until,
+			SELECT a.id, a.kind, a.occurred_at, a.occurred_precision, a.restricted_at, a.restricted_until,
 			       a.retention_class, a.redacted_fields,
 			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', e.deal_id, 'name', e.deal_name) ORDER BY e.deal_name)
 			                   FROM (SELECT DISTINCT deal_id, deal_name FROM activity_retention_evidence
@@ -109,7 +110,7 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 		defer rows.Close()
 		for rows.Next() {
 			var r RestrictedRecord
-			if err := rows.Scan(&r.ActivityID, &r.Kind, &r.OccurredAt, &r.RestrictedAt, &r.RestrictedUntil,
+			if err := rows.Scan(&r.ActivityID, &r.Kind, &r.OccurredAt, &r.Precision, &r.RestrictedAt, &r.RestrictedUntil,
 				&r.Class, &r.RedactedFields, &r.Deals, &r.Projects); err != nil {
 				return err
 			}

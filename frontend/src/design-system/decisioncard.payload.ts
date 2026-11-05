@@ -14,9 +14,16 @@
 // Every function here returns DATA. The card owns the element each field is
 // drawn in, so a caption's markup cannot be decided in two places.
 
+import type { DecisionApproval } from "./decisionstatus";
+
+export function decisionEvidence(approval: DecisionApproval) {
+  return approval.preview?.evidence ?? approval.evidence;
+}
+
 /** The old→new sides of one field the proposal would change. */
 export type DecisionDiff = Readonly<{
   field: string;
+  label?: string;
   from: string | null;
   to: string | null;
 }>;
@@ -45,9 +52,57 @@ export type DecisionDisplay = Readonly<{
   /** The value, already formatted — a date on the reader's calendar, an enum
    *  in words. Null where the payload does not carry the field. */
   value: string | null;
+  href?: string;
+  /** Null refuses inferred differences from the executable payload. */
+  comparison?: Pick<DecisionDiff, "from" | "to"> | null;
   /** Leads the body as a sentence rather than sitting in the fact list. */
   lead?: boolean;
 }>;
+
+/**
+ * The display without a lead that only repeats the approval's own summary.
+ *
+ * The summary is already the card's headline or the line under it. A stager
+ * often writes the same sentence into the payload it leads with, and one
+ * sentence printed twice reads as two facts. A lead that differs still shows.
+ */
+export function withoutRepeatedLead(
+  display: readonly DecisionDisplay[],
+  summary: string | null | undefined,
+): readonly DecisionDisplay[] {
+  const said = summary ? displayNormalized(summary) : "";
+  return said
+    ? display.filter((entry) => !(entry.lead && repeats(entry.value, said)))
+    : display;
+}
+
+// The server stores a summary with control and format characters dropped,
+// whitespace collapsed and the length bounded with a trailing ellipsis
+// (sanitizeSummary in modules/approvals/summary.go). The payload copy is raw,
+// so both are compared after the same cleaning, and a bounded summary matches
+// the lead it was cut from.
+const SUMMARY_CUT = "…";
+
+function displayNormalized(text: string): string {
+  return text
+    .replace(/\s+/gu, " ")
+    .replace(/[\p{Cc}\p{Cf}]/gu, "")
+    .trim();
+}
+
+function repeats(lead: string | null, said: string): boolean {
+  if (!lead) {
+    return false;
+  }
+  const value = displayNormalized(lead);
+  if (value === said) {
+    return true;
+  }
+  const head = said.endsWith(SUMMARY_CUT)
+    ? said.slice(0, -SUMMARY_CUT.length).trim()
+    : "";
+  return head !== "" && value.startsWith(head);
+}
 
 /** One remaining payload field, as the two strings a fact list draws. */
 export type PayloadField = Readonly<{
@@ -56,6 +111,7 @@ export type PayloadField = Readonly<{
   /** What the row is called: a declared caption, or the wire key itself. */
   label: string;
   value: string;
+  href?: string;
 }>;
 
 // A payload value as one line of text. `proposed_change` is an open map in the
@@ -138,9 +194,16 @@ export function restFields(
 ): readonly PayloadField[] {
   if (display.length > 0) {
     return display.flatMap((entry) =>
-      entry.lead || entry.value === null
+      entry.lead || entry.comparison || entry.value === null
         ? []
-        : [{ key: entry.field, label: entry.label, value: entry.value }],
+        : [
+            {
+              key: entry.field,
+              label: entry.label,
+              value: entry.value,
+              href: entry.href,
+            },
+          ],
     );
   }
   const consumed = new Set<string>();

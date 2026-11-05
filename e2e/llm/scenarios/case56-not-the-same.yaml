@@ -1,6 +1,6 @@
 # CASE 56 — Not the same contact.
 #
-# The business card in case 2 files a possible duplicate and the answer says so.
+# A business card files a possible duplicate when the contact it names is already here.
 # Here the user knows better: the other Lucy Vo on file is a different contact.
 # decide_duplicate is the verb for that call. It is undoable (decision reopen
 # lifts it), which is the whole reason an assistant may make it, and it is the

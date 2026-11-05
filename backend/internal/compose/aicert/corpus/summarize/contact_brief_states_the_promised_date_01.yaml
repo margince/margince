@@ -1,0 +1,78 @@
+name: contact_brief_states_the_promised_date
+task: summarize
+site: contact_brief
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  name: Lena Brandt
+  title: Procurement Lead
+  employer: Nordwerk Maschinenbau GmbH
+  buying_role: economic_buyer
+  strength: 58
+  deal:
+    name: Nordwerk volume order 2027
+    stage: proposal
+    amount_minor: 9600000
+    currency: EUR
+    close_date: "2026-12-15"
+  # On Monday 31 August we promised the revised quote "this week". The
+  # extractor read the promise with the sender's calendar and stored the end of
+  # that working week, Friday 4 September, as its deadline. A right brief
+  # states that date; the quote's own words tell a reader on a later day
+  # nothing about when the quote is due.
+  messages:
+    - label: discount_question
+      days_ago: 5
+      direction: inbound
+      author: { kind: contact_record, name: Lena Brandt, role: author }
+      subject: "Volume discount for the 2027 order"
+      preview: >
+        Can you confirm the volume discount for the 2027 order? Our board
+        decides on the supplier at its next meeting.
+      move: none
+    - label: revised_quote
+      days_ago: 4
+      direction: outbound
+      author: { kind: colleague, reader: true, role: addressee }
+      subject: "Re: Volume discount for the 2027 order"
+      preview: >
+        Thanks Lena, I will send you the revised quote with the volume
+        discount this week.
+      move: none
+  claims:
+    - kind: commitment_ours
+      body: Send the revised quote with the volume discount.
+      quote: I will send you the revised quote with the volume discount this week
+      status: open
+      due_at: "2026-09-04T17:00:00Z"
+      from_label: revised_quote
+expect:
+  outcome: accepted
+  # The brief must read the promise we made and say why it matters: their board
+  # picks the supplier, which only the older message says and the floor never
+  # quotes. The deadline is checked twice: the deterministic half refuses the
+  # relative words the quote used, and the rubric asks the judge for the stored
+  # date itself, since a date can be written many ways.
+  answer:
+    cites_label: revised_quote
+    names_token: board
+    avoids:
+      - this week
+      - shortly
+  bands:
+    # The deterministic floor already states the claim and its date, so the
+    # bar is the same as the other contact-brief scenarios: a model that
+    # reliably names the date is worth the call, and one that falls back to the
+    # quote's relative words half the time misleads the reader.
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the brief says that we owe Lena Brandt the revised quote
+    with the volume discount before their board picks a supplier, and states its deadline as the date the claim
+    carries, 4 September 2026, in any common date format; it may add that
+    this is today. A brief that repeats "this week" or another relative phrase
+    from the quote, or gives no deadline at all, has not told the reader when
+    the quote is due. Penalise any date other than 4 September 2026 given as
+    the deadline, and any invented amount or commitment the input did not
+    supply.

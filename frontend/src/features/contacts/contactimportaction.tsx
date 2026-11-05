@@ -4,7 +4,7 @@
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { openActivityImport } from "../../screens/importaddress";
+import { openActivityImport } from "../import/importaddress";
 
 /**
  * Starts an import of activities that all belong to this contact. Shown only

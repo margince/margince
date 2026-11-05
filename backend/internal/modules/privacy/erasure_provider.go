@@ -83,3 +83,23 @@ func subjectContactIDs(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
+
+// purgeEmployerOffers deletes the offered values of every company the subject
+// was employed by, for both the erasure and the anonymize. A feed's offer for a
+// company field can quote an employee; the next feed run offers again whatever
+// is still true.
+func purgeEmployerOffers(ctx context.Context, tx pgx.Tx, subjects []ids.UUID) error {
+	_, err := tx.Exec(ctx,
+		`DELETE FROM company_offered_value o USING relationship r
+		 WHERE r.company_id = o.company_id AND r.contact_id = ANY($1) AND r.kind = 'employment'`, subjects)
+	return err
+}
+
+// purgeProvidedValues removes what outside sources said about the subject: the
+// offers of their employers' feeds, then the purchases made from providers.
+func purgeProvidedValues(ctx context.Context, tx pgx.Tx, subjects []ids.UUID) error {
+	if err := purgeEmployerOffers(ctx, tx, subjects); err != nil {
+		return err
+	}
+	return purgeProviderPurchases(ctx, tx, subjects)
+}

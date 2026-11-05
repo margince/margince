@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -623,6 +624,10 @@ func seedTranscribedMeeting(
 type noDomains struct{}
 
 func (noDomains) Domains(context.Context, pgx.Tx) ([]string, error) { return nil, nil }
+
+func (noDomains) MeetingParties(context.Context, pgx.Tx) (owndomain.Parties, error) {
+	return owndomain.Parties{}, nil
+}
 
 // A model's reading and the record's own claim are two claims about ONE
 // source, and the record must not be silenced by whichever arrived first.

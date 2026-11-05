@@ -19,7 +19,6 @@ package meetingbrief
 import (
 	"sort"
 	"strings"
-	"time"
 )
 
 // thread is one conversation, folded.
@@ -27,8 +26,8 @@ type thread struct {
 	Key     string
 	Kind    string
 	Subject string
-	First   time.Time
-	Last    time.Time
+	First   Occurred
+	Last    Occurred
 	// IDs are the conversation's activities this caller may READ, newest
 	// first. A withheld row is counted in Rows and never listed here: citing
 	// it would send a reader to a record they cannot open — which also tells
@@ -104,16 +103,17 @@ func threadsOf(history []HistoryIn) []thread {
 			// First/Last date the arc, so only a row this caller may read may
 			// set them — a withheld row still counts in Rows above, but its
 			// instant must never surface as when the thread started or ended.
-			if found.Readable == 0 || row.At.Before(found.First) {
-				found.First = row.At
+			at := Occurred{At: row.At, DateOnly: row.DateOnly}
+			if found.Readable == 0 || row.At.Before(found.First.At) {
+				found.First = at
 			}
-			if found.Readable == 0 || row.At.After(found.Last) {
-				found.Last = row.At
+			if found.Readable == 0 || row.At.After(found.Last.At) {
+				found.Last = at
 			}
 			found.Readable++
 			// The newest readable subject names the thread: a later message in a
 			// chain carries the subject the participants settled on.
-			if found.Subject == "" || row.At.Equal(found.Last) {
+			if found.Subject == "" || row.At.Equal(found.Last.At) {
 				if row.Subject != "" {
 					found.Subject = row.Subject
 				}
@@ -133,7 +133,7 @@ func threadsOf(history []HistoryIn) []thread {
 		threads = append(threads, *byKey[key])
 	}
 	sort.SliceStable(threads, func(i, j int) bool {
-		return threads[i].First.Before(threads[j].First)
+		return threads[i].First.At.Before(threads[j].First.At)
 	})
 	return threads
 }

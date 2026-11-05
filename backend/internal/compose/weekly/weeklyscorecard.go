@@ -6,10 +6,10 @@ package weekly
 // How WELL the week went, as against what happened in it.
 //
 // The counts beside this say a rep was sent 40 leads and held 6 meetings. This
-// says they answered 12 inside the target and 4 of those meetings left a next
-// step behind. The two are different questions and a reader wants both, but
-// only this one is a judgement, so only this one has to be careful about what
-// it does when there is nothing to judge.
+// says 12 of those leads had a first response recorded by the close, and 4 of
+// those meetings left a next step behind. A reader wants both. Only this one
+// is a judgement, so only this one has to be careful when there is nothing to
+// judge.
 //
 // A BLOCK IS PRESENT OR ABSENT, NEVER ZEROED. A rep who carried no leads at all
 // did not score zero on the funnel — the funnel was not their work that week,
@@ -19,16 +19,16 @@ package weekly
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Scorecard is one week's judgement of one rep's work.
@@ -51,8 +51,11 @@ type LeadBlock struct {
 	Disqualified int
 	Promoted     int
 
-	// The SLA slice, carried here as well as on Counts so a reader of the
-	// scorecard has the whole funnel in one record.
+	// The SLA slice, read from the cohort Arrived counts. AnsweredInTarget is
+	// every first response recorded by the close, late ones included. A late
+	// answer is also a breach, so only responses are subtracted from Arrived.
+	// Arrived is nil on a week frozen before it was recorded.
+	Arrived          *int
 	AnsweredInTarget int
 	Breached         int
 
@@ -143,41 +146,6 @@ func scoreWeek(
 	return Scorecard{Lead: lead, Deal: deal}, nil
 }
 
-// ladderRungSQL ranks an open lead status by its position on the ladder, so a
-// transition has a DIRECTION.
-//
-// The rungs are the generated contract's own constants, so a status renamed in
-// crm.yaml stops compiling here rather than silently ranking -1. Their ORDER is
-// this list — the contract's enum is alphabetical and says nothing about
-// direction — and it is the SQL mirror of contacts.LeadStatus.Advances, which is
-// the Go spelling of the same rule.
-//
-// A terminal or unknown status ranks -1 and so is never a step UP, which is
-// right: promoted and disqualified LEAVE the ladder rather than climbing it,
-// and each already has its own count.
-func ladderRungSQL(column string) string {
-	ladder := []crmcontracts.LeadStatus{
-		crmcontracts.LeadStatusNew,
-		crmcontracts.LeadStatusContacted,
-		crmcontracts.LeadStatusEngaged,
-	}
-	var b strings.Builder
-	b.WriteString("CASE " + column)
-	for rung, status := range ladder {
-		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, rung)
-	}
-	b.WriteString(" ELSE -1 END")
-	return b.String()
-}
-
-// climbedTheLadderSQL is the predicate for a step UP: both ends on the ladder,
-// and the destination above the origin. The Go spelling of this rule is
-// contacts.LeadStatus.Advances, and the two must agree — a gate below holds it.
-func climbedTheLadderSQL() string {
-	from, to := ladderRungSQL("from_status"), ladderRungSQL("to_status")
-	return "(" + from + ") >= 0 AND (" + to + ") > (" + from + ")"
-}
-
 // scoreLeads reads the funnel block, or reports it absent.
 //
 // ABSENT means the rep carried no lead in the window at all — not that nothing
@@ -219,12 +187,6 @@ func scoreLeads(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	// The RECORDER, used only where a meeting names no host — the same
-	// fallback countWeekMeetings applies. captured_by is a principal STRING
-	// rather than a user id, which is why this is not simply userID: comparing
-	// the text column to a uuid is a type error, and comparing it to the bare
-	// uuid text would never match.
-	capturedPos := arg("human:" + userID.String())
 	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
 	if err != nil {
 		return nil, err
@@ -243,23 +205,12 @@ func scoreLeads(
 		 WHERE l.owner_id = $%[1]d AND (%[2]s)`, userPos, scope)
 
 	block := &LeadBlock{}
-	// One statement for the whole block: eight counts read at eight moments
-	// would describe eight slightly different weeks.
+	var arrived int
+	// One statement for the whole block: ten counts read at ten moments
+	// would describe ten slightly different weeks.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		WITH mine AS (%[5]s),
-		-- Every status transition on those leads inside the window, one row per
-		-- audit entry. DISTINCT FROM rather than <>: a NULL on either side is a
-		-- change, and <> would silently drop the first transition of a lead
-		-- whose status was NULL before it.
-		moved AS (
-		  SELECT a.entity_id,
-		         a.before->>'status' AS from_status,
-		         a.after->>'status'  AS to_status
-		    FROM audit_log a
-		    JOIN mine ON mine.id = a.entity_id
-		   WHERE a.entity_type = 'lead'
-		     AND a.occurred_at >= $%[1]d AND a.occurred_at < $%[2]d
-		     AND a.before->>'status' IS DISTINCT FROM a.after->>'status'),
+		moved AS (`+LeadMovesSQL("mine", "$%[1]d", "$%[2]d")+`),
 		-- Meetings the rep's leads became something this week. Read from the
 		-- history table, so a meeting booked Monday and held Friday counts in
 		-- BOTH the booked and the held tally, which is what a funnel means.
@@ -268,34 +219,34 @@ func scoreLeads(
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
-		     AND `+meetingIsTheirsSQL("$%[3]d", "$%[6]d")+`
+		     AND `+meetingIsTheirsSQL("$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
-		     AND (%[7]s))
+		     AND (%[6]s))
 		SELECT
-		  (SELECT count(*) FROM moved WHERE %[8]s),
-		  (SELECT count(*) FROM moved WHERE to_status = 'disqualified'),
-		  (SELECT count(*) FROM moved WHERE to_status = 'promoted'),
+		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveAdvanced+`'),
+		  (SELECT count(*) FROM moved WHERE move = '`+LeadMoveDisqualified+`'),
+		  (SELECT count(*) FROM moved WHERE move = '`+LeadMovePromoted+`'),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
-		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		    WHERE `+leadArrivedInWeekSQL+`),
+		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
+		    WHERE `+leadArrivedInWeekSQL+`
 		      AND `+responseRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
-		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		    WHERE `+leadArrivedInWeekSQL+`
 		      AND `+breachRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM met WHERE status = 'booked' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'no_show' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE partial_pre_history)`,
-		startPos, endPos, userPos, scope, mine, capturedPos, meetingScope,
-		climbedTheLadderSQL()), args...).
+		startPos, endPos, userPos, scope, mine, meetingScope), args...).
 		Scan(&block.Advanced, &block.Disqualified, &block.Promoted,
-			&block.AnsweredInTarget, &block.Breached,
+			&arrived, &block.AnsweredInTarget, &block.Breached,
 			&block.Booked, &block.Held, &block.NoShow, &block.PartialHistory)
 	if err != nil {
 		return nil, fmt.Errorf("weekly: scoring the week's funnel: %w", err)
 	}
+	block.Arrived = &arrived
 	return block, nil
 }
 
@@ -329,24 +280,11 @@ func hasLeads(ctx context.Context, tx pgx.Tx, userID ids.UUID, by time.Time) (bo
 	return present, nil
 }
 
-// forecastRankSQL orders the forecast categories so a move between two of them
-// has a direction.
-//
-// The vocabulary is deal_forecast_category_check's, and the order is the
-// confidence ladder the product already speaks: omitted is not in the number at
-// all, pipeline is in it, best_case is likely and commit is promised. A
-// category the CHECK does not allow, and a NULL, rank as -1 and so read as
-// BELOW omitted — a deal that gained a category moved up, and one that lost it
-// moved down, which is what happened.
-//
-// Spelled as SQL rather than compared in Go because the comparison happens
-// inside the aggregate that reduces a deal's many edits to one move; pulling
-// the rows out to rank them here would be a second pass over the same data to
-// answer the same question.
-func forecastRank(column string) string {
-	return `CASE ` + column + `
-		WHEN 'commit' THEN 3 WHEN 'best_case' THEN 2
-		WHEN 'pipeline' THEN 1 WHEN 'omitted' THEN 0 ELSE -1 END`
+// probabilityRank orders the override images so a move between two has a
+// direction. No override ranks -1, below every percent: a deal that took its
+// own probability moved up, and one set back to its stage moved down.
+func probabilityRank(column string) string {
+	return `COALESCE((` + column + `)::int, -1)`
 }
 
 // scoreDeals reads the pipeline block, or reports it absent.
@@ -394,16 +332,21 @@ func scoreDeals(
 	if err != nil {
 		return nil, err
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
+	currentTask := storekit.CurrentTaskClause("task", end, identities, arg)
 	block := &DealBlock{}
 	var present bool
 	// Nullable on its own: a present block whose deals all stayed put has no
 	// median, and that is absent rather than zero days.
 	var median *int
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
-		startPos, endPos, userPos, sincePos, stakeholdersPos,
-		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
+		startPos, endPos, userPos, occurredday.WithinSQL("act", fmt.Sprintf("$%d", sincePos), fmt.Sprintf("$%d", endPos)), stakeholdersPos,
+		probabilityRank("last_cat"), probabilityRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
-		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
+		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),
 		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,

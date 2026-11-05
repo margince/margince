@@ -63,7 +63,6 @@ anywhere
 apart
 apostrophe
 app
-appear
 append
 applied
 applies
@@ -84,7 +83,6 @@ article
 artifact
 as
 ask
-assemble
 assert
 assertion
 assignee
@@ -146,7 +144,6 @@ beyond
 binary
 bind
 bindings
-bit
 blame
 blob
 blobstore
@@ -274,7 +271,6 @@ comfort
 comma
 command
 comment
-commission
 commit
 common
 company
@@ -302,7 +298,6 @@ connect
 connection
 connector
 consent
-console
 consolidation
 constant
 constellation
@@ -381,8 +376,6 @@ defines
 definition
 degrade
 delay
-delegate
-delegation
 delete
 delivery
 demo
@@ -393,7 +386,6 @@ depth
 derive
 describe
 design
-desktop
 destructive
 desync
 detail
@@ -487,14 +479,12 @@ enrich
 enrichment
 entered
 enters
-entirely
 entry
 enumerate
 env
 envelope
 environment
 ephemeral
-equivalent
 era
 erase
 erasure
@@ -510,14 +500,12 @@ everywhere
 evidence
 exact
 example
-exceed
 except
 exception
 excerpt
 exclamation
 exclusion
 exclusive
-executable
 exempt
 exemption
 exercise
@@ -627,7 +615,6 @@ general
 generate
 generation
 generator
-geocoding
 get
 gif
 git
@@ -656,10 +643,8 @@ guard
 guess
 guide
 guidelines
-guids
 h
 had
-hairpin
 half
 halves
 hand
@@ -727,7 +712,6 @@ ignore
 image
 immutable
 import
-imprint
 in
 inbound
 inbox
@@ -765,7 +749,6 @@ interval
 into
 introduction
 invalid
-invalidate
 invite
 invocation
 invoice
@@ -781,7 +764,6 @@ job
 join
 joke
 journal
-jpeg
 judge
 judgement
 jurisdiction
@@ -814,7 +796,6 @@ last
 latency
 later
 launch
-launcher's
 law
 layer
 lead
@@ -824,7 +805,6 @@ leave
 ledger
 left
 leg
-legacy
 legal
 legibility
 legitimate
@@ -838,7 +818,6 @@ license
 like
 limit
 line
-lineage
 link
 lint
 list
@@ -875,7 +854,6 @@ mail
 mailbox
 main
 maintain
-maintenance
 make
 manager
 manifest
@@ -984,6 +962,7 @@ nowhere
 number
 object
 obligation
+observe
 occasional
 of
 off
@@ -1004,7 +983,6 @@ one
 only
 onto
 open
-openstreetmap
 operation
 operational
 operator
@@ -1018,7 +996,6 @@ opus
 or
 order
 ordinal
-organization
 origin
 orphan
 other
@@ -1034,7 +1011,6 @@ outrank
 outside
 over
 overlap
-overlay
 overridable
 overridden
 override
@@ -1100,7 +1076,6 @@ plant
 platform
 plural
 plus
-png
 poc
 pod
 point
@@ -1116,7 +1091,6 @@ postgres
 posture
 practice
 pre
-prebuilt
 precedes
 predicate
 preference
@@ -1165,13 +1139,11 @@ prove
 provenance
 provide
 proxy
-prune
 psql
 public
 publish
 pull
 punctuation
-purchase
 pure
 purge
 purity
@@ -1220,7 +1192,6 @@ recent
 recipe
 recipient
 reclaims
-recompile
 reconcile
 record
 recovery
@@ -1229,7 +1200,6 @@ redaction
 redeems
 redials
 redirect
-redistributed
 reds
 reduce
 ref
@@ -1252,10 +1222,8 @@ relationship
 relative
 relay
 release
-relicense
 relink
 reload
-relocatable
 relocate
 remain
 remainder
@@ -1302,7 +1270,6 @@ retire
 retrieval
 retry
 return
-reuse
 reverse
 review
 revive
@@ -1319,11 +1286,9 @@ rollback
 rollout
 room
 root
-rotation
 rough
 round
 route
-routine
 row
 rss
 rubric
@@ -1372,9 +1337,7 @@ see
 seeded
 seeds
 segment
-sek
 selects
-self
 send
 sent
 sentence
@@ -1442,7 +1405,6 @@ software
 some
 someone
 something
-somewhere
 soon
 sorry
 sort
@@ -1476,7 +1438,6 @@ static
 status
 statute
 stay
-std
 stdio
 step
 still
@@ -1495,7 +1456,6 @@ structural
 structure
 stub
 stylesheet
-subdirectory
 subdomain
 subject
 subscriber
@@ -1507,7 +1467,6 @@ suits
 summary
 superseded
 superuser
-supervises
 supervisor
 supply
 support
@@ -1534,7 +1493,6 @@ tag
 tail
 take
 taken
-tarball
 target
 task
 team
@@ -1584,7 +1542,6 @@ tiers
 time
 timeline
 timeout
-timer
 timezone
 title
 to
@@ -1613,7 +1570,6 @@ transcript
 transient
 translate
 transport
-travel
 treat
 tree
 trigger
@@ -1646,15 +1602,12 @@ unix
 unknown
 unless
 unlike
-unpack
 unprovisioned
-unreachable
 unregistered
 unrelated
 unresolved
 unset
 unsigned
-unsubscribe
 untagged
 untested
 until
@@ -1669,6 +1622,7 @@ upstream
 uptime
 urls
 us
+usd
 use
 user
 user's
@@ -1766,5 +1720,4 @@ you
 your
 yourself
 zero
-zip
 zone

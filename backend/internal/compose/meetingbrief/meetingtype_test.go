@@ -115,7 +115,7 @@ func TestDiscoverySplitsOnWhetherTheRoomHasMet(t *testing.T) {
 		t.Errorf("a room that has never met = %q, want first_discovery", got.Value)
 	}
 
-	in.PriorMeetings = []PriorMeetingIn{{ID: activityID, Subject: "Last time", StartsAt: at(2)}}
+	in.PriorMeetings = []PriorMeetingIn{{ID: activityID, Subject: "Last time", StartsAt: instantOn(2)}}
 	if got := classifyMeeting(in); got.Value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery {
 		t.Errorf("a room that has met = %q, want followup_discovery", got.Value)
 	}

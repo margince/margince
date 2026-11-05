@@ -63,10 +63,9 @@ const (
 const freemailDomainObject = captureSettingsObject
 
 // ValidFreemailEntry vets one entry and returns the domain in the form the
-// matcher keys on — its registrable eTLD+1, derived by the same gate the
-// capture path uses. An operator typing "mail.gmx.net"
-// means gmx.net, and storing the subdomain would leave an entry that never
-// matches anything.
+// matcher keys on: the registrable eTLD+1, derived by the capture path's gate.
+// A carve-out keeps a subdomain baseline entry as written.
+// Storing "mail.gmx.net" as typed would leave an entry that never matches.
 //
 // Exported because the handler validates before it writes, so a bad request
 // answers 422 with the reason rather than 500 with a constraint violation.
@@ -80,6 +79,13 @@ func ValidFreemailEntry(domain, kind string) (string, error) {
 	base, ok := freemail.Hostname(domain)
 	if !ok {
 		return "", fmt.Errorf("capture: %q is not a mail domain", domain)
+	}
+	if kind == FreemailKindNever {
+		// A baseline entry that is a subdomain only matches a carve-out spelled
+		// the same, so narrowing it to the registrable form would remove nothing.
+		if key, ok := freemail.CarveOutKey(domain); ok {
+			return key, nil
+		}
 	}
 	return base, nil
 }

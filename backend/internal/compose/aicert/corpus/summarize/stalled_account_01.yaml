@@ -25,7 +25,7 @@ fixture:
     - label: last_email
       kind: email
       subject: "Re: proposal — coming back to you after the board meeting"
-      direction: inbound
+      author: { kind: contact_record, name: Jonas Brandt }
       at: "2026-07-10T09:00:00Z"
 expect:
   outcome: accepted
@@ -46,8 +46,8 @@ expect:
   rubric: >
     Score whether the brief states only what the summary states — no inferred
     cause for the stall, no read on the counterparty's intent beyond the quoted
-    subject line, the email attributed to the account because its speaker is
-    "them" — and whether every sentence cites ids the summary actually
+    subject line, the email attributed to Jonas Brandt at the account because its speaker
+    names that contact — and whether every sentence cites ids the summary actually
     supplied. The product asks for up to two next-step recommendations, each
     motivated by a record; one that rests on a stall cause, a decision or a
     message content nobody recorded is invented. Acting on the subject line is

@@ -223,7 +223,7 @@ func (a *IntroAdvance) firstAnswerSince(
 		  FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id
 		 WHERE p.contact_id = $1
-		   AND a.occurred_at > $2
+		   AND a.occurred_at > $2 -- occurred_at raw: mail captured after the introduction, an instant
 		   AND a.archived_at IS NULL
 		   AND a.captured_by LIKE $3
 		   AND a.direction = 'inbound'

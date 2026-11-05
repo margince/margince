@@ -254,6 +254,7 @@ func companyReachWire(colleagues []CompanyReachColleague) crmcontracts.CompanyLi
 			UserId:      openapi_types.UUID(c.UserID),
 			DisplayName: c.DisplayName,
 			Connections: c.Connections,
+			Functions:   c.Functions,
 		})
 	}
 	return crmcontracts.CompanyLinkedInReachResponse{Colleagues: out}

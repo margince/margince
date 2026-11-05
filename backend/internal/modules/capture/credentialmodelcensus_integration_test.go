@@ -39,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -149,7 +148,7 @@ func lowerTheFloor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, ws, me
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	store := capture.NewSettings(settings.New(pool, settings.NewRegistry(capture.Definitions()...)))
+	store, _ := captureSettingsStore(t, pool)
 	if _, err := store.Update(writer, capture.SettingsPatch{MailSharing: &off}); err != nil {
 		t.Fatalf("lowering the workspace mail-sharing floor: %v", err)
 	}

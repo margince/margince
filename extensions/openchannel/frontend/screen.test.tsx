@@ -115,7 +115,7 @@ function stubTransport(
       // A route nobody scripted answers 503 rather than something plausible,
       // so a screen reaching for one fails here instead of rendering an error
       // card that looks like the server's.
-      return json({ code: "unavailable" }, 503);
+      return json({ code: "service_unavailable" }, 503);
     }
     return json(handler(raw === "" ? null : JSON.parse(raw)));
   };
@@ -675,7 +675,7 @@ describe("the openchannel screen", () => {
       }
       if (path === "/ext/openchannel/inbound") return json({ entries: [] });
       if (path === "/ext/openchannel/outbound") return json({ attempts: [] });
-      return json({ code: "unavailable" }, 503);
+      return json({ code: "service_unavailable" }, 503);
     };
     vi.stubGlobal("fetch", vi.fn(fetchStub));
 

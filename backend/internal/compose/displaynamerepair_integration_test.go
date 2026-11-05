@@ -240,3 +240,14 @@ func TestTheRepairLeavesAContactWithABlankHalfAlone(t *testing.T) {
 		t.Errorf("full_name = %q, want the label kept until both halves are known", got)
 	}
 }
+
+func TestTheRepairKeepsAShortNameThatTheAddressSpells(t *testing.T) {
+	e := integration.Setup(t)
+	id := captureCounterparty(t, e, "", "anna@initials.test")
+
+	runDisplayNameRepair(t, e)
+
+	if got := shownName(t, e, id); got != "Anna" {
+		t.Errorf("full_name = %q, want Anna: the address spells a name", got)
+	}
+}

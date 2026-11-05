@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { InlineText } from "../design-system/inlinetext";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -36,17 +36,17 @@ const meta: Meta<typeof PageAsideToggle> = {
 export default meta;
 type Story = StoryObj<typeof PageAsideToggle>;
 
-// Two of the company rail's own cards, in their empty state: real details-pane
-// copy from the catalog rather than invented filler, so the pane is judged
-// against the width and rhythm it actually carries.
+// Two of the company overview's own cards, in their empty state. The copy is
+// real, from the catalog, so the pane is judged against the width and rhythm it
+// actually carries.
 function contextCards() {
   return (
     <>
-      <Panel title={en["co.rail.deals.title"]}>
-        <PanelBody>{en["co.rail.deals.empty"]}</PanelBody>
+      <Panel title={en["co.overview.allDeals"]}>
+        <PanelBody>{en["co.overview.noWork"]}</PanelBody>
       </Panel>
-      <Panel title={en["co.rail.contacts.title"]}>
-        <PanelBody>{en["co.rail.contacts.empty"]}</PanelBody>
+      <Panel title={en["co.overview.otherOpen"]}>
+        <PanelBody>{en["co.overview.nothingOpen"]}</PanelBody>
       </Panel>
     </>
   );
@@ -71,8 +71,7 @@ function Record() {
           trailing={<PageAsideToggle />}
         />
       }
-      aside={contextCards()}
-      asideOpen={details.open}
+      aside={details.open ? contextCards() : undefined}
     >
       <Panel title={en["co.commercial.title"]}>
         <PanelBody>{en["co.deals.empty"]}</PanelBody>
@@ -224,16 +223,22 @@ export const DraftProtected: Story = {
     const canvas = within(canvasElement);
     const user = userEvent.setup();
     await user.click(
-      await canvas.findByRole("button", { name: "Change Name" }),
+      await canvas.findByRole("button", { name: /^Change Name/ }),
     );
     // The pane is open, so the switch offers to hide it — and refuses while a
     // field in it holds an unsaved edit.
     const details = () =>
       canvas.getByRole("button", { name: en["record.panel.hideDetails"] });
     await expect(details()).toBeEnabled();
-    await user.type(canvas.getByRole("textbox", { name: "Name" }), " revised");
+    await user.type(
+      await screen.findByRole("textbox", { name: "Name" }),
+      " revised",
+    );
     await expect(details()).toBeDisabled();
     await user.keyboard("{Escape}");
-    await expect(details()).toBeEnabled();
+    await user.click(
+      await screen.findByRole("button", { name: en["unsaved.discard"] }),
+    );
+    await waitFor(() => expect(details()).toBeEnabled());
   },
 };

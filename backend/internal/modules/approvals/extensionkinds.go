@@ -156,8 +156,9 @@ func (k ExtensionKind) validate() error {
 	return nil
 }
 
-// extensionKind answers the registered kind for one verb.
-func extensionKind(verb string) (ExtensionKind, bool) {
+// RegisteredExtensionKind answers the registered kind for one verb, so the
+// review display and the decision read one registry.
+func RegisteredExtensionKind(verb string) (ExtensionKind, bool) {
 	extensionKinds.mu.RLock()
 	defer extensionKinds.mu.RUnlock()
 	kind, ok := extensionKinds.byRaw[verb]
@@ -220,7 +221,7 @@ const extensionSchema = "ext"
 // two independent reasons the name cannot carry a statement, because this is
 // the line that writes one.
 func extensionExistenceQuery(table string) string {
-	return `SELECT EXISTS (SELECT 1 FROM ` + pgx.Identifier{extensionSchema, table}.Sanitize() + ` WHERE id = $1)`
+	return `SELECT id FROM ` + pgx.Identifier{extensionSchema, table}.Sanitize() + ` WHERE id = ANY($1)`
 }
 
 // ExtensionTargetExists answers whether a registered unit row is still there.
@@ -236,9 +237,6 @@ func ExtensionTargetExists(ctx context.Context, tx pgx.Tx, table string, id ids.
 	if !extensionTableGrammar.MatchString(table) {
 		return false, fmt.Errorf("crmapprovals: %q is not a namespaced extension table", table)
 	}
-	var exists bool
-	if err := tx.QueryRow(ctx, extensionExistenceQuery(table), id).Scan(&exists); err != nil {
-		return false, err
-	}
-	return exists, nil
+	exists, err := idsAmong(ctx, tx, extensionExistenceQuery(table), []ids.UUID{id})
+	return exists[id], err
 }

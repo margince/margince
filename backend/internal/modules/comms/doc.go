@@ -11,5 +11,5 @@
 // honestly why it has not. Provider I/O lives in whichever connector implements
 // ports/connector.EmailSender — comms never speaks to Google.
 //
-// Tables owned: comms_outbound.
+// Tables owned: docs/reference/entity-model/comms.md.
 package comms

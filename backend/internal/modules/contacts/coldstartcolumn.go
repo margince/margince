@@ -22,6 +22,9 @@ func writeCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	if !overwrite {
 		return applyUnclaimedCompanyColumn(ctx, tx, companyID, column, value)
 	}
+	if column == columnAddress {
+		return writeCompanyAddress(ctx, tx, companyID, value, replaceStanding)
+	}
 	write, ok := companyColumnWrites[column]
 	if !ok {
 		return false, fmt.Errorf("contacts: %q is not a coldstart-writable column", column)
@@ -31,7 +34,11 @@ func writeCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	// be filled again by any later read — the record would look answered while
 	// holding nothing, and no enrichment would ever correct it. The human
 	// company form clears to NULL for the same reason (setCompanyColumn).
-	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), companyID, emptyToNil(value))
+	stored, unmapped := companyColumnArgument(column, value)
+	if unmapped {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), companyID, stored)
 	if err != nil {
 		return false, fmt.Errorf("replace %s: %w", column, err)
 	}
@@ -50,42 +57,41 @@ func applyUnclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.C
 	if !ok {
 		return false, fmt.Errorf("contacts: %q is not a coldstart-fillable column", column)
 	}
-	authority := fillUnclaimed
-	if column == columnDescription {
-		held, err := descriptionHeldByHuman(ctx, tx, companyID)
-		if err != nil {
-			return false, err
-		}
-		if held {
-			return false, nil
-		}
-		authority = replaceStanding
-		// The same bound the form applies, for the same reason: the header is
-		// one rendering of a longer field, and a value too long for the line is
-		// a value to shorten rather than a write to drop. A read-back that
-		// skipped it left the header blank on exactly the companies whose site
-		// said the most.
-		value = headerLine(value)
+	authority, value, err := unclaimedCompanyColumn(ctx, tx, companyID, column, value)
+	if err != nil || value == "" {
+		return false, err
 	}
-	// Nothing to fill. Writing "" here would satisfy the fill arm's own
-	// WHERE legal_name IS NULL once and never again: the column would read as
-	// answered while holding nothing, and no later read could correct it.
-	if value == "" {
+	if column == columnAddress {
+		return writeCompanyAddress(ctx, tx, companyID, value, authority)
+	}
+	stored, unmapped := companyColumnArgument(column, value)
+	if unmapped {
 		return false, nil
 	}
-	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, value)
+	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, stored)
 	if err != nil {
 		return false, fmt.Errorf("fill %s: %w", column, err)
 	}
 	return tag.RowsAffected() == 1, nil
 }
 
-// carriesCompanyName reports whether this apply could write a name column, and so
-// whether it owes the company-name lock.
-//
-// Presence of the field is the test, because that is what the loop in
-// applyEvidenceFieldsWithOverwrite acts on: writeCompanyColumn's overwrite arm
-// matches on IS DISTINCT FROM, so an apply that clears legal_name to "" still
-// writes the row — taking its row lock — and still reaches the re-check, which
-// wants the name lock. Anything narrower than presence lets that apply take the
-// two in the order that deadlocks against a human rename.
+func unclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, column, value string) (companyWriteAuthority, string, error) {
+	authority := fillUnclaimed
+	if column == columnDescription {
+		held, err := descriptionHeldByHuman(ctx, tx, companyID)
+		if err != nil {
+			return 0, "", err
+		}
+		if held {
+			return 0, "", nil
+		}
+		authority = replaceStanding
+		// The company header uses the same bounded text as the human form.
+		value = headerLine(value)
+	}
+	// An empty string must not permanently claim an unanswered column.
+	if value == "" {
+		return 0, "", nil
+	}
+	return authority, value, nil
+}

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling
@@ -26,16 +27,28 @@ A later email proves a reply was sent; it does not prove the request was handled
 itself settles nothing. `"Thanks, I will check"` is a reply and closes nothing. So short notes back,
 replies about something else and newer inbound messages all leave a confirmed request standing.
 
-A reply does start a model reading of the thread. Once the workspace has written back, the settle pass
-hands the conversation to a model. It sends the request and everything after it, each message marked as
-from them or from us. It asks what our own reply did: `settled`, `still_owed`, or `unsure` below the
-confidence floor. A request nobody has answered is never judged. With no model set up for the task, a
-request stays owed until someone completes its reminder.
+A reply starts a model reading of the thread. Later inbound mail from the same sender can also start that reading.
+Capture must hold proof from the receiving server that the sender passed its checks.
+For Gmail, that proof is a `DMARC` pass for the domain of the sender from `mx.google.com`.
+Other transports and older rows without proof cannot end a request through inbound mail alone. Capture still works without this proof.
+
+The settle pass asks whether the evidence completes the exact request: `settled`, `still_owed`, or
+`unsure` below the confidence floor. A signature notice must name the requested document; matching
+subjects alone prove nothing. The model receives the request and eligible later evidence, marked as
+from them or from us. With no eligible evidence or no model, the request stays owed until someone
+completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
-So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may
-change the title of a reminder with no date that the machine filed. The new title names what is still
-open ("Send the offer" in place of the mail's subject line). It never touches a reminder a human accepted, dated or opened again.
+So it carries the audit row and the event that a human who completes it by hand would carry.
+
+`still_owed` may change the title of a reminder with no date that the machine filed. The new title
+quotes the part of the customer's request that is still open ("send the revised offer" in place of the
+mail's subject line). The quote must be at least two words of their request, outside the quoted history
+and the signature. A text that is not such a quote is dropped, so a question we asked them never
+becomes our work. It never touches a reminder a human accepted, dated or opened again.
+
+Each verdict records the rule it was reached under. A `still_owed` verdict from an older rule is judged
+again, and the title it gave a reminder may change once more.
 
 An open reminder always wins over the machine's verdict. Someone who takes the work back up is the
 answer, and the request counts as open again while their task stands. `unsure` records that the pass
@@ -47,10 +60,10 @@ snooze, `not_mine` or `handled`, that changes their own queue, not what is owed 
 
 ## Whether a reply is still owed
 
-One check answers this for every surface. The surfaces are the needs-reply badge on the timeline, the
-contact page and the agent tools, the waiting lane, request review and the response time. It lives in
-`activities/answered.go`, and `backend/gates/answerwalk_test.go` fails a second walk of a thread for our
-reply.
+The timeline badge, contact page, agent tools, waiting lane, request review and response time
+use the same reply evidence. It lives in `platform/database/storekit/answered.go`.
+`backend/gates/answerwalk_test.go` fails a second walk of a thread for our reply.
+Request state still decides whether the original ask stays owed.
 
 A message that is not a request is answered by any of:
 
@@ -81,7 +94,7 @@ sections above say. A message that is not yet classified but is labelled as sche
 Two decisions end what is owed: a human marking the conversation not sales, and the `informs_us`
 verdict of the classifier. `/worklist/hidden` counts and lists what each one takes out of the queue. The
 verdict never takes out a request a human accepted. Mail from an obvious machine address is owed only
-as a confirmed request.
+as a confirmed request. Mail that carried a List-Unsubscribe header is owed only once a human accepted it.
 
 The waiting lane is the owed set, made smaller by queue rules. The rules are the horizon, the sales
 link, mail from colleagues' own company, and the snooze, `not_mine` and `handled` choices of that reader. Each of
@@ -113,6 +126,17 @@ is counted under the past the horizon number in `/worklist/hidden`.
 
 That number counts conversations rather than single requests, and older ones are not counted. The record
 of such a request still offers **Create task** to take it back.
+
+The deal reads current requests apart from review, before either read reaches its page limit.
+Current requests share the existing intent, completion, recipient and source date checks. A request a human
+holds can stay current beyond the date limit. Review keeps old evidence and evidence not yet confirmed on the record,
+but does not set `reply_to` or start a waiting clock. The date of a message is no deadline.
+
+The card and its Worklist move carry the same source basis. The basis names its scope, source time,
+decision and the time of the check. Time since contact exchange, activity filed on a deal and current
+request arrival are separate figures. No one links mail to another record to make those dates match.
+Cache readers share a version check; a card from an older projection is a miss. The move's dismissal
+identity still names its action and source, so a new decision does not undo a reader's choice.
 
 The deal offers **Create task** for a request that waits to be accepted. Both task and activity create
 calls accept `request_activity_id`. The server checks that the caller may read the source evidence, and

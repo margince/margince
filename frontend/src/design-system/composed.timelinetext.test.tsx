@@ -27,6 +27,7 @@ describe("TimelineText's links in a mail", () => {
             kind: "email",
             title: "Passwort",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             body: "Neu setzen (über https://kunde.de/reset/(abc)) oder HTTPS://kunde.de/hilfe.",
           },
@@ -55,6 +56,7 @@ describe("TimelineText on a note", () => {
           kind,
           title: "Gespräch",
           atIso: "2026-07-01T00:00:00Z",
+          atPrecision: "instant",
           provenance: { kind: "human" as const, self: true },
           body,
           transcript,
@@ -117,8 +119,10 @@ describe("TimelineText on a note", () => {
       row("note", "Rückruf am Dienstag\nAgenda: https://kunde.de/plan"),
     );
     const body = container.querySelector(".tl-text-clamp");
+    // The line break is kept as one, so the two lines never run together.
+    expect(body?.querySelectorAll("br")).toHaveLength(1);
     expect(body?.textContent).toBe(
-      "Rückruf am Dienstag\nAgenda: https://kunde.de/plan",
+      "Rückruf am DienstagAgenda: https://kunde.de/plan",
     );
     expect(
       screen.getByRole("link", { name: "https://kunde.de/plan" }),

@@ -48,8 +48,9 @@ func redactIntroductionRequests(ctx context.Context, tx pgx.Tx, subject ids.Cont
 	if _, err := storekit.LockRow(ctx, tx, "contact", subject.UUID, storekit.IncludeArchived); err != nil {
 		return err
 	}
-	// internal_reason takes the tombstone rather than a blank: intro_request_reason_present
-	// refuses an empty one, and a requester's record may still say a reason was given.
+	// internal_reason takes the tombstone rather than a blank: an ask must carry a
+	// reason (intro_request_reason_by_origin), and a requester's record may still say
+	// one was given. A recorded introduction has none to scrub and must keep it NULL.
 	//
 	// Only an OPEN ask is closed. closed_at is NULL for the completed outcomes too —
 	// introduced, name_dropped, replied — so closing on that column would rewrite what
@@ -58,7 +59,7 @@ func redactIntroductionRequests(ctx context.Context, tx pgx.Tx, subject ids.Cont
 		UPDATE intro_request
 		   SET forwardable_note = '',
 		       value_for_target = '',
-		       internal_reason  = $2,
+		       internal_reason  = CASE WHEN origin = 'recorded' THEN NULL ELSE $2 END,
 		       decision_reason  = CASE WHEN decision_reason IS NULL THEN NULL ELSE $2 END,
 		       status           = CASE WHEN status = ANY($3) THEN 'cancelled' ELSE status END,
 		       closed_at        = CASE WHEN status = ANY($3) THEN now() ELSE closed_at END,

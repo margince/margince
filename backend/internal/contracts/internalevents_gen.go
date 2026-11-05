@@ -146,6 +146,14 @@ type InternalEventDealSuggestionDismissed struct{}
 // InternalEventDealSuggestionSuperseded A suggestion stopped standing without anybody deciding it: its company gained an open deal or was archived, or a piece of its evidence was erased.
 type InternalEventDealSuggestionSuperseded struct{}
 
+// InternalEventExistingCustomerNoticeCreated An administrator declared that a group of customers was told at collection that they may object to advertising.
+type InternalEventExistingCustomerNoticeCreated struct {
+	LegalEntityId openapi_types.UUID `json:"legal_entity_id"`
+}
+
+// InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
+type InternalEventExistingCustomerNoticeWithdrawn struct{}
+
 // InternalEventLeadPrivacyNoticeCreated A website lead's Art. 14 notice was queued, or could not be given and nothing about the lead was kept. Entity-less and without the lead, which keeps it off the subscribable set: a named lead's unmet legal obligation is not a subscriber's to read. The proof row stays on the audit row the emit points at.
 type InternalEventLeadPrivacyNoticeCreated struct {
 	// Failure Why the notice could not be given, when it could not.
@@ -163,6 +171,25 @@ type InternalEventLeadPrivacyNoticeCreatedState string
 
 // InternalEventLeadPrivacyNoticeFailed A website lead's queued notice bounced, so the lead is deleted in the same transaction. Entity-less for the reason the created event gives.
 type InternalEventLeadPrivacyNoticeFailed struct{}
+
+// InternalEventLegalEntityArchived An administrator archived a legal entity nobody worked for any more.
+type InternalEventLegalEntityArchived struct{}
+
+// InternalEventLegalEntityCreated An administrator described a further legal entity.
+type InternalEventLegalEntityCreated struct {
+	DisplayName string `json:"display_name"`
+}
+
+// InternalEventLegalEntityMemberAdded A user now works for this legal entity. previous_legal_entity_id is the entity they worked for before, the default entity included.
+type InternalEventLegalEntityMemberAdded struct {
+	PreviousLegalEntityId openapi_types.UUID `json:"previous_legal_entity_id"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
+
+// InternalEventLegalEntityUpdated A legal entity's description changed. The payload names the fields that changed and never their values, so bank details and the imprint stay off the bus.
+type InternalEventLegalEntityUpdated struct {
+	ChangedFields []string `json:"changed_fields"`
+}
 
 // InternalEventLegalReviewDecided Legal answered a request. An approval has already settled the deal's legal_reviewed criteria in the same transaction, so no consumer has to.
 type InternalEventLegalReviewDecided struct {
@@ -243,6 +270,22 @@ func (InternalEventDealSuggestionSuperseded) EventType() string { return "deal_s
 
 func (InternalEventDealSuggestionSuperseded) EntityType() string { return "" }
 
+func (InternalEventExistingCustomerNoticeCreated) EventType() string {
+	return "existing_customer_notice.created"
+}
+
+func (InternalEventExistingCustomerNoticeCreated) EntityType() string {
+	return "existing_customer_notice"
+}
+
+func (InternalEventExistingCustomerNoticeWithdrawn) EventType() string {
+	return "existing_customer_notice.withdrawn"
+}
+
+func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
+	return "existing_customer_notice"
+}
+
 func (InternalEventLeadPrivacyNoticeCreated) EventType() string { return "lead_privacy_notice.created" }
 
 func (InternalEventLeadPrivacyNoticeCreated) EntityType() string { return "" }
@@ -250,6 +293,22 @@ func (InternalEventLeadPrivacyNoticeCreated) EntityType() string { return "" }
 func (InternalEventLeadPrivacyNoticeFailed) EventType() string { return "lead_privacy_notice.failed" }
 
 func (InternalEventLeadPrivacyNoticeFailed) EntityType() string { return "" }
+
+func (InternalEventLegalEntityArchived) EventType() string { return "legal_entity.archived" }
+
+func (InternalEventLegalEntityArchived) EntityType() string { return "legal_entity" }
+
+func (InternalEventLegalEntityCreated) EventType() string { return "legal_entity.created" }
+
+func (InternalEventLegalEntityCreated) EntityType() string { return "legal_entity" }
+
+func (InternalEventLegalEntityMemberAdded) EventType() string { return "legal_entity.member_added" }
+
+func (InternalEventLegalEntityMemberAdded) EntityType() string { return "legal_entity" }
+
+func (InternalEventLegalEntityUpdated) EventType() string { return "legal_entity.updated" }
+
+func (InternalEventLegalEntityUpdated) EntityType() string { return "legal_entity" }
 
 func (InternalEventLegalReviewDecided) EventType() string { return "legal_review.decided" }
 

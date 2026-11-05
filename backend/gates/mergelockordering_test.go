@@ -44,9 +44,12 @@ const (
 	lockTakerName   = "takeMergeLockFirst"
 	lockStatement   = "mergeLockStatement"
 	captureEntryFn  = "Upsert"
-	// The alias sighting sits one call down, behind the wrapper that settles what
-	// the seat's own addresses decide. The gate reads both halves: the wrapper's
-	// position inside Upsert, and the sighting's presence inside the wrapper.
+	// The alias sighting sits two calls down. Upsert calls the mail read, which
+	// calls the wrapper that settles what the seat's own addresses decide. The
+	// gate reads each link: the mail read's position inside Upsert, the wrapper
+	// inside the mail read, and the sighting inside the wrapper.
+	mailReadFile    = "internal/modules/capture/threadboundary.go"
+	mailReadFn      = "readMailForTheSeatTx"
 	seatAddressFile = "internal/modules/capture/sentfromownaddress.go"
 	seatAddressFn   = "readAgainstTheSeatsAddressesTx"
 	aliasSightingFn = "noteAliasSightingTx"
@@ -71,16 +74,20 @@ func TestTheMergeLockIsTakenBeforeAnythingTouchesAnActivity(t *testing.T) {
 		t.Fatalf("%s does not call %s — a capture that locks an activity row before the merge "+
 			"lock deadlocks against a concurrent merge of the same thread", captureEntryFn, lockTakerName)
 	}
-	// The sighting is still the first thing that can reach an activity; it is just
-	// reached through the wrapper now. Asserting the wrapper alone would let the
-	// sighting move out from under it without a word, so the chain is read as two
-	// links and each one fails on its own.
+	// The sighting is still the first thing that can reach an activity, through
+	// two wrappers. Asserting the outer one alone would let the sighting move out
+	// from under it unnoticed. So each link of the chain fails on its own.
+	mailRead := functionNamed(t, gatekit.ModuleRoot(t), mailReadFile, mailReadFn)
+	if offsetOfCall(mailRead, seatAddressFn) < 0 {
+		t.Errorf("%s no longer calls %s, so the ordering below pins the mail read and not the "+
+			"alias path it stands for", mailReadFn, seatAddressFn)
+	}
 	wrapper := functionNamed(t, gatekit.ModuleRoot(t), seatAddressFile, seatAddressFn)
 	if offsetOfCall(wrapper, aliasSightingFn) < 0 {
 		t.Errorf("%s no longer calls %s, so the ordering below pins the wrapper and not the "+
 			"alias path it stands for", seatAddressFn, aliasSightingFn)
 	}
-	for _, reaches := range []string{seatAddressFn, "captureActivity"} {
+	for _, reaches := range []string{mailReadFn, "captureActivity"} {
 		at := offsetOfCall(entry, reaches)
 		if at < 0 {
 			t.Errorf("%s no longer calls %s — this gate reads the order of the two, so a rename "+

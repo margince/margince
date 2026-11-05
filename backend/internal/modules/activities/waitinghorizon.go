@@ -23,11 +23,13 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // waitingHorizonSpread is what the derivation measures: how long this
@@ -48,20 +50,19 @@ const (
 	//
 	// A fresh installation has no history at all, and a thin one produces a
 	// wild number from a handful of conversations that happen to be slow. Below
-	// this the compiled ninety stands — stated here rather than left to emerge
-	// from a percentile over three rows.
+	// this the compiled default stands, rather than a percentile over three
+	// rows.
 	waitingHorizonMinSample = 30
 
 	// waitingHorizonFloorDays and waitingHorizonCeilingDays bound what the
 	// measurement may produce.
 	//
-	// The ceiling is the queue's other failure mode: a derivation with none can
-	// answer "keep everything forever", which is not a queue. The floor is the
-	// mirror — an installation that answers everything within a day would
-	// otherwise derive a horizon that drops a customer who waited a week, and a
-	// week's silence is not history in any business.
+	// The ceiling is the product's maximum automatic waiting horizon. A wait
+	// older than it is record information, never current work, however slowly
+	// the installation answers. The floor stops an installation that answers
+	// within a day from dropping a customer who waited a week.
 	waitingHorizonFloorDays   = 14
-	waitingHorizonCeilingDays = 365
+	waitingHorizonCeilingDays = storekit.DefaultWaitingHorizonDays
 
 	// waitingHorizonSlack is how much longer than its slow answers an
 	// installation keeps waiting.
@@ -117,27 +118,29 @@ const (
 // read. The number is in days and moves slowly, so a day is below what the
 // queue can tell apart. Past it the pass has stopped running, and the compiled
 // horizon beats a measurement of an older business.
-const waitingHorizonStaleAfter = 24 * time.Hour
+const waitingHorizonStaleAfter = storekit.WaitingHorizonStaleAfter
 
 // waitingHorizonFor is the horizon the worker pass stored, or the compiled one
-// when none is stored or it is older than waitingHorizonStaleAfter. It never
-// measures: a read that did was as slow as the mailbox is long.
+// when none is stored or it is older than waitingHorizonStaleAfter at asOf. It
+// never measures: a read that did was as slow as the mailbox is long.
+//
+// asOf is the reading's own instant, the one its badges are judged at
+// (moveInputs), so a row the filter admits and its badge read one horizon.
 //
 // Ungated: the horizon decides which rows the queue holds, so two colleagues
 // reading one thread must be judged by one number. It names no record.
-func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
+func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	return waitingHorizonAt(ctx, tx, asOf)
+}
+
+func waitingHorizonAt(ctx context.Context, tx pgx.Tx, asOf time.Time) (int, error) {
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	var days int
-	var measuredAt time.Time
-	err := tx.QueryRow(ctx,
-		`SELECT horizon_days, measured_at FROM activity_waiting_horizon`).Scan(&days, &measuredAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return waitingHorizonDays, nil
-	}
+	query := "SELECT " + storekit.WaitingHorizonSQL(asOf, arg)
+	err := tx.QueryRow(ctx, query, args...).Scan(&days)
 	if err != nil {
 		return 0, fmt.Errorf("activities: reading the stored waiting horizon: %w", err)
-	}
-	if s.now().Sub(measuredAt) >= waitingHorizonStaleAfter {
-		return waitingHorizonDays, nil
 	}
 	return days, nil
 }
@@ -148,9 +151,15 @@ func (s *Store) waitingHorizonFor(ctx context.Context, tx pgx.Tx) (int, error) {
 // A failed measurement returns its error and writes nothing, so the previous
 // value stands. The compiled horizon is never stored in its place: a reader
 // would take a stand-in for something this installation measured.
-func (s *Store) RefreshWaitingHorizon(ctx context.Context) (int, error) {
+//
+// The measurement reads a year of mail, so it runs under the caller's budget.
+// The general statement ceiling would cut it for being large.
+func (s *Store) RefreshWaitingHorizon(ctx context.Context, budget time.Duration) (int, error) {
 	var days int
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if err := database.BoundStatement(ctx, tx, budget); err != nil {
+			return err
+		}
 		days, err = s.refreshWaitingHorizonTx(ctx, tx, s.now())
 		return err
 	})
@@ -183,13 +192,13 @@ func (s *Store) measureWaitingHorizon(ctx context.Context, tx pgx.Tx, asOf time.
 	}
 	var spread waitingHorizonSpread
 	var slowMinutes int64
-	if err := tx.QueryRow(ctx, fmt.Sprintf(firstResponseSQL,
+	query := fmt.Sprintf(firstResponseSQL,
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
 		ownDomainSenderSQL("inbound", arg(ownDomains)),
-		slowPercentile),
-		args...).Scan(&spread.Answered, &slowMinutes); err != nil {
+		slowPercentile)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&spread.Answered, &slowMinutes); err != nil {
 		return 0, fmt.Errorf("activities: measuring the response spread the horizon follows: %w", err)
 	}
 	spread.Slow = time.Duration(slowMinutes) * time.Minute
@@ -206,5 +215,5 @@ func horizonOrDefault(days int) int {
 	if days <= 0 {
 		return waitingHorizonDays
 	}
-	return days
+	return min(days, waitingHorizonCeilingDays)
 }

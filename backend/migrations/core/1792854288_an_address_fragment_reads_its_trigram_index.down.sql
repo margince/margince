@@ -1,0 +1,3 @@
+DROP INDEX CONCURRENTLY IF EXISTS idx_lead_email_trgm;
+DROP INDEX CONCURRENTLY IF EXISTS idx_company_domain_trgm;
+DROP INDEX CONCURRENTLY IF EXISTS idx_contact_email_trgm;

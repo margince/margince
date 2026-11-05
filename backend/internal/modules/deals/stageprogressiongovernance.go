@@ -86,6 +86,9 @@ func (s *Store) SetTransitionPolicy(
 	}
 	var out TransitionPolicy
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockLadderTrust(ctx, tx, in.PipelineID); err != nil {
+			return err
+		}
 		if err := requireTransitionStages(ctx, tx, in.TransitionRef); err != nil {
 			return err
 		}

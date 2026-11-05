@@ -63,7 +63,8 @@ func seedScoredLead(ctx context.Context, t *testing.T, store *Store) ids.LeadID 
 		FullName: new("Jonas Petersen"),
 		Email:    new("jonas@nordwind.example"),
 		Title:    new("VP Sales"),
-		Source:   "webform",
+		Source:   "manual",
+		Origin:   new("website"),
 		Status:   "new",
 	})
 	if err != nil {
@@ -89,7 +90,7 @@ func TestACreatedLeadCarriesItsOwnExplanation(t *testing.T) {
 	if out.Current.Score != out.Score {
 		t.Errorf("displayed score %d disagrees with the entry's %d", out.Score, out.Current.Score)
 	}
-	// VP Sales + webform: the two fit factors, and no behavioral ones yet.
+	// VP Sales + a website origin: the two fit factors, and no behavioral ones yet.
 	factors := *out.Current.Factors
 	if len(factors) != 2 {
 		t.Fatalf("want the two fit factors, got %+v", factors)
@@ -360,6 +361,32 @@ func TestManualSignalReadReturnsTheStoredQualificationEvidence(t *testing.T) {
 	}
 }
 
+// A manual signal is replaced whole, so one entered again with no confidence
+// holds none, whatever the one before it said.
+func TestAManualSignalEnteredAgainWithoutAConfidenceHoldsNone(t *testing.T) {
+	ctx, store := newLeadScoreEnv(t)
+	leadID := seedScoredLead(ctx, t, store)
+	confidence := float32(0.7)
+	signal := SetLeadManualSignalInput{
+		Factor: "employees", Band: "51-200", SignalKind: "assumption",
+		Confidence: &confidence, Reason: "the careers page lists about eighty contacts",
+	}
+	if _, err := store.SetLeadManualSignal(ctx, leadID, signal); err != nil {
+		t.Fatalf("entering a manual signal: %v", err)
+	}
+	signal.Confidence = nil
+	if _, err := store.SetLeadManualSignal(ctx, leadID, signal); err != nil {
+		t.Fatalf("entering it again without a confidence: %v", err)
+	}
+	signals, err := store.ListLeadManualSignals(ctx, leadID)
+	if err != nil {
+		t.Fatalf("reading manual signals: %v", err)
+	}
+	if len(signals) != 1 || signals[0].Confidence != nil {
+		t.Fatalf("manual signals = %+v, want one with no confidence", signals)
+	}
+}
+
 // Scoring a lead is a WRITE to it. A lead is workspace-readable identity
 // (platform/auth tableclass.go), so every seat with the lead grant may READ
 // another rep's lead — but row scope and record grants still govern writes,
@@ -384,7 +411,8 @@ func TestARepCannotScoreALeadTheyDoNotOwn(t *testing.T) {
 		FullName: new("Annika Vogel"),
 		Email:    new("annika@sudwind.example"),
 		Title:    new("VP Sales"),
-		Source:   "webform",
+		Source:   "manual",
+		Origin:   new("website"),
 		Status:   "new",
 		OwnerID:  &teammate,
 	})

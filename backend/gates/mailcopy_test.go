@@ -28,6 +28,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -43,13 +44,19 @@ var mailLabelPairs = []struct {
 	key   string
 	field func(mailcopy.Copy) string
 }{
+	{"prefs.purpose.business_correspondence", func(c mailcopy.Copy) string { return c.BusinessPurpose }},
+	// The approval email says why the reader is asked in the card's own words.
+	{"approval.preview.requested", func(c mailcopy.Copy) string { return c.MailReasonRequested }},
+	{"approval.preview.onBehalf", func(c mailcopy.Copy) string { return c.MailReasonOnBehalf }},
+	{"approval.preview.authority", func(c mailcopy.Copy) string { return c.MailReasonAuthority }},
+	{"prefs.purpose.marketing_email", func(c mailcopy.Copy) string { return c.MarketingPurpose }},
+	{"prefs.purpose.transactional", func(c mailcopy.Copy) string { return c.TransactionalPurpose }},
 	{"brief.weekly.tasksDelivered", func(c mailcopy.Copy) string { return c.WeeklyTasksDelivered }},
 	// The count template, with the panel's {done}/{due} placeholders read as
 	// the %d pair the mail formats with: the ORDER is the localised part, and
 	// a language that puts the total first would otherwise read backwards.
 	{"brief.weekly.ofDue", func(c mailcopy.Copy) string { return placeholders(c.WeeklyOfDue) }},
 	{"brief.weekly.dealsWon", func(c mailcopy.Copy) string { return c.WeeklyDealsWon }},
-	{"brief.weekly.dealsLost", func(c mailcopy.Copy) string { return c.WeeklyDealsLost }},
 	{"brief.weekly.dealsMoved", func(c mailcopy.Copy) string { return c.WeeklyMoved }},
 	{"brief.weekly.decided", func(c mailcopy.Copy) string { return c.WeeklyDecided }},
 	{"brief.weekly.queueWorked", func(c mailcopy.Copy) string { return c.WeeklyQueue }},
@@ -57,13 +64,11 @@ var mailLabelPairs = []struct {
 	// The planning question is the PANEL's heading. The mail asks it and the
 	// screen answers it, so two spellings would have the message invite
 	// something the page it opens does not offer under that name.
-	{"plan.title", func(c mailcopy.Copy) string { return c.WeeklyPlanAhead }},
 	{"brief.weekly.outcome.won", func(c mailcopy.Copy) string { return c.WeeklyOutcomeWon }},
 	{"brief.weekly.outcome.lost", func(c mailcopy.Copy) string { return c.WeeklyOutcomeLost }},
 	{"brief.weekly.outcome.moved", func(c mailcopy.Copy) string { return c.WeeklyOutcomeMoved }},
 	{"brief.weekly.notRecorded", func(c mailcopy.Copy) string { return c.WeeklyNotRecorded }},
 	{"brief.weekly.recordedFrom", func(c mailcopy.Copy) string { return c.WeeklyRecordedFrom }},
-	{"brief.weekly.noRecords", func(c mailcopy.Copy) string { return c.WeeklyNoRecords }},
 	{"brief.weekly.partialFrom", func(c mailcopy.Copy) string { return c.WeeklyPartialFrom }},
 	{"brief.weekly.partialValue", func(c mailcopy.Copy) string { return c.WeeklyPartialValue }},
 	{"brief.week.beforeHistory", func(c mailcopy.Copy) string { return c.WeeklyBeforeHistory }},
@@ -180,6 +185,34 @@ func TestTheMailCatalogSpeaksEveryLanguageTheContractAdmits(t *testing.T) {
 					language, written.Type().Field(i).Name)
 			}
 		}
+	}
+}
+
+// TestTheContractsMailLanguagesAreTheCatalogs holds the languages a rep may pick
+// for a mail equal to those the catalog has copy for, in both directions.
+func TestTheContractsMailLanguagesAreTheCatalogs(t *testing.T) {
+	t.Parallel()
+	document, err := os.ReadFile(mailLanguageContract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := regexp.MustCompile(`\n    MailLanguage:\s*\n\s*type: string\s*\n\s*enum: \[([^\]]*)\]`).
+		FindStringSubmatch(string(document))
+	if declared == nil {
+		t.Fatal("the contract's MailLanguage enum could not be read, so this gate compares nothing")
+	}
+	var offered []string
+	for raw := range strings.SplitSeq(declared[1], ",") {
+		offered = append(offered, strings.TrimSpace(raw))
+	}
+	var carried []string
+	for _, language := range mailcopy.Languages() {
+		carried = append(carried, string(language))
+	}
+	if !slices.Equal(offered, carried) {
+		t.Errorf("the contract's MailLanguage is %v and the mail catalog carries %v: a rep picks from the "+
+			"first and the mail is written from the second, so keep them equal, in mailcopy.Languages() order",
+			offered, carried)
 	}
 }
 

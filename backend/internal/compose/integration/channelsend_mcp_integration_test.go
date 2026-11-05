@@ -65,7 +65,7 @@ func (c *channelSendEnv) enrichTarget(t *testing.T) string {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/companies",
-		AnyMap{"source": "manual", "display_name": "Approval Mechanism GmbH"}, nil, &company); status != http.StatusCreated {
+		AnyMap{"source": "manual", "display_name": "Approval Mechanism GmbH", "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	return company.ID
@@ -138,7 +138,7 @@ func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *test
 	token := c.mintPassport(t, []string{"read", "send"})
 	invoke := c.sendMessageInvoker(t, token)
 
-	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.activityID)
+	args := fmt.Sprintf(`{"activity_id":%q,"body":"Yes — shipping Monday.","consent_purpose":"transactional"}`, c.ActivityID)
 
 	out, err := invoke(args)
 	if err != nil {

@@ -38,6 +38,8 @@ const (
 	// suppliedDay is a date taken as an outside system wrote it, in a zone the
 	// product never learns, and compared with no today.
 	suppliedDay dayCalendar = "as supplied"
+	// storedZoneDay is a day a user picked in a zone stored beside it, and judged in that zone.
+	storedZoneDay dayCalendar = "zone stored beside it"
 )
 
 // dateColumnCalendar is one column's statement. why is required for every
@@ -66,9 +68,14 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	},
 	"brief_item.returned_after_dismissal_on": {calendar: installationDay},
 	"brief_run.local_day":                    {calendar: installationDay},
+	"sales_initiative.deadline":              {calendar: installationDay},
 	"capture_auto_enrich_budget.budget_date": {
 		calendar: utcDay,
 		why:      "one shared daily enrichment cap, keyed explicitly on (now() AT TIME ZONE 'UTC')::date so the cap resets at one instant everywhere",
+	},
+	"capture_connection.history_baseline_date": {
+		calendar: storedZoneDay,
+		why:      "a mailbox owner picks it in their own zone, stored in history_baseline_tz, and a message's sent time is cut to a day in that zone before the comparison",
 	},
 	"capture_backfill.after_date": {
 		calendar: utcDay,
@@ -79,19 +86,18 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 		why:      "the capture digest is built and labelled on the UTC calendar",
 		drift:    "it sits beside brief_run.local_day, an installation day; " + readersDisagree,
 	},
-	"close_date_run.as_of":                       {calendar: installationDay},
-	"contract.cancellation_effective_on":         {calendar: installationDay},
-	"contract.cancellation_notice_on":            {calendar: installationDay},
-	"contract.ends_on":                           {calendar: installationDay},
-	"contract.fx_rate_date":                      {calendar: installationDay},
-	"contract.renewal_on":                        {calendar: installationDay, drift: "company360 reads it through ::timestamptz, a session-zone midnight; " + readersDisagree},
-	"contract.signed_on":                         {calendar: installationDay},
-	"contract.starts_on":                         {calendar: installationDay},
-	"deal.expected_close_date":                   {calendar: installationDay, drift: "the assurance close_past rule and the days_ago list filter judge it against a UTC today; " + readersDisagree},
-	"deal.fx_rate_date":                          {calendar: installationDay},
-	"deal.wait_until":                            {calendar: installationDay, drift: "the stall formulas end the pause at 00:00 UTC; " + readersDisagree},
-	"deal_forecast_history.close_date_at_change": {calendar: installationDay},
-	"deal_risk_day.local_day":                    {calendar: installationDay},
+	"close_date_run.as_of":               {calendar: installationDay},
+	"contract.cancellation_effective_on": {calendar: installationDay},
+	"contract.cancellation_notice_on":    {calendar: installationDay},
+	"contract.ends_on":                   {calendar: installationDay},
+	"contract.fx_rate_date":              {calendar: installationDay},
+	"contract.renewal_on":                {calendar: installationDay, drift: "company360 reads it through ::timestamptz, a session-zone midnight; " + readersDisagree},
+	"contract.signed_on":                 {calendar: installationDay},
+	"contract.starts_on":                 {calendar: installationDay},
+	"deal.expected_close_date":           {calendar: installationDay, drift: "the assurance close_past rule and the days_ago list filter judge it against a UTC today; " + readersDisagree},
+	"deal.fx_rate_date":                  {calendar: installationDay},
+	"deal.wait_until":                    {calendar: installationDay, drift: "the stall formulas end the pause at 00:00 UTC; " + readersDisagree},
+	"deal_risk_day.local_day":            {calendar: installationDay},
 	"deal_stage_history.fx_date_at_change": {
 		calendar: installationDay,
 		drift:    "stage valuation picks its rate with the process clock's day, not the installation's; " + readersDisagree,
@@ -122,6 +128,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	"forecast_snapshot.local_day":                {calendar: installationDay},
 	"forecast_snapshot.period_end":               {calendar: installationDay},
 	"forecast_snapshot.period_start":             {calendar: installationDay},
+	"tax_rate.valid_from":                        {calendar: installationDay},
 	"fx_rate.rate_date":                          {calendar: installationDay, drift: "the open-pipeline rollup, company 360, the brief and the deal list's base value ask it with a UTC or session-zone today; " + readersDisagree},
 	"linkedin_connection.connected_on":           {calendar: suppliedDay, why: "parsed from the member's LinkedIn export as written; only a dedupe key and a subject-access export read it"},
 	"notification_digest_run.digest_date":        {calendar: installationDay},
@@ -190,7 +197,7 @@ func TestADateColumnOutsideTheInstallationZoneSaysWhy(t *testing.T) {
 	for column, stated := range dateColumnCalendars {
 		switch stated.calendar {
 		case installationDay:
-		case utcDay, suppliedDay:
+		case utcDay, suppliedDay, storedZoneDay:
 			if strings.TrimSpace(stated.why) == "" {
 				t.Errorf("%s is a %s day with no reason; the installation zone is the rule, "+
 					"so an exception says why it holds", column, stated.calendar)

@@ -28,9 +28,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
+	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -61,7 +63,7 @@ const (
 
 const scanSystem = `You read one account's records for the rep who works it and say what needs a human.
 
-The data is one JSON object. "account" is how the account stands: its contacts, open deals, open tasks and recent activity by subject. "messages" are the recent exchanges, oldest first, each with its own words; "direction" says who wrote it — "outbound" is us, "inbound" is them — and "unread_chars" says how much of a body was cut.
+The data is one JSON object. "account" is how the account stands: its contacts, open deals, open tasks and recent activity by subject. "messages" are the recent exchanges, oldest first, each with its own words; "direction" says who wrote it — "outbound" is us, "inbound" is them — "unread_chars" says how much of a body was cut, "thread" is the same for the messages of one conversation, and "settled": true means a later message or a recorded decision already met what that message asked or promised. "partner": true means the account works with us through a partner programme, and "no_deal_advice": true means deal advice is not wanted for it.
 
 Raise a finding ONLY in these kinds:
 - commitment_unmet — WE said we would do something, in an outbound message, and nothing in the account — no later message of ours, no open task — says it happened.
@@ -77,6 +79,8 @@ Rules:
 - "message_id" is the id of the ONE message the finding rests on, and "quote" is a verbatim excerpt of that message's "text", between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
 - "title" says what to do, in under eight words, starting with a verb. "reason" is one sentence saying what the message says and why it needs attention now. Plain words, addressed to the reader. Never put an id in a title or a reason.
 - "action" is draft_reply when the move is writing back on that message, add_task when it is something to do that is not a reply, and none otherwise.
+- Never raise commitment_unmet or question_unanswered on a message marked "settled". Read every message of a thread before judging what it still owes.
+- When the account says "no_deal_advice": true, never advise opening a deal and never raise need_raised. A partner's business is recorded in the partner programme.
 - Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
 
 // scanSystemFor is the whole system prompt: the task, the house voice, the
@@ -159,7 +163,7 @@ func Read(
 		return nil, crmcontracts.WrittenByDeterministic, nil
 	}
 	resp, err := ai.Ask(ctx, lane, ScanRequest(in, lang), func(text string) error {
-		_, refused, parseErr := ParseFindings(text, companyID, in)
+		_, refused, parseErr := ParseFindings(text, companyID, in, lang)
 		if parseErr != nil {
 			return parseErr
 		}
@@ -174,7 +178,7 @@ func Read(
 	if err != nil {
 		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}
 	}
-	kept, _, err := ParseFindings(resp.Text, companyID, in)
+	kept, _, err := ParseFindings(resp.Text, companyID, in, lang)
 	if err != nil {
 		return nil, crmcontracts.WrittenByDeterministic, &LaneError{Cause: err}
 	}
@@ -200,7 +204,7 @@ type rawFinding struct {
 // reply, or one with no findings key, is an error: the model did not answer
 // the question.
 func ParseFindings(
-	reply string, companyID ids.CompanyID, in Input,
+	reply string, companyID ids.CompanyID, in Input, lang string,
 ) (kept []crmcontracts.Company360Suggestion, refused []string, err error) {
 	var parsed struct {
 		Findings *[]rawFinding `json:"findings"`
@@ -216,7 +220,7 @@ func ParseFindings(
 		if len(kept) == maxFindings {
 			break
 		}
-		suggestion, why := ground(raw, companyID, in)
+		suggestion, why := ground(raw, companyID, in, langcopy.For(lang))
 		if why != "" {
 			refused = append(refused, fmt.Sprintf("finding %d: %s", i+1, why))
 			continue
@@ -231,7 +235,7 @@ func ParseFindings(
 }
 
 // ground turns one raw finding into a suggestion, or says why it cannot.
-func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Company360Suggestion, string) {
+func ground(raw rawFinding, companyID ids.CompanyID, in Input, said langcopy.Spoken) (crmcontracts.Company360Suggestion, string) {
 	kind, ok := readKind(raw.Kind)
 	if !ok {
 		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("kind %q is not one the scan raises", clamp(raw.Kind))
@@ -239,6 +243,9 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Com
 	message, ok := in.message(raw.MessageID)
 	if !ok {
 		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("message %q was not among the exchanges given", clamp(raw.MessageID))
+	}
+	if why := standingRefusal(kind, message, in.NoDealAdvice); why != "" {
+		return crmcontracts.Company360Suggestion{}, why
 	}
 	if !claims.Quoted(message.Text, raw.Quote) {
 		return crmcontracts.Company360Suggestion{}, "the quote is not in the message it cites, verbatim"
@@ -263,7 +270,7 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input) (crmcontracts.Com
 		Name:       nonEmpty(message.Subject),
 		Quote:      &quote,
 		At:         &message.At,
-		Origin:     new(origin(message)),
+		Origin:     new(receiptcopy.Origin(said, message.Kind, message.Direction)),
 	}}
 	by := crmcontracts.WrittenByModel
 	out := crmcontracts.Company360Suggestion{
@@ -299,25 +306,6 @@ func readKind(name string) (crmcontracts.Company360SuggestionKind, bool) {
 		}
 	}
 	return "", false
-}
-
-// origin says where a quote came from in the reader's terms: the channel,
-// and who spoke. Server-authored like the rules' own, so the receipt under a
-// model's finding and the one under a rule's row use one voice.
-func origin(message MessageIn) string {
-	channel := map[string]string{
-		"email": "Email", "message": "Message", "call": "Call", "meeting": "Meeting",
-	}[message.Kind]
-	if channel == "" {
-		channel = "Exchange"
-	}
-	switch message.Direction {
-	case string(crmcontracts.ActivityDirectionOutbound):
-		return channel + " you sent"
-	case string(crmcontracts.ActivityDirectionInbound):
-		return channel + " they sent"
-	}
-	return channel
 }
 
 // The quote's bounds, as the prompt states them. A quote under the floor is

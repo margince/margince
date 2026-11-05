@@ -84,7 +84,7 @@ func TestCompanyDescriptionSurvivesAnUnrelatedEdit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	industry := "Building products"
+	industry := "Construction"
 	updated, err := e.store.UpdateCompany(ctx,
 		ids.From[ids.CompanyKind](ids.UUID(company.Id)),
 		UpdateCompanyInput{Industry: &industry})
@@ -274,11 +274,9 @@ func TestAMergedInDescriptionKeepsItsHumanAuthor(t *testing.T) {
 	}
 }
 
-// An AGENT editing the description through update_record does not claim the
-// column: the stamp records the authenticated principal, and only a human:<id>
-// holds it. Without this the governed write surface would be a way to freeze a
-// company header against the site read that could correct it.
-func TestAnAgentsEditDoesNotClaimTheDescription(t *testing.T) {
+// Automatic work editing the description does not claim the column. Its stamp
+// names no user, and a site read may correct it.
+func TestAutomaticWorksEditDoesNotClaimTheDescription(t *testing.T) {
 	e := setupDedupe(t)
 	company, err := e.store.CreateCompany(e.as(), CreateCompanyInput{
 		DisplayName: "Agent Edited GmbH", Source: "manual",

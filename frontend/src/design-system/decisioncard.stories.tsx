@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import {
   type DecisionApproval,
   DecisionCard,
   type DecisionCardLabels,
+  type DecisionCardProps,
   DecisionStatusChip,
   type DecisionStatusLabels,
   DecisionToolChip,
@@ -54,6 +56,10 @@ const LABELS: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: {
+    field: (name) => name,
+    more: (count) => `${count} more not shown`,
+  },
   showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
@@ -185,9 +191,7 @@ export const Row: Story = {
 };
 
 // The row at LIST DENSITY: one line, and the proposal behind the line's own
-// control. It is the same decision and the same verbs — Accept and Later keep
-// their words, a rejection and an edit go in the menu — so what changes is how
-// much of it stands open, which is why this is a density and not a layout.
+// control. Reject and Accept keep their words; Later and Edit go in the menu.
 //
 // Check the line in BOTH themes at a narrow width: the question is the only
 // thing on it allowed to be clipped, and a chip that gave way instead would
@@ -250,6 +254,48 @@ export const CompactRowExpired: Story = {
     ...CompactRow.args,
     approval: approval({ expires_at: new Date(NOW - HOUR).toISOString() }),
   },
+};
+
+function HoldingCard(args: DecisionCardProps) {
+  const [held, setHeld] = useState(false);
+  return (
+    <DecisionCard
+      {...args}
+      onReject={() => setHeld(true)}
+      heldRejection={
+        held
+          ? { label: "Rejected", undo: "Undo", onUndo: () => setHeld(false) }
+          : undefined
+      }
+    />
+  );
+}
+
+async function pressReject(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: "Reject" }));
+  await expect(await canvas.findByText("Rejected")).toHaveFocus();
+  await expect(canvas.getByRole("button", { name: "Undo" })).toBeVisible();
+}
+
+// A rejection in its undo window: the verbs give way to the bar until the
+// caller sends it or the reader takes it back.
+export const HeldRejection: Story = {
+  args: Deck.args,
+  render: (args) => <HoldingCard {...args} />,
+  play: async ({ canvasElement }) => pressReject(canvasElement),
+};
+
+export const HeldRejectionCompact: Story = {
+  args: CompactRow.args,
+  render: (args) => <HoldingCard {...args} />,
+  play: async ({ canvasElement }) => pressReject(canvasElement),
+};
+
+export const HeldRejectionPhone: Story = {
+  ...CompactRowPhone,
+  render: (args) => <HoldingCard {...args} />,
+  play: async ({ canvasElement }) => pressReject(canvasElement),
 };
 
 // Under six hours: the edge takes the warning tone. The countdown badge is the
@@ -383,6 +429,56 @@ export const DeclaredFields: Story = {
         field: "flags",
         label: "Issues",
         value: "no recent progress",
+      },
+    ],
+  },
+};
+
+const COMMITMENT_SUMMARY = "Send the signed form by Friday";
+
+// A promise read out of mail. The summary shows once, though the payload leads
+// with the same sentence. The provenance `body` shows as its labelled original
+// text rather than as a draft, and the evidence names its source in words.
+export const CommitmentProposal: Story = {
+  args: {
+    ...Deck.args,
+    approval: approval({
+      kind: "commitment_task",
+      summary: COMMITMENT_SUMMARY,
+      target_label: "Contract renewal",
+      proposed_change: {
+        summary: COMMITMENT_SUMMARY,
+        party: "Lena Fischer",
+        body: 'Promiser: Lena Fischer. Commitment in the email "Contract renewal", sent 2026-08-20.',
+      },
+      evidence: [
+        {
+          evidence_snippet: "I will send the signed form by Friday",
+          source_type: "activity",
+        },
+      ],
+    }),
+    provenance: { kind: "agent", job: "signal-scan" },
+    confidence: undefined,
+    display: [
+      {
+        field: "summary",
+        label: "Step",
+        value: COMMITMENT_SUMMARY,
+        lead: true,
+      },
+      { field: "party", label: "Promised by", value: "Lena Fischer" },
+      {
+        field: "assignment",
+        label: "On approval",
+        value: "Creates a task assigned to Lena Fischer.",
+      },
+      { field: "due_date", label: "Due", value: "No day stated" },
+      {
+        field: "body",
+        label: "Original text",
+        value:
+          'Promiser: Lena Fischer. Commitment in the email "Contract renewal", sent 2026-08-20.',
       },
     ],
   },

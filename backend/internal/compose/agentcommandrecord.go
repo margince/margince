@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -98,29 +99,19 @@ func mergeTagsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body
 	}), nil
 }
 
-// scrapeCompanyCommand decodes POST /v1/companies/{id}/enrich — the
-// one-page read.
-//
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func scrapeCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
-	return enrichCall(deps, r, body, agents.EnrichDepthPage)
+var enrichOperationDepth = map[string]agents.EnrichDepth{
+	opScrapeCompany:          agents.EnrichDepthPage,
+	opDeepReadCompany:        agents.EnrichDepthSite,
+	opTechnicalEnrichCompany: agents.EnrichDepthTechnical,
 }
 
-// deepReadCompanyCommand decodes POST /v1/companies/{id}/deep-read — the
-// whole-site crawl.
-//
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func deepReadCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
-	return enrichCall(deps, r, body, agents.EnrichDepthSite)
-}
-
-// technicalEnrichCompanyCommand decodes POST /v1/companies/{id}/technical-enrich
-// — the public-records lookup. Its depth is STRUCTURAL, like its two siblings:
-// the route IS the depth, where the tool door reads a word.
-//
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func technicalEnrichCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
-	return enrichCall(deps, r, body, agents.EnrichDepthTechnical)
+//nolint:ireturn // The routing table returns the shared governed command interface.
+func enrichCompanyCommand(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	depth, ok := enrichOperationDepth[pol.Op]
+	if !ok {
+		return nil, apperrors.ErrInvalidArgument
+	}
+	return enrichCall(deps, r, body, depth)
 }
 
 // enrichCall builds one enrich command at the depth its CALLER names.

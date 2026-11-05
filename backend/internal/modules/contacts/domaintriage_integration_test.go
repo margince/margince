@@ -252,11 +252,12 @@ func TestResolvingADomainNobodyAskedAboutIsRefused(t *testing.T) {
 
 	// Nothing opened a question for this domain, so there is no verdict to
 	// settle. Creating rows anyway would be a company nobody's mail justified.
+	// A missing row is a 404 for the caller; a bare error would be a 500.
 	if _, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
 		Domain: "unasked.test", Status: DomainCompany, Source: DomainSourceSiteRead,
 		DossierName: "Unasked Ltd", SeedURL: "https://unasked.test",
-	}); err == nil {
-		t.Fatal("resolving a domain with no open question must refuse, not create")
+	}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("resolving a domain with no open question = %v, want ErrNotFound", err)
 	}
 }
 
@@ -763,9 +764,8 @@ func TestTheBlockedDomainListWithholdsAnInvisibleCompany(t *testing.T) {
 	}
 }
 
-// What the operator's list carries — decisions, and the questions nobody owns —
-// lives in domainadmissionlist_integration_test.go, beside the WHERE clause that
-// is its whole subject.
+// What the operator's list carries, every decision and every open question,
+// lives in domainadmissionlist_integration_test.go beside its `WHERE` clause.
 
 // Re-asking puts the question back in the sweep's path. The machine cleared the
 // cursor because re-crawling could not help; somebody may know otherwise, and

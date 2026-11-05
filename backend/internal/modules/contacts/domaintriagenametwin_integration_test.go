@@ -87,7 +87,7 @@ func (e *dedupeEnv) liveCompaniesNamed(ctx context.Context, t *testing.T, name s
 
 // The Baqend case: baqend.com and speedkit.com both resolved to "Baqend GmbH"
 // and became two records four minutes apart.
-func TestASecondDomainOfOneCompanyJoinsTheCompanyAlreadyHere(t *testing.T) {
+func TestANameMatchWaitsForExplicitDomainAdoption(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -98,6 +98,15 @@ func TestASecondDomainOfOneCompanyJoinsTheCompanyAlreadyHere(t *testing.T) {
 	bob := e.openTriageFirst(ctx, t, "bob@speedkit.test", "Bob Brand", "speedkit.test")
 	readID := e.startTriageRead(ctx, t, "speedkit.test")
 	second := e.answerSiteVerdict(ctx, t, "speedkit.test", "Baqend GmbH", readID)
+	if second.CompanyID != nil {
+		t.Fatal("a matching name bound an unrelated domain without confirmation")
+	}
+	second, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
+		Domain: "speedkit.test", Status: DomainCompany, Source: DomainSourceHuman, CompanyID: first.CompanyID, ReadID: readID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if second.CompanyCreated || second.CompanyID == nil || *second.CompanyID != *first.CompanyID {
 		t.Fatalf("the second domain = %+v, want it on the existing company %s", second, first.CompanyID)
@@ -272,16 +281,16 @@ func TestATwinTheSeatCannotWriteIsNotJoined(t *testing.T) {
 		t.Fatalf("seeding the colleague's company: %v", err)
 	}
 	ctx := e.asOwnRows()
+	twinID := ids.From[ids.CompanyKind](ids.UUID(twin.Id))
 	e.openTriageFirst(ctx, t, "finn@guarded-two.test", "Finn Frey", "guarded-two.test")
 	_, err = e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
-		Domain: "guarded-two.test", Status: DomainCompany, Source: DomainSourceSiteRead,
+		Domain: "guarded-two.test", Status: DomainCompany, Source: DomainSourceHuman, CompanyID: &twinID,
 		ReadID: e.startTriageRead(ctx, t, "guarded-two.test"), DossierName: "Guarded Works GmbH",
 		SeedURL: "https://guarded-two.test",
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the verdict answered %v, want ErrPermissionDenied — the twin is not this seat's to change", err)
 	}
-	twinID := ids.From[ids.CompanyKind](ids.UUID(twin.Id))
 	if domains := e.liveDomainsOf(ctx, t, twinID); len(domains) != 1 {
 		t.Fatalf("the colleague's company holds %v, want only its own domain", domains)
 	}

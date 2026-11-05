@@ -28,7 +28,6 @@ adapter
 add
 address
 admin
-administrator
 advertise
 advice
 advise
@@ -74,7 +73,6 @@ anywhere
 apart
 app
 appear
-application
 apply
 approval
 approve
@@ -92,7 +90,6 @@ arrows
 article
 as
 ask
-assemble
 assess
 asset
 assignee
@@ -124,7 +121,6 @@ axis
 b
 back
 backdrop
-backfill
 backspace
 bad
 badge
@@ -262,7 +258,6 @@ charts
 check
 checkbox
 checkboxes
-checkout
 chevron
 child
 children
@@ -288,7 +283,6 @@ client
 climbs
 clipboard
 clock
-clone
 close
 closure
 cloud
@@ -322,7 +316,6 @@ complete
 complex
 component
 compose
-composite
 compute
 condition
 conditional
@@ -335,7 +328,6 @@ connect
 connection
 connector
 consent
-console
 consult
 consultancy
 consume
@@ -346,7 +338,6 @@ context
 continue
 contract
 contrast
-contrib
 contribute
 control
 conversation
@@ -453,7 +444,6 @@ dismiss
 display
 disqualified
 disqualify
-distributable
 do
 doc
 document
@@ -501,7 +491,6 @@ else
 elsewhere
 email
 embed
-emerald
 emil
 emoji
 emphasis
@@ -535,7 +524,6 @@ evidence
 example
 except
 exception
-executable
 exempt
 exist
 exit
@@ -835,7 +823,6 @@ last
 late
 later
 latest
-launch
 lavender
 law
 lawful
@@ -944,7 +931,6 @@ meta
 metadata
 meter
 middle
-migrate
 migration
 minute
 mirror
@@ -969,7 +955,6 @@ most
 motion
 mount
 move
-msys
 much
 muddy
 multi
@@ -1186,7 +1171,6 @@ private
 pro
 probe
 problem
-process
 product
 production
 profile
@@ -1277,7 +1261,6 @@ relay
 release
 relink
 reload
-relocatable
 rem
 remote
 remove
@@ -1310,7 +1293,6 @@ return
 reuse
 reversal
 reverse
-revert
 review
 revoke
 rewrite
@@ -1322,7 +1304,6 @@ rise
 risk
 role
 roll
-rollback
 rollout
 room
 root
@@ -1426,7 +1407,6 @@ sibling
 side
 sidebar
 sideways
-sigint
 sign
 signal
 silence
@@ -1448,7 +1428,6 @@ small
 smooth
 snapshot
 so
-socket
 soft
 software
 sold
@@ -1500,7 +1479,6 @@ status
 statute
 statutory
 stay
-stdlib
 step
 steward
 still
@@ -1515,7 +1493,6 @@ strict
 string
 strip
 strong
-stronger
 strongest
 structural
 structure
@@ -1531,7 +1508,6 @@ submit
 submits
 success
 such
-suffix
 suggest
 suggestion
 suggestions
@@ -1539,8 +1515,6 @@ suite
 sum
 summary
 superellipse
-supervised
-supervisor
 support
 suppress
 sure
@@ -1565,6 +1539,7 @@ taller
 tallest
 target
 task
+teal
 team
 tell
 template
@@ -1613,7 +1588,6 @@ time
 timeline
 timeout
 timers
-timezone
 tint
 tinted
 tints
@@ -1720,7 +1694,6 @@ visible
 visit
 visual
 vocabulary
-vs
 wait
 waive
 walk

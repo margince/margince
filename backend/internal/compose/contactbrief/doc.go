@@ -4,7 +4,8 @@
 // Package contactbrief writes the standing relationship brief on the contact
 // record page.
 //
-// Tables owned: contact_brief (the per-user brief cache).
+// Tables owned: docs/reference/entity-model/compose.md. contact_brief is the
+// per-user brief cache.
 //
 // It is the company brief applied to a contact, and the mirroring is the ruling
 // rather than a coincidence (ADR-0097 D4): reuse over reinvention, so the two

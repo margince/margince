@@ -137,12 +137,16 @@ export const agentTools = {
   data: [
     {
       name: "search_records",
+      title: "Search records",
+      description: "Find contacts, companies, deals and leads by name.",
       required_scope: "read",
       tier: "auto_execute",
       egress: false,
     },
     {
       name: "send_email",
+      title: "Send email",
+      description: "Send an approved email from the member's mailbox.",
       required_scope: "send",
       tier: "confirmation_required",
       egress: true,

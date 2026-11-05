@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The profile-field vocabulary — the contract's ColdStartField enum, spelled
@@ -69,10 +70,20 @@ const (
 	companySourceSiteRead = "site_read"
 )
 
+// companyAuthorSource names who stands behind a company fact the caller typed.
+// A context with no agent actor is a human's, as the session gate requires.
+func companyAuthorSource(ctx context.Context) string {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalAgent {
+		return CompanySourceAgent
+	}
+	return CompanySourceHuman
+}
+
 const (
 	actionUpdate       = "update"
 	auditKeyFields     = "fields"
 	auditKeySource     = "source"
+	auditKeyStatus     = "status"
 	auditKeyCapturedBy = "captured_by"
 	auditKeySourceURL  = "source_url"
 	// auditKeySourceRef names WHICH source: the activity a signature came
@@ -294,7 +305,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		if target.created {
 			action = actionCreate
 		}
-		before, after, err := anchorSaveImages(ctx, tx, target)
+		before, after, receipts, err := anchorSaveImages(ctx, tx, target)
 		if err != nil {
 			return err
 		}
@@ -304,15 +315,19 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		// rides audit_log.evidence, because anything placed in the images is
 		// projected by field history as a change to a field of that name
 		// (storekit.AuditWithEvidence).
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, map[string]any{
-			auditKeySource: CompanySourceHuman, "anchor": true, auditKeyFields: applied,
-		})
+		source := companyAuthorSource(ctx)
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "company", companyID.UUID, before, after, withProfileFieldReceipts(map[string]any{
+			auditKeySource: source, "anchor": true, auditKeyFields: applied,
+		}, receipts))
 		if err != nil {
 			return fmt.Errorf("audit company save: %w", err)
 		}
-		payload := companySaveEventPayload(target.created, applied, by)
+		payload := companySaveEventPayload(target.created, applied, by, source)
 		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, payload); err != nil {
 			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
+		}
+		if err := s.locateLandedAddress(ctx, tx, companyID, after); err != nil {
+			return err
 		}
 		if err := s.followAnchorSaveTx(ctx, tx, target); err != nil {
 			return err
@@ -335,9 +350,8 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 // variants of one, so the return type is the shared events.Payload seam.
 //
 //nolint:ireturn // dispatches to PublicEventCompanyCreated vs Updated by the created condition; tested directly via the interface in contact_company_payload_test.go
-func companySaveEventPayload(created bool, applied map[string]any, by string) events.Payload {
+func companySaveEventPayload(created bool, applied map[string]any, by, source string) events.Payload {
 	if created {
-		source := CompanySourceHuman
 		anchor := true
 		return crmcontracts.PublicEventCompanyCreated{
 			Delta:      &applied,
@@ -348,7 +362,7 @@ func companySaveEventPayload(created bool, applied map[string]any, by string) ev
 	}
 	return crmcontracts.PublicEventCompanyUpdated{
 		ChangedFields: map[string]any{
-			eventKeyDelta: applied, auditKeySource: CompanySourceHuman, "anchor": true, "captured_by": by,
+			eventKeyDelta: applied, auditKeySource: source, "anchor": true, "captured_by": by,
 		},
 	}
 }
@@ -382,6 +396,8 @@ type anchorTarget struct {
 	id      ids.CompanyID
 	created bool
 	before  map[string]any
+	// rows are the profile-field rows behind the columns, read with before.
+	rows map[string]profileFieldRow
 	// named is true when this save wrote the anchor's display name.
 	named bool
 }
@@ -423,6 +439,10 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 	if err != nil {
 		return anchorTarget{}, err
 	}
+	rows, err := readProfileFieldImages(ctx, tx, companyID)
+	if err != nil {
+		return anchorTarget{}, err
+	}
 	tag, err := tx.Exec(ctx,
 		`UPDATE company SET display_name = $2
 		 WHERE id = $1 AND display_name IS DISTINCT FROM $2`,
@@ -439,7 +459,7 @@ func resolveOrCreateAnchor(ctx context.Context, tx pgx.Tx, displayName, by strin
 			return anchorTarget{}, err
 		}
 	}
-	return anchorTarget{id: companyID, before: before, named: tag.RowsAffected() > 0}, nil
+	return anchorTarget{id: companyID, before: before, rows: rows, named: tag.RowsAffected() > 0}, nil
 }
 
 // createAnchorCompany mints the company row, marked as the installation's
@@ -468,7 +488,7 @@ func createAnchorCompany(ctx context.Context, tx pgx.Tx, displayName, by string)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, activitySourceManual, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, companyID, activitySourceManual, by); err != nil {
 		return ids.CompanyID{}, err
 	}
 	return companyID, nil

@@ -1,0 +1,87 @@
+# Has this pull request said whether each page describing its code still holds?
+#
+# An explanation or handbook page names its code in a `<!-- describes: -->` line.
+# This lists the pages whose paths the change touches and asks the body for one
+# answer per page: `- <page>: still true` or `- <page>: updated`. A page the
+# change edits counts as answered. scripts/check-docs-describing.sh decides.
+#
+# IT WARNS AND NEVER BLOCKS, for the reason closing-declaration.yml gives: `ci`
+# is the one required check, and any red check leaves the pull request blocked.
+# Promote it if the warning is measurably ignored.
+name: docs-describing
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  describing:
+    name: pages describing this change (reports, never blocks)
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # write, for the sticky comment the finding lives in.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Which pages describe this change, and are they answered
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          # A failed query is not an empty change: an empty list would read as
+          # "no page describes this" and say nothing about a change that needs
+          # an answer. The job still succeeds; it says nothing rather than
+          # something false.
+          asked=0
+          changed="$(gh api --paginate "repos/${{ github.repository }}/pulls/${PR}/files" \
+            --jq '.[].filename')" || asked=$?
+          if [ "$asked" -ne 0 ]; then
+            echo "could not read this pull request's files; saying nothing rather than guessing" >&2
+            exit 0
+          fi
+
+          status=0
+          out="$(DOCS_DESCRIBING_CHANGED="$changed" DOCS_DESCRIBING_BODY="$BODY" \
+                 ./scripts/check-docs-describing.sh 2>&1)" || status=$?
+          printf '%s\n' "$out"
+          {
+            echo '```'
+            printf '%s\n' "$out"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+          # One sticky comment, found by its marker, and deleted once every page
+          # is answered, so a fixed finding leaves nothing behind.
+          marker='<!-- docs-describing -->'
+          existing="$(gh api --paginate "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq "[.[] | select(.body != null and (.body | contains(\"$marker\"))) | .id] | first // empty" || true)"
+
+          if [ "$status" -eq 0 ]; then
+            if [ -n "$existing" ]; then
+              gh api -X DELETE "repos/${{ github.repository }}/issues/comments/${existing}" >/dev/null || true
+            fi
+            exit 0
+          fi
+
+          body="$(printf '%s\n%s\n\n```\n%s\n```' "$marker" \
+            '**These pages describe code this pull request changes. Say whether each still holds.**' \
+            "$out")"
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${{ github.repository }}/issues/comments/${existing}" -f body="$body" >/dev/null || true
+          else
+            gh api -X POST "repos/${{ github.repository }}/issues/${PR}/comments" -f body="$body" >/dev/null || true
+          fi

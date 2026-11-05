@@ -87,14 +87,14 @@ func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRow
 	if p.Permissions.RowScope == principal.RowScopeTeam {
 		teams := arg(p.TeamIDs)
 		return func(alias string) string {
-			return fmt.Sprintf(`(`+nullArm+`%[1]s = $%[2]d OR %[1]s IN (
+			return fmt.Sprintf(`(`+nullArm+`%[1]s IN (%[2]s) OR %[1]s IN (
 			   SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = ANY($%[3]d)))`,
-				col(alias), me, teams)
+				col(alias), memberIdentitySQL(me), teams)
 		}
 	}
 	// own — and the zero value: an unresolved scope never widens.
 	return func(alias string) string {
-		return fmt.Sprintf(`(`+nullArm+`%[1]s = $%[2]d)`, col(alias), me)
+		return fmt.Sprintf(`(`+nullArm+`%[1]s IN (%[2]s))`, col(alias), memberIdentitySQL(me))
 	}
 }
 
@@ -167,10 +167,10 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 
 // ownerScopedTables is the closed set of table names the row-scope
 // primitives interpolate into SQL. It is NOT every table carrying an
-// owner_id column: fourteen carry one and nine are here, because on the
-// other five that column names the MEASURED or ATTRIBUTED subject rather
-// than an access owner. signal is the case that matters: its owner_id
-// names the rep a signal is ABOUT, so it stays out of this set and
+// owner_id column: fifteen carry one and ten are here. On the other five
+// that column names the MEASURED or ATTRIBUTED subject rather than an
+// access owner. signal is the case that matters: its owner_id
+// names the rep a signal is ABOUT. So it stays out of this set, and
 // anyone holding signal.read sees every one. Deriving this set from the
 // column would add those tables back and silently narrow such a read: an
 // availability regression wearing a security fix's clothes.
@@ -186,6 +186,7 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 var ownerScopedTables = map[string]bool{
 	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 	tableList: true, "saved_view": true, "automation": true, "voice_profile": true,
+	"sales_initiative": true,
 }
 
 // VisiblePredicate is the FULL row-visibility test for one table, in
@@ -261,8 +262,8 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	if private {
 		inner := visible
 		visible = func(alias string) string {
-			return fmt.Sprintf(`((%s <> 'owner' AND %s) OR %s = $%d)`,
-				col(alias, "visibility"), inner(alias), col(alias, "owner_id"), me)
+			return fmt.Sprintf(`((%s <> 'owner' AND %s) OR %s IN (%s))`,
+				col(alias, "visibility"), inner(alias), col(alias, "owner_id"), memberIdentitySQL(me))
 		}
 	}
 	if !shareable {
@@ -275,51 +276,8 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 		access = "\n\t\t     AND rg.access = '" + grantAccessWrite + "'"
 	}
 	return func(alias string) string {
-		return fmt.Sprintf(`(%s OR EXISTS (
-		   SELECT 1 FROM record_grant rg
-		   WHERE rg.record_type = '%s' AND rg.record_id = %s%s
-		     AND (rg.expires_at IS NULL OR rg.expires_at > now())
-		     AND ((rg.subject_type = 'user' AND rg.subject_id = $%d)
-		       OR (rg.subject_type = 'team' AND rg.subject_id = ANY($%d)))))`,
-			inner(alias), table, col(alias, "id"), access, me, teams)
+		return fmt.Sprintf(`(%s OR %s)`, inner(alias), liveGrantSQL(table, col(alias, "id"), access, me, teams))
 	}
-}
-
-// EnsureVisibleLive is the strict row probe: the row must EXIST, be LIVE
-// (archived_at IS NULL) and pass the caller's row scope. It differs from
-// EnsureVisible in both halves that matter to a caller handing data back —
-// an unbounded actor does not skip the existence check, and a soft-deleted
-// row never passes.
-//
-// Both differences are load-bearing where a record is served or referenced
-// outside the store that owns it. Art. 17 erasure anonymizes a contact in
-// place and stamps archived_at while LEAVING owner_id alone, so the
-// tombstone still satisfies the original owner's predicate: a probe without
-// the live filter answers "yes, still yours" for a record every live read
-// path now refuses.
-func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	q := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND archived_at IS NULL`, table, idPos)
-	if clause != "" {
-		q += " AND " + clause
-	}
-	q += ")"
-
-	var visible bool
-	if err := tx.QueryRow(ctx, q, args...).Scan(&visible); err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
 }
 
 // EnsureVisibleForSubjectRights is EnsureVisible for the GDPR engines:
@@ -371,13 +329,35 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 // object grant as well as the row scope: a seat that may create a type and
 // not read it is told a duplicate exists, never which one.
 func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
-	if err := Require(ctx, table, principal.ActionRead); err != nil {
+	return visibleThrough(ctx, tx, table, id, EnsureVisible)
+}
+
+// VisibleToExisting is VisibleTo that also answers false for an id no row
+// holds, even to a caller whose row scope is every row.
+func VisibleToExisting(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	return visibleThrough(ctx, tx, table, id, EnsureVisibleExisting)
+}
+
+// probeRead notes table's read check and records no refusal, for a caller that
+// answers a missing grant as "withheld" rather than refusing the call.
+func probeRead(ctx context.Context, table string) error {
+	read := Check{Object: table, Actions: []principal.Action{principal.ActionRead}}
+	noteCheck(ctx, read)
+	return probeCheck(ctx, read)
+}
+
+// visibleThrough's "no" is an answer the caller branches on, so its row probe
+// records no refusal either.
+func visibleThrough(ctx context.Context, tx pgx.Tx, table string, id ids.UUID,
+	ensure func(context.Context, pgx.Tx, string, ids.UUID) error,
+) (bool, error) {
+	if err := probeRead(ctx, table); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
-	err := EnsureVisible(ctx, tx, table, id)
+	err := ensure(withoutRecorder(ctx), tx, table, id)
 	switch {
 	case err == nil:
 		return true, nil
@@ -386,38 +366,6 @@ func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool,
 	default:
 		return false, err
 	}
-}
-
-// EnsureVisible applies the row scope to a single-row operation: get,
-// update, archive, advance. Out of scope reads as ErrNotFound — the
-// caller cannot distinguish "not yours" from "not there", by design.
-// Activities scope through their links (the activities module's
-// link-walk clause); pipelines have no owner and are governed by object
-// grants only.
-func EnsureVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	idPos := arg(id)
-
-	clause, err := ScopeClauseFor(ctx, table, "", arg)
-	if err != nil {
-		return err
-	}
-	if clause == "" {
-		return nil
-	}
-
-	var visible bool
-	err = tx.QueryRow(ctx,
-		fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $%d AND %s)`, table, idPos, clause),
-		args...).Scan(&visible)
-	if err != nil {
-		return err
-	}
-	if !visible {
-		return apperrors.ErrNotFound
-	}
-	return nil
 }
 
 // VisibleSubset answers, in ONE statement, which of the given rows of a
@@ -455,7 +403,7 @@ func VisibleSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.UU
 	out := make(map[ids.UUID]bool, len(rowIDs))
 	// No grant on the referenced type: every id is withheld, and the caller
 	// cannot tell that from the rows simply not being there.
-	if err := Require(ctx, table, principal.ActionRead); err != nil {
+	if err := probeRead(ctx, table); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return out, nil
 		}

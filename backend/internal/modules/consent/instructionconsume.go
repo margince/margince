@@ -45,6 +45,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // ExecutionAuthority names why a message was allowed to leave.
@@ -67,6 +68,9 @@ type LiveInstruction struct {
 	// Empty on a decision written before this was recorded, and an absent
 	// fingerprint is nothing to disagree with rather than a mismatch.
 	Acknowledged []byte
+	// GivenByAdmin says an admin gave the exception, so it may answer a refusal
+	// only an admin may (DecisionSet.ExceptionMayAnswer).
+	GivenByAdmin bool
 }
 
 // InstructionStaleError refuses an instruction that no longer describes the
@@ -113,7 +117,7 @@ func (e *InstructionStaleError) FieldFault() (field, code, message string) {
 func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (LiveInstruction, error) {
 	var out LiveInstruction
 	err := tx.QueryRow(ctx, `
-		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording
+		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording, i.given_by_admin
 		  FROM communication_instruction i
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
@@ -122,7 +126,7 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
 		   FOR UPDATE OF i`, intentID).
-		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged)
+		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
 	}
@@ -140,7 +144,6 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 // cannot slip between the two.
 func consumeInstructionTx(
 	ctx context.Context, tx pgx.Tx, inst LiveInstruction, deliveryID ids.UUID, wording [32]byte,
-	withdraw ReviewRouter,
 ) error {
 	// WHAT THE HUMAN ACKNOWLEDGED, read from the INSTRUCTION rather than from
 	// the held row it was given against.
@@ -177,15 +180,14 @@ func consumeInstructionTx(
 	}
 	// THE REVIEW IS FINISHED, because the message it was about has gone.
 	//
-	// Without this the review stays live forever: the rep's queue keeps showing
-	// work that is done, the message can be routed to a decider who would be
-	// asked about a closed matter, and the live-intent index goes on treating a
-	// spent message as one still waiting.
+	// Without this the review stays live forever. The rep's queue keeps showing
+	// work that is done, and the live-intent index treats a spent message as
+	// one still waiting.
 	//
 	// Resolved rather than deleted. The review is what a subject asking "why
 	// did I receive this" is shown beside the decision, and a queue that
 	// emptied itself by forgetting would answer nothing.
-	if err := resolveReviewTx(ctx, tx, inst.ReviewID, withdraw); err != nil {
+	if err := resolveReviewTx(ctx, tx, inst.ReviewID); err != nil {
 		return err
 	}
 	// AUDITED AS AN UPDATE WITH BOTH IMAGES, because that is what it is: the
@@ -245,7 +247,8 @@ func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([
 //
 // THREE ANSWERS, and the caller needs to tell them apart:
 //
-//	(zero, nil)     nothing decided this; the refusal stands as it always did
+//	(zero, nil)     nothing decided this, or the decision does not answer every
+//	                refusal in set; the refusal stands as it always did
 //	(id,   nil)     a named human's decision has been spent on this delivery
 //	(zero, err)     somebody decided and the decision no longer fits the message
 //
@@ -253,7 +256,7 @@ func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([
 // refusal exactly where it was: no suppression lifted, no consent written, the
 // decision rows still reading deny.
 func (g *Gate) AuthorizeDirectedExecutionTx(
-	ctx context.Context, tx pgx.Tx, intentID, deliveryID ids.UUID, wording [32]byte,
+	ctx context.Context, tx pgx.Tx, intentID, deliveryID ids.UUID, wording [32]byte, set commsauthz.DecisionSet,
 ) (ids.UUID, error) {
 	if intentID.IsZero() {
 		// Not a resumed message, so there is no review and no decision. Every
@@ -270,7 +273,12 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 		// it again, which is the right answer.
 		return ids.UUID{}, nil
 	}
-	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording, g.store.reviewRouter); err != nil {
+	// A stop recorded since the decision, or a refusal beyond the authority of
+	// whoever gave it: the decision stays unspent and the refusal stands.
+	if !set.ExceptionMayAnswer(inst.GivenByAdmin) {
+		return ids.UUID{}, nil
+	}
+	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording); err != nil {
 		return ids.UUID{}, err
 	}
 	return inst.ID, nil
@@ -293,15 +301,9 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 // GATED ON THE SAME GRANT AS DIRECTING, because this read exists to serve that
 // act and no other. A seat that may not direct a send has no use for it.
 func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (ids.UUID, error) {
-	// THE SAME DOOR DirectSend USES, not the weaker one beside it.
-	// auth.RequireHuman refuses buyers and agents but ADMITS connectors and the
-	// system principal, and a connector runs with the granting human's own
-	// grants — so it would hold communication_exception:create and could learn
-	// which reviews exist before the stricter check on the write ever ran.
-	//
-	// This read serves directing and nothing else; it answers to the same
-	// human the write does.
-	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
+	// The same door DirectSend uses. A connector holds the granting user's
+	// communication_exception:create and would learn which reviews exist.
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
 		return ids.UUID{}, err
 	}
 	// CREATE here, not read: this lookup exists to serve DIRECTING a send, and
@@ -332,32 +334,15 @@ func (s *Store) HeldMessageForReview(ctx context.Context, reviewID ids.UUID) (id
 // The state and the moment move together, which the row's own shape CHECK
 // requires: a resolved review that named no moment, or a live one that claimed
 // one, would each be a row the database refuses.
-func resolveReviewTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, router ReviewRouter) error {
+func resolveReviewTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID) error {
 	if reviewID.IsZero() {
 		return nil
 	}
-	var routedTo *ids.UUID
-	err := tx.QueryRow(ctx, `
+	if _, err := tx.Exec(ctx, `
 		UPDATE communication_review
 		   SET state = 'resolved', resolved_at = now()
-		 WHERE id = $1 AND resolved_at IS NULL
-		RETURNING approval_id`, reviewID).Scan(&routedTo)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// Already closed. Nothing to retract either: whoever closed it first
-		// took the card with them.
-		return nil
-	}
-	if err != nil {
+		 WHERE id = $1 AND resolved_at IS NULL`, reviewID); err != nil {
 		return fmt.Errorf("consent: closing the review this message answered: %w", err)
 	}
-	// THE CARD GOES WITH IT. A review can be routed and then directed from the
-	// review itself — by the same rep once they are granted the authority, or
-	// by a colleague reading it. The card is then asking about a message that
-	// has already gone, and approving it would put a second decision on the
-	// record for one send.
-	if routedTo == nil || router == nil {
-		return nil
-	}
-	return router.WithdrawCardTx(ctx, tx, *routedTo,
-		"the message this asked about has already been sent")
+	return nil
 }

@@ -64,9 +64,6 @@ to decide, and the call says so:
   what waits and where: **Approvals** in the app.
 - When a human has approved it, send the same request again with the header
   `X-Approval-Token: <approval id>`. The id is in the refusal's message.
-- An update can apply in part. When some fields hold a value a human typed, the call
-  answers `200` with the record and a `staged_approval` member. That member names the
-  fields held back and the approval that holds them. The rest is saved.
 - Call `GET /approvals` to list what waits. Before you tell the user a task is done,
   list it and say what is still waiting. Never say that nothing waits unless you
   listed it in this same task.

@@ -140,20 +140,6 @@ type jobLane interface {
 	StopAndCancel(ctx context.Context) error
 }
 
-// defaultJobDrainWindow is --job-drain-window's default: how long a job caught
-// mid-flight by shutdown gets to finish on its own terms.
-//
-// It is one term of the shutdown budget, and the budget is what an operator
-// sizes the pod's termination grace period against: the drain window, then
-// jobCancelWindow, then the teardown that closes the bus and the pool. Twenty
-// seconds leaves the whole of it inside a thirty-second grace period, which is
-// the common default; a deployment that raises the window raises the grace
-// period with it.
-const defaultJobDrainWindow = 20 * time.Second
-
-// jobDrainWindowEnv backs --job-drain-window with the environment.
-const jobDrainWindowEnv = "MARGINCE_JOB_DRAIN_WINDOW"
-
 // jobCancelWindow bounds the wait AFTER the work contexts are cancelled. Short,
 // because nothing is being given time to finish here — only to notice it was
 // cancelled and return.
@@ -218,7 +204,8 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		ListsEnabled: cfg.listsEnabled,
+		ListsEnabled:  cfg.listsEnabled,
+		DataTasksPace: cfg.dataTasksPace,
 		// Every setting-driven schedule, read once here and kept current by
 		// the watch startJobRunner starts.
 		Schedules: schedules,
@@ -407,12 +394,10 @@ func vatCheckerFor(baseURL string) vatcheck.Checker {
 // geocodes nothing.
 //
 //nolint:ireturn // the PORT is the return type: nil means this deployment geocodes nothing, which a concrete type cannot express.
-func geocoderFor(baseURL string) geocode.Client {
-	if !geocode.Configured(baseURL) {
+func geocoderFor(setting string) geocode.Client {
+	baseURL, on := geocode.Resolve(setting)
+	if !on {
 		return nil
-	}
-	if baseURL == baseURLPublic {
-		return geocode.NewNominatim(geocode.PublicBaseURL, nil)
 	}
 	return geocode.NewNominatim(baseURL, nil)
 }

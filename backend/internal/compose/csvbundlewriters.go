@@ -9,6 +9,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -21,7 +23,8 @@ import (
 // bundleWriters hands each row to the writer of its own type. A single CSV is
 // a bundle of one part, so every run reaches the engine through this.
 type bundleWriters struct {
-	parts map[string]*csvWriters
+	reviewPlan *migration.ReviewPlan
+	parts      map[string]*csvWriters
 	// links is the one resolver every part writer shares, so a row of one
 	// file finds a row of another.
 	links *linkResolver
@@ -88,19 +91,34 @@ func newBundleWriters(
 	if err != nil {
 		return nil, err
 	}
+	zone, err := runInstallationZone(ctx, db)
+	if err != nil {
+		return nil, err
+	}
 	for _, part := range parts {
 		cols, err := readImportColumns(ctx, db, part.Object)
 		if err != nil {
 			return nil, err
 		}
 		w := newCSVWriters(db, runID, part, options, b.links, cols)
-		w.owners, w.tagNames, w.dealStages = b.owners, b.tags, stages
+		w.owners, w.tagNames, w.dealStages, w.zone = b.owners, b.tags, stages, zone
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w
 		}
 	}
 	return b, nil
+}
+
+// runInstallationZone reads the zone that says which date is today for a run.
+func runInstallationZone(ctx context.Context, db *database.DB) (*time.Location, error) {
+	var zone *time.Location
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		zone, err = installationZoneTx(ctx, tx)
+		return err
+	})
+	return zone, err
 }
 
 // runDealStages reads the pipelines a run's deal rows are checked against. An
@@ -166,12 +184,8 @@ func (c *cellCollector) add(object string, row migration.Row) {
 func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy map[string]string) ([]string, []string, error) {
 	c := &cellCollector{seenEmail: map[string]bool{}, firstNamedBy: firstNamedBy}
 	for _, object := range src.Objects() {
-		part, err := partSourceOf(src, object)
-		if err != nil {
-			return nil, nil, err
-		}
 		for offset := 0; ; offset += importPredictPage {
-			rows, err := part.Rows(ctx, object, offset, importPredictPage)
+			rows, err := src.Rows(ctx, object, offset, importPredictPage)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -227,6 +241,9 @@ func (b *bundleWriters) Ensure(ctx context.Context, object string, row migration
 func (b *bundleWriters) Associate(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
 	w, err := b.part(a.FromType)
 	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if err := w.validateReviewedLinks(ctx, a.FromID); err != nil {
 		return migration.AssocResult{}, err
 	}
 	return w.Associate(ctx, a)

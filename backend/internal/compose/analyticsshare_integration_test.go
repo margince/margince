@@ -55,20 +55,18 @@ func (e *forecastEnv) freezeWorkspace(t *testing.T) ids.UUID {
 		if err != nil {
 			return err
 		}
-		deals, _, _, err := ForecastDeals(ctx, tx, period,
+		assembly, err := ForecastAssemble(ctx, tx, period,
 			forecasting.Scope{Kind: forecasting.ScopeWorkspace}, time.Now(), baseCurrency)
 		if err != nil {
 			return err
 		}
-		readings, err := forecasting.Compute(period, period.LocalDay(time.Now()), deals)
-		if err != nil {
-			return err
-		}
-		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
+		snapshot := forecasting.NewSnapshot{
 			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
 			Trigger: forecasting.TriggerCall, BaseCurrency: baseCurrency,
-			Readings: readings, TakenAt: time.Now(),
-		})
+			Readings: assembly.Readings, TakenAt: time.Now(),
+		}
+		snapshot.StampChances(assembly)
+		id, err = store.TakeSnapshot(ctx, tx, snapshot)
 		return err
 	}); err != nil {
 		t.Fatalf("freezing the seeded deals: %v", err)
@@ -223,6 +221,17 @@ func TestASharedSnapshotRecomputesRatherThanServingTheStoredTotal(t *testing.T) 
 	}
 	if whole.Withheld {
 		t.Error("nothing was withheld from a reader who sees every deal, and the answer says otherwise")
+	}
+	var frame shareFrame
+	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(snapshotWriterCtx(e.WS), func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		frame, err = snapshotFrame(ctx, tx, id)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if frame.SelfCorrecting == nil || !*frame.SelfCorrecting {
+		t.Errorf("the frozen share's frame reads self_correcting %v, want the snapshot's true", frame.SelfCorrecting)
 	}
 
 	// A rep on one team reads THEIR team's half, not the whole frozen state.
@@ -508,7 +517,7 @@ func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
 
 func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	rows := []SharedContribution{{DealName: "=cmd|' /c calc'!A1", Currency: "EUR"}}
-	body, err := shareRowsCSV(rows)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,9 +528,23 @@ func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	}
 }
 
+func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
+	on := true
+	drawn := forecasting.Range{LowMinor: 1200, HighMinor: 3400, Runs: 8}
+	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited") ||
+		!strings.HasSuffix(lines[1], ",true,,1200,3400,false") {
+		t.Errorf("the export does not carry the snapshot's self_correcting and the reader's range:\n%s", body)
+	}
+}
+
 func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 	rows := []SharedContribution{{DealName: "Unpriced", ExclusionReason: "unpriced"}}
-	body, err := shareRowsCSV(rows)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -817,6 +840,43 @@ func (e *forecastEnv) writableScope(
 // an aggregate under a per-recipient FILTER that never loads them. So the two
 // are asserted EQUAL here, which fails whichever of them drifts, rather than
 // pinning constants that would stay green while they parted company.
+func TestASharedSnapshotSplitsByProbabilitySourceAndKeepsItsThreshold(t *testing.T) {
+	const priced = 100_000
+	e := setupForecast(t)
+	e.seedDealClosingWithin(t, "Follows its stage", &e.Rep1, priced)
+	e.seedDealClosingWithin(t, "Set by hand", &e.Rep1, priced)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE deal
+		SET win_probability_override = 30, win_probability_set_by = 'human'
+		WHERE name = 'Set by hand'`); err != nil {
+		t.Fatal(err)
+	}
+
+	id := e.freezeWorkspace(t)
+	shared := e.readShared(snapshotWriterCtx(e.WS), t, id).Readings
+
+	var stored int
+	if err := e.Pool.QueryRow(context.Background(),
+		`SELECT likely_threshold FROM forecast_snapshot WHERE id = $1`, id).Scan(&stored); err != nil {
+		t.Fatal(err)
+	}
+	if stored == 0 || shared.LikelyThreshold != stored {
+		t.Errorf("the shared snapshot reads threshold %d, want the %d it was frozen under", shared.LikelyThreshold, stored)
+	}
+	human := shared.BySource[forecasting.SourceHuman]
+	if human.OpenMinor != priced {
+		t.Errorf("the hand-set deal sums %d open, want %d", human.OpenMinor, priced)
+	}
+	var open, weighted int64
+	for _, total := range shared.BySource {
+		open += total.OpenMinor
+		weighted += total.WeightedMinor
+	}
+	if open != shared.OpenMinor || weighted != shared.WeightedMinor {
+		t.Errorf("by-source totals sum to %d open and %d weighted, want the snapshot's %d and %d",
+			open, weighted, shared.OpenMinor, shared.WeightedMinor)
+	}
+}
+
 func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
 	const priced = 100_000
 	e := setupForecast(t)

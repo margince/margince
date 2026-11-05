@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/programsettings"
 )
 
 func TestRetrieveRefusesWhatCannotRun(t *testing.T) {
@@ -58,8 +59,8 @@ func TestRetrieveAcceptsTheShortQuestionForm(t *testing.T) {
 	if cfg.floor != nil {
 		t.Errorf("floor = %v, want unset — a retrieval run at another floor is not the one production runs", *cfg.floor)
 	}
-	if cfg.workDir != workDirDefault {
-		t.Errorf("work dir = %q, want the gitignored default %q", cfg.workDir, workDirDefault)
+	if cfg.workDir != programsettings.DefaultAITaskDir {
+		t.Errorf("work dir = %q, want the gitignored default %q", cfg.workDir, programsettings.DefaultAITaskDir)
 	}
 }
 
@@ -216,7 +217,7 @@ func TestRetrieveStopsBeforeSpendingWhenTheRunCannotBeMade(t *testing.T) {
 		{
 			name: "a log level nothing can be reported at",
 			args: []string{"-q", "how can I create a project", "--model", "fake:fake-embed", "--log-level", "chatty"},
-			want: "chatty",
+			want: "--log-level",
 		},
 		{
 			name: "a page this build does not ship",

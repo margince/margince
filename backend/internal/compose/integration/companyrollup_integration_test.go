@@ -209,7 +209,7 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 	seedRollupCompanyActivity(t, e, childA, now.Add(-40*24*time.Hour)) // outside the 30d window
 	seedRollupCompanyActivity(t, e, root, now.Add(24*time.Hour))       // future-dated: never counts
 
-	tree, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", fixedClock(now))
+	tree, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", compose.CompanyRollupPeriod{}, fixedClock(now))
 	if err != nil {
 		t.Fatalf("tree rollup: %v", err)
 	}
@@ -217,8 +217,8 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 	if tree.WeightedPipelineMinor != 70_000 {
 		t.Errorf("tree weighted = %d, want 70000", tree.WeightedPipelineMinor)
 	}
-	if tree.ClosedWonMinor != 30_000 {
-		t.Errorf("tree closed-won = %d, want 30000", tree.ClosedWonMinor)
+	if tree.ClosedWonMinor == nil || *tree.ClosedWonMinor != 30_000 {
+		t.Errorf("tree closed-won = %v, want 30000", tree.ClosedWonMinor)
 	}
 	if tree.ActivityCount30d != 2 {
 		t.Errorf("tree activity count = %d, want 2 (the 40-day-old touch and the future-dated one are both out of window)", tree.ActivityCount30d)
@@ -240,24 +240,26 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 	var sumWeighted, sumWon int64
 	var sumActivity, sumNodes int
 	for _, node := range []ids.UUID{root, childA, childB, grandchild} {
-		self, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, node, "self", fixedClock(now))
+		self, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, node, "self", compose.CompanyRollupPeriod{}, fixedClock(now))
 		if err != nil {
 			t.Fatalf("self rollup of %v: %v", node, err)
 		}
 		if self.AggregatedAccountCount != 1 {
 			t.Errorf("self count of %v = %d, want 1", node, self.AggregatedAccountCount)
 		}
-		if node == childB && (self.WeightedPipelineMinor != 0 || self.ClosedWonMinor != 0 || self.ActivityCount30d != 0) {
+		if node == childB && (self.WeightedPipelineMinor != 0 || self.ClosedWonMinor == nil || *self.ClosedWonMinor != 0 || self.ActivityCount30d != 0) {
 			t.Errorf("empty sibling self = %+v, want real zeros", self)
 		}
 		sumWeighted += self.WeightedPipelineMinor
-		sumWon += self.ClosedWonMinor
+		if self.ClosedWonMinor != nil {
+			sumWon += *self.ClosedWonMinor
+		}
 		sumActivity += self.ActivityCount30d
 		sumNodes += self.AggregatedAccountCount
 	}
-	if sumWeighted != tree.WeightedPipelineMinor || sumWon != tree.ClosedWonMinor ||
+	if sumWeighted != tree.WeightedPipelineMinor || tree.ClosedWonMinor == nil || sumWon != *tree.ClosedWonMinor ||
 		sumActivity != tree.ActivityCount30d || sumNodes != tree.AggregatedAccountCount {
-		t.Errorf("Σ(self) = {%d %d %d %d}, want the tree totals {%d %d %d %d}",
+		t.Errorf("Σ(self) = {%d %d %d %d}, want the tree totals {%d %v %d %d}",
 			sumWeighted, sumWon, sumActivity, sumNodes,
 			tree.WeightedPipelineMinor, tree.ClosedWonMinor, tree.ActivityCount30d, tree.AggregatedAccountCount)
 	}
@@ -282,7 +284,7 @@ func TestCompanyRollupRestrictedNodeDisclosedAndGrantRestores(t *testing.T) {
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, rollupCompanyReadPerms(principal.RowScopeOwn))
-	pre, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "tree", time.Now)
+	pre, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "tree", compose.CompanyRollupPeriod{}, time.Now)
 	if err != nil {
 		t.Fatalf("pre-grant rollup: %v", err)
 	}
@@ -301,7 +303,7 @@ func TestCompanyRollupRestrictedNodeDisclosedAndGrantRestores(t *testing.T) {
 	e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
 		VALUES ('company', $1, 'user', $2, 'read', $2)`, child, e.Rep1)
 
-	post, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "tree", time.Now)
+	post, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "tree", compose.CompanyRollupPeriod{}, time.Now)
 	if err != nil {
 		t.Fatalf("post-grant rollup: %v", err)
 	}
@@ -328,7 +330,7 @@ func TestCompanyRollupWeightedPipelineSurvivesStageArchival(t *testing.T) {
 	seedRollupOpenDeal(t, e, st, root, new(int64(10_000)), new("EUR"))
 	e.WsExec(t, `UPDATE stage SET archived_at = now() WHERE id = $1`, st.open)
 
-	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", time.Now)
+	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", compose.CompanyRollupPeriod{}, time.Now)
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
@@ -347,7 +349,7 @@ func TestCompanyRollupFXRateUnavailableFailsWholeRead(t *testing.T) {
 	seedRollupOpenDeal(t, e, st, root, new(int64(100_000)), new("EUR"))
 	seedRollupOpenDeal(t, e, st, root, new(int64(10_000)), new("USD")) // no USD→EUR rate seeded
 
-	_, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", time.Now)
+	_, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", compose.CompanyRollupPeriod{}, time.Now)
 	var fxErr *compose.FXRateUnavailableError
 	if !errors.As(err, &fxErr) {
 		t.Fatalf("err = %v, want a typed FX-rate-unavailable failure", err)
@@ -379,12 +381,12 @@ func TestCompanyRollupClosedWonQuarterWindow(t *testing.T) {
 	// quarter spans at most 92 days), whatever asOf itself resolves to.
 	seedRollupWonDeal(t, e, st, root, 99_999, "USD", "1.0", asOf.AddDate(0, 0, -100))
 
-	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", fixedClock(asOf))
+	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, root, "tree", compose.CompanyRollupPeriod{}, fixedClock(asOf))
 	if err != nil {
 		t.Fatalf("rollup: %v", err)
 	}
-	if res.ClosedWonMinor != 5_000 {
-		t.Errorf("closed-won = %d, want 5000 (in-quarter deal at its frozen 0.5 rate only)", res.ClosedWonMinor)
+	if res.ClosedWonMinor == nil || *res.ClosedWonMinor != 5_000 {
+		t.Errorf("closed-won = %v, want 5000 (in-quarter deal at its frozen 0.5 rate only)", res.ClosedWonMinor)
 	}
 	if res.WeightedPipelineMinor != 0 {
 		t.Errorf("weighted = %d, want 0 (won deals never re-enter the pipeline sum)", res.WeightedPipelineMinor)
@@ -403,20 +405,20 @@ func TestCompanyRollupRootGates(t *testing.T) {
 	// Nonexistent root, unbounded admin: the tree walk itself must
 	// answer not-found (the visibility gate has nothing to probe for an
 	// unbounded caller).
-	if _, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, ids.NewV7(), "tree", time.Now); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, ids.NewV7(), "tree", compose.CompanyRollupPeriod{}, time.Now); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("nonexistent root: err = %v, want not found", err)
 	}
 
 	// Rep3 captured the root privately, so Rep1 cannot read it — out of
 	// scope reads as not-there, never as an empty rollup.
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, rollupCompanyReadPerms(principal.RowScopeTeam))
-	if _, err := compose.CompanyHierarchyRollup(rep, e.Pool, foreign, "tree", time.Now); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := compose.CompanyHierarchyRollup(rep, e.Pool, foreign, "tree", compose.CompanyRollupPeriod{}, time.Now); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("out-of-scope root: err = %v, want not found", err)
 	}
 
 	// RepPerms grants contact/deal/pipeline but not company: 403.
 	noPerm := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if _, err := compose.CompanyHierarchyRollup(noPerm, e.Pool, foreign, "tree", time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := compose.CompanyHierarchyRollup(noPerm, e.Pool, foreign, "tree", compose.CompanyRollupPeriod{}, time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("no company:read: err = %v, want permission denied", err)
 	}
 
@@ -442,7 +444,7 @@ func TestCompanyRollupRootGates(t *testing.T) {
 		},
 	} {
 		caller := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
-		if _, err := compose.CompanyHierarchyRollup(caller, e.Pool, foreign, "tree", time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		if _, err := compose.CompanyHierarchyRollup(caller, e.Pool, foreign, "tree", compose.CompanyRollupPeriod{}, time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("missing %s:read: err = %v, want permission denied", missing, err)
 		}
 	}
@@ -450,12 +452,12 @@ func TestCompanyRollupRootGates(t *testing.T) {
 	// Permission refusal precedes input validation: a caller without
 	// company:read gets 403 even for a scope outside the vocabulary
 	// — the bogus scope must never be judged before the grant is.
-	if _, err := compose.CompanyHierarchyRollup(noPerm, e.Pool, foreign, "subtree", time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := compose.CompanyHierarchyRollup(noPerm, e.Pool, foreign, "subtree", compose.CompanyRollupPeriod{}, time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("no company:read + bogus scope: err = %v, want permission denied", err)
 	}
 
 	// A scope outside {tree, self} is a refused input, not a default.
-	if _, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, foreign, "subtree", time.Now); err == nil {
+	if _, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, foreign, "subtree", compose.CompanyRollupPeriod{}, time.Now); err == nil {
 		t.Error("invalid scope accepted — must be refused")
 	}
 }
@@ -472,7 +474,7 @@ func TestCompanyRollupSelfScopeSkipsPruning(t *testing.T) {
 	seedRollupOpenDeal(t, e, st, child, new(int64(50_000)), new("EUR"))
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, rollupCompanyReadPerms(principal.RowScopeOwn))
-	res, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "self", time.Now)
+	res, err := compose.CompanyHierarchyRollup(rep, e.Pool, root, "self", compose.CompanyRollupPeriod{}, time.Now)
 	if err != nil {
 		t.Fatalf("self rollup: %v", err)
 	}
@@ -507,7 +509,7 @@ func TestCompanyRollupCounts30dActivityThroughEveryLinkTheTimelineWalks(t *testi
 	seedRollupDealLinkedActivity(t, e, st, company, now.AddDate(0, 0, -40))
 	seedRollupContactLinkedActivity(t, e, company, now.Add(24*time.Hour))
 
-	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, company, "self", fixedClock(now))
+	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, company, "self", compose.CompanyRollupPeriod{}, fixedClock(now))
 	if err != nil {
 		t.Fatalf("self rollup: %v", err)
 	}
@@ -538,7 +540,7 @@ func TestCompanyRollupCountsAnActivityReachingTheTreeTwiceOnlyOnce(t *testing.T)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id)
 		VALUES ($1, 'deal', $2)`, activityID, dealID)
 
-	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, company, "self", fixedClock(now))
+	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, company, "self", compose.CompanyRollupPeriod{}, fixedClock(now))
 	if err != nil {
 		t.Fatalf("self rollup: %v", err)
 	}

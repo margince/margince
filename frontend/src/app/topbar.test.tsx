@@ -14,14 +14,17 @@ import {
 import { en } from "../i18n/en";
 import { parseHash, type Route } from "../lib/router";
 import { LIVE_ID, liveList } from "../testing/lists.fixtures";
-import type { NavSection } from "./nav";
 import {
   fixtureSection,
   ignoreSearch,
   newClient,
   render,
   renderWith,
-} from "./testing/shellharness";
+  repSeeing,
+  stubPhoneViewport,
+  TWO_MARKS,
+} from "../testing/shellharness";
+import type { NavSection } from "./nav";
 import { TopBar } from "./topbar";
 
 // The sticky strip above every railed page: what is true of the SESSION rather
@@ -168,6 +171,59 @@ describe("Top bar search (AC-shell-7)", () => {
   });
 });
 
+// The page heading under the bar names the page, so a phone's bar spends the
+// trail's room on the company's mark instead.
+describe("Top bar at phone width", () => {
+  it("leads home from the company's mark in place of the trail", () => {
+    stubPhoneViewport();
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
+    renderWith(
+      client,
+      <TopBar
+        route={{ screen: "deals" }}
+        collapsed={false}
+        onOpenSearch={ignoreSearch}
+      />,
+    );
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    const home = screen.getByRole("link", {
+      name: "Demo GmbH home, powered by Margince",
+    });
+    expect(home.getAttribute("href")).toBe("/#/home");
+    expect(
+      home.querySelector(".ws-chip-company img")?.getAttribute("src"),
+    ).toBe(TWO_MARKS.logo_icon_url);
+  });
+
+  it("reads no record name for the trail it does not draw", async () => {
+    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
+      fetch.mock.calls.filter(([request]) =>
+        String(request instanceof Request ? request.url : request).includes(
+          "/deals/d-1",
+        ),
+      );
+    const wideFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", wideFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
+    cleanup();
+
+    stubPhoneViewport();
+    const phoneFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", phoneFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(phoneFetch).toHaveBeenCalled());
+    expect(recordReads(phoneFetch)).toEqual([]);
+  });
+
+  it("keeps the trail and no mark on a wide screen", () => {
+    renderTopBar({ screen: "deals" });
+    expect(trail()).toBeTruthy();
+    expect(document.querySelector(".topbar .ws-chip")).toBeNull();
+  });
+});
+
 // The sidebar's own control, moved out of the sidebar: a panel that can collapse
 // to 56px cannot hold the affordance that brings it back at a width where its
 // labels are gone.
@@ -234,7 +290,7 @@ describe("Top bar trail", () => {
 
     expect(stopTexts()).toEqual(["Contacts", "Anna Weber"]);
     const back = within(trail()).getByRole("link", { name: "Contacts" });
-    expect(back.getAttribute("href")).toBe("#/contacts");
+    expect(back.getAttribute("href")).toBe("/#/contacts");
     // The record itself is the page: not a link, and the one current claim.
     const stops = within(trail()).getAllByRole("listitem");
     const last = stops[stops.length - 1];
@@ -269,7 +325,7 @@ describe("Top bar trail", () => {
       within(trail())
         .getByRole("link", { name: "Settings" })
         .getAttribute("href"),
-    ).toBe("#/settings");
+    ).toBe("/#/settings");
     expect(within(trail()).queryByRole("link", { name: "Account" })).toBeNull();
   });
 
@@ -297,7 +353,7 @@ describe("Top bar trail", () => {
       within(trail())
         .getByRole("link", { name: "Settings" })
         .getAttribute("href"),
-    ).toBe("#/settings");
+    ).toBe("/#/settings");
   });
 
   // AC-shell-1k: every route resolves to real copy. A hash nobody answers used
@@ -373,7 +429,7 @@ describe("Top bar trail below Filters and views", () => {
       within(trail())
         .getByRole("link", { name: "Filters and views" })
         .getAttribute("href"),
-    ).toBe("#/filters");
+    ).toBe("/#/filters");
   });
 
   it("names an opened view once the page has read it, with one read between them", async () => {
@@ -421,7 +477,7 @@ describe("Top bar trail below Filters and views", () => {
       within(trail())
         .getByRole("link", { name: liveList.name })
         .getAttribute("href"),
-    ).toBe(`#/lists/${LIVE_ID}`);
+    ).toBe(`/#/lists/${LIVE_ID}`);
     expect(reads(seen, `/lists/${LIVE_ID}`)).toHaveLength(1);
   });
 

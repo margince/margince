@@ -32,3 +32,66 @@ func TestARowTheReaderMayNotChangeOffersNoVerbThatWrites(t *testing.T) {
 		}
 	}
 }
+
+func TestOnlyATaskNobodyHoldsThatTheReaderMayChangeOffersTake(t *testing.T) {
+	asOf := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	holder := ids.NewV7()
+	for name, tc := range map[string]struct {
+		task Task
+		take bool
+	}{
+		"nobody holds it and they may change it": {Task{ID: ids.NewV7()}, true},
+		"nobody holds it and they may only read": {Task{ID: ids.NewV7(), ReadOnly: true}, false},
+		"a colleague holds it":                   {Task{ID: ids.NewV7(), AssigneeID: &holder}, false},
+	} {
+		item := taskItem(tc.task, asOf, asOf, time.UTC)
+		if got := slices.Contains(item.Actions, crmcontracts.AttentionItemActionsTake); got != tc.take {
+			t.Errorf("%s: offers take = %v, want %v (actions %v)", name, got, tc.take, item.Actions)
+		}
+	}
+}
+
+// The Worklist gates Reassign on `complete`, because a task carries it only
+// when the reader may change it. The client has no other writability signal
+// on a row, so this tie must not come apart.
+func TestATaskCarriesCompleteExactlyWhenTheReaderMayChangeIt(t *testing.T) {
+	holder := ids.NewV7()
+	for name, tc := range map[string]struct {
+		task     Task
+		complete bool
+	}{
+		"unheld and changeable": {Task{ID: ids.NewV7()}, true},
+		"held and changeable":   {Task{ID: ids.NewV7(), AssigneeID: &holder}, true},
+		"unheld and read-only":  {Task{ID: ids.NewV7(), ReadOnly: true}, false},
+		"held and read-only":    {Task{ID: ids.NewV7(), AssigneeID: &holder, ReadOnly: true}, false},
+	} {
+		if got := slices.Contains(taskActions(tc.task), crmcontracts.AttentionItemActionsComplete); got != tc.complete {
+			t.Errorf("%s: carries complete = %v, want %v", name, got, tc.complete)
+		}
+	}
+}
+
+// Decide and cancel both PATCH the meeting, so a reader who may only read it is
+// offered neither. The row says why rather than standing empty.
+func TestAMeetingTheReaderMayNotChangeOffersNoAnswer(t *testing.T) {
+	asOf := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	for name, tc := range map[string]struct {
+		meeting MeetingAwaitingOutcome
+		answers bool
+	}{
+		"a meeting they may change":    {MeetingAwaitingOutcome{ID: ids.NewV7(), Subject: "Discovery call"}, true},
+		"a meeting they may only read": {MeetingAwaitingOutcome{ID: ids.NewV7(), Subject: "Discovery call", ReadOnly: true}, false},
+	} {
+		item := meetingAwaitingOutcomeItem(tc.meeting)
+		for _, verb := range []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActionsDecide, crmcontracts.AttentionItemActionsCancel} {
+			if got := slices.Contains(item.Actions, verb); got != tc.answers {
+				t.Errorf("%s: offers %s = %v, want %v (actions %v)", name, verb, got, tc.answers, item.Actions)
+			}
+		}
+		row := classifyUnansweredMeeting(item, asOf).item
+		says := slices.ContainsFunc(row.Because, func(r crmcontracts.WorklistReason) bool { return r.Kind == "read_only" })
+		if says == tc.answers {
+			t.Errorf("%s: says read_only = %v, want %v", name, says, !tc.answers)
+		}
+	}
+}

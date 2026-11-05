@@ -17,6 +17,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 )
 
 // frozenRateTables are every table holding an `fx_rate_to_base` — the column
@@ -43,19 +45,19 @@ import (
 // quietly widening the hole.
 var frozenRateTables = []string{"deal", "offer", "finance_invoice", "contract", "commission_entry"}
 
-// BaseCurrencyFreeze binds the probe to the settings key that HOLDS the base
+// BaseCurrencyLock binds the probe to the settings key that holds the base
 // currency. The key is injected rather than spelled here because deals may not
 // import the module that owns the entry (ADR-0054), and a literal copy would
 // go on pointing at the old name the day that entry is renamed — silently
 // answering "nothing is priced" for a setting that no longer exists.
-func BaseCurrencyFreeze(settingKey string) func(context.Context, pgx.Tx) (bool, string, error) {
-	return func(ctx context.Context, tx pgx.Tx) (bool, string, error) {
-		return baseCurrencyFrozen(ctx, tx, settingKey)
+func BaseCurrencyLock(settingKey string) func(context.Context, pgx.Tx) (currencylock.Lock, bool, error) {
+	return func(ctx context.Context, tx pgx.Tx) (currencylock.Lock, bool, error) {
+		return lockFacts(ctx, tx, settingKey)
 	}
 }
 
-// baseCurrencyFrozen reports whether the installation's base currency has
-// stopped being changeable, and says why.
+// lockFacts reports whether the installation's base currency has
+// stopped being changeable, and the facts of why.
 //
 // TWO THINGS STOP IT, and they differ in whether anyone can undo them.
 //
@@ -73,27 +75,22 @@ func BaseCurrencyFreeze(settingKey string) func(context.Context, pgx.Tx) (bool, 
 //
 // Runs inside the caller's write transaction, so the answer cannot go stale
 // between the check and the write it guards.
-func baseCurrencyFrozen(ctx context.Context, tx pgx.Tx, settingKey string) (bool, string, error) {
+func lockFacts(ctx context.Context, tx pgx.Tx, settingKey string) (currencylock.Lock, bool, error) {
 	converted, err := frozenRateCount(ctx, tx)
 	if err != nil {
-		return false, "", err
+		return currencylock.Lock{}, false, err
 	}
 	if converted > 0 {
-		return true, fmt.Sprintf(
-			"%d record(s) — closed deals and sent offers — have already frozen a conversion rate "+
-				"against it, so changing the base would re-mean every roll-up built on them",
-			converted), nil
+		return currencylock.Lock{Reason: currencylock.RatesFrozen, Count: converted}, true, nil
 	}
 	priced, base, err := ratesPricedAgainstBase(ctx, tx, settingKey)
 	if err != nil {
-		return false, "", err
+		return currencylock.Lock{}, false, err
 	}
 	if priced > 0 {
-		return true, fmt.Sprintf(
-			"%d rate(s) in the sheet convert into %s and cannot be restated against another base; "+
-				"clear the rate sheet first", priced, base), nil
+		return currencylock.Lock{Reason: currencylock.RateSheet, Count: priced, BaseCurrency: base}, true, nil
 	}
-	return false, "", nil
+	return currencylock.Lock{}, false, nil
 }
 
 // frozenRateCount counts the records whose worth is already expressed against
@@ -115,7 +112,7 @@ func frozenRateCount(ctx context.Context, tx pgx.Tx) (int, error) {
 
 // ratesPricedAgainstBase counts the sheet rows converting into the base the
 // installation currently holds, and returns that base so the reason can name
-// it.
+// it. The base is "" when no setting row holds one.
 //
 // It reads the setting row directly rather than through platform/settings
 // because it runs INSIDE the settings write's own transaction, before the new
@@ -144,7 +141,7 @@ func ratesPricedAgainstBase(ctx context.Context, tx pgx.Tx, settingKey string) (
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM fx_rate`).Scan(&priced); err != nil {
 			return 0, "", fmt.Errorf("counting rates on the sheet: %w", err)
 		}
-		return priced, "the base it was set to", nil
+		return priced, "", nil
 	}
 	var priced int
 	if err := tx.QueryRow(ctx,

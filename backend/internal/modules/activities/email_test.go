@@ -169,7 +169,7 @@ func TestMintMessageIDIsUnbracketedAndFreshPerMessage(t *testing.T) {
 // rendering the merged list as To: would copy every cc'd contact twice and
 // expose both lists as primary recipients.
 func TestDeliveryToRecipientsExcludeTheCcAddresses(t *testing.T) {
-	to := toRecipients(
+	to := ToRecipients(
 		[]string{"buyer@example.test", "boss@example.test", "Watcher@Example.test"},
 		[]string{"boss@example.test", "watcher@example.test "},
 		nil,
@@ -183,7 +183,7 @@ func TestDeliveryToRecipientsExcludeTheCcAddresses(t *testing.T) {
 // recipient reads it the moment the message arrives, which is the single
 // failure this feature exists to prevent.
 func TestDeliveryToRecipientsExcludeTheBccAddresses(t *testing.T) {
-	to := toRecipients(
+	to := ToRecipients(
 		[]string{"buyer@example.test", "quiet@example.test", "Watcher@Example.test"},
 		[]string{"watcher@example.test"},
 		[]string{"Quiet@Example.test "},
@@ -199,7 +199,7 @@ func TestDeliveryToRecipientsExcludeTheBccAddresses(t *testing.T) {
 // pins is the derivation — the To line is empty when every address is blind,
 // which is what makes refuseUnsendable's check catch that shape.
 func TestABccOnlySendHasNoVisibleAddressee(t *testing.T) {
-	to := toRecipients(
+	to := ToRecipients(
 		[]string{"one@example.test", "two@example.test"},
 		nil,
 		[]string{"one@example.test", "two@example.test"},
@@ -251,14 +251,14 @@ func TestTheFloorGreetsTheRecipientOrNobody(t *testing.T) {
 		Body:      "Hallo, ich wollte kurz nachfragen, ob das Angebot so passt und wann wir sprechen koennen.",
 		Threaded:  true,
 	}
-	_, body := DeterministicEmailDraft(named, "")
+	_, body := DeterministicEmailDraft(named)
 	if !strings.HasPrefix(body, "Hallo Marek,") {
 		t.Errorf("a known recipient should be greeted by name, got %q", firstLineOf(body))
 	}
 
 	anonymous := named
 	anonymous.Recipient = ""
-	_, body = DeterministicEmailDraft(anonymous, "")
+	_, body = DeterministicEmailDraft(anonymous)
 	if strings.Contains(firstLineOf(body), "Marek") {
 		t.Errorf("with no recipient the greeting must name nobody, got %q", firstLineOf(body))
 	}

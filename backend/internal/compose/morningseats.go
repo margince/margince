@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // morningSeatSQL is who has a morning: a live human full seat, aliased `u`.
@@ -101,7 +102,13 @@ func seatContext(
 	if err != nil {
 		return nil, false, fmt.Errorf("resolving the colleague's authority: %w", err)
 	}
-	bound := principal.WithActor(ctx, principal.Principal{
+	return principal.WithCorrelationID(boundToSeat(ctx, userID, rbac, seat), ids.NewV7()), true, nil
+}
+
+// boundToSeat binds the colleague's own authority, as read from the database, as
+// the actor of ctx.
+func boundToSeat(ctx context.Context, userID ids.UUID, rbac authz.RBAC, seat principal.SeatType) context.Context {
+	return principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + userID.String(),
 		UserID:      userID,
@@ -109,5 +116,4 @@ func seatContext(
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
 	})
-	return principal.WithCorrelationID(bound, ids.NewV7()), true, nil
 }

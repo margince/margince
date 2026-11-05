@@ -101,10 +101,11 @@ type Names interface {
 // was hidden from their account when nothing of the kind is true — the
 // same lie face() (render.go) refuses for a merge card's sides.
 func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Attention) error {
+	defer timeStage(ctx, "subject_labels")()
 	var subjects []*crmcontracts.AttentionSubject
 	for _, lane := range everyItemLane(out) {
 		for i := range *lane {
-			subjects = append(subjects, (*lane)[i].Subject)
+			subjects = append(subjects, (*lane)[i].Subject, (*lane)[i].SourceRecord)
 		}
 	}
 	return s.labelSubjects(ctx, subjects)

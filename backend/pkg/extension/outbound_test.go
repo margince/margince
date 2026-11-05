@@ -155,3 +155,115 @@ func TestTheGuardedTransportRoutesThroughNoProxy(t *testing.T) {
 		t.Skip("the stdlib default carries no proxy in this build, so nothing was inherited to drop")
 	}
 }
+
+// admitLoopbackForTest binds the development posture for one test and restores
+// production after it, so no other test inherits it.
+func admitLoopbackForTest(t *testing.T) {
+	t.Helper()
+	BindEgress(Egress{AdmitLoopback: true})
+	t.Cleanup(func() { BindEgress(Egress{}) })
+}
+
+// Under the development posture a unit reaches a provider stand-in on the
+// developer's own machine, through the same client it ships with.
+func TestUnderTheDevelopmentPostureTheOutboundClientReachesLoopback(t *testing.T) {
+	admitLoopbackForTest(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusTeapot)
+	}))
+	defer server.Close()
+
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := OutboundClient().Do(request)
+	if err != nil {
+		t.Fatalf("the development posture still refused loopback: %v", err)
+	}
+	if err := response.Body.Close(); err != nil {
+		t.Errorf("closing the body: %v", err)
+	}
+	if response.StatusCode != http.StatusTeapot {
+		t.Errorf("status = %d, want the stand-in's %d", response.StatusCode, http.StatusTeapot)
+	}
+}
+
+// Loopback is the whole carve-out: the private ranges a developer's network
+// holds, and every other reserved range, stay refused.
+func TestUnderTheDevelopmentPostureOnlyLoopbackIsAdmitted(t *testing.T) {
+	dial := egressControl(true)
+	for address, admitted := range map[string]bool{
+		"127.0.0.1":        true,
+		"127.8.8.8":        true,
+		"::1":              true,
+		"::ffff:127.0.0.1": true,
+		"93.184.216.34":    true,
+		"10.0.0.5":         false,
+		"192.168.1.10":     false,
+		"172.16.4.4":       false,
+		"169.254.169.254":  false,
+		"0.0.0.0":          false,
+		"100.64.0.1":       false,
+		"fe80::1":          false,
+		"2002:7f00:1::1":   false,
+	} {
+		err := dial("tcp", net.JoinHostPort(address, "443"), nil)
+		if admitted && err != nil {
+			t.Errorf("%s was refused under the development posture: %v", address, err)
+		}
+		if !admitted && err == nil {
+			t.Errorf("%s was admitted under the development posture, and only loopback may be", address)
+		}
+	}
+	if err := dial("tcp", "localhost:443", nil); err == nil {
+		t.Error("a name reached the dial check unresolved and was admitted")
+	}
+}
+
+// Production is the default. A client built under it keeps refusing loopback
+// when the posture is bound later, because a transport keeps its dial check.
+func TestOutsideTheDevelopmentPostureLoopbackStaysRefused(t *testing.T) {
+	if err := egressControl(false)("tcp", "127.0.0.1:443", nil); err == nil {
+		t.Error("loopback was admitted outside the development posture")
+	}
+	built := OutboundClient()
+	admitLoopbackForTest(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	defer server.Close()
+	request, err := http.NewRequestWithContext(context.Background(), http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := built.Do(request)
+	if err == nil {
+		if closeErr := response.Body.Close(); closeErr != nil {
+			t.Errorf("closing the body: %v", closeErr)
+		}
+		t.Error("a client built under production reached loopback once the posture changed")
+	}
+}
+
+// A request a unit builds here carries the name the core bound. Before any
+// binding it carries none, never a name made up here.
+func TestNewRequestNamesTheInstallation(t *testing.T) {
+	t.Cleanup(func() { BindEgress(Egress{}) })
+	unbound, err := NewRequest(context.Background(), http.MethodGet, "https://provider.example.test/v1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if agent := unbound.Header.Get("User-Agent"); agent != "" {
+		t.Errorf("an unbound request names itself %q", agent)
+	}
+	BindEgress(Egress{UserAgent: "margince-extension/9.9"})
+	named, err := NewRequest(context.Background(), http.MethodPost, "https://provider.example.test/v1", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if agent := named.Header.Get("User-Agent"); agent != "margince-extension/9.9" {
+		t.Errorf("User-Agent = %q, want the bound name", agent)
+	}
+	if named.Method != http.MethodPost || named.Context() == nil {
+		t.Errorf("request = %s, want the POST it was asked for", named.Method)
+	}
+}

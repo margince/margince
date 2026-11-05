@@ -5,11 +5,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -22,24 +24,33 @@ import (
 // promoteTargetMovedError.
 func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, by string, active []fieldcatalog.Column, candidate ids.ContactID) (PromoteOutcome, error) {
 	var out PromoteOutcome
-	// Consent's stop locks come before any row, for the reason
-	// mergeContactTx gives. A zero candidate names no contact subject.
-	subjects := []commsauthz.StopSubject{commsauthz.LeadStopSubject(id)}
-	if !candidate.IsZero() {
-		subjects = append(subjects, commsauthz.ContactStopSubject(candidate))
+	// The evidence lock and the evidence check judge its age at one instant.
+	ctx = withPinnedSLANow(ctx, slaNow(ctx))
+	lockedEvidence, err := lockEvidenceActivity(ctx, tx, id, in)
+	if err != nil {
+		return PromoteOutcome{}, err
 	}
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+	company, err := leadLinkedCompany(ctx, tx, id)
+	if err != nil {
 		return PromoteOutcome{}, err
 	}
 	// The lead lock comes before the promotability read. Two promotes of one
 	// lead serialize here, and the loser reads status=promoted and answers 409.
-	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id); err != nil {
-		return PromoteOutcome{}, err
-	}
-	lead, err := promotableLead(ctx, tx, id, in)
+	lanes, err := s.lockLeadForContact(ctx, tx, id, candidate, company)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
+	if err := refuseMovedCompany(ctx, tx, id, company); err != nil {
+		return PromoteOutcome{}, err
+	}
+	lead, evidence, err := promotableLead(ctx, tx, id, in)
+	if err != nil {
+		return PromoteOutcome{}, err
+	}
+	if err := holdEvidenceLink(ctx, tx, id, in, lockedEvidence, evidence); err != nil {
+		return PromoteOutcome{}, err
+	}
+	in.EvidenceActivityID = evidence
 	// Under the lock, against the row this transaction will write. An
 	// agent's released approval was granted against a version, and
 	// redemption verified it in a transaction that has since committed —
@@ -49,8 +60,18 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		return PromoteOutcome{}, err
 	}
 
-	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, by, candidate, &out.Merged)
+	employer, typed, err := s.lockedPromotionEmployer(ctx, tx, lead, in, candidate)
 	if err != nil {
+		return PromoteOutcome{}, err
+	}
+	if err := s.holdPromotionDeal(ctx, tx, lead, employer, candidate, in.ExistingDealID); err != nil {
+		return PromoteOutcome{}, err
+	}
+	contactID, mergeFields, err := s.promoteTarget(ctx, tx, lead, employer, by, candidate, lanes, in.intoCandidate, &out.Merged)
+	if err != nil {
+		return PromoteOutcome{}, err
+	}
+	if err := proposeTypedCompany(ctx, tx, contactID, id, typed, by); err != nil {
 		return PromoteOutcome{}, err
 	}
 	if err := carryLeadConsent(ctx, tx, id, contactID, by); err != nil {
@@ -70,15 +91,43 @@ func (s *Store) promoteLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in 
 		commsauthz.ContactStopSubject(contactID)); err != nil {
 		return PromoteOutcome{}, fmt.Errorf("carry the lead's consent links: %w", err)
 	}
+	if out.Merged {
+		if err := s.resolveCreatedEmployer(ctx, tx, contactID, promotionContactSpec(lead, employer, leadIdentityName(lead), by)); err != nil {
+			return PromoteOutcome{}, err
+		}
+	}
+	if err := s.carryLeadIndustry(ctx, tx, company, lead.Industry); err != nil {
+		return PromoteOutcome{}, err
+	}
 	carried, err := carryLeadActivities(ctx, tx, id, contactID)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
 
-	out.DealID, err = s.openQualifiedDeal(ctx, tx, id, lead, contactID, in.Deal)
+	out.DealID, err = s.qualifiedDeal(ctx, tx, id, lead, contactID, in)
 	if err != nil {
 		return PromoteOutcome{}, err
 	}
-	out.Contact, err = finalizeLeadPromotion(ctx, tx, id, in, lead, contactID, out.Merged, mergeFields, active, out.DealID, carried)
+	out.Contact, err = s.finalizeLeadPromotion(ctx, tx, id, in, lead, contactID, out.Merged, mergeFields, active, out.DealID, carried)
 	return out, err
+}
+
+// lockLeadLanes takes the duplicate-lane locks a promotion's new contact will be
+// created under, between the contact lock and the lead lock (lockorder.go). The
+// lead is read before its lock, so promoteTarget compares the lanes with the
+// locked lead and starts over when they moved. A lead that is gone takes no
+// lane lock, and the lead lock that follows answers it.
+func (s *Store) lockLeadLanes(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) (ContactCandidate, error) {
+	lead, err := readLead(ctx, tx, leadID, storekit.IncludeArchived, nil)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return ContactCandidate{}, nil
+	}
+	if err != nil {
+		return ContactCandidate{}, err
+	}
+	lanes, err := s.leadContactCandidate(ctx, tx, lead)
+	if err != nil {
+		return ContactCandidate{}, err
+	}
+	return lanes, lockContactLanes(ctx, tx, lanes.Emails, lanes.FullName)
 }

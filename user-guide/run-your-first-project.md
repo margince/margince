@@ -156,11 +156,11 @@ in the subject; see step 7.
 Nordwind signs on a purchase order.
 
 1. Open the deal and press **Won** in the **Stage** row.
-2. A confirmation opens: **Move to Won?** Press **Confirm**.
-3. If the deal has no signed contract attached, the dialog stays open and
-   asks **How was it won?** Pick **On a purchase order** and press **Confirm**
-   again. ([the-pipeline.md](../docs/handbook/the-pipeline.md#winning)
-   explains why winning asks this.)
+2. A confirmation opens: **Move to Won?** If the deal has no signed contract
+   attached, it asks **How was it won?** Pick **On a purchase order**.
+   ([the-pipeline.md](../docs/handbook/the-pipeline.md#winning) explains why
+   winning asks this.)
+3. Press **Confirm**.
 
 The deal now reads **won**. Click the project chip.
 

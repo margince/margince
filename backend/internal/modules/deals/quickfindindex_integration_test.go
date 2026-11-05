@@ -13,5 +13,5 @@ import (
 )
 
 func TestTheDealQuickFindReadsItsTrigramIndex(t *testing.T) {
-	quickfindtest.AssertIndexed(t, "deal", dealNameColumn, "idx_deal_name_trgm", storekit.Identifier{})
+	quickfindtest.AssertIndexed(t, "deal", dealNameColumn, "idx_deal_name_trgm", storekit.Identifier{}, "")
 }

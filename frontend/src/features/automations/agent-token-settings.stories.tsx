@@ -33,7 +33,7 @@ const MANAGER = { installation_settings: ["read", "update"] } as const;
 const READER = { installation_settings: ["read"] } as const;
 
 const meta: Meta<typeof AgentConnectionsCard> = {
-  title: "Settings/Company/Sign-in and apps/Agent connections",
+  title: "Settings/AI/MCP/Agent connections",
   component: AgentConnectionsCard,
 };
 export default meta;

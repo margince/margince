@@ -3,6 +3,7 @@ import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { GroupedTimelineList } from "./timeline";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
@@ -23,6 +24,7 @@ function entry(overrides: Partial<TimelineEntry> = {}): TimelineEntry {
     kind: "email",
     title: "Re: Renewal",
     atIso: "2026-07-03T10:00:00Z",
+    atPrecision: "instant",
     provenance: { kind: "connector", connector: "gmail" },
     ...overrides,
   };
@@ -33,6 +35,60 @@ function thread(entries: TimelineEntry[]): TimelineGroup {
 }
 
 describe("a thread's card", () => {
+  it("counts each side's messages and leaves out the ones no human wrote", () => {
+    const theirs = [1, 2, 3, 4].map((n) =>
+      entry({ id: `in${n}`, direction: "inbound", counterparts: "Ida Keller" }),
+    );
+    const ours = [1, 2, 3, 4, 5].map((n) =>
+      entry({ id: `out${n}`, direction: "outbound" }),
+    );
+    const invitation = entry({
+      id: "invite",
+      direction: "outbound",
+      automaticKind: "calendar",
+    });
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[thread([invitation, ...theirs, ...ours])]}
+      />,
+    );
+    expect(
+      screen.getByText("10 messages · 4 from them, 5 from your team"),
+    ).toBeTruthy();
+    expect(screen.getByText("Calendar invitation")).toBeTruthy();
+  });
+
+  it("marks a newsletter and leaves it out of either side's count", () => {
+    const reply = entry({
+      id: "in1",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+    });
+    const newsletter = entry({
+      id: "news",
+      direction: "inbound",
+      counterparts: "Ida Keller",
+      automaticKind: "bulk",
+    });
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            newsletter,
+            reply,
+            entry({ id: "out1", direction: "outbound" }),
+          ]),
+        ]}
+      />,
+    );
+    expect(
+      screen.getByText("3 messages · 1 from them, 1 from your team"),
+    ).toBeTruthy();
+    expect(screen.getByText("Sent to a mailing list")).toBeTruthy();
+  });
+
   it("names the kind, the count and who it was with, and seats the verbs in its head", () => {
     render(
       <GroupedTimelineList
@@ -62,13 +118,14 @@ describe("a thread's card", () => {
       />,
     );
     expect(screen.getByText("Thread")).toBeTruthy();
-    expect(screen.getByText("3 messages")).toBeTruthy();
+    expect(
+      screen.getByText("3 messages · 2 from them, 1 from your team"),
+    ).toBeTruthy();
     // Each name once, however many messages it was on.
     expect(screen.getByText("Ida Keller, Marc Dubois")).toBeTruthy();
-    // Inside the card, on its head line, rather than in the row's own
-    // actions column outside it.
+    // In the row's own verb slot, where every other entry keeps its verbs.
     expect(
-      screen.getByRole("button", { name: "Reply" }).closest(".tl-thread"),
+      screen.getByRole("button", { name: "Reply" }).closest(".tl-actions"),
     ).toBeTruthy();
   });
 
@@ -166,6 +223,7 @@ describe("a thread's card", () => {
               emailSummary: {
                 activity_id: "m2",
                 occurred_at: "2026-07-03T10:00:00Z",
+                occurred_precision: "instant",
                 direction: "inbound",
                 counterparty: "Ida Keller +1",
                 attachment_count: 0,
@@ -190,6 +248,7 @@ describe("a thread's card", () => {
     const summary = (id: string) => ({
       activity_id: id,
       occurred_at: "2026-07-03T10:00:00Z",
+      occurred_precision: "instant" as const,
       direction: "inbound" as const,
       counterparty: "Ida Keller",
       preview: `what ${id} said`,
@@ -281,5 +340,127 @@ describe("a row's place on the axis", () => {
     // Inside the card each message carries day AND time: the gutter holds the
     // newest member's day, and an older member may be from another.
     expect(screen.getByText("27/08/2026 08:15")).toBeTruthy();
+  });
+});
+
+it("shows commitment review counts on a thread without exposing private readings", () => {
+  render(
+    <GroupedTimelineList
+      zone={browserZone()}
+      groups={[
+        thread([
+          entry({ id: "visible", commitmentReviewCount: 2 }),
+          entry({ id: "private", withheld: true, commitmentReviewCount: 7 }),
+        ]),
+      ]}
+    />,
+  );
+  expect(screen.getAllByText("Commitments to review: 2")).toHaveLength(2);
+  expect(screen.queryByText("Commitments to review: 7")).toBeNull();
+  expect(screen.queryByText("Commitments to review: 9")).toBeNull();
+});
+
+describe("the files a thread carried", () => {
+  const summary = (
+    attachments: number,
+    status: "team" | "withheld" = "team",
+  ): NonNullable<TimelineEntry["emailSummary"]> => ({
+    activity_id: "11111111-1111-4111-8111-111111111111",
+    occurred_at: "2026-07-01T10:00:00Z",
+    occurred_precision: "instant",
+    display_status: status,
+    attachment_count: attachments,
+    move: "none",
+    version: 1,
+    preview: "words",
+  });
+
+  it("totals them under the card's subject and keeps each message's own count on it", () => {
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            entry({ id: "m3", emailSummary: summary(2) }),
+            entry({
+              id: "m2",
+              atIso: "2026-07-02T10:00:00Z",
+              emailSummary: summary(0),
+            }),
+            entry({
+              id: "m1",
+              atIso: "2026-07-01T10:00:00Z",
+              emailSummary: summary(1),
+            }),
+          ]),
+        ]}
+      />,
+    );
+    const card = document.querySelector(".tl-thread-messages")?.parentElement;
+    expect(
+      card?.querySelector(":scope > .tl-meta .emailentry__files")?.textContent,
+    ).toBe("3 attachments");
+    const members = Array.from(document.querySelectorAll(".tl-msg")).map(
+      (message) => message.querySelector(".emailentry__files")?.textContent,
+    );
+    expect(members).toEqual(["2 attachments", undefined, "1 attachment"]);
+  });
+
+  it("counts no files for a message the reader may not open, and says the rest once", () => {
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            entry({
+              id: "m2",
+              withheld: true,
+              emailSummary: summary(4, "withheld"),
+            }),
+            entry({
+              id: "m1",
+              atIso: "2026-07-01T10:00:00Z",
+              emailSummary: summary(1),
+            }),
+          ]),
+        ]}
+      />,
+    );
+    // The one readable message carries the only file and is on screen, so its
+    // own mark is the total.
+    expect(document.querySelectorAll(".emailentry__files")).toHaveLength(1);
+    expect(
+      document.querySelector(".tl-msg .emailentry__files")?.textContent,
+    ).toBe("1 attachment");
+  });
+
+  it("totals the files when the message carrying them is folded away", async () => {
+    const user = userEvent.setup();
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread(
+            [4, 3, 2, 1].map((n) =>
+              entry({
+                id: `m${n}`,
+                atIso: `2026-07-0${n}T10:00:00Z`,
+                emailSummary: summary(n === 1 ? 2 : 0),
+              }),
+            ),
+          ),
+        ]}
+      />,
+    );
+    expect(
+      document
+        .querySelector(".tl-thread-messages")
+        ?.parentElement?.querySelector(":scope > .tl-meta .emailentry__files")
+        ?.textContent,
+    ).toBe("2 attachments");
+
+    await user.click(screen.getByRole("button", { name: /earlier/ }));
+    // Once the carrying message is on screen its mark says it, not the card.
+    expect(document.querySelectorAll(".emailentry__files")).toHaveLength(1);
   });
 });

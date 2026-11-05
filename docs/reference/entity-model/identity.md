@@ -6,14 +6,16 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-25 columns · primary key `(id)` · referenced by 135 foreign keys
+36 columns · primary key `(id)` · referenced by 153 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `combine_routine_email` | `boolean` |  |  |
 | `delivery_hour_local` | `integer` |  |  |
 | `display_name` | `text` | yes |  |
 | `email` | `text` | yes |  |
+| `email_domain_folded` | `text` |  |  |
 | `failed_login_count` | `integer`, default `0` | yes |  |
 | `greeting_name` | `text` |  | At most 100 characters. |
 | `greeting_name_chosen_at` | `timestamp with time zone` |  |  |
@@ -21,14 +23,23 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `last_active_at` | `timestamp with time zone` |  |  |
 | `locale` | `text` |  | One of `en`, `de`, `vi`. |
 | `locked_until` | `timestamp with time zone` |  |  |
+| `merged_into_user_id` | `uuid` |  | Points at `app_user.id`. |
 | `morning_brief_delivery` | `text` |  |  |
 | `must_change_password` | `boolean`, default `false` | yes |  |
 | `password_hash` | `text` |  |  |
 | `quiet_day_notice` | `boolean` |  |  |
+| `removed_at` | `timestamp with time zone` |  |  |
+| `routine_delivery_time` | `text` |  |  |
+| `routine_mail_scope` | `text` |  | One of `personal`, `team`, `combined`. |
+| `routine_mail_team_id` | `uuid` |  | Points at `team.id`. |
 | `seat_type` | `text`, default `'full'::text` | yes | One of `read`, `full`. |
+| `service_extension` | `text` |  |  |
 | `status` | `text`, default `'active'::text` | yes | One of `invited`, `active`, `suspended`, `deactivated`. |
 | `timezone` | `text` |  |  |
+| `timezone_chosen` | `boolean`, default `false` | yes |  |
+| `timezone_set_by` | `text` |  |  |
 | `weekly_delivery` | `text` |  |  |
+| `weekly_delivery_day` | `integer` |  |  |
 | `work_days` | `smallint[]` |  |  |
 | `work_end_minute` | `smallint` |  |  |
 | `work_start_minute` | `smallint` |  |  |
@@ -36,19 +47,33 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `merged_into_user_id` | `app_user` | the parent cannot be deleted while this row points at it |
+| `routine_mail_team_id` | `team` | deleting the parent keeps this row and clears the link |
+
 **Rules**
 
 - `app_user_agent_is_full`: `CHECK (((NOT is_agent) OR (seat_type = 'full')))`
 - `app_user_agent_never_forced`: `CHECK ((NOT (is_agent AND must_change_password)))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
+- `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100))))`
 - `app_user_locale_shipped`: `CHECK ((locale = ANY (ARRAY['en', 'de', 'vi'])))`
+- `app_user_merge_is_retired`: `CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL)))`
 - `app_user_morning_brief_delivery_check`: `CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none', 'email']))))`
+- `app_user_removed_is_deactivated`: `CHECK (((removed_at IS NULL) OR (status = 'deactivated')))`
+- `app_user_routine_delivery_time_check`: `CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'))`
+- `app_user_routine_mail_scope_check`: `CHECK ((routine_mail_scope = ANY (ARRAY['personal', 'team', 'combined'])))`
 - `app_user_seat_type_check`: `CHECK ((seat_type = ANY (ARRAY['read', 'full'])))`
+- `app_user_service_is_a_passwordless_agent`: `CHECK (((service_extension IS NULL) OR (is_agent AND (password_hash IS NULL) AND (service_extension <> ''))))`
 - `app_user_status_check`: `CHECK ((status = ANY (ARRAY['invited', 'active', 'suspended', 'deactivated'])))`
 - `app_user_weekly_delivery_check`: `CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none', 'email']))))`
+- `app_user_weekly_delivery_day_check`: `CHECK (((weekly_delivery_day >= 1) AND (weekly_delivery_day <= 7)))`
 - `app_user_work_days_are_weekdays`: `CHECK (((work_days IS NULL) OR (((cardinality(work_days) >= 1) AND (cardinality(work_days) <= 7)) AND (work_days <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint]))))`
 - `app_user_work_end_minute_of_day`: `CHECK (((work_end_minute IS NULL) OR ((work_end_minute >= 1) AND (work_end_minute <= 1440))))`
 - `app_user_work_range_is_a_range`: `CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute))))`
@@ -58,23 +83,29 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `app_user_pkey`: `unique, btree (id)`
 - `idx_app_user_live`: `btree (created_at, id) WHERE (archived_at IS NULL)`
+- `idx_app_user_merge_target`: `btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)`
 - `uq_app_user_email`: `unique, btree (lower(email))`
 
 **Triggers**
 
 - `app_user_forget_weekly_plan_responses`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION weekly_plan_commitment_forget_manager()`
+- `app_user_service_never_deleted`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION refuse_service_member_delete()`
+- `home_read_fence_identity`: `AFTER UPDATE OF merged_into_user_id, email_domain_folded FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `report_authority_user_change`: `BEFORE UPDATE OF status, archived_at, seat_type, is_agent FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `report_authority_user_delete`: `BEFORE DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_report_projection_authority()`
 - `trg_app_user_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## auth_token
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `expires_at` | `timestamp with time zone` | yes |  |
+| `mail_failed_at` | `timestamp with time zone` |  |  |
+| `mail_queued_at` | `timestamp with time zone` |  |  |
+| `mail_sent_at` | `timestamp with time zone` |  |  |
 | `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |
@@ -255,13 +286,14 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_client
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+11 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `client_id` | `text` | yes |  |
 | `client_name` | `text` | yes |  |
+| `client_secret_hash` | `text` |  |  |
 | `created_via` | `text`, default `'dcr'::text` | yes | One of `dcr`, `admin`, `cimd`. |
 | `deleted_at` | `timestamp with time zone` |  |  |
 | `disabled_at` | `timestamp with time zone` |  |  |
@@ -274,6 +306,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_client_client_id_key`: `UNIQUE (client_id)`
 - `oauth_client_created_via_check`: `CHECK ((created_via = ANY (ARRAY['dcr', 'admin', 'cimd'])))`
+- `oauth_client_secret_is_admin_only`: `CHECK (((client_secret_hash IS NULL) OR (created_via = 'admin')))`
 
 **Indexes**
 
@@ -387,7 +420,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## passport
 
-11 columns · primary key `(id)` · referenced by 8 foreign keys
+11 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -477,6 +510,10 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `idx_record_grant_subject`: `btree (subject_type, subject_id)`
 - `record_grant_pkey`: `unique, btree (id)`
 - `record_grant_unique`: `unique, btree (record_type, record_id, subject_type, subject_id)`
+
+**Triggers**
+
+- `home_read_fence_record_grant`: `AFTER DELETE OR UPDATE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 
 ## role
 
@@ -598,7 +635,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 8 foreign keys
+6 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

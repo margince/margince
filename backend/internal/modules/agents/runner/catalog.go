@@ -18,6 +18,11 @@ import (
 type AgentSpec struct {
 	Name string
 	Goal string
+	// SeedQuery is what the run's grounding searches for. The goal is a set of
+	// instructions, not a query: search refuses its length and ranks its words
+	// as noise. It is websearch syntax, where plain words must all match, so join
+	// alternatives with `or`. Empty seeds no grounding.
+	SeedQuery string
 	// DueHourUTC is the daily trigger hour. Workspace-local scheduling
 	// (each tenant's own 06:00) needs the workspace timezone plumbed
 	// through the seeder; V1 runs the catalog on UTC.
@@ -72,6 +77,7 @@ func Catalog() []AgentSpec {
 				"Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. " +
 				"Keep the existing order. If there are no items, finish without inventing a brief. " +
 				"A tool refusal means the findings were not saved: correct it before claiming completion.",
+			SeedQuery:  "next step or follow up or decision or deadline",
 			DueHourUTC: 6,
 		},
 		{
@@ -83,6 +89,7 @@ func Catalog() []AgentSpec {
 				"read or log on it before that list. Then read each listed deal and log ONE note " +
 				"activity per at-risk deal summarizing the risk and the evidence (cite the records " +
 				"you read). Do not advance stages, send anything, or archive anything.",
+			SeedQuery:  "risk or stalled or blocked or overdue or quiet",
 			DueHourUTC: 2,
 		},
 	}

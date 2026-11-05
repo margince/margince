@@ -1,0 +1,14 @@
+name: transcript_optional_commitment_preserves_its_meaning_de
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - "Mira: Ich könnte nächste Woche einen Entwurf machen, falls das hilfreich wäre."
+expect:
+  outcome: accepted
+  answer: [{"optional": true, "meaning": {"state": "optional", "condition": "", "deadline_precision": "range", "deadline_quote": "nächste Woche"}, "line": 1, "due_date": ""}]
+  judge: none
+  judge_none_reason: >
+    An unmet condition or tentative offer creates no unconditional work.
+    The deterministic checks require the state, condition and deadline words when reported, and refuse new work.

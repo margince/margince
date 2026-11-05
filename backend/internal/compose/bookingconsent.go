@@ -136,18 +136,7 @@ func admitBookingMarketingPurpose(purposes []consent.Purpose, purposeID ids.UUID
 }
 
 func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contactID ids.UUID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
-	source := "public_booking"
-	_, err := a.store.Record(ctx, consent.RecordInput{
-		ContactID:     ids.From[ids.ContactKind](contactID),
-		PurposeID:     ids.From[ids.PurposeKind](c.PurposeID),
-		NewState:      "granted",
-		Source:        &source,
-		PolicyText:    &c.Wording,
-		PolicyVersion: &c.PolicyVersion,
-		// Anyone knowing an email can post this form: a decision already
-		// on record — above all a withdrawal — must stand.
-		NeverOverrideExisting: true,
-	})
+	_, err := a.store.Record(ctx, bookingConsentRecord(contactID, c))
 	// The consent module's client-fault type is its own; the booking
 	// transport only knows the platform vocabulary — translate here so a
 	// bad DOI token reads as the 422 it is, not a 500.
@@ -159,6 +148,25 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contac
 	}
 	outcome, err := a.askMarketing(ctx, contactID, c.Marketing)
 	return outcome, err
+}
+
+// CaptureLeadBookingConsent records the operational grant on the live lead a
+// booking landed on. A marketing tick is not asked about: the confirmation
+// link is minted against a contact's own primary address.
+func (a bookingConsentAdapter) CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
+	record := bookingConsentRecord(ids.Nil, c)
+	record.ContactID, record.LeadID = ids.ContactID{}, leadID
+	_, err := a.store.Record(ctx, record)
+	if invalid, ok := errors.AsType[*consent.ValidationError](err); ok {
+		return activities.MarketingNotRequested, httperr.Validation(invalid.Field, "invalid", invalid.Reason)
+	}
+	if err != nil {
+		return activities.MarketingNotRequested, err
+	}
+	if c.Marketing == nil {
+		return activities.MarketingNotRequested, nil
+	}
+	return activities.MarketingNotAsked, nil
 }
 
 // RecordBookingInquiry stamps the qualifying event a public booking IS: the
@@ -207,7 +215,7 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	if m == nil {
 		return activities.MarketingNotRequested, nil
 	}
-	issued, err := a.store.IssueConsentLink(ctx,
+	issued, err := a.store.IssueBookedConsentLink(ctx,
 		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
 	if err == nil {
 		// STAGED, not merely minted. issueLink answers a token it could not
@@ -264,6 +272,25 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	// means authority changed between two consecutive writes. That is rare and
 	// it is exactly why it must not be reported as "we could not ask": a
 	// booking form is not the place to discover a permission failure silently.
+	return bookingMarketingFailure(err)
+}
+
+func bookingConsentRecord(contactID ids.UUID, c activities.BookingConsent) consent.RecordInput {
+	source := "public_booking"
+	return consent.RecordInput{
+		ContactID:     ids.From[ids.ContactKind](contactID),
+		PurposeID:     ids.From[ids.PurposeKind](c.PurposeID),
+		NewState:      "granted",
+		Source:        &source,
+		PolicyText:    &c.Wording,
+		PolicyVersion: &c.PolicyVersion,
+		// Anyone knowing an email can post this form, so existing
+		// decisions must stand, including withdrawals.
+		NeverOverrideExisting: true,
+	}
+}
+
+func bookingMarketingFailure(err error) (activities.MarketingOutcome, error) {
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
 		return activities.MarketingNotRequested, err
 	}

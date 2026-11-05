@@ -22,7 +22,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // suggestionEntity names a suggestion in its audit rows and events.
@@ -50,7 +52,9 @@ type SuggestionEvidence struct {
 	ActivityID   *ids.UUID
 	SignalID     *ids.UUID
 	AttachmentID *ids.UUID
-	OccurredAt   time.Time
+	// OccurredAt is the stored time the item cites, which no zone moves: a
+	// signal's newest cited occurred_at (storekit.CitedActivityStamp).
+	OccurredAt time.Time
 }
 
 // ref is the item's own id, whichever column carries it.
@@ -109,7 +113,8 @@ func validDraft(d SuggestionDraft) error {
 	if d.CompanyID.IsZero() || !nameHints[d.NameHint] || len(d.Evidence) == 0 {
 		return ErrSuggestionDraftInvalid
 	}
-	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || d.Confidence < 0 || d.Confidence > 1 {
+	if moneyPairError(d.AmountMinor, nil, d.Currency) != nil || (d.Currency != nil && !values.AssignableCurrency(*d.Currency)) || amountSetError(d.AmountMinor) != nil ||
+		d.Confidence < 0 || d.Confidence > 1 {
 		return ErrSuggestionDraftInvalid
 	}
 	for _, e := range d.Evidence {
@@ -181,22 +186,13 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	if err := validDraft(d); err != nil {
 		return false, err
 	}
+	through, stands, err := evidenceStandsTx(ctx, tx, d)
+	if err != nil || !stands {
+		return false, err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return false, err
-	}
-	floor, err := suggestionFloorTx(ctx, tx, d.CompanyID)
-	if err != nil {
-		return false, err
-	}
-	through := d.Evidence[0].OccurredAt
-	for _, e := range d.Evidence {
-		if floor != nil && !e.OccurredAt.After(*floor) {
-			return false, nil
-		}
-		if e.OccurredAt.After(through) {
-			through = e.OccurredAt
-		}
 	}
 	cited, err := evidenceRaisedOnDuplicateTx(ctx, tx, d)
 	if err != nil || cited {
@@ -309,19 +305,24 @@ func insertSuggestionEvidence(ctx context.Context, tx pgx.Tx, suggestion ids.UUI
 // there and live — a message cited by a signal included. A suggestion that
 // clause hides from everybody would otherwise block its company for good.
 // System-only, for the same reason recording is.
-func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
+func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx, buyerEligible func(func(any) int) string) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
+	if buyerEligible == nil {
+		return 0, apperrors.ErrInvalidArgument
+	}
 	var args []any
-	stands, err := suggestionVisibleClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	stands, err := suggestionVisibleClause(ctx, arg, "")
 	if err != nil {
 		return 0, err
 	}
+	buyer := buyerEligible(arg)
 	rows, err := tx.Query(ctx, `
 		UPDATE deal_suggestion s SET state = 'superseded', decided_at = now()
 		 WHERE s.state = 'open'
-		   AND (NOT `+SuggestionCompanyFreeClause("s.company_id")+` OR NOT `+stands+`)
+		   AND (NOT `+SuggestionCompanyFreeClause("s.company_id")+` OR NOT `+stands+` OR NOT `+buyer+`)
 		RETURNING s.id`, args...)
 	if err != nil {
 		return 0, fmt.Errorf("deals: superseding suggestions: %w", err)
@@ -331,7 +332,7 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx) (int, error) {
 		return 0, fmt.Errorf("deals: reading superseded suggestions: %w", err)
 	}
 	for _, id := range retired {
-		if err := recordSuperseded(ctx, tx, id); err != nil {
+		if err := recordSuperseded(ctx, tx, id, nil); err != nil {
 			return 0, err
 		}
 	}
@@ -373,7 +374,7 @@ func SupersedeDuplicateSuggestionsTx(ctx context.Context, tx pgx.Tx, pairs [][2]
 		return 0, fmt.Errorf("deals: reading suggestions superseded as raised twice: %w", err)
 	}
 	for _, id := range retired {
-		if err := recordSuperseded(ctx, tx, id); err != nil {
+		if err := recordSuperseded(ctx, tx, id, nil); err != nil {
 			return 0, err
 		}
 	}
@@ -453,7 +454,7 @@ func claimsRetired(claims []duplicateClaim) []ids.UUID {
 const columnState = "state"
 
 // supersedeTx retires one open suggestion the caller holds locked.
-func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID, evidence map[string]any) error {
 	tag, err := tx.Exec(ctx, `
 		UPDATE deal_suggestion SET state = 'superseded', decided_at = now()
 		 WHERE id = $1 AND state = 'open'`, id)
@@ -463,14 +464,14 @@ func supersedeTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if tag.RowsAffected() == 0 {
 		return nil
 	}
-	return recordSuperseded(ctx, tx, id)
+	return recordSuperseded(ctx, tx, id, evidence)
 }
 
 // recordSuperseded writes the audit row and the event for one retirement.
-func recordSuperseded(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	auditID, err := storekit.Audit(ctx, tx, "update", suggestionEntity, id,
+func recordSuperseded(ctx context.Context, tx pgx.Tx, id ids.UUID, evidence map[string]any) error {
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", suggestionEntity, id,
 		map[string]any{columnState: SuggestionOpen},
-		map[string]any{columnState: SuggestionSuperseded})
+		map[string]any{columnState: SuggestionSuperseded}, evidence)
 	if err != nil {
 		return fmt.Errorf("deals: auditing a superseded suggestion: %w", err)
 	}

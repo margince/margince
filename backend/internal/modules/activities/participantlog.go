@@ -23,8 +23,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -35,6 +37,7 @@ const (
 	linkEntityContact  = "contact"
 	linkEntityCompany  = "company"
 	linkEntityDeal     = "deal"
+	linkEntityLead     = "lead"
 	linkEntityActivity = "activity"
 	linkEntityProject  = "project"
 )
@@ -70,7 +73,7 @@ func loggedOurSide(ctx context.Context, in LogActivityInput) ids.UUID {
 	if in.Author.AuthorID != nil {
 		return *in.Author.AuthorID
 	}
-	if in.Author.AuthorName != nil {
+	if in.Author.AuthorName != nil || isImportedActivity(in) {
 		return ids.Nil
 	}
 	actor, ok := principal.Actor(ctx)
@@ -81,6 +84,10 @@ func loggedOurSide(ctx context.Context, in LogActivityInput) ids.UUID {
 		return ids.Nil
 	}
 	return actor.UserID
+}
+
+func isImportedActivity(in LogActivityInput) bool {
+	return in.SourceSystem != nil && provenance.ImporterNamespace(*in.SourceSystem)
 }
 
 // loggedStamp is what one logged interaction says about who was in it.
@@ -203,7 +210,7 @@ func envelopeRole(ctx context.Context, tx pgx.Tx, contact ids.UUID, envelope mai
 // uniqueness index — the log path has its own replay guard, and this must not
 // become a second place that can fail on a retry.
 func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID) error {
-	return insertParticipantRow(ctx, tx, activityID, role, userID, contactID, "")
+	return insertParticipantRow(ctx, tx, activityID, role, userID, contactID, "", nil)
 }
 
 // insertParticipantRow writes one row, idempotently against the ACT-DDL-3
@@ -213,7 +220,9 @@ func insertLoggedParticipant(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 // A participant is identified by a user, a contact, or — for an imported
 // message whose addresses match nobody here — the bare address off the header.
 // The table's own CHECK requires exactly one of the three.
-func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID, address string) error {
+// name is the party's display name; nil leaves the column NULL, as the logged
+// path has always written it.
+func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string, userID, contactID *ids.UUID, address string, name *string) error {
 	// The user arm is written through a SELECT over app_user rather than a
 	// bare VALUES: a principal's UserID is not guaranteed to name a workspace
 	// member. An agent or a service principal can carry an id that belongs to
@@ -222,11 +231,11 @@ func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.Activit
 	// operation. Guarding here rather than pre-checking also avoids a race
 	// with a member being archived between the check and the insert.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, role, address)
-		SELECT $1, $2, $3, $4, NULLIF($5, '')
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, role, address, address_domain_folded, display_name)
+		SELECT $1, $2, $3, $4, NULLIF($5, ''), $6, $7
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
-		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role, address); err != nil {
+		ON CONFLICT DO NOTHING`, activityID, userID, contactID, role, address, owndomain.StoredOfAddress(address), name); err != nil {
 		return fmt.Errorf("activities: recording who was in a logged interaction: %w", err)
 	}
 	return nil
@@ -255,7 +264,7 @@ func stampSuppliedEmailParticipants(ctx context.Context, tx pgx.Tx, activityID i
 			if address == "" {
 				continue
 			}
-			if err := insertParticipantRow(ctx, tx, activityID, party.role, nil, nil, address); err != nil {
+			if err := insertParticipantRow(ctx, tx, activityID, party.role, nil, nil, address, nil); err != nil {
 				return err
 			}
 		}

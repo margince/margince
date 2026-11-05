@@ -6,6 +6,7 @@ package meetingbrief
 import (
 	"slices"
 	"testing"
+	"time"
 )
 
 // The excerpt budget is six threads, and a moment can hold more. What a reader
@@ -26,7 +27,7 @@ func TestTheNewestConversationIsExcerptedBeforeTheOldest(t *testing.T) {
 	note := HistoryIn{ID: "the-note", Kind: "note", Subject: "CRM", At: at(9)}
 	history = append(history, note)
 
-	moments := clusterThreads(threadsOf(history))
+	moments := clusterThreads(threadsOf(history), time.UTC)
 	if len(moments) != 1 {
 		t.Fatalf("moments = %d, want 1 — every row is inside arcGapDays", len(moments))
 	}
@@ -49,7 +50,7 @@ func TestTheOldestConversationsAreWhatTheBudgetDrops(t *testing.T) {
 			"thread-"+string(rune('a'+i)), i+1,
 			"Subject "+string(rune('a'+i)), "inbound"))
 	}
-	targets := excerptTargets(clusterThreads(threadsOf(history)))
+	targets := excerptTargets(clusterThreads(threadsOf(history), time.UTC))
 	if slices.Contains(targets, "thread-a") {
 		t.Errorf("the oldest thread was excerpted over a newer one: %v", targets)
 	}
@@ -65,7 +66,7 @@ func TestPickingExcerptsLeavesTheMomentsOwnOrderAlone(t *testing.T) {
 		mail("older", 1, "First", "inbound"),
 		mail("newer", 5, "Second", "outbound"),
 	}
-	moments := clusterThreads(threadsOf(history))
+	moments := clusterThreads(threadsOf(history), time.UTC)
 	before := make([]string, 0, len(moments[0].Threads))
 	for _, current := range moments[0].Threads {
 		before = append(before, current.Key)

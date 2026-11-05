@@ -48,12 +48,12 @@ func inputFixture() Input {
 		Recent: []ActIn{
 			{
 				ID: schedulingID, Kind: "email", Subject: "Re: renewal call",
-				Preview: "Thursday at ten works for me.", Speaker: "them", At: "2026-08-29T08:10:00Z",
+				Preview: "Thursday at ten works for me.", Speaker: &Speaker{Kind: "them"}, At: "2026-08-29T08:10:00Z",
 			},
 			{
 				ID: objectionID, Kind: "email", Subject: "Sub-processor list before we sign",
 				Preview: "We cannot go ahead while the analytics vendor is on it.",
-				Move:    "needs_reply", Speaker: "them", At: "2026-08-24T09:00:00Z",
+				Move:    "needs_reply", Speaker: &Speaker{Kind: "them"}, At: "2026-08-24T09:00:00Z",
 			},
 		},
 	}
@@ -255,5 +255,24 @@ func TestWriteKeepsWhatItGroundsAndNamesTheModel(t *testing.T) {
 	}
 	if written[1].Nature != natureAssessment {
 		t.Errorf("nature = %q, want the judgment labelled as one", written[1].Nature)
+	}
+}
+
+func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testing.T) {
+	t.Parallel()
+	move := func(text string) string {
+		return `{"text":"` + text + `","nature":"recommendation","evidence":[{"entity_type":"activity","entity_id":"` + objectionID + `"}]}`
+	}
+	var moves []string
+	for range maxRecommendations {
+		moves = append(moves, move("I'll send the sub-processor list once legal completes its review."))
+	}
+	moves = append(moves, move("Send them the sub-processor list once legal finishes its review."))
+	kept, err := ParseBrief(`{"sentences":[`+strings.Join(moves, ",")+`]}`, briefContactID, inputFixture())
+	if err != nil {
+		t.Fatalf("ParseBrief: %v", err)
+	}
+	if len(kept) != 1 || kept[0].Text != "Send them the sub-processor list once legal finishes its review." {
+		t.Fatalf("kept %+v, want only the move addressed to the reader", kept)
 	}
 }

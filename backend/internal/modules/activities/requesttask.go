@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -40,7 +41,7 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	args = append(args, s.now())
 	instant := fmt.Sprintf("$%d", len(args))
 	var pending bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND a.occurred_at <= %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), instant, idPos), args...).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	source, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
@@ -55,6 +56,9 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := prepareRequestAcceptance(ctx, tx, &request, userID, pending); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 	// Replay carries the source's content gate AND the task's: a caller cannot
 	// use a visible source to obtain somebody else's private reminder.
 	replay, err := replayedActivity(ctx, tx, request)
@@ -62,16 +66,20 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 		return crmcontracts.Activity{}, false, err
 	}
 	if replay != nil {
-		return replayRequestTask(ctx, tx, *replay, pending)
+		return s.replayRequestTask(ctx, tx, *replay, pending, userID, in)
 	}
 	if !pending {
 		return crmcontracts.Activity{}, false, apperrors.ErrConflict
+	}
+	if err := s.checkTaskRecommendation(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
 	}
 	if in.Subject != nil && strings.TrimSpace(*in.Subject) != "" {
 		request.Subject = in.Subject
 	}
 	request.Body = in.Body
-	request.DueAt, request.RemindAt = in.DueAt, in.RemindAt
+	request.DueAt, request.DueHasTime, request.RemindAt = in.DueAt, in.DueHasTime, in.RemindAt
+	request.CustomFields, request.customColumns, request.customChecked = in.CustomFields, in.customColumns, in.customChecked
 	return s.LogActivityTx(ctx, tx, request)
 }
 
@@ -92,7 +100,7 @@ func requestAcceptingUser(ctx context.Context, in LogActivityInput) (ids.UUID, e
 	return actor.UserID, nil
 }
 
-func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, pending bool) (crmcontracts.Activity, bool, error) {
+func (s *Store) replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activity, pending bool, userID ids.UUID, in LogActivityInput) (crmcontracts.Activity, bool, error) {
 	task, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(replay.Id)), storekit.IncludeArchived)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -100,10 +108,13 @@ func replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcontracts.Activ
 		}
 		return crmcontracts.Activity{}, false, err
 	}
+	if task.AssigneeId == nil || ids.UUID(*task.AssigneeId) != userID {
+		return crmcontracts.Activity{}, false, &requestHeldError{}
+	}
 	if task.ArchivedAt != nil && (task.IsDone == nil || !*task.IsDone) && !pending {
 		return crmcontracts.Activity{}, false, apperrors.ErrConflict
 	}
-	return restoreRequestTask(ctx, tx, task)
+	return s.restoreRequestTask(ctx, tx, task, pending, userID, in)
 }
 
 // emailRequestTask is the reply reminder for one request, filed under who
@@ -119,7 +130,24 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 	if err != nil {
 		return LogActivityInput{}, err
 	}
-	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf), nil
+	shared, err := readMailSharedWithWorkspace(ctx, tx, ids.UUID(source.Id))
+	if err != nil {
+		return LogActivityInput{}, err
+	}
+	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf, shared), nil
+}
+
+// readMailSharedWithWorkspace says whether everyone who can discover the mail
+// may read it. Only then does its reminder keep the mail's reach, so a manager
+// reads the task a teammate holds for workspace mail. A held message, or one
+// narrowed to its participants or a selection, stays its assignee's alone.
+func readMailSharedWithWorkspace(ctx context.Context, tx pgx.Tx, message ids.UUID) (bool, error) {
+	var shared bool
+	if err := tx.QueryRow(ctx, `
+		SELECT audience = 'workspace' AND restricted_at IS NULL FROM activity WHERE id = $1`, message).Scan(&shared); err != nil {
+		return false, fmt.Errorf("activities: reading who may read a request: %w", err)
+	}
+	return shared, nil
 }
 
 // requestFiling is where a request is filed, as its assignee can see it.
@@ -198,17 +226,20 @@ func requesterLinks(filed requestFiling) []ActivityLinkInput {
 	}
 }
 
-func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time) LogActivityInput {
+func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time, shared bool) LogActivityInput {
 	subject := "Reply to email"
 	if source.Subject != nil && strings.TrimSpace(*source.Subject) != "" {
 		subject = *source.Subject
 	}
 	sourceSystem, sourceID := EmailRequestTaskSource, source.Id.String()
 	messageID, assignee := ids.UUID(source.Id), ids.From[ids.UserKind](userID)
-	return LogActivityInput{
-		audienceMembers: []AudienceMember{{SubjectType: string(crmcontracts.AudienceMemberSubjectTypeUser), SubjectID: userID}},
-		Kind:            string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
+	in := LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindTask), Subject: &subject, OccurredAt: &asOf, AssigneeID: &assignee,
 		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
 		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
 	}
+	if !shared {
+		in.VisibleOnlyTo(userID)
+	}
+	return in
 }

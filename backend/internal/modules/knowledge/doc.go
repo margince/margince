@@ -13,9 +13,7 @@
 //
 // The ask never calls search. It is one corpus, one lane, no fusion.
 //
-// # Tables owned
-//
-// knowledge_corpus, knowledge_document, knowledge_chunk.
+// Tables owned: docs/reference/entity-model/knowledge.md.
 //
 // A chunk is a derived artifact of its document and carries no audit identity
 // of its own — the document row is its history. That is not a convenience: an

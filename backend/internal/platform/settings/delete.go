@@ -11,9 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // DeleteRawTx removes a setting's row, so it reads as its registered default
@@ -28,7 +26,7 @@ func (s *Store) DeleteRawTx(ctx context.Context, tx pgx.Tx, key string) (bool, e
 	if err != nil {
 		return false, err
 	}
-	if err := auth.Require(ctx, def.Object(), principal.ActionUpdate); err != nil {
+	if err := RequireWrite(ctx, def); err != nil {
 		return false, err
 	}
 	if err := LockForWrite(ctx, tx, key); err != nil {

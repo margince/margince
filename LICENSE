@@ -10,14 +10,14 @@ Parameters
 Licensor:             Gradion Pte. Ltd. (Singapore)
                       https://gradion.com
 
-Licensed Work:        Margince CRM
+Licensed Work:        Margince CRM v1.0.0-beta.3
                       The Licensed Work is (c) 2026 Gradion Pte. Ltd.
 
 Additional Use Grant: You may make production use of the Licensed Work,
                       provided that the total number of Seats authorized to
                       access any instance or instances of the Licensed Work
-                      operated by you and your Affiliates does not exceed ten
-                      (10) in aggregate. Production use exceeding ten (10)
+                      operated by you and your Affiliates does not exceed three
+                      (3) in aggregate. Production use exceeding three (3)
                       Seats requires a commercial subscription from the
                       Licensor. An Authorized Hosting Partner may host and
                       provide the Licensed Work to third parties solely under
@@ -50,7 +50,7 @@ Additional Use Grant: You may make production use of the Licensed Work,
                       has entered into the Licensor's written
                       partner/hosting agreement.
 
-Change Date:          2028-07-04
+Change Date:          2028-11-04
 
 Change License:       Apache License, Version 2.0
 

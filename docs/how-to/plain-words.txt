@@ -74,7 +74,6 @@ assign
 assignee
 assistant
 at
-attachment
 attack
 attempt
 attribution
@@ -211,7 +210,6 @@ clone
 close
 closure
 cloud
-cmd
 code
 cold
 colleague
@@ -326,7 +324,6 @@ derive
 describe
 description
 design
-desktop
 destroyed
 destructive
 detail
@@ -503,7 +500,6 @@ ghost
 give
 given
 glossary
-glow
 go
 goal
 good
@@ -624,7 +620,6 @@ language
 last
 later
 launch
-launcher
 layer
 layout
 lead
@@ -660,7 +655,6 @@ location
 lock
 log
 login
-logo
 long
 look
 lookup
@@ -673,7 +667,6 @@ made
 mail
 mailbox
 main
-maintainer
 make
 manifest
 many
@@ -923,7 +916,6 @@ qualify
 query
 question
 queue
-quit
 quota
 quote
 radius
@@ -1078,7 +1070,6 @@ send
 sent
 sentence
 separate
-sequence
 series
 serious
 serve
@@ -1108,7 +1099,6 @@ sign
 signal
 signature
 silence
-silicon
 similarity
 since
 single
@@ -1135,7 +1125,6 @@ sort
 source
 sovereign
 space
-specification
 spend
 spine
 split
@@ -1174,7 +1163,6 @@ subdomain
 subject
 subscribe
 subscription
-succeed
 such
 suffixed
 suggestion
@@ -1200,7 +1188,6 @@ tabular
 tag
 take
 taken
-tarball
 target
 task
 tax
@@ -1292,7 +1279,6 @@ unique
 unit
 unknown
 unless
-unlicensed
 unprivileged
 unready
 unset
@@ -1362,6 +1348,7 @@ win
 window
 wire
 with
+withdrawn
 withheld
 within
 without

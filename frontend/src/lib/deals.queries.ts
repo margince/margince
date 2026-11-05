@@ -1,0 +1,311 @@
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { api } from "../api/client";
+import { dealStatusFilter } from "../format/dealstatus";
+import { useNow } from "../format/now";
+import { dayInZone } from "../format/timezone";
+import type { MessageKey } from "../i18n/en";
+import { useCompanyZone } from "./companyzone";
+import {
+  CLOSE_DAY_DIAL,
+  closeDayRange,
+  type DayRange,
+  narrowsByRange,
+  rangeQueryParams,
+  WIN_PROBABILITY_DIAL,
+} from "./dealranges";
+import { throwProblem, unwrap } from "./problem";
+import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
+import { useInstallationSettings } from "./uploadlimit";
+import { bandOfDial } from "./winprobabilitybands";
+
+/**
+ * The pipeline a record belongs to, falling back to the default.
+ *
+ * `pipelineId` is the deal's own. Without it, every deal would get the default
+ * pipeline, and the stepper offers its stages as moves. The stages of a
+ * pipeline the deal is not in are targets the server refuses as a pipeline
+ * mismatch.
+ */
+export function usePipeline(pipelineId?: string | null) {
+  return useQuery({
+    queryKey: ["pipelines", pipelineId ?? "default"],
+    queryFn: async () => {
+      const data = unwrap(
+        await api.GET("/pipelines", {
+          params: { query: {} },
+        }),
+      );
+      const pipeline =
+        (pipelineId &&
+          data.data.find((candidate) => candidate.id === pipelineId)) ||
+        data.data.find((candidate) => candidate.is_default) ||
+        data.data[0];
+      if (!pipeline) {
+        throw new Error("no pipeline");
+      }
+      return pipeline;
+    },
+  });
+}
+
+export type DealFilters = {
+  pipelineId: string;
+  q: string;
+  sort: string;
+  includeArchived: boolean;
+  filters: Record<string, string>;
+  /** The close-day dial read as days, which needs today and the fiscal year. */
+  closeDay?: DayRange;
+};
+
+// Drawing mode and pipeline selection are URL dials, not deal-list filters.
+
+export const PIPELINE_PARAM = "pipeline_id";
+
+export const VIEW_PARAM = "view";
+
+// This screen's own dials, held out of the list's parameter space by the codec's
+// shared pair rather than by copies kept here. A copy can drift, and then a list
+// sends its drawing choice to the server as a filter.
+export const DEAL_SCREEN_DIALS: readonly string[] = [
+  PIPELINE_PARAM,
+  VIEW_PARAM,
+];
+
+// The board's owner dials as the server reads them. The deals and the
+// suggestions drawn beside them both take these, so Mine narrows both alike.
+export function ownerDialParams(filters: Record<string, string>) {
+  return {
+    owner_id: filters.owner_id || undefined,
+    owner_team_id: filters.owner_team_id || undefined,
+    unassigned: filters.unassigned === "true" ? true : undefined,
+  };
+}
+
+// dealsQueryParams builds the board's /deals query: the full dial set
+// (pipeline/stage/owner/company filters + sort).
+export function dealsQueryParams(f: DealFilters) {
+  const { filters } = f;
+  return {
+    limit: 100,
+    include_archived: f.includeArchived || undefined,
+    pipeline_id: f.pipelineId || undefined,
+    q: f.q || undefined,
+    sort: f.sort || undefined,
+    stage_id: filters.stage_id || undefined,
+    ...ownerDialParams(filters),
+    company_id: filters.company_id || undefined,
+    status: dealStatusFilter(filters.status),
+    partner_company_id: filters.partner_company_id || undefined,
+    stalled: filters.stalled === "true" ? true : undefined,
+    partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    // Several ids and their mode, out of the one comma-joined string the
+    // address carries them in. Spelled by the shared encoder rather than here,
+    // so this board and the three lists cannot read one address two ways.
+    ...tagQueryParams(
+      parseTagIDs(filters.tag_id),
+      parseTagMode(filters.tag_mode),
+    ),
+    ...rangeQueryParams(filters, f.closeDay),
+  };
+}
+
+// The close-day dial as days. "This quarter" is the fiscal quarter holding
+// today in the installation's zone, the one the reports count.
+export function useCloseDay(value: string | undefined): DayRange | undefined {
+  const today = dayInZone(useNow(0), useCompanyZone());
+  const fiscalStart =
+    useInstallationSettings().data?.fiscal_year_start_month ?? 1;
+  return closeDayRange(value, today, fiscalStart);
+}
+
+export type DealListQuery = ReturnType<typeof dealsQueryParams> & {
+  cursor?: string;
+};
+
+export type DealListPage = Awaited<ReturnType<typeof readDealPage>>;
+
+export async function readDealPage(query: DealListQuery, signal?: AbortSignal) {
+  return unwrap(await api.GET("/deals", { params: { query }, signal }));
+}
+
+export function nextCursorOf(page: DealListPage): string | undefined {
+  return page.page?.has_more ? (page.page.next_cursor ?? undefined) : undefined;
+}
+
+/** The deals as one keyset walk over every stage. */
+export function useDeals(f: DealFilters, enabled = true) {
+  const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
+  return useInfiniteQuery({
+    enabled,
+    // The days, not the dial's word: a list opened after the quarter turns
+    // never reuses the old quarter's cached page. Today is read at mount.
+    queryKey: ["deals", f, closeDay],
+    // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
+    // bare `undefined` infers TPageParam=undefined and the string cursor no
+    // longer type-checks.
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) =>
+      readDealPage(
+        { ...dealsQueryParams({ ...f, closeDay }), cursor: pageParam },
+        signal,
+      ),
+    getNextPageParam: nextCursorOf,
+  });
+}
+
+// dealsByStageReportFilters translates the board's own filter dials into the
+// deals-by-stage report's filter shape. They are the same dials dealsQueryParams
+// sends to /deals, so a stage total and its cards agree on which deals are in
+// scope. Unsupported population dials withhold totals before this runs.
+function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
+  const { filters } = f;
+  const out: Record<string, unknown> = {};
+  if (f.pipelineId) out.pipeline_id = f.pipelineId;
+  if (filters.owner_id) out.owner_id = filters.owner_id;
+  if (filters.company_id) out.company_id = filters.company_id;
+  const status = dealStatusFilter(filters.status);
+  if (status) out.status = status;
+  const band = bandOfDial(filters[WIN_PROBABILITY_DIAL]);
+  if (band) out.win_probability_band = band.key;
+  if (filters.partner_company_id)
+    out.partner_company_id = filters.partner_company_id;
+  if (filters.stalled === "true") out.stalled = true;
+  if (filters.partner_sourced === "true") out.partner_sourced = true;
+  return out;
+}
+
+// Why the board may not state a stage total, or undefined when it may.
+//
+// One function for both the decision and the words. The query's `enabled` keys
+// on this answering undefined, and the column prints what it answers. So a
+// reason cannot be added to one without the other. The column can never
+// explain a total by a rule other than the one that withheld it.
+//
+// Derived from the filters, never from the query's own status. A query that
+// errored also settles to idle-and-not-successful. Reading status would tell a
+// reader whose report answered 422 to press a filter, not show the failure.
+//
+// Unsupported filters and archived-inclusive lists have a different population
+// from the live report. Their counts and money must stay limited to loaded cards.
+export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
+  if (f.includeArchived) return "deals.totalsNoArchived";
+  if (f.filters.stage_id) return "deals.totalsNoStageFilter";
+  if (parseTagIDs(f.filters.tag_id).length > 0) {
+    return "deals.totalsNoTagFilter";
+  }
+  if (f.q) return "deals.totalsNoSearch";
+  if (f.filters.owner_team_id || f.filters.unassigned === "true") {
+    return "deals.totalsNoTeamFilter";
+  }
+  if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
+  // The report narrows by band only, so a range no band matches has no total.
+  const probability = f.filters[WIN_PROBABILITY_DIAL];
+  if (probability && !bandOfDial(probability)) {
+    return "deals.totalsNoRangeFilter";
+  }
+  return undefined;
+}
+
+// The one reason the server decides: an owner dial naming somebody whose
+// totals this reader may not measure answers 403. The cards stay, because
+// reading a deal and measuring its owner are different permissions.
+export function totalsRefusedBecause(
+  totals: Map<string, StageTotals> | null | undefined,
+): MessageKey | undefined {
+  return totals === null ? "deals.totalsOwnerNotMeasurable" : undefined;
+}
+
+// useStageTotals reads the board's per-column totals from the deals-by-stage
+// report: a full aggregate over every matching deal, not the pages the columns
+// have read. The server converts each deal before grouping by stage.
+// Reports exclude archived deals, so that broader board population withholds
+// its totals through the same rule as every other unsupported filter.
+export function useStageTotals(f: DealFilters, enabled = true) {
+  return useQuery({
+    // Under ["deals"], so the one invalidation every deal mutation fires
+    // refreshes the column headers along with the cards. Keyed apart, a moved
+    // card would sit under a header still counting it in the stage it left.
+    queryKey: ["deals", "by-stage-totals", f],
+    // Asked only when the report would count the deals the board is drawing.
+    // totalsWithheldBecause owns that decision and the words for it both, so
+    // the column cannot explain a missing total by the wrong rule.
+    enabled: enabled && totalsWithheldBecause(f) === undefined,
+    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
+      const { data, error, response } = await api.POST("/reports/{report}", {
+        params: { path: { report: "deals-by-stage" } },
+        body: {
+          group_by: ["stage_id"],
+          aggregates: [
+            { fn: "count", as: "deals" },
+            { fn: "sum", field: "amount_base_minor", as: "base_minor" },
+            {
+              fn: "sum",
+              field: "weighted_base_minor",
+              as: "weighted_base_minor",
+            },
+            { fn: "count", field: "amount_base_minor", as: "priced_deals" },
+          ],
+          filters: dealsByStageReportFilters(f),
+        },
+      });
+      if (error) {
+        if (response.status === 403) {
+          return null;
+        }
+        throwProblem(error);
+      }
+      return buildStageTotals(
+        data.rows,
+        data.base_currency ?? null,
+        data.as_of ?? null,
+        data.timezone ?? null,
+      );
+    },
+  });
+}
+
+// Stage totals carry the server's reporting currency and valuation date.
+export type StageTotals = {
+  count: number;
+  baseMinor: number | null;
+  weightedBaseMinor: number | null;
+  currency: string | null;
+  asOf: string | null;
+  timezone: string | null;
+  unpricedCount: number | null;
+};
+
+function reportMinor(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+export function buildStageTotals(
+  rows: Record<string, unknown>[],
+  currency: string | null = null,
+  asOf: string | null = null,
+  timezone: string | null = null,
+): Map<string, StageTotals> {
+  return new Map(
+    rows.map((row) => {
+      const count = reportMinor(row.deals) ?? 0;
+      const priced = reportMinor(row.priced_deals);
+      return [
+        String(row.stage_id ?? ""),
+        {
+          count,
+          baseMinor: currency ? reportMinor(row.base_minor) : null,
+          weightedBaseMinor: currency
+            ? reportMinor(row.weighted_base_minor)
+            : null,
+          currency,
+          asOf,
+          timezone,
+          unpricedCount: priced == null ? null : Math.max(0, count - priced),
+        },
+      ];
+    }),
+  );
+}

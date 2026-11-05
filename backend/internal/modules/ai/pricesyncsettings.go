@@ -6,6 +6,7 @@ package ai
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -13,16 +14,23 @@ import (
 const (
 	PriceSyncKey        = "ai.price_sync"
 	PriceSyncLastRunKey = "ai.price_sync_last_run"
+	modelRateObject     = "ai_model_rate"
 )
 
 // PriceSyncConfig is whether the daily job syncs model prices.
 type PriceSyncConfig struct {
-	AutoSync bool `json:"auto_sync"`
+	AutoSync bool `json:"auto_sync" yaml:"auto_sync"`
 }
 
 // PriceSyncSettings is on by default, sovereign included: reading two public
 // price lists sends nothing of the installation's.
-var PriceSyncSettings = settings.Define(PriceSyncKey, "ai_model_rate", "update", PriceSyncConfig{AutoSync: true}, nil)
+var PriceSyncSettings = config.DefineStored(config.Spec[PriceSyncConfig]{
+	Key:     "ai.price_sync",
+	Env:     "MARGINCE_AI_PRICE_SYNC",
+	Type:    config.Struct[PriceSyncConfig](),
+	Default: config.Some(PriceSyncConfig{AutoSync: true}),
+	Doc:     "Whether the daily job syncs model prices, as {\"auto_sync\": true|false}. Refresh now runs either way.",
+}, config.Store{RBACObject: modelRateObject, AuditVerb: settingsAuditVerb})
 
 // PriceSyncTrigger is who started a run.
 type PriceSyncTrigger string
@@ -41,5 +49,6 @@ type LastPriceSync struct {
 	Report  RateRefreshReport `json:"report"`
 }
 
-// PriceSyncLastRun holds the last run; nil until the sync has run once.
-var PriceSyncLastRun = settings.Define[*LastPriceSync](PriceSyncLastRunKey, "ai_model_rate", "update", nil, nil)
+// PriceSyncLastRun holds the last run; nil until the sync has run once. Only
+// the sync writes it, so it is a record, not configuration a boot source sets.
+var PriceSyncLastRun = settings.Define[*LastPriceSync](PriceSyncLastRunKey, modelRateObject, settingsAuditVerb, nil, nil)

@@ -11,7 +11,6 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -27,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // importCall posts an approve or an undo of a run, then works every job it
@@ -49,38 +47,9 @@ func importCall(t *testing.T, e *apptest.AppEnv, id, verb string, body, out any)
 	return status
 }
 
-// testCall posts a request that starts a test run, then works the job it
-// queued. out then holds the run as the worker left it, or the refusal.
-//
-//craft:ignore naked-any out is whichever shape the caller reads the run or the refusal into, as e.Call takes it
-func testCall(t *testing.T, e *apptest.AppEnv, path string, body, out any) int {
+func readRun(t *testing.T, e *apptest.AppEnv, id string) importjobtest.Run {
 	t.Helper()
-	var answer json.RawMessage
-	status := e.Call(t, http.MethodPost, path, body, nil, &answer)
-	if status == http.StatusAccepted {
-		var queued struct {
-			ID     string `json:"id"`
-			Status string `json:"status"`
-		}
-		if err := json.Unmarshal(answer, &queued); err != nil || queued.Status != "validating" {
-			t.Fatalf("POST %s → 202 %s (%v), want the run at validating", path, answer, err)
-		}
-		importjobtest.Drain(t, e)
-		if got := e.Call(t, http.MethodGet, "/v1/imports/"+queued.ID, nil, nil, &answer); got != http.StatusOK {
-			t.Fatalf("GET the run after its test → %d, want 200", got)
-		}
-	}
-	if out != nil && len(answer) > 0 {
-		if err := json.Unmarshal(answer, out); err != nil {
-			t.Fatalf("decoding the answer to POST %s: %v", path, err)
-		}
-	}
-	return status
-}
-
-func readRun(t *testing.T, e *apptest.AppEnv, id string) importRunDTO {
-	t.Helper()
-	var run importRunDTO
+	var run importjobtest.Run
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+id, nil, nil, &run); status != http.StatusOK {
 		t.Fatalf("GET the run → %d, want 200", status)
 	}
@@ -108,10 +77,10 @@ func storedLeads(t *testing.T, e *apptest.AppEnv) int {
 }
 
 // testedLeadRun uploads a lead file and test-runs it, ready to approve.
-func testedLeadRun(t *testing.T, e *apptest.AppEnv, csv string) importRunDTO {
+func testedLeadRun(t *testing.T, e *apptest.AppEnv, csv string) importjobtest.Run {
 	t.Helper()
-	profile, _ := uploadCSV(t, e, "lead", csv)
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", csv)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})
 	if status != http.StatusAccepted || run.Status != "awaiting_approval" {
 		t.Fatalf("test run → %d %q, want 202 awaiting approval", status, run.Status)
 	}
@@ -121,7 +90,7 @@ func testedLeadRun(t *testing.T, e *apptest.AppEnv, csv string) importRunDTO {
 // approveQueued approves a run and leaves its commit job queued.
 func approveQueued(t *testing.T, e *apptest.AppEnv, id string) {
 	t.Helper()
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+id+"/approve", nil, nil, &approved); status != http.StatusAccepted || approved.Status != "running" {
 		t.Fatalf("approve → %d %q, want 202 running", status, approved.Status)
 	}
@@ -161,7 +130,7 @@ func TestUndoAnswersBeforeAnyRowIsReversed(t *testing.T) {
 	run := testedLeadRun(t, e, prospectCSV)
 	approveAndRead(t, e, run.ID)
 
-	var undoing importRunDTO
+	var undoing importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/undo", nil, nil, &undoing); status != http.StatusAccepted || undoing.Status != "undoing" {
 		t.Fatalf("undo → %d %q, want 202 undoing", status, undoing.Status)
 	}
@@ -176,8 +145,8 @@ func TestUndoAnswersBeforeAnyRowIsReversed(t *testing.T) {
 
 func TestTagsAreCreatedOnlyByTheCommitJob(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "company", "Name,Tags\nTagged Jobs GmbH,Fresh\n")
-	run, _ := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nTagged Jobs GmbH,Fresh\n")
+	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	tagsBefore := tagCount(t, e)
 	approveQueued(t, e, run.ID)
 	if got := tagCount(t, e); got != tagsBefore {
@@ -208,9 +177,24 @@ func TestASnoozedSliceIsClaimedWithTheSameAttempt(t *testing.T) {
 	if _, claimed := runLease(t, e, run.ID); claimed != nil {
 		t.Fatalf("a snoozed slice left the run claimed by attempt %d, want it queued for the next slice", *claimed)
 	}
-	second := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
-	if len(second) != 1 || second[0].Job.ID != first[0].Job.ID || second[0].EventKind != river.EventKindJobCompleted {
-		t.Fatalf("the second slice was %+v, want job %d again, completed", second, first[0].Job.ID)
+	checkpoint := readRun(t, e, run.ID).Checkpoint
+	for checkpoint < 501 {
+		next := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
+		if len(next) != 1 || next[0].Job.ID != first[0].Job.ID {
+			t.Fatalf("the next slice was %+v, want job %d again", next, first[0].Job.ID)
+		}
+		if next[0].EventKind != river.EventKindJobCompleted && next[0].EventKind != river.EventKindJobSnoozed {
+			t.Fatalf("the next slice ended %s, want completion or another bounded slice", next[0].EventKind)
+		}
+		polled := readRun(t, e, run.ID)
+		if polled.Checkpoint <= checkpoint || polled.Checkpoint > 501 {
+			t.Fatalf("slice checkpoint moved from %d to %d, want progress within 501 rows", checkpoint, polled.Checkpoint)
+		}
+		checkpoint = polled.Checkpoint
+		sliceAttempt, claimed := runLease(t, e, run.ID)
+		if sliceAttempt != attempt || (next[0].EventKind == river.EventKindJobSnoozed && claimed != nil) {
+			t.Fatalf("slice attempt %d claimed by %v, want unchanged attempt %d and released snoozes", sliceAttempt, claimed, attempt)
+		}
 	}
 	finalAttempt, claimed := runLease(t, e, run.ID)
 	if finalAttempt != attempt || claimed == nil || *claimed != attempt {
@@ -265,7 +249,7 @@ func TestAShutdownFlushesAndSnoozesWithoutFailing(t *testing.T) {
 	run := testedLeadRun(t, e, leadFile(rows))
 
 	runner, _, _ := jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{
-		Blobstore: store, ImportUploadCap: deployconfig.Config{}.EffectiveUploads().CSVImport,
+		Blobstore: store, ImportUploadCap: compose.DefaultUploadLimits().CSVImport,
 	})
 	approveQueued(t, e, run.ID)
 	landed := awaitCheckpoint(t, e, run.ID)

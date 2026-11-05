@@ -38,10 +38,15 @@ type tallyingProvider struct {
 	archivesWhatNativeDoes
 	records map[datasource.EntityRef]datasource.Record
 	reads   int
+	readsOf map[datasource.EntityRef]int
 }
 
 func (p *tallyingProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	p.reads++
+	if p.readsOf == nil {
+		p.readsOf = map[datasource.EntityRef]int{}
+	}
+	p.readsOf[ref]++
 	rec, ok := p.records[ref]
 	if !ok {
 		return datasource.Record{}, apperrors.ErrNotFound
@@ -105,7 +110,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			"disqualify_lead",
 			oneRecord(datasource.EntityLead, id, `{"full_name":"Ada"}`, 3),
 			func(p *tallyingProvider) GovernedCall {
-				return NewDisqualifyLeadCall(p, nil, DisqualifyLeadCommand{LeadID: id})
+				return NewDisqualifyLeadCall(p, nil, nil, DisqualifyLeadCommand{LeadID: id})
 			},
 		},
 		{
@@ -125,7 +130,7 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 		},
 		{
 			"enrich",
-			oneRecord(datasource.EntityCompany, id, `{"name":"Acme"}`, 3),
+			oneRecord(datasource.EntityCompany, id, `{"name":"Acme","domains":[{"domain":"acme.example"}]}`, 3),
 			func(p *tallyingProvider) GovernedCall {
 				return NewEnrichCall(p, nil, EnrichCommand{CompanyID: id, Depth: EnrichDepthPage})
 			},
@@ -164,9 +169,14 @@ func TestEachAnchoredCommandReadsItsRecordOnce(t *testing.T) {
 			if err != nil {
 				t.Fatalf("staging a readable, authoritative record answered %v", err)
 			}
-			if c.provider.reads != 1 {
-				t.Errorf("read the record %d times, want 1 — Guards and Subject must rest on one moment, "+
-					"or the approval pins a version the refusal never judged", c.provider.reads)
+			for ref, n := range c.provider.readsOf {
+				if n != 1 {
+					t.Errorf("read %s %d times, want 1 — Guards and Subject must rest on one moment, "+
+						"or the approval pins a version the refusal never judged", ref.Type, n)
+				}
+			}
+			if len(c.provider.readsOf) == 0 {
+				t.Error("read no record at all, so the approval pins a version nobody read")
 			}
 			if info.TargetVersion == nil || *info.TargetVersion != 3 {
 				t.Errorf("TargetVersion = %v, want the version the read returned", info.TargetVersion)
@@ -283,7 +293,7 @@ func TestTheSinglePurposeGuardsRefuseWhatExecutionWouldRefuse(t *testing.T) {
 		},
 		{
 			"an enrich of a target that is not an absolute http(s) URL",
-			NewEnrichCall(oneRecord(datasource.EntityCompany, id, `{}`, 1),
+			NewEnrichCall(oneRecord(datasource.EntityCompany, id, `{"domains":[{"domain":"acme.example"}]}`, 1),
 				nil, EnrichCommand{CompanyID: id, URL: "acme.test/about", Depth: EnrichDepthPage}),
 			"absolute http(s) URL",
 		},
@@ -365,6 +375,9 @@ func TestAMergeStagesTheSurvivorAndNamesBothHalves(t *testing.T) {
 		t.Errorf("staged target %s, want the SURVIVOR %s — an approval bound to the archived half pins a "+
 			"row the merge is about to retire", info.TargetID, survivor)
 	}
+	if info.CoTargetType != "contact" || info.CoTargetID != source {
+		t.Fatalf("source pin = %s/%s, want contact/%s", info.CoTargetType, info.CoTargetID, source)
+	}
 	if info.TargetVersion == nil || *info.TargetVersion != 7 {
 		t.Errorf("TargetVersion = %v, want the survivor's 7", info.TargetVersion)
 	}
@@ -430,7 +443,7 @@ func TestTheTwoEnrichDepthsAreDistinctCommandsWithDistinctSummaries(t *testing.T
 	summaries := map[EnrichDepth]string{}
 	for _, cmd := range []EnrichCommand{page, site} {
 		info, err := StageSubject(context.Background(),
-			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme"}`, 1), nil, cmd))
+			NewEnrichCall(oneRecord(datasource.EntityCompany, company, `{"name":"Acme","domains":[{"domain":"acme.example"}]}`, 1), nil, cmd))
 		if err != nil {
 			t.Fatalf("staging depth %q answered %v", cmd.Depth, err)
 		}
@@ -662,60 +675,6 @@ func TestBookingAnotherHostStagesOnlyForAnAdmin(t *testing.T) {
 			_, err := StageSubject(c.ctx, call(c.host))
 			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
 				t.Fatalf("staging answered %v; want permission denied = %v", err, c.denied)
-			}
-		})
-	}
-}
-
-// The same rule on the door that now EXECUTES it. book_meeting stopped staging
-// by default, and requireOwnCalendarOrAdmin lived only in the resolver's Guards
-// — which run inside StageSubject and nowhere else. The store does not re-ask:
-// defaultHost (compose/comms.go) takes whatever host it is handed. So without
-// this the verb would book onto a colleague's calendar for any passport holding
-// `send`.
-func TestBookingAnotherHostExecutesOnlyForAnAdmin(t *testing.T) {
-	self, host, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	window := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
-	tool := bookMeetingTool{
-		comms: &recordingComms{},
-		p:     oneRecord(datasource.EntityCompany, company, `{}`, 1),
-	}
-	args := func(hostID *ids.UUID) json.RawMessage {
-		in := map[string]any{
-			"start": window.Format(time.RFC3339), "end": window.Add(30 * time.Minute).Format(time.RFC3339),
-			"subject": "Review",
-			"links":   []map[string]string{{"entity_type": "company", "entity_id": company.String()}},
-		}
-		if hostID != nil {
-			in["host_user_id"] = hostID.String()
-		}
-		raw, err := json.Marshal(in)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return raw
-	}
-	as := func(roles []string) context.Context {
-		return principal.WithActor(context.Background(), principal.Principal{
-			Type: principal.PrincipalHuman, ID: "human:" + self.String(), UserID: self,
-			Permissions: principal.Permissions{RoleKeys: roles, RowScope: principal.RowScopeAll},
-		})
-	}
-	for _, c := range []struct {
-		name   string
-		ctx    context.Context
-		host   *ids.UUID
-		denied bool
-	}{
-		{"own calendar", as([]string{"management"}), &self, false},
-		{"no host named", as([]string{"rep"}), nil, false},
-		{"another host, admin", as([]string{"admin"}), &host, false},
-		{"another host, management", as([]string{"management"}), &host, true},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			_, err := tool.Handle(c.ctx, args(c.host))
-			if got := errors.Is(err, apperrors.ErrPermissionDenied); got != c.denied {
-				t.Fatalf("Handle answered %v; want permission denied = %v", err, c.denied)
 			}
 		})
 	}

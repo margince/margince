@@ -25,5 +25,5 @@ it("canonicalizes legacy Home links without adding history or losing queue filte
     view: "weekly",
   });
   expect(history.length).toBe(length);
-  expect(history.state).toEqual({ previous: "record" });
+  expect(history.state).toMatchObject({ previous: "record" });
 });

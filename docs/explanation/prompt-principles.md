@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/draftrules backend/internal/compose/promptvoice backend/internal/compose/promptlang backend/internal/shared/kernel/promptfence backend/internal/modules/ai/geminithinking.go config/presets/gemini_cloud.yaml -->
 # Writing production prompts: what comes first, and the rules that hold it
 
 These rules cover the prompts Margince itself sends while it runs. They are the system and user

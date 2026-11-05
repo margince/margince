@@ -32,6 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -48,6 +49,8 @@ func (s *Store) ContactRelationshipChangesTx(
 	contactID ids.ContactID,
 	now time.Time,
 	within *ids.ProjectID,
+	touch relstrength.Touches,
+	zone *time.Location,
 ) ([]relstrength.Change, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
@@ -59,7 +62,7 @@ func (s *Store) ContactRelationshipChangesTx(
 	if err != nil {
 		return nil, err
 	}
-	return relstrength.Changes(in, now), nil
+	return relstrength.Changes(withTouch(in, touch, zone), now), nil
 }
 
 // ContactChanges is one contact's derived changes, carrying the id and the name
@@ -88,6 +91,8 @@ func (s *Store) RelationshipChangesForContacts(
 	tx pgx.Tx,
 	contacts []ids.ContactID,
 	now time.Time,
+	touches map[ids.ContactID]relstrength.Touches,
+	zone *time.Location,
 ) ([]ContactChanges, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
@@ -99,13 +104,23 @@ func (s *Store) RelationshipChangesForContacts(
 	if err != nil {
 		return nil, err
 	}
+	touched := make([]ids.ContactID, 0, len(visible))
+	for _, contact := range visible {
+		if _, ok := touches[contact.id]; ok {
+			touched = append(touched, contact.id)
+		}
+	}
+	inputs, err := changeInputsFor(ctx, tx, touched, now, nil)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]ContactChanges, 0, len(visible))
 	for _, contact := range visible {
-		in, err := changeInputs(ctx, tx, contact.id, now, nil)
-		if err != nil {
-			return nil, err
+		touch, ok := touches[contact.id]
+		if !ok {
+			continue
 		}
-		changes := relstrength.Changes(in, now)
+		changes := relstrength.Changes(withTouch(inputs[contact.id], touch, zone), now)
 		if len(changes) == 0 {
 			continue
 		}
@@ -158,13 +173,38 @@ func visibleContactNames(ctx context.Context, tx pgx.Tx, contacts []ids.ContactI
 	return out, rows.Err()
 }
 
-// changeInputs gathers the present fold, the same fold as it stood one
-// comparison window ago, and the two timestamps a returning reply is measured
-// between.
+// withTouch adds the moments the last-touch reader owns. The fold below holds
+// only the strength-window counts. No second statement here answers "when did
+// they last write" differently from the date a surface prints.
+func withTouch(in relstrength.ChangeInputs, touch relstrength.Touches, zone *time.Location) relstrength.ChangeInputs {
+	in.LastTouch = touch.LastTouch
+	in.LatestInbound = touch.LatestInbound
+	in.PrecedingInteraction = touch.Preceding
+	in.Zone = zone
+	return in
+}
+
+// changeInputs gathers the present fold and the same fold as it stood one
+// comparison window ago.
 func changeInputs(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	now time.Time, within *ids.ProjectID,
 ) (relstrength.ChangeInputs, error) {
+	inputs, err := changeInputsFor(ctx, tx, []ids.ContactID{contactID}, now, within)
+	return inputs[contactID], err
+}
+
+// changeInputsFor is changeInputs for a set of contacts, in one grouped pass.
+// A contact with no qualifying interaction is absent, and its zero inputs are
+// what the fold answers over no rows.
+func changeInputsFor(
+	ctx context.Context, tx pgx.Tx, contacts []ids.ContactID,
+	now time.Time, within *ids.ProjectID,
+) (map[ids.ContactID]relstrength.ChangeInputs, error) {
+	out := make(map[ids.ContactID]relstrength.ChangeInputs, len(contacts))
+	if len(contacts) == 0 {
+		return out, nil
+	}
 	asOf := now.AddDate(0, 0, -relstrength.ComparisonDays)
 
 	// BOTH windows and both statements, or the comparison is between two
@@ -172,10 +212,11 @@ func changeInputs(
 	// the "after" covered one, and the change it reported would be the
 	// narrowing rather than anything that happened.
 	foldArgs := []any{
-		contactID,
+		contacts,
 		now.AddDate(0, 0, -relStrengthWindowDays),
 		asOf,
 		asOf.AddDate(0, 0, -relStrengthWindowDays),
+		now,
 	}
 	foldWithin := ""
 	if within != nil {
@@ -183,54 +224,60 @@ func changeInputs(
 		foldWithin = " AND " + activityWithinProject("a", len(foldArgs))
 	}
 
-	var in relstrength.ChangeInputs
-	// One pass over the contact's qualifying interactions answers both windows.
+	// One pass over the contacts' qualifying interactions answers both windows.
 	// The earlier fold's own last-interaction is the last one BEFORE asOf, not
 	// the overall one — inheriting today's recency would make every band look
 	// unchanged and the whole derivation silent.
-	if err := tx.QueryRow(ctx, `
-		SELECT max(a.occurred_at),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'outbound'),
-		       max(a.occurred_at) FILTER (WHERE a.occurred_at < $3),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'inbound'),
-		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE a.occurred_at >= $4 AND a.occurred_at < $3 AND a.direction = 'outbound'),
-		       max(a.occurred_at) FILTER (WHERE a.direction = 'inbound')
-		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE `+strengthCounts+` AND a.archived_at IS NULL`+
-		auth.AudienceWorkspaceOnly("a")+foldWithin,
+	rows, err := tx.Query(ctx, `
+		SELECT a.link_contact,
+		       max(a.occurred_at),
+		       max(a.engaged_at),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", "$2")+` AND `+afterEngaged+` AND `+relstrength.WeWroteSQL("a")+`),
+		       max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+`),
+		       max(a.engaged_before),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.TheyWroteSQL("a.link_contact", "a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+relstrength.WeWroteSQL("a")+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+afterEngagedBefore+`),
+		       count(DISTINCT `+strengthInteractionUnit+`) FILTER (WHERE `+occurredday.WithinSQL("a", "$4", "$3")+` AND `+afterEngagedBefore+` AND `+relstrength.WeWroteSQL("a")+`)
+		  FROM (SELECT `+foldColumns+`, l.contact_id AS link_contact,
+		               max(a.occurred_at) FILTER (WHERE `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
+		                 OVER (PARTITION BY l.contact_id) AS engaged_at,
+		               max(a.occurred_at) FILTER (WHERE `+occurredday.BeforeSQL("a", "$3")+` AND `+relstrength.ContactTookPartSQL("l.contact_id", "a")+`)
+		                 OVER (PARTITION BY l.contact_id) AS engaged_before
+		          FROM activity a
+		          JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = ANY($1)
+		         WHERE `+strengthCountsAt(5)+` AND a.archived_at IS NULL`+
+		auth.AudienceWorkspaceOnly("a")+foldWithin+`) a
+		 GROUP BY a.link_contact`,
 		foldArgs...,
-	).Scan(
-		&in.Current.LastInteraction, &in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
-		&in.Previous.LastInteraction, &in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
-		&in.LatestInbound,
-	); err != nil {
-		return relstrength.ChangeInputs{}, fmt.Errorf("contacts: reading a contact's relationship history: %w", err)
+	)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
 	}
-
-	if in.LatestInbound == nil {
-		return in, nil
+	defer rows.Close()
+	for rows.Next() {
+		var contactID ids.ContactID
+		var in relstrength.ChangeInputs
+		if err := rows.Scan(&contactID,
+			&in.Current.LastTouch, &in.Current.LastEngaged,
+			&in.Current.Count90d, &in.Current.Inbound90d, &in.Current.Outbound90d,
+			&in.Current.LateCount90d, &in.Current.LateOutbound90d,
+			&in.Previous.LastTouch, &in.Previous.LastEngaged,
+			&in.Previous.Count90d, &in.Previous.Inbound90d, &in.Previous.Outbound90d,
+			&in.Previous.LateCount90d, &in.Previous.LateOutbound90d,
+		); err != nil {
+			return nil, fmt.Errorf("contacts: reading contacts' relationship history: %w", err)
+		}
+		out[contactID] = in
 	}
-	// The far side of the silence their reply broke. A separate statement
-	// because it is bounded by a value the first one returns.
-	precedingArgs := []any{contactID, *in.LatestInbound}
-	precedingWithin := ""
-	if within != nil {
-		precedingArgs = append(precedingArgs, *within)
-		precedingWithin = " AND " + activityWithinProject("a", len(precedingArgs))
-	}
-	if err := tx.QueryRow(ctx, `
-		SELECT max(a.occurred_at)
-		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = $1
-		 WHERE `+strengthCounts+` AND a.archived_at IS NULL
-		   AND a.occurred_at < $2`+auth.AudienceWorkspaceOnly("a")+precedingWithin,
-		precedingArgs...,
-	).Scan(&in.PrecedingInteraction); err != nil {
-		return relstrength.ChangeInputs{}, fmt.Errorf("contacts: reading what preceded a contact's last reply: %w", err)
-	}
-	return in, nil
+	return out, rows.Err()
 }
+
+// afterEngagedBefore is afterEngaged for the earlier window: after the
+// contact's last part before asOf.
+var afterEngagedBefore = relstrength.AfterEngagedSQL("a", "engaged_before")

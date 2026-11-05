@@ -3,34 +3,19 @@
 
 package ai
 
-// FakeRoutingConfig is the routing config the offline --ai-fake dev/test
-// path is built over. It binds every tier a task ladder NAMES
-// (local_small, cheap_cloud, premium) plus the embeddings lane to
-// ProviderFake, so every task's fallback ladder is fully bound —
-// UnboundLadderWarnings reports nothing for it, and no ladder is ever
-// refused because --ai-fake happened to leave a tier unbound. That
-// matters because TaskSiteExtract's ladder is premium-only by contract
-// (no fallback rung): a fake config that skipped the premium tier would
-// silently refuse deep-read extraction under --ai-fake while every
-// other lane worked, an inconsistency a dev/test flag must never
-// produce. The tiers no ladder names — frontier and local_large — stay
-// deliberately unbound: they exist for an operator to bind, and binding
-// them here would assert a fallback the contract does not declare.
-// TestFakeRoutingConfigBindsEveryLadder catches the case that matters,
-// a ladder rung this config cannot serve, by running the real
-// UnboundLadderWarnings over it. Riding this config through NewModelPath
-// (rather than FakeModelPath's direct client wiring) means --ai-fake
-// exercises the real Router — tiering, the budget guardrail, metering and
-// call tracing — with only the provider swapped for the deterministic fake.
+// FakeRoutingConfig keeps offline calls on the real router while deriving
+// fake bindings from the task contract, so a new ladder cannot go unbound.
 func FakeRoutingConfig() RoutingConfig {
 	fake := ProviderConfig{Provider: ProviderFake}
+	tiers := make(map[Tier]ProviderConfig)
+	for _, task := range AllTasks() {
+		for _, tier := range TaskLadder(task) {
+			tiers[tier] = fake
+		}
+	}
 	return RoutingConfig{
-		Profile: ProfileEUHosted,
-		Tiers: map[Tier]ProviderConfig{
-			TierLocalSmall: fake,
-			TierCheapCloud: fake,
-			TierPremium:    fake,
-		},
+		Profile:    ProfileEUHosted,
+		Tiers:      tiers,
 		Embeddings: EmbeddingsConfig{ProviderConfig: fake},
 	}
 }

@@ -61,6 +61,41 @@ func TestReportingPreviousWeekPreservesLocalMidnightAcrossDST(t *testing.T) {
 	}
 }
 
+func TestThisWeekComparesWithLastWeekToTheSameLocalClockAcrossDST(t *testing.T) {
+	zone := reportingTestZone(t)
+	start := time.Date(2026, 3, 30, 0, 0, 0, 0, zone)
+	cutoff := time.Date(2026, 4, 1, 9, 30, 0, 0, zone).UTC()
+	previous := reportingPrevious(crmcontracts.ReportingContext{PeriodKind: "this_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: cutoff}})
+	if want := time.Date(2026, 3, 23, 0, 0, 0, 0, zone); !previous.StartAt.Equal(want) {
+		t.Errorf("previous week starts %s, want %s", previous.StartAt, want)
+	}
+	if want := time.Date(2026, 3, 25, 9, 30, 0, 0, zone); !previous.EndAt.Equal(want) {
+		t.Errorf("previous week ends %s, want last Wednesday 09:30 local, %s", previous.EndAt, want)
+	}
+}
+
+// A week that began in October is read on 1 November. The week counts its
+// own days, and the month target counts November up to the cutoff.
+func TestThisWeekAcrossAMonthEndKeepsTheMonthTargetToItsOwnDays(t *testing.T) {
+	zone := reportingTestZone(t)
+	at := time.Date(2026, 11, 1, 18, 0, 0, 0, zone)
+	interval := crmcontracts.ReportingWindow{StartAt: time.Date(2026, 10, 26, 0, 0, 0, 0, zone), EndAt: at}
+	target := crmcontracts.ReportingWindow{StartAt: time.Date(2026, 11, 1, 0, 0, 0, 0, zone), EndAt: time.Date(2026, 12, 1, 0, 0, 0, 0, zone)}
+	frame := crmcontracts.ReportingContext{PeriodKind: "this_week", Interval: interval, TargetInterval: &target, EvaluatedAt: at, Currency: "EUR"}
+	owner := ids.NewV7()
+	facts := reportingCohorts(frame, []reporting.Fact{
+		reportingTestMoney(owner, time.Date(2026, 10, 27, 10, 0, 0, 0, zone), 10000),
+		reportingTestMoney(owner, time.Date(2026, 11, 1, 9, 0, 0, 0, zone), 20000),
+	})
+	metric := projectReportingMetric(reportingTestMetric(t, "bookings_won"), frame, facts, crmcontracts.ReportingCoverage{Status: "ok"})
+	if metric.Value == nil || *metric.Value != 30000 {
+		t.Errorf("the week = %v, want both sales, 30000", metric.Value)
+	}
+	if metric.TargetActual == nil || *metric.TargetActual != 20000 {
+		t.Errorf("the month actual = %v, want November's sale only, 20000", metric.TargetActual)
+	}
+}
+
 func TestReportingMarchComparisonStopsAtFebruaryBoundary(t *testing.T) {
 	zone := reportingTestZone(t)
 	start := time.Date(2027, 3, 1, 0, 0, 0, 0, zone)
@@ -179,6 +214,9 @@ func TestReportingOutcomesUseTheSelectedIntervalAcrossMonths(t *testing.T) {
 	if chart.Interval == nil || !chart.Interval.StartAt.Equal(start) || !chart.Interval.EndAt.Equal(frame.Interval.EndAt) || len(chart.Points) != 1 || chart.Points[0].Value == nil || *chart.Points[0].Value != 2 || chart.Points[0].Evidence.ContextId != "interval" {
 		t.Fatalf("outcomes did not preserve the requested week: %+v", chart)
 	}
+	if at := chart.Points[0].At; at == nil || !at.Equal(start) {
+		t.Fatalf("a weekly point is placed at its week's start, not %v", at)
+	}
 }
 
 func TestReportingTrendOmitsMissingOrPartialComparisonHistory(t *testing.T) {
@@ -242,5 +280,31 @@ func TestReportingFrozenOwnerLabelsKeepTheirOriginalMeaning(t *testing.T) {
 				t.Fatalf("frozen owner label: %+v", result.Charts)
 			}
 		})
+	}
+}
+
+func TestReportingEmptyEventWeeksCountZero(t *testing.T) {
+	start := time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC)
+	frame := crmcontracts.ReportingContext{Timezone: "UTC", PeriodKind: "last_week", Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 7)}, EvaluatedAt: start.AddDate(0, 0, 8)}
+	matched := 0
+	for _, spec := range reportingMetrics {
+		def := spec.definition
+		// The legacy promotion count uses arrivals as its population.
+		if def.Id == reportingLeadsPromoted {
+			continue
+		}
+		if def.TemporalBasis != reportingEventPeriod || def.Unit != reportingCountUnit || !slices.Contains(def.Blocks, reportingSdrOutcomes) {
+			continue
+		}
+		matched++
+		t.Run(string(def.Id), func(t *testing.T) {
+			chart := reportingWeekly(&reporting.Evaluation{Result: crmcontracts.ReportingEvaluation{Context: frame}}, crmcontracts.ReportingChart{Metric: def.Id, Coverage: crmcontracts.ReportingCoverage{Status: "ok"}})
+			if len(chart.Points) != 1 || chart.Points[0].Value == nil || *chart.Points[0].Value != 0 {
+				t.Fatalf("empty event week: %+v", chart.Points)
+			}
+		})
+	}
+	if matched == 0 {
+		t.Fatal("no count-based SDR outcome metrics were checked")
 	}
 }

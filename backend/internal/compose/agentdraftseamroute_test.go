@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -54,7 +55,7 @@ func (l askedLeads) GetLead(_ context.Context, id ids.LeadID, _ storekit.Archive
 	return crmcontracts.Lead{}, l.asked("lead", id.UUID)
 }
 
-func (askedLeads) ForLead(context.Context, ids.LeadID) ([]crmcontracts.Activity, error) {
+func (askedLeads) ForLead(context.Context, ids.LeadID, time.Time) ([]crmcontracts.Activity, error) {
 	return nil, nil
 }
 

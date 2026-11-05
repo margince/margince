@@ -125,6 +125,8 @@ func keepFiltered(rows []ranked, want crmcontracts.WorklistFilter) []ranked {
 
 func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 	switch want {
+	case crmcontracts.WorklistFilterProspecting:
+		return buildsPipeline(row.item) || row.item.Source == crmcontracts.WorklistItemSourceMeeting || row.item.Source == crmcontracts.WorklistItemSourceMeetingOutcome || row.item.Source == sourceMeetingFollowUp
 	case crmcontracts.WorklistFilterLeads:
 		return prospectingWork(row.item)
 	case filterUrgent:
@@ -153,7 +155,7 @@ func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 // row, so the complement above must leave it out.
 //
 // ONE test on the row's OWN source, matching the client exactly. The browser's
-// spelling is `item.source !== "approval"` (frontend/src/screens/brief.sentence.ts),
+// spelling is `item.source !== "approval"` (frontend/src/features/brief/brief.sentence.ts),
 // and the two obvious server-side readings are both wider:
 //
 //   - Category `decisions` includes an introduction request, which is not an

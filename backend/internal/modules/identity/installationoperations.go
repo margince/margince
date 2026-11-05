@@ -14,7 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // OperationSettings holds the operating values as they stand. Its fields are the
@@ -58,7 +58,7 @@ type OperationPatch struct {
 }
 
 type operationField struct {
-	entry *settings.Entry[int]
+	entry *config.Setting[int]
 	into  *int
 }
 
@@ -87,7 +87,7 @@ func (o *OperationSettings) fields() []operationField {
 
 func (p OperationPatch) writes() ([]pendingWrite, error) {
 	values := []struct {
-		entry *settings.Entry[int]
+		entry *config.Setting[int]
 		value *int
 	}{
 		{AgentRunnerIntervalSeconds, p.AgentRunnerIntervalSeconds},
@@ -108,7 +108,7 @@ func (p OperationPatch) writes() ([]pendingWrite, error) {
 	}
 	out := make([]pendingWrite, 0, len(values))
 	for _, v := range values {
-		write, err := encodePatchField(v.entry, v.value)
+		write, err := encodeStoredField(v.entry, v.value)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +123,7 @@ func (s *InstallationSettingsStore) readOperations(ctx context.Context) (Operati
 	var out OperationSettings
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		for _, field := range out.fields() {
-			value, err := settings.GetTx(ctx, tx, field.entry)
+			value, err := config.StoredValTx(ctx, tx, s.config, field.entry)
 			if err != nil {
 				return err
 			}

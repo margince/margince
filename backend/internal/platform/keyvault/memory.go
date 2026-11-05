@@ -86,3 +86,11 @@ func (m *memoryVault) Delete(_ context.Context, ws ids.WorkspaceID, ref Ref) err
 
 // Health always succeeds: the in-memory vault has no backend to reach.
 func (m *memoryVault) Health(_ context.Context) error { return nil }
+
+// Count is how many secrets the vault holds, for a test proving that a path
+// sealed nothing. Reach it through an interface{ Count() int } assertion.
+func (m *memoryVault) Count() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.secrets)
+}

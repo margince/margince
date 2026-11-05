@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
 import { EmailReference } from "./emailreference";
 import { Eyebrow } from "./eyebrow";
@@ -28,7 +29,10 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
     companyId: "o-1",
     valueMinor: 33_000,
     currency: "EUR",
-    ageMs: 9 * DAY_MS,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - 9 * DAY_MS,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     ...extra,
   };
 }
@@ -49,7 +53,7 @@ const states: { label: string; deal: BoardDeal }[] = [
       name: "ERP connector, phase 2",
       closeDate: "2027-03-14",
       owner: { id: "u-2", name: "Jonas Ritter" },
-      lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
+      lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
     }),
   },
   {
@@ -57,7 +61,7 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       name: "deal-de-lumenhealth-x-gradion-dataplatform-migration-2026",
       valueMinor: 12_500_000,
-      lastEmail: { agoMs: 5 * DAY_MS, direction: "outbound" },
+      lastEmail: lastEmailAgo(5 * DAY_MS, "outbound"),
     }),
   },
   {
@@ -65,10 +69,45 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       stalled: true,
       singleThreaded: true,
-      ageMs: 23 * DAY_MS,
+      idleSince: new Date(
+        Date.parse("2026-09-15T12:00:00Z") - 23 * DAY_MS,
+      ).toISOString(),
+      measuredAt: Date.parse("2026-09-15T12:00:00Z"),
       closeDate: "2027-04-30",
       closeDateProvisional: true,
-      lastEmail: { agoMs: 23 * DAY_MS, direction: "outbound" },
+      lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
+    }),
+  },
+  {
+    // The widest mail chip: a date-only email from another year.
+    label: "Mail dated last year",
+    deal: boardDeal({
+      stalled: true,
+      singleThreaded: true,
+      idleSince: new Date(
+        Date.parse("2026-09-15T12:00:00Z") - 23 * DAY_MS,
+      ).toISOString(),
+      measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+      lastEmail: {
+        at: "2025-09-14T12:00:00Z",
+        precision: "day",
+        measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+        direction: "outbound",
+      },
+    }),
+  },
+  {
+    label: "The same calendar age on both badges",
+    deal: boardDeal({
+      stalled: true,
+      idleSince: "2025-01-01T22:30:00Z",
+      measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+      lastEmail: {
+        at: "2025-01-01T22:30:00Z",
+        precision: "instant",
+        measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+        direction: "inbound",
+      },
     }),
   },
   {
@@ -112,8 +151,8 @@ export const BoardCardStatesDark: StoryObj = {
 
 // A card's mail line with the flyout a caller gave it: the last few subjects,
 // read on hover, without opening the deal. The aside's content is the
-// caller's — here the same stacked citations screens/dealmailaside.tsx reads
-// from the timeline, handed in as fixtures — so what this canvas holds is the
+// caller's. Here it is the stacked citations features/deals/dealmailaside.tsx
+// reads from the timeline, handed in as fixtures. So this canvas holds the
 // trigger, the panel and where it sits against the card.
 export const BoardCardMailFlyout: StoryObj = {
   render: () => (
@@ -122,7 +161,7 @@ export const BoardCardMailFlyout: StoryObj = {
         deal={boardDeal({
           stalled: true,
           closeDate: "2026-09-30",
-          lastEmail: { agoMs: 10 * DAY_MS, direction: "outbound" },
+          lastEmail: lastEmailAgo(10 * DAY_MS, "outbound"),
         })}
         href="#/deals/d2"
         zone="Europe/Berlin"
@@ -158,4 +197,24 @@ export const BoardCardMailFlyout: StoryObj = {
       expect(document.body.querySelector(".popover-panel")).toBeInTheDocument(),
     );
   },
+};
+
+export const CalendarAgeAgreement: StoryObj = {
+  render: () => (
+    <DealCard
+      deal={boardDeal({
+        stalled: true,
+        idleSince: "2025-01-01T22:30:00Z",
+        measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+        lastEmail: {
+          at: "2025-01-01T22:30:00Z",
+          precision: "instant",
+          measuredAt: Date.parse("2025-03-12T10:00:00Z"),
+          direction: "inbound",
+        },
+      })}
+      href="#/deals/d2"
+      zone="Europe/Berlin"
+    />
+  ),
 };

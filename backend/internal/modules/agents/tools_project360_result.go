@@ -65,16 +65,25 @@ type Project360PhaseHistory struct {
 	Durations   []Project360PhaseDuration `json:"phase_durations"`
 }
 
-// Project360Transition is one phase move; from_phase is empty on the birth
-// row, and changed_by_name is empty for a principal the user table does not
-// hold.
+// Project360Transition is one phase move. from_phase is empty on the birth
+// row. changed_by is absent when the audit row of the move is not known; a
+// caller reads that as "unknown", never as the system.
 type Project360Transition struct {
-	FromPhase     string    `json:"from_phase"`
-	ToPhase       string    `json:"to_phase"`
-	Reason        string    `json:"reason"`
-	ChangedAt     time.Time `json:"changed_at"`
-	ChangedBy     string    `json:"changed_by"`
-	ChangedByName string    `json:"changed_by_name"`
+	FromPhase string                 `json:"from_phase"`
+	ToPhase   string                 `json:"to_phase"`
+	Reason    string                 `json:"reason"`
+	ChangedAt time.Time              `json:"changed_at"`
+	ChangedBy *Project360Attribution `json:"changed_by,omitempty"`
+}
+
+// Project360Attribution is who made a move: the actor kind, the colleague an
+// agent acted for and the tool it was typed through.
+type Project360Attribution struct {
+	ActorType      string `json:"actor_type"`
+	ActorID        string `json:"actor_id"`
+	ActorName      string `json:"actor_name"`
+	OnBehalfOfName string `json:"on_behalf_of_name"`
+	AgentClient    string `json:"agent_client"`
 }
 
 // Project360PhaseDuration is the seconds a project has spent in one phase,
@@ -167,8 +176,10 @@ type Project360Filing struct {
 // currency over the caller's deal row scope, counts over their activity row
 // scope.
 type Project360Rollups struct {
-	OpenDealValueMinor int64      `json:"open_deal_value_minor"`
-	WonDealValueMinor  int64      `json:"won_deal_value_minor"`
+	OpenDealValueMinor *int64     `json:"open_deal_value_minor,omitempty"`
+	WonDealValueMinor  *int64     `json:"won_deal_value_minor,omitempty"`
+	OpenDealsUnpriced  *int       `json:"open_deals_unpriced,omitempty"`
+	WonDealsUnpriced   *int       `json:"won_deals_unpriced,omitempty"`
 	Currency           string     `json:"currency"`
 	OpenCommitments    int        `json:"open_commitments"`
 	LastActivityAt     *time.Time `json:"last_activity_at,omitempty"`

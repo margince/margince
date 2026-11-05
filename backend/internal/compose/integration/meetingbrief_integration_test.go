@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -47,19 +48,16 @@ func meetingBriefService(e *Env) *meetingbrief.Service {
 // meetingBriefServiceWithoutTeammates is the same service with no membership
 // seam — the composition a deployment that never wired coaching gets.
 func meetingBriefServiceWithoutTeammates(e *Env) *meetingbrief.Service {
+	return meetingBriefServiceAt(e, roomFixedNow)
+}
+
+func meetingBriefServiceAt(e *Env, now time.Time) *meetingbrief.Service {
 	view := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
-		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
-	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return roomFixedNow })
+		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return now })
+	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return now })
 }
 
 // identityTeammates is the membership reader, in the shape the brief takes.
-// The typed id stays inside identity, exactly as compose's own seam does.
-type identityTeammates struct{ svc *identity.Service }
-
-func (t identityTeammates) SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error) {
-	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
-}
-
 // The object grant is checked before any row is read. Without it a reader whose
 // role grants no activity read still reaches a brief describing a meeting, its
 // attendees and their commitments — through a door every sibling read refuses.
@@ -420,6 +418,54 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 	}
 }
 
+// A day entry dated today has not ended, so the room has not yet met on it.
+func TestMeetingBriefRecallsADayMeetingOnlyOnceItsDateIsOver(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
+
+	newDayMeeting := func(subject string, date time.Time) {
+		t.Helper()
+		at := occurredday.Anchor(date)
+		made, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "meeting", Subject: &subject, OccurredAt: &at, OccurredPrecision: activities.PrecisionDay, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ours}},
+		})
+		if err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+		// No writer seats a contact as an attendee, so the seat is a raw row.
+		seatInRoom(t, owner, e.WS, ids.UUID(made.Id), ours)
+	}
+	newDayMeeting("Held yesterday", roomFixedNow.AddDate(0, 0, -1))
+	newDayMeeting("Dated today", roomFixedNow)
+
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
+	LinkActivity(t, owner, meeting, "contact", ours)
+	seatInRoom(t, owner, e.WS, meeting, ours)
+
+	brief, err := meetingBriefService(e).Get(e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms), meeting)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	var recalled strings.Builder
+	for _, section := range brief.Sections {
+		if section.Kind != "company_context" {
+			continue
+		}
+		for _, sentence := range section.Sentences {
+			recalled.WriteString(sentence.Text + "\n")
+		}
+	}
+	if !strings.Contains(recalled.String(), "Held yesterday") {
+		t.Errorf("recalled = %q, want the day meeting whose date is over", recalled.String())
+	}
+	if strings.Contains(recalled.String(), "Dated today") {
+		t.Errorf("recalled = %q, but a day meeting dated today has not ended", recalled.String())
+	}
+}
+
 // A brief scoped to one engagement must not reach into the other for its
 // history — the same rule the rest of the page runs.
 func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
@@ -648,5 +694,40 @@ func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
 		if got != want {
 			t.Errorf("call %d was made under subject %+v, want %+v", i, got, want)
 		}
+	}
+}
+
+// A meeting brief spends AI budget on every read. An agent without the enrich
+// scope reads its plain form, and one holding the scope starts the model.
+func TestAMeetingBriefStartsAModelCallOnlyForAnAgentWithEnrich(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
+	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
+	LinkActivity(t, owner, meeting, "contact", ours)
+	seatInRoom(t, owner, e.WS, meeting, ours)
+	agent := func(scopes ...principal.Scope) context.Context {
+		ctx := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, roomPerms)
+		p, ok := principal.Actor(ctx)
+		if !ok {
+			t.Fatal("no actor")
+		}
+		p.Scopes = principal.NewScopeSet(scopes...)
+		return principal.WithActor(ctx, p)
+	}
+
+	lane := &meetingSubjectLane{}
+	if _, err := meetingBriefService(e).WithLane(lane).Get(agent(principal.ScopeRead), meeting); err != nil {
+		t.Fatalf("the agent's read without enrich: %v", err)
+	}
+	if len(lane.subjects) != 0 {
+		t.Errorf("an agent without enrich started %d model calls", len(lane.subjects))
+	}
+	if _, err := meetingBriefService(e).WithLane(lane).Get(agent(principal.ScopeRead, principal.ScopeEnrich), meeting); err != nil {
+		t.Fatalf("the agent's read with enrich: %v", err)
+	}
+	if len(lane.subjects) == 0 {
+		t.Error("an agent with enrich started no model call")
 	}
 }

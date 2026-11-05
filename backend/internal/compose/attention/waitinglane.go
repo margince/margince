@@ -40,7 +40,8 @@ type Waiting interface {
 	// can be what is left of a full two hundred — and a hundred and eighty is
 	// also what a smaller, complete installation returns. A caller counting rows
 	// against the bound would read the truncated scan as complete.
-	Unanswered(ctx context.Context, asOf time.Time) (rows []WaitingCustomer, cut bool, err error)
+	// WaitingFor narrows the mail before paging.
+	Unanswered(ctx context.Context, asOf time.Time, narrow WaitingFor) (rows []WaitingCustomer, cut bool, err error)
 	// Hidden answers what the queue's own hiding rules are keeping off this
 	// reader's page, one rule at a time.
 	//
@@ -168,6 +169,8 @@ type WaitingCustomer struct {
 	// thread. It is what keeps a long wait in execution instead of sending it
 	// to review.
 	HasOpenDeal bool
+	// NonBuyer keeps commercial direction separate from whether a reply is owed.
+	NonBuyer bool
 	// Engaged says the workspace wrote on this thread before the message
 	// arrived. False means unproven, not absent: a client that strips reply
 	// headers gives each message its own thread, so this demotes rather than
@@ -194,22 +197,17 @@ type WaitingCustomer struct {
 	ConfirmedRequest bool
 	// ActionUnconfirmed keeps unclassified or conflicting evidence out of Focus.
 	ActionUnconfirmed bool
-	// OwnerID is who owes this reply, resolved by the module from the record
-	// the thread is filed under.
-	//
-	// ZERO IS AMBIGUOUS HERE, unlike the task and lead lanes beside it, and the
-	// SQL is where the difference lives: eligibility is qualified through an
-	// UNGATED sales-link lookup — deliberately, so the same message is not work
-	// for one colleague and personal mail for another — while the owner is read
-	// through the visibility-gated link join, so an owner off a record this
-	// reader may not open is correctly withheld. A row can therefore qualify
-	// while its owner cannot be read.
-	//
-	// So zero means "this lane cannot say", not "nobody owns it". The scope
-	// filters can live with that: a row they cannot judge simply stays. The
-	// wire cannot, which is why classifyWaiting states nothing rather than
-	// reporting a withheld owner as an unassigned customer.
-	OwnerID ids.UUID
+	// Ownership is resolved only from records this reader may see.
+	DirectRecipients []ids.UUID
+	OwnerID          ids.UUID
+	OwnerKnown       bool
+	// SenderWasStranger says the workspace had never written to the sender
+	// when the mail arrived. BccOnly says this reader was in neither To nor Cc;
+	// ForeignLink that a link leads to a site unrelated to the sender. All three
+	// are capture's facts, and false where capture judged nothing.
+	SenderWasStranger bool
+	BccOnly           bool
+	ForeignLink       bool
 }
 
 // waitingCustomers reads who is waiting, or names why it could not.
@@ -221,6 +219,7 @@ type WaitingCustomer struct {
 func (s *Service) waitingCustomers(
 	ctx context.Context, asOf time.Time,
 ) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
+	defer timeStage(ctx, "waiting_customers")()
 	if s.waiting == nil {
 		return waitingRead{}, nil
 	}
@@ -228,7 +227,7 @@ func (s *Service) waitingCustomers(
 	var cut bool
 	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
 		var err error
-		rows, cut, err = s.waiting.Unanswered(ctx, asOf)
+		rows, cut, err = s.waiting.Unanswered(ctx, asOf, s.waitingFor(ctx))
 		return err
 	})
 	switch {
@@ -248,6 +247,39 @@ func (s *Service) waitingCustomers(
 	default:
 		return waitingRead{rows: rows, read: true, cut: cut}, nil
 	}
+}
+
+// WaitingFor is whose waiting mail one read answers. The zero value reads
+// every seat's.
+type WaitingFor struct {
+	// Owner is one seat's own queue, read as that seat.
+	Owner *ids.UUID
+	// Team keeps the read to the mail a seat in Seats answers for, the rows the
+	// team filter keeps. A message that is not mail answers to nobody and stays.
+	Team  bool
+	Seats []ids.UUID
+	// Unowned keeps what no seat answers for, the rows the unassigned scope
+	// keeps: every waiting mail has its one seat, so only other messages.
+	Unowned bool
+}
+
+// waitingFor narrows the scan the way narrowToScope narrows its rows, so the
+// scan bound is spent on rows the scope keeps.
+func (s *Service) waitingFor(ctx context.Context) WaitingFor {
+	switch s.taskScope {
+	case TasksMine:
+		reader := readerOf(ctx)
+		return WaitingFor{Owner: &reader}
+	case TasksOwnedBy:
+		owner := s.taskOwner
+		return WaitingFor{Owner: &owner}
+	case TasksUnassigned:
+		return WaitingFor{Unowned: true}
+	}
+	if s.teamRoster != nil {
+		return WaitingFor{Team: true, Seats: s.teamRoster.seats()}
+	}
+	return WaitingFor{}
 }
 
 // waitingRead is what the who-is-waiting source answered, and whether it ran.

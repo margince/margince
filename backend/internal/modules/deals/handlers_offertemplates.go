@@ -5,8 +5,10 @@ package deals
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -50,7 +52,7 @@ func (h Handlers) CreateOfferTemplate(w http.ResponseWriter, r *http.Request, _ 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := offerTemplateCreateInput(req)
+	in, err := OfferTemplateCreationInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -100,8 +102,12 @@ func (h Handlers) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id
 
 // ArchiveOfferTemplate soft-deletes a template; a repeat archive is a
 // no-op that returns the same entity.
-func (h Handlers) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	template, err := h.store.ArchiveOfferTemplate(r.Context(), pathID[ids.OfferTemplateKind](id))
+func (h Handlers) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferTemplateParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	template, err := h.store.ArchiveOfferTemplateAt(r.Context(), pathID[ids.OfferTemplateKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -140,7 +146,8 @@ func (h Handlers) RenderOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		writeStoreErr(w, r, err)
 		return
 	}
-	pdfBytes, err := RenderOfferPDF(ingredients.Offer, ingredients.LineItems, ingredients.BuyerBlock, ingredients.IssuerName, ingredients.Locale, ingredients.Layout)
+	issuer := PDFIssuer{OfferIssuer: ingredients.Issuer, Logo: h.issuerLogo(r.Context(), ingredients.Issuer.LogoKey)}
+	pdfBytes, err := RenderOfferPDF(ingredients.Offer, ingredients.LineItems, ingredients.BuyerBlock, issuer, ingredients.Locale, ingredients.Layout)
 	if err != nil {
 		httperr.Write(w, r, fmt.Errorf("render offer pdf: %w", err))
 		return
@@ -251,4 +258,30 @@ func (h Handlers) DownloadOfferPdf(w http.ResponseWriter, r *http.Request, id cr
 		ContentType: contentType, Filename: filename, Inline: true, Size: obj.Size,
 		Body: rc,
 	}, "offer pdf "+id.String())
+}
+
+// issuerLogoReadLimit bounds the stored logo a render reads.
+const issuerLogoReadLimit = 8 << 20
+
+// issuerLogo reads the issuing entity's stored logo. A logo that cannot be
+// read leaves the document without one rather than failing it. The issuer's
+// name and legal block still say who issued it.
+func (h Handlers) issuerLogo(ctx context.Context, key string) []byte {
+	if key == "" {
+		return nil
+	}
+	reader, _, err := h.blob.Get(ctx, key)
+	if err != nil {
+		slog.WarnContext(ctx, "reading the issuer logo for an offer render", "key", key, "err", err)
+		return nil
+	}
+	logo, err := io.ReadAll(io.LimitReader(reader, issuerLogoReadLimit))
+	if closeErr := reader.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		slog.WarnContext(ctx, "reading the issuer logo for an offer render", "key", key, "err", err)
+		return nil
+	}
+	return logo
 }

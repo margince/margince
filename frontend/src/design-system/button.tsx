@@ -1,7 +1,8 @@
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Sparkles } from "lucide-react";
 import { type ComponentPropsWithRef, type ReactNode, useId } from "react";
 import { describedByIds } from "./describedby";
 import { swallowWhileBusy, useSinglePress } from "./presslatch";
+import { atRegionVolume, useQuietVerbs } from "./verbvolume";
 
 // `federated` is the door into another company's sign-in: full-width,
 // unfilled, and carrying that company's own mark. It is a variant rather than a
@@ -12,12 +13,10 @@ import { swallowWhileBusy, useSinglePress } from "./presslatch";
 /**
  * How loud a control is, and on whose behalf it acts.
  *
- * `ai` is the one that is not a volume. It says a machine does the work behind
- * the click: it drafts the mail, reads the site, writes the summary. It is
- * indigo everywhere for the same reason the bands and the citation rules are.
- * A reader learns one colour for "Margince did this" rather than one per
- * surface. It never marks importance: a destructive verb an agent performs is
- * still danger.
+ * `ai` and `aiQuiet` say the press starts a model, and both draw the ✦. `ai`
+ * is filled like `primary`, and a screen, panel or card in hand has one of the
+ * two at most. Every other AI verb is `aiQuiet`, a ghost with an indigo ✦. An
+ * agent's destructive verb is still danger. Accepting a proposal is `primary`.
  *
  * `link` is the quietest rung: the text affordance `.link-button` already draws
  * for an `<a>` or a hand-rolled `<button>`. A verb reaches it through this
@@ -62,18 +61,35 @@ export function BusyMark({ className }: Readonly<{ className?: string }>) {
 type ButtonShape =
   | {
       variant: "bare";
-      /** The whole label is the glyph; see the other arm. */
+      /** The whole label is the glyph; the next arm says what that owes. */
       iconOnly: true;
+      align?: never;
     }
   | {
-      variant?: ButtonVariant;
+      /** An AI verb always shows its ✦, so it never takes a glyph of its own. */
+      variant: "ai" | "aiQuiet";
+      iconOnly?: false;
+      align?: "center" | "start";
+    }
+  | {
+      variant?: Exclude<ButtonVariant, "ai" | "aiQuiet">;
       /**
        * This button's whole label is its icon, so it drops the width floor that
        * keeps a short word readable and becomes square. The caller still owes
        * it an accessible name (`aria-label` or a visually-hidden child),
        * because a glyph announces as nothing.
        */
-      iconOnly?: boolean;
+      iconOnly: true;
+      align?: never;
+    }
+  | {
+      variant?: ButtonVariant;
+      iconOnly?: false;
+      /**
+       * Where the label's lines sit in the button. `start` is for a label that
+       * is data standing in running text, so a wrapped line reads from its edge.
+       */
+      align?: "center" | "start";
     };
 
 type ButtonBase = ComponentPropsWithRef<"button"> & ButtonShape;
@@ -81,6 +97,7 @@ type ButtonBase = ComponentPropsWithRef<"button"> & ButtonShape;
 export function Button({
   variant = "ghost",
   iconOnly,
+  align = "center",
   className,
   reason,
   reasonId,
@@ -184,9 +201,11 @@ export function Button({
   const ownReasonId = useId();
   const busyLabelId = useId();
   const singlePress = useSinglePress(pending);
+  const drawn = atRegionVolume(variant, useQuietVerbs());
+  const marked = drawn === "ai" || drawn === "aiQuiet";
   const classes = [
     "btn",
-    `btn-${variant}`,
+    faceClass(drawn),
     iconOnly ? "btn-icon" : "",
     unavailable ? "btn-unavailable" : "",
     className ?? "",
@@ -233,6 +252,7 @@ export function Button({
       type="button"
       {...attrs}
       className={classes}
+      data-align={align === "start" ? "start" : undefined}
       disabled={barred}
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
@@ -240,6 +260,7 @@ export function Button({
       onClick={busy ? swallowWhileBusy : singlePress(onClick)}
     >
       {busy && <BusyMark />}
+      {marked && <Sparkles aria-hidden="true" />}
       {/* The children stay, always. An icon-only control has no room for two
           16px marks side by side, so the glyph is hidden, but in CSS, by the
           `.btn-icon` rule for a busy button. Dropping the children here would also
@@ -260,6 +281,15 @@ export function Button({
       {button}
     </ButtonSentences>
   );
+}
+
+/**
+ * The class a variant's face is drawn by. `aiQuiet` is a ghost that carries
+ * the ✦ in indigo, so it wears the ghost rules rather than a copy of them. An
+ * anchor drawn with the button classes takes its face from here too.
+ */
+export function faceClass(variant: ButtonVariant | "bare"): string {
+  return variant === "aiQuiet" ? "btn-ghost btn-aiQuiet" : `btn-${variant}`;
 }
 
 /**

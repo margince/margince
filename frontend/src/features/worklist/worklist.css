@@ -297,19 +297,18 @@
 
 /* THE INSET THE PANEL PAYS FOR, on the blocks that are its direct children.
    `PanelRow` carries the panel's own margin and these do not, so a band
-   heading and an empty band's sentence began a full --padPanel to the left of
+   heading began a full --padPanel to the left of
    every row they stand over — lines that read as having escaped the card. They
    stay direct children because a `PanelBody` around them would draw the
    panel's seam hairline between a heading and the rows it heads, which is the
    one place panel.css says a rule must never fall. */
-.worklist-band,
-.worklist-band-clear {
+.worklist-band {
   padding-inline: var(--padPanel);
 }
 
 /* The band heading, above its own <ol>. The page draws one list per band, so
    the heading is a sibling of the list rather than a child of its first item —
-   which is what lets a band with no rows draw a heading and a line saying so.
+   which keeps each band's rows under their own heading.
    The first heading needs no gap above it. */
 .worklist-band {
   display: flex;
@@ -355,11 +354,6 @@
   padding-inline: var(--padPanel);
 }
 
-/* What an empty band says. */
-.worklist-band-clear {
-  margin: 0;
-}
-
 /* The rank reads as a marker beside the row rather than as part of the
    sentence, so it is set at a fixed width: a two-digit number must not shift
    the titles beside it.
@@ -383,17 +377,17 @@
     color var(--dur-state) var(--ease-out);
 }
 
-/* The tile of the row in hand goes to the accent: it is the one control on
-   the row that opens the pane, and the pane is what the accent says is open.
-   Lit under the pointer a step before that, so a rank that can be pressed
-   answers the pointer where a bare digit would not. */
+/* The tile of the row in hand is filled in the primary ink: it is the one
+   control on the row that opens the pane. Lit in the accent under the pointer,
+   so a rank that can be pressed answers the pointer where a bare digit would
+   not. */
 .worklist-rank-select:hover .worklist-rank {
   background: var(--accentLight);
   color: var(--accentText);
 }
 .worklist-row-selected .worklist-rank {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
+  background: var(--textPrimary);
+  color: var(--bgElevated);
 }
 
 /* The guardrail over the queue's own hiding rules. A diagnostic behind a
@@ -574,4 +568,12 @@
   .worklist-context-back {
     display: inline-flex;
   }
+}
+
+/* Upcoming and backlog, the closing section of Today: its name and count on
+   one line. */
+.worklist-upcoming-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }

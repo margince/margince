@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attachCompanyCounts fills contact_count and open_deal_count for a page.
@@ -84,7 +85,7 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	return fillOpenDealCounts(ctx, tx, idx, companyIDs, asOf)
 }
 
-// fillContactCounts counts current-primary employment edges to live contacts
+// fillContactCounts counts distinct current employees to live contacts
 // the caller may see. The company end needs no predicate of its own:
 // every account on the page already passed the list's row scope.
 func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID) error {
@@ -98,7 +99,7 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 		return err
 	}
 	return fillCount(ctx, tx, idx,
-		`SELECT rel.company_id, count(*)`+from+`
+		`SELECT rel.company_id, count(DISTINCT p.id)`+from+`
 		 GROUP BY rel.company_id`, args,
 		func(o *crmcontracts.Company, n int) { o.ContactCount = &n })
 }
@@ -116,14 +117,17 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 // may see, and a caller that had to remember to pass either could forget one
 // and get a counting oracle over edges it is refused everywhere else.
 func countedEmploymentFrom(ctx context.Context, companyBinding string, arg func(any) int) (string, error) {
-	edgeBound, err := auth.RelationshipEndpointScope(ctx, "rel", arg)
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return "", err
+	}
+	edgeBound, err := auth.EdgeReadScope(ctx, "rel", arg)
 	if err != nil {
 		return "", err
 	}
 	if edgeBound != "" {
 		edgeBound = " AND " + edgeBound
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
+	scope, err := contactScopePredicate(ctx, arg)
 	if err != nil {
 		return "", err
 	}
@@ -134,9 +138,7 @@ func countedEmploymentFrom(ctx context.Context, companyBinding string, arg func(
 		 FROM relationship rel
 		 JOIN contact p ON p.id = rel.contact_id AND p.archived_at IS NULL
 		 WHERE ` + companyBinding + `
-		   AND rel.kind = 'employment'
-		   AND ` + employment.CurrentPrimarySQL("rel") + `
-		   AND rel.archived_at IS NULL` + edgeBound + scope, nil
+		   AND ` + employment.CurrentMembershipSQL("rel") + edgeBound + scope, nil
 }
 
 // fillOpenDealCounts reads the 0065 company_open_pipeline_rollup view

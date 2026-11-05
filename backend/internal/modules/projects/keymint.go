@@ -205,6 +205,10 @@ func insertProjectRow(
 	ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	in CreateProjectInput, by string, active []fieldcatalog.Column,
 ) (string, error) {
+	// Checked once, so a refused custom field never opens a savepoint.
+	if err := storekit.CheckCustomValues(active, in.CustomFields); err != nil {
+		return "", err
+	}
 	minted := map[string]bool{}
 	var lastErr error
 	for range keyMintAttempts {
@@ -254,17 +258,20 @@ func insertOnce(
 		}
 		return false, fmt.Errorf("bound the project-insert lock wait: %w", err)
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, key, in.CompanyID, in.OwnerID,
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
 		in.SourceSystem,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
-	_, insertErr := sp.Exec(ctx,
+	cfCols, cfHolders, args, cfErr := storekit.InsertFragments(active, in.CustomFields, base)
+	if cfErr != nil {
+		return false, cfErr
+	}
+	insertErr := storekit.ExecSourceInsert(ctx, sp, projectObject,
 		`INSERT INTO project (id, name, key, company_id, owner_id,
-		                      description, started_at, target_end_date, source, captured_by, source_system`+authorCols+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`+authorHolders+cfHolders+`)`,
-		args...)
+		                      description, started_at, target_end_date, source, captured_by, source_system`+provenanceCols+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11`+provenanceHolders+cfHolders+`)`,
+		args)
 	if insertErr != nil {
 		if rbErr := sp.Rollback(ctx); rbErr != nil {
 			return false, fmt.Errorf("roll the project-insert savepoint back after %v: %w", insertErr, rbErr)

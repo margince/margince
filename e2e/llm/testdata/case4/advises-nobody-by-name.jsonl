@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__query_workspace", "mcp__margince__read_record"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__query_workspace", "input": {"plan": {"version": "v1", "target": "company", "where": [{"field": "address.city", "op": "in", "values": ["Köln", "Cologne"]}]}}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The CRM has three companies in Köln, all owned by Sofia Meier. Rheinufer AG is the best pick. Call them before dropping in, and check with them that someone is free."}

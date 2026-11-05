@@ -6,7 +6,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 ## notice
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -21,6 +21,7 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 | `recipient_user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `subject` | `text` | yes | The headline the recipient reads, derived from the kind rather than supplied. |
+| `subject_parts` | `jsonb` |  |  |
 | `target_id` | `uuid` |  |  |
 | `target_type` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -42,7 +43,9 @@ The 3 tables owned by `notices`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
+- `notice_dedupe_key`: `btree (dedupe_key) WHERE (dedupe_key IS NOT NULL)`
 - `notice_history`: `btree (recipient_user_id, created_at DESC, id DESC)`
+- `notice_outstanding_kind_id`: `btree (kind, id) WHERE (retracted_at IS NULL)`
 - `notice_pkey`: `unique, btree (id)`
 - `notice_unread`: `btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL)`
 - `uq_notice_dedupe`: `unique, btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL)`

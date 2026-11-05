@@ -5,6 +5,7 @@ package forecasting
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"time"
 
@@ -13,26 +14,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
-
-// DealsFunc reads the deals in scope for a period, already row-scoped.
-//
-// Injected rather than imported: the deals live in another module and the row
-// scope is applied where the caller's authority already sits, which is the
-// composition layer. The boolean says whether anything was withheld — and it is
-// a boolean and never a count, because a count of what a caller may not read is
-// itself a statement about how much of it there is.
-//
-// asOf and baseCurrency travel with the request because the conversion needs
-// both: a rate is looked up as of a DAY, and there is no base amount without a
-// currency to convert into.
-// The Scope it returns is the one it RESOLVED, which is not always the one it
-// was handed: an unset scope means the caller named nothing, and what that
-// means depends on their lens. The reading reports the resolved one, so an
-// answer always says which population it is about.
-type DealsFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) ([]Deal, Scope, bool, error)
 
 // PeriodFunc resolves the installation's window for a day, and the currency its
 // money is counted in. Injected for the same reason: the fiscal settings belong
@@ -51,29 +36,71 @@ type ResolveScopeFunc func(ctx context.Context, tx pgx.Tx, requested Scope) (Sco
 // before any of it reaches the arithmetic.
 type HistoryFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) (ConversionHistory, error)
 
+// HoldsDealsFunc answers whether the population a reading is about holds any
+// deal at all, with the same population clause the reading's deals used.
+type HoldsDealsFunc func(ctx context.Context, tx pgx.Tx, scope Scope) (bool, error)
+
 // MeasureFunc reads which remaining-pipeline reading this installation builds
 // its landing from.
 type MeasureFunc func(ctx context.Context, tx pgx.Tx) (ForwardMeasure, error)
 
+// Baseline is a reading as a capture takes it: over the scope's whole
+// population, with the fingerprint of who that population was.
+type Baseline struct {
+	Readings              Readings
+	Scope                 Scope
+	PopulationFingerprint string
+	BaseCurrency          string
+	// ForwardMeasure is the measure the landing was built from when read.
+	ForwardMeasure ForwardMeasure
+	// QualifiedPolicy is the viability rule the qualified readings applied,
+	// empty while enforcement is off. Read from the setting, so a period with
+	// no deal still records it.
+	QualifiedPolicy string
+	// Assembly is the whole result the readings came from, kept so a snapshot
+	// of the baseline freezes the basis of its chances too.
+	Assembly Assembly
+}
+
+// BaselineFunc reads the population a call is made about the way a capture
+// does. Injected, because the population and its members are resolved in the
+// composition layer. A call keeps this reading as its baseline, and the input
+// check compares the call with a fresh one.
+type BaselineFunc func(ctx context.Context, tx pgx.Tx, scope Scope, period Period, at time.Time) (Baseline, error)
+
 // Handlers is the forecast's HTTP surface.
 type Handlers struct {
-	store   *Store
-	deals   DealsFunc
-	period  PeriodFunc
-	resolve ResolveScopeFunc
-	history HistoryFunc
-	measure MeasureFunc
-	now     func() time.Time
+	store    *Store
+	assemble AssembleFunc
+	period   PeriodFunc
+	resolve  ResolveScopeFunc
+	history  HistoryFunc
+	measure  MeasureFunc
+	holds    HoldsDealsFunc
+	baseline BaselineFunc
+	// stageChances serves the stage-chances read; see stagechances.go.
+	stageChances StageChancesFunc
+	// readerRows narrows per-deal rows to what the reader may see one by one.
+	readerRows ReaderRowsFunc
+	now        func() time.Time
+}
+
+// WithCallBaseline keeps a baseline with every call recorded through these
+// handlers. Without one a call has no baseline, and its history reads as
+// unavailable.
+func (h Handlers) WithCallBaseline(baseline BaselineFunc) Handlers {
+	h.baseline = baseline
+	return h
 }
 
 // NewHandlers binds the routes to the store and its seams.
 func NewHandlers(
-	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc,
-	history HistoryFunc, measure MeasureFunc, now func() time.Time,
+	store *Store, assemble AssembleFunc, period PeriodFunc, resolve ResolveScopeFunc,
+	history HistoryFunc, measure MeasureFunc, holds HoldsDealsFunc, now func() time.Time,
 ) Handlers {
 	return Handlers{
-		store: store, deals: deals, period: period, resolve: resolve,
-		history: history, measure: measure, now: now,
+		store: store, assemble: assemble, period: period, resolve: resolve,
+		history: history, measure: measure, holds: holds, now: now,
 	}
 }
 
@@ -110,26 +137,38 @@ func (h Handlers) GetForecast(
 		if err != nil {
 			return err
 		}
-		deals, resolved, limited, err := h.deals(ctx, tx, period, scope, at, baseCurrency)
+		assembly, err := h.assemble(ctx, tx, period, scope, at, baseCurrency)
 		if err != nil {
 			return err
 		}
-		scope = resolved
-		// The as-of DAY, not the instant. The slipped rule compares calendar
-		// days, and handing it a clock makes a deal due today read as slipped
-		// from noon onward — which the report engine, comparing dates, would
-		// not agree with.
-		readings, err := Compute(period, period.LocalDay(at), deals)
-		if err != nil {
-			return err
-		}
+		scope, readings := assembly.Scope, assembly.Readings
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
-		out.ScopeLimited = &limited
-		refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope, baseCurrency)
+		out.ScopeLimited = &assembly.Limited
+		out.SelfCorrecting = &assembly.SelfCorrecting
+		if params.Contributions != nil && *params.Contributions {
+			if err := h.contributionRows(ctx, tx, readings, &out); err != nil {
+				return err
+			}
+		}
+		holds, err := h.holds(ctx, tx, scope)
 		if err != nil {
 			return err
 		}
-		out.Snapshots = snapshotRefsToWire(refs)
+		out.ScopeHoldsDeals = &holds
+		// Totals are readable more widely than a standing call is. The call,
+		// its author and its snapshots assert something about a population.
+		// Only a seat that may assert about it sees them.
+		mayAssert, err := MayAssertAbout(ctx, tx, h.resolve, scope)
+		if err != nil {
+			return err
+		}
+		if mayAssert {
+			refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope, baseCurrency)
+			if err != nil {
+				return err
+			}
+			out.Snapshots = snapshotRefsToWire(refs)
+		}
 
 		// A standing call is an assertion about ONE named population. The
 		// managed-teams reading covers several, so there is no call to look up
@@ -139,17 +178,14 @@ func (h Handlers) GetForecast(
 			return nil
 		}
 		var called *int64
-		call, err := h.store.CurrentCallTx(ctx, tx, period, scope)
-		switch {
-		case err == nil:
+		call, seen, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
+		if err != nil {
+			return err
+		}
+		if seen {
 			wire := callToWire(call)
 			out.CurrentCall = &wire
 			called = &call.AmountMinor
-		case IsNoStandingCall(err):
-			// Nobody has called this period. A real answer, and absent rather
-			// than an error.
-		default:
-			return err
 		}
 		return h.project(ctx, tx, &out, period, scope, readings, called, at, baseCurrency)
 	})
@@ -158,6 +194,40 @@ func (h Handlers) GetForecast(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// MayAssertAbout asks the write authority whether this seat may see the
+// standing call and the snapshots of a resolved population. A refusal hides
+// them; any other failure is real. The forecast endpoint and the forecast_readings
+// tool both ask it.
+func MayAssertAbout(ctx context.Context, tx pgx.Tx, resolve ResolveScopeFunc, scope Scope) (bool, error) {
+	if scope.Kind == ScopeManagedTeams {
+		return true, nil
+	}
+	_, err := resolve(ctx, tx, scope)
+	switch {
+	case err == nil:
+		return true, nil
+	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
+		return false, nil
+	default:
+		return false, err
+	}
+}
+
+// CallSeen is the standing call a seat sees for a resolved population. Its
+// bool is false when the seat may not assert about it, or nobody has called. The
+// forecast endpoint, the forecast_readings tool and the reporting landing all
+// read the call through it, so the three agree on one landing.
+func CallSeen(ctx context.Context, tx pgx.Tx, store *Store, mayAssert bool, period Period, scope Scope) (Call, bool, error) {
+	if !mayAssert || scope.Kind == ScopeManagedTeams {
+		return Call{}, false, nil
+	}
+	call, err := store.CurrentCallTx(ctx, tx, period, scope)
+	if IsNoStandingCall(err) {
+		return Call{}, false, nil
+	}
+	return call, err == nil, err
 }
 
 // project adds where the period lands and whether the pipeline supports it.
@@ -171,16 +241,11 @@ func (h Handlers) project(
 	period Period, scope Scope, readings Readings, call *int64,
 	asOf time.Time, baseCurrency string,
 ) error {
-	measure, err := h.measure(ctx, tx)
+	landing, err := LandingFor(ctx, tx, h.measure, readings, call)
 	if err != nil {
 		return err
 	}
-	landing, err := ProjectLanding(readings, measure, call)
-	if err != nil {
-		return err
-	}
-	wire := landingToWire(landing)
-	out.Landing = &wire
+	out.Landing = &landing
 
 	// The managed-teams reading covers several populations, so a conversion
 	// rate over it would blend books that are measured separately — and the
@@ -201,16 +266,35 @@ func (h Handlers) project(
 	return nil
 }
 
-// landingToWire maps a projection onto the wire shape.
+// LandingFor answers the landing the forecast read prints, under the measure
+// this installation set. The forecast endpoint and the forecast_readings tool
+// both call it.
+func LandingFor(
+	ctx context.Context, tx pgx.Tx, measure MeasureFunc, readings Readings, call *int64,
+) (crmcontracts.ForecastLanding, error) {
+	set, err := measure(ctx, tx)
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	landing, err := ProjectLanding(readings, set, call)
+	if err != nil {
+		return crmcontracts.ForecastLanding{}, err
+	}
+	return LandingToWire(landing), nil
+}
+
+// LandingToWire maps a projection onto the wire shape. The reporting metric
+// calls it too, so both state one landing.
 //
 // The caveat is omitted rather than sent empty when there is none: an empty
 // string would render as a warning that says nothing.
-func landingToWire(in Landing) crmcontracts.ForecastLanding {
+func LandingToWire(in Landing) crmcontracts.ForecastLanding {
 	out := crmcontracts.ForecastLanding{
 		AmountMinor:    in.AmountMinor,
 		Measure:        crmcontracts.ForecastLandingMeasure(in.Measure),
 		WonMinor:       in.WonMinor,
 		RemainingMinor: in.RemainingMinor,
+		SystemMinor:    in.SystemMinor,
 	}
 	if in.Caveat != "" {
 		caveat := crmcontracts.ForecastLandingCaveat(in.Caveat)
@@ -287,7 +371,7 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return err
 		}
-		out, err = h.store.RecordCallTx(ctx, tx, NewCall{
+		out, err = h.recordWithBaseline(ctx, tx, NewCall{
 			Period: period, Scope: allowed, AmountMinor: body.AmountMinor,
 			Currency: body.Currency, Note: derefString(body.Note),
 		})
@@ -298,6 +382,41 @@ func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, callToWire(out))
+}
+
+// recordWithBaseline records a call and the reading it was made against. The
+// baseline is stamped and read at the server's clock; the period, which the
+// caller's as_of chose, rides on the snapshot's own period columns. So a
+// caller cannot stamp a capture with a day of their choosing. The reading is
+// taken before the write, so the population-sized read runs before the
+// previous call is locked. The transaction stays read committed: under repeatable read
+// a call waiting on that lock would supersede a call it cannot see, and fork
+// the chain.
+func (h Handlers) recordWithBaseline(ctx context.Context, tx pgx.Tx, in NewCall) (Call, error) {
+	if h.baseline == nil {
+		return h.store.RecordCallTx(ctx, tx, in)
+	}
+	submitted := h.now()
+	baseline, err := h.baseline(ctx, tx, in.Scope, in.Period, submitted)
+	if err != nil {
+		return Call{}, err
+	}
+	out, err := h.store.RecordCallTx(ctx, tx, in)
+	if err != nil {
+		return Call{}, err
+	}
+	snapshot := NewSnapshot{
+		Period: in.Period, Scope: baseline.Scope, Trigger: TriggerCall,
+		BaseCurrency: baseline.BaseCurrency, Readings: baseline.Readings, TakenAt: submitted,
+		CallID: &out.ID, PopulationFingerprint: baseline.PopulationFingerprint,
+		ForwardMeasure: baseline.ForwardMeasure, QualifiedPolicyVersion: baseline.QualifiedPolicy,
+	}
+	snapshot.StampChances(baseline.Assembly)
+	if _, err := h.store.TakeSnapshot(ctx, tx, snapshot); err != nil {
+		return Call{}, err
+	}
+	out.HasBaseline = true
+	return out, nil
 }
 
 // scopeFromParams turns the two query keys into one scope, refusing the pairs
@@ -364,125 +483,4 @@ func callScopeFromBody(body crmcontracts.NewForecastCall) (Scope, error) {
 		return Scope{}, err
 	}
 	return scope, nil
-}
-
-// ReadingsToWire is exported so a share can render the SAME envelope a direct
-// read renders. A second converter would be a second answer to "what does a
-// reading look like on the wire", and the two would drift the first time a
-// field was added.
-func ReadingsToWire(
-	period Period, scope Scope, in Readings, baseCurrency string, asOf time.Time,
-) crmcontracts.ForecastReadings {
-	out := crmcontracts.ForecastReadings{
-		PeriodStart:        openapi_types.Date{Time: period.StartDate},
-		PeriodEnd:          openapi_types.Date{Time: period.EndDate},
-		ScopeKind:          crmcontracts.ForecastReadingsScopeKind(scope.Kind),
-		WonMinor:           in.WonMinor,
-		EvidenceMinor:      in.EvidenceMinor,
-		BestCaseMinor:      in.BestCaseMinor,
-		OpenMinor:          in.OpenMinor,
-		WeightedMinor:      in.WeightedMinor,
-		EligibleCount:      in.EligibleCount,
-		PricedCount:        in.PricedCount,
-		ConfirmedDateCount: in.ConfirmedDateCount,
-		FxMissingCount:     in.FxMissingCount,
-		AsOf:               asOf,
-		Timezone:           period.Zone.String(),
-		BaseCurrency:       baseCurrency,
-	}
-	if scope.ID != nil {
-		id := openapi_types.UUID(*scope.ID)
-		out.ScopeId = &id
-	}
-	return out
-}
-
-func callToWire(in Call) crmcontracts.ForecastCall {
-	out := crmcontracts.ForecastCall{
-		Id:          openapi_types.UUID(in.ID),
-		PeriodStart: openapi_types.Date{Time: in.PeriodStart},
-		PeriodEnd:   openapi_types.Date{Time: in.PeriodEnd},
-		ScopeKind:   crmcontracts.ForecastCallScopeKind(in.Scope.Kind),
-		AmountMinor: in.AmountMinor,
-		Currency:    in.Currency,
-		AuthorId:    openapi_types.UUID(in.AuthorID),
-		CreatedAt:   in.CreatedAt,
-	}
-	if in.Scope.ID != nil {
-		id := openapi_types.UUID(*in.Scope.ID)
-		out.ScopeId = &id
-	}
-	if in.Note != "" {
-		out.Note = &in.Note
-	}
-	if in.SupersedesID != nil {
-		id := openapi_types.UUID(*in.SupersedesID)
-		out.SupersedesId = &id
-	}
-	return out
-}
-
-func derefString(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-// GetForecastMovement answers what moved between two snapshots.
-func (h Handlers) GetForecastMovement(
-	w http.ResponseWriter, r *http.Request, params crmcontracts.GetForecastMovementParams,
-) {
-	reading := ReadingOpen
-	if params.Reading != nil {
-		reading = Reading(*params.Reading)
-	}
-	out, err := h.store.Movement(r.Context(), reading,
-		ids.UUID(params.From), ids.UUID(params.To))
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, movementToWire(reading, out))
-}
-
-func movementToWire(reading Reading, in Movement) crmcontracts.ForecastMovement {
-	out := crmcontracts.ForecastMovement{
-		Reading:      crmcontracts.ForecastMovementReading(reading),
-		OpeningMinor: in.OpeningMinor,
-		ClosingMinor: in.ClosingMinor,
-		// Empty, never nil. "Nothing moved" is a real answer and arrives shaped
-		// like the array it is; nil marshals to null, which a reader takes for
-		// "unknown".
-		Buckets: []crmcontracts.ForecastMovementBucket{},
-		Deals:   []crmcontracts.ForecastMovementDeal{},
-	}
-	for _, b := range in.Buckets {
-		out.Buckets = append(out.Buckets, crmcontracts.ForecastMovementBucket{
-			Name:        crmcontracts.ForecastMovementBucketName(b.Name),
-			AmountMinor: b.AmountMinor,
-			DealCount:   b.DealCount,
-		})
-	}
-	for _, d := range in.Deals {
-		wire := crmcontracts.ForecastMovementDeal{
-			Bucket:      d.Bucket,
-			AmountMinor: d.AmountMinor,
-			FromMinor:   d.FromMinor,
-			ToMinor:     d.ToMinor,
-		}
-		if parsed, err := ids.Parse(d.DealID); err == nil {
-			wire.DealId = openapi_types.UUID(parsed)
-		}
-		if d.AuditID != nil {
-			id := openapi_types.UUID(*d.AuditID)
-			wire.AuditId = &id
-		}
-		if d.ApprovalID != nil {
-			id := openapi_types.UUID(*d.ApprovalID)
-			wire.ApprovalId = &id
-		}
-		out.Deals = append(out.Deals, wire)
-	}
-	return out
 }

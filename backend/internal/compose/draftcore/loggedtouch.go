@@ -6,35 +6,39 @@ package draftcore
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// ClassifyWithLogged is convstate.Classify with a logged note or meeting
-// counted as prior contact: a rep who met somebody and wrote it down is not
-// writing to a stranger. The touch counts as our own side's, because nobody
-// on their side wrote anything.
-//
-// Here rather than in the 360 reads' last-touch stamps, which other readers
-// take to mean mail only. The contact, lead and account drafts all classify
-// through it, because the shared TIME rule tells each of them what
-// silence_days counts from.
-func ClassifyWithLogged(now, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
-	if logged := lastLoggedTouch(activities, now); logged.After(lastOut) {
+// ClassifyWithLogged counts notes and meetings as prior contact, even without mail.
+// It counts as our side: nothing claims the contact wrote.
+func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
+	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
 		lastOut = logged
 	}
-	return convstate.Classify(now, lastIn, lastOut)
+	return convstate.Classify(now, lastIn, lastOut, zone)
 }
 
-// lastLoggedTouch is the newest logged touch in newest-first activities, zero
-// when there is none.
-func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time) time.Time {
+// Date-only anchors can sort differently once read in the record calendar.
+func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *time.Location) time.Time {
+	var latest time.Time
 	for _, activity := range activities {
-		if IsLoggedTouch(activity, now) {
-			return activity.OccurredAt.UTC()
+		if !IsLoggedTouch(activity, now, zone) {
+			continue
+		}
+		moment := activitywhen.MomentOf(activity)
+		at := moment.At
+		if moment.DateOnly {
+			at = occurredday.Begins(at, zone)
+		}
+		if at.After(latest) {
+			latest = at
 		}
 	}
-	return time.Time{}
+	return latest
 }
 
 // IsLoggedKind reports the kinds a rep writes down about contact outside the
@@ -43,15 +47,14 @@ func IsLoggedKind(kind crmcontracts.ActivityKind) bool {
 	return kind == crmcontracts.ActivityKindNote || kind == crmcontracts.ActivityKindMeeting
 }
 
-// IsLoggedTouch reports a note or meeting that records contact which really
-// happened: dated at or before now, and not a meeting that was canceled or
-// that the other side missed. A past meeting still marked booked counts: it
-// most often took place, and reps rarely come back to mark it held.
-func IsLoggedTouch(activity crmcontracts.Activity, now time.Time) bool {
-	if !IsLoggedKind(activity.Kind) || activity.OccurredAt.After(now) {
+// IsLoggedTouch reports a note or meeting that has happened by now in zone
+// (occurredday.Happened). A canceled or missed meeting records no contact. A
+// past meeting still marked booked counts: it most often took place, and reps
+// rarely come back to mark it held.
+func IsLoggedTouch(activity crmcontracts.Activity, now time.Time, zone *time.Location) bool {
+	if !IsLoggedKind(activity.Kind) || !occurredday.Happened(string(activity.Kind), activitywhen.MomentOf(activity), now, zone) {
 		return false
 	}
 	status := activity.MeetingStatus
-	return status == nil || (*status != crmcontracts.ActivityMeetingStatusCanceled &&
-		*status != crmcontracts.ActivityMeetingStatusNoShow)
+	return status == nil || relstrength.MeetingStatusCounts(string(*status))
 }

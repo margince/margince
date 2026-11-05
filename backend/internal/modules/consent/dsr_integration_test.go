@@ -40,6 +40,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -135,6 +136,10 @@ func (e *dsrEnv) mustCreate(t *testing.T, kind, subjectRef string) dsrRow {
 	return row
 }
 
+// idDocumentChecked is the identity check a test states when it closes a
+// request, as the officer's closing patch must.
+var idDocumentChecked = ProofStatement{IdentityCheck: new("id_document")}
+
 // BE-1: ?status= is declared in crm.yaml and was parsed into the params
 // struct and never read, so every filter returned the whole queue. The
 // bug was in the handler's plumbing of params.Status into the store call,
@@ -148,7 +153,7 @@ func TestListDSRsNarrowsByStatus(t *testing.T) {
 
 	answer := "handled by hand"
 	if _, err := e.store.UpdateDSR(e.ctx, toClose.ID, UpdateDSRInput{
-		Status: new("fulfilled"), Resolution: &answer,
+		Status: new("fulfilled"), Resolution: &answer, Proof: idDocumentChecked,
 	}); err != nil {
 		t.Fatalf("closing the second request: %v", err)
 	}
@@ -244,7 +249,7 @@ func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
 	// erase seam compose injects in production.
 	eraser := &recordingEraser{}
 	h := NewHandlers(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithEraser(eraser)
-	body := `{"status":"fulfilled","resolution":"verified by phone"}`
+	body := `{"status":"fulfilled","resolution":"verified by phone","identity_check":"id_document"}`
 	r := httptest.NewRequest(http.MethodPatch, "/v1/data-subject-requests/"+req.ID.String(),
 		strings.NewReader(body)).WithContext(e.ctx)
 	r.Header.Set("Content-Type", "application/json")
@@ -316,14 +321,14 @@ func TestFulfillErasureHTTPRefusesAnAlreadyRejectedRequest(t *testing.T) {
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())
 	answer := "the subject withdrew the request"
 	if _, err := e.store.UpdateDSR(e.ctx, req.ID, UpdateDSRInput{
-		Status: new("rejected"), Resolution: &answer,
+		Status: new("rejected"), Resolution: &answer, Proof: idDocumentChecked,
 	}); err != nil {
 		t.Fatalf("rejecting the request: %v", err)
 	}
 
 	eraser := &recordingEraser{}
 	h := NewHandlers(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithEraser(eraser)
-	body := `{"status":"fulfilled","resolution":"verified by phone"}`
+	body := `{"status":"fulfilled","resolution":"verified by phone","identity_check":"id_document"}`
 	r := httptest.NewRequest(http.MethodPatch, "/v1/data-subject-requests/"+req.ID.String(),
 		strings.NewReader(body)).WithContext(e.ctx)
 	r.Header.Set("Content-Type", "application/json")
@@ -371,7 +376,7 @@ func validationField(t *testing.T, body []byte) string {
 // refusal happens BEFORE any erase is attempted.
 type recordingEraser struct{ calls int }
 
-func (e *recordingEraser) EraseContact(context.Context, ids.UUID, string) error {
+func (e *recordingEraser) EraseContactCounted(context.Context, ids.UUID, string) (erasureaccount.Account, error) {
 	e.calls++
-	return nil
+	return erasureaccount.Empty(), nil
 }

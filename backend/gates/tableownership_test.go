@@ -288,17 +288,12 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 					})
 				}
 			}
+			consumedSQL := map[ast.Node]bool{}
 			visit := func(n ast.Node) {
+				if text, ok := ownershipSQLExpression(n, consts[dir], consumedSQL); ok {
+					record(n.Pos(), gatekit.FirstLineOf(text), sqlWrites(text))
+				}
 				switch node := n.(type) {
-				case *ast.BasicLit:
-					if node.Kind != token.STRING {
-						return
-					}
-					text, err := strconv.Unquote(node.Value)
-					if err != nil {
-						return
-					}
-					record(node.Pos(), gatekit.FirstLineOf(text), sqlWrites(text))
 				case *ast.CallExpr:
 					sel, ok := node.Fun.(*ast.SelectorExpr)
 					if !ok || !storekitTableArg[sel.Sel.Name] || len(node.Args) < 4 {

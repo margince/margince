@@ -18,8 +18,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { RequestsPanel } from "../../screens/settings.privacy";
 import { meFixture } from "../../testing/mefixture";
+import { RequestsPanel } from "../settings/settings.privacy";
 import { type DataSubjectRequest, DsrDetail } from "./privacy.requests";
 
 const NAMED: DataSubjectRequest = {
@@ -31,6 +31,7 @@ const NAMED: DataSubjectRequest = {
   status: "in_progress",
   due_at: "2026-08-01T00:00:00Z",
   due_overridden: false,
+  dispute_open: false,
   created_at: "2026-07-01T00:00:00Z",
 };
 
@@ -250,7 +251,10 @@ describe("the subject-request drawer", () => {
     const link = within(await subjectFact()).getByRole("link", {
       name: "Lena Hoffmann",
     });
-    expect(link).toHaveAttribute("href", `#/contacts/${NAMED.subject_ref}`);
+    expect(link).toHaveAttribute(
+      "href",
+      `/r/contacts/${NAMED.subject_ref}#/contacts/${NAMED.subject_ref}`,
+    );
   });
 
   it("links a lead subject to the lead, never to a contact of the same id", async () => {
@@ -264,7 +268,7 @@ describe("the subject-request drawer", () => {
     const link = within(await subjectFact()).getByRole("link", {
       name: "Jonas Berg",
     });
-    expect(link).toHaveAttribute("href", `#/leads/${NAMED.subject_ref}`);
+    expect(link).toHaveAttribute("href", `/#/leads/${NAMED.subject_ref}`);
   });
 
   it("names an unresolved subject neutrally and links nowhere", async () => {

@@ -49,7 +49,7 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 	if err := os.WriteFile(pwFile, []byte("correct-horse-battery"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: "Configured Company", BaseCurrency: "USD", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
@@ -211,7 +211,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 	if err := os.WriteFile(pwFile, []byte("correct-horse-battery"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: "Spent Secret Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
@@ -239,7 +239,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 // to surface as one rather than as a silently unbootstrapped installation.
 func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
 	e := apptest.SetupApp(t)
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: "No Secret Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{

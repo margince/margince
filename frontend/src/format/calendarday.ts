@@ -12,7 +12,8 @@
 // All but `today` are pure and take their zone (or the reader's own wall clock)
 // as input, so nothing here has to be tested against the machine's own zone.
 
-import { endOfDayInZone, viewerZone } from "./timezone";
+import type { ISODate } from "./datepattern";
+import { DAY_MS, endOfDayInZone, instantAtWallClock } from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
@@ -106,11 +107,11 @@ export function sameCalendarDay(a: Date, b: Date, zone: string): boolean {
   return calendarDay(a, zone) === calendarDay(b, zone);
 }
 
-// The reader's own today, for a form whose date box opens on it and refuses
-// anything earlier: the sheets it feeds read their effective dates against
-// the reader's calendar rather than UTC's, so the floor is read the same way.
-export function today(): string {
-  return calendarDay(new Date(), viewerZone());
+// The day it is now in `zone`, for a form whose date box opens on it and
+// refuses anything earlier. The zone is the one the form's server counts its
+// days in, so the floor the form offers is a day the server takes.
+export function todayIn(zone: string): string {
+  return calendarDay(new Date(), zone);
 }
 
 // The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.
@@ -130,19 +131,20 @@ export function calendarMonth(at: Date, zone: string): string {
 // `yyyy-mm-dd` a date input yields, which every caller has already checked is
 // non-empty.
 //
-// A deadline is a fact about the RECORD, so the day ends on the installation's
-// clock and every colleague reads back the day that was agreed. Resolving it in
-// the browser's zone instead is what made a transcript proposal for the 9th
-// become a task labelled the 10th: the accept path stamps the day's end in the
-// installation zone, and a reader east of it saw that last second land after
-// midnight. Callers pass the zone from `useRecordZone()`, the same one the task
-// is rendered in.
+// The day ends on the clock of the user who picks it (decision A1 on
+// #7894): a day picked in Berlin ends at midnight in Berlin, and a colleague
+// elsewhere sees that same moment in their own zone. Callers pass the zone from
+// `useViewerZone()`, the zone the picker reads the day in. Tasks minted before
+// this ended on the installation's clock and keep that moment.
 //
 // `endOfDayInZone` already resolves a named day's end against a zone's real
 // offset, DST included, and privacy files its deadlines with it. Reuse rather
 // than a second algorithm: it returns the day's last millisecond, so this floors
 // to the whole second the task writer has always sent.
-export function dueInstant(day: string, zone: string): string {
+//
+// With a callback time (`HH:MM`), the task is due at that wall-clock time in
+// `zone`, by instantAtWallClock's DST rule, to the whole second.
+export function dueInstant(day: string, zone: string, time = ""): string {
   // Refused explicitly, because the arithmetic below no longer refuses it on
   // its own. `new Date("10000-09-15T23:59:59")` threw a RangeError, and that
   // throw was the only thing standing between a year typo and a due date ten
@@ -163,6 +165,14 @@ export function dueInstant(day: string, zone: string): string {
   // FLOORED, not truncated toward zero. `% 1000` on a negative instant rounds
   // the wrong way — a day before 1970 would land on the next day's midnight,
   // which is the very off-by-one-day this signature exists to end.
+  if (time !== "") {
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
+    if (!match) {
+      throw new RangeError(`not a time of day: ${time}`);
+    }
+    const ms = (Number(match[1]) * 60 + Number(match[2])) * 60_000;
+    return new Date(instantAtWallClock(day, ms, zone)).toISOString();
+  }
   const lastMs = new Date(endOfDayInZone(day, zone)).getTime();
   return new Date(Math.floor(lastMs / 1000) * 1000).toISOString();
 }
@@ -182,8 +192,13 @@ export function dueInstant(day: string, zone: string): string {
 export function localDateTimeValue(utcIso: string): string {
   const at = new Date(utcIso);
   const pad = (value: number) => String(value).padStart(2, "0");
-  const day = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
-  return `${day}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/** The day a `Date` falls on in the reader's own zone, as `YYYY-MM-DD`. */
+export function isoDay(at: Date): ISODate {
+  const pad = (value: number, width = 2) => String(value).padStart(width, "0");
+  return `${pad(at.getFullYear(), 4)}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}` as ISODate;
 }
 
 // The instant that is NOON of a picked calendar day in a named zone — for a
@@ -192,33 +207,41 @@ export function localDateTimeValue(utcIso: string): string {
 // picked day both there and in the wall clock of any writer within twelve
 // hours of that zone.
 //
-// Found without a timezone table: read what wall time the zone shows at UTC
-// noon of that day, then shift the instant by the difference from the noon
-// that was wanted. One correction is exact because a zone's offset does not
-// change within the couple of hours the shift moves through — DST switches
-// happen at night, and the target is midday.
+// It renders, so it never throws. An unreal day or a year below 100, which
+// instantAtWallClock refuses, rolls over the way JavaScript parses it instead.
 export function middayInstant(day: string, zone: string): string {
-  const utcNoon = new Date(`${day}T12:00:00Z`);
-  const parts = new Map(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: zone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      // h23, not `hour12: false`: some ICU builds resolve the latter to h24,
-      // which prints midnight as "24" and breaks the ISO string below.
-      hourCycle: "h23",
-    })
-      .formatToParts(utcNoon)
-      .map((part) => [part.type, part.value]),
+  try {
+    return new Date(instantAtWallClock(day, DAY_MS / 2, zone)).toISOString();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    const rolled = new Date(`${day}T12:00:00Z`);
+    return Number.isNaN(rolled.getTime()) ? day : rolled.toISOString();
+  }
+}
+
+/**
+ * The ISO 8601 week number of a `yyyy-mm-dd` day. A week runs Monday to
+ * Sunday, and week 1 is the one holding the year's first Thursday.
+ */
+export function isoWeekOf(day: string): number {
+  const thursday = (at: number) =>
+    at + (3 - ((new Date(at).getUTCDay() + 6) % 7)) * DAY_MS;
+  const own = thursday(
+    Date.UTC(
+      Number(day.slice(0, 4)),
+      Number(day.slice(5, 7)) - 1,
+      Number(day.slice(8, 10)),
+    ),
   );
-  const shown = new Date(
-    `${parts.get("year")}-${parts.get("month")}-${parts.get("day")}T${parts.get("hour")}:${parts.get("minute")}:00Z`,
+  const first = thursday(Date.UTC(new Date(own).getUTCFullYear(), 0, 4));
+  return 1 + Math.round((own - first) / (7 * DAY_MS));
+}
+
+/** The ISO 8601 week number of the week before the one holding `day`. */
+export function isoWeekBefore(day: string): number {
+  const before = new Date(Date.parse(`${day}T00:00:00Z`) - 7 * DAY_MS);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return isoWeekOf(
+    `${before.getUTCFullYear()}-${pad(before.getUTCMonth() + 1)}-${pad(before.getUTCDate())}`,
   );
-  const wanted = new Date(`${day}T12:00:00Z`);
-  return new Date(
-    utcNoon.getTime() - (shown.getTime() - wanted.getTime()),
-  ).toISOString();
 }

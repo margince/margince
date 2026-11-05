@@ -5,7 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { day, renderWorklist, stub } from "./worklist.testkit";
+import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
 
 // Broad visibility diagnostics must not describe a personal or named queue.
 
@@ -54,7 +54,7 @@ describe("the hidden-backlog panel is about the reader", () => {
     await screen.findByRole("button", { name: "Add note" });
     // The receipt is the LAST panel on the page, below the one under test, so
     // the wait covers that panel's own position rather than only a neighbour's.
-    await screen.findByRole("heading", { name: "Handled for you" });
+    await screen.findByRole("heading", { name: "Change history" });
 
     // The panel is absent, and — the half that actually holds — it never ASKS.
     // The endpoint answers about the authenticated principal, so a request made

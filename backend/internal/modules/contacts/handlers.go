@@ -15,16 +15,20 @@ import (
 	"net/http"
 	"sync"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	// stageMatches turns suggested LinkedIn matches into approvals. See
 	// WithMatchStager for why it is injected.
 	stageMatches func(context.Context) error
@@ -32,6 +36,10 @@ type Handlers struct {
 	// stageVCardReview turns one imported card's near-match into a durable
 	// create proposal. See WithVCardReviewStager for why it is injected.
 	stageVCardReview func(ctx context.Context, entry VCardEntry, candidate *ids.ContactID) error
+
+	// readCardPhoto reads a photo of business cards. Nil is an installation
+	// with no model, and the photo route then answers 501.
+	readCardPhoto CardPhotoReader
 
 	store *Store
 	// listMembers resolves a list read's list_id; nil while lists are off.
@@ -122,10 +130,10 @@ func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
 	return h
 }
 
-// WithSettings wires the installation settings store the lead-settings
-// endpoints write through.
-func (h Handlers) WithSettings(store *settings.Store) Handlers {
-	h.store = h.store.WithSettings(store)
+// WithSettings wires the configuration the lead-settings endpoints read and
+// save through.
+func (h Handlers) WithSettings(cfg *config.Config) Handlers {
+	h.store = h.store.WithSettings(cfg)
 	return h
 }
 
@@ -186,10 +194,50 @@ func duplicateLeadProblem(err error) *httperr.DetailedError {
 	if dupLeadLinkedIn, ok := errors.AsType[*DuplicateLeadLinkedInError](err); ok {
 		return httperr.Duplicate("duplicate_linkedin_url", duplicateID(dupLeadLinkedIn.ExistingID.UUID))
 	}
-	if dupContactLead, ok := errors.AsType[*DuplicateContactLeadError](err); ok {
-		return httperr.Duplicate("duplicate_contact_lead", duplicateID(dupContactLead.ExistingID.UUID))
-	}
 	return nil
+}
+
+// leadHoldsProblem is the 409 for a contact write over a key a live lead holds,
+// or nil when err is no such refusal. It names only leads the caller may read.
+func leadHoldsProblem(err error) *httperr.DetailedError {
+	held, ok := errors.AsType[*LeadHoldsIdentityError](err)
+	if !ok {
+		return nil
+	}
+	if len(held.LeadIDs) == 0 {
+		// Nothing the caller may read holds it: no id, no key, no convert, as
+		// contact_held_by_colleague answers a hidden contact holder.
+		return httperr.Duplicate("lead_holds_email", "")
+	}
+	leadIDs := make([]string, 0, len(held.LeadIDs))
+	for _, lead := range held.LeadIDs {
+		leadIDs = append(leadIDs, lead.String())
+	}
+	problem := httperr.Duplicate("lead_holds_email", leadIDs[0])
+	problem.Details["lead_ids"] = leadIDs
+	problem.Details["field"] = held.Field
+	problem.Details["convertible"] = held.Convertible
+	return problem
+}
+
+// contactHoldsProblem is the 409 for a lead write over a key a live contact
+// holds, or nil when err is no such refusal. It names only a contact the caller
+// may read, and says whether its owner was told.
+func contactHoldsProblem(err error) *httperr.DetailedError {
+	held, ok := errors.AsType[*ContactHoldsIdentityError](err)
+	if !ok {
+		return nil
+	}
+	problem := httperr.Duplicate(CodeContactHoldsEmail, duplicateID(held.ContactID.UUID))
+	problem.Detail = held.Error()
+	if problem.Details == nil {
+		problem.Details = map[string]any{}
+	}
+	if held.Field != "" {
+		problem.Details["field"] = held.Field
+	}
+	problem.Details["owner_notified"] = held.OwnerNotified
+	return problem
 }
 
 // writeStoreErr maps this module's typed store errors onto the wire
@@ -213,12 +261,29 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_email", duplicateID(dupEmail.ExistingID.UUID)))
 		return
 	}
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		// No id and no owner: the caller learns the address is taken and
+		// whether its holder was asked, nothing about the record.
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "contact_held_by_colleague", Detail: held.Error(),
+			Details: map[string]any{"share_requested": held.ShareRequested},
+		})
+		return
+	}
 	if dupDomain, ok := errors.AsType[*DuplicateDomainError](err); ok {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_domain", duplicateID(dupDomain.ExistingID.UUID)))
 		return
 	}
 	if dup := duplicateLeadProblem(err); dup != nil {
 		httperr.Write(w, r, dup)
+		return
+	}
+	if held := leadHoldsProblem(err); held != nil {
+		httperr.Write(w, r, held)
+		return
+	}
+	if held := contactHoldsProblem(err); held != nil {
+		httperr.Write(w, r, held)
 		return
 	}
 	if primaryConflict, ok := errors.AsType[*PrimaryConflictError](err); ok {
@@ -237,12 +302,6 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 			e.Details = map[string]any{fieldKeyPromotedContact: promoted.ContactID.String()}
 		}
 		httperr.Write(w, r, e)
-		return
-	}
-	if notPromoted, ok := errors.AsType[*NotPromotedError](err); ok {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "not_promoted", Detail: notPromoted.Error(),
-		})
 		return
 	}
 	if notDisqualified, ok := errors.AsType[*NotDisqualifiedError](err); ok {

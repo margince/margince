@@ -110,7 +110,7 @@ func (s *Store) RestoreProfileField(ctx context.Context, contactID ids.ContactID
 			}
 		}
 		if field == fieldPhone {
-			if err := restoreSupersededPhone(ctx, tx, contactID, superseded); err != nil {
+			if err := restoreSupersededPhone(ctx, tx, contactID, current, superseded); err != nil {
 				return err
 			}
 			// The replacement's evidence goes with its number. The row below
@@ -262,16 +262,16 @@ func (h Handlers) RestoreContactProfileField(w http.ResponseWriter, r *http.Requ
 // and still ours to retire, and the old row is revived only while it is still
 // archived — a number somebody re-added by hand in the meantime is theirs, and
 // reviving a second copy of it would leave the contact holding one number twice.
-func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, want string) error {
+func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, replacement, want string) error {
 	parsed, err := values.ParsePhone(want)
 	if err != nil {
-		// The buffer holds a value this reader cannot parse back into a number,
-		// so there is nothing to revive. The evidence line is still restored;
-		// the record simply has no row to match it.
-		//nolint:nilerr // an unparseable buffered value is nothing to revive, not a fault
-		return nil
+		return apperrors.ErrConflict
 	}
 	normalized := parsed.String()
+	replacing, err := values.ParsePhone(replacement)
+	if err != nil {
+		return apperrors.ErrConflict
+	}
 
 	var replacementID, supersededID ids.UUID
 	// was.contact_id is checked, not assumed from the join. A merge re-homes only
@@ -289,23 +289,21 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 		SELECT live.id, live.superseded_phone_id
 		  FROM contact_phone live
 		  JOIN contact_phone was ON was.id = live.superseded_phone_id
-		 WHERE live.contact_id = $1 AND live.archived_at IS NULL
+		 WHERE live.contact_id = @contact AND live.phone = @replacement AND live.archived_at IS NULL
 		   AND live.superseded_phone_id IS NOT NULL
-		   AND was.contact_id = $1
-		   AND was.phone = $2 AND was.archived_at IS NOT NULL
+		   AND was.contact_id = @contact
+		   AND was.phone = @old AND was.archived_at IS NOT NULL
 		   AND NOT EXISTS (
 			SELECT 1 FROM contact_phone dup
-			 WHERE dup.contact_id = $1 AND dup.phone = $2
+			 WHERE dup.contact_id = @contact AND dup.phone = @old
 			   AND dup.archived_at IS NULL)
 		 ORDER BY live.observed_at DESC
 		 LIMIT 1
 		 FOR UPDATE OF live`,
-		contactID, normalized).Scan(&replacementID, &supersededID); err != nil {
+		pgx.StrictNamedArgs{entityContact: contactID, "old": normalized, "replacement": replacing.String()}).Scan(&replacementID, &supersededID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// Nothing to move: the replacement is gone, or the number it
-			// replaced is live again already. Not a fault — the evidence line
-			// restores and the record already says what the reader wanted.
-			return nil
+			// A stale undo must not delete a live replacement's evidence.
+			return apperrors.ErrConflict
 		}
 		return fmt.Errorf("contacts: looking for the number to bring back: %w", err)
 	}
@@ -322,14 +320,11 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrConflict
 	}
-	revived, err := tx.Exec(ctx, `
-		UPDATE contact_phone SET archived_at = NULL
-		 WHERE id = $1 AND archived_at IS NOT NULL AND contact_id = $2`,
-		supersededID, contactID)
+	revived, err := revivePhoneTx(ctx, tx, contactID, supersededID)
 	if err != nil {
-		return fmt.Errorf("contacts: bringing the replaced number back: %w", err)
+		return err
 	}
-	if revived.RowsAffected() == 0 {
+	if !revived {
 		// The row stopped being ours to revive between the read and here. The
 		// replacement is already retired, so refusing leaves the contact one
 		// number short — but the alternative is reviving nothing while
@@ -352,18 +347,35 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 // agreeing, and a mismatch would fail by matching nothing rather than by
 // failing. TestTheRestoreMatchesTheLedgersOwnClaimKey holds them together.
 func refuseIfCorrected(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, field string) error {
-	var corrected bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM ai_feedback
-			 WHERE subject_type = 'contact' AND subject_id = $1
-			   AND claim_kind = 'profile_field' AND verdict = 'corrected'
-			   AND claim_key = encode(sha256(('profile_field:' || $2)::bytea), 'hex'))`,
-		contactID, field).Scan(&corrected); err != nil {
-		return fmt.Errorf("contacts: looking for a correction on %s: %w", field, err)
+	corrected, err := correctedProfileFieldNames(ctx, tx, contactID, []string{field})
+	if err != nil {
+		return err
 	}
-	if corrected {
+	if corrected[field] {
 		return apperrors.ErrConflict
 	}
 	return nil
+}
+
+// revivePhoneTx brings back one archived number of this contact, and reports
+// whether it did. A number the contact holds live again already is not revived
+// a second time: nothing on the table forbids one contact holding it twice. It
+// comes back primary only while its type has no live primary, which the
+// partial unique index permits once.
+func revivePhoneTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phoneID ids.UUID) (bool, error) {
+	tag, err := tx.Exec(ctx, `
+		UPDATE contact_phone was SET archived_at = NULL,
+		       is_primary = was.is_primary AND NOT EXISTS (
+			SELECT 1 FROM contact_phone p
+			 WHERE p.contact_id = $2 AND p.phone_type = was.phone_type AND p.is_primary
+			   AND p.archived_at IS NULL)
+		 WHERE was.id = $1 AND was.archived_at IS NOT NULL AND was.contact_id = $2
+		   AND NOT EXISTS (
+			SELECT 1 FROM contact_phone dup
+			 WHERE dup.contact_id = $2 AND dup.phone = was.phone AND dup.archived_at IS NULL)`,
+		phoneID, contactID)
+	if err != nil {
+		return false, fmt.Errorf("contacts: bringing the replaced number back: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }

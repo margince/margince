@@ -39,24 +39,24 @@ const claimStatusOpen = "open"
 // their claims moved.
 const claimIDKey = "claim_id"
 
+// claimTaskKey names the claim's task inside the same audit image.
+const claimTaskKey = "task_activity_id"
+
 // SettleConversationClaim records that a claim finished, and how.
 //
 // Gated on `contact` UPDATE and the contact's own writability, the same pair
 // RecordConversationClaim holds: a claim is a fact about a contact, and settling
 // one writes to that contact's record as much as recording it did.
 //
-// Human-only in the STORE as well as the router table, for the reason the
-// recording path states: a store relying on the routing declaration alone is one
-// x-mcp-tool away from being agent-reachable without anybody revisiting it. And
-// here the stakes are the reason to keep it — whether a human kept their word is
-// not a thing to let an extractor decide about itself.
+// Checked in the STORE as well as the router table. Whether a contact kept
+// their word is the user's to say, or their agent's, never an extractor's.
 func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, outcome string) error {
 	if outcome != string(crmcontracts.SettleClaimRequestOutcomeDone) &&
 		outcome != string(crmcontracts.SettleClaimRequestOutcomeDismissed) {
 		return httperr.Validation("outcome", "invalid",
 			"a claim settles as done or dismissed")
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -99,7 +99,7 @@ func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to 
 	// must not go on settling promises read out of it, and the 204-vs-409
 	// answer would report the claim's current status to somebody who may no
 	// longer read what it rests on.
-	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, activityID); err != nil {
+	if err := ensureClaimContentVisible(ctx, tx, claimID); err != nil {
 		return err
 	}
 	if current == to {
@@ -149,4 +149,31 @@ func (h Handlers) SettleConversationClaim(w http.ResponseWriter, r *http.Request
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// WithdrawClaimsTx dismisses the named claims that are still open and became
+// no task, inside the caller's transaction. A promise its promiser turned down
+// as a proposal no longer stands, so the customer's record stops saying we owe
+// it. A claim already settled, or one a task now carries, is left alone.
+func WithdrawClaimsTx(ctx context.Context, tx pgx.Tx, claimIDs []ids.UUID) error {
+	if len(claimIDs) == 0 {
+		return nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM conversation_claim
+		 WHERE id = ANY($1) AND status = $2 AND task_activity_id IS NULL AND archived_at IS NULL
+		 ORDER BY id`, claimIDs, claimStatusOpen)
+	if err != nil {
+		return fmt.Errorf("read the claims to withdraw: %w", err)
+	}
+	open, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("read the claims to withdraw: %w", err)
+	}
+	for _, claim := range open {
+		if err := moveClaimStatus(ctx, tx, claim, claimStatusOpen, string(crmcontracts.SettleClaimRequestOutcomeDismissed)); err != nil {
+			return err
+		}
+	}
+	return nil
 }

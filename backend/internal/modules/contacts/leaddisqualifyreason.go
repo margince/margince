@@ -46,7 +46,7 @@ func leadDisqualifyReasonColumns(ctx context.Context, args *[]any) (string, erro
 	if err != nil {
 		return "", err
 	}
-	return `id, label, sort_order, active, system, version, created_at, updated_at,
+	return `id, label, label_key, sort_order, active, system, version, created_at, updated_at,
 	(SELECT count(*) FROM lead WHERE disqualify_reason_id = lead_disqualify_reason.id AND ` + scope + `)`, nil
 }
 
@@ -56,7 +56,7 @@ func scanLeadDisqualifyReason(row pgx.Row) (crmcontracts.LeadDisqualifyReason, e
 	var system bool
 	var version int64
 	var count int
-	if err := row.Scan(&id, &out.Label, &out.SortOrder, &out.Active, &system, &version,
+	if err := row.Scan(&id, &out.Label, &out.LabelKey, &out.SortOrder, &out.Active, &system, &version,
 		&out.CreatedAt, &out.UpdatedAt, &count); err != nil {
 		return out, err
 	}
@@ -123,6 +123,15 @@ func ensureActiveDisqualifyReason(ctx context.Context, tx pgx.Tx, id ids.UUID) e
 		return &UnknownDisqualifyReasonError{}
 	}
 	return err
+}
+
+// CheckDisqualifyReason answers whether a caller who may disqualify a lead could
+// record this reason, before a governed call is put to a user.
+func (s *Store) CheckDisqualifyReason(ctx context.Context, id ids.UUID) error {
+	if err := auth.Require(ctx, entityLead, principal.ActionDelete); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error { return ensureActiveDisqualifyReason(ctx, tx, id) })
 }
 
 // ListLeadDisqualifyReasons answers the whole list in display order.

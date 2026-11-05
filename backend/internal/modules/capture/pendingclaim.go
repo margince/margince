@@ -41,13 +41,10 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 	claim := ids.NewV7()
 	var out []PendingCounterparty
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The pick is MATERIALIZED so it runs once. An IN over a LIMITed subquery can be
+		// re-run per row, and one statement then claims more rows than its limit.
 		rows, err := tx.Query(ctx, `
-			UPDATE capture_pending_counterparty p
-			   SET attempts = p.attempts + 1,
-			       claimed_until = now() + make_interval(secs => $2),
-			       claimed_by = $4,
-			       updated_at = now()
-			 WHERE p.id IN (
+			WITH picked AS MATERIALIZED (
 			   SELECT id FROM capture_pending_counterparty
 			    WHERE status = 'pending'
 			      AND next_attempt_at IS NOT NULL AND next_attempt_at <= now()
@@ -61,6 +58,12 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			    ORDER BY next_attempt_at
 			    LIMIT $1
 			    FOR UPDATE SKIP LOCKED)
+			UPDATE capture_pending_counterparty p
+			   SET attempts = p.attempts + 1,
+			       claimed_until = now() + make_interval(secs => $2),
+			       claimed_by = $4,
+			       updated_at = now()
+			 WHERE p.id IN (SELECT id FROM picked)
 			RETURNING p.id, p.email, coalesce(p.domain, ''), coalesce(left(p.display_name, $5), ''),
 			          p.activity_id, p.owner_id,
 			          coalesce(left((SELECT a.subject FROM activity a WHERE a.id = p.activity_id AND a.restricted_at IS NULL), $6), ''),
@@ -70,7 +73,9 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 			                           THEN 'outbound'
 			                      WHEN a.direction = 'inbound' THEN 'inbound'
 			                      ELSE '' END
-			                      FROM activity a WHERE a.id = p.activity_id), '')`,
+			                      FROM activity a WHERE a.id = p.activity_id), ''),
+			          coalesce((SELECT a.inbound_sender_authenticated AND a.counterparty_email = p.email
+			                      FROM activity a WHERE a.id = p.activity_id), false)`,
 			limit, pendingLease.Seconds(), PendingMaxAttempts, claim,
 			MaxCapturedNameChars, MaxCapturedSubjectChars, MaxCapturedBodyChars)
 		if err != nil {
@@ -80,7 +85,7 @@ func (s *PendingStore) ClaimDue(ctx context.Context, limit int) ([]PendingCounte
 		for rows.Next() {
 			p := PendingCounterparty{Claim: claim}
 			if err := rows.Scan(&p.ID, &p.Email, &p.Domain, &p.DisplayName,
-				&p.ActivityID, &p.OwnerID, &p.Subject, &p.Body, &p.Direction); err != nil {
+				&p.ActivityID, &p.OwnerID, &p.Subject, &p.Body, &p.Direction, &p.SenderAuthenticated); err != nil {
 				return err
 			}
 			out = append(out, p)

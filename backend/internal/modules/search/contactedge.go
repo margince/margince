@@ -12,7 +12,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -32,9 +34,11 @@ type ContactEdge struct {
 // and none are invented: the reciprocity term simply has nothing to say.
 func (e ContactEdge) StrengthOf(now time.Time) relstrength.Score {
 	last := e.LastAt
+	// Both contacts were on the activity, so each took part in it.
 	return relstrength.Compute(relstrength.Inputs{
-		LastInteraction: &last,
-		Count90d:        e.Count90d,
+		LastTouch:   &last,
+		LastEngaged: &last,
+		Count90d:    e.Count90d,
 	}, now)
 }
 
@@ -116,7 +120,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		folded AS (
 		    SELECT t.contact_a, t.contact_b,
 		           max(a.occurred_at) AS last_at,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE a.occurred_at >= `+window+`) AS count_90d,
+		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`) AS count_90d,
 		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
 		      FROM target t
 		      JOIN activity_participant pa
@@ -127,6 +131,7 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		      JOIN activity a
 		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
+		     WHERE `+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+`
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
@@ -150,14 +155,14 @@ func recomputeContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) 
 		DELETE FROM graph_contact_edge e
 		 USING unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
 		 WHERE e.contact_a = t.contact_a AND e.contact_b = t.contact_b
-		   AND NOT EXISTS (
+		   AND NOT (`+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+` AND EXISTS (
 		       SELECT 1
 		         FROM activity_participant pa
 		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
 		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
 		   AND `+graphCountedActivity+`
 		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
-		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`)`,
+		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`))`,
 		first, second); err != nil {
 		return fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
 	}
@@ -226,7 +231,7 @@ func ContactEdgesForContact(ctx context.Context, tx pgx.Tx, contactID ids.UUID, 
 		  FROM graph_contact_edge e
 		  JOIN contact p
 		    ON p.id = CASE WHEN e.contact_a = $%d THEN e.contact_b ELSE e.contact_a END
-		   AND p.archived_at IS NULL
+		   AND p.archived_at IS NULL AND `+relationshipmark.NotMarkedSQL("p")+`
 		 WHERE (e.contact_a = $%d OR e.contact_b = $%d) AND (%s)
 		 ORDER BY e.last_at DESC, e.contact_a, e.contact_b
 		 LIMIT $%d`, anchorPos, anchorPos, anchorPos, scope, limitPos), args...)

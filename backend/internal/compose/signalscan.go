@@ -26,6 +26,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -35,7 +36,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ghostedThresholdDays (SIG-PARAM-6) is twice the no_reply suggestion's window,
@@ -52,6 +55,7 @@ type ghostedCandidate struct {
 	CompanyID  ids.UUID
 	ActivityID ids.UUID
 	At         time.Time
+	Precision  string
 }
 
 // scanGhostedThreads finds the accounts whose newest interaction is ours and
@@ -78,7 +82,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 	rows, err := tx.Query(ctx, `
 		WITH newest AS (
 			SELECT DISTINCT ON (ro.company_id)
-			       ro.company_id, a.id, a.direction, a.occurred_at
+			       ro.company_id, a.id, a.direction, a.occurred_at, a.occurred_precision
 			  FROM activity a
 			  JOIN (`+activities.CompanyReachSet()+`) ro ON ro.activity_id = a.id
 			 WHERE a.archived_at IS NULL
@@ -87,19 +91,19 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 			   -- last, so it is skipped rather than guessed at — the same rule
 			   -- PO-F-4 applies to the engagement state.
 			   AND a.direction IS NOT NULL
-			   AND a.occurred_at <= $1
+			   AND `+occurredday.HappenedSQL("a", "$1")+`
 			 ORDER BY ro.company_id, a.occurred_at DESC, a.id DESC
 		)
-		SELECT n.company_id, n.id, n.occurred_at
+		SELECT n.company_id, n.id, n.occurred_at, n.occurred_precision
 		  FROM newest n
 		  JOIN company o ON o.id = n.company_id AND o.archived_at IS NULL
 		 WHERE n.direction = 'outbound'
 		   AND n.occurred_at < $2
-		   AND (o.lifecycle IN ('prospect','opportunity','customer')
+		   AND (o.lifecycle = ANY($3)
 		        OR EXISTS (SELECT 1 FROM deal d
 		                    WHERE d.company_id = o.id AND d.status = 'open'
 		                      AND d.archived_at IS NULL))`,
-		now, cutoff)
+		now, cutoff, values.EngagedLifecycles())
 	if err != nil {
 		return nil, fmt.Errorf("scan ghosted threads: %w", err)
 	}
@@ -107,7 +111,7 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 	var out []ghostedCandidate
 	for rows.Next() {
 		var found ghostedCandidate
-		if err := rows.Scan(&found.CompanyID, &found.ActivityID, &found.At); err != nil {
+		if err := rows.Scan(&found.CompanyID, &found.ActivityID, &found.At, &found.Precision); err != nil {
 			return nil, err
 		}
 		out = append(out, found)
@@ -159,16 +163,26 @@ func WriteGhostedSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Ghosted
 	if err != nil {
 		return GhostedPass{}, err
 	}
-	said := signalSummaryCopyFor(identity.BaseLanguageForRecord(ctx, tx))
+	loc, err := installationZoneTx(ctx, tx)
+	if err != nil {
+		return GhostedPass{}, err
+	}
+	parts := ghostedThreadParts{Days: ghostedThresholdDays}
+	summary := parts.worded(identity.BaseLanguageForRecord(ctx, tx))
+	params, err := json.Marshal(parts)
+	if err != nil {
+		return GhostedPass{}, fmt.Errorf("encoding a ghosted-thread summary's parts: %w", err)
+	}
 	pass := GhostedPass{Considered: len(candidates)}
 	for _, found := range candidates {
-		days := int(now.Sub(found.At).Hours() / 24)
+		days := max(occurredday.DaysSince(occurredday.Moment{At: found.At, DateOnly: occurredday.IsDay(found.Precision)}, now, loc), 0)
 		raised, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-			Kind:        kindGhostedThread,
-			CompanyID:   found.CompanyID,
-			Summary:     fmt.Sprintf(said.ghostedThread, days),
-			Severity:    severityWarn,
-			Fingerprint: signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
+			Kind:          kindGhostedThread,
+			CompanyID:     found.CompanyID,
+			Summary:       summary,
+			SummaryParams: params,
+			Severity:      severityWarn,
+			Fingerprint:   signalFingerprint(kindGhostedThread, found.CompanyID, found.ActivityID),
 			// The message is CITED, not quoted. This finding is shared with
 			// everyone who can see the account, while the message it points at
 			// may be readable by one contact — capture files mail against

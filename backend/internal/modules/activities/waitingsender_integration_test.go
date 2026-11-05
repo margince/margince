@@ -38,6 +38,8 @@ func (e *loadEnv) buyerAddress() string { return "boris-" + e.rep.String() + "@c
 func (e *loadEnv) mailFiledUnderBoth(t *testing.T, subject string, buyer, rep ids.UUID, senderContact *ids.UUID) ids.UUID {
 	t.Helper()
 	activity := e.seedWait(t, subject, "contact_id", rep)
+	e.exec(t, `UPDATE activity SET kind='email' WHERE id=$1`, activity)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address) VALUES ($1,$2,'to',$3)`, ids.NewV7(), activity, "rep-"+e.rep.String()+"@load.test")
 	e.exec(t, `UPDATE activity_participant SET address = $3, contact_id = $2
 		WHERE activity_id = $1 AND role = 'from'`, activity, senderContact, e.buyerAddress())
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
@@ -46,7 +48,7 @@ func (e *loadEnv) mailFiledUnderBoth(t *testing.T, subject string, buyer, rep id
 }
 
 // The buyer wrote to the rep, and both have a record the message is filed
-// under. The row names the buyer, and the buyer's owner owes the reply.
+// under. The row names the buyer, while the addressed rep owes the reply.
 func TestAWaitingRowNamesWhoWroteNotWhoReceived(t *testing.T) {
 	e := setupLoad(t)
 	buyer, rep := e.buyerAndRepContacts(t)
@@ -56,8 +58,8 @@ func TestAWaitingRowNamesWhoWroteNotWhoReceived(t *testing.T) {
 	if got.ContactID != buyer {
 		t.Fatalf("the row names contact %v, want the sender %v (the rep's own record is %v)", got.ContactID, buyer, rep)
 	}
-	if got.OwnerID != e.other {
-		t.Fatalf("the reply is owed by %v, want the buyer's owner %v", got.OwnerID, e.other)
+	if got.OwnerID != e.rep {
+		t.Fatalf("the reply is owed by %v, want direct recipient %v, not buyer owner %v", got.OwnerID, e.rep, e.other)
 	}
 }
 

@@ -130,7 +130,7 @@ function choices(
   const busy = state.phase === "busy";
   row.append(
     button(
-      known ? "Tag it" : "Add the tag and tag it",
+      known ? "Tag it" : "Create and add the tag",
       "primary",
       () => void accept(offer, record, state, set),
       busy,

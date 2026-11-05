@@ -15,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -24,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -96,6 +96,12 @@ func Setup(t *testing.T) *Env {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	// Refused rather than reported, because the reset is what makes a leak
+	// invisible: it truncates the rows the leaked workers are still reading.
+	if leaked := leakedRunners(); leaked != "" {
+		t.Fatalf("a job runner outlived the test that started it, so this reset would "+
+			"pull the database out from under its workers:%s", leaked)
+	}
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
@@ -111,8 +117,10 @@ func Setup(t *testing.T) *Env {
 	}
 	seedInstallationIdentity(ctx, t, owner)
 	for i, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
+		address := string(rune('a'+i)) + "@authz.test"
 		if _, err := owner.Exec(ctx,
-			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, $3)`, user, string(rune('a'+i))+"@authz.test", "Rep"); err != nil {
+			`INSERT INTO app_user (id, email, display_name, email_domain_folded) VALUES ($1, $2, $3, $4)`,
+			user, address, "Rep", owndomain.StoredOfAddress(address)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -149,14 +157,7 @@ func Setup(t *testing.T) *Env {
 	// last and sees a package that has genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	e.Pool = pool
-	// A no-op rename: the installation-name edge is compose's, which this package
-	// cannot import, and compose's installationname suites prove it.
-	e.Contacts = contacts.NewStore(harnessDB(pool, e.WS)).
-		WithInstallationRenamer(func(context.Context, pgx.Tx, string) error { return nil })
-	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
-	e.Projects = ProjectsStore(harnessDB(pool, e.WS))
-	e.Contracts = ContractsStore(harnessDB(pool, e.WS), e.Deals)
-	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
+	e.bindStores(harnessDB(pool, e.WS))
 	return e
 }
 
@@ -200,6 +201,9 @@ func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
 // same owner DSN the migration step uses.
 func SchemaPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
+	if err := testdb.EnsureSchema(context.Background(), OwnerConn(t)); err != nil {
+		t.Fatal(err)
+	}
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
 	if dsn == "" {
 		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
@@ -296,7 +300,7 @@ func (e *Env) AgentCtx() context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: e.AgentPassport,
+		PassportID: e.AgentPassport, OnBehalfOf: e.Rep1,
 	})
 }
 
@@ -319,12 +323,19 @@ func (e *Env) AgentCtx() context.Context {
 // assertion vacuously.
 func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions) context.Context {
 	t.Helper()
+	return e.AgentOnPassport(t, human, teams, perms, ids.New[ids.PassportKind]())
+}
+
+// AgentOnPassport is AgentFor acting under a passport the test seeded, so the
+// audit row resolves the tool the passport was granted to.
+func (e *Env) AgentOnPassport(t *testing.T, human ids.UUID, teams []ids.UUID, perms principal.Permissions, passport ids.PassportID) context.Context {
+	t.Helper()
 	teamIDs := make([]ids.TeamID, 0, len(teams))
 	for _, team := range teams {
 		teamIDs = append(teamIDs, ids.From[ids.TeamKind](team))
 	}
 	agent := identity.AgentIdentity{
-		PassportID:  ids.New[ids.PassportKind](),
+		PassportID:  passport,
 		WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
 		OnBehalfOf:  ids.From[ids.UserKind](human),
 		SeatType:    string(principal.SeatFull),
@@ -337,21 +348,6 @@ func (e *Env) AgentFor(t *testing.T, human ids.UUID, teams []ids.UUID, perms pri
 	return principal.WithActor(ctx, agent.Principal())
 }
 
-// SeedPassport inserts a live passport for Rep1 and returns its id. Rows
-// that reference a passport carry a real foreign key, so a synthetic id
-// would be rejected by the database rather than by the code under test.
-func (e *Env) SeedPassport(t *testing.T, owner *pgx.Conn, label string) ids.UUID {
-	t.Helper()
-	id := ids.NewV7()
-	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
-		VALUES ($1, $2, $2, $3, ARRAY['read','write'], $4, now() + interval '1 day')`,
-		id, e.Rep1, label, "hash-"+id.String()); err != nil {
-		t.Fatalf("seeding passport %s: %v", label, err)
-	}
-	return id
-}
-
 // AgentCtxWithPassport is AgentCtx carrying a passport id, which is what a
 // real agent principal always holds. The distinction matters wherever
 // provenance decides authority — a staging with a passport was minted by an
@@ -362,7 +358,7 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: passportID,
+		PassportID: passportID, OnBehalfOf: e.Rep1,
 	})
 }
 

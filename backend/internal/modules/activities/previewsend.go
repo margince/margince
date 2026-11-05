@@ -16,6 +16,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,7 +37,25 @@ var errNoPreviewAuthority = errors.New("activities: preview has no consent autho
 // Injected because consent owns the engine and a module never imports a
 // sibling. The consent gate's own Preview satisfies it.
 type SendPreviewer interface {
+	decisionPreviewer
+	// PreviewTx answers on the caller's transaction, so it sees a contact the
+	// preview filed there and rolls back.
+	PreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.DecisionSet, error)
+}
+
+// decisionPreviewer is the half of SendPreviewer a send asks while it
+// prepares, when no transaction of its own is open.
+type decisionPreviewer interface {
 	Preview(ctx context.Context, req commsauthz.Request) (commsauthz.DecisionSet, error)
+}
+
+// SendPreview is the engine's answer, and which addresses the send would file
+// as new contacts before asking it.
+type SendPreview struct {
+	Decisions commsauthz.DecisionSet
+	// NewContacts are the folded addresses no record holds. The decisions about
+	// them are the ones the contact the send makes will get.
+	NewContacts map[string]bool
 }
 
 // PreviewSendInput is a message a composer has not written yet.
@@ -67,7 +87,7 @@ type PreviewSendInput struct {
 // It runs on the store's own transaction through the previewer, which rolls
 // back. Nothing is recorded: no decision rows, and no lawful basis, because a
 // basis is the ground a SEND relies on and nothing has been sent.
-func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSendInput, previewer SendPreviewer) (commsauthz.DecisionSet, error) {
+func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSendInput, previewer SendPreviewer) (SendPreview, error) {
 	// THE SAME GRANT THE SEND NEEDS, and asked first.
 	//
 	// A preview answers about a message this caller could send, so a caller who
@@ -76,19 +96,19 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 	// that contact has objected. The record probe below is not a substitute — it
 	// gates the RECORDS named, and a reply preview names none.
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return commsauthz.DecisionSet{}, err
+		return SendPreview{}, err
 	}
 	if previewer == nil {
 		// A preview with no authority behind it would answer "allowed" about a
 		// question nobody asked. Refused the way the send path refuses a
 		// missing gate: absence of the engine never reads as permission.
-		return commsauthz.DecisionSet{}, errNoPreviewAuthority
+		return SendPreview{}, errNoPreviewAuthority
 	}
-	links, err := origin.resolve(ctx, s)
+	links, err := origin.Resolve(ctx, s)
 	if err != nil {
-		return commsauthz.DecisionSet{}, err
+		return SendPreview{}, err
 	}
-	return previewer.Preview(ctx, commsauthz.Request{
+	req := commsauthz.Request{
 		Recipients:       connector.EmailRecipients(in.Recipients),
 		Context:          in.Context,
 		LegacyPurposeKey: in.LegacyPurposeKey,
@@ -96,7 +116,41 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 		Evidence:         in.evidenceWithAnchor(origin),
 		AnchorActivityID: origin.anchor.UUID,
 		Links:            linkedRecordIDs(links),
+	}
+	if origin.isReply() || s.recipientFiler == nil {
+		set, err := previewer.Preview(ctx, req)
+		return SendPreview{Decisions: set}, err
+	}
+	return s.previewFilingNewAddresses(ctx, in.Recipients, req, previewer)
+}
+
+// errPreviewFiled unwinds the preview's transaction once it has its answer:
+// the contacts it filed were only there to be asked about.
+var errPreviewFiled = errors.New("activities: preview complete")
+
+// previewFilingNewAddresses files the new addresses as the send would, asks the
+// engine about the contacts that makes, and rolls all of it back. A preview
+// that skipped the filing would answer about nobody, which the engine refuses.
+func (s *Store) previewFilingNewAddresses(ctx context.Context, recipients []string, req commsauthz.Request, previewer SendPreviewer) (SendPreview, error) {
+	var out SendPreview
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		filed, err := s.recipientFiler.FileTypedRecipientsTx(ctx, tx, recipients)
+		if err != nil {
+			return err
+		}
+		out.NewContacts = make(map[string]bool, len(filed))
+		for _, address := range filed {
+			out.NewContacts[address] = true
+		}
+		if out.Decisions, err = previewer.PreviewTx(ctx, tx, req); err != nil {
+			return err
+		}
+		return errPreviewFiled
 	})
+	if errors.Is(err, errPreviewFiled) {
+		err = nil
+	}
+	return out, err
 }
 
 // evidenceWithAnchor fills the anchor in the way outboundMessage.evidence does

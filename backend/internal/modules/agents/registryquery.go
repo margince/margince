@@ -19,6 +19,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -142,25 +144,25 @@ func outsideToolName(c rune) bool {
 	return c != '_' && !unicode.IsLower(c) && !unicode.IsDigit(c)
 }
 
-// Offered is the surface THIS caller may invoke: the catalog both the external
-// tools/list and a Surface-B run's tool listing are drawn from.
-//
-// One function serves both, rather than two filters that agree today. A run
-// offered a verb its passport cannot spend is being asked to choose among names
-// it will be refused for, and every one of them rides in a system prompt that
-// elision never touches.
-//
-// It answers the SCOPE axis only. Invoke remains the authority on the seat
-// ceiling and object RBAC, which are re-derived per call — this narrows what is
-// advertised and enforces nothing. An Unlisted tool is never offered.
+// Offered is the tools/list this caller is shown. It narrows by the passport's
+// scopes, the seat and the checks each verb was measured to ask (grantedTo).
+// Invoke remains the authority on every one of them: this narrows what is
+// advertised and enforces nothing. An Unlisted tool is never offered. Each
+// description names a routed verb by the router action this listing offers.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	all := r.Specs()
 	out := make([]mcp.ToolSpec, 0, len(all))
-	words := r.lister()
 	for _, spec := range all {
-		if !spec.Unlisted && invocableByCaller(ctx, spec) {
-			out = append(out, words.listed(spec))
+		if spec.Unlisted || !invocableByCaller(ctx, spec) {
+			continue
 		}
+		if granted, ok := r.grantedTo(ctx, spec); ok {
+			out = append(out, r.asSeenBy(ctx, granted))
+		}
+	}
+	words := listerOf(out)
+	for i, spec := range out {
+		out[i] = words.listed(spec)
 	}
 	return out
 }
@@ -173,10 +175,40 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if invocableByCaller(ctx, spec) {
-			out = append(out, spec)
+			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}
 	return out
+}
+
+// asSeenBy is spec with the tier the gate admits this caller on (auth.TierFor).
+// A router's action is admitted on its own verb's spec once routed. So each
+// action is lifted by that spec, and the router by whether its actions agree.
+func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return spec
+	}
+	if len(spec.Actions) == 0 {
+		if tier := auth.TierFor(p, spec); tier != spec.Tier {
+			spec.Tier, spec.TierResolver = tier, nil
+		}
+		return spec
+	}
+	actions := make([]mcp.ToolAction, len(spec.Actions))
+	agree := true
+	for i, action := range spec.Actions {
+		if verb, registered := r.Spec(action.Verb); registered {
+			action.Tier = auth.TierFor(p, verb)
+		}
+		actions[i] = action
+		agree = agree && action.Tier == actions[0].Tier
+	}
+	spec.Actions = actions
+	if agree && actions[0].Tier != mcp.TierDynamic {
+		spec.Tier, spec.TierResolver = actions[0].Tier, nil
+	}
+	return spec
 }
 
 // dynamicTool is implemented by TierDynamic tools that need more than the

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -15,24 +16,36 @@ import (
 // What the timeline may be narrowed by on the record seam: the contract's
 // listActivities parameters, bound to the fields the HTTP door fills.
 const (
-	filterKind            = "kind"
-	filterChannelProvider = "channel_provider"
-	filterEntityType      = "entity_type"
-	filterEntityID        = "entity_id"
-	filterAssigneeID      = "assignee_id"
-	filterProjectID       = "project_id"
-	filterThreadKey       = "thread_key"
-	filterOccurredAfter   = "occurred_after"
-	filterOccurredBefore  = "occurred_before"
-	filterWaitingReply    = "waiting_reply"
-	filterIncludeArchived = "include_archived"
-	filterSort            = "sort"
+	filterKind             = "kind"
+	filterChannelProvider  = "channel_provider"
+	filterCallOutcome      = "call_outcome"
+	filterEntityType       = "entity_type"
+	filterEntityID         = "entity_id"
+	filterAssigneeID       = "assignee_id"
+	filterProjectID        = "project_id"
+	filterThreadKey        = "thread_key"
+	filterSourceActivityID = "source_activity_id"
+	filterOccurredAfter    = "occurred_after"
+	filterOccurredBefore   = "occurred_before"
+	filterWaitingReply     = "waiting_reply"
+	filterReminderDue      = "reminder_due"
+	filterIncludeArchived  = "include_archived"
+	filterSort             = "sort"
 )
 
 var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
 	filterKind:            storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Kind = v }),
 	filterChannelProvider: storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ChannelProvider = v }),
-	filterEntityType:      storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.EntityType = v }),
+	// Checked against the contract's list here: a typo would otherwise answer
+	// an empty list, which reads as "no such calls".
+	filterCallOutcome: func(in *ListActivitiesInput, value string) error {
+		if !crmcontracts.ListActivitiesParamsCallOutcome(value).Valid() {
+			return errors.New("takes one of reached, not_reached, voicemail, call_back_later, put_through")
+		}
+		in.CallOutcome = &value
+		return nil
+	},
+	filterEntityType: storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.EntityType = v }),
 	// The polymorphic activity_link target, so the id stays untyped: the paired
 	// entity_type names it.
 	filterEntityID: func(in *ListActivitiesInput, value string) error {
@@ -43,14 +56,16 @@ var activityListFilters = storekit.FilterSet[ListActivitiesInput]{
 		in.EntityID = &id
 		return nil
 	},
-	filterAssigneeID:      storekit.FilterID(func(in *ListActivitiesInput, id *ids.UserID) { in.AssigneeID = id }),
-	filterProjectID:       storekit.FilterID(func(in *ListActivitiesInput, id *ids.ProjectID) { in.WithinProjectID = id }),
-	filterThreadKey:       storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ThreadKey = v }),
-	filterOccurredAfter:   instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredAfter = at }),
-	filterOccurredBefore:  instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredBefore = at }),
-	filterWaitingReply:    storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.WaitingReply = *v }),
-	filterIncludeArchived: storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.IncludeArchived = *v }),
-	filterSort:            storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Sort = v }),
+	filterAssigneeID:       storekit.FilterID(func(in *ListActivitiesInput, id *ids.UserID) { in.AssigneeID = id }),
+	filterProjectID:        storekit.FilterID(func(in *ListActivitiesInput, id *ids.ProjectID) { in.WithinProjectID = id }),
+	filterSourceActivityID: storekit.FilterID(func(in *ListActivitiesInput, id *ids.ActivityID) { in.SourceActivityID = id }),
+	filterThreadKey:        storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.ThreadKey = v }),
+	filterOccurredAfter:    instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredAfter = at }),
+	filterOccurredBefore:   instantFilter(func(in *ListActivitiesInput, at *time.Time) { in.OccurredBefore = at }),
+	filterWaitingReply:     storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.WaitingReply = *v }),
+	filterReminderDue:      storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.RemindersDue = *v }),
+	filterIncludeArchived:  storekit.FilterFlag(func(in *ListActivitiesInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:             storekit.FilterWord(func(in *ListActivitiesInput, v *string) { in.Sort = v }),
 }
 
 // instantFilter binds an RFC 3339 instant, the form the contract's date-time
@@ -66,10 +81,11 @@ func instantFilter(set func(*ListActivitiesInput, *time.Time)) storekit.FilterBi
 	}
 }
 
-// ListFilters names what the timeline can be narrowed by on the seam.
+// ListFilters names what the timeline can be narrowed by on the seam. The cf_
+// prefix says SearchEntity binds custom-field keys too, as the route does.
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	if t != datasource.EntityActivity {
 		return nil
 	}
-	return activityListFilters.Names()
+	return append(activityListFilters.Names(), datasource.CustomFieldPrefix)
 }

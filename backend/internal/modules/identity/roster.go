@@ -4,7 +4,7 @@
 package identity
 
 // The workspace roster reads (A52 sharing needs a subject picker + name
-// resolution): flat, row-scoped member/team lists, active seats only.
+// resolution): flat, row-scoped member/team lists, active seats by default.
 // Keyset-paginated like every other list surface (storekit.EncodeCursor/
 // DecodeCursor + ClampLimit) — the roster can grow past one page, unlike
 // ListRecordGrants. The q filter and the unfiltered read are two fixed,
@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -42,12 +43,9 @@ type ListUsersInput struct {
 	// place, because two ways to spell one authorization decision is how the
 	// two come to disagree.
 	IncludeInactive bool
-	// IncludeInvited widens the roster to invited seats for any member.
-	//
-	// Deprecated: naming the owners a record points at is SeatNames, which
-	// answers id and display name alone; a roster row carries the member's
-	// email and seat status with it. The pickers leave it off, so the default
-	// stays the list of members who can open what they are given.
+	// IncludeInvited widens the roster to invited seats for any member. The
+	// responsibility picker asks for it, because an invited colleague may be
+	// given work before their first sign-in. Each row carries its status.
 	IncludeInvited bool
 	// Actor is the human asking, when one is. The management view carries each
 	// member's allowed actions for a human caller only, because every member
@@ -78,6 +76,21 @@ type userRow struct {
 	// or the member never signed in.
 	LastActiveAt *time.Time
 	CreatedAt    time.Time
+	Unused       bool
+	// InviteMailState is nil unless the read asked and an invitation was mailed.
+	InviteMailState *string
+	UpdatedAt       time.Time
+	MergedFrom      []crmcontracts.SeatName
+	// ServiceExtension names the extension unit a service member serves; nil
+	// for every other seat.
+	ServiceExtension *string
+	// Assignable is whether the caller may make this member a record's owner;
+	// nil when the read did not ask.
+	Assignable *bool
+	// CanOwnRecords is the seat half of Assignable, without the caller's scope.
+	CanOwnRecords *bool
+	// ConnectedMailboxes counts live capture connections; nil when not read.
+	ConnectedMailboxes *int
 }
 
 // roleKeys aggregates the member's assigned role keys, sorted so a member
@@ -111,8 +124,9 @@ const lastActive = `CASE WHEN $1::boolean THEN
 	    (SELECT max(s.last_seen_at) FROM session s WHERE s.user_id = app_user.id))
 	  ELSE NULL::timestamptz END`
 
-const userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
-	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at`
+var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user") +
+	`, ` + inviteMailState
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -128,17 +142,20 @@ var listUsersQuery = `
 	ORDER BY created_at, id
 	LIMIT $4`
 
+// memberMatchesQ is the roster search over $2: name or email, with the
+// diacritics folded on both sides, so "Thắng" finds "Thang" and the reverse.
+const memberMatchesQ = `(f_unaccent(display_name) ILIKE f_unaccent($2) OR f_unaccent(email) ILIKE f_unaccent($2))`
+
 var listUsersFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + LiveMemberSQL("") + `
-	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	  AND ` + memberMatchesQ + `
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
 	LIMIT $5`
 
-// The live members plus the invited seats, for the deprecated include_invited.
-// Naming an id is SeatNames. See ListUsersInput.IncludeInvited.
+// The live members plus the invited seats. See ListUsersInput.IncludeInvited.
 var listUsersInvitedQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
@@ -151,26 +168,26 @@ var listUsersInvitedFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
 	WHERE ` + ActivatableMemberSQL("") + `
-	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	  AND ` + memberMatchesQ + `
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
 	LIMIT $5`
 
 // The admin management roster: every non-archived member regardless of status,
 // so a deactivated member is visible to reactivate.
-const listUsersAllQuery = `
+var listUsersAllQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
-	WHERE archived_at IS NULL
+	WHERE archived_at IS NULL AND removed_at IS NULL
 	  AND ($2::timestamptz IS NULL OR (created_at, id) > ($2, $3))
 	ORDER BY created_at, id
 	LIMIT $4`
 
-const listUsersAllFilteredQuery = `
+var listUsersAllFilteredQuery = `
 	SELECT ` + userColumns + `
 	FROM app_user
-	WHERE archived_at IS NULL
-	  AND (display_name ILIKE $2 OR email ILIKE $2)
+	WHERE archived_at IS NULL AND removed_at IS NULL
+	  AND ` + memberMatchesQ + `
 	  AND ($3::timestamptz IS NULL OR (created_at, id) > ($3, $4))
 	ORDER BY created_at, id
 	LIMIT $5`
@@ -178,12 +195,13 @@ const listUsersAllFilteredQuery = `
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
-		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt)
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused,
+		&u.InviteMailState)
 	return u, err
 }
 
-const getUserQuery = `SELECT ` + userColumns + ` FROM app_user
-	WHERE id = $2 AND archived_at IS NULL`
+var getUserQuery = `SELECT ` + userColumns + ` FROM app_user
+	WHERE id = $2 AND archived_at IS NULL AND removed_at IS NULL`
 
 // GetUser reads one member by id regardless of status — the read every member
 // administration write returns after a mutation, so it always asks for the role
@@ -245,7 +263,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 	if err := auth.RequireMember(ctx); err != nil {
 		return RosterPage{}, err
 	}
-	mayManage := auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	mayManage := auth.Allows(ctx, objectUserAdmin, principal.ActionRead)
 	plain, filtered := listUsersQuery, listUsersFilteredQuery
 	switch {
 	case mayManage && in.IncludeInactive:
@@ -260,6 +278,9 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 		scan:      scanUser,
 		cursorKey: func(u userRow) (time.Time, ids.UUID) { return u.CreatedAt, u.ID },
 	})
+	if err == nil {
+		err = s.markAssignable(ctx, rows)
+	}
 	if err != nil || !mayManage || in.Actor == nil {
 		withholdActivity(ctx, nil, rows, nil)
 		return RosterPage{Users: rows, Page: page, Management: mayManage}, err
@@ -271,6 +292,9 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 			return err
 		}
 		withholdActivity(ctx, in.Actor, rows, grants)
+		if err := s.markConnectedMailboxesTx(ctx, tx, rows); err != nil {
+			return err
+		}
 		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows, grants)
 		return err
 	})
@@ -280,20 +304,12 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 // withholdActivity clears last-active wherever the caller could not list the member's sessions:
 // no human caller, no user_admin read, or a target beyond ListUserSessions' ceiling.
 func withholdActivity(ctx context.Context, actor *Identity, rows []userRow, grants map[ids.UUID]seatGrants) {
-	mayList := actor != nil && auth.Require(ctx, objectUserAdmin, principal.ActionRead) == nil
+	mayList := actor != nil && auth.Allows(ctx, objectUserAdmin, principal.ActionRead)
 	for i := range rows {
 		if !mayList || callerOutranks(*actor, grants[rows[i].ID], reachDenial) != nil {
 			rows[i].LastActiveAt = nil
 		}
 	}
-}
-
-func rowIDs(rows []userRow) []ids.UUID {
-	out := make([]ids.UUID, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, row.ID)
-	}
-	return out
 }
 
 // RosterPage is one roster read: the rows, the keyset position, and WHICH VIEW
@@ -351,7 +367,7 @@ var listTeamsQuery = `
 
 var listTeamsFilteredQuery = `
 	SELECT ` + teamColumns + teamFromJoin + `
-	WHERE t.archived_at IS NULL AND t.name ILIKE $1
+	WHERE t.archived_at IS NULL AND f_unaccent(t.name) ILIKE f_unaccent($1)
 	  AND ($2::timestamptz IS NULL OR (t.created_at, t.id) > ($2, $3))
 	GROUP BY t.id
 	ORDER BY t.created_at, t.id

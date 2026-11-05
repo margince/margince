@@ -4,6 +4,7 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -57,7 +59,7 @@ func seatIdentity(
 
 // InviteUser (POST /users): provision a new member and mail the set-password link.
 func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -97,21 +99,23 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request) {
 		GreetingName: req.GreetingName,
 		Role:         string(req.Role),
 		TeamIDs:      teams,
+		Mailed:       h.canSendPasswordLink(),
 	})
 	if err != nil {
+		err = conflictIf(err, errRemovedEmail, "removed_member_email", "This address belongs to a permanently removed member and remains reserved for historical attribution.")
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a user with this email already exists in this company; if they were "+
 				"deactivated, reactivate them from the roster instead of inviting again")
 		httperr.Write(w, r, teamMembershipRefusal(unknownRoleRefusal(companyNotDescribedRefusal(err))))
 		return
 	}
-	h.sendInvite(r, email.String(), rawToken)
-	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
+	queued := h.sendInvite(r, email.String(), rawToken, actor)
+	h.writeInvitedUser(w, r, actor, userID, http.StatusCreated, queued)
 }
 
 // ChangeUserRole (PATCH /users/{id}/role).
 func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -134,7 +138,7 @@ func (h Handlers) ChangeUserRole(w http.ResponseWriter, r *http.Request, id crmc
 
 // DeactivateUser (POST /users/{id}/deactivate).
 func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -161,7 +165,7 @@ func (h Handlers) DeactivateUser(w http.ResponseWriter, r *http.Request, id crmc
 
 // ReactivateUser (POST /users/{id}/reactivate).
 func (h Handlers) ReactivateUser(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -367,20 +371,55 @@ func (h Handlers) writeUserByID(w http.ResponseWriter, r *http.Request, actor Id
 	httperr.WriteJSON(w, status, wireUserWithRoles(row))
 }
 
-// sendInvite mails the single-use set-password link when a mailer is wired.
-// Delivery is best-effort — the member and token already committed, so a mail
-// failure is an operator incident (logged), never a failed invite.
-func (h Handlers) sendInvite(r *http.Request, email, rawToken string) {
+// sendInvite mails the set-password link off the request, so a slow relay does
+// not hold the admin's Invite. It reports whether it handed the mail over.
+// A goroutine and not a queued job: a job table stores its arguments verbatim,
+// and the raw token must not enter it. The relay's answer is stamped on the
+// link, where the roster reads it.
+func (h Handlers) sendInvite(r *http.Request, email, rawToken string, inviter Identity) bool {
 	if !h.canSendPasswordLink() || rawToken == "" {
-		return
+		return false
 	}
-	link := passwordLink(h.passwordLinkBaseURL, rawToken)
-	words := h.mailCopy(r.Context())
-	body := words.InviteIntro + "\n\n" +
-		words.InviteAction + "\n\n  " + link + "\n\n" +
-		words.InviteIgnore
-	if err := h.resetMailer.Send(r.Context(), email, words.InviteSubject, body); err != nil {
-		slog.Error("invite email failed", "err", err)
+	// releaseSend runs in the goroutine, which outlives this handler.
+	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), h.inviteSendBudget())
+	done := h.resetSendStarted // test seam; nil in production
+	go func() {
+		defer releaseSend()
+		if done != nil {
+			defer done()
+		}
+		defer recoverDetached("invite send")
+		current, live, err := h.svc.InviteMailRecipient(workCtx, inviter, rawToken)
+		if err != nil {
+			slog.Error("reading an invitation before mailing it failed", "err", err)
+			h.recordInviteOutcome(workCtx, inviter, rawToken, err)
+			return
+		}
+		if !live {
+			slog.Info("invitation not mailed: its link or its member changed before the send")
+			return
+		}
+		email = current
+		link := passwordLink(h.passwordLinkBaseURL, rawToken)
+		words := h.mailCopy(workCtx, email)
+		body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
+		sendErr := mailer.SendProduct(workCtx, h.resetMailer, email, words.InviteSubject, body)
+		if sendErr != nil {
+			slog.Error("invite email failed", "err", sendErr)
+		}
+		h.recordInviteOutcome(workCtx, inviter, rawToken, sendErr)
+	}()
+	return true
+}
+
+// recordInviteOutcome takes its own budget: a send that ran out of time has spent
+// workCtx, and the refusal must still land on the link. An invitation that never
+// reached the relay counts as refused, because the admin can only resend from there.
+func (h Handlers) recordInviteOutcome(workCtx context.Context, inviter Identity, rawToken string, sendErr error) {
+	outcomeCtx, release := context.WithTimeout(context.WithoutCancel(workCtx), inviteOutcomeTimeout)
+	defer release()
+	if err := h.svc.RecordInviteMailOutcome(outcomeCtx, inviter, rawToken, sendErr); err != nil {
+		slog.Error("recording an invite email outcome failed", "err", err)
 	}
 }
 
@@ -399,7 +438,7 @@ const formerSourceMax = 200
 // no "this member could never sign in" conflict applies. Being unable to sign
 // in is the point here rather than the failure.
 func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
-	actor, ok := h.actor(w, r)
+	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
 	}
@@ -431,13 +470,18 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 		}
 		in.Source = *req.Source
 	}
-	userID, err := h.svc.CreateFormerMember(r.Context(), actor, in)
+	userID, created, err := h.svc.provisionFormerMember(r.Context(), actor, in)
 	if err != nil {
+		err = conflictIf(err, errRemovedEmail, "removed_member_email", "This address belongs to a permanently removed member and remains reserved for historical attribution.")
 		err = conflictIf(err, errEmailTaken, "email_taken",
 			"a seat with this email already exists; a former member is recorded once, "+
 				"and somebody who came back is reactivated from the roster rather than added again")
 		httperr.Write(w, r, unknownRoleRefusal(companyNotDescribedRefusal(err)))
 		return
 	}
-	h.writeUserByID(w, r, actor, userID, http.StatusCreated)
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	h.writeUserByID(w, r, actor, userID, status)
 }

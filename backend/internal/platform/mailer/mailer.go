@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -48,7 +49,31 @@ type SMTP struct {
 	Username    string
 	Password    string
 	FromAddress string
+	// Now stamps the Date header; the wall clock when nil.
+	Now func() time.Time
+	// Letterhead is who product mail comes from: the installation's own
+	// company, with its logo when one is stored. Send and SendBranded refuse
+	// without one, so a relay built field by field fails at its first send
+	// rather than mailing as nobody.
+	Letterhead LetterheadSource
 }
+
+// LetterheadSource reads the letterhead product mail is drawn under, in the
+// mail's language, with the inline images its markup refers to. It returns
+// no error: a source that cannot read the logo in time answers with the name
+// alone, because a reset mail must not wait on a slow object store.
+type LetterheadSource interface {
+	Letterhead(ctx context.Context, language string) (emailview.Letterhead, []connector.InlineImage)
+}
+
+// BrandedSender sends product mail under the installation's letterhead.
+type BrandedSender interface {
+	SendBranded(ctx context.Context, to, subject string, message emailview.Message) error
+}
+
+// ErrNoLetterhead is the refusal of a relay that was built without a
+// letterhead source.
+var ErrNoLetterhead = errors.New("mailer: no letterhead source is wired")
 
 // Send submits the message through the configured relay. TLS is
 // REQUIRED: a reset mail carries a live credential, so a relay that
@@ -57,23 +82,60 @@ type SMTP struct {
 // docker mailhog or a host postfix), where the wire never leaves the
 // machine.
 func (s SMTP) Send(ctx context.Context, to, subject, textBody string) error {
-	return s.SendIdentified(ctx, to, subject, textBody, "")
+	return s.SendBranded(ctx, to, subject, emailview.Message{Title: subject, Text: textBody})
+}
+
+// SendBranded renders message under the installation's letterhead and sends
+// it with the letterhead's logo as an inline part.
+func (s SMTP) SendBranded(ctx context.Context, to, subject string, message emailview.Message) error {
+	if s.Letterhead == nil {
+		return ErrNoLetterhead
+	}
+	head, inline := s.Letterhead.Letterhead(ctx, message.Language)
+	return s.send(ctx, to, subject, textLetterhead(head)+message.Text, emailview.Render(message, head), "", inline)
+}
+
+// textLetterhead heads the plain-text alternative the way the logo heads the
+// markup: the company's name, then the attribution, then a blank line. A
+// reader whose client shows text only still sees who the mail comes from.
+// The message's own text is left as the builder wrote it.
+func textLetterhead(head emailview.Letterhead) string {
+	var lines []string
+	for _, line := range []string{head.Name, head.Attribution} {
+		if line = strings.TrimSpace(line); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	return strings.Join(lines, "\n") + "\n\n"
 }
 
 // SendIdentified is Send with the Message-ID header set to messageID. An
-// empty messageID writes no header and leaves the identity to the relay.
+// empty messageID gets one minted on the sender's domain.
 //
 // Once the relay accepts the DATA terminator the message is sent, so a QUIT
 // that fails after it is logged and the send still succeeds. Reporting it
 // would make the dispatcher retry and mail a second copy.
 func (s SMTP) SendIdentified(ctx context.Context, to, subject, textBody, messageID string) error {
+	return s.SendAlternative(ctx, to, subject, textBody, "", messageID)
+}
+
+// SendAlternative submits readable text and HTML under one message identity.
+func (s SMTP) SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error {
+	return s.send(ctx, to, subject, textBody, htmlBody, messageID, nil)
+}
+
+// send is SendAlternative with the inline images the markup shows.
+func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) error {
 	if strings.ContainsAny(to, "\r\n") || strings.ContainsAny(subject, "\r\n") {
 		return errors.New("mailer: recipient and subject must be single-line (header injection)")
 	}
 	if messageID != "" && !connector.ValidMessageID(messageID) {
 		return connector.ErrInvalidMessageID
 	}
-	msg, err := s.compose(to, subject, textBody, messageID)
+	msg, err := s.composeAlternative(to, subject, textBody, htmlBody, messageID, inline)
 	if err != nil {
 		return err
 	}
@@ -189,4 +251,9 @@ func isLoopback(host string) bool {
 func closeQuietly(c io.Closer) {
 	//craft:ignore swallowed-errors error-path transport cleanup — the send's own error is already on its way to the caller
 	_ = c.Close()
+}
+
+// AlternativeSender preserves the already-authorized HTML and text alternatives.
+type AlternativeSender interface {
+	SendAlternative(ctx context.Context, to, subject, textBody, htmlBody, messageID string) error
 }

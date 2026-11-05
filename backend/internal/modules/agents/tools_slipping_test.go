@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -304,7 +305,7 @@ func TestDraftFollowUpsForRefusesANegativeLimit(t *testing.T) {
 func TestADealWithNoOpenNextStepIsReportedAsSlipping(t *testing.T) {
 	t.Parallel()
 
-	ranked := rankSlipping([]SlippingDeal{{
+	ranked := rankSlipping(langcopy.For("en"), []SlippingDeal{{
 		DealID: ids.NewV7(), Name: "Quiet but stepless", NoOpenNextStep: true,
 		CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
 	}})
@@ -331,7 +332,7 @@ func TestADealWithNoOpenNextStepIsReportedAsSlipping(t *testing.T) {
 func TestADealWithAnOpenNextStepIsNotSlippingOnThatGroundAlone(t *testing.T) {
 	t.Parallel()
 
-	ranked := rankSlipping([]SlippingDeal{{
+	ranked := rankSlipping(langcopy.For("en"), []SlippingDeal{{
 		DealID: ids.NewV7(), Name: "Healthy", NoOpenNextStep: false,
 		CreatedAt: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
 	}})

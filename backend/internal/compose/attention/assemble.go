@@ -32,7 +32,7 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	// itself — a deal that closed between lane 3 and lane 11 appeared in one
 	// and not the other — and it paid a transaction per lane to do it.
 	var day crmcontracts.Attention
-	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+	err := s.inSnapshot(ctx, ReadAttention, func(ctx context.Context) error {
 		var err error
 		day, _, err = s.assembleDay(ctx)
 		return err
@@ -48,4 +48,7 @@ type besideDay struct {
 	failed []*crmcontracts.WorklistSourceUnavailable
 	// until is where the day's lanes stopped reading, so a read past today starts there.
 	until time.Time
+	// zone is the installation calendar this response was assembled in, so a
+	// lane that counts days uses the same one as the lanes before it.
+	zone *time.Location
 }

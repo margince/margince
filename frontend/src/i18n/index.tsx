@@ -45,23 +45,8 @@ export {
 // here: it governs what AI writes for the whole team, not what any one contact
 // reads the interface in.
 
-// The catalog registry is what we ship, and `Locale` is written in ./locale
-// rather than derived from it. The derivation is what a reader would expect
-// and it is not available: `tsc -b` has to SERIALIZE the inferred type into a
-// declaration file, and three catalogs of every message key exceed the length
-// the compiler will emit (TS7056). The annotation is what keeps the type
-// short — it names the shape instead of restating it key by key.
-//
-// A locale therefore arrives in two places, and neither can be forgotten
-// quietly: added to `catalogs` alone it is an excess property the annotation
-// rejects, and added to `Locale` alone it leaves the record missing a key.
-// Both fail the build.
-//
-// `LOCALES` does not derive either: it is hand-ordered because it also
-// fixes the order the switcher shows, and both the switcher and browser
-// detection read that written list. `satisfies readonly Locale[]` proves each
-// entry is a real locale — it does not prove the list is COMPLETE.
-// Completeness is enforced by i18n.test.ts.
+// `Locale` is written in ./locale, which must load without the catalogs. The
+// annotation fails the build when a locale is added to only one of the two.
 export const catalogs: Record<Locale, Record<MessageKey, string>> = {
   en,
   de,

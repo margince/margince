@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The hard priority bands. A level is a claim about WHAT KIND of work an item
@@ -42,7 +43,8 @@ const (
 	// levelAgreed is work already agreed: an assigned task, or a deal drifting
 	// below the material bar.
 	levelAgreed = 4
-	// levelBlocking is a decision that holds up customer work.
+	// levelBlocking is a decision that holds up customer work, or a deal the
+	// evidence says should exist.
 	levelBlocking = 5
 	// levelRoutine is data hygiene. It never outranks anything above it,
 	// however large the pile.
@@ -70,6 +72,9 @@ const meetingHorizon = 2 * time.Hour
 // produced it is the server's business.
 type ranked struct {
 	item crmcontracts.WorklistItem
+	// lane is the source of the lane that produced the row; empty for a row
+	// read outside the day's lanes, whose own source names it.
+	lane crmcontracts.WorklistItemSource
 	// deadlineAt is the moment this item's clock runs out, zero when it has
 	// none. Overdue items carry a past instant and sort first by that fact.
 	deadlineAt time.Time
@@ -117,6 +122,12 @@ type ranked struct {
 	// reader's ordering preference move a figure their manager reads.
 	pinned        bool
 	semanticLevel int
+	// reminded says the row is a task of the reader's whose reminder came due.
+	// It sorts at the pin level for the same reason, and means what it meant.
+	reminded bool
+	// uncrowdable exempts the row from crowding: the reader's own meeting,
+	// within meetingHorizon, that they have not confirmed they are ready for.
+	uncrowdable bool
 	// opportunity is the overnight brief's own composite for this deal, between
 	// 0 and 1, and zero where the night did not rank it.
 	//
@@ -142,25 +153,7 @@ type ranked struct {
 	// already promises, for every source that falls through to it rather than
 	// only the one lane that computes a day count for itself.
 	asOf time.Time
-	// owner is who this row answers to, for the sources that carry an owner but
-	// no deal on the wire.
-	//
-	// The scope filters judge a deal-bearing row by its deal's owner, which a
-	// waiting message does not have: the message names a contact, not a deal, and
-	// its ownership is the ownership of the record it is filed under. The lane
-	// resolves that walk, and this is where the answer rides so the SAME filters
-	// can judge it. Zero means the row names nobody, which for a wait is an
-	// unowned customer rather than a missing answer.
-	owner ids.UUID
-	// ownerRef is the same question answered for the CLIENT rather than for the
-	// scope filters, and it carries one thing `owner` cannot: whether the
-	// producer answered at all.
-	//
-	// A zero `owner` means two different things — nobody holds this row, and
-	// this lane never said — and the filters can live with that because a row
-	// they cannot judge simply stays. A reader cannot: told `unassigned`, they
-	// would read a confident claim that nobody owes it. So the producers state
-	// this one, and the census fails on a lane that does not.
+	// ownerRef is the producer's attribution for both scope and display.
 	ownerRef ownerRef
 	// contact is WHO a waiting row is about, when it names one.
 	//
@@ -260,6 +253,8 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)
+		// A row built without a time states one anyway, since the wire requires it.
+		item.OccurredPrecision = precisionOf(&item.OccurredPrecision)
 		// The heading this row sits under. Stamped after the sort, so it
 		// describes a row's place on the page it is actually on.
 		band := crmcontracts.WorklistItemBand(bandOfRow(row))
@@ -407,14 +402,16 @@ func moneyValue(r ranked) *crmcontracts.WorklistValue {
 	return value
 }
 
-// daysSince is how many whole days ago `from` was, against `asOf` —
-// deadline.DaysPast read backwards, since "whole days past" and "whole days
-// ago" are the same arithmetic on two instants. Zero when `from` is not
-// before `asOf` — a row read before its own occurrence or deadline, under
-// clock skew between two reads of one page, is not aged from the future.
+// daysSince reads the calendar carried by the page's assembly instant.
 func daysSince(from, asOf time.Time) int {
-	days, _ := deadline.DaysPast(&from, asOf)
-	return days
+	return calendarDaysSince(occurredday.Moment{At: from}, asOf, asOf.Location())
+}
+
+// calendarDaysSince counts calendar days in loc from the activity's date to
+// `asOf`. A same-day event is zero, and one across local midnight is one.
+// Clamped at zero for the same clock-skew reason as daysSince.
+func calendarDaysSince(from occurredday.Moment, asOf time.Time, loc *time.Location) int {
+	return max(occurredday.DaysSince(from, asOf, loc), 0)
 }
 
 func daysValue(days int) *crmcontracts.WorklistValue {

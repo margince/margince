@@ -233,7 +233,7 @@ fenced warning.
 ### 4.0 Contract-first, but extensions register rather than join
 
 Core has three closed, compile-time sets: `ServerInterface` (one interface for every endpoint,
-`internal/contracts/api_gen.go`), `declaredJobArgs` (a type union in `package compose`), and the
+`internal/contracts/api_gen.go`), `declaredJobArgs` (a generated registration constraint in `package compose`), and the
 agent-policy/RBAC generated tables. None can reference an extension module. The composed workspace uses
 the same backend tree (`emit.go:composedWork` adds `../../backend`), so only the composition module can.
 
@@ -587,7 +587,7 @@ is a reviewed decision rather than a fix-round line. Filed as #658 instead of bu
 ### 4.4 Jobs
 
 Extension jobs ride the existing River runner through a registration seam, not the closed
-`declaredJobArgs` union (§4.0).
+`declaredJobArgs` constraint (§4.0).
 
 **A scheduled extension job is two kinds.** `gen-jobs`' `validateCadence` forbids a cadence on a
 workspace-role kind, so it is a dispatcher (`ext_<name>_<job>`, cadenced) plus a workspace child
@@ -884,7 +884,7 @@ Gates that exist because the build found something the design never named:
 | Gate | Why it exists |
 |---|---|
 | `.gitignore` fitness test (`backend/gates/extensionsignored_test.go`) | Every gate was green while `extensions/notes/` was invisible to git. `.gitignore` carries a per-unit un-ignore list, and composition, migrate, the catalog gate and `check-q` all read the working tree. The how-to warned about this in prose and it was still missed, so it is now a test. It uses `--no-index`, because without it a tracked file is never reported |
-| `check-ext-migrations` in the CI `integration` job | Not in `deterministic-gates`, which is hermetic and container-free. Arming it there would make the repo's fastest merge gate start a compose stack on every backend PR once any unit ships migrations. Gate locality costs once; the compose start costs on every run. The gate migrates its own throwaway database rather than assuming a clean clone, since a composed template now holds `ext.ext_<name>_*` |
+| `check-ext-migrations` in the CI integration lane | Not in `deterministic-gates`, which is hermetic and container-free. Arming it there would make the repo's fastest merge gate start a compose stack on every backend PR once any unit ships migrations. Gate locality costs once; the compose start costs on every run. The gate migrates its own throwaway database rather than assuming a clean clone, since a composed template now holds `ext.ext_<name>_*` |
 | core-lane migration-role fitness test | `make check` does not run the integration lane, so a core migration needing a privilege the restricted role lacks passes every gate a task author runs. The `ext` schema migration was the first that could hit it, and did. It broke four migration tests on `permission denied for database`, because `CREATE SCHEMA` needs database-level `CREATE`. Now a class guard runs the full lane as a restricted non-owner role, with two vacuity guards |
 | `go vet -tags integration ./...` in the `vet` target | `make check` never compiled the integration lane. Build, vet, lint and test all ran untagged, while `internal/compose` alone holds hundreds of `//go:build integration` files. A new untagged test in such a package could collide with a tagged helper while the whole merge gate stayed green. This is a DB-free type-check of the tagged lane |
 | `fe-typecheck-composed` in `make check-fe` | The composed frontend lane, with three explicit missing-artifact assertions (§4.5), so a skipped composition fails loudly instead of typechecking against the committed contract |

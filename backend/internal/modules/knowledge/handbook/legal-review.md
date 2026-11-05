@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/privacy/legalreviews.tsx frontend/src/features/privacy/legalreviewpack.tsx frontend/src/features/settings/legalreviewsettings.tsx frontend/src/components/legalreviewstatus.tsx backend/internal/modules/deals/legalreview.go backend/internal/modules/deals/legalreviewdecide.go backend/internal/modules/deals/legalreviewgate.go backend/internal/modules/deals/handlers_legalreview.go -->
 # Legal review
 
 A **legal review** in Margince is a request from a deal's side to your legal team: read this deal

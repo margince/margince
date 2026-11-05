@@ -123,7 +123,7 @@ func TestProjectCheckErrorNamesEachRule(t *testing.T) {
 // both are the server's to decide, and the input type is where that is
 // enforced.
 func TestProjectCreateInputRequiresAName(t *testing.T) {
-	_, err := projectCreateInput(crmcontracts.CreateProjectRequest{
+	_, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{
 		CompanyId: openapi_types.UUID{},
 		Source:    "manual",
 	})

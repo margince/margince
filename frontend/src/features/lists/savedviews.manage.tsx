@@ -8,7 +8,7 @@ import { Heading } from "../../design-system/heading";
 import { useSinglePress } from "../../design-system/presslatch";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
-import { type SavedView, useSaveView } from "./savedviews.queries";
+import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
 import "./savedviews.css";
 
 // Renaming and deleting the reader's own saved views. One dialog listing every

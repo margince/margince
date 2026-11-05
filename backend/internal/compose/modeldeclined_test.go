@@ -49,7 +49,7 @@ func TestAReadingEveryModelWithheldIsRefusedNotRetried(t *testing.T) {
 			lane := outcomeLane{outcome: tc.outcome}
 
 			_, signalErr := (&SignalExtractor{brain: lane, log: quiet}).ask(ctx, thread)
-			_, transcriptErr := (&TranscriptProposer{brain: lane, log: quiet}).ask(ctx, []string{"hello"}, "2026-09-24")
+			_, transcriptErr := (&TranscriptProposer{brain: lane, log: quiet}).ask(ctx, []string{"hello"}, "2026-09-24", nil)
 			_, documentErr := (&DocumentExtractor{brain: lane, log: quiet}).ask(ctx, documentSource{Text: "terms", Parent: ids.New[ids.CompanyKind]().Ref()})
 			claims, stageErr := (&StageEvidenceReader{brain: lane, log: quiet}).ask(ctx, criteria, spans)
 

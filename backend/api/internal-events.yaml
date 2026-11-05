@@ -24,6 +24,60 @@ components:
       properties:
         object: { type: string }
         action: { type: string }
+    InternalEventExistingCustomerNoticeCreated:
+      type: object
+      x-event-type: existing_customer_notice.created
+      x-entity-type: existing_customer_notice
+      description: >-
+        An administrator declared that a group of customers was told at
+        collection that they may object to advertising.
+      required: [legal_entity_id]
+      properties:
+        legal_entity_id: { type: string, format: uuid }
+    InternalEventExistingCustomerNoticeWithdrawn:
+      type: object
+      x-event-type: existing_customer_notice.withdrawn
+      x-entity-type: existing_customer_notice
+      description: An administrator withdrew a collection-notice declaration.
+      properties: {}
+    InternalEventLegalEntityCreated:
+      type: object
+      x-event-type: legal_entity.created
+      x-entity-type: legal_entity
+      description: An administrator described a further legal entity.
+      required: [display_name]
+      properties:
+        display_name: { type: string }
+    InternalEventLegalEntityUpdated:
+      type: object
+      x-event-type: legal_entity.updated
+      x-entity-type: legal_entity
+      description: >-
+        A legal entity's description changed. The payload names the fields that
+        changed and never their values, so bank details and the imprint stay off
+        the bus.
+      required: [changed_fields]
+      properties:
+        changed_fields:
+          type: array
+          items: { type: string }
+    InternalEventLegalEntityArchived:
+      type: object
+      x-event-type: legal_entity.archived
+      x-entity-type: legal_entity
+      description: An administrator archived a legal entity nobody worked for any more.
+      properties: {}
+    InternalEventLegalEntityMemberAdded:
+      type: object
+      x-event-type: legal_entity.member_added
+      x-entity-type: legal_entity
+      description: >-
+        A user now works for this legal entity. previous_legal_entity_id is the
+        entity they worked for before, the default entity included.
+      required: [user_id, previous_legal_entity_id]
+      properties:
+        user_id: { type: string, format: uuid }
+        previous_legal_entity_id: { type: string, format: uuid }
     InternalEventBookingPageUpdated:
       type: object
       x-event-type: booking_page.updated

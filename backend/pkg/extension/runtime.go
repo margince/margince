@@ -144,10 +144,40 @@ type Runtime interface {
 	// authority in play. A unit offering an on-demand sync enqueues its job.
 	Ingest(ctx context.Context, on UserID, rec Record) (Result, error)
 
+	// IngestBatch lands up to MaxBatchRecords records of one declared source in
+	// order, as Ingest does for each, and then saves position for that source.
+	// A restarted job reads it back with IngestPosition and carries on from it.
+	//
+	// The position is saved only after every record is answered. A record that
+	// fails ends the batch. The results so far come back with the error and the
+	// saved position does not move. The next run offers the batch again, and
+	// the natural key makes the records already landed a no-op.
+	IngestBatch(ctx context.Context, on UserID, system SourceName, recs []Record, position BatchPosition) ([]Result, error)
+
+	// IngestPosition answers the position the last saved batch of this source
+	// ended at, or empty when the unit has saved none.
+	IngestPosition(ctx context.Context, system SourceName) (BatchPosition, error)
+
 	// SyncNow asks this unit's own declared job to run soon for the calling
 	// workspace, and answers when it is QUEUED rather than when it has run.
 	// See syncnow.go for what it promises and what it cannot do.
 	SyncNow(ctx context.Context, job JobName) error
+
+	// OAuthAccessToken answers a live access token for one of this unit's
+	// OAuthApps in the invocation's workspace. The core refreshes an expired one
+	// at the vendor. Call it before each vendor call and keep nothing.
+	// ErrOAuthNotConnected and ErrOAuthRevoked both mean an admin must connect.
+	OAuthAccessToken(ctx context.Context, provider OAuthProvider) (string, error)
+
+	// OAuthDisconnect forgets the workspace's grant for one of this unit's
+	// OAuthApps. It does not revoke the grant at the vendor.
+	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
+
+	// Deals, Authority and Directory are system reads for a job tick or a bus
+	// delivery, and answer ErrAttendedRead anywhere else. See systemread.go.
+	Deals() Deals
+	Authority() Authority
+	Directory() Directory
 }
 
 // CallerType is which kind of principal an invocation is running as. It mirrors

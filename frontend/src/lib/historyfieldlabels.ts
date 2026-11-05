@@ -11,8 +11,8 @@ import type { MessageKey } from "../i18n/en";
 //
 // It is its own map rather than a reuse of the three that already exist,
 // because none of them is about this subject. `COLD_FIELD_LABELS`
-// (screens/coldfieldlabels.ts) names the enrichment vocabulary.
-// `PROFILE_FIELD_LABELS` (screens/companies.tsx) names company profile facts,
+// (lib/coldfieldlabels.ts) names the enrichment vocabulary.
+// `PROFILE_FIELD_LABELS` (features/companies/companies.profile.tsx) names company profile facts,
 // and today.merge's map names the fields a merge compares. This one names the
 // columns a record's UPDATE writes. `historyfieldlabels.test.ts` derives that
 // set from the contract, so a field added upstream fails the gate instead of
@@ -40,11 +40,11 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["ended_at", "history.field.ended_at"],
   ["expected_close_date", "history.field.expected_close_date"],
   ["first_name", "history.field.first_name"],
-  ["forecast_category", "history.field.forecast_category"],
   ["full_name", "history.field.full_name"],
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
   ["industry", "history.field.industry"],
+  ["assess_against_entity_id", "history.field.assess_against_entity_id"],
   ["is_done", "history.field.is_done"],
   ["last_name", "history.field.last_name"],
   ["legal_name", "history.field.legal_name"],
@@ -52,22 +52,28 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["linkedin_url", "history.field.linkedin_url"],
   ["lost_reason", "history.field.lost_reason"],
   ["meeting_status", "history.field.meeting_status"],
+  ["call_outcome", "history.field.call_outcome"],
   ["name", "history.field.name"],
   ["occurred_at", "history.field.occurred_at"],
+  ["occurred_precision", "history.field.occurred_precision"],
   ["company_id", "history.field.company_id"],
   ["owner_id", "history.field.owner_id"],
   ["parent_company_id", "history.field.parent_company_id"],
+  ["relationship_mark", "history.field.relationship_mark"],
   ["partner_attribution", "history.field.partner_attribution"],
   ["partner_company_id", "history.field.partner_company_id"],
   ["phones", "history.field.phones"],
   ["project_id", "history.field.project_id"],
   ["relationship_types", "history.field.relationship_types"],
+  ["due_has_time", "history.field.due_has_time"],
   ["remind_at", "history.field.remind_at"],
   ["score", "history.field.score"],
   ["score_override_reason", "history.field.score_override_reason"],
   ["size_band", "history.field.size_band"],
   ["social", "history.field.social"],
   ["source", "history.field.source"],
+  ["origin", "history.field.origin"],
+  ["origin_detail", "history.field.origin_detail"],
   ["started_at", "history.field.started_at"],
   ["status", "history.field.status"],
   ["subject", "history.field.subject"],
@@ -79,6 +85,16 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["commercial_motion", "history.field.commercial_motion"],
   ["priority", "history.field.priority"],
   ["acquisition_source", "history.field.acquisition_source"],
+  ["win_probability", "history.field.win_probability"],
+]);
+
+// The columns an update stores under names of their own: the deal's
+// `win_probability` is recorded as the figure set on the deal and who set it.
+// Apart from both maps above, because no `Update<Type>Request` names these and
+// no hand-built image writes them, so each census would call them orphans.
+const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ["win_probability_override", "history.field.win_probability_override"],
+  ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);
 
 // Fields a HAND-BUILT audit image names — a write described by its own
@@ -102,11 +118,18 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // this lookup carries no entity context, so `suppression_kind` rather than
 // `kind`.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  [
+    "commitment_evidence_unavailable",
+    "history.field.commitment_evidence_unavailable",
+  ],
   ["proposal_status", "history.field.proposal_status"],
   ["reminder_status", "history.field.reminder_status"],
   ["invitation_status", "history.field.invitation_status"],
+  ["attendees", "history.field.attendees"],
   ["admission", "history.field.admission"],
   ["admission_reason", "history.field.admission_reason"],
+  ["admission_reason_code", "history.field.admission_reason_code"],
+  ["admission_sender_kind", "history.field.admission_sender_kind"],
   ["admission_source", "history.field.admission_source"],
   ["bounce", "history.field.bounce"],
   ["capture_question", "history.field.capture_question"],
@@ -120,6 +143,19 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["decided_by_level", "history.field.decided_by_level"],
   ["disposition", "history.field.disposition"],
   ["domain", "history.field.domain"],
+  ["merged_from_id", "history.field.merged_from_id"],
+  ["merged_into_id", "history.field.merged_into_id"],
+  ["filled", "history.field.filled"],
+  ["guests_added", "history.field.guests_added"],
+  ["guest_links_added", "history.field.guest_links_added"],
+  ["meeting_documents_added", "history.field.meeting_documents_added"],
+  ["guests_retired", "history.field.guests_retired"],
+  ["guest_answers_changed", "history.field.guest_answers_changed"],
+  ["guests_left_out", "history.field.guests_left_out"],
+  ["relinked_emails", "history.field.relinked_emails"],
+  ["relinked_phones", "history.field.relinked_phones"],
+  ["relinked_relationships", "history.field.relinked_relationships"],
+  ["relinked_activity_links", "history.field.relinked_activity_links"],
   ["lifted_by", "history.field.lifted_by"],
   ["lifted_by_level", "history.field.lifted_by_level"],
   ["lifted_suppression", "history.field.lifted_suppression"],
@@ -128,8 +164,15 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["override_category", "history.field.override_category"],
   ["overrides_carried", "history.field.overrides_carried"],
   ["provider_claims_received", "history.field.provider_claims_received"],
+  ["about_deal", "history.field.about_deal"],
   ["qualifying_event", "history.field.qualifying_event"],
+  ["qualifying_event_retracted", "history.field.qualifying_event_retracted"],
+  [
+    "acquisition_request_retracted",
+    "history.field.acquisition_request_retracted",
+  ],
   ["reachability", "history.field.reachability"],
+  ["readiness", "history.field.readiness"],
   ["reason", "history.field.reason"],
   ["recorded_at_level", "history.field.recorded_at_level"],
   ["reply_verdict", "history.field.reply_verdict"],
@@ -167,7 +210,9 @@ export function historyFieldLabel(
   t: (key: MessageKey) => string,
 ): string {
   const key =
-    HISTORY_FIELD_LABELS.get(field) ?? SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
+    HISTORY_FIELD_LABELS.get(field) ??
+    STORED_COLUMN_LABELS.get(field) ??
+    SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
   return key ? t(key) : field.replaceAll("_", " ");
 }
 

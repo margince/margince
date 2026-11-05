@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -82,18 +83,24 @@ func claimedDomainOwner(
 	domain string,
 ) error {
 	var existing ids.CompanyID
+	// Every spelling, because Postgres cannot fold IDNA: a punycode claim on one
+	// company and its Unicode twin on another otherwise read as two free
+	// domains. Compared against `domain`, which uq_company_domain keys, rather
+	// than the folded column no index covers.
+	spellings := owndomain.Spellings(domain)
+
+	// `self` is excluded in SQL rather than compared afterwards. Both spellings
+	// can be live at once. So this has to answer with a rival, never with
+	// whichever of the two the planner reached first.
 	err := tx.QueryRow(ctx,
 		`SELECT company_id FROM company_domain
-		  WHERE domain = lower($1) AND archived_at IS NULL`,
-		domain).Scan(&existing)
-	// Non-absence errors return before the ids are compared: a failed Scan
-	// leaves `existing` at its zero value, which equals `self`'s zero value on
-	// the CREATE path, so the comparison cannot tell a database failure from a
-	// free domain.
+		  WHERE domain = ANY($1) AND company_id <> $2 AND archived_at IS NULL
+		  LIMIT 1`,
+		spellings, self).Scan(&existing)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("probe domain dedupe: %w", err)
 	}
-	if errors.Is(err, pgx.ErrNoRows) || existing == self {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	dup := &DuplicateDomainError{Domain: domain}
@@ -138,13 +145,14 @@ func ensureCompanyDomainsUnclaimed(ctx context.Context, tx pgx.Tx, domains []Com
 // insertCompanyDomains lands the company's domains; the unique index remains the
 // structural guarantee under races, mapping uq_company_domain to the typed
 // 409 and a second primary domain to a plain conflict. Each claim files the
-// companies named after its domain for review.
+// companies named after its domain, and the holders of the domain it is a
+// subdomain of, for review.
 func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, source, by string, domains []CompanyDomainInput) error {
 	for _, d := range domains {
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
-			 VALUES ($1, lower($2), $3, $4, $5)`,
-			companyID, d.Domain, d.IsPrimary, source, by); err != nil {
+			`INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by, domain_folded)
+			 VALUES ($1, lower($2), $3, $4, $5, $6)`,
+			companyID, d.Domain, d.IsPrimary, source, by, owndomain.StoredOwn(d.Domain)); err != nil {
 			if name, ok := storekit.UniqueViolation(err); ok {
 				if name == "uq_company_domain" {
 					return &DuplicateDomainError{Domain: d.Domain}
@@ -154,6 +162,9 @@ func insertCompanyDomains(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 			return fmt.Errorf("insert company domain: %w", err)
 		}
 		if err := fileNameDomainTwins(ctx, tx, companyID, normalizeDomain(d.Domain), source, by); err != nil {
+			return err
+		}
+		if err := fileSubdomainClaimants(ctx, tx, companyID, d.Domain, source, by); err != nil {
 			return err
 		}
 	}

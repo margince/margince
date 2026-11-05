@@ -11,6 +11,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // GetMailDraft answers with the caller's own draft for one anchor.
@@ -36,22 +37,40 @@ func (h Handlers) SaveMailDraft(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !ok {
 		return
 	}
+	content, err := mailDraftContentFrom(req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	draft, err := h.store.SaveMailDraft(r.Context(), MailDraftAnchor{
 		Type: req.AnchorType,
 		ID:   ids.UUID(req.AnchorId),
-	}, MailDraftContent{
-		To:       valueOr(req.To),
-		Cc:       valueOr(req.Cc),
-		Bcc:      valueOr(req.Bcc),
-		Subject:  valueOr(req.Subject),
-		Body:     valueOr(req.Body),
-		HTMLBody: valueOr(req.HtmlBody),
-	}, version)
+	}, content, version)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, mailDraftResponse(draft))
+}
+
+// mailDraftContentFrom reads the composer's fields, an omitted one as empty:
+// a save replaces the whole draft, so a field left out is a field cleared.
+func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, error) {
+	schedule, err := scheduleFrom(req.ScheduledAt, req.ScheduledTz)
+	if err != nil {
+		return MailDraftContent{}, err
+	}
+	return MailDraftContent{
+		To:            valueOr(req.To),
+		Cc:            valueOr(req.Cc),
+		Bcc:           valueOr(req.Bcc),
+		Subject:       valueOr(req.Subject),
+		Body:          valueOr(req.Body),
+		HTMLBody:      valueOr(req.HtmlBody),
+		AttachmentIDs: attachmentIDsFrom(req.AttachmentIds),
+		Context:       commsauthz.Category(valueOr(req.CommunicationContext)),
+		Schedule:      schedule,
+	}, nil
 }
 
 // DiscardMailDraft deletes one of the caller's drafts.
@@ -82,7 +101,43 @@ func mailDraftResponse(d MailDraft) crmcontracts.MailDraft {
 		html := d.Content.HTMLBody
 		out.HtmlBody = &html
 	}
+	withDraftSending(&out, d)
+	// Served so the composer files a sent draft where it was written from.
+	//
+	// The read already holds these. Without them on the wire, the composer
+	// rebuilds links from whichever page opened it. A draft grounded in a deal
+	// then sends under the contact alone.
+	//
+	// An empty slice rather than nil for a human draft, because the contract
+	// declares an array and a nil would reach a reader as `null`.
+	grounds := make([]crmcontracts.MailDraftGround, 0, len(d.Grounding))
+	for _, ground := range d.Grounding {
+		grounds = append(grounds, crmcontracts.MailDraftGround{
+			AnchorType: ground.Type, AnchorId: openapi_types.UUID(ground.ID),
+		})
+	}
+	out.Grounding = &grounds
 	return out
+}
+
+// withDraftSending leaves each sending field absent when the draft has none.
+func withDraftSending(out *crmcontracts.MailDraft, d MailDraft) {
+	if len(d.Files.attachable) > 0 {
+		attachments := ApprovalPreviewFiles(d.Files.attachable)
+		out.Attachments = &attachments
+	}
+	if d.Files.unavailable > 0 {
+		unavailable := d.Files.unavailable
+		out.AttachmentsUnavailable = &unavailable
+	}
+	if d.Content.Context != "" {
+		claimed := crmcontracts.CommunicationContext(d.Content.Context)
+		out.CommunicationContext = &claimed
+	}
+	if d.Content.Schedule != nil {
+		at, tz := d.Content.Schedule.At, d.Content.Schedule.TZ
+		out.ScheduledAt, out.ScheduledTz = &at, &tz
+	}
 }
 
 // valueOr reads an optional request field, an omitted one as its zero value:

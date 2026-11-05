@@ -36,6 +36,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -281,7 +282,7 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 				SELECT pe.contact_id
 				  FROM activity_participant ap
 				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
-				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL
+				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
 				   AND NOT EXISTS (
 				       SELECT 1 FROM activity_participant other
 				        WHERE other.activity_id = ap.activity_id
@@ -391,8 +392,7 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			    -- selector narrower than the write leaves a backlog nothing ever
 			    -- offers; one wider offers work the write will not take, and the
 			    -- domain is returned on every tick for ever.
-			   AND (split_part(pe.email, '@', 2) = od.domain
-			        OR right(split_part(pe.email, '@', 2), length(od.domain) + 1) = '.' || od.domain)
+			   AND `+owndomain.CoversSQL("pe.email_domain_folded", "od.domain_folded")+`
 			  JOIN contact p ON p.id = pe.contact_id
 			 WHERE od.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL

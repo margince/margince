@@ -6,7 +6,7 @@ import {
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "../src/screens/book.testkit";
+} from "../src/testing/book.testkit";
 import { copy } from "./copy";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
@@ -151,17 +151,19 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
   const settings = await settingsPromise;
   await expect(
-    settings.getByRole("heading", { name: de["scheduling.availabilityTitle"] }),
+    settings.getByRole("heading", {
+      name: de["scheduling.calendarTitle"],
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),
   ).toHaveCount(0);
-  await settings
-    .getByRole("button", { name: de["scheduling.save"], exact: true })
-    .click();
-  await expect(
-    settings.getByText(de["settings.saved"], { exact: true }),
-  ).toBeVisible();
+  const saveCalendar = settings
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true });
+  await saveCalendar.click();
+  await expect(saveCalendar).toHaveCount(0);
   await settings.close();
   await page.bringToFront();
   await page.evaluate(() =>
@@ -333,10 +335,16 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   context,
 }) => {
   const availability: string[] = [];
+  let previewing = false;
+  let probeRead = () => {};
+  const settingsProbeRead = new Promise<void>((resolve) => {
+    probeRead = resolve;
+  });
   await context.route("**/v1/availability?*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.searchParams.get("reliable")).toBe("true");
-    availability.push(url.searchParams.get("from") ?? "");
+    if (previewing) availability.push(url.searchParams.get("from") ?? "");
+    else probeRead();
     await route.fulfill({ json: { slots: bookingSlots, truncated: false } });
   });
   let profile = { ...bookingProfile, enabled: false };
@@ -359,36 +367,49 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   });
   await page.goto("/#/settings/meetings");
   await expect(
-    page.getByRole("textbox", { name: de["scheduling.myLink"] }),
-  ).toHaveValue(bookingProfile.public_url ?? "");
+    page.getByText(bookingProfile.public_url ?? "", { exact: true }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: de["scheduling.copyLink"], exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
-  await expect(
-    page.getByPlaceholder("https://meet.google.com/abc-defg-hij"),
-  ).toBeVisible();
-  await page.getByLabel(de["scheduling.notice"]).fill("24");
   await page
-    .getByRole("button", { name: de["scheduling.save"], exact: true })
+    .getByRole("combobox", { name: de["scheduling.noticeRow"] })
+    .click();
+  await page.getByRole("option", { name: de["scheduling.ruleOther"] }).click();
+  await page.getByLabel(de["scheduling.ruleMinutes"]).fill("1440");
+  await page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true })
     .click();
   await expect(
     page.getByText(de["settings.saved"], { exact: true }),
   ).toBeVisible();
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ notice_minutes: 1440, enabled: false });
-  await page.getByRole("button", { name: de["scheduling.preview"] }).click();
+  // The hours save does not re-key the probe, so its one read has landed.
+  await settingsProbeRead;
+  previewing = true;
+  await page
+    .getByRole("button", { name: de["scheduling.preview"] })
+    .first()
+    .click();
   await expect(page).toHaveURL(/#\/book\/preview$/);
   await expect(page.getByText(de["scheduling.previewPaused"])).toBeVisible();
   await expect(
     page.getByRole("heading", { name: bookingProfile.title }),
   ).toBeVisible();
   await page.getByRole("button", { name: de["calendar.nextMonth"] }).click();
-  // October in Berlin holds the clock going back, so it runs past the
-  // server's 31-day bound and is read in two windows after September's one.
+  // September takes one window. October gains an hour at the clock change in
+  // Berlin, so it runs past the 31-day bound and takes two.
   await expect.poll(() => availability.length).toBe(3);
   const slot = page.locator(".bookguest-times .meeting-slots button").first();
   await expect(slot).toBeVisible();
+  expect(availability).toEqual([
+    "2026-09-27T06:00:00.000Z",
+    "2026-09-30T22:00:00.000Z",
+    "2026-10-31T22:00:00.000Z",
+  ]);
   await slot.click();
   await page.getByLabel(de["book.name"], { exact: true }).fill("Demo guest");
   await page
@@ -427,31 +448,28 @@ test("calendar setup enables booking with the existing Account name", async ({
   });
   await page.goto("/#/settings/meetings");
   await expect(
-    page.getByText(de["scheduling.hostName"], { exact: true }),
+    page.getByText(
+      de["scheduling.yourNameHelp"].replace(
+        "{name}",
+        bookingProfile.host_name ?? "",
+      ),
+      { exact: true },
+    ),
   ).toBeVisible();
-  await expect(page.locator(".factlist")).toContainText(
-    bookingProfile.host_name ?? "",
-  );
-  await expect(
-    page
-      .getByRole("main")
-      .getByRole("link", { name: de["settings.tab.account"], exact: true }),
-  ).toHaveAttribute("href", "#/settings/account");
   const accept = page.getByRole("switch", {
     name: de["scheduling.acceptBookings"],
     exact: true,
   });
   await expect(accept).toBeDisabled();
-  await page
-    .getByRole("button", { name: de["scheduling.save"], exact: true })
-    .click();
-  await expect(
-    page.getByText(de["settings.saved"], { exact: true }),
-  ).toBeVisible();
+  const saveCalendar = page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true });
+  await saveCalendar.click();
+  await expect(saveCalendar).toHaveCount(0);
+  await expect(accept).toBeEnabled();
   await accept.click();
-  // The booking link panel is the one surface that states it.
   await expect(accept).toHaveAttribute("aria-checked", "true");
-  expect(writes).toHaveLength(2);
+  await expect.poll(() => writes.length).toBe(2);
   expect(writes[1]).toMatchObject({
     provider: "gcal",
     enabled: true,

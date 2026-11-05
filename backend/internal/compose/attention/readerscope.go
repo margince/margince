@@ -22,6 +22,8 @@ func (s *Service) readerFor(
 	// Deeper than the lane feed reads: a batch row counts a pile, and a count
 	// taken from a page of ten would report ten over a hundred and fifty.
 	reader := s.countingDecisions()
+	reader.skipReceipts = true
+	reader.zone = zoneOncePerRead(reader.zone)
 	switch {
 	// A named owner outranks the scope word: "their queue" is a narrower
 	// question than any of mine/team/all, and answering the wider one would

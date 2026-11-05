@@ -1,11 +1,3 @@
-/* The connect guide inside the Connected MCP clients card; the rows above it
-   are settings-agents.css's. `pre-wrap` keeps the two-line Codex recipe two
-   lines, and `break-all` stops a long base URL from widening the card. */
-.agents-guide-command {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 /* The empty line keeps a focus target around it, so it reads as the bare
    sentence `.panel-body > .empty` draws rather than as a plate. */
 .agents-empty > .empty {

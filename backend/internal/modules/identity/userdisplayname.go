@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,8 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // displayNameField is the name this answers to on every surface: the audit
@@ -50,24 +47,20 @@ const displayNameMaxRunes = 255
 // There is no object grant to check for the same reason — holding a seat is the
 // whole authority needed to say what your own name is.
 func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, error) {
-	// Deliberately NOT actingHuman: that resolves the human an agent is acting
-	// UNDER, which is right for attributing work and wrong here. An agent
-	// carrying its grantor's authority must not rename its grantor.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return Seat{}, apperrors.ErrPermissionDenied
+	human, err := ownSettingsSeat(ctx)
+	if err != nil {
+		return Seat{}, err
 	}
-	human := actor.UserID
 
 	// Trimmed before it is judged, so a name that is only spaces is refused
 	// rather than stored as a blank a colleague cannot address.
 	name = strings.TrimSpace(name)
-	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > displayNameMaxRunes {
-		return Seat{}, &InvalidDisplayNameError{MaxRunes: displayNameMaxRunes}
+	if err := validateDisplayName(name); err != nil {
+		return Seat{}, err
 	}
 
 	seat := Seat{UserID: ids.From[ids.UserKind](human), DisplayName: name}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before string
 		// Both halves of liveness, through the one spelling: a DEACTIVATED
 		// account is not archived, so `archived_at IS NULL` alone would let a

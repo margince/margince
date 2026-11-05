@@ -38,68 +38,6 @@ func voiceSystemPromptFor(fence promptfence.Fence) string {
 	return voiceSystemPrompt + "\n" + fence.Rule("corpus")
 }
 
-// SafeVoiceBuildFailure maps a build error onto an actionable message that
-// never leaks internals; the build row's status_detail carries it verbatim.
-func SafeVoiceBuildFailure(err error) string {
-	if err == nil {
-		return "The build failed. Try again."
-	}
-	// Asked FIRST, and by sentinel rather than by message: a provider that
-	// refused on billing never ran the model, so every message below it would
-	// be a claim about an answer nobody received. This was the defect — a
-	// spending cap read to the operator as "the model could not produce a
-	// valid profile", which sent them looking at their writing samples.
-	if errors.Is(err, ErrProviderQuota) {
-		return "Our AI provider refused the call: the account behind it is out of budget or over its quota, so the build never ran. Your previous version is unchanged. Raise the limit on the provider account, then build again."
-	}
-	// Asked before the answer-shaped default below for the same reason: the
-	// offline stand-in DID answer, but with the one string it produces for
-	// every request, so reading its reply as a bad profile blames a corpus for
-	// a missing setting. An installation that never bound a vendor reaches this
-	// on its FIRST build and on every retry after, which is exactly the case
-	// the default message cost an operator an hour of retrying.
-	if errors.Is(err, ErrUnconfiguredModel) {
-		return "Voice building is unavailable until an AI provider is configured: the offline stand-in model answered instead. Open Settings → AI, bind each tier to a vendor and add that vendor's key under AI models → Providers, then build again."
-	}
-	// A burst limit, not an empty account: the same build succeeds shortly,
-	// and telling this operator to go raise a spending limit would send them
-	// to a console where nothing is wrong.
-	if errors.Is(err, ErrProviderThrottled) {
-		return "Our AI provider is busy right now and turned the call away, so the build did not run. Your previous version is unchanged; wait a minute and build again."
-	}
-	// A refusal neither sentinel claimed. It still did not reach the model, so
-	// it must not fall through to the message below, which describes an answer
-	// that was received — but nothing here knows WHY, and inventing a cause is
-	// what sent an operator with unspent credit to check their billing. The
-	// honest sentence is that the provider said no.
-	if errors.Is(err, errProviderRefused) {
-		return "Our AI provider turned the call away, so the build never ran. Your previous version is unchanged. Check the provider's status and account, then build again."
-	}
-	// Two answers that are not a profile and not an outage. A model that
-	// declined made a decision the same corpus will usually meet again; a
-	// request refused as malformed is ours to fix, and says nothing of the
-	// samples.
-	if errors.Is(err, model.ErrOutputWithheld) {
-		return "The AI model declined to write this voice profile, so the build produced nothing. Your previous version is unchanged. Building again may meet the same answer; a model bound to another vendor under Settings → AI may not."
-	}
-	if errors.Is(err, model.ErrRequestRejected) {
-		return "Our AI provider rejected the build request as malformed, so the build never ran. Your previous version is unchanged. This is a fault on our side rather than in your samples; the server log carries the provider's reason."
-	}
-	text := strings.ToLower(err.Error())
-	switch {
-	// Only OUR OWN word-floor message is safe verbatim: match its exact
-	// prefix, never a keyword pair a wrapped provider error could
-	// coincidentally contain.
-	case strings.HasPrefix(text, "voice build needs at least"):
-		return err.Error()
-	case strings.Contains(text, "no model path"), strings.Contains(text, "no bound"),
-		strings.Contains(text, "not bound"), strings.Contains(text, "unbound"):
-		return "Voice building is unavailable until an AI provider is configured."
-	default:
-		return "The voice model returned something we could not read as a profile. Your previous version is unchanged; try again, and if it keeps failing the model or its configuration is at fault rather than your samples."
-	}
-}
-
 type voiceBrain interface {
 	Complete(context.Context, model.Request) (model.Response, error)
 }
@@ -174,7 +112,7 @@ func DeriveVoice(ctx context.Context, brain voiceBrain, personality, sourceHash 
 	}
 	stats := AnalyzeVoice(samples)
 	if stats.WordCount < StarterVoiceWords {
-		return VoiceArtifact{}, fmt.Errorf("voice build needs at least %d own-authored words; corpus has %d", StarterVoiceWords, stats.WordCount)
+		return VoiceArtifact{}, &voiceWordFloorError{words: stats.WordCount}
 	}
 	selected := SelectVoiceSamples(samples)
 	fence := promptfence.New()

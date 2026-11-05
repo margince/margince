@@ -1,3 +1,4 @@
+import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { useNow } from "../format/now";
@@ -5,10 +6,15 @@ import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useAgentTierMap } from "../lib/autonomy";
 import type { LicensePosture } from "../lib/license-posture";
 import { routeHash } from "../lib/router";
-import { settingsHref } from "../screens/settingsrouting";
+import { settingsHref } from "../lib/settingsrouting";
 import { modelText } from "./agentrail.model";
 import { RailLine } from "./agentrail-line";
-import type { AiActivityItem, AiCall, AiPosture } from "./agentrail-reads";
+import type {
+  AiActivityItem,
+  AiCall,
+  AiPosture,
+  OfflineSource,
+} from "./agentrail-reads";
 import { speak } from "./ai-activity-speak";
 
 /** How many of the agent's last actions the panel recaps. */
@@ -152,7 +158,7 @@ export function RuntimeFacts({
   license,
   licenseLine,
 }: Readonly<{
-  offline: readonly string[];
+  offline: readonly OfflineSource[];
   model: Readonly<{ allowed: boolean; calls: readonly AiCall[] }>;
   ai: AiPosture;
   license: LicensePosture | undefined;
@@ -173,9 +179,9 @@ export function RuntimeFacts({
               page, so a link around it takes them there: the badge stays the
               label nobody presses, and the anchor carries the press. */}
           {licenceFault && (
-            <a className="arwarning" href={LICENSE_SETTINGS_HREF}>
+            <AppLink className="arwarning" href={LICENSE_SETTINGS_HREF}>
               <Badge tone="warning">{licenseLine}</Badge>
-            </a>
+            </AppLink>
           )}
         </div>
       )}
@@ -207,9 +213,9 @@ export function RuntimeFacts({
             <dt>{t("agent.fact.sources")}</dt>
             <dd>
               {offline.map((source) => (
-                <span className="arconn" key={source}>
+                <span className="arconn" key={source.id}>
                   <i aria-hidden="true" />
-                  {`${source} ${t("agent.fact.offline")}`}
+                  {`${source.label} ${t("agent.fact.offline")}`}
                 </span>
               ))}
             </dd>

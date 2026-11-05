@@ -75,6 +75,15 @@ type Column struct {
 	// Currency is a currency column's ISO code, the unit its minor-unit values
 	// count; empty for every other type.
 	Currency string
+	// ActivityKinds are the activity kinds an activity column applies to, and
+	// empty means every kind. It is schema, like Name and Type.
+	ActivityKinds []string
+}
+
+// AppliesToKind reports whether a value of this column may be written on an
+// activity of kind.
+func (c Column) AppliesToKind(kind string) bool {
+	return len(c.ActivityKinds) == 0 || slices.Contains(c.ActivityKinds, kind)
 }
 
 // Reader answers the active custom-field columns for one core object,
@@ -96,6 +105,15 @@ type Reader interface {
 // and never writes cf_* values, and the record stores write and never filter.
 type FilterableReader interface {
 	FilterableColumns(ctx context.Context, object string) ([]Column, error)
+}
+
+// ReportableColumn is a column an administrator opted into reporting, with
+// the label reports show it under. Opting in publishes the label and options to
+// every reader of reports over the field's object. A consumer may pass both to
+// anyone who may read that object, without `custom_field:read`.
+type ReportableColumn struct {
+	Column
+	Label string
 }
 
 // Target is what a custom field may be ATTACHED to.

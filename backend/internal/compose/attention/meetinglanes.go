@@ -12,17 +12,29 @@ import (
 	"context"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Meetings is today's booked meetings that have not happened yet. Optional: nil
-// means this feed does not read meetings, which is not a day with none in it.
+// Meetings is today's booked meetings that have not happened yet. The day
+// meetings come first, as a calendar's all-day row, then the timed ones by
+// start, each up to limit. full says either read left a meeting out.
+// Optional: nil means this feed does not read meetings, which is not a day with
+// none in it.
 //
 // Scoped like the task lane, because a meeting is somebody's — off one seat's
 // calendar, or naming them as a participant. Answering it unscoped puts one
 // seat's appointments in every colleague's brief.
 type Meetings interface {
-	Today(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]Meeting, error)
+	Today(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) (meetings []Meeting, full bool, err error)
+}
+
+// MeetingWindow is the stretch a meetings read covers: a timed meeting starting
+// in [From, Until), and a day meeting whose anchor is in [DaysFrom, DaysUntil).
+// A day has no hour to fall inside the first range.
+type MeetingWindow struct {
+	From, Until         time.Time
+	DaysFrom, DaysUntil time.Time
 }
 
 // MeetingsAwaitingOutcome is today's meetings that have started and whose result
@@ -30,7 +42,7 @@ type Meetings interface {
 // because every stub would otherwise have to answer both. Scoped exactly as
 // Meetings is, or whichever half was left open leaks.
 type MeetingsAwaitingOutcome interface {
-	Since(ctx context.Context, from, until time.Time, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
+	Since(ctx context.Context, window MeetingWindow, limit int, scope TaskScope, owner ids.UUID) ([]MeetingAwaitingOutcome, error)
 }
 
 // MeetingAwaitingOutcome is one appointment that happened and owes an answer. It
@@ -43,6 +55,8 @@ type MeetingAwaitingOutcome struct {
 	// Not a due moment: a meeting that happened cannot be late, and an overdue
 	// mark on it would contradict the row's whole point.
 	StartedAt time.Time
+	// Precision says StartedAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 
 	// What the answer is pinned to: two readers answering one meeting would
 	// otherwise both succeed, the later winning silently. A pointer because a
@@ -56,8 +70,16 @@ type MeetingAwaitingOutcome struct {
 	HostUserID ids.UUID
 
 	// Who the meeting was with: the same counterparty Meeting.ContactID names.
-	// Zero for an internal meeting, or one whose outside attendees are withheld.
+	// Zero for a meeting with no outside party, or one whose outside party is
+	// withheld from this reader or is no contact.
 	ContactID ids.UUID
+
+	// A live calendar invitation holds the meeting, so it is canceled there.
+	CalendarManaged bool
+
+	// ReadOnly says the reader may see the meeting but not change it, so the
+	// row offers no answer the write would refuse.
+	ReadOnly bool
 }
 
 // Meeting is one appointment still ahead of the reader.
@@ -65,25 +87,46 @@ type Meeting struct {
 	ID       ids.UUID
 	Subject  string
 	StartsAt time.Time
+	// Precision says StartsAt is a date's anchor when it is day.
+	Precision crmcontracts.OccurredPrecision
 
 	// Who the meeting is with, and so whose page the brief is read on. The
 	// brief opens as `?prep=<activity>` on a CONTACT's record, so the activity
-	// id names the meeting and says nothing about where to read it. Zero for an
-	// internal meeting, or one whose outside attendees are withheld: the row
-	// then offers no verb rather than a link to a page picked at random.
+	// id names the meeting and says nothing about where to read it. Zero when
+	// the outside party is withheld or is no contact. The row then offers no
+	// verb. A meeting with no outside party never reaches this lane.
 	ContactID ids.UUID
 
-	// True when nothing has been written down for a meeting about to happen.
-	// Three-state, with the guard below: a meeting whose content this reader may
-	// not read also arrives empty, and calling that "needs prep" would tell a rep
-	// to prepare a meeting they cannot see.
-	NeedsPrep bool
-
-	// Whether NeedsPrep was answerable at all; false when content is withheld.
-	PrepKnown bool
+	// The reader's own preparation for the meeting. Nil when the reader does
+	// not attend it or may not read its content. A rep cannot act on a meeting
+	// they cannot open, or on someone else's.
+	Preparation *crmcontracts.MeetingPreparation
 
 	// Whose calendar this came off, and what the row names as its owner. Zero
 	// when no calendar claims it, and the row then names nobody rather than
 	// guessing.
 	HostUserID ids.UUID
+}
+
+// needsPreparation says the reader attends the meeting and has not confirmed
+// they are ready for its current revision.
+func (m Meeting) needsPreparation() bool {
+	return m.Preparation != nil && m.Preparation.State != crmcontracts.MeetingPreparationStateReady
+}
+
+// precisionOf is a row's wire precision: what the lane said, else an instant.
+func precisionOf(p *crmcontracts.OccurredPrecision) crmcontracts.OccurredPrecision {
+	if p == nil || *p == "" {
+		return crmcontracts.OccurredPrecisionOccurredPrecisionInstant
+	}
+	return *p
+}
+
+// dayOnly carries a day precision onto a lane item, and nothing for an
+// instant, which the item's absent field already says.
+func dayOnly(p crmcontracts.OccurredPrecision) *crmcontracts.OccurredPrecision {
+	if p != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		return nil
+	}
+	return &p
 }

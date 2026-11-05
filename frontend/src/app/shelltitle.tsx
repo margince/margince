@@ -1,10 +1,10 @@
 import { Badge } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
+import { useSettingsSection } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import type { Route } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
-import { useSettingsSection } from "../screens/settingsnav";
 import { entryLabel, NAV, type NavSection, recordKindOf } from "./nav";
 import {
   headsItself,

@@ -4,12 +4,9 @@
 // Package attention assembles the one surface a rep opens to answer "what
 // needs me?".
 //
-// Five producers already ask a rep for something, and before this they asked
-// from four screens with four shapes: staged approvals in a queue, duplicate
-// pairs in a second one, tasks in a third, the ranked Morning-Brief deals and
-// the overnight digest on a fourth. Each was reasonable alone. Together they
-// meant the rep's actual question had no single answer, and the cheapest way
-// to answer it was to visit every screen and hold the total in their head.
+// The feed reads approvals, duplicate pairs, tasks and the ranked brief.
+// Home reads the nightly digest beside this feed through its own endpoint.
+// Each request has its own snapshot; separate endpoints and pages do not share one.
 //
 // It lives in compose because it spans approvals, contacts, activities and the
 // brief engine — the composition layer's charter — and it owns no table of its

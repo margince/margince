@@ -69,6 +69,7 @@ export const ModerateCountsOnly: StoryObj = {
         graph={graph}
         nodeId={`user:${SOFIA}`}
         anchorId={`contact:${CONTACT}`}
+        viewerId={undefined}
       />
     </StoryProviders>
   ),
@@ -118,6 +119,7 @@ export const SuggestedPeerLongName: StoryObj = {
             graph={withLongPeer}
             nodeId={`contact:${PEER}`}
             anchorId={`contact:${CONTACT}`}
+            viewerId={undefined}
           />
         </div>
       </StoryProviders>

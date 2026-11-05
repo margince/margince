@@ -8,12 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
 func TestReplayErasuresRejectsAStrayArgument(t *testing.T) {
-	err := runReplayErasures(t.Context(), nil, refuseVault(t), config.Lookup(func(string) string { return "" }),
+	err := runReplayErasures(t.Context(), nil, refuseVault(t), nil,
 		[]string{"now"}, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "usage: worker replay-erasures") {
 		t.Fatalf("err = %v, want a usage error for the stray argument", err)
@@ -23,7 +22,7 @@ func TestReplayErasuresRejectsAStrayArgument(t *testing.T) {
 // The other database subcommands ran without a key vault before the replay
 // existed, and still do.
 func TestADatabaseSubcommandThatNeedsNoVaultNeverResolvesOne(t *testing.T) {
-	handled, err := runDatabaseSubcommand(t.Context(), nil, refuseVault(t), []string{"deal-key-names"}, &bytes.Buffer{})
+	handled, err := runDatabaseSubcommand(t.Context(), nil, refuseVault(t), nil, []string{"deal-key-names"}, &bytes.Buffer{})
 	if !handled || err == nil {
 		t.Fatalf("handled = %v, err = %v; want deal-key-names to refuse its missing flags", handled, err)
 	}

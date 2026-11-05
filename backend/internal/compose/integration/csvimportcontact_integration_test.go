@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 // The other half of the same promise: a file of contacts the business already
@@ -34,7 +35,7 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 	contactsBefore := importedContactCount(t, e)
 	leadsBefore := leadCount(t, e)
 
-	profile, status := uploadCSV(t, e, "contact", prospectCSV)
+	profile, status := importjobtest.UploadCSV(t, e, "contact", prospectCSV)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
@@ -42,7 +43,7 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 		t.Fatalf("profile = %+v, want 3 rows", profile)
 	}
 
-	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef,
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef,
 		map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"})
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
@@ -59,7 +60,7 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 		t.Fatalf("report = %+v, want 3 rows the commit will create", report)
 	}
 
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
@@ -73,11 +74,11 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 	// The same file again: every row is already here and unchanged, so the
 	// commit has nothing to do. An `email` the comparison cannot read would
 	// report three updates instead.
-	second, secondStatus := uploadCSV(t, e, "contact", prospectCSV)
+	second, secondStatus := importjobtest.UploadCSV(t, e, "contact", prospectCSV)
 	if secondStatus != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", secondStatus)
 	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "contact", second.SourceRef,
+	rerun, rerunStatus := importjobtest.CreateRunWithMapping(t, e, "contact", second.SourceRef,
 		map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"})
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("create re-run → %d, want 202", rerunStatus)
@@ -101,16 +102,16 @@ func TestCSVImportOfKnownContactsCreatesContacts(t *testing.T) {
 func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 	e := setupImportApp(t)
 
-	first, status := uploadCSV(t, e, "contact", prospectCSV)
+	first, status := importjobtest.UploadCSV(t, e, "contact", prospectCSV)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
-	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", first.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
@@ -121,11 +122,11 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 	const clash = "Email,Full Name,Title\n" +
 		"ada@lovelace.example,Ada Byron,Countess\n" +
 		"joan@clarke.example,Joan Clarke,Cryptanalyst\n"
-	second, secondStatus := uploadCSV(t, e, "contact", clash)
+	second, secondStatus := importjobtest.UploadCSV(t, e, "contact", clash)
 	if secondStatus != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", secondStatus)
 	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "contact", second.SourceRef, mapping)
+	rerun, rerunStatus := importjobtest.CreateRunWithMapping(t, e, "contact", second.SourceRef, mapping)
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("create re-run → %d, want 202", rerunStatus)
 	}
@@ -138,7 +139,7 @@ func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
 		t.Fatalf("preview = %+v, want 1 create and 1 update for the address already held", report.Disposition)
 	}
 
-	var reapproved importRunDTO
+	var reapproved importjobtest.Run
 	if s := importCall(t, e, rerun.ID, "approve", nil, &reapproved); s != http.StatusAccepted {
 		t.Fatalf("approve re-run → %d, want 202", s)
 	}
@@ -174,17 +175,17 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	// nobody has imported.
 	const contacts = "Email,Full Name,Company\n" +
 		"ada@x.test,Ada Lovelace,Analytical Engines\n" +
-		"joan@x.test,Joan Clarke,Bletchley Ltd\n" +
-		"katherine@x.test,Katherine Johnson,Langley Research\n"
+		"joan@bletchley.test,Joan Clarke,Bletchley Ltd\n" +
+		"katherine@langley.test,Katherine Johnson,Langley Research\n"
 
-	profile, status := uploadCSV(t, e, "contact", contacts)
+	profile, status := importjobtest.UploadCSV(t, e, "contact", contacts)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
 	mapping := map[string]string{
 		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	}
-	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
@@ -196,25 +197,18 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	if report.Links == nil {
 		t.Fatal("the report carries no links section, so a contact approving it is told nothing about employers")
 	}
-	// The file asks for three links and two of the companies are here, so the
-	// preview says three offered with one named as unresolvable. Both numbers
-	// matter: "3 asked for, 1 we cannot make" is the decision a contact is
-	// actually taking, and reporting only the resolvable two would hide the
-	// company they need to go and import.
+	// The missing employer is created with its contact.
 	if report.Links.Offered != 3 {
 		t.Fatalf("links.offered = %d, want the 3 the file names", report.Links.Offered)
 	}
 	if report.Links.Applied != 0 {
 		t.Fatalf("links.applied = %d on a dry run, want 0 — a dry run writes nothing", report.Links.Applied)
 	}
-	if len(report.Links.Unresolved) != 1 {
-		t.Fatalf("unresolved = %+v, want the one company that is not in the CRM", report.Links.Unresolved)
-	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "Langley Research") {
-		t.Fatalf("reason = %q, want it to name the company that was not found", report.Links.Unresolved[0].Reason)
+	if len(report.Links.Unresolved) != 0 {
+		t.Fatalf("unresolved = %+v, want all named employers to resolve or be created", report.Links.Unresolved)
 	}
 
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
@@ -223,11 +217,10 @@ func TestCSVImportLinksContactsToTheirEmployers(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &after); s != http.StatusOK {
 		t.Fatalf("report after commit → %d, want 200", s)
 	}
-	if after.Links == nil || after.Links.Applied != 2 {
-		t.Fatalf("links after commit = %+v, want the 2 the preview promised", after.Links)
+	if after.Links == nil || after.Links.Applied != 3 {
+		t.Fatalf("links after commit = %+v, want the 3 the preview promised", after.Links)
 	}
-	// Every contact lands, including the one whose employer was not found: an
-	// unresolvable company is a missing link, never a missing contact.
+	// All three employer choices can be fulfilled.
 	if got := importedContactCount(t, e); got != 3 {
 		t.Fatalf("contacts = %d, want all 3 — a row's employer not resolving must not lose the contact", got)
 	}
@@ -248,11 +241,11 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 	}
 
 	const contacts = "Email,Full Name,Company\nada@x.test,Ada Lovelace,Northwind Inc\n"
-	profile, status := uploadCSV(t, e, "contact", contacts)
+	profile, status := importjobtest.UploadCSV(t, e, "contact", contacts)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
 		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	})
 	if runStatus != http.StatusAccepted {
@@ -263,12 +256,27 @@ func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
 		t.Fatalf("report → %d, want 200", s)
 	}
-	if report.Links == nil || len(report.Links.Unresolved) != 1 {
-		t.Fatalf("links = %+v, want the differently-spelled company reported unresolved", report.Links)
+	if report.Links == nil || len(report.Links.Unresolved) != 0 {
+		t.Fatalf("links: %+v", report.Links)
 	}
-	if !strings.Contains(report.Links.Unresolved[0].Reason, "Northwind Inc") {
-		t.Fatalf("reason = %q, want it to name the company as the FILE spells it",
-			report.Links.Unresolved[0].Reason)
+	var approved importjobtest.Run
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
+		t.Fatalf("approve: %d", status)
+	}
+	var companies struct {
+		Data []struct {
+			DisplayName string `json:"display_name"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/companies", nil, nil, &companies); status != http.StatusOK {
+		t.Fatal(status)
+	}
+	names := map[string]bool{}
+	for _, company := range companies.Data {
+		names[company.DisplayName] = true
+	}
+	if !names["Northwind Inc"] || !names["Northwind GmbH"] {
+		t.Fatalf("distinct companies: %v", names)
 	}
 }
 
@@ -289,11 +297,11 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	const contacts = "Email,Full Name,Company\n" +
 		"ada@x.test,Ada Lovelace,Analytical Engines\n" +
 		"not-an-address,Broken Row,Analytical Engines\n"
-	profile, status := uploadCSV(t, e, "contact", contacts)
+	profile, status := importjobtest.UploadCSV(t, e, "contact", contacts)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
 		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	})
 	if runStatus != http.StatusAccepted {
@@ -312,7 +320,7 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 			report.Links.Unresolved)
 	}
 
-	var approved importRunDTO
+	var approved importjobtest.Run
 	if s := importCall(t, e, run.ID, "approve", nil, &approved); s != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", s)
 	}
@@ -400,11 +408,11 @@ func importOneEmployer(t *testing.T, e *apptest.AppEnv, company string) importRe
 	t.Helper()
 	contacts := "Email,Full Name,Company\nada" + strings.ToLower(strings.Fields(company)[0]) +
 		"@x.test,Ada Lovelace," + company + "\n"
-	profile, status := uploadCSV(t, e, "contact", contacts)
+	profile, status := importjobtest.UploadCSV(t, e, "contact", contacts)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{
 		"Email": "email", "Full Name": "full_name", "Company": "company_name",
 	})
 	if runStatus != http.StatusAccepted {
@@ -431,11 +439,11 @@ func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
 
 	const firstFile = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Old title\n"
-	first, status := uploadCSV(t, e, "contact", firstFile)
+	first, status := importjobtest.UploadCSV(t, e, "contact", firstFile)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", first.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
@@ -445,11 +453,11 @@ func TestUndoingAnUpdateOnlyRunSaysWhatItDidNotReverse(t *testing.T) {
 
 	// The same address, a new title: an update, and the run creates nothing.
 	const correction = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,New title\n"
-	second, secondStatus := uploadCSV(t, e, "contact", correction)
+	second, secondStatus := importjobtest.UploadCSV(t, e, "contact", correction)
 	if secondStatus != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", secondStatus)
 	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "contact", second.SourceRef, mapping)
+	rerun, rerunStatus := importjobtest.CreateRunWithMapping(t, e, "contact", second.SourceRef, mapping)
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("create re-run → %d, want 202", rerunStatus)
 	}
@@ -523,11 +531,11 @@ func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
 	const file = "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Analyst\n"
 
-	first, status := uploadCSV(t, e, "contact", file)
+	first, status := importjobtest.UploadCSV(t, e, "contact", file)
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}
-	run, runStatus := createRunWithMapping(t, e, "contact", first.SourceRef, mapping)
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", first.SourceRef, mapping)
 	if runStatus != http.StatusAccepted {
 		t.Fatalf("create run → %d, want 202", runStatus)
 	}
@@ -538,11 +546,11 @@ func TestAnUndoneImportCanBeStagedAndRunAgain(t *testing.T) {
 		t.Fatalf("undo → %d, want 202", s)
 	}
 
-	again, status := uploadCSV(t, e, "contact", file)
+	again, status := importjobtest.UploadCSV(t, e, "contact", file)
 	if status != http.StatusOK {
 		t.Fatalf("second upload → %d, want 200", status)
 	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "contact", again.SourceRef, mapping)
+	rerun, rerunStatus := importjobtest.CreateRunWithMapping(t, e, "contact", again.SourceRef, mapping)
 	if rerunStatus != http.StatusAccepted {
 		t.Fatalf("staging the file again → %d, want 202", rerunStatus)
 	}
@@ -565,5 +573,74 @@ func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
 	}
 	if len(refusals) != 1 || refusals[0].Code != "not_utf8" || refusals[0].Field != "file" {
 		t.Fatalf("refusals = %+v, want one not_utf8 on file", refusals)
+	}
+}
+
+// A row whose address belongs to a sending system names no contact. The dry run
+// skips it with its reason, and the commit skips the same row. The report a
+// reader approves is the one the import carries out.
+func TestCSVImportSkipsARowWithASendingSystemsAddressInPreviewAndCommit(t *testing.T) {
+	e := setupImportApp(t)
+	contactsBefore := importedContactCount(t, e)
+	const file = "Email,Full Name,First Name,Last Name\n" +
+		"signing-noreply@machine-import.example,Signing-Noreply,Contact,A\n" +
+		"ada@machine-import.example,Signing-Noreply,Ada,Lovelace\n"
+
+	profile, status := importjobtest.UploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef,
+		map[string]string{"Email": "email", "Full Name": "full_name", "First Name": "first_name", "Last Name": "last_name"})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var report struct {
+		Disposition importDispositionDTO `json:"disposition"`
+		Issues      []struct {
+			Line       int    `json:"line"`
+			ReasonCode string `json:"reason_code"`
+		} `json:"issues"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+		t.Fatalf("preview = %+v, want 1 created and 1 skipped", report.Disposition)
+	}
+	if len(report.Issues) != 1 || report.Issues[0].ReasonCode != "email_names_no_contact" {
+		t.Fatalf("issues = %+v, want the one row skipped as email_names_no_contact", report.Issues)
+	}
+
+	var approved importjobtest.Run
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	if got := importedContactCount(t, e); got != contactsBefore+1 {
+		t.Fatalf("contacts = %d, was %d; want the one human row created", got, contactsBefore)
+	}
+	var committed struct {
+		Disposition importDispositionDTO `json:"disposition"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &committed); status != http.StatusOK {
+		t.Fatalf("committed report → %d, want 200", status)
+	}
+	if committed.Disposition.Created != 1 || committed.Disposition.Skipped != 1 {
+		t.Fatalf("commit = %+v, want what the preview promised", committed.Disposition)
+	}
+	var listed struct {
+		Data []struct {
+			FullName string `json:"full_name"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/contacts?limit=100", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("list → %d", status)
+	}
+	names := map[string]bool{}
+	for _, c := range listed.Data {
+		names[c.FullName] = true
+	}
+	if !names["Ada Lovelace"] || names["Signing-Noreply"] {
+		t.Errorf("imported names = %v, want Ada Lovelace named from her name parts and no Signing-Noreply", names)
 	}
 }

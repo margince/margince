@@ -15,7 +15,7 @@ office accepts the *consultation number* the register gives, for the number aske
 ## Turn the register on
 
 The check needs a register to ask. Set it in `.env.local` at the root of the repository. The dev script
-reads that file, and both the API and the worker get it from there, so no value goes into a config file:
+passes that file to the API and the worker as `--env-file`. Both read it, so no value goes into a config file:
 
 ```
 MARGINCE_VAT_CHECK_BASE_URL=public

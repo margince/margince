@@ -10,7 +10,7 @@ passport. The operations themselves are in the OpenAPI document; to make a passp
 
 | What | Value |
 |---|---|
-| Base URL | The install's API address with `/v1`. `GET /v1/passports` answers it as `api_base_url`; [configuration.md](configuration.md#public-base-url) says where it comes from. |
+| Base URL | The install's API address with `/v1`. `GET /v1/passports` answers it as `api_base_url`; [configuration.md](programs.md#public-base-url) says where it comes from. |
 | Credential | `Authorization: Bearer mgp_…`, a passport. The web app signs in with the `crm_session` cookie instead. |
 | A bad or revoked passport | `401`. Every call checks the passport again, so a revoke takes effect on the next call. |
 | An operation only a human may call | `403 permission_denied`. These operations are left out of the OpenAPI document. |
@@ -57,6 +57,11 @@ An error answers `application/problem+json` (RFC 7807) with a machine `code` to 
 some: an `errors` array of `{field, code, message}` on a `422`, or `existing_id` on a duplicate. The
 statuses each operation can answer are listed with its responses in the OpenAPI document.
 
+A path, query or header parameter whose value does not parse, or that is missing, answers
+`422 validation_error`, with `invalid_parameter` as the code of its entry. Every operation that can
+answer this declares the `422`: `backend/internal/compose/paramrefusaldeclared_test.go` sends each
+operation a bad value for each parameter and checks.
+
 ## Safe retries and concurrent edits
 
 | Header | Rule |
@@ -83,10 +88,6 @@ The repeated request can still be refused:
 | `403 approval_token_invalid` | A different body, a rejected approval, one past its 15 minutes, or a second use. |
 | `409 version_skew` | The record changed after the approval. |
 
-An update that touches fields a human wrote last applies the other fields and answers `200` with a
-`staged_approval` member. Its `approval_id`, `fields` and `replay` name what waits and the body to
-send again once it is approved.
-
 ## What the server sets
 
 The server stamps `captured_by` from the passport and ignores it in a request body. `source`, which
@@ -94,6 +95,24 @@ says what produced the record (such as `api`), is yours to set; `source_system` 
 when you import. A record is archived, not deleted: an archive operation sets `archived_at`, and the
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
+
+## An id from your system
+
+A contact, company, deal or project can keep `source_id`, its id in your system. You set it on
+create, next to `source_system`. The reasons are in [outside-ids.md](../explanation/outside-ids.md).
+
+| Create request | Answer |
+|---|---|
+| `source_id` with no `source_system` | `422` |
+| An empty `source_id` | `422` |
+| `source_system` or `source_id` over 128 characters | `422` |
+| A `source_system` that starts with `mirror:`, from a caller that is not a declared importer | `422` |
+| The same pair as a record of the same kind, whether or not you may read it | `409` |
+
+Only `listCompanies` and `listDeals` can look a record up by it. Send both query parameters to find
+the one record. Each also works alone. `source_system` lists every record from that system, and
+`source_id` matches that id in any system. An empty value, or one over 128 characters, is also `422`
+on the parameters.
 
 ## Events out
 

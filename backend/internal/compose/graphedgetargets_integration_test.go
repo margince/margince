@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -26,7 +27,7 @@ func TestAMergeDropsTheSourceEdgesAndRefoldsTheSurvivor(t *testing.T) {
 	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
 	source := v.contact(t, "Merge Source")
 	survivor := v.contact(t, "Merge Survivor")
-	activity := v.interaction(t, v.e.Rep1, source, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, source, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	v.recompute(t, activity)
 	if len(v.edgesFor(t, source)) != 1 {
 		t.Fatal("the seed produced no edge to the merge source")
@@ -55,7 +56,7 @@ func TestRefoldingAContactRestoresItsEdgesAndDroppingRemovesThem(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	c := v.contact(t, "Refold Subject")
 	other := v.contact(t, "Refold Peer")
-	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'cc')`, activity, other); err != nil {
 		t.Fatalf("adding a peer to the activity: %v", err)
@@ -101,7 +102,7 @@ func TestAProjectionWriteTheDatabaseRefusesSurfaces(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 	c := v.contact(t, "Refused Subject")
-	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC(), "inbound", "from")
+	activity := v.interaction(t, v.e.Rep1, c, time.Now().UTC().Add(-time.Minute), "inbound", "from")
 	v.recompute(t, activity)
 
 	breakingTable := func(t *testing.T, table string, run func(tx pgx.Tx) error) error {
@@ -162,5 +163,66 @@ func TestRefoldingNoActivitiesTouchesNothing(t *testing.T) {
 	v := edgeEnv{integration.Setup(t)}
 	if err := v.inTx(t, func(tx pgx.Tx) error { return search.RecomputeEdgesForActivities(v.e.Admin(), tx, nil) }); err != nil {
 		t.Fatalf("an empty refold errored: %v", err)
+	}
+}
+
+// An archived contact has no edges. Its archive event drops them outright, and
+// a refold of the whole projection does not bring them back until it is
+// restored.
+func TestArchivedContactEdgesDroppedDirectly(t *testing.T) {
+	v := edgeEnv{integration.Setup(t)}
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	gen := search.NewGraphEdgeGen(search.NewStore(v.e.DB()))
+	c := v.contact(t, "Archived Subject")
+	peer := v.contact(t, "Archived Peer")
+	activity := v.interaction(t, v.e.Rep1, c, clocktest.Now(t).UTC().Add(-time.Minute), "inbound", "from")
+	if _, err := owner.Exec(ctx,
+		`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'cc')`, activity, peer); err != nil {
+		t.Fatal(err)
+	}
+	v.recompute(t, activity)
+	if len(v.edgesFor(t, c)) != 1 {
+		t.Fatal("the seed produced no edge to the contact")
+	}
+	if _, err := owner.Exec(ctx, `UPDATE contact SET archived_at = now() WHERE id = $1`, c); err != nil {
+		t.Fatal(err)
+	}
+	if err := gen.HandleEvent(ctx, envelopeFor(v.e.WS, "contact.archived", "contact", c.UUID)); err != nil {
+		t.Fatalf("HandleEvent contact.archived: %v", err)
+	}
+	// Counted from the tables: the edge reader answers not found for an
+	// archived contact, which would read as no edges either way.
+	count := func(sql string) int {
+		var n int
+		if err := owner.QueryRow(ctx, sql, c).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	interaction := func() int { return count(`SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`) }
+	peerEdges := func() int {
+		return count(`SELECT count(*) FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`)
+	}
+	if interaction() != 0 || peerEdges() != 0 {
+		t.Fatalf("the archived contact kept %d interaction and %d peer edges", interaction(), peerEdges())
+	}
+
+	v.recompute(t, activity)
+	if err := v.inTx(t, func(tx pgx.Tx) error { return search.RebuildEdges(v.e.Admin(), tx) }); err != nil {
+		t.Fatalf("RebuildEdges: %v", err)
+	}
+	if interaction() != 0 || peerEdges() != 0 {
+		t.Errorf("a refold gave the archived contact %d interaction and %d peer edges back", interaction(), peerEdges())
+	}
+
+	if _, err := owner.Exec(ctx, `UPDATE contact SET archived_at = NULL WHERE id = $1`, c); err != nil {
+		t.Fatal(err)
+	}
+	if err := gen.HandleEvent(ctx, envelopeFor(v.e.WS, "contact.restored", "contact", c.UUID)); err != nil {
+		t.Fatalf("HandleEvent contact.restored: %v", err)
+	}
+	if edges := v.edgesFor(t, c); len(edges) != 1 {
+		t.Errorf("the restored contact has %d edges, want its edge back", len(edges))
 	}
 }

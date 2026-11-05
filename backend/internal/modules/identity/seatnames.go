@@ -57,3 +57,29 @@ func (s *Service) SeatNames(ctx context.Context, seats []ids.UserID) (map[ids.UU
 	})
 	return names, err
 }
+
+// DepartedAmong answers which of seats left: deactivated and not archived. A
+// naming read marks them, so a record a departed colleague still owns says it
+// needs a new owner wherever their name appears.
+func (s *Service) DepartedAmong(ctx context.Context, seats []ids.UserID) (map[ids.UUID]bool, error) {
+	if err := auth.RequireMember(ctx); err != nil {
+		return nil, err
+	}
+	departed := map[ids.UUID]bool{}
+	if len(seats) == 0 {
+		return departed, nil
+	}
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx,
+			`SELECT id FROM app_user WHERE id = ANY($1) AND `+DepartedMemberSQL(""), seats)
+		if err != nil {
+			return err
+		}
+		gone, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		for _, id := range gone {
+			departed[id] = true
+		}
+		return err
+	})
+	return departed, err
+}

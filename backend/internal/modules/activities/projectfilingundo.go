@@ -88,7 +88,7 @@ func (s *Store) UndoProjectFiling(ctx context.Context, id ids.ActivityID, reason
 		if err != nil {
 			return err
 		}
-		if err := withdrawProjectFiling(ctx, tx, id); err != nil {
+		if err := withdrawProjectFiling(ctx, tx, id, facts.filings); err != nil {
 			return err
 		}
 		if err := recordProjectFilingUndone(ctx, tx, id, facts, name, stated); err != nil {
@@ -163,10 +163,15 @@ func (e *DeciderUnnamedError) MessageFault() (code, message string) {
 
 func (e *DeciderUnnamedError) Unwrap() error { return apperrors.ErrConflict }
 
-// withdrawProjectFiling unlinks the project, deletes the filing's evidence and
-// clears the class, under the declaration the triggers admit. The declaration is
-// cleared again before returning so nothing later in the transaction rides it.
-func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
+// withdrawProjectFiling unlinks the project and deletes the evidence rows it was
+// given, the ones the audit decision lists. It then clears the class under the
+// declaration the triggers admit. The declaration is cleared again before
+// returning so nothing later in the transaction rides it.
+func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, filings []filingEntry) error {
+	evidenceIDs := make([]ids.UUID, len(filings))
+	for i, filing := range filings {
+		evidenceIDs[i] = filing.evidenceID
+	}
 	if _, err := tx.Exec(ctx, `SELECT set_config($1, $2, true)`, UndoDeclarationSetting, id.String()); err != nil {
 		return err
 	}
@@ -174,8 +179,8 @@ func withdrawProjectFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID) er
 		return err
 	}
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM activity_retention_evidence WHERE activity_id = $1 AND basis = $2`,
-		id, BasisProjectLinked); err != nil {
+		`DELETE FROM activity_retention_evidence WHERE activity_id = $1 AND id = ANY($2)`,
+		id, evidenceIDs); err != nil {
 		return err
 	}
 	cleared, err := tx.Exec(ctx,

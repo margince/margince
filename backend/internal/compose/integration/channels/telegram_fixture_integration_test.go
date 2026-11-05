@@ -363,6 +363,17 @@ type telegramUpdate struct {
 	username  string
 	firstName string
 	text      string
+	// sentAt is the provider's send time. Zero is the fixed instant every
+	// other update carries; a reply sets it after the send it answers.
+	sentAt time.Time
+}
+
+// date is the update's send time in Unix seconds.
+func (u telegramUpdate) date() int64 {
+	if u.sentAt.IsZero() {
+		return 1785000000
+	}
+	return u.sentAt.Unix()
 }
 
 // body renders the update as Telegram's own JSON.
@@ -378,10 +389,9 @@ func (u telegramUpdate) body(t *testing.T) []byte {
 			"from": map[string]any{
 				"id": u.senderID, "username": u.username, "first_name": u.firstName,
 			},
-			// A fixed instant: occurred_at is the provider's own send time, and
-			// a wall-clock value here would make the captured row's timestamp
-			// depend on when the test ran.
-			"date": int64(1785000000),
+			// A fixed instant unless the update names one: occurred_at is the
+			// provider's own send time.
+			"date": u.date(),
 			"text": u.text,
 		},
 	})

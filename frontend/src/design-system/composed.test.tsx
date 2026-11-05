@@ -9,9 +9,13 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { formatMoneyCompact, MONEY_ABSENT } from "../format/format";
+import {
+  formatDayMonth,
+  formatMoneyCompact,
+  MONEY_ABSENT,
+} from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { Button } from "./atoms";
+import { lastEmailAgo } from "../testing/dealmail";
 import { DealCard } from "./dealcard";
 import { armHoverIntent } from "./hoverintent-testing";
 import {
@@ -40,7 +44,10 @@ describe("DealCard + PipelineBoard", () => {
     companyId: "o-1",
     valueMinor: 4_800_000,
     currency: "EUR",
-    ageMs: 62 * 86_400_000,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - 62 * 86_400_000,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     stalled: true,
   };
   // The card's figure as the compact formatter writes it, asked rather than
@@ -153,8 +160,8 @@ describe("DealCard + PipelineBoard", () => {
     const hrefs = screen
       .getAllByRole("link")
       .map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/deals/d1");
-    expect(hrefs).toContain("#/companies/o-1");
+    expect(hrefs).toContain("/#/deals/d1");
+    expect(hrefs).toContain("/#/companies/o-1");
   });
 
   // The refusal case, and the reason the card takes an href rather than an id:
@@ -166,7 +173,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
       screen.getAllByRole("link").map((each) => each.getAttribute("href")),
-    ).toEqual(["#/deals/d1"]);
+    ).toEqual(["/#/deals/d1"]);
   });
 
   // A company has three readings on a card and only one of them is blank. The
@@ -279,7 +286,7 @@ describe("DealCard + PipelineBoard", () => {
       <DealCard
         deal={{
           ...deal,
-          lastEmail: { agoMs: 10 * 86_400_000, direction: "outbound" },
+          lastEmail: lastEmailAgo(10 * 86_400_000, "outbound"),
         }}
         href="#/deals/d1"
         zone="Europe/Berlin"
@@ -295,6 +302,30 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.queryByText("Last email:")).toBeNull();
   });
 
+  // A `day` mail has no hour to count an age from, so the chip names its day.
+  // A short date keeps the dense chip on one line.
+  it("dates a date-only last email by its day and month", () => {
+    render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: {
+            at: "2026-09-14T12:00:00Z",
+            precision: "day",
+            measuredAt: Date.parse("2026-09-15T12:00:00Z"),
+            direction: "outbound",
+          },
+        }}
+        href="#/deals/d1"
+        zone="Pacific/Kiritimati"
+      />,
+    );
+    // The 14th even in Kiritimati, where its noon UTC is the 15th.
+    const day = formatDayMonth("2026-09-14T12:00:00Z", "en", "UTC");
+    expect(screen.getByText(day)).toBeTruthy();
+    expect(screen.queryByText(/ago/)).toBeNull();
+  });
+
   // Given an aside, the line is a flyout's trigger: what the caller read from
   // the timeline opens under a settled pointer and closes when it leaves. The
   // content is the caller's — this tier fetches nothing.
@@ -304,7 +335,7 @@ describe("DealCard + PipelineBoard", () => {
       <DealCard
         deal={{
           ...deal,
-          lastEmail: { agoMs: 2 * 86_400_000, direction: "inbound" },
+          lastEmail: lastEmailAgo(2 * 86_400_000, "inbound"),
         }}
         href="#/deals/d1"
         zone="Europe/Berlin"
@@ -357,8 +388,10 @@ describe("DealCard + PipelineBoard", () => {
     );
     expect(screen.getByText("40%")).toBeTruthy();
     expect(screen.getByText("1 deal")).toBeTruthy();
-    expect(screen.getByText("€60,500.00")).toBeTruthy();
-    expect(screen.getByText("weighted €24,200.00")).toBeTruthy();
+    expect(screen.getByText(/^€60\.5k$/i)).toBeTruthy();
+    expect(document.querySelector(".board-col-weighted")?.textContent).toMatch(
+      /^€24\.2k weighted$/i,
+    );
   });
 
   // A caller with a capped card fetch (the Kanban board) supplies
@@ -386,22 +419,18 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.queryByText("1 deal")).toBeNull();
   });
 
-  // A refused sum says it was refused. Dropping the figure and leaving the count
-  // alone is a blank where a total belongs, and a blank cannot tell "these are in
-  // several currencies, so no one total means anything" apart from "nobody has
-  // priced these" — which reads as a column that failed to load. On a board whose
-  // stages hold euros, dollars and dong, most columns are in this state.
-  it("says why a mixed-currency column shows no total", () => {
+  it("shows converted totals and excludes unpriced deals explicitly", () => {
     const column: BoardMoneyColumn = {
-      stage: "won",
-      label: "Won",
-      probabilityPct: 100,
-      rawMinor: null,
-      weightedMinor: null,
-      currency: null,
+      stage: "proposal",
+      label: "Proposal",
+      probabilityPct: 40,
+      rawMinor: 125_000,
+      weightedMinor: 50_000,
+      currency: "EUR",
+      asOf: "2026-10-01",
+      unpricedCount: 2,
       deals: [deal],
       count: 29,
-      sumHidden: true,
     };
     render(
       <PipelineBoard
@@ -410,19 +439,14 @@ describe("DealCard + PipelineBoard", () => {
         zone="Europe/Berlin"
       />,
     );
-    // Selected by CLASS, because which class it carries is the behaviour: the
-    // refusal is prose and wraps, where `.board-col-weighted` is a money line
-    // that ellipsises — sharing it cut this sentence to "several currencies —
-    // no sing…" in a 240px stage. Matched on the words alone, the assertion
-    // stayed green through exactly that.
+    expect(screen.getByText("€1,250")).toBeTruthy();
     expect(
-      screen.getByText("several currencies, no single total", {
-        selector: ".board-col-refusal",
-      }),
+      screen.getByText(
+        `Rates ${formatDayMonth("2026-10-01", "en", "Europe/Berlin")}`,
+      ),
     ).toBeTruthy();
-    // The count is a fact and stays; no money figure is invented beside it.
+    expect(screen.getByText("2 not priced")).toBeTruthy();
     expect(screen.getByText("29 deals")).toBeTruthy();
-    expect(screen.queryByText(/weighted/)).toBeNull();
   });
 
   // A money figure is an amount AND its currency. Either half absent leaves no
@@ -475,7 +499,11 @@ describe("DealCard + PipelineBoard", () => {
       />,
     );
     expect(screen.getByText("4 deals")).toBeTruthy();
-    expect(screen.getByText(`weighted ${MONEY_ABSENT}`)).toBeTruthy();
+    expect(
+      screen.getByText(MONEY_ABSENT, {
+        selector: ".board-col-weighted-figure",
+      }),
+    ).toBeTruthy();
     expect(
       screen.getByText(MONEY_ABSENT, { selector: ".board-col-money" }),
     ).toBeTruthy();
@@ -501,65 +529,6 @@ describe("DealCard + PipelineBoard", () => {
   });
 });
 
-describe("RecordView's chrome", () => {
-  /** The element the class draws, or a failure naming what was missing. */
-  const chrome = (selector: string): Element => {
-    const found = document.querySelector(selector);
-    if (!found) {
-      throw new Error(`no ${selector} in the record`);
-    }
-    return found;
-  };
-
-  const precedes = (first: Element, second: Element) =>
-    Boolean(
-      first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-
-  it("draws the tab strip above the band, and the band above the columns", () => {
-    render(
-      <RecordView
-        identity="r-1"
-        name="Fleet retrofit"
-        zone="UTC"
-        tabs={<Button>Overview</Button>}
-        band={<p>Kick-off pending</p>}
-      />,
-    );
-
-    const tabs = chrome("[data-testid='record-tabs']");
-    const band = chrome(".record-band");
-    // The work column, which every shape of `PageZones` draws; the grid class
-    // itself is absent on a record that has neither rail nor aside.
-    const zones = chrome(".page-zones-main");
-    expect(precedes(tabs, band), "the band is drawn above the strip").toBe(
-      true,
-    );
-    expect(precedes(band, zones), "the band is drawn below the columns").toBe(
-      true,
-    );
-  });
-
-  it("draws the tab strip on a record that carries no band", () => {
-    render(
-      <RecordView
-        identity="r-1"
-        name="Fleet retrofit"
-        zone="UTC"
-        tabs={<Button>Overview</Button>}
-      />,
-    );
-
-    expect(document.querySelector(".record-band")).toBeNull();
-    expect(
-      precedes(
-        chrome("[data-testid='record-tabs']"),
-        chrome(".page-zones-main"),
-      ),
-    ).toBe(true);
-  });
-});
-
 describe("RecordView + timeline", () => {
   it("renders the header and provenance-tagged timeline in the workspace zone", () => {
     render(
@@ -574,6 +543,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Re: fleet retrofit offer",
             atIso: "2026-06-12T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
           },
           {
@@ -581,6 +551,7 @@ describe("RecordView + timeline", () => {
             kind: "note",
             title: "Call notes",
             atIso: "2026-06-14T10:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
           },
         ]}
@@ -610,6 +581,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Update zu Margince",
             atIso: "2026-07-17T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
             body,
           },
@@ -633,6 +605,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Update zu Margince",
             atIso: "2026-07-17T09:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "agent", agent: "capture" },
             body: "   ",
           },
@@ -654,6 +627,7 @@ describe("RecordView + timeline", () => {
             kind: "email",
             title: "Re: Q3",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human", self: true },
             actions: (
               <button type="button" key="reply">
@@ -678,6 +652,7 @@ describe("TimelineText on a mail row", () => {
       kind,
       title: "Re: Angebot",
       atIso: "2026-07-01T00:00:00Z",
+      atPrecision: "instant" as const,
       provenance: { kind: "human" as const, self: true },
       body,
     },
@@ -692,6 +667,7 @@ describe("TimelineText on a mail row", () => {
   const IGNORED_SUMMARY = {
     activity_id: "a-ignored",
     occurred_at: "2026-07-01T00:00:00Z",
+    occurred_precision: "instant" as const,
     display_status: "team" as const,
     attachment_count: 0,
     move: "none" as const,
@@ -719,6 +695,7 @@ describe("TimelineText on a mail row", () => {
               kind,
               title: "Was besprochen wurde",
               atIso: "2026-07-01T00:00:00Z",
+              atPrecision: "instant",
               provenance: { kind: "human" as const, self: true },
               body: "Der ganze Text, den dieser Eintrag traegt.",
               emailSummary: IGNORED_SUMMARY,
@@ -751,6 +728,7 @@ describe("TimelineText on a mail row", () => {
             kind: "email",
             title: "Re: Angebot",
             atIso: "2026-07-01T09:12:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             body: "Der Text der Mail.",
             emailSummary: {
@@ -771,6 +749,52 @@ describe("TimelineText on a mail row", () => {
     expect(screen.getByText("Können wir Dienstag sprechen?")).toBeTruthy();
   });
 
+  // A chat message carries the server's move as an email does, so the row says
+  // whose move it is. A withheld one says nothing.
+  it("draws whose move a chat message is, and none when it is withheld", () => {
+    const message = (withheld: boolean) => ({
+      id: `a-chat-${withheld}`,
+      kind: "message" as const,
+      title: "Can we move to Thursday?",
+      atIso: "2026-07-01T09:12:00Z",
+      atPrecision: "instant" as const,
+      provenance: { kind: "human" as const, self: true },
+      direction: "inbound" as const,
+      messageMove: "needs_reply" as const,
+      withheld,
+    });
+    const { unmount } = render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[message(false)]}
+        timelineGroups={[
+          {
+            id: "g",
+            kind: "single",
+            entries: [message(false)],
+            partial: false,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Needs reply")).toBeTruthy();
+    unmount();
+    render(
+      <RecordView
+        identity="r-1"
+        name="Acme"
+        zone="UTC"
+        timeline={[message(true)]}
+        timelineGroups={[
+          { id: "g", kind: "single", entries: [message(true)], partial: false },
+        ]}
+      />,
+    );
+    expect(screen.queryByText("Needs reply")).toBeNull();
+  });
+
   // A withheld email whose server has not caught up carries no summary and
   // falls to the generic row. That row masked the title and went on printing
   // the counterparty above it — "Received from Anna" beside a message whose
@@ -787,6 +811,7 @@ describe("TimelineText on a mail row", () => {
             kind: "email",
             title: "Re: Angebot",
             atIso: "2026-07-01T00:00:00Z",
+            atPrecision: "instant",
             provenance: { kind: "human" as const, self: true },
             direction: "inbound",
             counterparts: "Anna Berger",

@@ -26,8 +26,7 @@
 // it tonight would ask them the same question every morning until they stopped
 // reading.
 //
-// Tables owned: assurance_run, assurance_run_finding, assurance_source_coverage,
-// assurance_exception, assurance_resolution
+// Tables owned: docs/reference/entity-model/assurance.md.
 //
 // assurance_run_finding is which findings a run OBSERVED. The run row says how
 // much was checked and the exception row says what is open now; neither answers

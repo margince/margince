@@ -14,11 +14,13 @@ package consent
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,11 +45,17 @@ import (
 // checks out a second pooled connection for its own transaction, the two never
 // contend: this nests one connection deep, well within the pool on the
 // human-driven, admin-only DSR surface.
-func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput,
-	erase func(ctx context.Context, contactID ids.UUID, reason string) error,
-) (dsrRow, error) {
+//
+// erase answers its counts by category. The proof is written from them, in
+// this transaction, beside the status flip.
+func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput, erase EraseFunc) (dsrRow, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
 		return dsrRow{}, err
+	}
+	// An erasure destroys data for good, so a human closes it. An agent may open
+	// and work the request, and closes every other kind.
+	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalHuman {
+		return dsrRow{}, fmt.Errorf("an erasure is closed by a human in the app: %w", apperrors.ErrPermissionDenied)
 	}
 	// ids.Parse proves syntax only; a subject_ref that fails even that names
 	// no contact at all. Both doors — unparseable, and syntactically valid but
@@ -62,7 +70,7 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		if err != nil {
 			return err
 		}
-		if verr := validateDSRUpdate(current, in); verr != nil {
+		if verr := validateDSRUpdate(current, withoutReplayedAnswer(current, in)); verr != nil {
 			return verr
 		}
 		// THE LINK FIRST, then the reference.
@@ -80,16 +88,40 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		if !resolved {
 			return unresolvedSubject
 		}
-		if err := erase(ctx, contactID, "dsr:"+current.ID.String()); err != nil {
+		// Read before the erase, which deletes the confirm link the requester's
+		// address is read from.
+		source, err := s.readProofSource(ctx, tx, current, in)
+		if err != nil {
+			return err
+		}
+		erased, err := erase(ctx, contactID, "dsr:"+current.ID.String())
+		if err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return unresolvedSubject
 			}
 			return err
 		}
 		out, err = finalizeErasureFulfil(ctx, tx, id, in, current)
-		return err
+		if err != nil {
+			return err
+		}
+		return writeRequestProof(ctx, tx, source, out, &erased)
 	})
 	return out, err
+}
+
+// EraseFunc is the privacy engine's erasure, run in its own transaction. It
+// answers its own account of what it removed or anonymised.
+type EraseFunc func(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error)
+
+// withoutReplayedAnswer drops the officer's text from a repeated fulfilment.
+// The erasure already replaced that text, so the retry is a no-op and not a
+// rewrite of a closed request's answer.
+func withoutReplayedAnswer(current dsrRow, in UpdateDSRInput) UpdateDSRInput {
+	if closedDSRStatus(current.Status) && current.Resolution != nil && *current.Resolution == erasedResolution {
+		in.Resolution = nil
+	}
+	return in
 }
 
 // finalizeErasureFulfil flips the locked request to fulfilled and appends the
@@ -120,17 +152,17 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 	// this statement writes.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	assignee := dsrAssigneeSet(in, arg)
-	row := tx.QueryRow(ctx, storekit.SQLf(`
+	held := dsrHeldSets(in, arg)
+	query := storekit.SQLf(`
 			UPDATE data_subject_request SET
 			  status = 'fulfilled',
 			  %s,
 			  resolution = CASE
-			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE 'erased' END,
+			    WHEN coalesce($%d, resolution) IS NULL THEN NULL ELSE '`+erasedResolution+`' END,
 			  contact_id = NULL
 			WHERE id = $%d AND status = $%d
-			RETURNING `+dsrColumns, assignee, arg(in.Resolution), arg(id), arg(current.Status)),
-		args...)
+			RETURNING `+dsrColumns, held, arg(in.Resolution), arg(id), arg(current.Status))
+	row := tx.QueryRow(ctx, query, args...)
 	out, err := scanDSR(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -138,7 +170,7 @@ func finalizeErasureFulfil(ctx context.Context, tx pgx.Tx, id ids.UUID, in Updat
 		}
 		return dsrRow{}, err
 	}
-	if err := auditDSRUpdate(ctx, tx, current, out, in.Resolution != nil); err != nil {
+	if err := auditDSRUpdate(ctx, tx, current, out); err != nil {
 		return dsrRow{}, err
 	}
 	return out, nil

@@ -18,6 +18,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
+import { mailPreview } from "./controllermail.fixtures";
 import { NoticeCasesCard } from "./noticecases";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -112,7 +113,7 @@ function stubRoutes(
       sent.push({ key, url: url.pathname + url.search, body });
       const override = overrides[key];
       if (override) return override();
-      if (key === "GET /privacy/notice-cases") {
+      if (key === "GET /privacy/notice-case-reviews") {
         return queuePage([OWED]);
       }
       if (key === "GET /users") {
@@ -169,7 +170,9 @@ describe("the disclosure-duty queue", () => {
     render(<NoticeCasesCard />);
 
     await findDuty("Lena Hoffmann");
-    const listed = sent.find((s) => s.key === "GET /privacy/notice-cases");
+    const listed = sent.find(
+      (s) => s.key === "GET /privacy/notice-case-reviews",
+    );
     expect(listed?.url).toContain("state=open");
     expect(listed?.url).toContain("state=assigned");
     expect(listed?.url).toContain("state=queued");
@@ -216,7 +219,7 @@ describe("the disclosure-duty queue", () => {
 
   it("says when a duty rests on no evidence and when its contact is not available", async () => {
     stubRoutes({
-      "GET /privacy/notice-cases": () =>
+      "GET /privacy/notice-case-reviews": () =>
         queuePage([{ ...OWED, contact_name: null, acquisition: null }]),
     });
     render(<NoticeCasesCard />);
@@ -234,7 +237,7 @@ describe("the disclosure-duty queue", () => {
     ).toBeNull();
   });
 
-  it("sends the privacy notice to the duty's contact after a confirm", async () => {
+  it("previews the notice for the duty's contact, and sends it only on the confirm", async () => {
     const sent = stubRoutes({
       "GET /me": () =>
         jsonResponse(
@@ -243,6 +246,8 @@ describe("the disclosure-duty queue", () => {
             allow: { privacy_request: ["read", "update"], contact: ["update"] },
           }),
         ),
+      "GET /contacts/contact-1/consent/mail-preview": () =>
+        jsonResponse(mailPreview("privacy_notice")),
       "POST /contacts/contact-1/consent/privacy-notice": () =>
         jsonResponse({
           delivered_to: "lena@kps.test",
@@ -252,6 +257,7 @@ describe("the disclosure-duty queue", () => {
         }),
     });
     render(<NoticeCasesCard />);
+    const posts = () => sent.filter((s) => s.key.startsWith("POST"));
 
     const user = userEvent.setup();
     await pressVerb(
@@ -260,22 +266,36 @@ describe("the disclosure-duty queue", () => {
       en["noticeDuty.sendNotice"],
     );
     const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("lena@kps.test")).toBeVisible();
+    expect(
+      sent.some((s) =>
+        s.url.endsWith(
+          "/contacts/contact-1/consent/mail-preview?kind=privacy_notice",
+        ),
+      ),
+    ).toBe(true);
+    expect(posts()).toEqual([]);
+
     await user.click(
       within(dialog).getByRole("button", { name: en["notice.sendConfirm"] }),
     );
     await waitFor(() =>
-      expect(
-        sent.some(
-          (s) => s.key === "POST /contacts/contact-1/consent/privacy-notice",
-        ),
-      ).toBe(true),
+      expect(posts()).toEqual([
+        {
+          key: "POST /contacts/contact-1/consent/privacy-notice",
+          url: expect.stringMatching(
+            /\/contacts\/contact-1\/consent\/privacy-notice$/,
+          ),
+          body: { language: "de" },
+        },
+      ]),
     );
   });
 
   it("offers no actions on a duty that has already ended", async () => {
     // The server refuses both, so offering them would be a button that fails.
     stubRoutes({
-      "GET /privacy/notice-cases": () => queuePage([EXCUSED]),
+      "GET /privacy/notice-case-reviews": () => queuePage([EXCUSED]),
     });
     render(<NoticeCasesCard />);
 
@@ -356,7 +376,9 @@ describe("the disclosure-duty queue", () => {
     );
 
     await waitFor(() => {
-      const reads = sent.filter((s) => s.key === "GET /privacy/notice-cases");
+      const reads = sent.filter(
+        (s) => s.key === "GET /privacy/notice-case-reviews",
+      );
       const last = reads[reads.length - 1];
       expect(last?.url).toContain("state=completed");
       expect(last?.url).toContain("state=exempt_with_reason");
@@ -373,7 +395,7 @@ describe("the disclosure-duty queue", () => {
     // excused case A would open case B with A's words and A's claim already
     // filled in, one keystroke from confirming them.
     stubRoutes({
-      "GET /privacy/notice-cases": () =>
+      "GET /privacy/notice-case-reviews": () =>
         queuePage([OWED, { ...OWED, id: "case-3", contact_name: "Mia Klein" }]),
       "POST /privacy/notice-cases/case-1/excuse": () =>
         jsonResponse({ ...OWED, state: "exempt_with_reason" }),
@@ -408,7 +430,7 @@ describe("the disclosure-duty queue", () => {
 
   it("says why it is empty rather than showing nothing", async () => {
     stubRoutes({
-      "GET /privacy/notice-cases": () => queuePage([]),
+      "GET /privacy/notice-case-reviews": () => queuePage([]),
     });
     render(<NoticeCasesCard />);
 
@@ -472,9 +494,9 @@ describe("the disclosure-duty queue", () => {
     const sent: Sent[] = [];
     stubRoutes(
       {
-        "GET /privacy/notice-cases": () => {
+        "GET /privacy/notice-case-reviews": () => {
           const asked = sent.filter(
-            (s) => s.key === "GET /privacy/notice-cases",
+            (s) => s.key === "GET /privacy/notice-case-reviews",
           );
           const first = asked.length === 1;
           return jsonResponse({
@@ -502,7 +524,9 @@ describe("the disclosure-duty queue", () => {
     expect(screen.getByText("Lena Hoffmann")).toBeInTheDocument();
     // And the second request carried the cursor the first page handed back,
     // rather than re-asking for the same page forever.
-    const asked = sent.filter((s) => s.key === "GET /privacy/notice-cases");
+    const asked = sent.filter(
+      (s) => s.key === "GET /privacy/notice-case-reviews",
+    );
     expect(asked).toHaveLength(2);
     expect(asked[1].url).toContain("cursor=page-2");
   });

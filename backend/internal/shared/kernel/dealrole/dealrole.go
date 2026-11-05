@@ -14,6 +14,8 @@
 package dealrole
 
 const (
+	// LegacyDecisionMaker remains readable on records written with the older role vocabulary.
+	LegacyDecisionMaker = "decision_maker"
 	// Champion carries the deal inside the account.
 	Champion = "champion"
 	// EconomicBuyer signs for it.

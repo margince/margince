@@ -12,8 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
-	"time"
 )
 
 // RecordKind is which kind of record a unit lands. It is the vocabulary a unit
@@ -23,12 +23,9 @@ type RecordKind string
 
 // KindActivity is a captured interaction bound for the shared timeline.
 //
-// It is the only kind today, and the absence of a lead kind is deliberate
-// rather than pending: the sink's lead arm returns before the row is written
-// when a captured lead collides with an existing one, so the natural key never
-// enters the table and the collision restages on every poll. Publishing a kind
-// whose idempotency does not hold would be offering a unit a guarantee this
-// side cannot keep.
+// There is no lead kind. The sink's lead arm returns before the row is written
+// when a captured lead collides. The natural key never enters the table, so a
+// kind without idempotency would offer a guarantee this side cannot keep.
 const KindActivity RecordKind = "activity"
 
 // ActivityKindMessage is the timeline kind a message on a messaging channel
@@ -60,11 +57,7 @@ type IngressSource struct {
 	// Lands are the record kinds this source produces. Empty is invalid rather
 	// than meaning "all": a declaration an operator reads must say what it does.
 	//
-	// One kind is landable today (KindActivity) and a Record carries exactly
-	// one payload, so this list currently states what the call could not
-	// contradict anyway. It is the growth point: the second kind arrives as a
-	// second Record field, and the gate that a unit may land only what it
-	// declared arrives with it, in the core.
+	// The core refuses, at the call, a record whose kind this list leaves out.
 	Lands []RecordKind
 
 	// Merges are the identity keys this source's provider VOUCHES for, and the
@@ -103,9 +96,9 @@ func (s IngressSource) Validate() error {
 		return fmt.Errorf("extension: ingress source %q declares no record kinds — a declaration an operator reads must say what it lands", s.System)
 	}
 	for _, kind := range s.Lands {
-		if kind != KindActivity {
-			return fmt.Errorf("extension: ingress source %q declares record kind %q — the only kind an ingress may land is %q",
-				s.System, string(kind), string(KindActivity))
+		if !slices.Contains(landableKinds, kind) {
+			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q or %q",
+				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal))
 		}
 	}
 	for _, key := range s.Merges {
@@ -160,36 +153,6 @@ type Counterparty struct {
 	//
 	// Zero for every record that identifies its counterparty by address.
 	ChannelIdentity ChannelIdentity
-}
-
-// ActivityFields is a captured interaction bound for the timeline. It mirrors
-// the core's own shape; a fitness test outside this package compares the two so
-// a field added there cannot go unnoticed here.
-type ActivityFields struct {
-	// Kind is the timeline kind — the core admits a closed set, and a value
-	// outside it is refused rather than coerced.
-	Kind string
-	// ChannelProvider is the transport that carried this record, and it is
-	// meaningful for exactly one kind: ActivityKindMessage.
-	//
-	// The pairing rule — a message names a transport, nothing else does, and a
-	// unit may name only a transport it DECLARED — is enforced by the core at
-	// the write door rather than here. This package does not know the core's
-	// kind vocabulary and cannot see which channels the calling unit declared,
-	// so a rule spelled here would be a second version of one that can disagree
-	// with the first.
-	ChannelProvider string
-	// Subject and Body are the message as a human reads it. Both are bounded
-	// (see the Max* constants): a provider is a remote party, and an unbounded
-	// field is that party choosing how much this installation stores.
-	Subject string
-	Body    string
-	// OccurredAt is when the message happened at the PROVIDER, not when the
-	// poll saw it — a timeline ordered by discovery is a timeline of this
-	// system's own scheduling.
-	OccurredAt      time.Time
-	DurationSeconds *int
-	Direction       string
 }
 
 // The bounds every ingested record is held to, applied before any transaction
@@ -273,11 +236,14 @@ type Record struct {
 	// answerable, and ADR-0082 §1 permits it for exactly that reason.
 	KeyNamesAContact bool
 
-	// Activity is the record itself. One field rather than a kind-tagged union
-	// because one kind is landable today (see KindActivity); a second kind
-	// arrives as a second field plus a rule that exactly one is set, which
-	// leaves every unit written against this compiling.
+	// Activity is the record itself when it is an activity. A company or a deal
+	// arrives in its own field instead. At most one of the three is set.
 	Activity ActivityFields
+
+	// Company and Deal carry the other two kinds, matched by the outside id that
+	// System and Key name. They take no Counterparty, Addresses, Participants or ThreadKey.
+	Company *CompanyFields
+	Deal    *DealFields
 
 	// ThreadKey is the conversation this belongs to, and it MUST be namespaced
 	// by the provider — a bare provider id shares one column with every other
@@ -459,9 +425,13 @@ type Result struct {
 	// on the participants" are different bugs, and Reason beside it cannot be
 	// grouped on because it is prose.
 	Refusal RecordRefusal
-	// Reason says WHY, for the dispositions that are a refusal. It carries the
+	// Withheld names the fields of an accepted company or deal update left as
+	// they were because a user last edited them. A deal's amount and currency go
+	// together. Empty when the installation lets this unit overwrite them.
+	Withheld []string
+	// Reason says why, for the dispositions that are a refusal. It carries the
 	// core's complaint about an unrepresentable record so a unit can log the
-	// same sentence it used to read off the error — and it is empty for an
+	// same sentence it used to read off the error. It is empty for an
 	// acceptance and for a deliberate skip, where there is nothing the unit
 	// could act on.
 	//
@@ -492,8 +462,7 @@ var (
 	ErrAttendedIngest = errors.New("extension: a record is ingested by an unattended run, never on a caller's invocation")
 
 	// ErrNestedIngest is an ingest from inside the unit's own transaction. The
-	// core's capture pipeline opens its own, so this would take a second
-	// connection while holding one — which on a small pool does not fail, it
-	// hangs.
+	// capture pipeline opens its own, so it would take a second connection while
+	// holding one, which on a small pool hangs.
 	ErrNestedIngest = errors.New("extension: a record cannot be ingested from inside a transaction the unit is holding")
 )

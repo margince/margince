@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, type Page, type Request, test } from "@playwright/test";
+import { nearestRank } from "./quantile";
 import { mockApi } from "./seed";
 
 /**
@@ -90,17 +91,6 @@ async function throttle(page: Page) {
     await new Promise((resolve) => setTimeout(resolve, FAST_3G.latency));
     await route.fallback();
   });
-}
-
-/** Nearest-rank quantile, the same method the Go harness reports — so a value
- * here is a latency that actually happened rather than an interpolation between
- * two that did not. One spelling for every quantile this file reports: the
- * published record used to inline the same arithmetic twice more, and three
- * copies of a rank formula are three chances to be off by one. */
-function nearestRank(samples: number[], quantile: number): number {
-  const sorted = [...samples].sort((a, b) => a - b);
-  const rank = Math.ceil(sorted.length * quantile) - 1;
-  return sorted[Math.min(Math.max(rank, 0), sorted.length - 1)];
 }
 
 /**
@@ -393,8 +383,7 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
  * Whether this run publishes its numbers, read from the same variable the Go
  * bench suites read (`RecordingEnabled`, backend/internal/compose/integration/
  * perfrecord.go). One spelling across both languages, because the rule is one
- * rule: a record is a human's to publish, and a scheduled job is exactly the
- * machine that must not write one.
+ * rule: only a recording target writes a record, and a check target never does.
  *
  * `=== "1"` rather than "set and non-empty", so a target can CLEAR the variable
  * to mean it — `MARGINCE_BENCH_RECORD=` in a check target has to beat whatever

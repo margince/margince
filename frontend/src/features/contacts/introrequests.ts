@@ -15,6 +15,8 @@ import { unwrap } from "../../lib/problem";
 
 export type IntroRequest = components["schemas"]["IntroRequest"];
 export type IntroRequestInput = components["schemas"]["IntroRequestInput"];
+export type RecordIntroductionInput =
+  components["schemas"]["RecordIntroductionInput"];
 export type IntroDecision =
   components["schemas"]["IntroRequestDecisionInput"]["decision"];
 
@@ -53,6 +55,28 @@ export function useCreateIntroRequest(contactId: string) {
     mutationFn: async (body: IntroRequestInput) => {
       return unwrap(
         await api.POST("/contacts/{id}/intro-requests", {
+          params: { path: { id: contactId } },
+          body,
+        }),
+      );
+    },
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * useRecordIntroduction records an introduction that already happened.
+ *
+ * The server decides who may record it (the introducer or the introduced
+ * colleague); a refusal reaches the caller as the mutation's error.
+ */
+export function useRecordIntroduction(contactId: string) {
+  const invalidate = useAskInvalidation(contactId);
+  return useMutation({
+    mutationKey: ["introRequest.record", contactId],
+    mutationFn: async (body: RecordIntroductionInput) => {
+      return unwrap(
+        await api.POST("/contacts/{id}/introductions", {
           params: { path: { id: contactId } },
           body,
         }),

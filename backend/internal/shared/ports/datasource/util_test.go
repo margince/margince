@@ -46,19 +46,25 @@ func TestStrictDecodeRefusesCaseVariantFieldKeys(t *testing.T) {
 	}
 }
 
-// A target that carries an AdditionalProperties catch-all owns its own key
-// policy (it routes and drops non-exact keys), so the exact-key gate must
-// leave it alone — enforcing here would double-reject or fight the type's
-// own unmarshaler. The catch-all is a `json:"-"` MAP; a plain `json:"-"`
-// ignored field (a common Go idiom) must NOT disable the backstop.
-func TestStrictDecodeDefersOnlyToMapCatchAll(t *testing.T) {
+// A target with an AdditionalProperties catch-all is left to the split decode,
+// which lifts its cf_ keys and holds the rest to the closed rules. A plain
+// ignored `json:"-"` field is no catch-all, so such a target is checked here.
+func TestRejectNonCanonicalKeysLeavesACatchAllTargetToTheSplitDecode(t *testing.T) {
 	type withMapCatchAll struct {
 		FullName             *string        `json:"full_name,omitempty"`
 		AdditionalProperties map[string]any `json:"-"`
 	}
 	var lax withMapCatchAll
-	if err := RejectNonCanonicalKeys(json.RawMessage(`{"anything":1}`), &lax); err != nil {
-		t.Fatalf("a map catch-all target must accept arbitrary keys: %v", err)
+	if err := RejectNonCanonicalKeys(json.RawMessage(`{"ful_name":"x"}`), &lax); err != nil {
+		t.Fatalf("a catch-all target is the split decode's: %v", err)
+	}
+	err := StrictDecode(json.RawMessage(`{"full_name":"Ada","cf_tier":"gold"}`), &lax)
+	if err != nil || lax.AdditionalProperties["cf_tier"] != "gold" {
+		t.Fatalf("StrictDecode did not route the target through the split decode: %v %+v", err, lax)
+	}
+	err = StrictDecode(json.RawMessage(`{"ful_name":"x"}`), &lax)
+	if _, ok := errors.AsType[*FieldDecodeError](err); !ok {
+		t.Fatalf("a misspelt key was answered %v, want a FieldDecodeError", err)
 	}
 
 	type withIgnoredField struct {
@@ -67,8 +73,8 @@ func TestStrictDecodeDefersOnlyToMapCatchAll(t *testing.T) {
 	}
 	var strict withIgnoredField
 	_ = strict.internal
-	if err := RejectNonCanonicalKeys(json.RawMessage(`{"FULL_NAME":"x"}`), &strict); err == nil {
-		t.Fatal("a plain json:\"-\" ignored field must not turn off case-variant rejection")
+	if err := RejectNonCanonicalKeys(json.RawMessage(`{"cf_tier":"x"}`), &strict); err == nil {
+		t.Fatal("a plain json:\"-\" ignored field is no catch-all, so a cf_ key is unknown there")
 	}
 }
 

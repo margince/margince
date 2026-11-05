@@ -46,8 +46,15 @@ const secondSeatAddress = "colleague@myco.example"
 func secondMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) func(t *testing.T, raws ...[]byte) {
 	t.Helper()
 	seedCaptureRoleFor(t, e, user)
-	conn := &mailBatchConnector{accountLabel: secondSeatAddress}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	return mailboxFor(t, e, user, secondSeatAddress, compose.CaptureConfig{})
+}
+
+// mailboxFor connects one seat's gmail mailbox, authenticated as label, on a
+// registry built from cfg.
+func mailboxFor(t *testing.T, e *integration.SearchEnv, user ids.UUID, label string, cfg compose.CaptureConfig) func(t *testing.T, raws ...[]byte) {
+	t.Helper()
+	conn := &mailBatchConnector{accountLabel: label}
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), cfg)
 	registry.Register(conn)
 	grantCtx := humanWithScopes(e, user, []principal.Scope{principal.ScopeRead})
 	connID, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh"))
@@ -467,6 +474,11 @@ func TestTheTwoModulesSpellTheRowCarriedReasonsTheSameWay(t *testing.T) {
 		t.Fatalf("the sink stamps a confidential marker %q; activities reads %q", reason, activities.ReasonConfidentialMarker)
 	}
 
+	colleagueMail := sentToColleague(env, t, colleagueLogin, "", "mirror-members@myco.example")
+	if _, reason := audienceOf(t, e, colleagueMail); reason != activities.ReasonMembersOnly {
+		t.Fatalf("the sink stamps mail between colleagues %q; activities reads %q", reason, activities.ReasonMembersOnly)
+	}
+
 	sync(t, email("dse@eu.docusign.net", "DocuSign EU", captureOwner, "mirror-linkless@docusign.net", ""))
 	var linkLess ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -607,7 +619,7 @@ func setMailSharing(t *testing.T, e *integration.SearchEnv, on bool) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	if _, err := store.Update(ctx, capturemod.SettingsPatch{MailSharing: &on}); err != nil {
 		t.Fatalf("setting mail sharing to %v: %v", on, err)
 	}

@@ -114,7 +114,7 @@ func (s *Store) RejectCompany(
 		if out.Company, err = archiveCompanyTx(ctx, tx, id, ifVersion, active); err != nil {
 			return err
 		}
-		out.Domain, err = recordHumanDomainAdmissionTx(ctx, tx, domain, DomainSuppressed, reason)
+		out.Domain, err = recordHumanDomainAdmissionTx(ctx, tx, domain, DomainSuppressed, statedAdmissionReason(reason))
 		return err
 	})
 	if err != nil {

@@ -11,22 +11,32 @@ package meetingbrief
 // agreement.
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Input is the room, the deal, what was promised, and what recently happened.
 type Input struct {
+	Language   string `json:"-"`
 	ActivityID string
 	Subject    string
 	StartsAt   time.Time
+	// StartsDateOnly says StartsAt is a day meeting's anchor, so only its date
+	// is known (MarshalJSON).
+	StartsDateOnly bool `json:"-"`
 	// Now is the instant the brief was assembled, carried so "days since last
 	// touch" is arithmetic on one clock rather than on time.Now() called from
 	// several places that could straddle a midnight.
 	Now time.Time
+	// Zone is the installation zone every "N days ago" in the brief is counted
+	// in: the zone the reader sees the dates in.
+	Zone *time.Location
 
 	Company string
 	Deal    *DealIn
@@ -48,10 +58,10 @@ type Input struct {
 	PriorMeetings []PriorMeetingIn
 	// LastSpokeAt is when the READER last dealt with anyone in the room — the
 	// baseline "what changed" is measured from. Nil is first contact.
-	LastSpokeAt *time.Time
+	LastSpokeAt *Occurred
 	// LastTouchAt is the newest conversation with anyone in the room before
 	// this meeting. Nil means nothing was ever captured with any of them.
-	LastTouchAt *time.Time
+	LastTouchAt *Occurred
 	// DealMoves are what happened to the DEAL since LastSpokeAt — stage moves,
 	// offers issued, what the buyer did in the Deal Room. Empty when nothing
 	// moved, when the meeting is about no deal, or when this reader may not
@@ -92,19 +102,38 @@ func (in Input) RailLabel() string {
 
 // DealIn is the deal this meeting is about.
 type DealIn struct {
-	ID          string
-	Name        string
-	Stage       string
-	AmountMinor int64
+	ID    string
+	Name  string
+	Stage string
+	// AmountMinor is the integer the column holds, in minor units, and nil
+	// when the deal has no amount. It never reaches the model: a raw 1850000
+	// EUR reads as 1,850,000 euros, so MarshalJSON writes it in major units.
+	AmountMinor *int64 `json:"-"`
 	Currency    string
 	CloseDate   *time.Time
+}
+
+// MarshalJSON adds the amount in major units: "18500.00" for 1850000 EUR, and
+// "1850000" for the same integer in JPY. values.MajorUnits owns that scale.
+// A zero amount is stated as zero. Only a deal with no amount or no currency
+// carries no amount.
+func (d DealIn) MarshalJSON() ([]byte, error) {
+	type plain DealIn // no methods, so no recursion back into this one
+	var amount string
+	if d.AmountMinor != nil && d.Currency != "" {
+		amount = values.MajorUnits(*d.AmountMinor, d.Currency)
+	}
+	return json.Marshal(struct {
+		plain
+		Amount string `json:"amount,omitempty"`
+	}{plain: plain(d), Amount: amount})
 }
 
 // PriorMeetingIn is one earlier meeting with somebody from this room.
 type PriorMeetingIn struct {
 	ID       string
 	Subject  string
-	StartsAt time.Time
+	StartsAt Occurred
 }
 
 // foldPriorMeetings maps the read rows into the brief's own shape.
@@ -133,7 +162,7 @@ type AttendeeIn struct {
 	FullName  string
 	Title     string
 	DealRole  string
-	LastTouch *time.Time
+	LastTouch *Occurred
 	FirstTime bool
 }
 
@@ -151,7 +180,7 @@ type ClaimIn struct {
 	SourceLabel string
 	DueAt       *time.Time
 	// OccurredAt is when the claim was made, for ranking the newer first.
-	OccurredAt *time.Time
+	OccurredAt *Occurred
 }
 
 // ActIn is one recent conversation as the brief reads it. Every field here is
@@ -165,6 +194,8 @@ type ActIn struct {
 	Subject   string
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's anchor (Input.MarshalJSON).
+	DateOnly bool `json:"-"`
 }
 
 // FromMeeting folds the gated meeting read into the brief's input.
@@ -174,6 +205,8 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 		Subject:    room.Subject,
 		StartsAt:   room.StartsAt.UTC(),
 		Now:        now,
+		// The meeting read states the precision with the start it describes.
+		StartsDateOnly: room.DateOnly,
 	}
 	if room.Deal != nil {
 		in.Deal = &DealIn{
@@ -182,7 +215,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			Stage:       room.Deal.Stage,
 			Currency:    room.Deal.Currency,
 			CloseDate:   room.Deal.CloseDate,
-			AmountMinor: derefInt(room.Deal.AmountMinor),
+			AmountMinor: room.Deal.AmountMinor,
 		}
 	}
 	if room.Project != nil {
@@ -200,10 +233,10 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 			FullName:  attendee.FullName,
 			Title:     attendee.Title,
 			DealRole:  attendee.DealRole,
-			LastTouch: attendee.LastTouch,
+			LastTouch: attendee.LastTouch.occurred(),
 			FirstTime: attendee.firstTime(),
 		})
-		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch)
+		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch.occurred())
 		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.ContactID])...)
 	}
 	return in
@@ -228,7 +261,9 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 			Status:      string(claim.Status),
 			SourceID:    ids.UUID(claim.SourceActivityId).String(),
 			DueAt:       claim.DueAt,
-			OccurredAt:  claim.OccurredAt,
+		}
+		if claim.OccurredAt != nil {
+			folded.OccurredAt = &Occurred{At: *claim.OccurredAt, DateOnly: occurredday.IsDay(claim.OccurredPrecision)}
 		}
 		if claim.SourceLabel != nil {
 			folded.SourceLabel = *claim.SourceLabel
@@ -274,6 +309,8 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 			ID:   ids.UUID(activity.Id).String(),
 			Kind: string(activity.Kind),
 			At:   activity.OccurredAt.UTC(),
+			// A day entry's anchor is no time anybody named (Input.MarshalJSON).
+			DateOnly: occurredday.IsDay(activity.OccurredPrecision),
 		}
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
@@ -303,9 +340,7 @@ func dealFromView(view crmcontracts.Contact360) *DealIn {
 	if deal.Stage != nil {
 		out.Stage = *deal.Stage
 	}
-	if deal.AmountMinor != nil {
-		out.AmountMinor = *deal.AmountMinor
-	}
+	out.AmountMinor = deal.AmountMinor
 	if deal.Currency != nil {
 		out.Currency = *deal.Currency
 	}
@@ -325,11 +360,11 @@ func currentEmployer(view crmcontracts.Contact360) string {
 // latest keeps the newer of two optional instants, treating nil as "nothing
 // captured" rather than as the zero time — the zero time would win every
 // comparison and report a relationship as touched in year one.
-func latest(current, candidate *time.Time) *time.Time {
+func latest(current, candidate *Occurred) *Occurred {
 	if candidate == nil {
 		return current
 	}
-	if current == nil || candidate.After(*current) {
+	if current == nil || candidate.At.After(current.At) {
 		return candidate
 	}
 	return current
@@ -340,4 +375,28 @@ func derefInt(v *int64) int64 {
 		return 0
 	}
 	return *v
+}
+
+// MarshalJSON is the input as the model reads it. A day meeting's start and a
+// day entry's time are their dates, never the stored noon.
+func (in Input) MarshalJSON() ([]byte, error) {
+	type plain Input
+	type promptAct struct {
+		ActIn
+		At string
+	}
+	recent := make([]promptAct, 0, len(in.Recent))
+	for _, act := range in.Recent {
+		recent = append(recent, promptAct{ActIn: act, At: occurredday.When(occurredday.Moment{At: act.At, DateOnly: act.DateOnly})})
+	}
+	return json.Marshal(struct {
+		plain
+		StartsAt string
+		Recent   []promptAct
+	}{plain: plain(in), StartsAt: in.startsText(), Recent: recent})
+}
+
+// startsText is the meeting's start as a prompt states it.
+func (in Input) startsText() string {
+	return occurredday.When(occurredday.Moment{At: in.StartsAt, DateOnly: in.StartsDateOnly})
 }

@@ -3,23 +3,8 @@
 
 package attention
 
-// What is going wrong on a lead's team.
-//
-// The team board answers "who is carrying what" and routes a lead to a contact.
-// This answers "what is going wrong", which is the question they open the page
-// for and which counts structurally cannot reach: three numbers per teammate
-// cannot say that one customer has waited past the target while another rep's
-// queue is merely long.
-//
-// EVERY ROW NAMES ITS BASIS. `threshold` carries the policy state that decided
-// the row — the lead-response policy's own vocabulary, the same one the rep's
-// queue reads — rather than a number chosen for this reading. A lead disputing
-// a row can then see the rule instead of the verdict, and the manager and the
-// rep hold one rule rather than two that agree today and drift tomorrow.
-//
-// CAPACITY IS DELIBERATELY ABSENT. "This rep is overloaded" needs a configured
-// capacity to be a fact rather than an opinion, and this installation has none.
-// The board's counts stay a reading, and no exception here claims otherwise.
+// Team exceptions reuse Worklist classification for revenue risk, unassigned work
+// and repeated failures. Waiting age carries no response-policy deadline.
 
 import (
 	"context"
@@ -49,7 +34,7 @@ func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptio
 		return crmcontracts.TeamExceptions{}, err
 	}
 	var out crmcontracts.TeamExceptions
-	err := s.inSnapshot(ctx, func(ctx context.Context) error {
+	err := s.inSnapshot(ctx, ReadTeamExceptions, func(ctx context.Context) error {
 		var err error
 		out, err = s.teamExceptionsIn(ctx)
 		return err
@@ -70,6 +55,10 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
 	day, err := s.Assemble(ctx)
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
@@ -81,11 +70,12 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
-	found := exceptionsFor(rowsForRoster(classifyDay(day, day.AsOf, money), roster), day.AsOf)
+	admitted, refused := admitBySource(ctx, classifyDay(day, day.AsOf, money))
+	found := exceptionsFor(rowsForRoster(admitted, roster, former...), day.AsOf)
 	out := crmcontracts.TeamExceptions{
 		AsOf:       day.AsOf,
 		Exceptions: found,
-		Truncated:  rosterCut || len(found) > exceptionsBound,
+		Truncated:  rosterCut || len(refused) > 0 || len(found) > exceptionsBound,
 	}
 	if len(found) > exceptionsBound {
 		out.Exceptions = found[:exceptionsBound]
@@ -133,13 +123,7 @@ func exceptionsFor(rows []ranked, asOf time.Time) []crmcontracts.TeamException {
 	return found
 }
 
-// sortExceptions puts the worst first.
-//
-// By KIND rather than by age, because the four are not comparable on one clock:
-// a breached response and an unowned deal are different kinds of wrong, and
-// ordering them by how long they have been wrong would put a week-old piece of
-// hygiene above a customer who has waited since this morning. Within a kind the
-// oldest leads, which is the only comparison that means anything there.
+// Kind orders unlike risks; age orders rows only within the same kind.
 func sortExceptions(found []crmcontracts.TeamException) {
 	sort.SliceStable(found, func(i, j int) bool {
 		a, b := exceptionRank(found[i].Kind), exceptionRank(found[j].Kind)
@@ -150,7 +134,7 @@ func sortExceptions(found []crmcontracts.TeamException) {
 	})
 }
 
-// exceptionRank is the order a lead reads the four kinds in.
+// Reserved contract values keep a deterministic order alongside active kinds.
 func exceptionRank(kind crmcontracts.TeamExceptionKind) int {
 	switch kind {
 	case crmcontracts.TeamExceptionKindTeamExceptionResponseBreached:
@@ -166,12 +150,6 @@ func exceptionRank(kind crmcontracts.TeamExceptionKind) int {
 
 // exceptionOf says whether one row is a condition a lead can act on, and what
 // it was judged against.
-//
-// FOUR KINDS, and each is a thing a lead can DO something about: talk to the
-// contact, protect the revenue, give the work an owner, or fix what keeps
-// failing. A row that is merely urgent for the rep is not an exception — the
-// rep's own queue already ranks it, and repeating it here would make this page
-// a second copy of theirs with a different heading.
 func exceptionOf(row ranked, asOf time.Time) (crmcontracts.TeamException, bool) {
 	// A condition with no record behind it is not one a lead can act on: every
 	// intervention this page offers — talk to the owner, protect the deal, give

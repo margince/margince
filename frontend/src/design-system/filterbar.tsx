@@ -21,6 +21,8 @@ export function FilterBar({
   children,
   actions,
   caption,
+  quiet = false,
+  labels = "above",
 }: Readonly<{
   /** What the group is called to a screen reader: the dials' shared noun. */
   label: string;
@@ -30,9 +32,18 @@ export function FilterBar({
   actions?: ReactNode;
   /** One line under the dials about what they selected. */
   caption?: ReactNode;
+  /** No card: the dials sit on the page ground, for a view whose figures should carry more weight than its controls. */
+  quiet?: boolean;
+  /** Inside: each field's name sits in its control, so the dials read as one line of chips. */
+  labels?: "above" | "inside";
 }>) {
   return (
-    <fieldset className="filter-bar" aria-label={label}>
+    <fieldset
+      className="filter-bar"
+      aria-label={label}
+      data-quiet={quiet || undefined}
+      data-labels={labels === "inside" ? labels : undefined}
+    >
       <div className="filter-bar-row">
         <div className="filter-bar-controls">{children}</div>
         {actions != null && <div className="filter-bar-actions">{actions}</div>}

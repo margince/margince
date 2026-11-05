@@ -7,8 +7,9 @@ import { useLocale, useT } from "../i18n";
 import { useMemberNames } from "../lib/membernames";
 import { useMe } from "../lib/session";
 import { useUrlParams } from "../lib/urlstate";
-import { useAssignableUserOptions } from "./assigneepicker";
+import { useMemberFilterOptions } from "./assigneepicker";
 import { rosterReading, useRoster, useRosterPartial } from "./entityref";
+import { isClearedFilterMarker } from "./listqueryparams";
 
 // The owner and team dials every owner-scoped list offers: leads, contacts,
 // companies, deals and projects. A record is owned by one colleague, so the
@@ -38,27 +39,31 @@ export function useOwnerChips(): readonly ListChip[] {
 }
 
 /** The value of one filter parameter in the address, under any list scope. */
+// The removal marker names no one, so it never reaches the names lookup.
 function useApplied(param: string): string | undefined {
   const [params] = useUrlParams();
-  const key = [...params.keys()].find(
-    (candidate) =>
+  const key = [...params.keys()].find((candidate) => {
+    const value = params.get(candidate);
+    return (
       (candidate === param || candidate.endsWith(`.${param}`)) &&
-      params.get(candidate),
-  );
+      Boolean(value) &&
+      !isClearedFilterMarker(value ?? "")
+    );
+  });
   return key ? (params.get(key) ?? undefined) : undefined;
 }
 
 /**
- * You first, then every active colleague by name, then the unowned queue.
+ * You first, then every colleague by name, then the unowned queue. A member
+ * administrator also sees those who left, marked so, to find their records.
  *
- * An applied owner the roster does not list still gets an option, named by id
- * lookup. A saved view can restore a deactivated seat. Without its option the
- * list would stay narrowed with no dial to clear it.
+ * An applied owner the roster does not list still gets an option, named by id.
+ * Without it a saved view could leave the list narrowed with no dial to clear.
  */
 function useOwnerDial(t: Translate): ListChip | undefined {
   const { locale } = useLocale();
   const viewerId = useMe().data?.user.id;
-  const colleagues = useAssignableUserOptions(Boolean(viewerId));
+  const colleagues = useMemberFilterOptions(Boolean(viewerId)).options;
   const applied = useApplied("owner_id");
   const listed = colleagues.some((option) => option.value === applied);
   const stray = applied && applied !== viewerId && !listed ? applied : "";

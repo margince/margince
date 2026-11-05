@@ -38,23 +38,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// newDealStatusService builds the deal's status card service.
-//
-// ONE constructor, because two surfaces read it and a deal has one next step.
-// The deal page draws the card; the worklist reads the move that card decided,
-// so a queue row and the deal page name the same thing. Building a second
-// service for the queue would have been the shorter path and the wrong one: the
-// two would carry different seat readers and different lane bindings, and the
-// row would then suggest a step the page does not.
-//
-// It performs nothing. The click goes through the verb the move names, and the
-// only row it writes is its own per-reader cache entry.
-func newDealStatusService(pool *pgxpool.Pool) *dealstatus.Service {
+// The deal page and Worklist share the card builder and its evidence clock.
+func newDealStatusService(pool *pgxpool.Pool, now func() time.Time) *dealstatus.Service {
+	return newCurrentAdviceService(pool, now).WithSeats(dealSeatReader(pool))
+}
+
+func newCurrentAdviceService(pool *pgxpool.Pool, now func() time.Time) *dealstatus.Service {
 	db := InstallationDB(pool)
-	return dealstatus.NewService(
-		pool, deals.NewStore(db, DealsInstallation()),
-		activities.NewStore(db), dealrooms.NewStore(db), time.Now,
-	).WithSeats(dealSeatReader(pool))
+	return dealstatus.NewService(pool, deals.NewStore(db, DealsInstallation()),
+		activities.NewStore(db), dealrooms.NewStore(db), now).
+		WithSeatBatch(dealSeatBatchReader(contacts.NewStore(db))).WithMailCoverage(mailCaptureCoverageReader(db))
 }
 
 // dealSeatReader reads the deal's seats with their roles and names.
@@ -77,11 +70,11 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 			if err != nil {
 				return err
 			}
-			names, err := seatNamesForCard(ctx, tx, contactsStore, coverage)
+			names, err := seatNamesForCard(ctx, tx, contactsStore, coverage.Stakeholders)
 			if err != nil {
 				return err
 			}
-			attachable, err := seatsThisReaderMayFileAgainst(ctx, tx, coverage)
+			attachable, err := seatsThisReaderMayFileAgainst(ctx, tx, coverage.Stakeholders)
 			if err != nil {
 				return err
 			}
@@ -119,10 +112,10 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 // clause, which means every seat is attachable — the same shortcut every other
 // scope caller takes.
 func seatsThisReaderMayFileAgainst(
-	ctx context.Context, tx pgx.Tx, coverage network.DealCoverage,
+	ctx context.Context, tx pgx.Tx, seats []deals.DealStakeholder,
 ) (map[ids.UUID]bool, error) {
 	attachable := map[ids.UUID]bool{}
-	if len(coverage.Stakeholders) == 0 {
+	if len(seats) == 0 {
 		return attachable, nil
 	}
 	// The object grant, asked before any contact row is touched. A seat this
@@ -135,8 +128,8 @@ func seatsThisReaderMayFileAgainst(
 		}
 		return nil, err
 	}
-	seated := make([]ids.UUID, 0, len(coverage.Stakeholders))
-	for _, s := range coverage.Stakeholders {
+	seated := make([]ids.UUID, 0, len(seats))
+	for _, s := range seats {
 		seated = append(seated, s.ContactID)
 	}
 	var args []any
@@ -185,13 +178,13 @@ func seatsThisReaderMayFileAgainst(
 // how many contacts carry it, in what roles — and simply no names. The card then
 // writes "the champion" where it would have written a contact.
 func seatNamesForCard(
-	ctx context.Context, tx pgx.Tx, store *contacts.Store, coverage network.DealCoverage,
+	ctx context.Context, tx pgx.Tx, store *contacts.Store, seats []deals.DealStakeholder,
 ) (map[ids.UUID]string, error) {
-	if len(coverage.Stakeholders) == 0 {
+	if len(seats) == 0 {
 		return map[ids.UUID]string{}, nil
 	}
-	seated := make([]ids.ContactID, 0, len(coverage.Stakeholders))
-	for _, s := range coverage.Stakeholders {
+	seated := make([]ids.ContactID, 0, len(seats))
+	for _, s := range seats {
 		seated = append(seated, ids.From[ids.ContactKind](s.ContactID))
 	}
 	names, err := store.ContactNamesTx(ctx, tx, seated)

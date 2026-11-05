@@ -17,7 +17,14 @@
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatMoneyCompact, formatNumber } from "../../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { pipelineValueDetail } from "../../format/pipelinevalue";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 import type { Worklist, WorklistFilter } from "./worklist.queries";
 import "./worklist.css";
 
@@ -111,6 +118,7 @@ function RevenueStat({
   t: Translator;
   onOpen: () => void;
 }>) {
+  const plural = usePlural();
   const minor = readings.revenue_at_risk_minor;
   const currency = readings.revenue_currency;
   if (minor == null || !currency) {
@@ -121,7 +129,16 @@ function RevenueStat({
       <StatCard
         label={t("worklist.readings.revenue")}
         value={t("worklist.readings.revenue.noFigure")}
-        detail={t("worklist.readings.revenue.unpriced")}
+        detail={pipelineValueDetail(
+          {
+            currency: undefined,
+            basis: t("worklist.readings.revenue.unpriced"),
+            unpriced: readings.unpriced_deals,
+            incomplete: readings.more_available,
+          },
+          locale,
+          plural,
+        )}
         onOpen={onOpen}
       />
     );
@@ -130,7 +147,16 @@ function RevenueStat({
     <StatCard
       label={t("worklist.readings.revenue")}
       value={formatMoneyCompact(minor, currency, locale)}
-      detail={t("worklist.readings.revenue.detail")}
+      detail={pipelineValueDetail(
+        {
+          currency,
+          basis: t("brief.readings.riskBasis"),
+          unpriced: readings.unpriced_deals,
+          incomplete: readings.more_available,
+        },
+        locale,
+        plural,
+      )}
       // The reading is bad news whenever there is any of it: money drifting is
       // the thing this strip exists to surface, and a rep who sees it in the
       // page's ordinary tone reads it as a status rather than as work.

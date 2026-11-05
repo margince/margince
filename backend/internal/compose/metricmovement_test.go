@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
@@ -31,7 +32,7 @@ func TestMovementKeepsUnpricedContributionsExplicitAndOmitsZeroBuckets(t *testin
 	opening := reportingCapture{id: ids.NewV7(), at: at}
 	closing := reportingCapture{id: ids.NewV7(), at: at.AddDate(0, 0, 7)}
 	movement := forecasting.Movement{OpeningMinor: 100, ClosingMinor: 125, Buckets: []forecasting.Bucket{{Name: "amount", AmountMinor: 25}, {Name: "won", AmountMinor: 0}}}
-	chart, err := projectMovement(crmcontracts.ReportingChart{}, movement, []reporting.Fact{{Money: nil}}, opening, closing)
+	chart, err := projectMovement(crmcontracts.ReportingContext{}, crmcontracts.ReportingChart{}, movement, []reporting.Fact{{Money: nil}}, opening, closing)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,20 +47,48 @@ func TestMovementKeepsUnpricedContributionsExplicitAndOmitsZeroBuckets(t *testin
 func TestMovementRejectsInexactTotalsAndUntraceableSources(t *testing.T) {
 	oversized := int64(reportingExactInteger + 1)
 	for _, movement := range []forecasting.Movement{{OpeningMinor: oversized}, {ClosingMinor: -oversized}, {Buckets: []forecasting.Bucket{{Name: "amount", AmountMinor: oversized}}}} {
-		if _, err := projectMovement(crmcontracts.ReportingChart{}, movement, nil, reportingCapture{}, reportingCapture{}); err == nil {
+		if _, err := projectMovement(crmcontracts.ReportingContext{}, crmcontracts.ReportingChart{}, movement, nil, reportingCapture{}, reportingCapture{}); err == nil {
 			t.Fatalf("inexact movement accepted: %+v", movement)
 		}
 	}
 	for _, contribution := range []forecasting.Contribution{{DealID: "invalid", InOpen: true}, {DealID: ids.NewV7().String(), Owner: "invalid", InOpen: true}} {
-		if _, err := movementAnchorFacts([]forecasting.Contribution{contribution}, "movement_opening", time.Time{}); err == nil {
+		if _, err := movementAnchorFacts(crmcontracts.ReportingContext{}, []forecasting.Contribution{contribution}, "movement_opening", time.Time{}); err == nil {
 			t.Fatalf("untraceable source accepted: %+v", contribution)
 		}
 	}
-	facts, err := movementAnchorFacts([]forecasting.Contribution{{DealID: ids.NewV7().String(), InOpen: false}}, "movement_opening", time.Time{})
+	facts, err := movementAnchorFacts(crmcontracts.ReportingContext{}, []forecasting.Contribution{{DealID: ids.NewV7().String(), InOpen: false}}, "movement_opening", time.Time{})
 	if err != nil || len(facts) != 0 {
 		t.Fatalf("closed deal entered open-pipeline anchor: %+v %v", facts, err)
 	}
-	if _, err := movementDeltaFacts([]forecasting.DealDelta{{DealID: ids.NewV7().String()}}, nil, nil, time.Time{}); err == nil {
+	if _, err := movementDeltaFacts(crmcontracts.ReportingContext{}, []forecasting.DealDelta{{DealID: ids.NewV7().String()}}, nil, nil, time.Time{}); err == nil {
 		t.Fatal("delta without a captured source was accepted")
+	}
+}
+
+func TestMovementSourceLanguagePreservesTheCapturedFacts(t *testing.T) {
+	amount := int64(125)
+	source := forecasting.Contribution{DealID: ids.NewV7().String(), Owner: ids.NewV7().String(), InOpen: true, BaseMinor: &amount}
+	at := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	var original []reporting.Fact
+	for _, lang := range []string{"en", "de", "vi"} {
+		frame := crmcontracts.ReportingContext{ProseLanguage: &lang}
+		facts, err := movementAnchorFacts(frame, []forecasting.Contribution{source}, "movement_opening", at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(facts) != 1 {
+			t.Fatalf("missing source: %+v", facts)
+		}
+		if lang == "en" {
+			original = facts
+			continue
+		}
+		if facts[0].Row.Label == "" || facts[0].Row.Label == original[0].Row.Label {
+			t.Fatalf("%s left captured evidence untranslated", lang)
+		}
+		facts[0].Row.Label = original[0].Row.Label
+		if !reflect.DeepEqual(facts, original) {
+			t.Fatalf("%s changed financial facts or source identity", lang)
+		}
 	}
 }

@@ -17,7 +17,6 @@ import (
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -169,38 +168,14 @@ func (s *Service) resolveOwner(ctx context.Context, asked ids.UUID) (ids.UUID, e
 // model the product does not have.
 func mineOnly(scope string) bool { return scope == scopeMine }
 
-// ownedByReader reports whether a row is the reader's own work.
-//
-// Only the rows that NAME somebody can be judged here — a deal's owner on the
-// wire, or the owner a waiting message's lane resolved. Everything else on this
-// queue is already per-reader by construction: a task the lane read for this
-// viewer, an approval they may decide, their own mailbox, their own promises. So
-// a row with nobody to check is the reader's by the lane that produced it, and
-// dropping it would hide their own work from them.
+// ownedByReader requires the same positive attribution shown on the card.
 func ownedByReader(row ranked, reader principal.Principal) bool {
-	named, ok := answersTo(row)
-	if !ok {
-		return true
-	}
-	return named == reader.UserID
+	owner := ownerOnTheWire(row, reader.UserID)
+	return owner != nil && owner.Id != nil && !reader.UserID.IsZero() && ids.UUID(*owner.Id) == reader.UserID
 }
 
-// keepReadersOwn drops the rows belonging to somebody else.
-//
-// It runs over the CANDIDATES, before the page is cut, so a reader asking for
-// twenty-five of their own rows gets twenty-five where they exist. Narrowing
-// after the cut returned a short page while the reader's own work sat just
-// past it.
-//
-// It fails CLOSED. A call with no human behind it has no "own work" to answer
-// for, and a queue that handed such a caller every row it had read would be
-// widening a scope named `mine` — the opposite of what it says. An agent that
-// needs the day reads it under a scope it can actually hold.
-//
-// The narrowing itself is a display cut, not the security boundary: the lanes
-// are already row-scoped, so this changes what a wide-scoped reader is SHOWN
-// by default rather than what any store was asked. Pushing the filter into
-// each producer is the better shape and needs each to take an owner.
+// Producers scope candidates before their bounds; this final cut also checks
+// personal lanes whose attribution comes from the assembled row.
 func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
@@ -217,7 +192,7 @@ func keepReadersOwn(ctx context.Context, rows []ranked) []ranked {
 
 // keepOwnedBy keeps only the rows POSITIVELY attributable to one named contact.
 //
-// The opposite default from keepReadersOwn, and the difference is the whole
+// Like Mine, this scope requires positive attribution. The distinction is the
 // rule. That one keeps a row it cannot judge because the lane already bound it
 // to the acting reader: a notice addressed to them, their own mailbox, their
 // own promise. Under a named owner those same lanes are still bound to the
@@ -306,25 +281,12 @@ func boundToTheActingReader(row ranked) bool {
 	return narrowedByItsOwnLane(row) || row.item.Source == sourceBriefItem
 }
 
-// keepUnowned keeps the rows that answer to nobody.
-//
-// The counterpart to keepReadersOwn, over the same evidence: a row with an owner
-// belongs to that contact and not to this queue. A row with nobody to name stays,
-// which is what the scope is for.
-//
-// A promise is the exception, and it is not decorative. A conversation claim
-// has no assignee column, so it reaches here with no owner to read while
-// already belonging to the rep whose query produced it. Reading only answersTo
-// would file the rep's own debt under work nobody answers for.
-//
-// An ownerless task or lead genuinely answers to nobody — those stay.
+// keepUnowned requires a producer to affirm that nobody owns the work.
 func keepUnowned(rows []ranked) []ranked {
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Source == sourceClaim {
-			continue
-		}
-		if _, ok := answersTo(row); !ok {
+		owner := ownerOnTheWire(row, ids.Nil)
+		if owner != nil && owner.Kind == crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned {
 			kept = append(kept, row)
 		}
 	}
@@ -390,13 +352,30 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) ([]ranked, scope
 	if err != nil {
 		return nil, scopeNote{failed: true}
 	}
-	return rowsForRoster(rows, roster), scopeNote{truncated: cut}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return nil, scopeNote{failed: true}
+	}
+	return rowsForRoster(rows, roster, former...), scopeNote{truncated: cut}
 }
 
-func rowsForRoster(rows []ranked, roster []TeamMember) []ranked {
-	team := make(map[ids.UUID]bool, len(roster))
-	for _, member := range roster {
-		team[member.UserID] = true
+// formerTeammates is the bound reader's answer, or nobody when none is bound.
+func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
+	if s.teamRoster != nil {
+		return s.teamRoster.former, nil
+	}
+	if s.former == nil {
+		return nil, nil
+	}
+	return s.former.FormerTeammatesOfCaller(ctx)
+}
+
+// rowsForRoster keeps the rows owned by the roster and by former teammates,
+// whose work stays in the team's view until somebody takes it over.
+func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ranked {
+	team := make(map[ids.UUID]bool, len(roster)+len(former))
+	for _, id := range teamSeats(roster, former) {
+		team[id] = true
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
@@ -411,60 +390,24 @@ func rowsForRoster(rows []ranked, roster []TeamMember) []ranked {
 	return kept
 }
 
-// answersTo is WHO a row belongs to, and whether anybody does.
-//
-// One reading for all three scope filters, because they are three questions
-// about one fact and an answer that differed between them would put a row on two
-// queues or on none. It used to be spelled once per filter over the deal alone,
-// which is why a waiting message — owned through the record it is filed under
-// rather than through a deal on the wire — was invisible to every one of them.
-//
-// Held by: TestOnlyNarrowToScopeChoosesBetweenTheScopeFilters
-// (scopeonespelling_test.go) — the filters all reach this because narrowToScope
-// is their only caller, and that test fails when anything else calls one.
-//
-// Two carriers, because the two kinds of row need different things. A
-// deal-bearing row carries its owner ON THE WIRE, where the client draws it;
-// everything else that has an owner carries it beside the item, where only these
-// filters read it.
-//
-// THE LANE'S OWN ANSWER WINS, and the order is the correctness of it rather than
-// a preference. This runs twice over a waiting row — once before its crowding is
-// decided, once with the whole page — and between the two passes
-// dropDealsAlreadyWaiting ATTACHES a deal to it, so the row's evidence changes
-// under the filter. Asking the deal first meant the two passes could answer
-// differently: a wait kept as its owner's on the first pass was judged against
-// the absorbed deal's owner on the second, and when the two disagreed — a deal
-// reassigned between the at-risk read and the waiting read — the customer landed
-// on neither contact's queue and nothing said so.
-//
-// The lane's answer is also the better one. It resolved ownership from the
-// record the thread is actually filed under; the attached deal arrived because
-// the row absorbed a drifting deal's facts for DISPLAY, which is a different
-// question from who owes the reply.
-func answersTo(row ranked) (ids.UUID, bool) {
-	if !row.owner.IsZero() {
-		return row.owner, true
+// teamSeats lists the seats whose work a team view keeps: the live roster and
+// the former teammates. The row filter and the narrowed reads share it.
+func teamSeats(roster []TeamMember, former []ids.UUID) []ids.UUID {
+	seats := make([]ids.UUID, 0, len(roster)+len(former))
+	for _, member := range roster {
+		seats = append(seats, member.UserID)
 	}
-	if row.item.Deal != nil && row.item.Deal.OwnerId != nil {
-		return ids.UUID(*row.item.Deal.OwnerId), true
-	}
-	return ids.UUID{}, false
+	return append(seats, former...)
 }
 
-// teamWeekFor answers which teams' frozen weeks this reader may open, on the
-// predicate the week is served on. Not a scope: the `team` scope is the team's
-// live work and follows row scope, while the week is a lead's verdict on named
-// colleagues, which a read-only seat reaching every row does not get.
-func teamWeekFor(ctx context.Context) crmcontracts.WorklistTeamWeek {
-	switch auth.TeamWeekReachOf(ctx) {
-	case auth.ReachesEveryTeam:
-		return crmcontracts.WorklistTeamWeekEveryTeam
-	case auth.ReachesTeamsLed:
-		return crmcontracts.WorklistTeamWeekTeamsLed
-	default:
-		return crmcontracts.WorklistTeamWeekNone
+// answersTo resolves only named responsibility, using the card's owner resolver.
+// A deal attached for display cannot replace the source lane's attribution.
+func answersTo(row ranked) (ids.UUID, bool) {
+	owner := ownerOnTheWire(row, ids.Nil)
+	if owner == nil || owner.Id == nil {
+		return ids.Nil, false
 	}
+	return ids.UUID(*owner.Id), true
 }
 
 // scopeOptions puts the resolver's answer on the wire.
@@ -490,7 +433,11 @@ func (s *Service) forNoticeTeam(ctx context.Context) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	narrowed.teamRoster = &rosterRead{members: roster, cut: cut}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return nil, err
+	}
+	narrowed.teamRoster = &rosterRead{members: roster, former: former, cut: cut}
 	for _, member := range roster {
 		narrowed.noticeOwners = append(narrowed.noticeOwners, member.UserID)
 	}

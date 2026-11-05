@@ -6,17 +6,20 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { RosterFailedLine } from "../../components/entityref";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
+import { Select } from "../../design-system/select";
 import { Switch } from "../../design-system/switch";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
@@ -54,6 +57,7 @@ type AutomationPatch = {
     name?: string;
     params?: Record<string, unknown>;
     status?: "enabled" | "paused";
+    owner_id?: string;
   };
 };
 
@@ -135,6 +139,9 @@ export function ConfiguredAutomations({
     status: (automation) => (
       <AutomationStatus automation={automation} canEdit={canEdit} />
     ),
+    owner: (automation) => (
+      <AutomationOwner automation={automation} canEdit={canEdit} />
+    ),
   });
   const editingEntry = editing && entryFor(editing.automation.key);
   return (
@@ -212,12 +219,14 @@ function instanceColumns({
   entryFor,
   verbs,
   status,
+  owner,
 }: Readonly<{
   t: Translator;
   now: number;
   entryFor: (key: string) => CatalogEntry | undefined;
   verbs: (automation: Automation) => ReactNode;
   status: (automation: Automation) => ReactNode;
+  owner: (automation: Automation) => ReactNode;
 }>): DataTableColumn<Automation>[] {
   return [
     {
@@ -253,6 +262,11 @@ function instanceColumns({
         automation.last_run_at ? (
           <RunCount count={automation.runs_last_30_days ?? 0} />
         ) : null,
+    },
+    {
+      key: "owner",
+      header: t("auto.colOwner"),
+      render: owner,
     },
     {
       key: "status",
@@ -300,6 +314,7 @@ function LastRun({
   automation,
   now,
 }: Readonly<{ automation: Automation; now: number }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const at = automation.last_run_at;
@@ -308,7 +323,7 @@ function LastRun({
   }
   return (
     <CellStack>
-      <time dateTime={at} title={formatDateTime(at, locale, viewerZone())}>
+      <time dateTime={at} title={formatDateTime(at, locale, readerZone)}>
         {formatRelativeTime(at, locale, new Date(now))}
       </time>
       <RunOutcome outcome={automation.last_run_outcome} />
@@ -328,6 +343,46 @@ function RunCount({ count }: Readonly<{ count: number }>) {
         {plural("auto.runsInWindow", count, { count: figure })}
       </span>
     </>
+  );
+}
+
+// Who the rule runs as. A rule whose owner lost access is blocked on every
+// firing, so a seat that may edit gets the way out here and nowhere else.
+function AutomationOwner({
+  automation,
+  canEdit,
+}: Readonly<{ automation: Automation; canEdit: boolean }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const { options: owners, roster } = useRecordOwnerOptions(canEdit);
+  const hand = useMutation({
+    mutationFn: patchAutomation,
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["automations"] }),
+  });
+  const current = owners.find((option) => option.value === automation.owner_id);
+  if (!canEdit) {
+    return <span>{current?.label ?? t("auto.ownerNone")}</span>;
+  }
+  return (
+    <CellStack>
+      <Select
+        aria-label={t("auto.ownerFor", { name: automation.name })}
+        options={owners}
+        value={automation.owner_id ?? ""}
+        placeholder={t("auto.ownerNone")}
+        onChange={(next) =>
+          hand.mutate({
+            id: automation.id,
+            version: automation.version,
+            body: { owner_id: next },
+          })
+        }
+      />
+      <span className="t-caption">{t("auto.ownerHint")}</span>
+      <RosterFailedLine kind="user" roster={roster} />
+      {hand.isError && <ErrorLine>{problemMessageOf(hand.error, t)}</ErrorLine>}
+    </CellStack>
   );
 }
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -100,4 +101,23 @@ func reportingToolCursor(in agents.ReportingRead) (*ids.UUID, error) {
 		cursor = &id
 	}
 	return cursor, nil
+}
+
+// reportDrafter is draft_report's seam: a new private report, or a draft on
+// one the caller edits, through the service the Analytics screen saves with.
+func reportDrafter(pool *pgxpool.Pool) agents.ReportDrafter {
+	service := newReportingService(pool, time.Now)
+	return func(ctx context.Context, in agents.ReportDraftRequest) (crmcontracts.ReportingReport, error) {
+		if in.ReportID == nil {
+			return service.DraftNewReport(ctx, crmcontracts.ReportingReportInput{
+				Name: in.Name, Description: in.Description, Selection: in.Selection,
+			})
+		}
+		report, err := service.GetReport(ctx, *in.ReportID)
+		if err != nil {
+			return crmcontracts.ReportingReport{}, err
+		}
+		return service.SaveReportDraft(ctx, *in.ReportID, report.Version,
+			crmcontracts.ReportingReportDraftInput{Selection: in.Selection})
+	}
 }

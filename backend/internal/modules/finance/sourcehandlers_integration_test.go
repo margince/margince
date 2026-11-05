@@ -180,7 +180,7 @@ func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
 		t.Errorf("available = %+v, want every offered source with its description", state.Available)
 	}
 
-	bare := Handlers{store: NewStore(a.store.db, a.store.baseCurrency)}
+	bare := Handlers{store: NewStore(a.store.db, a.store.rates)}
 	rec = call(a.admin(), http.MethodGet, "", bare.GetFinanceSource)
 	if got := decode[crmcontracts.FinanceSourceState](t, rec); len(got.Available) != 0 || got.Available == nil {
 		t.Errorf("an unwired build offers %+v, want an empty list rather than null", got.Available)
@@ -210,8 +210,15 @@ func TestConnectingAnUnreadableSourceLeavesNothingBehind(t *testing.T) {
 	if strings.Contains(rec.Body.String(), "token") {
 		t.Errorf("the refusal repeats what the source said: %s", rec.Body.String())
 	}
-	expect(t, call(ctx, http.MethodPut, `{"provider":"absent_ledger"}`, a.handlers.ConnectFinanceSource),
-		http.StatusBadRequest, "invalid_argument")
+	// A source this build does not compose is a fault of the body's provider
+	// field, answered like every other body fault.
+	for _, body := range []string{`{"provider":"absent_ledger"}`, `{"provider":""}`} {
+		refused := call(ctx, http.MethodPut, body, a.handlers.ConnectFinanceSource)
+		expect(t, refused, http.StatusUnprocessableEntity, "validation_error")
+		if !strings.Contains(refused.Body.String(), `"field":"provider"`) {
+			t.Errorf("%s: the refusal does not name provider: %s", body, refused.Body.String())
+		}
+	}
 
 	state := decode[crmcontracts.FinanceSourceState](t, call(ctx, http.MethodGet, "", a.handlers.GetFinanceSource))
 	if state.Connection != nil {

@@ -3,9 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
+import { userEvent, within } from "storybook/test";
+import { mailbox } from "../format/contacturi";
 import { Field } from "./atoms";
 import { DateInput } from "./dateinput";
-import { TokenInput, TokenList, type TokenSuggestion } from "./tokeninput";
+import {
+  TokenInput,
+  TokenList,
+  type TokenParse,
+  type TokenSuggestion,
+} from "./tokeninput";
 
 /**
  * The two value controls a typed filter clause needs and the design system did
@@ -105,6 +112,28 @@ export const Wrapping: Story = {
           "Pharmaceuticals",
           "Renewables",
           "Construction",
+        ]}
+      />
+    </div>
+  ),
+};
+
+/**
+ * Values the record knows by name: a committed address reads as its contact,
+ * with the address dimmed after it. A typed value with no suggestion stays bare.
+ */
+export const Named: Story = {
+  render: () => (
+    <div style={column}>
+      <TokenDemo
+        label="To"
+        start={["sabine.mayer@straight.example", "someone@else.example"]}
+        suggestions={[
+          {
+            value: "sabine.mayer@straight.example",
+            label: "Sabine Mayer",
+            hint: "sabine.mayer@straight.example",
+          },
         ]}
       />
     </div>
@@ -225,4 +254,67 @@ export const OfferingDark: Story = {
       />
     </div>
   ),
+};
+
+const ADDRESSES: Omit<TokenParse, "onRefuse"> = {
+  keys: [",", ";"],
+  read: (raw) => {
+    const parts = raw.split(/[\s,;]+/).filter((part) => part !== "");
+    return {
+      values: parts.filter((part) => mailbox(part) !== null),
+      refused: parts.filter((part) => mailbox(part) === null),
+    };
+  },
+};
+
+/** A field whose values have a shape, with the refusal the host puts on its `Field`. */
+function ParseDemo() {
+  const [values, setValues] = useState<readonly string[]>([]);
+  const [refused, setRefused] = useState<readonly string[]>([]);
+  return (
+    <Field
+      label="To"
+      error={
+        refused.length > 0
+          ? `Not an email address: ${refused.join(", ")}. Correct it or remove it.`
+          : undefined
+      }
+    >
+      {(control) => (
+        <TokenInput
+          {...control}
+          values={values}
+          onChange={setValues}
+          parse={{ ...ADDRESSES, onRefuse: setRefused }}
+          placeholder="name@example.com"
+        />
+      )}
+    </Field>
+  );
+}
+
+/**
+ * A pasted line splits on commas, semicolons and spaces: each address becomes a token,
+ * the rest stays in the box under an error.
+ */
+export const Parsing: Story = {
+  render: () => (
+    <div style={column}>
+      <ParseDemo />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("textbox"));
+    await userEvent.paste(
+      "dana@nordwand.example; not-an-address milo@nordwand.example",
+    );
+  },
+};
+
+export const ParsingDark: Story = { ...Parsing, globals: { theme: "dark" } };
+
+export const ParsingPhone: Story = {
+  ...Parsing,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

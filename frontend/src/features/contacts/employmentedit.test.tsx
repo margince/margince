@@ -1,10 +1,10 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { steppedClock } from "../../testing/steppedclock";
 import { EmploymentEdit } from "./employmentedit";
 
 type Employment = components["schemas"]["Contact360Employment"];
@@ -23,6 +23,8 @@ const role: Employment = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+  Reflect.deleteProperty(globalThis, "jest");
 });
 
 function sentPatches() {
@@ -63,7 +65,7 @@ it("sends a typed month as the first of that month, with month precision", async
   const patches = sentPatches();
   const onSaved = vi.fn(async () => {});
   const { onClose } = open(role, onSaved);
-  const user = userEvent.setup();
+  const user = steppedClock();
 
   await user.clear(screen.getByLabelText("Role"));
   await user.type(screen.getByLabelText("Role"), "Chair");
@@ -85,7 +87,7 @@ it("sends a typed month as the first of that month, with month precision", async
 it("clears a start date the reader emptied, rather than leaving it", async () => {
   const patches = sentPatches();
   const { onClose } = open(role);
-  const user = userEvent.setup();
+  const user = steppedClock();
 
   await user.clear(screen.getByLabelText("Start date"));
   await user.click(screen.getByRole("button", { name: "Save" }));
@@ -98,7 +100,7 @@ it("clears a start date the reader emptied, rather than leaving it", async () =>
 it("refuses to save a date the wire cannot carry", async () => {
   sentPatches();
   open(role);
-  const user = userEvent.setup();
+  const user = steppedClock();
 
   await user.type(screen.getByLabelText("End date"), "soon");
 
@@ -115,4 +117,21 @@ it("offers the current-employer box only for a role that is still held", () => {
   expect(
     screen.getByRole("checkbox", { name: "This is their current employer" }),
   ).toHaveProperty("disabled", true);
+});
+
+it("requires a current or former choice for an imported unknown link", async () => {
+  const user = steppedClock();
+  const patches = sentPatches();
+  const { onClose } = open({ ...role, employment_status: "unknown" });
+  expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  await user.click(screen.getByRole("combobox", { name: "Employment status" }));
+  expect(screen.queryByRole("option", { name: "Status unknown" })).toBeNull();
+  expect(screen.getAllByRole("option")).toHaveLength(2);
+  await user.click(screen.getByRole("option", { name: "Current" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(onClose).toHaveBeenCalled());
+  expect(patches[0]?.body).toMatchObject({ employment_status: "current" });
 });

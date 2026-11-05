@@ -124,7 +124,7 @@ const resetTables = `
 // exactly what a new reference table did: the sweep kept it and the coverage
 // gate reported it as leaking.
 //
-// The report fence is one boot-seeded coordination row with no customer data.
+// The report and Home fences are boot-seeded coordination rows with no customer data.
 // Its generation is monotonic; no reader depends on a particular value. The
 // own-sent-mail repair cutoff is one such row too, and every test that reads
 // it sets it first.
@@ -132,10 +132,10 @@ const resetTables = `
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
-	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
-	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
-	`'maskable_field', 'report_projection_fence', ` +
-	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff')`
+	`'lead_origin', 'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
+	`'currency_minor_digits', 'deal_acquisition_source', 'deal_loss_reason', 'record_role', 'partner_stage', ` +
+	`'maskable_field', 'report_projection_fence', 'home_read_fence', ` +
+	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff', 'legal_entity')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
@@ -229,12 +229,29 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	if err := restartSequences(ctx, tx); err != nil {
 		return err
 	}
+	if err := restoreSeededLegalEntity(ctx, tx); err != nil {
+		return err
+	}
 	if err := dropCustomFieldColumns(ctx, tx); err != nil {
 		return err
 	}
 	// Every table is empty now, which is the only moment a table that did not
 	// exist when EnsureSchema ran can be given a real baseline.
 	return baselineNewTables(ctx, tx, unbaselined)
+}
+
+// restoreSeededLegalEntity puts legal_entity back to what its migration seeds.
+// The table is kept rather than emptied, because nothing but the migration
+// creates the default entity. So the entities a test described are deleted
+// here, and the default's own fields go back to the seeded NULLs.
+func restoreSeededLegalEntity(ctx context.Context, tx execQuerier) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM legal_entity WHERE NOT is_default;
+		UPDATE legal_entity SET country = NULL, default_language = NULL, bank_account_holder = NULL,
+		       iban = NULL, bic = NULL, imprint = NULL, archived_at = NULL, version = 1
+		 WHERE is_default;`); err != nil {
+		return fmt.Errorf("restoring the seeded legal entity: %w", err)
+	}
+	return nil
 }
 
 // baselineNewTables records the empty size of tables that appeared after

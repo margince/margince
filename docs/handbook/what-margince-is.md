@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies
@@ -124,7 +125,11 @@ To search Margince, click the search field **Search or ask Margince** in the top
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
-Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed. If there is none, it opens a record whose whole name you typed, and if there is none, the **Search results** page. So Enter on part of a name shows the results instead of opening the first one.
+With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
+
+With an empty box, Enter opens the newest recent item once the list has been checked.
+
+For a typed search, Enter opens the row you moved to with the arrow keys. If you have not moved, Enter opens a screen or action that matches what you typed. If there is none, it opens a record whose whole name you typed, and if there is none, the **Search results** page. So Enter on part of a name shows the results instead of opening the first one.
 
 If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed**, and the screen commands still work.
 Also called: find, look up, global search.
@@ -136,6 +141,9 @@ name it. A company's name also finds the contacts who work there now, each with
 the line **Works at** and the company's name. They come after the contacts whose
 own name matched. A result that came from a connected system is marked **From a
 connected system**.
+
+When nothing matches, the **Search results** page offers **Did you mean:** with up to five
+names that are written close to what you typed. It lists only names you may open.
 
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
@@ -151,21 +159,22 @@ Press ⌘K again, or Esc, to close it.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
 
 ### Where is the handbook, and how do I ask it a question?
-The Margince handbook is inside the app. To ask it a question, open the command palette with ⌘K (Ctrl+K) and choose **Ask your documents**, the first row.
-1. The **Ask your documents** dialog opens over the page, with whatever you typed so far.
-2. **Document set** starts on your company's default set. That is the **Margince handbook** unless an administrator picked another. Change it to ask a different set.
-3. Type in **Your question**, in your own words, and choose **Ask**.
-
-The answer quotes the handbook and says where each part comes from. A question it does not cover gets **Not covered by this set** instead of a guess.
+To ask the Margince handbook a question, type it into **Search or ask Margince** in the top bar and press Enter. You can also open it with ⌘K (Ctrl+K).
+1. A question such as "How do I change my time zone?" gets the row **Ask Margince: "…"** at the top. Enter asks it.
+2. The answer shows above the records that match. It names the set it came from, and its numbers open the handbook page at the quoted line.
+3. When the answer is a settings page you may open, **Open Settings → …** takes you there.
+The handbook is in English, so questions in English work best.
 Also called: help, FAQ, knowledge base, ask Margince.
+
+When the handbook does not cover a question, Margince asks your company's default document set next and says so. When neither covers it, you get **Not covered by this set** instead of a guess. To ask one set of your choice, choose **Ask your documents** under the search field. Pick a **Document set**, type in **Your question** and choose **Ask**.
 
 ### How do I ask Margince a question about a company?
 To ask about one company, open the company and use its **Ask about this company** panel. **Ask Margince** offers fixed questions (**What is open here?**, **Prepare for a meeting** and **What changed recently?**), answered from the records you can open. It takes no text of your own. For a question in your own words about how Margince works, use **Ask your documents** (⌘K).
 Also called: company summary, meeting prep, what's going on with this account.
 
 ### Where is the Ask box?
-The Margince Ask box is called **Ask your documents**, and it is the first row of the command palette. Press ⌘K (Ctrl+K), or click **Search or ask Margince** in the top bar.
-It answers only from one document set: the **Margince handbook** that comes with every installation, or a set your company filed under Settings → **Knowledge**.
+The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the first row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
+That dialog answers from the one set you pick. It is the **Margince handbook** that comes with every installation, or a set filed under Settings → **Knowledge**.
 On a company page there is a second, separate panel, **Ask about this company**, with its own **Ask Margince** questions about that one company.
 If the dialog says **No document sets**, there is nothing filed to search yet.
 
@@ -222,11 +231,11 @@ A teammate or a colleague who signs in is called a **user** in Margince. You loo
 
 A knowledge base is called a **document set** in Margince. Document sets are filed in Settings → **Knowledge**.
 
-The FAQ, the help or the handbook search is called **Ask your documents** in Margince. Open it from the command palette with ⌘K (Ctrl+K).
+The FAQ, the help or the handbook search is the search field **Search or ask Margince**: type a question and press Enter. **Ask your documents** in the command palette (⌘K) asks one set you choose.
 
 A to-do list or a task inbox is called the **Worklist** in Margince. It is on **Home**.
 
-An API key or an access token for an AI agent is called a **passport** in Margince. You create one in Settings → **Agents**.
+An API key or an access token for an AI agent is called a **passport** in Margince. You create one in Settings → **AI access**, under **For developers**.
 
 A writing style or tone profile is called **Voice DNA** in Margince. You set it up in Settings → **Writing voice**.
 

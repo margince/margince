@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -58,6 +59,20 @@ func TestEngagementStateAnswersWhoseMoveItIs(t *testing.T) {
 		{"newest message has no direction", suggestionInputs{
 			hasNewest: true, newest: lastMessage{Direction: "", At: ago(day)},
 		}, "active"},
+		// A mail's own badge decides, so a colleague's mail or a calendar copy
+		// leaves the move with nobody, as it does on the account's History.
+		{"a colleague's mail a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveNone)},
+		}, "active"},
+		{"a calendar copy a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveNone)},
+		}, "active"},
+		{"the reader's mail a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "outbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveWaitingForThem)},
+		}, "waiting_on_them"},
+		{"their mail owed a reply a fortnight ago", suggestionInputs{
+			hasNewest: true, newest: lastMessage{Direction: "inbound", At: ago(14 * day), Move: new(crmcontracts.EmailSummaryMoveNeedsReply)},
+		}, "waiting_on_us"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -76,7 +91,7 @@ func TestEachSuggestionNamesWhatPerformingItMeans(t *testing.T) {
 	company := ids.From[ids.CompanyKind](ids.NewV7())
 	unanswered := ids.NewV7()
 
-	stale := staleThread(company, now, lastMessage{
+	stale := englishSuggestions.staleThread(company, now, time.UTC, lastMessage{
 		ID: unanswered, Direction: "outbound", At: now.AddDate(0, 0, -14),
 	})
 	if stale == nil || stale.Action == nil {
@@ -92,7 +107,7 @@ func TestEachSuggestionNamesWhatPerformingItMeans(t *testing.T) {
 	}
 
 	dealID := ids.NewV7()
-	stalled := stalledDealSuggestions([]stalledDeal{{ID: dealID, Name: "Retrofit"}})
+	stalled := englishSuggestions.stalledDealSuggestions([]stalledDeal{{ID: dealID, Name: "Retrofit"}})
 	if len(stalled) != 1 || stalled[0].Action == nil {
 		t.Fatalf("the stalled-deal rule named no action: %+v", stalled)
 	}

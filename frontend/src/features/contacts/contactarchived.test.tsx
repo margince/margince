@@ -3,6 +3,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
+import { view as liveView } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -16,7 +17,6 @@ import {
   refusedRead,
 } from "./contactarchived.fixtures";
 import { ContactPageV2 } from "./contactpage";
-import { view as liveView } from "./contactpage.testkit";
 
 afterEach(cleanup);
 
@@ -46,13 +46,21 @@ describe("the contact page on an archived row", () => {
     ).toBeTruthy();
     expect(screen.getByText(en["record.archived"])).toBeTruthy();
     const reason = screen.getByText(en["contact.rail.archivedReadOnly"]);
-    expect(await screen.findByText(archiveEntry.summary)).toBeTruthy();
+    const archivedBy = en["history.verb.archive"].replace(
+      "{subject}",
+      archiveEntry.actor_name ?? archiveEntry.actor_id,
+    );
+    expect(await screen.findByText(archivedBy)).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["history.undo.action"] }),
     ).toBeTruthy();
 
+    // Add task is a row of the header's menu.
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.moreActions"] }),
+    );
     for (const verb of [en["log.title"], en["contact.action.addTask"]]) {
-      const control = screen.getByRole("button", { name: verb });
+      const control = await screen.findByRole("button", { name: verb });
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(control.getAttribute("aria-describedby")).toBe(reason.id);
     }
@@ -72,7 +80,6 @@ describe("the contact page on an archived row", () => {
     };
     for (const verb of [
       en["contact.action.write"],
-      en["contact.action.call"],
       en["contact.action.meetings"],
     ]) {
       refused(screen.getByRole("button", { name: verb }));
@@ -83,7 +90,6 @@ describe("the contact page on an archived row", () => {
     for (const verb of [
       en["contact.action.research"],
       en["lists.addToShortlist"],
-      en["contact.action.workAsLead"],
     ]) {
       refused(await screen.findByRole("button", { name: verb }));
     }
@@ -95,17 +101,21 @@ describe("the contact page on an archived row", () => {
       jsonResponse({
         ...archivedContact,
         emails: [liveView.contact.emails?.[0]],
+        primary_email: liveView.contact.primary_email,
       });
     mount(routes);
 
     const address = await screen.findByText("dana@brandt.example");
     expect(address.closest("a, button")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["compose.writeEmail"] }),
+    ).toBeNull();
   });
 
   it("says the contact could not be opened when the row read fails", async () => {
     const routes = archivedContactRoutes();
     routes["GET /contacts/p-1"] = () =>
-      jsonResponse({ status: 500, code: "internal_error" }, 500);
+      jsonResponse({ status: 500, code: "internal" }, 500);
     mount(routes);
 
     expect(await screen.findByText(en["contact.page.notOpened"])).toBeTruthy();

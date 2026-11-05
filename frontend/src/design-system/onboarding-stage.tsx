@@ -399,7 +399,9 @@ export function OnboardingStage({
             {...boardRegion}
           >
             {eyebrow === undefined ? null : (
-              <Eyebrow as="h2">{eyebrow}</Eyebrow>
+              <Eyebrow as="h2" size="xxsmall">
+                {eyebrow}
+              </Eyebrow>
             )}
             {/* A STABLE id, because on a screen whose title is the question
                 itself the board below is answering this heading, and a control

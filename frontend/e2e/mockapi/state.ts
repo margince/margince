@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import { runningDataTask } from "../../src/features/settings/datataskshealth.fixtures";
 import { projectMock } from "../projectmock";
 import {
   brandt,
@@ -13,6 +14,7 @@ import {
 } from "./fixtures";
 
 export type MockApiOptions = Readonly<{
+  dataTasks?: "populated" | "empty" | "failed" | "withheld" | "unavailable";
   // "authenticated" (the default) is what every existing AC needs.
   // "unauthenticated" answers /me with 401, so the app renders the login
   // screen a signed-out user meets. The axe sweeps cannot reach it otherwise.
@@ -24,7 +26,7 @@ export type MockApiOptions = Readonly<{
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
   // Which meeting brief the drawer gets. The default is the everyday one,
   // carrying a withheld source for the AC that reads it.
-  meetingBrief?: "rep" | "plan" | "manager" | "empty" | "failed";
+  meetingBrief?: "rep" | "plan" | "manager" | "empty" | "withheld";
   // Where the acting human stands in the setup journey. "finished" (the
   // default) is described and complete. The shell lets every screen render.
   // "unstarted" has no company and no wizard row, which the onboarding AC
@@ -45,6 +47,10 @@ export type MockApiOptions = Readonly<{
   // One run in flight on the agent feed. Without it the rail is at rest in
   // every spec and its live line is never drawn.
   agentRunning?: true;
+  // The day's queue holds the two tasks on the called contact instead.
+  callTasks?: true;
+  // Qualify holds more deals than one board column reads at a time.
+  busyStage?: true;
 }>;
 
 export type LoggedActivity = {
@@ -61,6 +67,7 @@ export type LoggedActivity = {
   version: number;
   created_at: string;
   updated_at: string;
+  writable: boolean;
 };
 
 export type CaptureSender = components["schemas"]["CaptureSenderDecision"];
@@ -83,6 +90,7 @@ function captureSettings(): components["schemas"]["CaptureSettings"] {
     auto_enrich_daily_cap: 500,
     site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
     mail_sync_interval_seconds: 120,
+    confidentiality_pass_cap: 40,
   };
 }
 
@@ -144,8 +152,22 @@ export function createMockState(options: MockApiOptions = {}) {
   // the other suites read as empty stay empty.
   const loggedActivities: LoggedActivity[] = [];
   const counterpartyHolds: CounterpartyHold[] = [];
+  const dataTasks: components["schemas"]["DataTaskProgress"][] =
+    options.dataTasks === "empty"
+      ? []
+      : [
+          {
+            ...runningDataTask,
+            status:
+              options.dataTasks === "failed"
+                ? "failed"
+                : runningDataTask.status,
+            consecutive_failures: options.dataTasks === "failed" ? 5 : 0,
+          },
+        ];
   return {
     options,
+    dataTasks,
     // No company row and no wizard row. Named once, so a third journey state
     // cannot be added to one route and missed by the other.
     undescribed:
@@ -156,6 +178,16 @@ export function createMockState(options: MockApiOptions = {}) {
     brief: {
       ...briefRun,
       items: briefRun.items.map((item) => ({ ...item })),
+    },
+    // Nobody has chosen hours yet, so the card offers the default.
+    workingHours: {
+      chosen: false,
+      working_hours: {
+        start_time: "09:00",
+        end_time: "17:00",
+        days: [1, 2, 3, 4, 5],
+        timezone: "Europe/Berlin",
+      },
     },
     captureSettings: captureSettings(),
     captureConnections: captureConnections(),

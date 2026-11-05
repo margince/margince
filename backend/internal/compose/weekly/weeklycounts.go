@@ -19,7 +19,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -58,14 +60,19 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 
 	verbsPos := arg(privacy.ScrubVerbs())
 	completion := taskCompletionAtSQL("a", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return Counts{}, err
+	}
+	current := storekit.CurrentTaskClause("a", end, identities, arg)
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
-          SELECT a.*, %[6]s AS completed_at FROM activity a
-           WHERE a.kind='task' AND a.archived_at IS NULL
+          SELECT `+storekit.TaskDueSQL("a")+` AS due_at, %[6]s AS completed_at FROM activity a
+           WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
-             AND ((a.due_at >= $%[1]d AND a.due_at < $%[2]d)
-               OR a.done_at >= $%[1]d OR (a.due_at < $%[2]d AND NOT a.is_done)
+             AND ((`+storekit.TaskDueSQL("a")+` >= $%[1]d AND `+storekit.TaskDueSQL("a")+` < $%[2]d)
+               OR a.done_at >= $%[1]d OR (`+storekit.TaskDueSQL("a")+` < $%[2]d AND NOT a.is_done)
                OR a.updated_at >= $%[2]d))
         SELECT
           (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
@@ -102,7 +109,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 		     JOIN brief_run br ON br.id = bi.brief_run_id
 		    WHERE br.user_id = $%[3]d AND bi.state = 'dismissed'
 		      AND bi.state_at >= $%[1]d AND bi.state_at < $%[2]d)`,
-		startPos, endPos, userPos, activityScope, dealScope, completion), args...).
+		startPos, endPos, userPos, activityScope, dealScope, completion, current), args...).
 		Scan(&c.TasksCompleted, &c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
 			&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 			&c.ProposalsAccepted, &c.ProposalsRejected,
@@ -113,12 +120,23 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 	return c, nil
 }
 
+// NonImportedLeadSQL admits a lead under alias l that no import wrote. Response
+// timing reads only those, here and in the reporting catalog.
+const NonImportedLeadSQL = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
+
+// leadArrivedInWeekSQL is the week's lead cohort under alias l, with the
+// window bound at positions 1 and 2. A lead is in it when it arrived in the
+// window, is not archived and no import wrote it. Both the weekly counts and
+// the frozen scorecard read it, so they describe the same leads.
+const leadArrivedInWeekSQL = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
+		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
+		      AND l.archived_at IS NULL AND ` + NonImportedLeadSQL
+
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
 const (
-	nonImportedLeadSQL        = "NOT starts_with(COALESCE(l.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "')"
-	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d AND ` + nonImportedLeadSQL
-	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d AND ` + nonImportedLeadSQL
+	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d AND ` + NonImportedLeadSQL
+	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d AND ` + NonImportedLeadSQL
 )
 
 // countWeekLeads counts how the week's inbound leads were answered.
@@ -146,22 +164,20 @@ func countWeekLeads(
 		return 0, 0, 0, err
 	}
 	scope = orUnbounded(scope)
-	// One window expression, three counts over it.
-	const arrived = `COALESCE(l.routed_at, l.created_at) >= $%[1]d
-		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d AND ` + nonImportedLeadSQL
+	// One cohort, three counts over it.
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+` AND (%[4]s)),
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+` AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+`
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+`
 		      AND `+responseRecordedInWeekSQL+`
 		      AND (%[4]s)),
 		  (SELECT count(*) FROM lead l
-		    WHERE l.owner_id = $%[3]d AND l.archived_at IS NULL
-		      AND `+arrived+`
+		    WHERE l.owner_id = $%[3]d
+		      AND `+leadArrivedInWeekSQL+`
 		      AND `+breachRecordedInWeekSQL+` AND (%[4]s))`,
 		startPos, endPos, userPos, scope), args...).
 		Scan(&routed, &answered, &breached)
@@ -195,29 +211,27 @@ func countWeekLeads(
 // by the member. A task merely sharing an account does not prove an outcome.
 // Only tasks created from the meeting before the week closed count.
 //
-// meetingIsTheirsSQL is the one spelling of "this meeting is that rep's":
-// hosted by them, or — where no host was recorded — filed by them.
+// meetingIsTheirsSQL is "this meeting is that rep's" for the weekly figures:
+// the meeting credit rule analytics counts by, over alias `m`. Filing a
+// meeting, importing a copy, or an invitation nobody accepted credits nobody.
+// A meeting two reps attended is in both their weeks: both spent the time.
 //
-// THREE readers ask it, the headline count here, the funnel in
-// weeklyscorecard.go and the coverage in weeklycoverage.go, and they must not
-// disagree: a meeting credited to different contacts by two panels is one page
-// contradicting itself about the same week. The caller supplies its own
-// placeholders because the queries number their arguments differently.
-//
-// The fallback is bounded to rows with NO host on purpose. A meeting naming one
-// is that contact's, and letting its recorder also claim it would count one
-// meeting twice across two reps.
-//
-// A row that names a source author is excluded from the fallback: an import
-// writes another system's history, and its recorder is whoever ran the import.
-// Such a row with no host names an author with no seat here, so nobody here
-// held it (activities.meetingHost).
+// Three readers ask it: the headline count here, the funnel in
+// weeklyscorecard.go and the coverage in weeklycoverage.go. Plan capacity asks
+// the wider responsibility rule instead, because an unanswered invitation
+// still holds the time.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
-func meetingIsTheirsSQL(hostPos, capturedPos string) string {
-	return fmt.Sprintf("(m.host_user_id = %s OR (m.host_user_id IS NULL AND m.captured_by = %s"+
-		" AND m.source_author_id IS NULL AND m.source_author_name IS NULL))",
-		hostPos, capturedPos)
+func meetingIsTheirsSQL(seat string) string {
+	return storekit.MeetingCreditSQL("m", seat)
+}
+
+// NextStepTaskSQL is "task is a next step recorded from meeting": a live task
+// made from it once the meeting began (occurredday.StartSQL). Each caller adds
+// its own upper bound and scope.
+func NextStepTaskSQL(task, meeting string) string {
+	return task + ".source_activity_id = " + meeting + ".id AND " + task + ".kind = 'task' AND " +
+		task + ".archived_at IS NULL AND " + task + ".created_at >= " + occurredday.StartSQL(meeting)
 }
 
 func countWeekMeetings(
@@ -226,7 +240,6 @@ func countWeekMeetings(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos := arg(start), arg(end)
-	capturedPos := arg("human:" + userID.String())
 	hostPos := arg(userID)
 	scope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
@@ -242,8 +255,8 @@ func countWeekMeetings(
 	// form counted none of a rep's synced meetings in their own review.
 	heldByRep := `m.kind = 'meeting' AND m.archived_at IS NULL
 		      AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
-		      AND ` + meetingIsTheirsSQL("$%[5]d", "$%[3]d") + `
-		      AND m.occurred_at >= $%[1]d AND m.occurred_at < $%[2]d
+		      AND ` + meetingIsTheirsSQL("$%[3]d") + `
+		      AND ` + occurredday.WithinSQL("m", "$%[1]d", "$%[2]d") + `
 		      AND (%[4]s)`
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
@@ -251,11 +264,9 @@ func countWeekMeetings(
 		  (SELECT count(*) FROM activity m WHERE `+heldByRep+`
 		      AND EXISTS (
 		        SELECT 1 FROM activity task
-		         WHERE task.source_activity_id = m.id AND task.kind = 'task'
-		           AND task.archived_at IS NULL
-		           AND task.created_at >= m.occurred_at
-		           AND task.created_at < $%[2]d AND (%[6]s)))`,
-		startPos, endPos, capturedPos, scope, hostPos, taskScope), args...).
+		         WHERE %[6]s
+		           AND task.created_at < $%[2]d AND (%[5]s)))`,
+		startPos, endPos, hostPos, scope, taskScope, NextStepTaskSQL("task", "m")), args...).
 		Scan(&held, &withNextStep)
 	if err != nil {
 		return 0, 0, fmt.Errorf("weekly: counting the week's meetings: %w", err)

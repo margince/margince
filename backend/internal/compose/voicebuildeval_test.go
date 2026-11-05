@@ -78,7 +78,7 @@ func TestScoreVoiceCandidateActivationPolicy(t *testing.T) {
 	}
 
 	t.Run("routine pass auto-activates", func(t *testing.T) {
-		result := scoreVoiceCandidate(artifact, goodDrafts(0.8), 0, true, nil)
+		result := voiceCopyFor("en").scoreVoiceCandidate(artifact, goodDrafts(0.8), 0, true, nil)
 		if result.Action != "auto_activated" || result.StatusCode != "" || result.Classification != "routine" {
 			t.Fatalf("result = %+v", result)
 		}
@@ -96,17 +96,17 @@ func TestScoreVoiceCandidateActivationPolicy(t *testing.T) {
 			}},
 			Evaluation: map[string]any{"candidate_median_voice_score": 0.7},
 		}
-		result := scoreVoiceCandidate(artifact, goodDrafts(0.8), 0, true, predecessor)
+		result := voiceCopyFor("en").scoreVoiceCandidate(artifact, goodDrafts(0.8), 0, true, predecessor)
 		if result.Action != "review_required" || result.Classification != "material" || result.StatusCode != "" {
 			t.Fatalf("result = %+v", result)
 		}
-		if len(result.ReviewReasons) == 0 {
+		if len(result.Reasons) == 0 {
 			t.Fatal("a material candidate must say why it needs review")
 		}
 	})
 
 	t.Run("hard failures are a quality regression", func(t *testing.T) {
-		result := scoreVoiceCandidate(artifact, goodDrafts(0.8), 3, true, nil)
+		result := voiceCopyFor("en").scoreVoiceCandidate(artifact, goodDrafts(0.8), 3, true, nil)
 		if result.Action != "review_required" || result.StatusCode != "quality_regression" {
 			t.Fatalf("result = %+v", result)
 		}
@@ -123,14 +123,14 @@ func TestScoreVoiceCandidateActivationPolicy(t *testing.T) {
 			}},
 			Evaluation: map[string]any{"candidate_median_voice_score": 0.9},
 		}
-		result := scoreVoiceCandidate(artifact, goodDrafts(0.7), 0, true, predecessor)
+		result := voiceCopyFor("en").scoreVoiceCandidate(artifact, goodDrafts(0.7), 0, true, predecessor)
 		if result.Action != "review_required" || result.StatusCode != "quality_regression" {
 			t.Fatalf("result = %+v", result)
 		}
 	})
 
 	t.Run("low median never activates", func(t *testing.T) {
-		result := scoreVoiceCandidate(artifact, goodDrafts(0.3), 0, true, nil)
+		result := voiceCopyFor("en").scoreVoiceCandidate(artifact, goodDrafts(0.3), 0, true, nil)
 		if result.Action != "review_required" || result.StatusCode != "quality_regression" {
 			t.Fatalf("result = %+v", result)
 		}
@@ -208,7 +208,7 @@ func TestEvaluateVoiceCandidateScoresHeldOutDrafts(t *testing.T) {
 		Inference: ai.VoiceInference{IdentitySummary: "direct"},
 	}
 	brain := &scriptedEvalBrain{judgeScore: 0.9}
-	result, err := evaluateVoiceCandidate(context.Background(), brain, artifact, "", heldOut, nil)
+	result, err := voiceCopyFor("en").evaluateVoiceCandidate(context.Background(), brain, artifact, "", heldOut, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestADemonstrationDraftStandsInWhereNothingCouldBeHeldOut(t *testing.T) {
 	}
 	brain := &scriptedEvalBrain{judgeScore: 0.9}
 
-	result, err := evaluateVoiceCandidate(context.Background(), brain, artifact, "", heldOut, nil)
+	result, err := voiceCopyFor("en").evaluateVoiceCandidate(context.Background(), brain, artifact, "", heldOut, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +283,7 @@ func TestEvaluateVoiceCandidatePropagatesBudgetExhaustion(t *testing.T) {
 	samples := evalSamples(8)
 	heldOut, buildSamples := splitVoiceHeldOut(samples, "hash-b")
 	artifact := ai.VoiceArtifact{Markdown: "# Voice DNA", Stats: ai.AnalyzeVoice(buildSamples)}
-	_, err := evaluateVoiceCandidate(context.Background(), &scriptedEvalBrain{judgeScore: 0.9, budgetAt: 2},
+	_, err := voiceCopyFor("en").evaluateVoiceCandidate(context.Background(), &scriptedEvalBrain{judgeScore: 0.9, budgetAt: 2},
 		artifact, "", heldOut, nil)
 	if !errors.Is(err, ai.ErrBudgetDeferred) {
 		t.Fatalf("err = %v, want the budget sentinel to survive wrapping", err)

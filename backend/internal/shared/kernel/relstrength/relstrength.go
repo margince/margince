@@ -62,8 +62,14 @@ const (
 // workspace score and the per-colleague one — and this package does not
 // second-guess it.
 type Inputs struct {
-	// LastInteraction is nil when there has never been one.
-	LastInteraction *time.Time
+	// LastTouch is the newest interaction of either direction, nil when there
+	// has never been one.
+	LastTouch *time.Time
+	// LastEngaged is the newest interaction the contact took part in: a
+	// message they sent, or a meeting or call that took place. Recency counts
+	// from it, so our own unanswered send does not refresh it. Nil when they
+	// never took part.
+	LastEngaged *time.Time
 	// Count90d is every qualifying interaction in the window; Inbound90d and
 	// Outbound90d are the directed subset. They are not required to sum to
 	// Count90d: an interaction with no recorded direction counts toward
@@ -71,6 +77,13 @@ type Inputs struct {
 	Count90d    int
 	Inbound90d  int
 	Outbound90d int
+	// LateCount90d is the part of Count90d after LastEngaged, all of it when
+	// LastEngaged is nil; LateOutbound90d is its outbound part. Nothing the
+	// contact did not answer counts toward the score: an unanswered send moves
+	// neither frequency nor reciprocity. They stay in the counts a surface
+	// prints.
+	LateCount90d    int
+	LateOutbound90d int
 }
 
 // Score is the explainable output: the 0–100 number, its band, and the three
@@ -91,30 +104,43 @@ type Score struct {
 // every read instead of storing it — and it is why callers pass `now` rather
 // than the package calling time.Now itself.
 func Compute(in Inputs, now time.Time) Score {
-	if in.LastInteraction == nil {
+	if in.LastTouch == nil {
 		return Score{Bucket: BucketNone}
 	}
-	days := now.Sub(*in.LastInteraction).Hours() / 24
-	if days < 0 {
-		// A clock skew, or an interaction recorded as happening later today.
-		// Clamped rather than allowed to amplify recency above 1.
-		days = 0
-	}
 	var s Score
-	s.Recency = math.Exp2(-days / HalfLifeDays)
-	s.Frequency = math.Min(1.0, float64(in.Count90d)/FreqSaturation)
+	s.Recency = recency(in.LastEngaged, now)
+	count := max(in.Count90d-in.LateCount90d, 0)
+	outbound := max(in.Outbound90d-in.LateOutbound90d, 0)
+	s.Frequency = math.Min(1.0, float64(count)/FreqSaturation)
 	// Reciprocity rewards a two-way exchange and floors a one-way one. The
-	// floor is what keeps a hundred unanswered sends from scoring as a
-	// relationship while still admitting that they happened.
-	directed := in.Inbound90d + in.Outbound90d
+	// floor keeps a hundred unanswered sends from scoring as a relationship,
+	// and still admits that they happened. Recency counts only from the
+	// contact's own part for the same reason. A send of ours they did not
+	// answer is no sign the relationship is warm.
+	directed := in.Inbound90d + outbound
 	balance := 0.0
 	if directed > 0 {
-		balance = 1 - math.Abs(float64(in.Inbound90d-in.Outbound90d))/float64(directed)
+		balance = 1 - math.Abs(float64(in.Inbound90d-outbound))/float64(directed)
 	}
 	s.Reciprocity = ReciprocityFloor + (1-ReciprocityFloor)*balance
 	s.Strength = int(math.Round(100 * s.Recency * s.Frequency * s.Reciprocity))
 	s.Bucket = bucketFor(s.Strength)
 	return s
+}
+
+// recency halves every HalfLifeDays since the contact last took part. A
+// contact who never took part has none: only our sends, which band weak.
+func recency(lastEngaged *time.Time, now time.Time) float64 {
+	if lastEngaged == nil {
+		return 0
+	}
+	days := now.Sub(*lastEngaged).Hours() / 24
+	if days < 0 {
+		// A clock skew, or an interaction recorded as happening later today.
+		// Clamped rather than allowed to amplify recency above 1.
+		days = 0
+	}
+	return math.Exp2(-days / HalfLifeDays)
 }
 
 // bucketFor bands a computed score.

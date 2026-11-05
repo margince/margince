@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"sort"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // arcGapDays is the silence that closes a moment. Three weeks is long enough
@@ -40,8 +38,8 @@ const arcEvidenceCap = 3
 
 // ArcMoment is a stretch of the relationship, with the conversations it holds.
 type ArcMoment struct {
-	From    time.Time
-	To      time.Time
+	From    Occurred
+	To      Occurred
 	Title   string
 	Threads []thread
 	// Score is why this moment survived, kept for the ranking's own tests.
@@ -49,14 +47,14 @@ type ArcMoment struct {
 }
 
 // clusterThreads groups threads into moments by the silences between them.
-func clusterThreads(threads []thread) []ArcMoment {
+func clusterThreads(threads []thread, loc *time.Location) []ArcMoment {
 	var moments []ArcMoment
 	for _, current := range threads {
 		if len(moments) > 0 {
 			open := &moments[len(moments)-1]
-			if elapsed.Days(open.To, current.First) <= arcGapDays {
+			if open.To.daysUntil(current.First, loc) <= arcGapDays {
 				open.Threads = append(open.Threads, current)
-				if current.Last.After(open.To) {
+				if current.Last.At.After(open.To.At) {
 					open.To = current.Last
 				}
 				continue
@@ -75,7 +73,7 @@ func rankMoments(moments []ArcMoment, in Input) []ArcMoment {
 	sources := claimSourceIDs(in)
 	scored := make([]ArcMoment, 0, len(moments))
 	for _, moment := range moments {
-		moment.Score = scoreMoment(moment, sources, in.Now)
+		moment.Score = scoreMoment(moment, sources, in.Now, in.Zone)
 		moment.Title = titleOf(moment)
 		scored = append(scored, moment)
 	}
@@ -84,13 +82,13 @@ func rankMoments(moments []ArcMoment, in Input) []ArcMoment {
 			return scored[i].Score > scored[j].Score
 		}
 		// A tie goes to the more recent: same weight, fresher bearing.
-		return scored[i].To.After(scored[j].To)
+		return scored[i].To.At.After(scored[j].To.At)
 	})
 	if len(scored) > arcCap {
 		scored = scored[:arcCap]
 	}
 	sort.SliceStable(scored, func(i, j int) bool {
-		return scored[i].From.Before(scored[j].From)
+		return scored[i].From.At.Before(scored[j].From.At)
 	})
 	return scored
 }
@@ -117,7 +115,7 @@ func claimSourceIDs(in Input) map[string]bool {
 // is the exact failure the ranking exists to prevent, so the signals are asked
 // as questions about the moment — was something agreed here, did we meet, is
 // this on the deal, did they reply — and each answers once.
-func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time) int {
+func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time, loc *time.Location) int {
 	var agreed, met, onDeal, twoWay bool
 	for _, current := range moment.Threads {
 		for _, id := range current.IDs {
@@ -147,7 +145,7 @@ func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time) 
 		// They wrote back. A thread nobody answered is us talking.
 		score++
 	}
-	switch days := elapsed.Days(moment.To, now); {
+	switch days := moment.To.daysAgo(now, loc); {
 	case days <= 30:
 		score += 3
 	case days <= 90:
@@ -200,7 +198,7 @@ func accountArc(in Input) []ArcMoment {
 	if len(in.History) == 0 {
 		return nil
 	}
-	moments := rankMoments(clusterThreads(threadsOf(in.History)), in)
+	moments := rankMoments(clusterThreads(threadsOf(in.History), in.Zone), in)
 	kept := make([]ArcMoment, 0, len(moments))
 	for _, moment := range moments {
 		if readableIDs(moment) == nil {
@@ -230,24 +228,19 @@ func readableIDs(moment ArcMoment) []string {
 }
 
 // arcSummary is the moment's one line: how much happened, over what stretch.
-func arcSummary(moment ArcMoment, conversations int) string {
-	span := formatDay(moment.From)
-	if formatDay(moment.To) != span {
-		span = fmt.Sprintf("%s–%s", span, formatDay(moment.To))
+func (said briefCopy) arcSummary(moment ArcMoment, conversations int) string {
+	span := moment.From.At.UTC().Format(time.DateOnly)
+	if end := moment.To.At.UTC().Format(time.DateOnly); end != span {
+		span += "–" + end
 	}
 	if moment.Title == "" {
-		return fmt.Sprintf("%s: %s.", span, plural(conversations, "conversation"))
+		if conversations == 1 {
+			return fmt.Sprintf(said.Say(arcWords.One), span)
+		}
+		return fmt.Sprintf(said.Say(arcWords.Many), span, conversations)
 	}
-	return fmt.Sprintf("%s: %s, on %s.", span, plural(conversations, "conversation"), moment.Title)
-}
-
-func formatDay(at time.Time) string {
-	return at.UTC().Format("2 Jan")
-}
-
-func plural(count int, noun string) string {
-	if count == 1 {
-		return fmt.Sprintf("1 %s", noun)
+	if conversations == 1 {
+		return fmt.Sprintf(said.Say(arcWords.OneTitle), span, moment.Title)
 	}
-	return fmt.Sprintf("%d %ss", count, noun)
+	return fmt.Sprintf(said.Say(arcWords.ManyTitle), span, conversations, moment.Title)
 }

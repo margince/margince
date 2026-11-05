@@ -48,6 +48,16 @@ func freezeScope(
 	rows []forecasting.Contribution,
 ) ids.UUID {
 	t.Helper()
+	return freezeScopeIn(ctx, t, e, at, scope, nil, rows)
+}
+
+// freezeScopeIn is freezeScope for one pipeline's snapshot. A snapshot cannot
+// be moved to a pipeline after it is taken.
+func freezeScopeIn(
+	ctx context.Context, t *testing.T, e *Env, at time.Time, scope forecasting.Scope,
+	pipeline *ids.UUID, rows []forecasting.Contribution,
+) ids.UUID {
+	t.Helper()
 	store := forecasting.NewStore(compose.InstallationDB(e.Pool))
 	var id ids.UUID
 	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
@@ -58,7 +68,7 @@ func freezeScope(
 		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
 			Period: period, Scope: scope,
 			Trigger: forecasting.TriggerRecheck, BaseCurrency: base,
-			Readings: forecasting.Readings{Contributions: rows}, TakenAt: at,
+			Readings: forecasting.Readings{Contributions: rows}, TakenAt: at, PipelineID: pipeline,
 		})
 		return err
 	}); err != nil {
@@ -154,8 +164,21 @@ func TestForecastReadingsListsTheResolvedScopesSnapshotsAndRefusesAWiderOne(t *t
 	}
 
 	_, err = registry.Invoke(ctx, "forecast_readings",
+		json.RawMessage(`{"as_of":"2037-02-14","scope_kind":"owner","scope_id":"`+e.Rep3.String()+`"}`))
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a rep naming a colleague got %v, want ErrNotFound", err)
+	}
+
+	out, err = registry.Invoke(ctx, "forecast_readings",
 		json.RawMessage(`{"as_of":"2037-02-14","scope_kind":"workspace"}`))
-	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a rep naming the workspace got %v, want ErrPermissionDenied", err)
+	if err != nil {
+		t.Fatalf("a rep naming the workspace was refused its totals: %v", err)
+	}
+	var wide readingSnapshots
+	if err := json.Unmarshal(out, &wide); err != nil {
+		t.Fatal(err)
+	}
+	if got := wide.Data.Snapshots; len(got) != 0 {
+		t.Fatalf("a rep naming the workspace was handed snapshots %+v, want none: they assert the workspace", got)
 	}
 }

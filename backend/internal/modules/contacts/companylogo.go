@@ -108,6 +108,9 @@ func (s *Store) SetCompanyLogo(ctx context.Context, id ids.CompanyID, objectKey,
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)
+		if err := handOverLogoKeys(ctx, tx, supersededKey, &objectKey); err != nil {
+			return err
+		}
 		return recordLogoWrite(ctx, tx, id, LogoWide, resolvedLogoWrite(previousOrigin, originURL, by))
 	})
 	if err != nil {
@@ -209,7 +212,11 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, companyID
 	// What this confirmation left unreferenced: the mark the record wore before
 	// it, if it wore one. On the confirmation that CREATES the company there is
 	// none, which is why this stays nil for every onboarding read.
-	return supersededObject(previousKey, *objectKey), nil
+	superseded := supersededObject(previousKey, *objectKey)
+	if err := handOverLogoKeys(ctx, tx, superseded, objectKey); err != nil {
+		return nil, err
+	}
+	return superseded, nil
 }
 
 // supersededObject names the object this write orphaned, or nil when it
@@ -250,16 +257,14 @@ func (s *Store) LogoHeldByHuman(ctx context.Context, id ids.CompanyID) (bool, er
 // logoHeldByHuman reports whether a contact's own mark is on this company
 // in one slot right now.
 //
-// TWO questions, because the logo's provenance can outlive the logo. What holds
-// a read off is a mark a contact chose, not the fact that a contact once touched
-// the field: someone who REMOVES a logo has asked for the record to have none,
-// and leaving their removal standing as a hold would mean the company could
-// never be given a face again by any later read. So the field's own answer —
-// companyFieldHeldByHuman, shared with the description — is narrowed by whether
-// there is a mark in the slot at all. The description needs no such arm: its
-// column and its provenance move together.
+// Two questions, because the logo's provenance can outlive the logo. What holds
+// a read off is a mark a user or their agent chose, not a past touch of the field.
+// Someone who removes a logo has asked for the record to have none. Treating that
+// as a hold would keep any later read from giving the company a face.
+// So companyFieldHeldByAUser is narrowed by whether the slot holds a mark.
+// The description needs no such arm: its column and its provenance move together.
 func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.CompanyID, slot LogoSlot) (bool, error) {
-	human, err := companyFieldHeldByHuman(ctx, tx, id, slot.field())
+	human, err := companyFieldHeldByAUser(ctx, tx, id, slot.field())
 	if err != nil || !human {
 		return false, err
 	}

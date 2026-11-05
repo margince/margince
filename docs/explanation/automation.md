@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/automation backend/internal/compose/workflows.go -->
 # Automation: the closed catalog and its trigger runtime
 
 `internal/modules/automation` lets a workspace turn on, and set values for, a **fixed** set of
@@ -18,8 +19,8 @@ An automation is a **handler** (the code) that a workspace turns on as an **inst
 
 ```text
 EVENT TRIGGER                                   CLOCK TRIGGER
-domain write → outbox → relay → Redis           River dispatcher `time_scan`
-  → cg:workflows → WorkflowEngine.HandleEvent      → one `time_scan_workspace` job per workspace
+domain write → outbox → relay → Redis           River fleet job `time_scan`
+  → cg:workflows → WorkflowEngine.HandleEvent      → one pass per live workspace, in that job
         │ once per enabled instance                → ScanWorkspace: stale candidates (ActivityScan seam)
         │                                          → synthesize one workflow.Event per candidate
         └───────────────┬──────────────────────────────────┘
@@ -153,14 +154,14 @@ across workspaces to guard against.
     `Spec().Trigger.EventType` matches. It runs once per **turned on instance** in the event's
     workspace, and the instance's `params` go with the event into `Plan`.
   - `cmd/worker` is the only reader of `cg:workflows`.
-- **Clock triggers** have no event to come in on. The `time_scan` dispatcher lists the fleet and queues
-  one `time_scan_workspace` job per live workspace.
+- **Clock triggers** have no event to come in on. One `time_scan` job runs for the whole fleet. It lists
+  the live workspaces and runs the pass for each one in turn.
   - `TimeScanner.ScanWorkspace` (`timescan.go`) runs the pass for that tenant against an **injected clock**.
     It reads each clock automation's candidates through a seam: `ActivityScan` for handlers on the last
     touch, and `DateFieldScan` for the custom date field of `renewal_reminder`.
   - It makes a `workflow.Event` per candidate, and hands each to `runOne`. A workspace whose pass fails
-    fails its own job row. It does not turn into a log line inside a run that River recorded as
-    completed.
+    does not stop the rest. The job still runs every workspace, then fails and names each one that
+    failed. So a failure never turns into a log line inside a run that River recorded as completed.
 
 ## The occurrence key and the trap it avoids
 
@@ -210,6 +211,10 @@ plain error while a human can still see and fix it, not days later in run histor
 request body. The only way to reach the gate with a `NULL` owner is the trusted path that seeds the
 system.
 
+## A rule an agent set up
+
+A rule names the passport of the agent that created or enabled it, in `setter_passport_id`. `runOne` reads that passport before it matches and again before it claims the run. If the passport is revoked, the rule pauses with the reason `passport_revoked`, its owner gets a notice, and the firing does not run. A user enabling or editing the rule clears the setter, so no passport stands behind it. Its owner stays who it was. A seeded rule never names a setter.
+
 ## The actor and context boundary of a run
 
 Every firing runs under a **principal context made for it**, with no HTTP request or signed in user
@@ -248,11 +253,19 @@ They never differ by anything a caller can set.
 
 ## The confirm-first staging path
 
-Take a handler whose `Plan` sends a 🟡 executor kind (`request_approval`, `send_email`, `advance_deal` to
-`won` or `lost`), or `assign_owner` at scale. It does not run the effect. `ApplyActions` stages it through
-the `Approvals` seam and makes a real approval row. `runOne` parks the run in `requires_approval`, with
-the approval id on its `detail` column. The staged effect lands later, through the redeem path for
-approvals.
+A handler can ask for a decision, stage an owner change at scale, or hold a drafted message for
+review. `ApplyActions` stages the request through the `Approvals` seam. `runOne` parks the run in
+`requires_approval`, with the approval id in its `detail` column.
+
+`request_approval` uses the `emit_flow_event` executor. Its payload has a `question` with text
+and an optional `reason`. The reader also accepts a stored `note` as the question, but refuses an
+empty payload, conflicting questions or unknown fields. A target stage and other mutation
+fields are not a question to confirm. The summary names the question in the installation's
+base language; the card shows the full question, reason and the effect of the answer.
+
+Approving this request records the answer and completes the waiting run. It does not authorize a
+record change or a message send. Other staged kinds run their own release executor, which completes
+the run after its effect has been applied.
 
 If the approval is **rejected**, the engine's own reader of `approval.decided` moves the parked run to a
 final `blocked` (`engine_blocked.go`). It matches by structure on `detail->>'approval_id'`, so a change

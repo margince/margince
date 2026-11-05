@@ -1,0 +1,44 @@
+[
+  {
+    "name": "partial final day",
+    "at": "2025-01-01T22:30:00Z",
+    "now": "2025-03-12T10:00:00Z",
+    "zone": "Europe/Berlin",
+    "days": 70
+  },
+  {
+    "name": "midnight in the east",
+    "at": "2026-06-10T16:55:00Z",
+    "now": "2026-06-10T17:05:00Z",
+    "zone": "Asia/Bangkok",
+    "days": 1
+  },
+  {
+    "name": "same instants west of UTC",
+    "at": "2026-06-10T16:55:00Z",
+    "now": "2026-06-10T17:05:00Z",
+    "zone": "America/Los_Angeles",
+    "days": 0
+  },
+  {
+    "name": "spring forward",
+    "at": "2026-03-28T11:00:00Z",
+    "now": "2026-03-29T10:00:00Z",
+    "zone": "Europe/Berlin",
+    "days": 1
+  },
+  {
+    "name": "fall back",
+    "at": "2026-10-24T10:00:00Z",
+    "now": "2026-10-25T11:00:00Z",
+    "zone": "Europe/Berlin",
+    "days": 1
+  },
+  {
+    "name": "same long day",
+    "at": "2026-10-24T22:00:00Z",
+    "now": "2026-10-25T22:30:00Z",
+    "zone": "Europe/Berlin",
+    "days": 0
+  }
+]

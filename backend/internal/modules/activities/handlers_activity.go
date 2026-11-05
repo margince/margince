@@ -15,22 +15,28 @@ import (
 
 func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params crmcontracts.ListActivitiesParams) {
 	in := ListActivitiesInput{
-		Cursor:          params.Cursor,
-		Limit:           params.Limit,
-		Sort:            params.Sort,
-		Query:           params.Q,
-		ThreadKey:       params.ThreadKey,
-		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
-		AssigneeID:      idArg[ids.UserKind](params.AssigneeId),
-		WithinProjectID: idArg[ids.ProjectKind](params.ProjectId),
-		OccurredAfter:   params.OccurredAfter,
-		OccurredBefore:  params.OccurredBefore,
+		Cursor:           params.Cursor,
+		Limit:            params.Limit,
+		Sort:             params.Sort,
+		Query:            params.Q,
+		ThreadKey:        params.ThreadKey,
+		SourceActivityID: idArg[ids.ActivityKind](params.SourceActivityId),
+		IncludeArchived:  params.IncludeArchived != nil && *params.IncludeArchived,
+		AssigneeID:       idArg[ids.UserKind](params.AssigneeId),
+		WithinProjectID:  idArg[ids.ProjectKind](params.ProjectId),
+		OccurredAfter:    params.OccurredAfter,
+		OccurredBefore:   params.OccurredBefore,
+		CustomFilters:    httperr.CustomFieldFilters(r),
 	}
 	if params.Kind != nil {
 		k := string(*params.Kind)
 		in.Kind = &k
 	}
 	in.ChannelProvider = params.ChannelProvider
+	if params.CallOutcome != nil {
+		outcome := string(*params.CallOutcome)
+		in.CallOutcome = &outcome
+	}
 	if err := httperr.RequirePair("entity_type", params.EntityType,
 		"entity_id", params.EntityId); err != nil {
 		httperr.Write(w, r, err)
@@ -45,6 +51,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		in.EntityID = &id
 	}
 	in.WaitingReply = params.WaitingReply != nil && *params.WaitingReply
+	in.RemindersDue = params.ReminderDue != nil && *params.ReminderDue
 
 	activities, page, err := h.store.ListActivities(r.Context(), in)
 	if err != nil {
@@ -75,6 +82,10 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	// A caller who NAMES an invited colleague as a new task's assignee is
 	// allowed to; automatic writers never pass through here.
 	in.invitedAssignee = req.AssigneeId != nil
+	in.LinksFromRequest = true
+	if in.FollowUpTask != nil {
+		in.FollowUpTask.invitedAssignee = req.FollowUpTask.AssigneeId != nil
+	}
 
 	activity, created, err := h.store.LogActivity(r.Context(), in)
 	if err != nil {
@@ -96,4 +107,14 @@ func (h Handlers) GetActivity(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, activity)
+}
+
+// ListLatestInbound serves a record page what it leads its Next bar with.
+func (h Handlers) ListLatestInbound(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLatestInboundParams) {
+	list, err := h.store.LatestInbound(r.Context(), string(params.EntityType), ids.UUID(params.EntityId))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, list)
 }

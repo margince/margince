@@ -5,5 +5,7 @@ package attention
 
 // Retained for public-contract and saved-snapshot compatibility. New worklists
 // admit tasks and waiting messages rather than bare lead records.
-const sourceLeadResponse = "lead_response"
-const categoryLeads = "leads"
+const (
+	sourceLeadResponse = "lead_response"
+	categoryLeads      = "leads"
+)

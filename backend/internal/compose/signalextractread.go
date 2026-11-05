@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -66,6 +67,7 @@ const (
 
 // threadMessage is one message of a conversation as the prompt sees it.
 type threadMessage struct {
+	Parties   []commitmentParty
 	ID        ids.UUID
 	Direction string
 	Subject   string
@@ -78,11 +80,14 @@ type threadMessage struct {
 	// identically, and the reading is drawn from the head either way. The
 	// remainder is the half that says which happened, and how far the model's
 	// view of the exchange falls short of it.
-	UnreadRunes int
+	UnreadRunes     int
+	QuotedRemainder bool
 	// OffThread is the kind of an answer of ours from outside the thread
 	// (email, call or meeting), shown to the settlement model as such. Empty
 	// for a message of the thread itself.
 	OffThread string
+	// Incomplete is a body the mail parser did not decode in full.
+	Incomplete bool
 }
 
 // settledThread is one conversation due for a read, with the account it
@@ -117,6 +122,11 @@ type settledThread struct {
 	// the window it chose is the only thing that knows.
 	ReadFromNow   *time.Time
 	ReadFromIDNow *ids.UUID
+	// Oldest and OldestID are the thread's own lower end as the queue measured
+	// it: the pair threadHasMoved holds the cursor against. Nil outside the
+	// queue, where no cursor is written.
+	Oldest   *time.Time
+	OldestID *ids.UUID
 	// PrivateTo is the one reader this conversation answers to, or the zero
 	// value when every message on it is workspace-readable.
 	//
@@ -127,6 +137,64 @@ type settledThread struct {
 	// disclose exactly what the private contact protects.
 	PrivateTo ids.UUID
 	Messages  []threadMessage
+	// Focus is set on the second reading of one pass: the only messages whose
+	// events it may report. The rest of Messages is context. Empty is the
+	// ordinary reading.
+	Focus []ids.UUID
+	// Recorded is what the first reading of the pass found, which the second
+	// reading is told so it reports none of it again.
+	Recorded []extractedEvent
+	// EventCap is how many events this reading may report; zero is
+	// extractMaxEvents. The second reading gets what the first left.
+	EventCap int
+}
+
+// messageLabel names a message in the prompt by its place, m1 for the oldest
+// shown. A small model copies a short label it was given. It garbles a long id,
+// and the fence tag beside it is an id of the same shape.
+func (t settledThread) messageLabel(id string) string {
+	for i, message := range t.Messages {
+		if message.ID.String() == id {
+			return "m" + strconv.Itoa(i+1)
+		}
+	}
+	return id
+}
+
+// messageID is the id a reply's label names. A string that is no label of
+// this thread stays as written, for the validator to refuse.
+func (t settledThread) messageID(label string) string {
+	for i, message := range t.Messages {
+		if label == "m"+strconv.Itoa(i+1) {
+			return message.ID.String()
+		}
+	}
+	return label
+}
+
+func (t settledThread) eventCap() int {
+	if t.EventCap > 0 {
+		return t.EventCap
+	}
+	return extractMaxEvents
+}
+
+// firstReadHere reports whether this pass is the first to read the message:
+// newer than the last read reached, or older than where it started. Both ends,
+// as in threadMessages, because a conversation grows at both.
+func (t settledThread) firstReadHere(m threadMessage) bool {
+	if t.ReadTo == nil {
+		return true
+	}
+	// Not After: newly imported mail can share the ReadTo instant, and a message
+	// already read at that instant is cited or harmlessly re-judged.
+	if !m.At.Before(*t.ReadTo) {
+		return true
+	}
+	if t.ReadFrom == nil || t.ReadFromID == nil {
+		return false
+	}
+	return m.At.Before(*t.ReadFrom) || (m.At.Equal(*t.ReadFrom) && m.ID.String() < t.ReadFromID.String())
 }
 
 // dueThreads lists the conversations that have settled and have moved since
@@ -176,8 +244,9 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		var privateTo *ids.UUID
 		if err := rows.Scan(&thread.Key, &thread.CompanyID,
 			&thread.Newest, &thread.Count, &privateTo,
-			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID); err != nil {
-			return nil, err
+			&thread.ReadTo, &thread.ReadFrom, &thread.ReadFromID,
+			&thread.Oldest, &thread.OldestID); err != nil {
+			return nil, fmt.Errorf("read a thread due for a read: %w", err)
 		}
 		if privateTo != nil {
 			thread.PrivateTo = *privateTo
@@ -185,7 +254,7 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		due = append(due, thread)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list the threads due for a read: %w", err)
 	}
 	for i := range due {
 		messages, err := threadMessages(ctx, tx, &due[i])

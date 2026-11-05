@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,20 +53,12 @@ func EncodeCursor(createdAt time.Time, id ids.UUID) (string, error) {
 	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id})
 }
 
-// SweepCursor is a position in a walk across SEVERAL streams: which stream the
-// page stopped in, and where inside that stream it stopped.
+// SweepCursor is a position in one of several streams: which stream the page
+// stopped in, and where inside that stream it stopped.
 //
-// A walk with no ordering to interleave its streams by — a search across
-// record types, whose rows carry no common rank — can still be resumed if the
-// token says both. The stream alone would restart it; the inner position alone
-// would not say what it indexes into.
-//
-// Both providers that sweep mint this ONE token, rather than a shape each:
-// what a caller pages with must not depend on which system of record answered
-// them, and two codecs for one wire value drift the first time either changes.
-// The inner half stays opaque here — a keyset token on one side, an incumbent
-// mirror's own cursor on the other — because this type carries a position, not
-// a meaning.
+// The stream half lets a reader refuse a token minted for another stream
+// rather than resume a keyset in the wrong table. The inner half stays opaque
+// here, because this type carries a position, not a meaning.
 type SweepCursor struct {
 	Stream string `json:"s"`
 	Inner  string `json:"c"`
@@ -141,6 +134,28 @@ func DecodeCursor(token string) (Cursor, error) {
 	return c, nil
 }
 
+// DecodeIDCursor reads the cursor of a page Query.SelectPage walks: the last id
+// of the page before. An empty token reads the first page.
+func DecodeIDCursor(token string) (*ids.UUID, error) {
+	if token == "" {
+		return nil, nil //nolint:nilnil // no cursor is the first page, the after SelectPage reads as nil
+	}
+	after, err := ids.Parse(token)
+	if err != nil {
+		return nil, &MalformedCursorError{}
+	}
+	return &after, nil
+}
+
+// IDPage is the Page that continues a Query.SelectPage answer, whose cursor
+// DecodeIDCursor reads back.
+func IDPage(matched []ids.UUID, more bool) Page {
+	if !more || len(matched) == 0 {
+		return Page{}
+	}
+	return Page{HasMore: true, NextCursor: matched[len(matched)-1].String()}
+}
+
 // SQLf keeps store-side SQL assembly lines readable; arguments are
 // always positional parameters or fixed identifiers, never user input.
 func SQLf(format string, a ...any) string { return fmt.Sprintf(format, a...) }
@@ -176,14 +191,9 @@ func QuickFindClause(pos int, nameExpr string) string {
 // Identifier is a record's identifier table — the addresses and domains contacts
 // paste in when they are not typing a name.
 //
-// Table is joined by FK to the row's own id, and Column is matched EXACTLY
-// against the lower-cased query. Both identifier tables store their values
-// lower-cased under a CHECK and carry a unique index on the value alone
-// (uq_contact_email_dedupe, uq_company_domain), so this arm is one index lookup.
-//
-// Exact, with no prefix arm: `LIKE 'x%'` is not reliably indexed under the
-// database's collation, and a search that silently reads the whole table is
-// worse than one that finds nothing.
+// Table is joined by FK to the row's own id, and Column stores lower-cased
+// values under a CHECK. The exact arm uses the unique index on the value. The
+// contains arm reads a trigram index on f_fold_apostrophes(lower(Column)).
 type Identifier struct {
 	Table  string
 	FK     string
@@ -207,18 +217,51 @@ func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	return "(" + clause + ")"
 }
 
-// The identifier tables of the two record types a pasted handle names. The
-// contact and company lists and the cross-object search all read them here.
+// The identifier columns of the record types a pasted handle names. The
+// contact, company and lead lists and the cross-object search all read them here.
 var (
 	ContactEmails  = Identifier{Table: "contact_email", FK: "contact_id", Column: "email"}
 	CompanyDomains = Identifier{Table: "company_domain", FK: "company_id", Column: "domain"}
+	LeadEmails     = Identifier{Table: "lead", FK: "id", Column: "email"}
 )
 
-// MatchSQL is true when a live identifier row of the record equals the query at
+// DomainTerm is the part of a pasted address after the "@", or the query as it
+// is when there is none. A company is found by its domain, so a sender's
+// address finds the account as readily as the bare domain does.
+func DomainTerm(q string) string {
+	if _, domain, found := strings.Cut(q, "@"); found && domain != "" {
+		return domain
+	}
+	return q
+}
+
+// ExactSQL is true when a live identifier row of the record equals the query at
 // pos. The ARRAY is built once, so the primary key joins the bitmap union over
 // the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
+// Ranking uses this arm for whole identifiers and PrefixSQL for typed address prefixes.
+func (id Identifier) ExactSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("%s = lower(btrim($%d))", id.Column, pos))
+}
+
+// ContainsSQL is true when a live identifier row of the record contains the
+// query at pos. It spells the expression the identifier's trigram index holds,
+// and escapes the query so `%` and `_` search for themselves.
+func (id Identifier) ContainsSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE '%%' || %s || '%%'",
+		id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
+}
+
+// PrefixSQL matches a literal identifier prefix using the same folding as discovery.
+func (id Identifier) PrefixSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE %s || '%%'", id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
+}
+
+// MatchSQL finds a record by a whole identifier or by a fragment of one.
 func (id Identifier) MatchSQL(pos int, idColumn string) string {
-	return fmt.Sprintf(`%[1]s = ANY (ARRAY(SELECT %[3]s FROM %[4]s
-	              WHERE archived_at IS NULL AND %[5]s = lower(btrim($%[2]d))))`,
-		idColumn, pos, id.FK, id.Table, id.Column)
+	return id.ExactSQL(pos, idColumn) + " OR " + id.ContainsSQL(pos, idColumn)
+}
+
+func (id Identifier) arraySQL(idColumn, predicate string) string {
+	return fmt.Sprintf(`%s = ANY (ARRAY(SELECT %s FROM %s
+	              WHERE archived_at IS NULL AND %s))`, idColumn, id.FK, id.Table, predicate)
 }

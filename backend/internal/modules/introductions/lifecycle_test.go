@@ -11,8 +11,10 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Permission to mention somebody is not a handshake. A product that let a
@@ -348,5 +350,64 @@ func TestEveryStatusIsCensused(t *testing.T) {
 		t.Errorf("EveryStatus() lists %v; the type declares %v — "+
 			"a status missing from the census is one every exhaustive check "+
 			"silently stops covering", censused, declared)
+	}
+}
+
+func TestEveryOriginIsCensused(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("listing the package: %v", err)
+	}
+	declared := map[Origin]bool{}
+	pattern := regexp.MustCompile(`Origin[A-Za-z]+ Origin = "([a-z_]+)"`)
+	for _, name := range files {
+		source, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatalf("reading %s: %v", name, err)
+		}
+		for _, m := range pattern.FindAllSubmatch(source, -1) {
+			declared[Origin(m[1])] = true
+		}
+	}
+	if len(declared) == 0 {
+		t.Fatal("no origin constants found — this gate has stopped reading its subject")
+	}
+	censused := map[Origin]bool{}
+	for _, o := range EveryOrigin() {
+		censused[o] = true
+	}
+	if !reflect.DeepEqual(censused, declared) {
+		t.Errorf("EveryOrigin() lists %v; the type declares %v", censused, declared)
+	}
+}
+
+func TestOnlyTheTwoColleaguesMayRecord(t *testing.T) {
+	for _, by := range []Actor{ActorIntroducer, ActorRequester} {
+		if err := MayRecord(by); err != nil {
+			t.Errorf("%s was refused: %v", by, err)
+		}
+	}
+	for _, by := range []Actor{ActorClock, ActorCapture, ""} {
+		if err := MayRecord(by); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%q may record (%v)", by, err)
+		}
+	}
+}
+
+func TestARecordingIsRefusedBeforeAnyQueryWhenItIsNotAnIntroduction(t *testing.T) {
+	now := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	a, b := ids.NewV7(), ids.NewV7()
+	ok := NewRecorded{IntroducerUser: a, IntroducedUser: b, On: now, Channel: "call"}
+	if err := admitRecording(ok, now); err != nil {
+		t.Fatalf("an introduction from today was refused: %v", err)
+	}
+	for name, in := range map[string]NewRecorded{
+		"the same colleague twice": {IntroducerUser: a, IntroducedUser: a, On: now, Channel: "call"},
+		"two days ahead":           {IntroducerUser: a, IntroducedUser: b, On: now.AddDate(0, 0, 2), Channel: "call"},
+		"an unknown channel":       {IntroducerUser: a, IntroducedUser: b, On: now, Channel: "fax"},
+	} {
+		if err := admitRecording(in, now); err == nil {
+			t.Errorf("%s was admitted", name)
+		}
 	}
 }

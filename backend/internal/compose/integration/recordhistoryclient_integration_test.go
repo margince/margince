@@ -50,6 +50,10 @@ func TestRecordHistoryNamesTheClientADelegatedChangeCameThrough(t *testing.T) {
 		t.Errorf("agent_client = %v, want Claude — a client rendering its own attribution "+
 			"must not have to parse the sentence", newest.AgentClient)
 	}
+	if newest.PassportID == nil || *newest.PassportID != passport {
+		t.Errorf("passport_id = %v, want %s — a client tells an unrecorded authority from "+
+			"none at all by it", newest.PassportID, passport)
+	}
 }
 
 // A passport minted by hand has no OAuth grant behind it, so there is no

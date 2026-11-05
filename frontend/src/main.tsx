@@ -11,7 +11,9 @@ import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { restoreReturnRoute } from "./lib/returnroute";
 import { sessionRefusalWatch } from "./lib/session";
+import { reloadOnStaleBuild } from "./lib/stalebuild";
 import { startTheme } from "./lib/theme";
 import "./app.css";
 
@@ -31,8 +33,12 @@ const queryClient = createQueryClient();
 // deaf to the switch.
 startTheme();
 
+// Before the first render reads the address: a provider sign-in lands bare.
+restoreReturnRoute();
+
 listenForInstall();
 registerServiceWorker();
+reloadOnStaleBuild();
 
 api.use(sessionRefusalWatch(queryClient));
 

@@ -134,6 +134,44 @@ func TestACalledOffMeetingAnswersNoQuietReminder(t *testing.T) {
 	}
 }
 
+// Mail from a sending system is not contact, so it ends no silence, and
+// neither does an invitation: the meeting it books is the touch. The same mail
+// from a human sender does end it.
+func TestMailFromASendingSystemAnswersNoQuietReminder(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		machine bool
+		method  *string
+		closed  int
+	}{
+		{"a file-share notice", true, nil, 0},
+		{"an invitation", false, new("REQUEST"), 0},
+		{"a human reply", false, nil, 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			e := setupRecency(t)
+			deal := e.seedQuietDeal(t, pinnedQuiet)
+			reminder := e.seedQuietReminder(t, deal, pinnedQuiet)
+			mail := ids.NewV7()
+			e.exec(t, `INSERT INTO activity
+				  (id, kind, direction, subject, occurred_at, audience, source, captured_by, origin, sender_is_machine, calendar_method)
+				VALUES ($1, 'email', 'inbound', 'Shared with you', $2, 'workspace', 'gmail', 'connector:gmail', 'human', $3, $4)`,
+				mail, pinnedQuiet.AddDate(0, 0, 89), test.machine, test.method)
+			e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+				VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), mail, deal)
+
+			store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+			closed, err := store.CompleteQuietRemindersReachedBy(e.asResolver(), ids.From[ids.ActivityKind](mail))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if closed != test.closed || e.reminderIsDone(t, reminder) != (test.closed == 1) {
+				t.Errorf("closed %d reminders, want %d", closed, test.closed)
+			}
+		})
+	}
+}
+
 // seedQuietReminder files the reminder the time scan would have filed, with
 // the anchor it would have carried: the record's last touch.
 func (e *recencyEnv) seedQuietReminder(t *testing.T, deal ids.UUID, anchor time.Time) ids.UUID {

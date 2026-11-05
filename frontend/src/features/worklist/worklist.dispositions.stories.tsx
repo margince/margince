@@ -30,6 +30,7 @@ type WorklistItem = components["schemas"]["WorklistItem"];
 // offering fewer is a picture of a narrower row than the product draws. On the
 // reader's own row the server leaves out Not mine.
 const WAITING: WorklistItem = {
+  occurred_precision: "instant",
   id: "01a05500-0000-7000-8000-0000000000a1",
   source: "customer_waiting",
   category: "customer_waiting",

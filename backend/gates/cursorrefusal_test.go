@@ -46,6 +46,7 @@ import (
 // because the distinction is what the token IS, which its shape does not say —
 // both are bytes carrying JSON.
 var connectorCursors = gatekit.Waive(map[string]string{
+	"internal/compose/datatask_homerepair.go:applyHomeRepairBatch": "reads the executor-owned offset from its durable run; callers review identities but cannot supply or advance this checkpoint, so malformed state fails the run rather than a page request.",
 	"internal/modules/capture/gmail/gmail.go:parseCursor":          "reads the Gmail history id this connector stored on its own last sync. The provider mints it, the server persists and hands it back; a caller never sends one.",
 	"internal/modules/capture/gcal/gcal.go:parseCursor":            "reads the Google Calendar sync token this connector stored on its own last sync — the provider's resume state, never request input.",
 	"internal/modules/capture/graph/graph.go:parseCursor":          "reads the Microsoft Graph delta link this connector stored on its own last sync — the provider's resume state, never request input.",

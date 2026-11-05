@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
@@ -16,19 +17,37 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 A contact's **Network** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
 
+When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
+
+### What does Reach on the Overview count?
+**Reach** on a contact's **How it stands** card counts the colleagues in touch with them. In touch means both sides wrote in the last 90 days, and the line under it names them.
+
+A colleague who sent the contact a message with no reply follows, after "also wrote". With no colleague in touch, **Reach** reads "No two-way contact" and names who wrote. A colleague who was only copied on a mail is not named.
+
 ### How strength is worked out
-Relationship strength in Margince comes from one rule, worked out from captured mail **each time you look**:
+Relationship strength in Margince comes from one rule, worked out from captured interactions, such as mail and meetings, **each time you look**:
 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
-- **Recency** is cut by half every 30 days since the last exchange.
+- **Recency** is cut by half every 30 days since the contact last wrote to you or had a meeting or call with you. Your own mail they have not answered does not reset it.
 - **Frequency** counts up to 20 interactions in 90 days; any more add
   nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
-**You cannot change it by hand.** It shows what happened in captured mail.
+**You cannot change it by hand.** It shows what happened in captured interactions.
+
+Mail that nobody wrote by hand does not count: calendar invitations, notices from sending systems, newsletters and mail Margince sent itself. It stays on the timeline with a label such as "Sent to a mailing list".
 
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
+
+A recent contact can still score **Weak**. The contact page then names what holds the score down:
+
+- few shared interactions in 90 days;
+- an exchange that goes mostly one way;
+- no reply from the contact among the shared interactions;
+- interactions, such as meetings or replies from other contacts, that count as no message either way.
+
+The score counts only interactions that everyone in Margince can see. So "no replies counted" does not mean the contact never replied.
 
 The route also shows which way the mail goes: "{total} two-way exchanges in 90 days" against "{total} interactions in 90 days, one-sided". So six real exchanges never read the same as six sends with no answer.
 
@@ -46,6 +65,40 @@ It counts and never shows the messages: "{total} interactions in 90 days · {inb
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
 
+### Why do two colleagues see different last-message dates for one contact?
+
+A contact's last-message dates count only the messages you can open. The same rule holds for:
+
+- the date of their last message on the contact's Overview, and the line that says which sides
+  have written;
+- the "No reply to the last message" card;
+- the dates on that contact's Worklist rows.
+
+What this means for you:
+
+
+- A reply on a private thread you are part of counts for you. A colleague who cannot open that
+  thread does not see the reply, and their dates, card and rows stay as they were.
+- When no message you can open has a reply, the Overview shows **None you can open**. A reply you
+  cannot open may still exist.
+- Relationship strength and the colleague network are shared numbers. They count only messages the
+  whole workspace can see, so every colleague reads the same number.
+- In History, a message is shown as theirs or yours by who wrote it. A colleague's mail that reached
+  you as a copy is still your team's.
+
+### When does the Worklist suggest a quiet contact?
+
+When a contact has gone quiet, the Worklist suggests that you get back in touch. These rows carry
+their own badge, **Quiet relationship**.
+
+- Only the contact's owner gets the suggestion. Writing to the contact, or being copied on a mail
+  to them, does not make it yours.
+- A contact with no owner, or whose owner has left, is in nobody's Mine. It shows under Unassigned.
+- When there has been no exchange for longer than 180 days, the contact leaves the Worklist. Its
+  own page still shows how long it has been quiet.
+- **Not now** hides the contact for a month. It is your choice only, and **Undo** brings the
+  contact back.
+
 ### How do I import my LinkedIn connections?
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
 1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.
@@ -62,7 +115,7 @@ Also called: LinkedIn import, upload my network, Connections.csv, LinkedIn expor
 
 There is no LinkedIn app to approve and nothing calls LinkedIn. You download your own export, and you upload it.
 
-The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent cannot import, read or change it.
+The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent acting for you can import it and read your own reach. No other agent can.
 
 The importer reads LinkedIn's English and German exports. A file it cannot read is refused whole, with nothing imported, and the message says to export the file again.
 
@@ -71,6 +124,12 @@ The importer reads LinkedIn's English and German exports. A file it cannot read 
 **An imported connection never becomes a contact.** It stays out of search, lists and contact pages. Nobody can write to it, log an activity on it or email it.
 
 It exists to answer one question: does someone here already know someone at this company?
+
+A company's **Who can get you in** card answers it with a count per colleague. When your own connections reach the company, your row reads **You** and comes first, so you can see you have a way in yourself.
+
+Next to each colleague, the card shows where their connections work, such as "IT · 3, Finance · 2". Margince reads this from the job titles in the export, and shows an area only when two or more connections work in it. It never shows a name or a title, because at a small company one title can name one contact.
+
+**Ask for an introduction** on a colleague's row writes a short message asking them to introduce you to someone at the company. You can name an area, such as IT, if the card shows it for that colleague. The message names no contact, and Margince does not send it: you copy it or open it in your mail app. Your own row has no such button.
 
 ### How a connection is matched to a contact
 
@@ -84,9 +143,16 @@ Matching runs as soon as the upload ends.
 | Two contacts with that name at that employer | Nothing: choosing one would be a guess |
 | A name alone, with no employer that matches | Nothing |
 
-A **LinkedIn match** approval shows **Name on LinkedIn** and **Company on LinkedIn** beside the contact it may be. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
+A **LinkedIn match** approval shows **Name on LinkedIn**, **Company on LinkedIn** and **Position on LinkedIn** beside the contact it may be. It also shows the contact's **Job title in CRM**. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
 
 When you accept a match, the connection's own LinkedIn profile goes on the contact. A contact that already has a LinkedIn profile keeps it.
+
+The approval can also offer two boxes:
+
+- **Use as job title** puts the position on LinkedIn on the contact as their job title.
+- **Use … as employer** makes the company Margince placed the connection at the contact's current employer. It shows only when that company is already in Margince, you can see it, and your role may both add and change a relationship.
+
+A box is ticked when the contact has nothing in that field yet. When the contact has a value, the box is unticked. Tick it and the LinkedIn value replaces the old one, which stays in the record's history. If someone changes the job title or the employer while the approval waits, accepting with that box ticked is refused, so their change stays. A later import never changes the contact again.
 
 **A refusal lasts.** Once you reject a match, Margince never asks about that pair again, even after a new import.
 
@@ -194,7 +260,7 @@ You can **Withdraw** your own ask; your colleague turns it down with Decline and
 ### Who can see an ask
 An introduction request is open to the two colleagues in it, and nobody else. Any other colleague sees an empty list, so they cannot tell if anyone was asked about a contact.
 
-An agent **may not ask, answer, complete or withdraw** an introduction. Asking a colleague for help is a human's choice. An agent may read who knows whom.
+An agent you connected can ask, answer, complete or withdraw an introduction for you, and sees the asks you are in. It sees no ask a colleague is in without you. The record names the agent as the one who acted.
 
 ### How do I research a company's website?
 To have Margince read a customer company's website, open the company's page. Press **Start company research**, or **Read website again** once it has been read.
@@ -254,6 +320,12 @@ Nobody named on the company's website is added. Someone found that way may only 
 
 Every field shows **the passage it was read from**, word for word, or it is left out. A value the page does not clearly state is not filled in.
 
+### The address a read finds
+
+An accepted read fills the company's address only while every part is still empty. Margince puts each part in its own address field. Address filters then find the company, and it can be placed on a map.
+
+An address Margince cannot split stays whole under **Registered address** in the company profile. It leaves the address fields empty.
+
 ### Other readings
 
 - **Dossier**: what this company *is*, written only from facts already on file,
@@ -266,9 +338,13 @@ Every field shows **the passage it was read from**, word for word, or it is left
   checked shows as not checked, not as failed.
 - **Hierarchy rollup**: the numbers of a parent company, with the companies under it that you can read added in.
   Any you cannot read are **named as excluded**. Where no exchange rate is
-  there, it shows no total and does not guess a rate.
+  there, it shows no total and does not guess a rate. **Won this quarter**
+  counts deals by the day they were won. Pick **Year**, **Quarter** or
+  **Month**, or step back with the arrows, to see an earlier period. The
+  **Weighted deal value today** is always the open deals as they stand now,
+  whatever period you pick.
 
-The dossier, the scan and the growth fit are yours alone. An agent cannot read any of them, because each is made from one reader's own view.
+The dossier, the scan and the growth fit are yours alone, because each is made from one reader's own view. An agent you connected reads yours, and no colleague's.
 
 ### When it is not available
 

@@ -11,8 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { ConnectedAgentsCard } from "./connected-agents";
 
-// The OAuth clients holding a credential of their own. The connect guide opens
-// itself only while nothing is connected, so `Connected` is the closed case.
+// The AI tools holding a credential of their own.
 const CLAUDE = {
   id: "pp-1",
   label: "Claude Desktop",
@@ -43,21 +42,12 @@ const LAPSED = {
   },
 };
 
-// The connect guide asks the OAuth discovery document whether this installation
-// serves the governed tool surface at all — a well-known path, not a /v1 one, so
-// it needs routing like any other. Left unrouted it fell through to the stub's
-// empty-list fallback, which carries no `resource`, and the guide rendered its
-// own failure state under a story named for a working card.
-function story(passports: Record<string, unknown>[], connectorEnabled = true) {
+function story(passports: Record<string, unknown>[]) {
   return () => {
     globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
     installFetchStub({
       "GET /me": meRoute({}),
       "GET /passports": () => jsonResponse({ data: passports }),
-      "GET /.well-known/oauth-protected-resource": () =>
-        connectorEnabled
-          ? jsonResponse({ resource: "https://margince.example/mcp" })
-          : jsonResponse({ code: "not_found" }, 404),
     });
     return (
       <StoryProviders>
@@ -68,7 +58,7 @@ function story(passports: Record<string, unknown>[], connectorEnabled = true) {
 }
 
 const meta: Meta<typeof ConnectedAgentsCard> = {
-  title: "Settings/You/Agents/Connected MCP clients",
+  title: "Settings/You/AI access/Your connections",
   component: ConnectedAgentsCard,
 };
 export default meta;
@@ -76,18 +66,9 @@ type Story = StoryObj<typeof ConnectedAgentsCard>;
 
 export const Connected: Story = { render: story([CLAUDE, LAPSED]) };
 
-// Nobody has connected YET — written out rather than left to the generic empty
-// state, because "nothing here" beside a connect guide reads as a failed load.
-// The guide stands open under it, which is what makes the empty state an
-// instruction rather than a dead end.
+// Nobody has connected yet: written out rather than left to the generic empty
+// state, which reads as a failed load.
 export const NoneConnected: Story = { render: story([]) };
-
-// The installation does not serve the tool surface, so discovery 404s and the
-// guide is absent rather than broken — a capability this deployment does not
-// have, which is the one cause that justifies a surface not being there.
-export const ConnectorNotEnabled: Story = {
-  render: story([], false),
-};
 
 export const ConnectedDark: Story = {
   globals: { theme: "dark" },

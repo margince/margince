@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -44,7 +45,7 @@ func ParsePromoteTrigger(raw string) (PromoteTrigger, error) {
 		return tr, nil
 	}
 	return "", &values.ParseError{
-		Field: "trigger", Code: "invalid_promote_trigger",
+		Field: fieldTrigger, Code: "invalid_promote_trigger",
 		Message: "trigger is one of inbound_reply, meeting_booked, meeting_held, human_qualify",
 	}
 }
@@ -56,7 +57,8 @@ type PromoteLeadInput struct {
 	EvidenceActivityID *ids.ActivityID
 	EvidenceNote       *string
 	// Deal, when set, opens a deal in the same transaction (qualify-to-deal).
-	Deal *QualifyDealInput
+	Deal           *QualifyDealInput
+	ExistingDealID *ids.UUID
 	// IfVersion refuses the promotion unless the lead is still at this
 	// version, asked under the row lock the write already takes.
 	//
@@ -67,6 +69,13 @@ type PromoteLeadInput struct {
 	// Nil attaches no precondition, so a REST caller and an agent whose
 	// approval carried no version spell the call the same way.
 	IfVersion *int64
+	// CreateCompany links or creates the company a typed name names when
+	// nothing else backs it; see promotionEmployer.
+	CreateCompany bool
+	// intoCandidate merges the lead into the contact the caller locked, even
+	// when that contact shares only a LinkedIn profile with it. Unexported: only
+	// a door converting the lead it was refused over sets it.
+	intoCandidate bool
 }
 
 // AlreadyPromotedError maps to 409: promotion happened once; the pointer
@@ -110,6 +119,9 @@ func (s *Store) PromoteLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 // QualifyLead is PromoteLead with the whole outcome: the contact, whether it
 // merged, and the deal opened alongside when the call asked for one.
 func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadInput) (PromoteOutcome, error) {
+	if err := validatePromotionDeal(in); err != nil {
+		return PromoteOutcome{}, err
+	}
 	// Promotion mutates the lead AND writes the contact side, so it needs
 	// both grants — a rep who may work leads but not create contacts
 	// cannot mint contacts through this door.
@@ -144,7 +156,7 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 			return err
 		})
 		if _, moved := errors.AsType[*promoteTargetMovedError](err); !moved {
-			return out, err
+			return out, s.AskHolderToShare(ctx, err)
 		}
 	}
 	return PromoteOutcome{}, apperrors.ErrConflict
@@ -160,62 +172,15 @@ func carryLeadConsent(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contact
 	return carryConsent(ctx, tx, consentCarryLeadPromotion, leadID.UUID, contactID.UUID, by)
 }
 
-// carryLeadActivities moves the lead's timeline onto the contact it became
-// (LEADS-FORM-5 step 3: "the lead's history, provenance, and activities carry
-// over with nothing orphaned").
-//
-// The link row is CONVERTED, not merely repointed: activity_link_shape admits
-// exactly one target per row, so a row that kept its lead_id while gaining a
-// contact_id violates the CHECK. entity_type and both id columns move together.
-//
-// The conflict arm is the case where the activity was ALREADY linked to that
-// contact — a lead whose reply was captured against a contact we already knew,
-// which is exactly the merge path. uq_activity_link would reject the duplicate,
-// so the row is dropped instead of converted; the contact keeps the link it had.
-// It ANSWERS what it moved. The activity ids ride the lead.promoted event so a
-// consumer can act on the tasks this promotion carried rather than on every
-// task the contact happens to hold — a distinction that does not exist for a
-// freshly created contact and is the whole question for a merge.
-//
-// The re-pointed rows only. An activity the survivor already carried has its
-// lead link deleted above rather than moved: the promotion did not bring it,
-// and naming it would hand a consumer work that was already there.
-func carryLeadActivities(
-	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID ids.ContactID,
-) ([]ids.UUID, error) {
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM activity_link a
-		WHERE a.lead_id = $1 AND EXISTS (
-		  SELECT 1 FROM activity_link b
-		  WHERE b.activity_id = a.activity_id
-		    AND b.entity_type = 'contact' AND b.contact_id = $2)`,
-		leadID, contactID); err != nil {
-		return nil, fmt.Errorf("drop already-linked lead activities: %w", err)
-	}
-	rows, err := tx.Query(ctx, `
-		UPDATE activity_link
-		SET entity_type = 'contact', contact_id = $2, lead_id = NULL
-		WHERE lead_id = $1
-		RETURNING activity_id`,
-		leadID, contactID)
-	if err != nil {
-		return nil, fmt.Errorf("carry lead activities: %w", err)
-	}
-	defer rows.Close()
-	carried, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("carry lead activities: %w", err)
-	}
-	return carried, nil
-}
-
 // finalizeLeadPromotion retires the lead and lands the write shape for the
 // whole promotion: the status flip, the ONE audit row (action=promote,
 // recording trigger + evidence + the resulting contact), and the paired
 // lead.promoted + contact.* events — all inside the caller's transaction,
 // still under the lead row lock taken by PromoteLead.
-func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, contactID ids.ContactID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Contact, error) {
-	now := time.Now().UTC()
+func (s *Store) finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, contactID ids.ContactID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Contact, error) {
+	// The column keeps microseconds. A finer stamp in the audit image reads as
+	// a later edit, and the undo refuses.
+	now := s.clock().UTC().Truncate(time.Microsecond)
 	setBy, err := statusSetByFor(ctx)
 	if err != nil {
 		return crmcontracts.Contact{}, err
@@ -241,7 +206,8 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	}
 	after := map[string]any{
 		leadStatusColumn: "promoted", fieldKeyPromotedContact: contactID,
-		"trigger": in.Trigger, "dedupe_outcome": outcome,
+		"promoted_at": now,
+		"trigger":     in.Trigger, "dedupe_outcome": outcome,
 	}
 	if in.EvidenceActivityID != nil {
 		after["evidence_activity_id"] = *in.EvidenceActivityID
@@ -252,8 +218,8 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	if dealID != nil {
 		after["qualified_deal_id"] = *dealID
 	}
-	auditID, err := storekit.Audit(ctx, tx, "promote", "lead", id.UUID,
-		map[string]any{leadStatusColumn: lead.Status}, after)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "promote", "lead", id.UUID,
+		map[string]any{leadStatusColumn: lead.Status}, after, map[string]any{"qualification_owner_id": lead.OwnerId})
 	if err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("audit lead promote: %w", err)
 	}
@@ -268,61 +234,72 @@ func finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in Pro
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, leadPromotedPayload(contactID, outcome, in.Trigger, in.EvidenceActivityID, carried)); err != nil {
 		return crmcontracts.Contact{}, fmt.Errorf("emit lead.promoted: %w", err)
 	}
-	// A fill-only merge that changed nothing has no contact.updated to emit —
-	// a changed_fields note with no fields would be a false claim, so skip it
-	// (lead.promoted above still records the promotion). A create always emits
-	// contact.created.
-	if contactPayload := promotedContactPayload(contact, merged, mergeFields); contactPayload != nil {
-		if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, contactPayload); err != nil {
-			return crmcontracts.Contact{}, fmt.Errorf("emit %s: %w", contactPayload.EventType(), err)
+	return contact, emitLeadContactEvent(ctx, tx, auditID, contact, contactID, merged, mergeFields)
+}
+
+// emitLeadContactEvent lands the contact side of a write that put a lead on a
+// contact. A create emits contact.created under the lead's audit row. A merge
+// audits the contact and emits contact.updated. A merge that changed nothing
+// emits nothing, because a note with no fields would be a false claim.
+func emitLeadContactEvent(ctx context.Context, tx pgx.Tx, leadAuditID ids.UUID, contact crmcontracts.Contact,
+	contactID ids.ContactID, merged bool, mergeFields map[string]any,
+) error {
+	contactPayload := promotedContactPayload(contact, merged, mergeFields)
+	if contactPayload == nil {
+		return nil
+	}
+	contactAuditID := leadAuditID
+	if merged {
+		var err error
+		if contactAuditID, err = storekit.Audit(ctx, tx, "update", "contact", contactID.UUID, heldNothing(mergeFields), mergeFields); err != nil {
+			return fmt.Errorf("audit the contact a lead merged into: %w", err)
 		}
 	}
-	return contact, nil
+	if err := storekit.EmitEvent(ctx, tx, contactAuditID, contactID.UUID, contactPayload); err != nil {
+		return fmt.Errorf("emit %s: %w", contactPayload.EventType(), err)
+	}
+	return nil
 }
 
 // promotableLead loads the lead and enforces every promotion guard:
-// visibility, the once-only rule, live status, minimal identity, and
-// in-scope evidence. Archived leads resolve here so a re-promote answers
-// 409 with the outcome pointer instead of a misleading 404; a
-// disqualified (archived, unpromoted) lead stays 404 like any archived
-// row.
-func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput) (crmcontracts.Lead, error) {
+// visibility, the once-only rule, live status, minimal identity and evidence.
+// It returns the evidence the trigger rests on. Archived leads resolve here, so
+// a re-promote answers 409 with the outcome pointer instead of a 404. A
+// disqualified (archived, unpromoted) lead stays 404 like any archived row.
+func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput) (crmcontracts.Lead, *ids.ActivityID, error) {
 	if err := auth.EnsureWritable(ctx, tx, "lead", id.UUID); err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, nil, err
 	}
 	// An internal read that builds the promoted contact; its result is not
 	// returned to the wire as a lead, so it carries no custom columns (nil).
 	lead, err := readLead(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
-		return crmcontracts.Lead{}, fmt.Errorf("read lead before promote: %w", err)
+		return crmcontracts.Lead{}, nil, fmt.Errorf("read lead before promote: %w", err)
 	}
 	if lead.Status == crmcontracts.LeadStatusPromoted {
 		e := &AlreadyPromotedError{}
 		if lead.PromotedContactId != nil {
 			e.ContactID = ids.From[ids.ContactKind](ids.UUID(*lead.PromotedContactId))
 		}
-		return crmcontracts.Lead{}, e
+		return crmcontracts.Lead{}, nil, e
 	}
 	if lead.ArchivedAt != nil {
-		return crmcontracts.Lead{}, apperrors.ErrNotFound
+		return crmcontracts.Lead{}, nil, apperrors.ErrNotFound
 	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, id.UUID); err != nil {
-		return crmcontracts.Lead{}, err
+		return crmcontracts.Lead{}, nil, err
 	}
 	// Read through the same derivation the ladder matches on, not through a
 	// nil check: a full_name that is present and empty passes `!= nil` and
 	// names nobody, so such a lead promotes into a contact with no name at all.
 	if leadIdentityName(lead) == "" {
-		return crmcontracts.Lead{}, &PromoteNeedsIdentityError{}
+		return crmcontracts.Lead{}, nil, &PromoteNeedsIdentityError{}
 	}
-	if in.EvidenceActivityID != nil {
-		// The evidence must be a real, in-scope activity — a promotion
-		// justified by a record the promoter cannot see is not evidence.
-		if err := auth.EnsureActivityVisible(ctx, tx, in.EvidenceActivityID.UUID); err != nil {
-			return crmcontracts.Lead{}, err
-		}
+	evidence, err := promotionEvidence(ctx, tx, id, in)
+	if err != nil {
+		return crmcontracts.Lead{}, nil, err
 	}
-	return lead, nil
+	return lead, evidence, nil
 }
 
 // promoteTarget resolves where the lead lands: the §1.3 dedupe path — a
@@ -339,11 +316,18 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 //
 // locked is the contact the caller locked before the lead. A match on any
 // other contact answers promoteTargetMovedError, because locking it now would
-// take the lead's lock before the contact's.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, merged *bool) (ids.ContactID, map[string]any, error) {
+// take the lead's lock before the contact's. intoLocked merges into locked when
+// the ladder names no contact, for a lead that shares only a LinkedIn profile.
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, employer EmployerChoice, by string, locked ids.ContactID, lanes ContactCandidate, intoLocked bool, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
+	}
+	// The lane locks were taken for the lead as it read before its lock. A lead
+	// renamed or re-addressed in between is a moved target, and the caller
+	// starts over under the right locks.
+	if candidate.FullName != lanes.FullName || !slices.Equal(candidate.Emails, lanes.Emails) {
+		return ids.ContactID{}, nil, &promoteTargetMovedError{}
 	}
 	// The contact is created under the SAME name the ladder matched on, so a
 	// lead that resolved as a new contact is stored as the candidate that was
@@ -353,59 +337,36 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	if match.Decision == DecisionExactCollision {
-		if match.ContactID != locked {
-			return ids.ContactID{}, nil, &promoteTargetMovedError{}
-		}
-		// Merging CHANGES the matched contact — the lead's fields land on it —
-		// and returns it, so the probe asks for write authority and the refusal
-		// still discloses nothing: a match the promoter cannot change answers a
-		// bare conflict, not the record, exactly as one they cannot see does.
-		writable, verr := auth.WritableBy(ctx, tx, "contact", match.ContactID.UUID)
+	if match.Decision == DecisionExactCollision && match.ContactID != locked {
+		return ids.ContactID{}, nil, &promoteTargetMovedError{}
+	}
+	if match.Decision == DecisionExactCollision || (intoLocked && !locked.IsZero()) {
+		match.ContactID = locked
+		// Merging changes the matched contact (the lead's fields land on it) and
+		// returns it, so the probe asks for write authority. A match the
+		// promoter cannot change answers a bare conflict, not the record. One
+		// they cannot see is a colleague's, and answers the held refusal.
+		writable, verr := auth.WritableBy(ctx, tx, "contact", locked.UUID)
 		if verr != nil {
 			return ids.ContactID{}, nil, verr
 		}
 		if !writable {
-			return ids.ContactID{}, nil, apperrors.ErrConflict
+			return ids.ContactID{}, nil, unwritablePromotionTarget(ctx, tx, match, candidate)
 		}
 		*merged = true
-		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, match.ContactID, by)
-		return match.ContactID, mergeFields, merr
+		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, locked, by)
+		return locked, mergeFields, merr
 	}
 
-	leadID := ids.UUID(lead.Id)
-	var leadEmails []ContactEmailInput
-	if lead.Email != nil {
-		leadEmails = []ContactEmailInput{{
-			Email: string(*lead.Email), EmailType: emailTypeWork, IsPrimary: true, Position: 1,
-		}}
+	spec := promotionContactSpec(lead, employer, name, by)
+	if spec.Acquisition, err = promotionAcquisition(ctx, tx, lead); err != nil {
+		return ids.ContactID{}, nil, err
 	}
-	var leadPhones []ContactPhoneInput
-	if lead.Phone != nil && *lead.Phone != "" {
-		leadPhones = []ContactPhoneInput{{
-			Phone: *lead.Phone, PhoneType: phoneTypeWork, IsPrimary: true, Position: 1,
-		}}
-	}
-	id, err := createContact(ctx, tx, match, ContactSpec{
-		FullName: name,
-		// A promoted lead was acquired however the LEAD was, and a lead
-		// carries no acquisition record yet. Claiming one here would invent
-		// the fact; unknown_legacy says plainly that nobody has established
-		// it, which is what the contact's file should show until a lead
-		// carries its own.
-		Acquisition:         Acquisition{Kind: AcquiredUnknownLegacy},
-		Title:               lead.Title,
-		OwnerID:             ownerFromUUID(uuidPtrToIDs(lead.OwnerId)),
-		ConvertedFromLeadID: &leadID,
-		Emails:              leadEmails,
-		Phones:              leadPhones,
-		Source:              lead.Source,
-		CapturedBy:          by,
-	})
+	id, err := createContact(ctx, tx, s, match, spec)
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	if err := match.recordIfReview(ctx, tx, id, name, lead.Source, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, id, name, lead.Source, by); err != nil {
 		return ids.ContactID{}, nil, err
 	}
 	return id, nil, nil
@@ -433,7 +394,7 @@ func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcon
 		return nil, fmt.Errorf("lock merge-target contact: %w", err)
 	}
 	// A fill-only decision read, never the wire — core columns suffice.
-	current, err := readContact(ctx, tx, contactID, storekit.LiveOnly, nil)
+	current, err := readContactRow(ctx, tx, contactID, storekit.LiveOnly, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read merge-target contact: %w", err)
 	}
@@ -445,13 +406,7 @@ func (s *Store) mergeLeadIntoContact(ctx context.Context, tx pgx.Tx, lead crmcon
 	if err := carryLeadPhone(ctx, tx, lead, contactID, by); err != nil {
 		return nil, err
 	}
-	p := storekit.NewPatch()
-	if current.ConvertedFromLeadId == nil {
-		p.Set("converted_from_lead_id", nil, ids.UUID(lead.Id))
-	}
-	if current.Title == nil && lead.Title != nil {
-		p.Set("title", nil, *lead.Title)
-	}
+	_, p := promotionContactChange(lead, current)
 	if p.Empty() {
 		// A no-op fill-only merge: no columns changed. Return an empty (not
 		// nil) map so the caller reads "no delta" via len == 0 and skips the
@@ -480,17 +435,23 @@ func uuidPtrToIDs(u *openapi_types.UUID) *ids.UUID {
 // Not primary. The surviving contact's own numbers were there first, and a
 // promotion is not a reason to re-rank them.
 func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, contactID ids.ContactID, by string) error {
-	if lead.Phone == nil || *lead.Phone == "" {
-		return nil
-	}
-	held, err := heldContactPhones(ctx, tx, contactID)
-	if err != nil {
+	phones, err := leadPhonesToCarry(ctx, tx, lead, contactID)
+	if err != nil || len(phones) == 0 {
 		return err
 	}
-	if len(held[*lead.Phone]) > 0 {
-		return nil
+	return insertContactPhones(ctx, tx, contactID, lead.Source, by, phones)
+}
+
+// unwritablePromotionTarget answers a promotion whose exact match the promoter
+// may not change. It is the held refusal when they cannot see the match, and a
+// bare conflict when they can.
+func unwritablePromotionTarget(ctx context.Context, tx pgx.Tx, match ContactResolution, candidate ContactCandidate) error {
+	if match.MatchedLane != LaneEmail || len(candidate.Emails) == 0 {
+		return apperrors.ErrConflict
 	}
-	return insertContactPhones(ctx, tx, contactID, lead.Source, by, []ContactPhoneInput{{
-		Phone: *lead.Phone, PhoneType: phoneTypeWork, Position: len(held) + 1,
-	}})
+	refusal := claimedEmailRefusal(ctx, tx, candidate.Emails[0], match.ContactID)
+	if _, held := errors.AsType[*ContactHeldByColleagueError](refusal); held || !IsClaimedEmail(refusal) {
+		return refusal
+	}
+	return apperrors.ErrConflict
 }

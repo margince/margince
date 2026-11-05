@@ -44,13 +44,6 @@ import (
 // matching reportcmd's own default for the sibling record tree.
 const corpusDirDefault = "internal/compose/aicert/corpus"
 
-// workDirDefault is where probe artifacts land. Under .tmp/ because it is
-// gitignored: a fetched page or a real fixture carries whatever the probed
-// source carried, and a probe must not be able to leave that somewhere a commit
-// would pick it up. It sits beside .tmp/aicert, the payload trace's own sink.
-// Relative to the repo root; the make target passes an absolute path.
-const workDirDefault = ".tmp/aitask"
-
 // maxArtifactSlug bounds the URL-derived part of a generated filename, leaving
 // room for the prefix and extension inside a 255-byte name.
 const maxArtifactSlug = 200

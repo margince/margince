@@ -203,3 +203,25 @@ func TestDoneIsOfferedWhereTheRowHasNoOtherWayOff(t *testing.T) {
 		t.Fatalf("the page drew none of %v, so this test judged nothing about them", want)
 	}
 }
+
+func TestDeferredDomainQuestionReturnsOnlyForNewEvidence(t *testing.T) {
+	pressed := rankInstant.Add(-time.Hour)
+	old := pressed.Add(-time.Hour)
+	fresh := pressed.Add(time.Minute)
+	for _, tc := range []struct {
+		name     string
+		evidence *time.Time
+		shown    bool
+	}{
+		{"undated evidence", nil, false}, {"same evidence rescanned", &old, false}, {"new evidence", &fresh, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			question := domainQuestionItem(DomainQuestion{Domain: "example.test", AskedAt: rankInstant, EvidenceAt: tc.evidence})
+			day := crmcontracts.Attention{AsOf: rankInstant, DomainQuestions: lane(question)}
+			done := map[RowRef]time.Time{{Source: "domain_question", RowID: "example.test"}: pressed}
+			if got := hasRow(queueOf(t, day, done), "domain_question", "example.test"); got != tc.shown {
+				t.Fatalf("question shown = %v, want %v", got, tc.shown)
+			}
+		})
+	}
+}

@@ -37,7 +37,7 @@ func (p stubCompanyProvider) Read(context.Context, datasource.EntityRef) (dataso
 func companyRecord(id ids.UUID, authoritative bool) datasource.Record {
 	return datasource.Record{
 		Ref:       datasource.EntityRef{Type: datasource.EntityCompany, ID: id},
-		Fields:    json.RawMessage(`{"name":"Acme"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: authoritative},
 	}
@@ -70,6 +70,30 @@ func TestEnrichStagesTheReadItIsAboutToPerform(t *testing.T) {
 	}
 	if !strings.Contains(info.Summary, "its own domain") {
 		t.Fatalf("summary = %q, want the default target named", info.Summary)
+	}
+}
+
+// A read with nothing to read is refused while the agent can still act on it.
+// Staged, it would be an approval whose review shows no target and that no one
+// can accept.
+func TestAnEnrichWithNothingToReadIsRefusedBeforeItIsStaged(t *testing.T) {
+	id := ids.NewV7()
+	domainless := companyRecord(id, true)
+	domainless.Fields = json.RawMessage(`{"name":"Acme"}`)
+	tool := enrichCompany{p: stubCompanyProvider{rec: domainless}}
+	company := `"company_id":"` + id.String() + `"`
+	for name, args := range map[string]string{
+		"no url":                  `{` + company + `}`,
+		"a technical read by url": `{` + company + `,"url":"https://acme.test/about","depth":"technical"}`,
+	} {
+		_, err := tool.StageInfo(context.Background(), json.RawMessage(args))
+		if bad, ok := errors.AsType[*BadArgsError](err); !ok || !strings.Contains(bad.Guidance, "add a domain") {
+			t.Errorf("%s: staging answered %v, want a refusal that says to add a domain", name, err)
+		}
+	}
+	if _, err := tool.StageInfo(context.Background(),
+		json.RawMessage(`{`+company+`,"url":"https://acme.test/about","depth":"site"}`)); err != nil {
+		t.Fatalf("a read naming its own url was refused: %v", err)
 	}
 }
 
@@ -114,7 +138,7 @@ func TestEnrichHandlePassesTheAdmittedArgumentsThrough(t *testing.T) {
 func TestReadEnrichArgsDefaultsTheDepthAndRefusesAnUnservedOne(t *testing.T) {
 	id := ids.NewV7().String()
 
-	args, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `"}`))
+	args, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +147,7 @@ func TestReadEnrichArgsDefaultsTheDepthAndRefusesAnUnservedOne(t *testing.T) {
 			args.Depth, EnrichDepthPage)
 	}
 
-	if _, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","depth":"crawl"}`)); err == nil {
+	if _, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `","depth":"crawl"}`)); err == nil {
 		t.Fatal("depth \"crawl\" was accepted; the tool serves two depths")
 	}
 }
@@ -137,7 +161,7 @@ func TestReadEnrichArgsRefusesATargetThatIsNotAnAbsoluteHTTPURL(t *testing.T) {
 		"javascript:alert(1)", // not a fetch at all
 	} {
 		t.Run(target, func(t *testing.T) {
-			_, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","url":"` + target + `"}`))
+			_, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `","url":"` + target + `"}`))
 			if err == nil {
 				t.Fatalf("%q was accepted as a fetch target", target)
 			}
@@ -147,7 +171,7 @@ func TestReadEnrichArgsRefusesATargetThatIsNotAnAbsoluteHTTPURL(t *testing.T) {
 		})
 	}
 
-	if _, err := readEnrichArgs(json.RawMessage(`{"company_id":"` + id + `","url":"https://example.com/about"}`)); err != nil {
+	if _, err := DecodeEnrichCommand(json.RawMessage(`{"company_id":"` + id + `","url":"https://example.com/about"}`)); err != nil {
 		t.Fatalf("an absolute https URL must be accepted: %v", err)
 	}
 }

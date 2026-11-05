@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -37,6 +38,8 @@ const (
 // Service owns identity: the singleton company, users, opaque
 // server-side sessions.
 type Service struct {
+	memberWork  MemberWork
+	mailCapture MailCapture
 	// db binds the installation's workspace, resolved through this service's
 	// own InstallationWorkspace — which reads no tenant table, so a service
 	// holding a handle that resolves through it is not circular at runtime
@@ -86,6 +89,9 @@ type Service struct {
 	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
 	// check before they touch it. See mfa.go.
 	vault keyvault.Vault
+	// config answers the stored settings a boot source may set. Nil refuses an
+	// OAuth mint (settingsoauthtoken.go); nothing else here reads it.
+	config *config.Config
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -128,6 +134,9 @@ type Identity struct {
 	// (data-semantics §2.2). Both are stored; only this one is a property of
 	// the seat.
 	Timezone string
+	// TimezoneChosen is true when the member picked Timezone themselves, and
+	// false when it is the browser's guess or nothing is stored.
+	TimezoneChosen bool
 	// MustChangePassword is true while this account is still using a password
 	// somebody else chose — a configured bootstrap's operator-supplied
 	// credential. Every authenticated route is refused until it is replaced.
@@ -137,9 +146,12 @@ type Identity struct {
 	// one is set up, the same confinement MustChangePassword uses. Derived per
 	// request from the policy and the enrolment, not a stored column.
 	MustEnrolMFA bool
-	Roles        []string
-	Teams        []ids.TeamID
-	Permissions  principal.Permissions
+	// IndividualPerformance is the installation's switch, read once with the
+	// session so every check in the request answers alike.
+	IndividualPerformance bool
+	Roles                 []string
+	Teams                 []ids.TeamID
+	Permissions           principal.Permissions
 }
 
 // systemRoles is the seeded default role set (ADR-0110).
@@ -252,6 +264,10 @@ func SeedSystemRoles(ctx context.Context, tx pgx.Tx) (adminRoleID ids.UUID, err 
 			adminRoleID = roleID
 		}
 	}
+	// A new installation gets the composed units' starting grants with its roles.
+	if err := fillRegisteredDefaults(ctx, tx); err != nil {
+		return ids.Nil, err
+	}
 	return adminRoleID, nil
 }
 
@@ -328,7 +344,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		var locale, timezone *string
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
-			        u.locale, u.timezone, u.greeting_name,
+			        u.locale, u.timezone, u.timezone_chosen, u.greeting_name,
 			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
@@ -337,12 +353,15 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.GreetingName, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.GreetingName, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
 			return err
+		}
+		if name, ok := config.BootVal(config.Bound(), Name); ok {
+			id.WorkspaceName = name
 		}
 		id.UserID = userID
 		// NULL stays empty: somebody who never chose a language is not somebody
@@ -370,6 +389,9 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		id.Roles, id.Teams, id.Permissions, loadErr = loadGrants(ctx, tx, userID)
 		if loadErr != nil {
 			return loadErr
+		}
+		if id.IndividualPerformance, err = IndividualPerformanceTx(ctx, tx); err != nil {
+			return err
 		}
 		// Confine a member with no confirmed factor while the installation
 		// requires one — the enrolment check runs only when the policy is on, so

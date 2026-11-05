@@ -57,7 +57,7 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 		seat(true, roleChampion), seat(true, "user"),
 	}}
 	if kinds(foldRisks(two, testEnglish))[RiskSingleThreadedTheirs] {
-		t.Errorf("two engaged contacts flagged single-threaded — the floor is %d, and a flag that fires at the boundary contradicts every other surface", reportThreadingFloor)
+		t.Errorf("two engaged contacts flagged single-threaded — the floor is %d, and a flag that fires at the boundary contradicts every other surface", ReportThreadingFloor)
 	}
 }
 
@@ -173,7 +173,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 func TestALongSilentDealStillReportsItsEngagementFindings(t *testing.T) {
 	old := DealCoverage{
 		DealID: ids.NewV7(), EverTouched: true, LastTouchAt: daysAgo(120),
-		TouchedAsOf: testNow, Status: dealStatusOpen,
+		TouchedAsOf: testNow, Zone: time.UTC, Status: dealStatusOpen,
 		Stakeholders: []deals.DealStakeholder{
 			seat(false, roleChampion), seat(false, "user"),
 		},
@@ -220,7 +220,7 @@ func TestGoingColdMeasuresAgainstTheClockThatStampedTheTouch(t *testing.T) {
 	for _, skew := range []time.Duration{-24 * time.Hour, 0, 24 * time.Hour} {
 		cover := DealCoverage{
 			DealID: ids.NewV7(), Status: dealStatusOpen,
-			LastTouchAt: daysAgo(silent), TouchedAsOf: testNow.Add(skew),
+			LastTouchAt: daysAgo(silent), TouchedAsOf: testNow.Add(skew), Zone: time.UTC,
 			Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 		}
 		days := 0
@@ -260,7 +260,7 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 	cover := func(status string, touched int) DealCoverage {
 		return DealCoverage{
 			DealID: ids.NewV7(), Status: status,
-			LastTouchAt: daysAgo(touched), TouchedAsOf: testNow, Stakeholders: base,
+			LastTouchAt: daysAgo(touched), TouchedAsOf: testNow, Zone: time.UTC, Stakeholders: base,
 		}
 	}
 
@@ -312,7 +312,7 @@ func TestGoingColdCountsTheCalendarSoTheChipAndTheCardAgree(t *testing.T) {
 	lateEvening := time.Date(2026, 5, 16, 23, 0, 0, 0, time.UTC)
 	cover := DealCoverage{
 		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: lateEvening,
-		TouchedAsOf:  testNow,
+		TouchedAsOf: testNow, Zone: time.UTC,
 		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
 	}
 	risks := foldRisks(cover, testEnglish)
@@ -435,5 +435,25 @@ func TestEveryRiskCarriesADealAndAReason(t *testing.T) {
 		if r.Summary == "" {
 			t.Errorf("risk %q carries no reason a human could act on", r.Kind)
 		}
+	}
+}
+
+// A day entry counts from the date it names. Its stored noon UTC is already
+// the next morning in Kiritimati, which would put the deal a day under the window.
+func TestGoingColdCountsADayTouchFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	asOf := time.Date(2026, 6, 15, 9, 0, 0, 0, kiritimati)
+	logged := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC).AddDate(0, 0, -goingColdDays)
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: logged, LastTouchDateOnly: true,
+		TouchedAsOf: asOf, Zone: kiritimati,
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+	cold, ok := goingCold(cover, testEnglish)
+	if !ok || cold.DaysSinceTouch != goingColdDays {
+		t.Fatalf("a day touch dated %d days ago reads %+v, want going cold for %d days", goingColdDays, cold, goingColdDays)
 	}
 }

@@ -238,10 +238,9 @@ func TestEveryFixtureManifestMatchesItsDerivation(t *testing.T) {
 	}
 }
 
-// TestCrmHelloManifestPublishesItsGovernedTool is the worked example: the
-// crm-hello fixture declares a jurisdiction pack (skipped) AND a governed
-// 🟡 tool, so its committed manifest carries exactly one risk-tier
-// request with its security descriptor and digest.
+// TestCrmHelloManifestPublishesItsGovernedTool is the worked example. The
+// crm-hello fixture declares a jurisdiction pack (skipped) and a governed 🟡
+// tool. Its manifest carries one risk-tier request, and the deal read it declares.
 //
 // The byte-identity half is the walk above; this is the claim about what THIS
 // fixture publishes, which no walk can derive.
@@ -251,7 +250,8 @@ func TestCrmHelloManifestPublishesItsGovernedTool(t *testing.T) {
 		`"operation": "agent.tool.invoke"`,
 		`"tier": "confirmation_required"`,
 		`"read"`,
-		`"digest": "sha256:`)
+		`"digest": "sha256:`,
+		"\"system_reads\": [\n    \"deals\"\n  ]")
 }
 
 func assertCommittedManifest(t *testing.T, dir, name string, wantSubstrings ...string) {

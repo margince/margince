@@ -5,7 +5,8 @@ package approvals
 
 // The way off the Worklist for an approved decision whose work did not run.
 //
-// The failure is shown to the contact who decided it, and to nobody else. They
+// The failure is shown to the contact who decided it or their agent, and to
+// nobody else. They
 // can approve it once more, which re-drives the work (decisioneffect.go), or say
 // they have seen it. Either one takes the row away; a later failure brings it back.
 
@@ -31,6 +32,23 @@ import (
 // failure it saw, so a newer mark differs from it.
 const stillFailing = `effect_failed_at IS NOT NULL
 	AND acknowledged_effect_failed_at IS DISTINCT FROM effect_failed_at`
+
+// Absolute stage moves can satisfy an older identical request; relative advances
+// and repeatable sends cannot. The later decision must belong to the same decider.
+const noCompletedStageReplacement = `NOT (approval.kind = 'progress_deal'
+ AND approval.target_entity_type = 'deal'
+ AND EXISTS (SELECT 1 FROM approval completed
+  WHERE completed.kind = approval.kind
+   AND completed.target_entity_type = approval.target_entity_type
+   AND completed.target_entity_id = approval.target_entity_id
+   AND completed.co_target_entity_type IS NOT DISTINCT FROM approval.co_target_entity_type
+   AND completed.co_target_entity_id IS NOT DISTINCT FROM approval.co_target_entity_id
+   AND completed.decided_by = approval.decided_by
+   AND completed.status = 'approved' AND completed.consumed_at IS NOT NULL
+   AND completed.effect_failed_at IS NULL
+   AND completed.created_at > approval.created_at
+   AND completed.diff_hash = approval.diff_hash
+   AND completed.proposed_change = approval.proposed_change))`
 
 // FailedDecision is one of the caller's own approvals whose work did not run.
 type FailedDecision struct {
@@ -61,7 +79,9 @@ func (s *Service) OwnFailedDecisions(ctx context.Context, limit int) ([]FailedDe
 					return err
 				}
 			}
-			out = append(out, FailedDecision{Approval: wire(a, now), Retryable: retryable})
+			shown := []crmcontracts.Approval{wire(a, now)}
+			withoutOwnersRecords(ctx, shown)
+			out = append(out, FailedDecision{Approval: shown[0], Retryable: retryable})
 		}
 		return nil
 	})
@@ -73,7 +93,7 @@ func (s *Service) OwnFailedDecisions(ctx context.Context, limit int) ([]FailedDe
 
 // AcknowledgeEffectFailure takes a failed decision off its decider's Worklist.
 //
-// Only the decider may do it, and anyone else is answered 404. The failure is
+// Only the decider or their agent may do it, and anyone else is answered 404. The failure is
 // shown to nobody else, so its existence is not theirs to learn. Acknowledging
 // the same failure twice changes nothing and records nothing.
 //
@@ -83,9 +103,9 @@ func (s *Service) AcknowledgeEffectFailure(ctx context.Context, id ids.ApprovalI
 	if err := actingForAHuman(ctx); err != nil {
 		return err
 	}
-	// The decider's own list, so an agent acting for them is refused too.
+	// The decider's own list, which their agent reads and clears as they do.
 	p, _ := principal.Actor(ctx)
-	if p.Type != principal.PrincipalHuman || p.UserID.IsZero() {
+	if !p.HumanOrItsAgent() || p.UserID.IsZero() {
 		return apperrors.ErrPermissionDenied
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

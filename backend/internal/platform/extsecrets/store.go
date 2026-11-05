@@ -64,7 +64,16 @@ var (
 	// no keyvault. Failing by name beats a nil dereference, and beats writing
 	// a mapping row pointing at material nothing could ever unseal.
 	ErrNoCustodian = errors.New("extsecrets: no keyvault is configured for this installation, so no extension secret can be stored or read")
+
+	// ErrReservedKey refuses a unit key in the core's own part of the unit's
+	// namespace (CoreHeldKeyPrefix).
+	ErrReservedKey = errors.New("extsecrets: keys starting " + CoreHeldKeyPrefix + " are kept by the core and not the unit")
 )
+
+// CoreHeldKeyPrefix starts every key the core keeps in a unit's namespace on
+// the unit's behalf, such as an OAuth grant. The unit's own port refuses it, so
+// a unit can neither read a token the core refreshes nor overwrite one.
+const CoreHeldKeyPrefix = "margince:"
 
 // maxKeyLength bounds a key name. The column is unbounded text and nothing
 // breaks at 4KB, but a key is a NAME an operator reads in the audit ledger
@@ -76,10 +85,12 @@ const maxKeyLength = 128
 // workspace the calling context is pinned to. unit is closed over at
 // construction and is never a parameter: see the package doc.
 type store struct {
-	unit  string
-	pool  *pgxpool.Pool
-	vault keyvault.Vault
-	log   *slog.Logger
+	unit string
+	// prefix is CoreHeldKeyPrefix on the core's port and empty on the unit's.
+	prefix string
+	pool   *pgxpool.Pool
+	vault  keyvault.Vault
+	log    *slog.Logger
 }
 
 var _ extension.Secrets = (*store)(nil)
@@ -103,16 +114,25 @@ func For(unit string, pool *pgxpool.Pool, vault keyvault.Vault) extension.Secret
 	return &store{unit: unit, pool: pool, vault: vault, log: slog.Default()}
 }
 
+// CoreHeld builds the port the CORE uses to keep workspace-scoped secrets in a
+// unit's namespace. Every key it is given lands under CoreHeldKeyPrefix, where
+// the unit's own port cannot reach.
+//
+//nolint:ireturn // the same seam For returns.
+func CoreHeld(unit string, pool *pgxpool.Pool, vault keyvault.Vault) extension.Secrets {
+	return &store{unit: unit, prefix: CoreHeldKeyPrefix, pool: pool, vault: vault, log: slog.Default()}
+}
+
 func (s *store) Get(ctx context.Context, key string) ([]byte, error) {
-	return s.read(ctx, nil, key)
+	return s.read(ctx, nil, s.prefix+key)
 }
 
 func (s *store) Put(ctx context.Context, key string, secret []byte) error {
-	return s.write(ctx, nil, key, secret)
+	return s.write(ctx, nil, s.prefix+key, secret)
 }
 
 func (s *store) Delete(ctx context.Context, key string) error {
-	return s.remove(ctx, nil, key)
+	return s.remove(ctx, nil, s.prefix+key)
 }
 
 func (s *store) GetUser(ctx context.Context, userID extension.UserID, key string) ([]byte, error) {
@@ -120,7 +140,7 @@ func (s *store) GetUser(ctx context.Context, userID extension.UserID, key string
 	if err != nil {
 		return nil, err
 	}
-	return s.read(ctx, &user, key)
+	return s.read(ctx, &user, s.prefix+key)
 }
 
 func (s *store) PutUser(ctx context.Context, userID extension.UserID, key string, secret []byte) error {
@@ -128,7 +148,7 @@ func (s *store) PutUser(ctx context.Context, userID extension.UserID, key string
 	if err != nil {
 		return err
 	}
-	return s.write(ctx, &user, key, secret)
+	return s.write(ctx, &user, s.prefix+key, secret)
 }
 
 func (s *store) DeleteUser(ctx context.Context, userID extension.UserID, key string) error {
@@ -136,7 +156,7 @@ func (s *store) DeleteUser(ctx context.Context, userID extension.UserID, key str
 	if err != nil {
 		return err
 	}
-	return s.remove(ctx, &user, key)
+	return s.remove(ctx, &user, s.prefix+key)
 }
 
 // read resolves the mapping row and fetches the material it names. A nil
@@ -349,6 +369,9 @@ func (s *store) prepare(ctx context.Context, key string) (ids.WorkspaceID, error
 	}
 	if err := validateKey(key); err != nil {
 		return ids.WorkspaceID{}, err
+	}
+	if s.prefix == "" && strings.HasPrefix(key, CoreHeldKeyPrefix) {
+		return ids.WorkspaceID{}, fmt.Errorf("extsecrets: %q: %w", key, ErrReservedKey)
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {

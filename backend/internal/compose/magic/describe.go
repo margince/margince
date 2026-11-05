@@ -13,11 +13,14 @@ package magic
 
 import (
 	"encoding/json"
+	"math"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
 // The job names used more than once below.
@@ -27,6 +30,9 @@ const (
 	byMailReader    = "magic.by.mail_reader"
 	byMailFiling    = "magic.by.mail_filing"
 	byAutomation    = "magic.by.automation"
+	// A release correction repairing older records.
+	byDataCorrection  = "magic.by.data_correction"
+	whyDataCorrection = "magic.why.data_correction"
 
 	whySiteUnnamed = "magic.why.site_read_unnamed"
 )
@@ -51,7 +57,9 @@ var bookkeepingFields = map[string]bool{
 	// The mail reader's sorting of one message into "needs a reply or not". It
 	// feeds the reply lists; as a line it read "Changed owed verdict" once per
 	// email, which named an internal column and told the reader nothing.
-	"owed_verdict": true,
+	"owed_verdict": true, "reply_verdict": true,
+	// The task or proposal has its own audit; source linkage adds no second result.
+	"commitment_admission": true, "task_activity_id": true,
 	// Why a contact is visible to its owner alone. It follows the visibility
 	// field, which a line shows on its own; as a line by itself it read
 	// "Changed narrowing reason", an internal state the reader cannot act on.
@@ -80,6 +88,20 @@ func describe(e entry) (description, bool) {
 		}, true
 	}
 	evidence := objectOf(e.Evidence)
+	// A lookup counts what it moved. Zero is a refresh that observed what the
+	// record already held: an observation, not work done for anybody. A row
+	// without the count predates it and keeps the older reading below.
+	if technical, ok := evidence["technical"].(map[string]any); ok {
+		if count, counted := technical["changes"].(float64); counted {
+			if count <= 0 {
+				return description{}, false
+			}
+			return description{
+				summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},
+				reason:  &crmcontracts.MagicSentence{Key: "magic.why.public_records"},
+			}, true
+		}
+	}
 	if facts, ok := evidence["facts"].([]any); ok && len(facts) > 0 && len(changedFields(objectOf(e.Before), after)) == 0 {
 		return description{
 			summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},
@@ -89,6 +111,12 @@ func describe(e entry) (description, bool) {
 	fields := changedFields(objectOf(e.Before), after)
 	if len(fields) == 0 {
 		return description{}, false
+	}
+	if reason := forecastCorrectionReason(evidence); reason != nil {
+		return description{
+			summary: crmcontracts.MagicSentence{Key: "magic.action.forecast_changed"},
+			reason:  reason,
+		}, true
 	}
 	values := map[string]string{"fields": strings.Join(fields, ", ")}
 	return description{
@@ -112,6 +140,38 @@ func changedFields(before, after map[string]any) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+func forecastCorrectionReason(evidence map[string]any) *crmcontracts.MagicSentence {
+	correction, ok := evidence[deals.CloseDateCorrectionKind].(string)
+	if !ok {
+		return nil
+	}
+	switch deals.CloseDateAction(correction) {
+	case deals.CloseDateActionDowngradeAndReview:
+		return &crmcontracts.MagicSentence{Key: "magic.why.forecast_review"}
+	case deals.CloseDateActionAutoApply, deals.CloseDateActionProvisionalConfirm:
+		return forecastDateReason(evidence)
+	default:
+		return nil
+	}
+}
+
+func forecastDateReason(evidence map[string]any) *crmcontracts.MagicSentence {
+	sample, sampleOK := evidence[deals.CloseDateSampleCountKey].(float64)
+	median, medianOK := evidence[deals.CloseDateMedianDaysKey].(float64)
+	stages, stagesOK := evidence[deals.CloseDateRemainingStagesKey].(float64)
+	if !sampleOK || !medianOK || !stagesOK || sample < deals.CloseDateMinHistory || median <= 0 || stages < 1 ||
+		math.Trunc(sample) != sample || math.Trunc(stages) != stages ||
+		math.IsNaN(median) || math.IsInf(median, 0) || math.IsInf(sample, 0) || math.IsInf(stages, 0) {
+		return &crmcontracts.MagicSentence{Key: "magic.why.forecast_date"}
+	}
+	values := map[string]string{
+		"sample_count":     strconv.FormatFloat(sample, 'f', -1, 64),
+		"median_days":      strconv.FormatFloat(median, 'f', -1, 64),
+		"remaining_stages": strconv.FormatFloat(stages, 'f', -1, 64),
+	}
+	return &crmcontracts.MagicSentence{Key: "magic.why.forecast_date_basis", Values: &values}
 }
 
 // reasonFromEvidence turns the source an enrichment recorded into a why.
@@ -156,6 +216,18 @@ func siteOf(evidence, after map[string]any) string {
 	return strings.TrimPrefix(u.Host, "www.")
 }
 
+// dataTaskActorPrefix is the actor every data-task batch writes under
+// (datatask.Acting): one release correction, named by its task id.
+const dataTaskActorPrefix = "system:datatask:"
+
+// isDataCorrection says the row is a release correction repairing older
+// records, not business work done for the reader. Its lines are maintenance:
+// one run over thousands of records is one operation, not thousands of
+// outcomes.
+func isDataCorrection(e entry) bool {
+	return strings.HasPrefix(e.ActorID, dataTaskActorPrefix)
+}
+
 // actorLabel names who acted, as a reader would call them.
 //
 // The ledger's actor ids are internal names (`link-reconcile`,
@@ -170,6 +242,8 @@ func actorLabel(e entry) crmcontracts.MagicSentence {
 		return crmcontracts.MagicSentence{Key: key}
 	}
 	switch {
+	case isDataCorrection(e):
+		return crmcontracts.MagicSentence{Key: byDataCorrection}
 	case strings.HasPrefix(e.ActorID, "connector:"):
 		return crmcontracts.MagicSentence{Key: "magic.by.mailbox"}
 	case strings.HasPrefix(e.ActorID, "automation:"):

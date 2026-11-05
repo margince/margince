@@ -115,8 +115,17 @@ export function markLine(blocks: Block[], line: number | undefined): boolean {
   return true;
 }
 
+/** The first words a document says, as one plain line with no marks. */
+export function firstRunText(blocks: Block[]): string {
+  for (const run of runsOf(blocks)) {
+    const text = collapseSpace(runText(run.nodes));
+    if (text) return text;
+  }
+  return "";
+}
+
 /** Every run in the document, in reading order. */
-function runsOf(blocks: Block[]): Run[] {
+export function runsOf(blocks: Block[]): Run[] {
   return blocks.flatMap((block) => {
     if (block.kind === "list") return block.items;
     if (block.kind === "quote") return runsOf(block.blocks);
@@ -131,9 +140,11 @@ function runsOf(blocks: Block[]): Run[] {
 export function runText(nodes: readonly Inline[]): string {
   return nodes
     .map((node) =>
-      node.kind === "text" || node.kind === "code"
-        ? node.text
-        : runText(node.children),
+      node.kind === "break"
+        ? "\n"
+        : node.kind === "text" || node.kind === "code"
+          ? node.text
+          : runText(node.children),
     )
     .join("");
 }
@@ -202,6 +213,11 @@ function markNode(
   end: number,
   cursor: { at: number },
 ): Inline[] {
+  if (node.kind === "break") {
+    // As runText reads it: one character, the newline it stands for.
+    cursor.at += 1;
+    return [node];
+  }
   if (node.kind !== "text" && node.kind !== "code") {
     return [
       { ...node, children: markNodes(node.children, start, end, cursor) },

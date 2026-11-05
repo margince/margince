@@ -129,7 +129,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `credited_minor` | `bigint`, default `0` | yes |  |
 | `credits_invoice_id` | `uuid` |  | Points at `finance_invoice.id`. |
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `disputed_at` | `timestamp with time zone` |  |  |
 | `due_at` | `date` |  |  |
 | `external_id` | `text` | yes |  |
@@ -166,7 +166,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_invoice_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
 - `finance_invoice_credits_not_self`: `CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id)))`
-- `finance_invoice_currency_check`: `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
@@ -199,7 +198,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `amount_minor` | `bigint` | yes |  |
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
-| `currency` | `character(3)` | yes |  |
+| `currency` | `currency_code` | yes |  |
 | `external_id` | `text` | yes |  |
 | `invoice_id` | `uuid` |  | Points at `finance_invoice.id`. |
 | `paid_at` | `timestamp with time zone` | yes |  |
@@ -224,7 +223,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_payment_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `finance_payment_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
-- `finance_payment_currency_check`: `CHECK ((currency ~ '^[A-Z]{3}$'))`
 - `finance_payment_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

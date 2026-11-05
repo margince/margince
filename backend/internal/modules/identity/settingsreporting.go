@@ -18,45 +18,27 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // FiscalYearStartMonth is the month the installation's business year begins,
-// 1..12. January is the default, which is what every installation reported by
-// before this existed — so an installation that never touches it sees no
-// change, and no saved report view moves under it.
-//
-// It buckets reports on READ and stores nothing, so changing it re-labels every
-// period report immediately and re-means no stored row. That is the opposite of
-// BaseCurrency, which freezes: a fiscal year is a way of cutting time, not a
-// value anything has already converted against.
-//
-// It does re-point a SAVED report view, which is a real gap rather than a
-// property of this setting: a period bucket's text travels out in a derivation
-// handle and binds back as an equality filter (reportperiod.go), so a view
-// saved under one fiscal start names a different span after it moves. Tracked
-// as its own decision — re-point, invalidate, or warn — rather than settled
-// here, because none of the three is obviously right and the label cannot fix
-// it either way: margince/margince#2569. Named rather than described, so a
-// reader can see whether it is still open instead of trusting a comment's
-// account of a gap.
-//
-// What the label DOES fix is the reader's half: spelling both years means the
-// answer they get is unambiguous about which twelve months it covers, even when
-// the filter that produced it is stale.
-var FiscalYearStartMonth = settings.Define[int](
-	"installation.fiscal_year_start_month",
-	installationSettingsObject,
-	"update",
-	int(time.January),
-	func(month int) error {
+// 1..12, January by default. It buckets reports on read, so a move relabels
+// every period report. A saved period filter keeps the calendar it was saved
+// under, which the CalendarChange hook writes down before the move.
+var FiscalYearStartMonth = config.DefineStored(config.Spec[int]{
+	Key:     "installation.fiscal_year_start_month",
+	Env:     "MARGINCE_INSTALLATION_FISCAL_YEAR_START_MONTH",
+	Type:    config.Int,
+	Default: config.Some(int(time.January)),
+	Validate: func(month int) error {
 		if month < int(time.January) || month > int(time.December) {
 			return fmt.Errorf("a fiscal year starts in month 1..12, not %d", month)
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "The month the business year begins, 1 to 12.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasure is which remaining-pipeline reading a projected
 // landing is built from.
@@ -74,27 +56,28 @@ var FiscalYearStartMonth = settings.Define[int](
 // anything outside it and this package may not import that module. Validating
 // against a copy here would let the two drift, and the drift only shows up as
 // a forecast read failing for an installation that saved cleanly.
-var ForecastForwardMeasure = settings.Define[string](
-	"installation.forecast_forward_measure",
-	installationSettingsObject,
-	"update",
-	string(values.MeasureCommitEvidence),
-	func(measure string) error {
+var ForecastForwardMeasure = config.DefineStored(config.Spec[string]{
+	Key:     "installation.forecast_forward_measure",
+	Env:     "MARGINCE_INSTALLATION_FORECAST_FORWARD_MEASURE",
+	Type:    config.String,
+	Default: config.Some(string(values.MeasureLikely)),
+	Validate: func(measure string) error {
 		if _, err := values.ParseForwardMeasure(&measure, "forecast_forward_measure"); err != nil {
 			return err
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "Which remaining-pipeline reading a projected landing is built from.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
 
 // ForecastForwardMeasureOf resolves the stored measure inside a transaction the
-// caller already holds.
+// caller already holds, and whether anybody chose it.
 //
 // Here rather than in the composition for the reason FiscalYearStartMonthOf is:
 // how this setting is read belongs with the entry that declares it, so a
 // wiring site injecting it does not restate the default or the key.
-func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.GetTx(ctx, tx, ForecastForwardMeasure)
+func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, bool, error) {
+	return config.StoredChosenTx(ctx, tx, config.Bound(), ForecastForwardMeasure)
 }
 
 // FiscalYearStartMonthOf resolves the month the installation's business year
@@ -106,5 +89,5 @@ func ForecastForwardMeasureOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // an absent row is not a broken installation, it is an older one that agrees
 // with the default.
 func FiscalYearStartMonthOf(ctx context.Context, tx pgx.Tx) (int, error) {
-	return settings.GetTx(ctx, tx, FiscalYearStartMonth)
+	return config.StoredValTx(ctx, tx, config.Bound(), FiscalYearStartMonth)
 }

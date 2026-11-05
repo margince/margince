@@ -60,8 +60,8 @@ func TestTheEndpointRanksOnConvertedFigures(t *testing.T) {
 			eur(8_000_000): 8_000_000, // €80,000
 		}},
 		[]RiskyDeal{
-			riskyDeal("yen", nineMillionYen, ids.UUID{}),
-			riskyDeal("euro", eur(8_000_000), ids.UUID{}),
+			riskyDeal("yen", nineMillionYen, ids.MustParse("01a05500-0000-7000-8000-000000000001")),
+			riskyDeal("euro", eur(8_000_000), ids.MustParse("01a05500-0000-7000-8000-000000000001")),
 		})
 
 	day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")

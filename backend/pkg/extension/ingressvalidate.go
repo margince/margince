@@ -28,6 +28,9 @@ func (r Record) Validate() error {
 	if err := refuse(RefusalKey, r.validateKey()); err != nil {
 		return err
 	}
+	if r.Kind() != KindActivity {
+		return r.validateOtherKind()
+	}
 	if err := refuse(RefusalActivity, r.Activity.validate()); err != nil {
 		return err
 	}
@@ -42,6 +45,18 @@ func (r Record) Validate() error {
 	}
 	if len(r.ThreadKey) > MaxThreadKeyLength {
 		return refuse(RefusalSize, fmt.Errorf("extension: the thread key is %d bytes, over the %d-byte cap", len(r.ThreadKey), MaxThreadKeyLength))
+	}
+	if len(r.Raw) > MaxRawBytes {
+		return refuse(RefusalSize, fmt.Errorf("extension: the raw record is %d bytes, over the %d-byte cap every landed record pays for", len(r.Raw), MaxRawBytes))
+	}
+	return nil
+}
+
+// validateOtherKind is Validate for a company or a deal, which carry none of an
+// activity's counterparty, address or roster.
+func (r Record) validateOtherKind() error {
+	if err := refuse(RefusalActivity, r.validatePayload()); err != nil {
+		return err
 	}
 	if len(r.Raw) > MaxRawBytes {
 		return refuse(RefusalSize, fmt.Errorf("extension: the raw record is %d bytes, over the %d-byte cap every landed record pays for", len(r.Raw), MaxRawBytes))

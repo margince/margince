@@ -301,9 +301,7 @@ func syntheticOperandRequest(route string, id ids.UUID) *http.Request {
 // a reason about the request rather than about the route: those decoders read a
 // BODY whose shape is per-operation, where a path parameter is not, so a
 // synthetic request cannot exercise them. Their equivalent proof is
-// TestAPatchStagesItsRecordAndID and its siblings above, and
-// TestEveryWholeRecordPatchRunsItsGuardsBeforeTheAutoExecuteHalf below reaches
-// every one of them through the split.
+// TestAPatchStagesItsRecordAndID and its siblings above.
 func TestEveryOperandRouteDecodesIntoTheCommandItsPolicyNames(t *testing.T) {
 	declared := operationsDeclaringARequestBody(t)
 	family := operandShapedRoutes()

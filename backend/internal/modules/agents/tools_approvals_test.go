@@ -181,3 +181,14 @@ func TestAnUnknownArgumentIsRefusedRatherThanIgnored(t *testing.T) {
 		t.Errorf("the refusal never names the argument it refused: %v", err)
 	}
 }
+
+func TestExplicitMutedReviewReachesTheSharedInbox(t *testing.T) {
+	inbox := &fakeInbox{}
+	_, err := (listApprovalsTool{inbox: inbox}).Handle(context.Background(), json.RawMessage(`{"include_muted":true}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !inbox.query.IncludeMuted {
+		t.Fatal("explicit muted review was dropped")
+	}
+}

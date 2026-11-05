@@ -12,7 +12,6 @@
 package mailmap
 
 import (
-	"bytes"
 	"fmt"
 	"slices"
 	"strings"
@@ -21,14 +20,19 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// maxBodyLen caps the stored email body — the timeline needs a legible
-// excerpt, not the full multi-megabyte thread with quoted history.
-const maxBodyLen = 8000
+// maxBodyLen caps the stored email body. It holds an ordinary long mail whole,
+// quoted history included, so automatic work can read all of it. A body cut
+// here is stored as partial. A multi-megabyte thread is still cut.
+const maxBodyLen = 64 * 1024
+
+// legacyMaxBodyLen is the cap bodies stored before maxBodyLen grew were cut
+// at. A stored body cut there lost text, and is assessed as partial.
+const legacyMaxBodyLen = 8000
 
 // Message is the pure result of reading one RFC822 message against the
 // mailbox owner — everything the mapping needs, with no provider handle.
@@ -89,6 +93,16 @@ type Message struct {
 	// files were dropped never reads as a message with no files (DOC-AC-12).
 	parts     []Part
 	partDrops []PartDrop
+	// bodyCompleteness is how much of the message's text this parser decoded.
+	bodyCompleteness capture.BodyCompleteness
+	// openRecipients holds the To and Cc addresses, the owner's own included, and
+	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
+	openRecipients   []string
+	directRecipients []string
+	recipientsUnread bool
+	links            []capture.MailLink
+	linksCut         bool
+	listMail         bool
 }
 
 // AttestSentByOwner returns a copy carrying the provider's own attestation
@@ -118,39 +132,40 @@ func (m Message) ThreadKey() string { return m.threadKey }
 // Parse reads the headers and the text body of one message and classifies
 // its direction relative to the mailbox owner.
 func Parse(raw []byte, owner string) (Message, error) {
-	reader, err := mail.CreateReader(bytes.NewReader(raw))
+	root, err := readEntity(raw)
 	if err != nil {
 		return Message{}, fmt.Errorf("mailmap: parsing message: %w", err)
 	}
-	header := reader.Header
+	header := mail.Header{Header: root.Header}
 
 	messageID, _ := header.MessageID()
-	subject, _ := header.Subject()
+	subject := headerText(header, "Subject")
 	occurredAt, _ := header.Date()
 
-	fromList, _ := header.AddressList("From")
+	fromList, _ := addressList(header, "From")
 	groupOriginal, viaGroup := googleGroupSender(header)
 	if viaGroup {
 		fromList = groupOriginal
 	}
-	toList, _ := header.AddressList("To")
+	toList, toErr := addressList(header, "To")
 	// A malformed Cc line yields no addresses rather than failing the message:
 	// the mail is already read off the wire, and losing the CCs is a smaller
 	// loss than dropping the correspondence.
-	ccList, _ := header.AddressList("Cc")
+	ccList, ccErr := addressList(header, "Cc")
 	// Bcc survives only on the sender's OWN copy — a recipient's copy never
 	// carries it. Where it does survive it is a real party to the message, and
 	// the internal-vs-external decision has to see it: a colleague who blind-
 	// copied a customer wrote to a customer. Where it does not survive, the
 	// message reads as one address short, which is the accepted loss named in
 	// ADR-0082 §3 and not something this parser can recover.
-	bccList, _ := header.AddressList("Bcc")
+	bccList, _ := addressList(header, "Bcc")
 	deliveredTo := TopDeliveredTo(header)
 	senderAuth := TopSenderAuthentication(header)
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	body, parts, drops, calendar := extractText(reader)
+	walked := extractText(root)
+	body, parts, drops, calendar := walked.text, walked.parts, walked.drops, walked.calendar
 	hasCalendarPart := calendar.present
 
 	ownerLower := strings.ToLower(strings.TrimSpace(owner))
@@ -208,8 +223,15 @@ func Parse(raw []byte, owner string) (Message, error) {
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
 		addresses:        allAddresses(fromList, toList, ccList, bccList),
+		openRecipients:   allAddresses(toList, ccList),
+		directRecipients: allAddresses(toList),
+		recipientsUnread: toErr != nil || ccErr != nil,
+		links:            walked.links,
+		linksCut:         walked.linksCut,
+		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
 		parts:            parts,
 		partDrops:        drops,
+		bodyCompleteness: walked.completeness,
 	}, nil
 }
 
@@ -297,11 +319,11 @@ func allAddresses(lists ...[]*mail.Address) []string {
 }
 
 // threadKey derives the conversation identity from the standard reply
-// headers: the References ROOT (its first id — stable across every reply in
-// the thread), else In-Reply-To, else the message's own id (a fresh thread
-// is rooted at its opener, so later replies referencing it join it). Never
-// a subject heuristic — "Re: Invoice" joining unrelated threads is worse
-// than no join (CAP-FORMULA-1's no-subject-fallback rule).
+// headers. It is the References root (its first id, stable across every reply
+// in the thread), else In-Reply-To, else the message's own id. A fresh thread
+// is rooted at its opener, so later replies referencing it join it. It never
+// uses the subject: "Re: Invoice" joining unrelated threads is worse than no
+// join (CAP-FORMULA-1's no-subject-fallback rule).
 func threadKey(references, inReplyTo, messageID string) string {
 	if refs := strings.Fields(references); len(refs) > 0 {
 		return trimAngle(refs[0])
@@ -313,18 +335,18 @@ func threadKey(references, inReplyTo, messageID string) string {
 }
 
 // maxReplyIDs bounds how many referenced ids one message contributes. A real
-// References chain is a handful of ids; the header is the sender's text, and
-// an unbounded list would let one message fan out into arbitrarily many rows.
+// References chain is a handful of ids. The header is the sender's text, and an
+// unbounded list would let one message fan out into any number of rows.
 const maxReplyIDs = 50
 
 // maxReplyIDBytes is the longest referenced id kept, the same bound the
 // capture sink holds a thread key to (maxIndexedHeaderChars).
 const maxReplyIDBytes = 998
 
-// replyIDs lists every Message-ID this message says it answers: In-Reply-To
-// first, then the References chain from its newest end, so the ids nearest
-// this message survive the bound. Its own id and anything oversized are left
-// out.
+// replyIDs lists every Message-ID this message says it answers. In-Reply-To
+// comes first, then the References chain from its newest end, so the ids
+// nearest this message survive the bound. Its own id and anything oversized are
+// left out.
 func replyIDs(references, inReplyTo, messageID string) []string {
 	own := trimAngle(strings.TrimSpace(messageID))
 	refs := strings.Fields(references)
@@ -384,26 +406,26 @@ func (m Message) ID() string { return m.messageID }
 // The counterparty (From/To) is folded into a compact header on the body —
 // the activity schema has no dedicated participant column, and the timeline
 // needs to show who the mail was with.
+//
+// Subject and body carry credentials masked; Raw keeps the original.
 func (m Message) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
 	source := connectorName + ":" + m.messageID
-	header := fmt.Sprintf("From: %s\nTo: %s", orDash(m.from), orDash(m.to))
-	body := header
-	if m.body != "" {
-		body = header + "\n\n" + m.body
-	}
-	body = textcut.BytesMarked(body, maxBodyLen, "…")
+	body, stored := m.storedBody()
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: m.messageID},
 		Fields: capture.ActivityFields{
-			Kind:            "email",
-			Subject:         m.subject,
-			Body:            body,
-			OccurredAt:      m.occurredAt,
-			Direction:       m.direction,
-			HasCalendarPart: m.hasCalendarPart,
-			CalendarMethod:  m.calendarMethod,
+			Kind:              "email",
+			Subject:           credentialmask.MaskText(m.subject),
+			Body:              body,
+			OccurredAt:        m.occurredAt,
+			Direction:         m.direction,
+			HasCalendarPart:   m.hasCalendarPart,
+			CalendarMethod:    m.calendarMethod,
+			BodyCompleteness:  stored,
+			CredentialsMasked: m.masksCredentials(),
+			Envelope:          m.envelope(),
 		},
 		Source:               source,
 		CapturedBy:           "connector:" + connectorName,
@@ -417,6 +439,21 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 		Addresses:            m.addresses,
 		Parts:                m.recordParts(),
 		PartDrops:            m.recordDrops(),
+	}
+}
+
+// envelope is what this message says about how it was addressed and where its
+// links lead. Only a list message is left without one: a list's To names the
+// list, so the owner's absence from it says nothing about a Bcc.
+// listMail is set by any List-* header or a Google Group relay.
+func (m Message) envelope() *capture.MailEnvelope {
+	if m.listMail {
+		return nil
+	}
+	hosts, hostsOver := hostsOf(m.links)
+	return &capture.MailEnvelope{
+		OpenRecipients: m.openRecipients, DirectRecipients: m.directRecipients, RecipientsUnreadable: m.recipientsUnread,
+		LinkHosts: hosts, Links: m.links, LinksTruncated: m.linksCut || hostsOver,
 	}
 }
 
@@ -452,44 +489,4 @@ func orDash(s string) string {
 		return "-"
 	}
 	return s
-}
-
-// recordParts hands the collected files to the seam.
-//
-// The two shapes stay separate types, and the line between them is a stage
-// rather than an owner: mailmap.Part is a candidate MID-WALK, which is why the
-// collector can still refuse one, and connector.Part is a file that already
-// cleared every bound. The copy below is where that transition is made, so a
-// part cannot reach the seam without passing through it.
-//
-// This is NOT the "second spelling" that pkg/extension/files.go rules out. That
-// rule is about two producers each declaring their own file type and therefore
-// their own bounds; here there is one producer, one set of bounds, and one
-// published file type at the seam that every producer shares.
-func (m Message) recordParts() []connector.Part {
-	if len(m.parts) == 0 {
-		return nil
-	}
-	out := make([]connector.Part, 0, len(m.parts))
-	for _, part := range m.parts {
-		out = append(out, connector.Part{
-			Ordinal:      part.Ordinal,
-			Filename:     part.Filename,
-			ContentType:  part.ContentType,
-			DeclaredType: part.DeclaredType,
-			Body:         part.Body,
-		})
-	}
-	return out
-}
-
-func (m Message) recordDrops() []connector.PartDrop {
-	if len(m.partDrops) == 0 {
-		return nil
-	}
-	out := make([]connector.PartDrop, 0, len(m.partDrops))
-	for _, drop := range m.partDrops {
-		out = append(out, connector.PartDrop{Reason: drop.Reason, Count: drop.Count})
-	}
-	return out
 }

@@ -5,6 +5,9 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
+import { callOutcomeLabel } from "../lib/calloutcome";
+import { correspondenceSide } from "../lib/messagevoice";
+import { markdownLines } from "./markdown-text";
 import {
   type ContactOn,
   contactsOn,
@@ -12,7 +15,7 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
-import { provenanceOf } from "./provenanceof";
+import { provenanceOf, withControllerSend, withCreator } from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 
@@ -72,16 +75,26 @@ function timelineTitle(activity: Activity): string {
   // titling the row from the raw body puts the From/To preamble, or a sign-off,
   // where the reason for the mail should be.
   const raw = activity.body ?? "";
-  const body =
-    activity.kind === "email"
-      ? emailSummaryText(raw)
-      : raw.replace(/\s+/g, " ").trim();
+  const body = titleText(activity, raw);
   if (!body) {
     return activity.kind;
   }
   return body.length > TIMELINE_TITLE_MAX
     ? `${body.slice(0, TIMELINE_TITLE_MAX - 1)}…`
     : body;
+}
+
+// A written body is markdown, so its title is the text it renders, not its
+// syntax.
+function titleText(activity: Activity, raw: string): string {
+  if (activity.kind === "email") return emailSummaryText(raw);
+  const written = writtenAsMarkdown({
+    kind: timelineKind(activity.kind),
+    transcript: isTranscriptActivity(activity),
+  });
+  return written
+    ? markdownLines(raw).join(" ")
+    : raw.replace(/\s+/g, " ").trim();
 }
 
 // The deal a row is filed against, as a chip. Absent when the row names none,
@@ -130,7 +143,16 @@ export function activityTimeline(
     return {
       id: activity.id,
       kind: timelineKind(activity.kind),
+      isDone: activity.is_done,
+      commitmentReviewCount:
+        activity.content_state === "withheld"
+          ? 0
+          : activity.commitment_admissions?.filter(
+              (decision) => !decision.current_work,
+            ).length,
       title: timelineTitle(activity),
+      // How a call ended sits where a direction sits: what the call did.
+      qualifier: callOutcomeLabel(activity, who?.t),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
       // subjectless rows together.
@@ -139,8 +161,11 @@ export function activityTimeline(
       // timeline of unreadable subject lines was a rendering choice, not a
       // limit of what the page knew.
       body: activity.body,
+      language: activity.language,
       transcript: isTranscriptActivity(activity),
       direction: activity.direction,
+      // Who wrote it, by the shared rule: known authorship over transport.
+      side: correspondenceSide(activity),
       counterparts:
         contacts && who
           ? withWhom(namesOf(contacts), who.t, who.locale)
@@ -156,17 +181,27 @@ export function activityTimeline(
       // exactly when kind=email, so the row branches on the field and every
       // other kind keeps the reading it had.
       emailSummary: activity.email_summary ?? undefined,
+      messageMove: activity.message_move ?? undefined,
       audience: activity.audience,
       withheld: activity.content_state === "withheld",
       threadKey: activity.thread_key,
       bulkAttested: activity.bulk_mail_attested,
+      automaticKind: activity.automatic_kind,
       atIso: activity.occurred_at,
-      provenance: provenanceOf(
-        activity.captured_by,
+      atPrecision: activity.occurred_precision,
+      provenance: withControllerSend(
+        withCreator(
+          provenanceOf(
+            activity.captured_by,
+            viewerUserId,
+            activity.author,
+            activity.source,
+            activity.imported_from,
+          ),
+          activity.created_by,
+        ),
+        activity.controller_send,
         viewerUserId,
-        activity.author,
-        activity.source,
-        activity.imported_from,
       ),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance

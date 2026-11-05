@@ -22,6 +22,7 @@ fixture:
     - label: rollout_question
       days_ago: 9
       direction: inbound
+      author: { kind: contact_record, name: Rainer Vogt, role: author }
       subject: "Single sign-on before the rollout"
       preview: >
         We cannot start the rollout until single sign-on is working against

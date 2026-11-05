@@ -1,0 +1,646 @@
+/** @vitest-environment happy-dom */
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { writeMessage } from "../../design-system/richtext-testing";
+import { pickOption } from "../../design-system/select-testing";
+import { LocaleProvider } from "../../i18n";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
+
+// The head of the message: who it is to, and the two things a rep could not
+// reach from here before — a blind copy, and the paper the mail is about.
+//
+// Both were on the wire already. The backend has long carried `bcc` and
+// `attachment_ids` (ADR-0086/A131), and no surface in the product named
+// either: a rep who wanted to send the offer they were writing about had to
+// leave the drawer, file it on the record, and start the mail again.
+
+type Sent = { key: string; body: unknown };
+
+const CONTACT = {
+  as_of: "2026-08-15T09:00:00Z",
+  contact: {
+    id: "p-1",
+    full_name: "Dana Brandt",
+    emails: [
+      { email: "dana@brandt.example", is_primary: true },
+      // A second address, because the primary is OFFERED into the To line and a
+      // value the field already holds stops being suggested — which is the rule
+      // the offer is built on, not an accident of this fixture.
+      { email: "d.brandt@nordwand.example", is_primary: false },
+    ],
+  },
+  sections_omitted: [],
+};
+
+const FILES = {
+  data: [
+    {
+      id: "att-1",
+      entity_type: "contact",
+      entity_id: "p-1",
+      filename: "Offer_Nordwand_v3.pdf",
+      byte_size: 412_000,
+    },
+    {
+      id: "att-2",
+      entity_type: "contact",
+      entity_id: "p-1",
+      filename: "Site_survey.jpg",
+      byte_size: 2_100_000,
+    },
+  ],
+  page: { has_more: false },
+};
+
+const SENT_ACTIVITY = {
+  id: "act-9",
+  kind: "email",
+  occurred_at: "2026-08-15T09:00:00Z",
+  is_done: false,
+  source: "manual",
+  captured_by: "human:u1",
+  created_at: "2026-08-15T09:00:00Z",
+  updated_at: "2026-08-15T09:00:00Z",
+};
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function stubRoutes(
+  overrides: Record<string, () => Response | Promise<Response>> = {},
+) {
+  const sent: Sent[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : null;
+      const url = new URL(
+        request ? request.url : String(input),
+        "https://test.local",
+      );
+      const method = request?.method ?? init?.method ?? "GET";
+      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
+      let body: unknown = null;
+      if (method !== "GET") {
+        try {
+          body = request
+            ? await request.clone().json()
+            : JSON.parse(String(init?.body));
+        } catch {
+          body = null;
+        }
+      }
+      sent.push({ key, body });
+      const override = overrides[key];
+      if (override) return override();
+      if (key === "GET /contacts/p-1/360") return jsonResponse(CONTACT);
+      if (key === "GET /attachments") return jsonResponse(FILES);
+      if (key === "POST /emails") return jsonResponse(SENT_ACTIVITY, 202);
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
+      return jsonResponse({ data: [] });
+    }),
+  );
+  return sent;
+}
+
+function render(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function drawer() {
+  return (
+    <ComposeModal
+      entityType="contact"
+      entityId="p-1"
+      contactId="p-1"
+      recordAddress="dana@brandt.example"
+      open
+      onClose={vi.fn()}
+    />
+  );
+}
+
+/** Everything a send needs beyond the head the test under study is about.
+ *
+ *  The "why" is answered because these compose an UNANCHORED message: no anchor
+ *  read is stubbed, so the composer has nothing to derive the category from and
+ *  asks — which is the behaviour compose.test.tsx pins on its own. */
+async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("Subject"), "The offer");
+  writeMessage("Body", "Attached.");
+  await pickOption(
+    user,
+    screen.getByLabelText("Reason for contact"),
+    "Follow-up they requested",
+  );
+  await user.click(screen.getByRole("button", { name: "Send" }));
+}
+
+function sentMail(sent: Sent[]) {
+  return sent.find((r) => r.key === "POST /emails")?.body as
+    | Record<string, unknown>
+    | undefined;
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("the recipient lines", () => {
+  // A reader remembers a colleague's name and not their address. The offer is
+  // read off the 360 the drawer already holds, so it costs no request and
+  // cannot disagree with the page behind it.
+  it("offers the record's own contacts by name", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByLabelText("To"));
+    await user.keyboard("Dana");
+
+    const offered = await screen.findAllByRole("option", {
+      name: /Dana Brandt/,
+    });
+    // Her OTHER address: the one already in the To line is not on offer.
+    expect(offered).toHaveLength(1);
+  });
+
+  // The list is HELP, never a constraint: a first message to somebody nobody
+  // has on file is the ordinary case, and a field that refused it would be
+  // worse than the plain box it replaced.
+  it("still takes an address nobody has on file", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.type(
+      await screen.findByLabelText("To"),
+      "stranger@example.com{Enter}",
+    );
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    // Beside the record's own address, which the drawer offered into the empty
+    // field — what the reader typed is added, never substituted.
+    expect(sentMail(sent)?.to).toContain("stranger@example.com");
+  });
+});
+
+describe("an address line pasted or typed as a list", () => {
+  it("makes one recipient per address, whatever splits them", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByLabelText("To"));
+    await user.paste(
+      "a@one.example, b@two.example; c@three.example d@four.example",
+    );
+    await user.keyboard("{Enter}");
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.to).toEqual([
+      "dana@brandt.example",
+      "a@one.example",
+      "b@two.example",
+      "c@three.example",
+      "d@four.example",
+    ]);
+  });
+
+  it("takes the address out of an Outlook line, and none twice", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    const to = await screen.findByLabelText("To");
+    await user.type(
+      to,
+      "Dana Brandt <dana@brandt.example>; Milo Fenn <milo@nordwand.example>{Enter}",
+    );
+
+    expect(
+      screen.getAllByRole("button", { name: "Remove dana@brandt.example" }),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Remove milo@nordwand.example" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps a part that is no address in the box, and names it", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    const to = await screen.findByLabelText<HTMLInputElement>("To");
+    await user.click(to);
+    await user.paste("not-an-address, e@five.example");
+
+    expect(
+      screen.getByRole("button", { name: "Remove e@five.example" }),
+    ).toBeTruthy();
+    expect(to.value).toBe("not-an-address");
+    expect(
+      await screen.findByText(
+        "Not an email address: not-an-address. Correct it or remove it.",
+      ),
+    ).toBeTruthy();
+
+    await user.clear(to);
+    await user.type(to, "{Enter}");
+    expect(screen.queryByText(/Not an email address/)).toBeNull();
+  });
+
+  it("holds Send while a line keeps refused text, and frees it once cleared", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    const to = await screen.findByLabelText<HTMLInputElement>("To");
+    await user.type(to, "not-an-address{Enter}");
+    const send = () =>
+      screen.getByRole<HTMLButtonElement>("button", { name: "Send" });
+
+    expect(send().disabled).toBe(true);
+    expect(
+      screen.getByText(
+        "Correct or remove the text that is not an email address.",
+      ),
+    ).toBeTruthy();
+
+    await user.clear(to);
+    expect(send().disabled).toBe(false);
+    await fillAndSend(user);
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.to).toEqual(["dana@brandt.example"]);
+  });
+
+  it("commits Cc on a semicolon, and names a wrong part there too", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Cc"), "f@six.example;nope;");
+
+    expect(
+      screen.getByRole("button", { name: "Remove f@six.example" }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "Not an email address: nope. Correct it or remove it.",
+      ),
+    ).toBeTruthy();
+  });
+});
+
+describe("the copies", () => {
+  // Copies are the rare half of addressing, and always-drawn rows made every
+  // ordinary mail read as a form with empty fields in it. Bcc is also the one
+  // field that reaches somebody the recipients cannot see, which is worth an
+  // explicit press.
+  it("are one link until they are asked for", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    await screen.findByLabelText("To");
+    expect(screen.queryByLabelText("Cc")).toBeNull();
+    expect(screen.queryByLabelText("Bcc")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    expect(await screen.findByLabelText("Cc")).toBeTruthy();
+    expect(screen.getByLabelText("Bcc")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cc and Bcc" })).toBeNull();
+  });
+
+  it("travels on the send once the reader fills it", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByRole("button", { name: "Cc and Bcc" }));
+    await user.type(
+      screen.getByLabelText("Bcc"),
+      "records@brandt.example{Enter}",
+    );
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.bcc).toEqual(["records@brandt.example"]);
+  });
+
+  // A mail nobody blind-copied sends no key at all, rather than an empty list.
+  it("sends no key when nobody was blind-copied", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await screen.findByLabelText("To");
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)).not.toHaveProperty("bcc");
+  });
+});
+
+describe("what the message carries", () => {
+  it("attaches paper already filed on the record", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ }),
+    );
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    // NAMED BY ID, never uploaded here: the send snapshots each file, so what
+    // travels is a set of references.
+    expect(sentMail(sent)?.attachment_ids).toEqual(["att-1"]);
+  });
+
+  it("takes a file back off before the send", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ }),
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: /^Remove Offer_Nordwand_v3\.pdf/,
+      }),
+    );
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)).not.toHaveProperty("attachment_ids");
+  });
+
+  // A file already on the message shows as held, and pressing it again takes
+  // it off. A message never carries a second copy of one document.
+  it("holds a file the message carries once, and a second press takes it off", async () => {
+    const user = userEvent.setup();
+    stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    const row = await screen.findByRole("button", {
+      name: /^Offer_Nordwand_v3\.pdf/,
+    });
+    await user.click(row);
+
+    const held = () =>
+      screen
+        .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
+        .getAttribute("aria-pressed");
+    await waitFor(() => expect(held()).toBe("true"));
+    await user.click(row);
+    await waitFor(() => expect(held()).toBe("false"));
+  });
+});
+
+// --- Where a message files, per record kind --------------------------------
+//
+// The picker is drawn only where a project is actually connected: a dropdown
+// over nothing asks a reader to open a menu to discover there is no choice.
+// What differs by record is where the connected set COMES from, and two of the
+// five reached none — a message written from a contact or from a project landed
+// unfiled while the composer showed no way to say otherwise.
+
+const PROJECT = {
+  id: "proj-1",
+  name: "Nordwand retrofit",
+  key: "NW-12",
+  phase: "delivering",
+  company_id: "company-1",
+  version: 1,
+};
+
+const COMPANY_360 = {
+  company: { id: "company-1", name: "Nordwand GmbH" },
+  contacts: {
+    data: [
+      {
+        contact_id: "per-2",
+        full_name: "Milo Fenn",
+        primary_email: "milo@nordwand.example",
+      },
+    ],
+  },
+  projects: [PROJECT],
+  sections_omitted: [],
+};
+
+function fileStubs(
+  overrides: Record<string, () => Response | Promise<Response>> = {},
+) {
+  return stubRoutes({
+    "GET /projects/proj-1": () => jsonResponse(PROJECT),
+    "GET /companies/company-1/360": () => jsonResponse(COMPANY_360),
+    ...overrides,
+  });
+}
+
+describe("the project a message files under", () => {
+  // A contact page reached NO project set at all: the composer offered a
+  // filing it could never make, so a mail about the retrofit landed on the
+  // contact and nowhere else.
+  it("offers the contact's own projects on a contact", async () => {
+    stubRoutes({
+      "GET /contacts/p-1/360": () =>
+        jsonResponse({ ...CONTACT, projects: [PROJECT] }),
+    });
+    render(drawer());
+
+    expect(await screen.findByLabelText("Project")).toBeTruthy();
+  });
+
+  // Nothing connected is nothing to ask about. The fixture at the top of this
+  // file carries no projects, which is the ordinary contact.
+  it("keeps the picker shut on No project when no project is connected", async () => {
+    stubRoutes();
+    render(drawer());
+
+    await screen.findByLabelText("To");
+    expectNoProjectToOffer();
+  });
+
+  // A message written FROM a project is about that project. There is no other
+  // filing it could mean, and deriving one from a thread would leave the
+  // record's own mail unfiled against the record it was written from.
+  it("files a project's own mail under it, chosen and visible", async () => {
+    fileStubs();
+    render(
+      <ComposeModal
+        entityType="project"
+        entityId="proj-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The sole live project is the default, SHOWN in the picker rather than
+    // sent silently.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("NW-12"),
+    );
+  });
+
+  it("sends a project's mail linked to the project", async () => {
+    const user = userEvent.setup();
+    const sent = fileStubs();
+    render(
+      <ComposeModal
+        entityType="project"
+        entityId="proj-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.type(
+      await screen.findByLabelText("To"),
+      "milo@nordwand.example{Enter}",
+    );
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.links).toEqual([
+      { entity_type: "project", entity_id: "proj-1" },
+    ]);
+  });
+
+  // The account behind the project is where its contacts come from: a project is
+  // not a contact and has no roster of its own.
+  it("offers the account's contacts on a project", async () => {
+    const user = userEvent.setup();
+    fileStubs();
+    render(
+      <ComposeModal
+        entityType="project"
+        entityId="proj-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(await screen.findByLabelText("To"));
+
+    expect(
+      await screen.findByRole("option", { name: /Milo Fenn/ }),
+    ).toBeTruthy();
+  });
+
+  // A closed project is history, and a message written today is not about
+  // history — so the picker stands down exactly as it does with none connected.
+  it("offers no closed project", async () => {
+    fileStubs({
+      "GET /projects/proj-1": () =>
+        jsonResponse({ ...PROJECT, phase: "closed" }),
+    });
+    render(
+      <ComposeModal
+        entityType="project"
+        entityId="proj-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("To");
+    expectNoProjectToOffer();
+  });
+});
+
+// A customer's thread can be filed under the project of another of its deals.
+// Replying from a deal is about that deal, so its own project is the default.
+describe("a reply written from a deal", () => {
+  it("suggests the deal's own project over the thread's", async () => {
+    const other = { ...PROJECT, id: "proj-2", name: "Reporting", key: "RP-3" };
+    fileStubs({
+      "GET /deals/deal-1": () =>
+        jsonResponse({
+          id: "deal-1",
+          name: "Retrofit",
+          project_id: "proj-1",
+          company_id: "company-1",
+        }),
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          thread_key: "t-1",
+          links: [{ entity_type: "project", entity_id: "proj-2" }],
+        }),
+      "GET /projects/proj-2": () => jsonResponse(other),
+      "GET /companies/company-1/360": () =>
+        jsonResponse({
+          ...COMPANY_360,
+          projects: [PROJECT, other].map(({ id, name, key, phase }) => ({
+            project_id: id,
+            name,
+            key,
+            phase,
+          })),
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="deal"
+        entityId="deal-1"
+        activityId="act-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("NW-12"),
+    );
+  });
+});
+
+// The picker stays in its row, so the head keeps its shape, but it offers nothing.
+function expectNoProjectToOffer() {
+  const picker = screen.getByLabelText("Project");
+  expect(picker.textContent).toContain("No project");
+  expect(picker.hasAttribute("disabled")).toBe(true);
+}

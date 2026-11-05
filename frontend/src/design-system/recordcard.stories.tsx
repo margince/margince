@@ -6,7 +6,7 @@ import { LocaleProvider } from "../i18n";
 import { WriteToProvider } from "../lib/writeto";
 import { Badge } from "./atoms";
 import { AvatarStack } from "./avatarstack";
-import { RecordCard } from "./recordcard";
+import { RecordCard, RecordCardList } from "./recordcard";
 
 // A record listed somewhere else. The stories are the states a caller
 // actually meets: the two kinds, a company's logo, a record with nothing but a
@@ -122,7 +122,7 @@ export const RefusedAddress: Story = {
  */
 export const WithAside: Story = {
   render: () => (
-    <ul className="record-card-list">
+    <RecordCardList>
       <li>
         <RecordCard
           kind="contact"
@@ -149,9 +149,13 @@ export const WithAside: Story = {
           href="#/contacts/p-3"
           position="Geschäftsführer Einkauf und Logistik"
           email="maximilian.von.hohenlohe@nordwind-logistik.de"
-          aside={<Badge tone="accent">Champion</Badge>}
+          aside={
+            <Badge tone="accent" wrap>
+              Champion
+            </Badge>
+          }
         />
       </li>
-    </ul>
+    </RecordCardList>
   ),
 };

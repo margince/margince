@@ -60,7 +60,7 @@ export const ACCEPTED_ATTACHMENT_ATTR =
  * rather than keeping a private list that can fall behind it.
  */
 export type AttachmentParent = Readonly<{
-  entityType: "company" | "contact" | "deal" | "lead" | "project";
+  entityType: "activity" | "company" | "contact" | "deal" | "lead" | "project";
   entityId: string;
 }>;
 

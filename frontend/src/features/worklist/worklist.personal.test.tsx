@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { day, renderWorklist, stub } from "./worklist.testkit";
+import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();

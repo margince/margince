@@ -30,6 +30,7 @@ const ACCOUNT = "01a05500-0000-7000-8000-0000000000c0";
 /** A thread filed under a deal, from a contact the server named beside it. */
 function dealFiledThread(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "waiting-1",
     source: "customer_waiting",
     category: "customer_waiting",
@@ -115,6 +116,7 @@ export const MomentsWithheld: Story = {
 export const AccountWhoWroteLast: Story = {
   args: {
     item: {
+      occurred_precision: "instant",
       id: "task-renewal",
       source: "task",
       category: "tasks",
@@ -139,4 +141,65 @@ export const AccountWhoWroteLast: Story = {
     stubRow();
     return <WorklistRow {...args} />;
   },
+};
+
+export const SupplierRequest: Story = {
+  ...WhoseRowAndWhoWroteLast,
+  args: {
+    item: {
+      ...dealFiledThread(),
+      subject: { type: "company", id: ACCOUNT, label: "Example supplier" },
+      title: "Please confirm the delivery schedule",
+      band: "review",
+      level: 6,
+      consequence: "none",
+      because: [{ kind: "non_buyer_request" }],
+    },
+    position: 1,
+    owner: "",
+  },
+};
+export const SupplierRequestDark: Story = {
+  ...SupplierRequest,
+  globals: { theme: "dark" },
+};
+
+export const SharedDeliverable: Story = {
+  args: {
+    item: {
+      occurred_precision: "instant",
+      id: "recording-task",
+      source: "task",
+      category: "tasks",
+      level: 2,
+      title: "Send the recording",
+      consequence: "task_slips",
+      because: [],
+      actions: ["open"],
+      promise_recipients: [
+        {
+          claim_id: "claim-ines",
+          contact_id: "ines",
+          display_name: "Ines Huber",
+          status: "done",
+        },
+        {
+          claim_id: "claim-morgan",
+          contact_id: "morgan",
+          display_name: "Morgan Recipient",
+          status: "open",
+        },
+      ],
+    },
+    position: 1,
+    owner: "",
+  },
+  render: (args) => {
+    stubRow();
+    return <WorklistRow {...args} />;
+  },
+};
+export const CompactSharedDeliverable: Story = {
+  ...SharedDeliverable,
+  args: { item: SharedDeliverable.args?.item, owner: "", density: "compact" },
 };

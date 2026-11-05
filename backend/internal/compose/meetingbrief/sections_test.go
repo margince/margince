@@ -24,6 +24,11 @@ func at(day int) time.Time {
 	return time.Date(2026, time.August, day, 9, 0, 0, 0, time.UTC)
 }
 
+// instantOn is an activity at 09:00 UTC on the given August day.
+func instantOn(day int) Occurred {
+	return Occurred{At: at(day)}
+}
+
 // fullInput is a meeting with everything a brief could be written from, so a
 // test that asserts one section's absence is asserting that section's own rule
 // rather than an empty fixture.
@@ -34,14 +39,15 @@ func fullInput() Input {
 		Subject:     "Q3 review",
 		StartsAt:    at(12),
 		Now:         at(10),
+		Zone:        time.UTC,
 		Company:     "Northwind",
-		LastTouchAt: &touched,
+		LastTouchAt: &Occurred{At: touched},
 		Deal: &DealIn{
 			ID: dealID, Name: "Northwind platform", Stage: "Proposal",
-			AmountMinor: 9500000, Currency: "EUR", CloseDate: new(at(30)),
+			AmountMinor: new(int64(9500000)), Currency: "EUR", CloseDate: new(at(30)),
 		},
 		Attendees: []AttendeeIn{
-			{ContactID: contactID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &touched},
+			{ContactID: contactID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &Occurred{At: touched}},
 		},
 		Commitments: []ClaimIn{{
 			ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
@@ -131,7 +137,7 @@ func TestAnOverduePromiseIsTheGoalOnceAndTheNextOneIsARisk(t *testing.T) {
 	})
 	sections := Deterministic(in)
 	goal := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindGoal)
-	if len(goal.Sentences) != 1 || !strings.Contains(goal.Sentences[0].Text, "overdue since 8 Aug: send the security pack") {
+	if len(goal.Sentences) != 1 || !strings.Contains(goal.Sentences[0].Text, "overdue since 2026-08-08: send the security pack") {
 		t.Fatalf("goal = %+v, want the older overdue promise, dated", goal.Sentences)
 	}
 	risks := sectionOf(t, sections, crmcontracts.MeetingBriefSectionKindRisks)
@@ -235,7 +241,7 @@ func TestTheHeaderSaysHowManyDaysTheRoomHasBeenQuiet(t *testing.T) {
 // Nothing here is cached, so a brief describing a room nobody has ever spoken
 // to still renders its header rather than blanking.
 func TestAColdRoomStillGetsAHeader(t *testing.T) {
-	in := Input{ActivityID: meetingID, Subject: "Intro call", StartsAt: at(12), Now: at(10)}
+	in := Input{ActivityID: meetingID, Subject: "Intro call", StartsAt: at(12), Now: at(10), Zone: time.UTC}
 	header := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindHeader)
 	if len(header.Sentences) != 2 {
 		t.Fatalf("got %d header sentences, want the meeting line and the quiet line", len(header.Sentences))
@@ -329,7 +335,7 @@ func TestAMeetingWithNoProjectSaysNothingAboutOne(t *testing.T) {
 func TestTheLastSectionSaysWhenThisRoomLastMet(t *testing.T) {
 	in := fullInput()
 	in.PriorMeetings = []PriorMeetingIn{
-		{ID: activityID, Subject: "Kickoff", StartsAt: at(3)},
+		{ID: activityID, Subject: "Kickoff", StartsAt: instantOn(3)},
 	}
 	section := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindCompanyContext)
 	if len(section.Sentences) != 1 {
@@ -361,7 +367,7 @@ func TestEveryPriorMeetingCitesTheMeetingItNames(t *testing.T) {
 	// The reader's next move is to open the earlier meeting, so the line must
 	// carry the record rather than only describing it.
 	in := fullInput()
-	in.PriorMeetings = []PriorMeetingIn{{ID: activityID, Subject: "Kickoff", StartsAt: at(3)}}
+	in.PriorMeetings = []PriorMeetingIn{{ID: activityID, Subject: "Kickoff", StartsAt: instantOn(3)}}
 	section := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindCompanyContext)
 	cited := section.Sentences[0].Evidence
 	if len(cited) != 1 || cited[0].EntityID != activityID || cited[0].EntityType != citeActivity {
@@ -417,11 +423,11 @@ func TestTheAssemblerDerivesFirstTimeFromTheDate(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name string
-		last *time.Time
+		last *touchRow
 		want bool
 	}{
 		{name: "no recorded contact is a first meeting", last: nil, want: true},
-		{name: "a recorded contact is not", last: new(time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)), want: false},
+		{name: "a recorded contact is not", last: &touchRow{At: time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)}, want: false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

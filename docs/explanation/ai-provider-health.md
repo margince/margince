@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/shared/ports/model/health.go backend/internal/modules/ai/providerhealth.go backend/internal/modules/ai/providerhealthshare.go backend/internal/modules/ai/budget.go backend/internal/modules/ai/tracing.go backend/internal/modules/ai/router.go backend/internal/compose/modelfailure -->
 # AI provider health: a provider that answers nobody
 
 A budget stop is the installation running out of its own allowance. A provider can also stop answering

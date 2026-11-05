@@ -25,14 +25,15 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// dressedDeal seeds one open deal carrying a value in every Subject field: a
-// commit-category deal with a provisional close date, an inbound email, a
-// same-currency sent offer and active contract, two close-date pushes plus one
-// pull-in that must not count, an open task, and an economic buyer.
+// dressedDeal seeds one open deal carrying a value in every Subject field. It
+// is at 95% with a provisional close date and has an inbound email, a
+// same-currency sent offer and active contract. It has two close-date pushes
+// plus one pull-in that must not count, an open task, and an economic buyer.
 func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	pipeline, open, _ := integration.DealFixture(t, e)
@@ -42,10 +43,20 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	deal := integration.SeedIDRow(t, owner, `
 		INSERT INTO deal (id, pipeline_id, stage_id, name, owner_id, status, source, captured_by,
 		                  amount_minor, currency, expected_close_date, close_date_provisional,
-		                  forecast_category)
+		                  win_probability_override, win_probability_set_by)
 		VALUES ($1, $2, $3, 'Dressed Subject', $4, 'open', 'manual', 'test',
-		        4200000, 'EUR', now()::date + 30, true, 'commit')`,
+		        4200000, 'EUR', now()::date + 30, true, 95, 'human')`,
 		pipeline, open, e.Rep1)
+
+	// A required criterion the stage declares and nothing has shown met, which
+	// is what UnmetExitCriteria counts. Unmet by ABSENCE of evidence here; the
+	// refuted and not-met cases are asserted in the rule's own suite.
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO stage_exit_criterion (stage_id, key, label, kind, "position")
+		VALUES ($1, 'buyer_confirmed', 'The buyer confirmed', 'buyer_confirmed', 0)`,
+		open); err != nil {
+		t.Fatalf("seeding a stage exit criterion: %v", err)
+	}
 
 	inbound := integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
@@ -59,7 +70,7 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by)
-		VALUES ($1, 'O-1', 'sent', 'EUR', 4300000, 4300000, 'manual', 'test')`, deal); err != nil {
+		VALUES ($1, 'A-1', 'sent', 'EUR', 4300000, 4300000, 'manual', 'test')`, deal); err != nil {
 		t.Fatalf("seeding the sent offer: %v", err)
 	}
 	// A second, newer offer in another currency must NOT become the total: a
@@ -67,7 +78,7 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	// exchange rate.
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by, updated_at)
-		VALUES ($1, 'O-2', 'sent', 'USD', 9900000, 9900000, 'manual', 'test', now() + interval '1 minute')`,
+		VALUES ($1, 'A-2', 'sent', 'USD', 9900000, 9900000, 'manual', 'test', now() + interval '1 minute')`,
 		deal); err != nil {
 		t.Fatalf("seeding the foreign-currency offer: %v", err)
 	}
@@ -115,10 +126,13 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 func subjectsFor(t *testing.T, e *integration.Env) []assurance.Subject {
 	t.Helper()
+	asOf := clocktest.Now(t)
 	var out []assurance.Subject
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
-		out, err = AssuranceSubjects(context.Background(), tx)
+		out, err = AssuranceSubjects(context.Background(), tx, asOf, []assurance.SourceCoverage{
+			{Source: sourceMail, State: assurance.CoverageChecked, CheckedThrough: &asOf},
+		})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the subjects: %v", err)

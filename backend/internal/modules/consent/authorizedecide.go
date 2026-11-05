@@ -32,9 +32,9 @@ import (
 // far less often than contacts do.
 //
 // The returned resolution's Supported reports whether it settled. When it did
-// not, the caller asks its own subject kind's grant, which is the ONLY part
-// that differs: a contact's is VerdictForContact and a lead's is grantedForLead,
-// and each reads a column the other's query does not.
+// not, the caller asks its own subject kind's grant, which is the only part
+// that differs. A contact's is VerdictForRecipient and a lead's is
+// grantedForLead, and each reads a column the other's query does not.
 func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, phase commsauthz.Phase, stops []liveStop) (resolution, error) {
 	res, err := g.resolveCategory(ctx, tx, req, subject)
 	if err != nil {
@@ -79,16 +79,42 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	// resolved on a thread or a live deal has no purpose for a narrow stop to
 	// match, so nil is the purpose it will still have when applySuppression
 	// asks — the same answer, not a guess standing in for one.
-	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) {
-		w, err := g.store.packRulesFor(ctx, tx)
-		if err != nil {
-			return resolution{}, err
-		}
-		if err := recordBasis(ctx, tx, subject, res, req, w); err != nil {
+	if phase == commsauthz.PhaseStaging && !suppressionBindsAny(stops, res.Category, nil) &&
+		!objectionBindsResolution(res, stops) {
+		if err := recordBasis(ctx, tx, subject, res, req, packRulesFor(subject.Country)); err != nil {
 			return resolution{}, err
 		}
 	}
 	return res, nil
+}
+
+// objectionBindsResolution reports whether a broad marketing objection binds a
+// resolution that asked for it (resolution.MarketingStopsBind). It binds when
+// it is no older than the request the quote rests on: the contact opted out
+// after asking. A request recorded after the objection carries the quote. A
+// narrow objection names a marketing purpose, which a quote does not have.
+func objectionBindsResolution(res resolution, stops []liveStop) bool {
+	if !res.MarketingStopsBind {
+		return false
+	}
+	for _, s := range stops {
+		if s.Kind == commsauthz.ReasonObjection && s.PurposeID == nil &&
+			!s.RecordedAt.Before(res.RequestedAt) {
+			return true
+		}
+	}
+	return false
+}
+
+// denyByObjection is the refusal objectionBindsResolution asks for. The
+// suppression is the objection. The reason says it came after the request, so
+// the send screen asks the rep to confirm with the contact first.
+func denyByObjection(d commsauthz.Decision, res resolution) commsauthz.Decision {
+	d.Resolved = res.Category
+	d.Verdict = commsauthz.VerdictDeny
+	d.ReasonCode = commsauthz.ReasonOptedOutAfterRequest
+	d.Suppression = commsauthz.ReasonObjection
+	return d
 }
 
 // allowOn stamps a decision with a resolution the record bore out.
@@ -115,6 +141,38 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 // caller says the record should decide.
 func contradictsClaim(claimed, resolved commsauthz.Category) bool {
 	return claimed != "" && claimed != resolved
+}
+
+// claimYieldsToEvidence reports whether a claim the evidence contradicts gives
+// way to that evidence. Every claim does except marketing. A "requested
+// follow-up" written from the recipient's own open deal is sent as the deal
+// follow-up, and the claim stays in Requested. A marketing claim never yields:
+// an objection to marketing binds the category the sender named.
+func claimYieldsToEvidence(claimed commsauthz.Category) bool {
+	return claimed != commsauthz.CategoryMarketing
+}
+
+// putClaimToEvidence puts the caller's claim to the category the evidence
+// resolved. A contradicted claim is kept in Requested; denied is true when the
+// claim does not yield. The contact and the lead arm both call it, so a
+// marketing claim binds a lead as it binds a contact.
+func putClaimToEvidence(d commsauthz.Decision, claimed, resolved commsauthz.Category) (commsauthz.Decision, bool) {
+	if !contradictsClaim(claimed, resolved) {
+		return d, false
+	}
+	d.Requested = claimed
+	if claimYieldsToEvidence(claimed) {
+		return d, false
+	}
+	return denyContradiction(d, resolved), true
+}
+
+// unsupportedClaimAwaitsAnswer reports whether an unsupported claim is a
+// question for the sender rather than a purpose nothing defines. That holds when
+// the claim is in the vocabulary and the caller named no legacy purpose key.
+// Both subject arms ask it, so a lead and a contact get the same answer.
+func unsupportedClaimAwaitsAnswer(claimed commsauthz.Category, purposeKey string) bool {
+	return purposeKey == "" && claimed != "" && claimed.Valid()
 }
 
 // denyContradiction is the refusal both paths give, with Resolved carrying the
@@ -173,11 +231,13 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		// things at once, and the withdrawal read below would be asked about
 		// reply_to_inbound — so a live objection to direct marketing would
 		// never be put to a message its own sender called marketing.
-		if contradictsClaim(req.Context, res.Category) {
-			d.Requested = req.Context
-			// An evidence-borne category, not a purpose key: nothing here ever
-			// named one, so a narrow suppression cannot be about this send.
-			return denyContradiction(d, res.Category), nil, nil
+		var denied bool
+		d, denied = putClaimToEvidence(d, req.Context, res.Category)
+		if denied {
+			return d, nil, nil
+		}
+		if objectionBindsResolution(res, stops) {
+			return denyByObjection(d, res), nil, nil
 		}
 		// The record bears the category out — and the subject may still have
 		// said stop. The evidence arms never read contact_consent, so this is
@@ -217,15 +277,15 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, req.LegacyPurposeKey, req.Context, res, d, stops)
+	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, req.LegacyPurposeKey, req.Context, res, d, stops, req.SendingEntity)
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no
 // category on its own.
 //
-// It calls VerdictForContact rather than reimplementing the class model, which
-// is what keeps the engine, the legacy transmit gate and the guard endpoint
-// answering with one body of code about one contact. A second implementation
+// It calls VerdictForRecipient rather than reimplementing the class model. So
+// the engine, the legacy transmit gate and the guard endpoint answer with one
+// body of code (verdictFor). A second implementation
 // here would be a second answer, and the one that stopped matching would look
 // exactly like the one that still did.
 //
@@ -233,7 +293,12 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 // caller's suppression re-check needs it to tell a narrow row that binds this
 // purpose from one that binds some OTHER marketing purpose, which
 // suppressionBinds cannot do from the category alone.
-func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop) (commsauthz.Decision, *ids.UUID, error) {
+func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string, country RecipientCountry, purposeKey string, claimed commsauthz.Category, res resolution, d commsauthz.Decision, stops []liveStop, entity ids.UUID) (commsauthz.Decision, *ids.UUID, error) {
+	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
+		d.Verdict = commsauthz.VerdictReview
+		d.ReasonCode = res.Reason
+		return d, nil, nil
+	}
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
@@ -292,15 +357,9 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 		return denyContradiction(d, fromPurpose), &purposeID, nil
 	}
 
-	w, err := g.store.packRulesFor(ctx, tx)
-	if err != nil {
-		return commsauthz.Decision{}, nil, err
-	}
-	// NO Advertises. Nothing on a send names the GOODS it advertises, so the
-	// §7(3) exception, whose similarity condition needs exactly that, is not
-	// offered: VerdictForContact refuses it here as it does for the guard.
-	verdict, err := VerdictForContact(ctx, tx, contactID, purpose, time.Now().Add(-w.reply),
-		MarketingContext{Exception: w.marketingException})
+	w := packRulesFor(country)
+	marketing := MarketingContext{Exception: w.marketingException, SendingEntity: entity}
+	verdict, err := VerdictForRecipient(ctx, tx, contactID, d.Recipient.Email, purpose, time.Now().Add(-w.reply), marketing)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
@@ -308,13 +367,13 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 	case VerdictAllowed:
 		// THE TRANSACTIONAL CLASS DOES NOT CARRY ITSELF ON THE SEND PATH.
 		//
-		// VerdictForContact allows ClassTransactional unconditionally, because
-		// Art 6(1)(b) really does mean the contract is the basis and the guard
-		// endpoint has to say so about a contact who has an invoice coming. But
-		// that answer is about a CONTACT, and this function is about a MESSAGE:
-		// we are only here because resolveCategory found nothing supporting
-		// this one — no thread, no live deal, no accepted claim — and
-		// resolutionForClass already said so with legacy_transactional_unevidenced.
+		// The verdict allows ClassTransactional unconditionally. Art 6(1)(b)
+		// makes the contract the basis, and the guard endpoint has to say so
+		// about a contact who has an invoice coming. But that answer is about a
+		// contact, and this function is about a message. We are here only
+		// because resolveCategory found nothing supporting this one (no thread,
+		// no live deal, no accepted claim). resolutionForClass already said so
+		// with legacy_transactional_unevidenced.
 		//
 		// Taking the allow anyway is what let any message calling itself
 		// operational become one, on nothing but the purpose key. The lead arm
@@ -322,9 +381,9 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 		// this is the same hole for contacts, and the reason code is the one the
 		// resolution had picked before the legacy gate overrode it.
 		//
-		// The guard endpoint and the legacy gate keep VerdictForContact's answer
-		// untouched: an invoice with real evidence resolves as supported and
-		// returns from decideResolved's supported arm, never reaching here.
+		// The guard endpoint and the legacy gate keep the verdict's answer. An
+		// invoice with real evidence resolves as supported and returns from
+		// decideResolved's supported arm, never reaching here.
 		if purpose.Class == ClassTransactional {
 			d.Verdict = commsauthz.VerdictReview
 			d.ReasonCode = commsauthz.ReasonLegacyTransactionalUnevidenced
@@ -348,6 +407,10 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID, purpo
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
 		d.Basis = basisForClass(purpose.Class)
+		if verdict.ExistingCustomer != nil {
+			d.Basis = commsauthz.BasisExistingCustomerException
+			d.ExistingCustomer = verdict.ExistingCustomer
+		}
 	case VerdictBlocked:
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = blockedReasonCode(verdict)

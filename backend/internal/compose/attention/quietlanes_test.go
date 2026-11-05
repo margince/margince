@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -24,19 +25,20 @@ type stubAtRisk struct {
 	err error
 }
 
-func (s stubAtRisk) Quiet(context.Context) ([]RiskyDeal, bool, error) {
+func (s stubAtRisk) Quiet(context.Context, *storekit.OwnerSet) ([]RiskyDeal, bool, error) {
 	return s.rows, s.cut, s.err
 }
 
 type stubDecay struct {
 	rows  []QuietRelationship
+	more  bool
 	err   error
 	calls int
 }
 
-func (s *stubDecay) Lapsed(context.Context) ([]QuietRelationship, error) {
+func (s *stubDecay) Lapsed(context.Context, TaskScope, ids.UUID) ([]QuietRelationship, bool, error) {
 	s.calls++
-	return s.rows, s.err
+	return s.rows, s.more, s.err
 }
 
 // A quiet deal names the number of days it has been quiet. The whole reason the

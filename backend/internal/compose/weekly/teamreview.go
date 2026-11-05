@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -65,10 +66,14 @@ type TeamReview struct {
 	// Summary is the paragraph at the top of the review, composed from the
 	// figures above by fixed rules. Empty on an older snapshot.
 	Summary string
+	// Language keeps permission-filtered summaries in the frozen record language.
+	Language string
 
 	// Attention is computed when the review is read, never frozen: what needs
 	// the manager now, over the frozen roster.
 	Attention TeamAttentionItems
+	// MeetingsWithheld is Review.MeetingsWithheld for the team's week.
+	MeetingsWithheld bool
 }
 
 // FrozenMember is one seat on the team that week, as it was named then.
@@ -138,6 +143,9 @@ func (e *Engine) AssembleTeamFor(
 	var review TeamReview
 	var created bool
 	err := e.withMeasurementSnapshot(ctx, func(tx pgx.Tx) error {
+		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
+			return err
+		}
 		thisWeek, err := WeekStartOf(ctx, tx, now)
 		if err != nil {
 			return err
@@ -155,6 +163,7 @@ func (e *Engine) AssembleTeamFor(
 		if measured {
 			return nil
 		}
+		review.Language = string(teamCopyFor(string(identity.BaseLanguageForRecord(ctx, tx))).Lang())
 		// Every figure is in memory before the parent row is written. The
 		// summary is built from all of them and travels in that one INSERT.
 		if err := e.measureTeamWeek(ctx, tx, &review, members, now); err != nil {
@@ -285,7 +294,7 @@ func gatherTeamWeek(
 		if err != nil {
 			return memberPlans{}, err
 		}
-		review.Reps = append(review.Reps, repFrom(member, counts, frozen.help, deals))
+		review.Reps = append(review.Reps, teamCopyFor(review.Language).repFrom(member, counts, frozen.help, deals))
 	}
 	review.Quality.ProposalsAccepted, review.Quality.ProposalsRejected = &accepted, &rejected
 	if money.Known && money.Currency != "" {
@@ -309,8 +318,8 @@ func addTeamCounts(team *TeamCounts, member Counts) {
 }
 
 // repFrom builds one member's row, patterns and all.
-func repFrom(member TeamMember, counts Counts, help int, deals *DealBlock) TeamRep {
-	patterns := patternsFor(counts, help, deals)
+func (said teamCopy) repFrom(member TeamMember, counts Counts, help int, deals *DealBlock) TeamRep {
+	patterns := said.patternsFor(counts, help, deals)
 	return TeamRep{
 		UserID: member.UserID, DisplayName: member.DisplayName,
 		DealsWon: counts.DealsWon, LeadsBreached: counts.LeadsBreached,

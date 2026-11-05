@@ -1,63 +1,23 @@
+import type { components } from "../../api/schema";
 import { formatDate } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type {
+  DisplayField,
+  ResolvedDisplayField,
+} from "../../lib/approvaldisplay.types";
+import {
+  commercialPreviewDisplay,
+  stagedDealMove,
+} from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
+import { commitmentResponsibility, madeByRow } from "./approvalresponsibility";
 
-// What a reader SEES of a staged proposal, per kind.
-//
-// Split from approvalkind.ts, which keeps the WRITE half (what a reader may
-// change before accepting) and the kind vocabulary itself. The two halves share
-// only the kind as a key: this one is a catalogue that grows with every kind the
-// server learns to stage, and it had grown to two thirds of a file whose name
-// promises something smaller.
-
-// Without this a card falls back to printing the payload's own JSON keys and
-// values: `deal_id  01a03781-9083-…`, `flags  ["unrealistic_stale"]`,
-// `target_version  —`. That is the database row, shown to somebody who was
-// asked to make a business decision. The information they actually need is
-// usually in there — `basis` on a close-date correction is written by the
-// server expressly as the plain-language reason — but it arrives as row four
-// of eight, in the same grey type as a uuid.
-//
-// So a kind may declare what each field IS. Three consequences follow from the
-// declaration, and they are the whole point:
-//
-//   - a field nobody declares is NOT SHOWN. Identifiers, versions and
-//     dedupe keys are how the software finds a record, not why a contact should
-//     agree to something. They stay reachable under the detail dialog's
-//     technical disclosure for whoever genuinely needs them.
-//   - `lead` is the sentence the card leads with, under the headline. At most
-//     one per kind.
-//   - everything else declared renders as a labelled fact, in the order
-//     declared rather than in JSON key order.
-//
-// A kind that declares nothing keeps the old behaviour, so the raw-args kinds
-// (an agent tool's arguments, an automation rule's action) are unchanged: they
-// carry no typed payload for this map to describe, and inventing labels for a
-// bag of unknown keys would be guessing.
-export type DisplayField = {
-  readonly field: string;
-  /** What the field is CALLED. A wire name is a payload path, not a caption. */
-  readonly label: MessageKey;
-  /**
-   * How to read the value.
-   *
-   * `prose` is a sentence the server wrote for a human. `date` is a date-only
-   * wire string, rendered on the reader's calendar. `enum` looks the value up
-   * in `optionLabels` — a raw enum on screen ("unrealistic_stale") is a wire
-   * token wearing a caption. `text` is a value that is already a word: a name,
-   * an address, a stage.
-   */
-  readonly as: "prose" | "text" | "date" | "enum";
-  /**
-   * Promotes this field to the card's lead sentence rather than a labelled
-   * fact. At most one per kind, and only ever a field that answers "why am I
-   * being asked this?" — the reason, never the value being proposed.
-   */
-  readonly lead?: true;
-  /** What each enum value is CALLED. Required in spirit for `as: "enum"`. */
-  readonly optionLabels?: Readonly<Record<string, MessageKey>>;
-};
+// Typed proposals expose declared business facts; raw-argument kinds retain their fields.
+export type {
+  DisplayField,
+  ResolvedDisplayField,
+} from "../../lib/approvaldisplay.types";
 
 // The §11 hygiene findings, spelled as deals.CloseDateFlag spells them
 // (modules/deals/closedate.go). A flag with no entry here renders as its own
@@ -70,6 +30,11 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_soon: "approval.field.closeDateFlag.unrealistic_soon",
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
+
+// A field whose value is already a word, under its caption.
+function textRow(field: string, label: MessageKey): DisplayField {
+  return { field, label, as: "text" };
+}
 
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
@@ -100,6 +65,24 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "enum",
         optionLabels: CLOSE_DATE_FLAGS,
       },
+    ],
+    // A deal move's reason for a loss and its note. While pending, the preview
+    // shows both as changes, so neither leads. Once decided there is no
+    // preview, and these tell a reader why the deal closed.
+    advance_deal: [
+      {
+        field: "lost_reason",
+        label: "approval.field.lost_reason",
+        as: "prose",
+      },
+    ],
+    progress_deal: [
+      {
+        field: "lost_reason",
+        label: "approval.field.lost_reason",
+        as: "prose",
+      },
+      { field: "note", label: "approval.field.note", as: "prose" },
     ],
     // `because` is the signal's own words for why the stage should move. The two
     // stages already render as a proper old→new comparison on the card
@@ -137,23 +120,17 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // Two records that look like one contact. The names are the whole comparison.
+    // A colleague's request: the summary names who asked and what it moves.
+    contact_share: [],
+    ownership_transfer: [textRow("note", "approval.field.note")],
+    // Two records that look like one contact. The names are the comparison; the
+    // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [
-      {
-        field: "connection_name",
-        label: "approval.field.connection_name",
-        as: "text",
-      },
-      {
-        field: "connection_company",
-        label: "approval.field.connection_company",
-        as: "text",
-      },
-      {
-        field: "contact_name",
-        label: "approval.field.contact_name",
-        as: "text",
-      },
+      textRow("connection_name", "approval.field.connection_name"),
+      textRow("connection_company", "approval.field.connection_company"),
+      textRow("connection_position", "approval.field.connection_position"),
+      textRow("contact_name", "approval.field.contact_name"),
+      textRow("contact_title", "approval.field.contact_title"),
     ],
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
@@ -229,7 +206,9 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // near-match. Every field the approval would write is captioned: the
     // decider must see the whole create, not its headline.
     vcard_create: [
-      { field: "full_name", label: "approval.field.name", as: "text" },
+      // `name` is what the accepted create writes; `full_name` is the folded
+      // identity and would show a name the contact never gets.
+      { field: "name", label: "approval.field.name", as: "text" },
       { field: "emails", label: "approval.field.email", as: "text" },
       { field: "company", label: "approval.field.company", as: "text" },
       { field: "title", label: "approval.field.title", as: "text" },
@@ -297,6 +276,10 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       // dated is not overdue, and a reviewer who knows the deadline can supply
       // it here rather than opening the task afterwards to add one.
       { field: "due_date", label: "approval.field.due_date", as: "date" },
+      // Where the task says it came from: the mail's subject and date, or the
+      // transcript lines. The server writes it once, in its own language, so
+      // the label marks it as the original text rather than a translation.
+      { field: "body", label: "approval.field.sourceText", as: "prose" },
     ],
     // An automation composed this reply. Subject and body are the draft the card
     // already renders; `intent` is why the rule fired.
@@ -378,31 +361,89 @@ function displayValue(
 }
 
 /**
- * What this proposal shows, resolved into the reader's language.
- *
- * The card is handed finished strings rather than a policy to interpret: which
- * fields a kind shows is the product's vocabulary, and a design-system
- * primitive that looked it up would be a second author of it.
+ * What this proposal shows, resolved into the reader's language: finished
+ * strings rather than a policy to interpret. Which fields a kind shows is the
+ * product's vocabulary, and a design-system primitive that looked it up would
+ * be a second author of it. `zone` is the record's, a cited day is read in it.
  */
 export function resolveDisplay(
   kind: string,
   change: Readonly<Record<string, unknown>>,
   t: Translator,
   formatDay: (value: string) => string,
+  names: ReadonlyMap<string, string> = new Map(),
+  requestedDecider?: string | null,
+  assigneeInactive = false,
+  preview?: components["schemas"]["ApprovalPreview"],
+  locale: Locale = "en",
+  zone?: string,
 ): readonly ResolvedDisplayField[] {
+  const args =
+    kind === "advance_deal" || kind === "progress_deal"
+      ? stagedDealMove(change)
+      : change;
   const resolved = displayFields(kind).map((entry) => ({
     field: entry.field,
     label: t(entry.label),
     value: displayValue(
       entry,
-      Object.hasOwn(change, entry.field) ? change[entry.field] : undefined,
+      Object.hasOwn(args, entry.field) ? args[entry.field] : undefined,
       t,
       formatDay,
     ),
     lead: entry.lead,
   }));
+  if (preview)
+    return [
+      ...resolved.filter(
+        (entry) => preview.state === "ready" && entry.lead && entry.value,
+      ),
+      ...madeByRow(kind, change, names, t),
+      ...commercialPreviewDisplay(preview, t, locale, formatDay, zone),
+    ];
+  if (
+    kind === "commitment_task" &&
+    typeof change.existing_task_id === "string"
+  ) {
+    return [
+      ...resolved.filter((entry) => entry.lead && entry.value),
+      {
+        field: "recipient_effect",
+        label: t("approval.preview.effects"),
+        value: t("approval.preview.attachRecipients"),
+      },
+    ];
+  }
+  if (kind === "commitment_task") {
+    const due = resolved.find((entry) => entry.field === "due_date");
+    if (due && due.value === null)
+      due.value = t("approval.commitment.noDueDay");
+    resolved.push({
+      field: "promise_status",
+      label: t("approval.commitment.promiseStatus"),
+      value: t("approval.commitment.notFulfilled"),
+      lead: undefined,
+    });
+  }
   const byField = new Map(resolved.map((entry) => [entry.field, entry]));
-  return resolved.filter((entry) => {
+  const fields =
+    kind === "commitment_task"
+      ? [
+          ...resolved.filter((entry) => entry.field !== "party"),
+          ...commitmentResponsibility(change, names, t, assigneeInactive),
+        ]
+      : resolved;
+  if (requestedDecider) {
+    fields.push({
+      field: "requested_decider",
+      label: t("approval.responsibility.requestedFrom"),
+      value:
+        names.get(requestedDecider) ??
+        t("approval.commitment.unnamedColleague"),
+      lead: undefined,
+    });
+  }
+  return fields.filter((entry) => {
     const supersedes = supersededBy.get(entry.field);
     if (supersedes === undefined) {
       return true;
@@ -439,14 +480,6 @@ const supersededBy = new Map<string, string>([
   ["previous_close_date", "expected_close_date"],
 ]);
 
-/** A DisplayField with its label and value resolved for one payload. */
-export type ResolvedDisplayField = Readonly<{
-  field: string;
-  label: string;
-  value: string | null;
-  lead?: true;
-}>;
-
 /**
  * How a staged date-only value reads on screen.
  *
@@ -457,10 +490,11 @@ export type ResolvedDisplayField = Readonly<{
  */
 export function stagedDayFormatter(
   locale: Locale,
-  zone: string,
+  // The record zone: a staged day and the cited activity's day are the record's.
+  record: string,
 ): (value: string) => string {
   return (value) => {
-    const day = formatDate(value, locale, zone);
+    const day = formatDate(value, locale, record);
     return day.includes("Invalid") ? value : day;
   };
 }

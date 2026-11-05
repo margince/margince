@@ -42,7 +42,7 @@ func TestASenderPurgeKeepsAContactTheOwnerTypedIn(t *testing.T) {
 	// Typed in by the owner, with one address and no deal; then mail arrives
 	// from it into the owner's mailbox.
 	owner := ids.From[ids.UserKind](e.Rep1)
-	typed, err := e.Contacts.CreateContact(purgeCtx(e, e.Rep1), contacts.CreateContactInput{
+	typed, err := e.Contacts.CreateContact(ownerCtx(e), contacts.CreateContactInput{
 		FullName: typedName,
 		OwnerID:  &owner,
 		Emails:   []contacts.ContactEmailInput{{Email: typedAddress, EmailType: "work", IsPrimary: true}},
@@ -130,13 +130,10 @@ func TestASenderPurgeKeepsACapturedContactSomebodyWorkedOn(t *testing.T) {
 		},
 		"a promotion of a typed lead into it": func(t *testing.T, e *integration.Env, minted ids.UUID) {
 			name, email, title := "Assistenz Kanzlei", mintedAddress, "Partnerin"
-			lead, _, err := e.Contacts.CreateLead(ownerCtx(e), contacts.CreateLeadInput{
-				FullName: &name, Email: &email, Title: &title, Source: "manual",
-			})
-			if err != nil {
-				t.Fatalf("typing in the lead: %v", err)
-			}
-			promoted, _, err := e.Contacts.PromoteLead(ownerCtx(e), ids.From[ids.LeadKind](ids.UUID(lead.Id)),
+			lead := seedHistoricalLeadAtContactEmail(t, e, ownerCtx(e), contacts.CreateLeadInput{
+				FullName: &name, Title: &title, Source: "manual",
+			}, email)
+			promoted, _, err := e.Contacts.PromoteLead(ownerCtx(e), lead,
 				contacts.PromoteLeadInput{Trigger: string(contacts.TriggerHumanQualify)})
 			if err != nil {
 				t.Fatalf("promoting the lead: %v", err)

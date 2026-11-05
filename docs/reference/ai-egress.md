@@ -53,8 +53,11 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `owed_verdict` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `propose_roles` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `rate_extract` | `premium` → `cheap_cloud` | no | no | no | none | shipped |
+| `reader_rendering` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
+| `report_interpret` | `premium` → `cheap_cloud` | no | yes | no | none | shipped |
+| `report_setup` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `request_settlement` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
-| `signal_extract` | `cheap_cloud` → `premium` | no | yes | no | none | shipped |
+| `signal_extract` | `frontier` | no | yes | no | none | shipped |
 | `site_extract` | `premium` | no | no | no | none | shipped |
 | `site_fact_extract` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `site_triage` | `cheap_cloud` → `premium` | no | no | no | the bound decision model | shipped |
@@ -62,7 +65,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `summarize` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `tag_suggest` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `transcript` | `cheap_cloud` → `premium` | no | no | no | none | planned |
-| `transcript_propose` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
+| `transcript_propose` | `premium` | no | no | no | none | shipped |
 | `voice_build` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `weekly_learnings` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `weekly_review` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
@@ -75,6 +78,10 @@ two decide whether a sender or a thread is private, so sending their text to a
 hosted provider would defeat the check. Both declare `local_only`: their prompt
 reaches no hosted provider under any profile, and no decision provider the
 registry does not mark local either.
+
+`voice_build` reads mail too, but only a user's own sent mail, and only after that
+user chose **Learn from sent mail** on their Writing voice page. Its text then goes
+where the task's ladder in the table sends it.
 
 The **Local-only ladder** column names the ladder's tiers and does not say what
 a deployment binds them to. Those tiers are size classes, and for a task that
@@ -117,6 +124,7 @@ a processing record can be written from the rows marked yes.
 | the customer's own webhook endpoint | yes | whatever the subscribed event carries, which is the customer's own record data | the subscription itself; deleting it stops the delivery |
 | the identity provider's published key set | no |  | the identity provider binding |
 | the mailbox provider (IMAP) | yes | the mailbox credential and the folders it reads | the mailbox connection; removing it stops the sync |
+| the provider an installed extension unit calls | yes | whatever that unit sends its provider, which can include the deals and colleagues' details its manifest lists under system_reads | removing the unit from the installation |
 | this installation's own public address | no |  | not optional: it is how the installation learns whether it is reachable |
 
 A row here is what the installation can do. Most of these are inert until an administrator supplies a credential or turns a setting on, and

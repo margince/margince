@@ -59,7 +59,7 @@ type elsewhereProvider struct {
 }
 
 func (elsewhereProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
-	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{"full_name":"Mirrored"}`)}, nil
+	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{"full_name":"Mirrored","domains":[{"domain":"acme.example"}]}`)}, nil
 }
 
 // stageableToolArgs is the argument corpus every walk over the stageable set
@@ -77,11 +77,6 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		"progress_deal":  fmt.Sprintf(`{"deal_id":%q,"to_stage_id":%q,"note":"n"}`, deal, stage),
 		"send_message":   fmt.Sprintf(`{"activity_id":%q,"body":"b","consent_purpose":"support"}`, activity),
 		"send_email":     fmt.Sprintf(`{"activity_id":%q,"to":["a@example.test"],"subject":"s","body":"b","consent_purpose":"support"}`, activity),
-		// A booking anchors on no row, so its refusal has to come through a
-		// LINK. Arguments with no links would read nothing and pass this walk
-		// while proving nothing.
-		"book_meeting": fmt.Sprintf(
-			`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","subject":"s","links":[{"entity_type":"deal","entity_id":%q}]}`, deal),
 		// The account-started send has no anchor either, and for the same
 		// reason: it starts the conversation instead of answering one. Its
 		// links are what carry the refusal here.
@@ -107,6 +102,7 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		"relink_activities": fmt.Sprintf(
 			`{"activity_ids":[%q],"entity_type":"deal","entity_id":%q}`, activity, deal),
 		"disqualify_lead":       fmt.Sprintf(`{"lead_id":%q}`, lead),
+		"set_up_partner":        fmt.Sprintf(`{"company_id":%q,"partner_role":"consulting"}`, company),
 		"demote_lead":           fmt.Sprintf(`{"lead_id":%q,"reason":"too early"}`, lead),
 		"advance_project_phase": fmt.Sprintf(`{"project_id":%q,"to_phase":"delivering"}`, project),
 		"merge_tags":            fmt.Sprintf(`{"tag_id":%q,"into_tag_id":%q}`, tagA, tagB),
@@ -132,9 +128,9 @@ func stageableToolArgs() (reads, creates map[string]string) {
 // With two families registered the count could not change for a tool in a third,
 // which is a census reporting PASS over two thirds of its subject.
 func registerEveryStageableFamily(r *Registry, p datasource.SystemOfRecordProvider, comms Comms) {
-	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, noConflicts{}, nil, nil, nil)
+	RegisterCoreTools(r, p, fixedStages{semantic: "won"}, nil, nil, nil, nil)
 	RegisterCommsTools(r, comms, p)
-	RegisterLifecycleTools(r, p, nil, nil, nil, nil)
+	RegisterLifecycleTools(r, p, nil, nil, nil, nil, inertLifecycle{})
 	RegisterTagTools(r, stagingTags{})
 	RegisterImportTools(r, stagingImports{})
 	RegisterEnrichTool(r, p, nil)
@@ -245,14 +241,18 @@ func (localProvider) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (d
 	return in.Ref, nil
 }
 
+func (p localProvider) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
 func (localProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return nativeRecord(datasource.Record{
 		Ref: ref, Version: 1,
-		// One record shape serving every tool in the corpus: a name for the
-		// labels a summary is written from, and the channel kind the reply
-		// tools ask for before they will describe a send.
+		// One record shape serves every tool in the corpus. It carries a name for
+		// the summary labels, the channel kind the reply tools need, and the
+		// domain an enrich reads.
 		Fields: json.RawMessage(`{"full_name":"Ada Lovelace","name":"Ada Lovelace",` +
-			`"kind":"message","channel_provider":"telegram"}`),
+			`"kind":"message","channel_provider":"telegram","domains":[{"domain":"acme.example"}]}`),
 	}), nil
 }
 

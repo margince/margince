@@ -9,9 +9,11 @@
 
 import type { components } from "../../../api/schema";
 import { EmailReference } from "../../../design-system/emailreference";
-import { formatDate } from "../../../format/format";
+import { relayProvenance } from "../../../design-system/provenanceof";
+import { ProvenanceTag, type RelaySend } from "../../../design-system/trust";
+import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 type Receipt = components["schemas"]["ContactGraphReceipt"];
 
@@ -25,9 +27,12 @@ type Receipt = components["schemas"]["ContactGraphReceipt"];
  */
 export function ReceiptList({
   receipts,
+  relayMember = "unknown",
   onOpenEmail,
 }: Readonly<{
   receipts: readonly Receipt[];
+  /** Whose relationship these receipts are, so a relay send says whom it was for. */
+  relayMember?: RelaySend["member"];
   /**
    * Opens one of these messages in the contact page's email drawer.
    *
@@ -40,7 +45,7 @@ export function ReceiptList({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <ul className="pn-receipts">
       {receipts.map((r) => (
@@ -48,7 +53,12 @@ export function ReceiptList({
           {r.kind === "email" ? (
             <EmailReference
               subject={r.subject}
-              occurredAt={formatDate(r.occurred_at, locale, recordZone)}
+              occurredAt={activityDay(
+                r.occurred_at,
+                r.occurred_precision,
+                locale,
+                readerZone,
+              )}
               onOpen={
                 onOpenEmail ? () => onOpenEmail(r.activity_id) : undefined
               }
@@ -56,7 +66,20 @@ export function ReceiptList({
           ) : (
             <>
               {r.subject ?? t("contact.graph.untitledMessage")} ·{" "}
-              {formatDate(r.occurred_at, locale, recordZone)}
+              {activityDay(
+                r.occurred_at,
+                r.occurred_precision,
+                locale,
+                readerZone,
+              )}
+            </>
+          )}
+          {r.controller_send && (
+            <>
+              {" "}
+              <ProvenanceTag
+                provenance={relayProvenance(r.controller_send, relayMember)}
+              />
             </>
           )}
         </li>

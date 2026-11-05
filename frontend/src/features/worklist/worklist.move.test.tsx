@@ -19,7 +19,7 @@ import {
   renderWorklist,
   row,
   stub,
-} from "./worklist.testkit";
+} from "../../testing/worklist.testkit";
 
 afterEach(() => {
   cleanup();
@@ -51,6 +51,11 @@ function aDayWith(item: ReturnType<typeof aQuietDeal>) {
   });
 }
 
+/** The agent's mark: the ✦ a control draws when its press makes the model write. */
+function wearsMark(control: Element): boolean {
+  return control.querySelector(".lucide-sparkles") !== null;
+}
+
 describe("a deal row carrying a decided next step", () => {
   it("offers the step, rather than naming the problem alone", async () => {
     stub(aDayWith(aQuietDeal()));
@@ -62,36 +67,37 @@ describe("a deal row carrying a decided next step", () => {
     ).not.toBeNull();
   });
 
-  it("sends the server's own arguments, not a body the row rebuilt", async () => {
-    // The move's arguments ARE the task the server prepared. A row that
-    // re-derived them from what it happens to render would send a different
-    // task than the one the reason on screen describes.
-    const sent: unknown[] = [];
-    stub(aDayWith(aQuietDeal()));
-    const passthrough = globalThis.fetch;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.endsWith("/tasks")) {
-          const body =
-            input instanceof Request
-              ? await input.clone().text()
-              : String(init?.body ?? "");
-          sent.push(JSON.parse(body));
-          return jsonResponse({ id: "01a05500-0000-7000-8000-0000000000d3" });
-        }
-        return passthrough(input, init);
-      }),
-    );
-    const user = userEvent.setup();
-    renderWorklist();
+  it.each(["deal_at_risk", "brief_item"])(
+    "%s sends the server's own task arguments",
+    async (source) => {
+      // Creating the task must preserve the server-prepared arguments.
+      const sent: unknown[] = [];
+      stub(aDayWith(aQuietDeal({ source })));
+      const passthrough = globalThis.fetch;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input instanceof Request ? input.url : input);
+          if (url.endsWith("/tasks")) {
+            const body =
+              input instanceof Request
+                ? await input.clone().text()
+                : String(init?.body ?? "");
+            sent.push(JSON.parse(body));
+            return jsonResponse({ id: "01a05500-0000-7000-8000-0000000000d3" });
+          }
+          return passthrough(input, init);
+        }),
+      );
+      const user = userEvent.setup();
+      renderWorklist();
 
-    await user.click(
-      await screen.findByRole("button", { name: /^add task$/i }),
-    );
-    await waitFor(() => expect(sent).toEqual([TASK_BODY]));
-  });
+      await user.click(
+        await screen.findByRole("button", { name: /^add task$/i }),
+      );
+      await waitFor(() => expect(sent).toEqual([TASK_BODY]));
+    },
+  );
 
   it("leaves every other move to the link that already draws it", async () => {
     // Only create_task is drawn here. The other moves reach the reader as
@@ -134,10 +140,6 @@ describe("a deal row carrying a decided next step", () => {
   });
 
   it("does not take a brief item's own verbs away", async () => {
-    // A brief item carries a deal subject, and the backend attaches a cached
-    // move to any deal-subject row that has none. Drawn before BriefVerbs, the
-    // task button would replace Act, Set aside and Dismiss on a row whose own
-    // verbs are the whole point of it.
     stub(
       aDayWith(
         aQuietDeal({
@@ -150,10 +152,34 @@ describe("a deal row carrying a decided next step", () => {
     renderWorklist();
 
     await screen.findByText(/Turbinenbau/);
+    expect(screen.getByRole("button", { name: /^add task$/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: en["brief.act"] })).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: /^add task$/i }),
-      "a brief item lost its own verbs to a move button",
+      screen.getByRole("button", { name: en["brief.snooze"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: en["deal.openDeal"] }),
     ).toBeNull();
+  });
+
+  it("wears the mark only on a link where the model writes", async () => {
+    // A deal's draft move reaches the deal, where nothing drafts on arrival; a
+    // contact's opens the composer, which does.
+    for (const [subject, marked] of [
+      [{ type: "deal", id: "01a05500-0000-7000-8000-0000000000d2" }, false],
+      [{ type: "contact", id: "01a05500-0000-7000-8000-0000000000c5" }, true],
+    ] as const) {
+      cleanup();
+      stub(aDayWith(aQuietDeal({ subject, move: { action: "draft_email" } })));
+      renderWorklist();
+
+      const link = await screen.findByRole("link", {
+        name: marked
+          ? en["worklist.verb.draft_email_now"]
+          : en["worklist.verb.draft_email"],
+      });
+      expect(wearsMark(link), subject.type).toBe(marked);
+    }
   });
 
   it("draws no button for a step it cannot perform", async () => {
@@ -210,9 +236,9 @@ describe("a waiting message whose prepared move is the reply", () => {
   function marked(): string[] {
     const acts = document.querySelector(".worklist-row-acts");
     expect(acts, "the row drew no line of verbs").not.toBeNull();
-    return [...(acts?.querySelectorAll(".btn-ai") ?? [])].map(
-      (verb) => verb.textContent ?? "",
-    );
+    return [...(acts?.querySelectorAll(".btn") ?? [])]
+      .filter(wearsMark)
+      .map((verb) => verb.textContent ?? "");
   }
 
   it("offers one control and not two", async () => {
@@ -230,13 +256,13 @@ describe("a waiting message whose prepared move is the reply", () => {
     ).toBeNull();
   });
 
-  it("keeps the mark on it, because a rule worked the move out", async () => {
+  it("keeps the mark on it, because the press drafts", async () => {
     aWaitingRow();
 
     const draft = await screen.findByRole("button", {
       name: en["worklist.verb.draft_reply_now"],
     });
-    expect(draft.classList.contains("btn-ai")).toBe(true);
+    expect(wearsMark(draft)).toBe(true);
   });
 
   it("opens the composer where the reader is standing", async () => {
@@ -254,5 +280,38 @@ describe("a waiting message whose prepared move is the reply", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeNull();
     });
+  });
+
+  it("starts the draft on that one press", async () => {
+    // The mark promises that the model writes. A composer that waited for its
+    // own Draft button would make the reader press the same promise twice.
+    aWaitingRow();
+    const asked: unknown[] = [];
+    const passthrough = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith(`/activities/${WAITING.id}/draft-email`)) {
+          asked.push(
+            JSON.parse(
+              input instanceof Request
+                ? await input.clone().text()
+                : String(init?.body ?? "{}"),
+            ),
+          );
+          return jsonResponse({ subject: "Re: pricing", body: "Thanks!" });
+        }
+        return passthrough(input, init);
+      }),
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.draft_reply_now"],
+      }),
+    );
+    await waitFor(() => expect(asked).toHaveLength(1));
   });
 });

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { waitingEmailRow } from "../../testing/brief.fixtures";
 import { jsonResponse, StoryProviders } from "../../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
@@ -36,6 +37,7 @@ const DEAL = "01a05500-0000-7000-8000-0000000000da";
 /** A deal the night picked out, with more to say than one line can hold. */
 function dealRow(over: Partial<WorklistItem> = {}): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "row-1",
     source: "brief_item",
     category: "deals_at_risk",
@@ -210,5 +212,65 @@ export const VisibleStandingAndReason: Story = {
   render: (args) => {
     stubRow();
     return <WorklistRow {...args} />;
+  },
+};
+
+// An update about a MAIL. An activity has no page, so the name is a press that
+// opens the message in its drawer. It reads as the other names do.
+export const UpdateAboutAMail: Story = {
+  args: {
+    ...COMPACT,
+    item: {
+      occurred_precision: "instant",
+      id: "row-notice",
+      source: "notice",
+      category: "tasks",
+      level: 3,
+      consequence: "none",
+      title: "Summary updated",
+      detail: "The buyer asked to hold the Q4 price until Friday.",
+      because: [],
+      actions: ["acknowledge"],
+      subject: {
+        type: "activity",
+        id: "01a05500-0000-7000-8000-0000000000f1",
+        label: "Pricing for Q4",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow();
+    return <WorklistRow {...args} />;
+  },
+};
+
+export const SharedReply: Story = {
+  ...OneLine,
+  args: {
+    ...COMPACT,
+    item: {
+      ...waitingEmailRow(),
+      owner: {
+        kind: "shared",
+        users: [
+          { id: "alice", label: "Alice Nguyen" },
+          { id: "bob", label: "Bob Fischer" },
+        ],
+      },
+    },
+  },
+};
+
+export const SharedReplyWithheldName: Story = {
+  ...OneLine,
+  args: {
+    ...COMPACT,
+    item: {
+      ...waitingEmailRow(),
+      owner: {
+        kind: "shared",
+        users: [{ id: "alice", label: "Alice Nguyen" }, { id: "bob" }],
+      },
+    },
   },
 };

@@ -1,4 +1,5 @@
 import { type ReactNode, useRef } from "react";
+import { AnsweredSearch } from "./answeredsearch";
 import { EmptyState, useScrollRegion } from "./atoms";
 import {
   CountLine,
@@ -12,6 +13,7 @@ import {
   useColumnWidths,
   useFrozenEdge,
 } from "./listtable.layout";
+import { orderedColumns, useColumnOrder } from "./listtable.order";
 import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
@@ -167,8 +169,16 @@ export function ListTable<Row>({
    * dial did passes none.
    */
   emptyNote?: ReactNode;
-  /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
-  search?: { value: string; onChange: (next: string) => void };
+  /**
+   * Omit for a list whose GET has no `q` param; the box is then not rendered.
+   * `answered` is the search the rows answer, which `value` runs ahead of while
+   * the typing settles. A `body` reads it as `AnsweredSearch`.
+   */
+  search?: {
+    value: string;
+    answered: string;
+    onChange: (next: string) => void;
+  };
   /**
    * Omit when the data source refuses to sort: the headers then render inert,
    * so the table never offers a control the server would reject.
@@ -288,9 +298,11 @@ export function ListTable<Row>({
   saveView?: ReactNode;
 }>) {
   const display = useColumnDisplay(columns);
+  const order = useColumnOrder(widthsKey);
+  const placed = orderedColumns(columns, order.order);
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
-  const shown = columns.filter((column) => !display.hidden.has(column.key));
+  const shown = placed.filter((column) => !display.hidden.has(column.key));
   // The width observer re-attaches when the scroller comes or goes.
   const drawsOwnTable = body === undefined || body === null;
   const layout = useColumnWidths(
@@ -395,7 +407,8 @@ export function ListTable<Row>({
           ? undefined
           : (menu) => (
               <DisplayMenu
-                optional={columns.filter((column) => !column.fixed)}
+                optional={placed.filter((column) => !column.fixed)}
+                onReorder={order.onReorder}
                 {...display}
                 {...menu}
               />
@@ -423,37 +436,39 @@ export function ListTable<Row>({
         <div className="lt-emptyline">
           <EmptyState>{emptyLine}</EmptyState>
         </div>
+      ) : body != null ? (
+        <AnsweredSearch.Provider value={search?.answered}>
+          {body}
+        </AnsweredSearch.Provider>
       ) : (
-        (body ?? (
-          <ListGrid
-            scrollerRef={(node) => {
-              scroller.current = node;
-              if (bodyRef) {
-                bodyRef.current = node;
-              }
-            }}
-            region={region}
-            frozen={frozen}
-            head={head}
-            dense={display.dense}
-            layout={layout}
+        <ListGrid
+          scrollerRef={(node) => {
+            scroller.current = node;
+            if (bodyRef) {
+              bodyRef.current = node;
+            }
+          }}
+          region={region}
+          frozen={frozen}
+          head={head}
+          dense={display.dense}
+          layout={layout}
+          shown={shown}
+          sort={sort}
+        >
+          <GridBody
+            rows={rows}
+            pageRows={paging.pageRows}
             shown={shown}
-            sort={sort}
-          >
-            <GridBody
-              rows={rows}
-              pageRows={paging.pageRows}
-              shown={shown}
-              rowKey={rowKey}
-              onRowClick={onRowClick}
-              rowHref={rowHref}
-              selection={selection}
-              pending={pending}
-              problem={problem}
-              empty={emptyLine}
-            />
-          </ListGrid>
-        ))
+            rowKey={rowKey}
+            onRowClick={onRowClick}
+            rowHref={rowHref}
+            selection={selection}
+            pending={pending}
+            problem={problem}
+            empty={emptyLine}
+          />
+        </ListGrid>
       )}
     </ListSurface>
   );

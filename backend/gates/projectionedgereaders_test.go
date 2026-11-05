@@ -65,11 +65,12 @@ func projectionEdgeTables(t *testing.T) []string {
 // one of them in the site's own declaration means the caller was gated or the
 // rows were row-scoped before they left the statement.
 var projectionGateSpellings = map[string]bool{
-	"Require":           true,
-	"EnsureVisible":     true,
-	"EnsureVisibleLive": true,
-	"ScopeClauseFor":    true,
-	"EdgeReadScope":     true,
+	"Require":               true,
+	"EnsureVisible":         true,
+	"EnsureVisibleLive":     true,
+	"EnsureVisibleExisting": true,
+	"ScopeClauseFor":        true,
+	"EdgeReadScope":         true,
 }
 
 // projectionMaintenanceSites are the ratified ungated sites, each with the

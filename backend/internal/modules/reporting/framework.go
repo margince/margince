@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -20,12 +21,29 @@ import (
 )
 
 func (s *Service) framework(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFramework, error) {
-	out := crmcontracts.ReportingFramework{Definition: crmcontracts.ReportingFrameworkInput{Template: reportingSales, Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{}, Reason: "Not configured"}}
-	err := tx.QueryRow(ctx, "SELECT f.revision,f.version,r.definition,r.effective_at FROM reporting_framework f JOIN reporting_framework_revision r ON r.revision=f.revision").Scan(&out.Revision, &out.Version, &out.Definition, &out.EffectiveAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return out, nil
+	out, published, err := currentFramework(ctx, tx)
+	if err == nil && !published {
+		out.Definition.Reason = s.statusCopy(ctx, tx).Say(statusWords.Unconfigured)
 	}
 	return out, err
+}
+
+// currentFramework reads the framework in force, or the sales default where
+// none was ever published.
+func currentFramework(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFramework, bool, error) {
+	out := crmcontracts.ReportingFramework{Definition: crmcontracts.ReportingFrameworkInput{Template: reportingSales, Qualification: []crmcontracts.ReportingQualification{}, CaptureContexts: []crmcontracts.ReportingCaptureContext{}}}
+	err := tx.QueryRow(ctx, "SELECT f.revision,f.version,r.definition,r.effective_at FROM reporting_framework f JOIN reporting_framework_revision r ON r.revision=f.revision").Scan(&out.Revision, &out.Version, &out.Definition, &out.EffectiveAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, false, nil
+	}
+	return out, err == nil, err
+}
+
+// FrameworkTemplate is the template of the framework in force. It needs no
+// framework grant: which views a workspace is set up for discloses no figure.
+func FrameworkTemplate(ctx context.Context, tx pgx.Tx) (crmcontracts.ReportingFrameworkInputTemplate, error) {
+	out, _, err := currentFramework(ctx, tx)
+	return out.Definition.Template, err
 }
 
 // GetFramework returns the current stage definitions used by metric evaluation.
@@ -81,7 +99,8 @@ func (s *Service) PublishFramework(ctx context.Context, version int64, in crmcon
 			return err
 		}
 		b = bindings{}
-		if _, err := tx.Exec(ctx, "UPDATE reporting_framework SET revision="+b.add(out.Revision)+",version="+b.add(out.Version), b.values...); err != nil {
+		query := "UPDATE reporting_framework SET revision=" + b.add(out.Revision) + ",version=" + b.add(out.Version)
+		if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 			return err
 		}
 		return recordChange(ctx, tx, "reporting_framework", frameworkID, "update", &before, out)
@@ -90,11 +109,40 @@ func (s *Service) PublishFramework(ctx context.Context, version int64, in crmcon
 }
 
 func validateFrameworkInput(in crmcontracts.ReportingFrameworkInput) error {
-	if !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 || len(in.CaptureContexts) > 20 {
-		return invalid("supply a reason and at most twenty capture contexts")
+	if !values.HasVisibleText(in.Reason) {
+		return refuse("reason", "invalid", "supply a reason")
+	}
+	if utf8.RuneCountInString(in.Reason) > 1000 {
+		return refuse("reason", "too_long", "a reason holds at most 1000 characters")
+	}
+	if len(in.CaptureContexts) > 20 {
+		return refuse("capture_contexts", "out_of_range", "supply at most twenty capture contexts")
 	}
 	if in.Template != reportingSales && in.Template != "sdr" {
-		return invalid("choose sales or SDR defaults")
+		return refuse("template", "invalid", "choose sales or SDR defaults")
+	}
+	return validateCoverageThresholds(in.AccountCoverage)
+}
+
+// validateCoverageThresholds refuses a limit outside the range the contract
+// states, so a published framework never judges by a number no screen offers.
+func validateCoverageThresholds(in *crmcontracts.AccountCoverageThresholds) error {
+	if in == nil {
+		return nil
+	}
+	for _, limit := range []struct {
+		name     string
+		value    *int
+		min, max int
+	}{
+		{"max_engaged_seats", in.MaxEngagedSeats, 0, 10},
+		{"untouched_days", in.UntouchedDays, 1, 365},
+		{"silent_days", in.SilentDays, 1, 365},
+		{"won_within_days", in.WonWithinDays, 1, 730},
+	} {
+		if limit.value != nil && (*limit.value < limit.min || *limit.value > limit.max) {
+			return refuse("account_coverage."+limit.name, "out_of_range", fmt.Sprintf("choose a number from %d to %d", limit.min, limit.max))
+		}
 	}
 	return nil
 }

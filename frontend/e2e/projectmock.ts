@@ -1,4 +1,5 @@
 import type { Route } from "@playwright/test";
+import type { components } from "../src/api/schema";
 
 // The project half of the network-edge mock: a stateful stand-in for the
 // project endpoints, so the create → attach → win → deliver → close flow in
@@ -62,16 +63,13 @@ type MockActivity = {
   links: { entity_type: string; entity_id: string }[];
 };
 
-type Transition = {
-  id: string;
-  from_phase: string | null;
-  to_phase: string;
-  reason: string | null;
-  changed_at: string;
-  changed_by: { id: string; display_name: string | null };
-};
+type Transition = components["schemas"]["Project360PhaseTransition"];
 
-const ACTOR = { id: "u1", display_name: "Lars Brandt" };
+const ACTOR: components["schemas"]["PrincipalAttribution"] = {
+  actor_type: "human",
+  actor_id: "u1",
+  actor_name: "Lars Brandt",
+};
 const NOW = "2026-07-06T09:00:00Z";
 
 function page(data: unknown[]) {

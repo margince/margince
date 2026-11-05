@@ -1,5 +1,7 @@
-import { formatMoney } from "../format/format";
+import { countryBeyondCity } from "../format/address";
+import { formatDateAbbrev, formatMoney } from "../format/format";
 import { toMinorUnits } from "../format/minorunits";
+import { browserZone } from "../format/timezone";
 import type { Locale, useT } from "../i18n";
 import {
   type CreateField,
@@ -9,6 +11,16 @@ import {
   splitMultiselectValue,
 } from "./create";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
+
+export function dateDisplay(
+  field: CreateField,
+  stored: string,
+  locale: Locale,
+): string | undefined {
+  return field.type === "date" && stored
+    ? formatDateAbbrev(stored, locale, browserZone())
+    : undefined;
+}
 
 export function selectOptions(
   field: CreateField,
@@ -162,7 +174,10 @@ function postalLines(values: Record<string, string>): string {
   const place = [values.address_postal_code, values.address_city]
     .filter(Boolean)
     .join(" ");
-  const area = [values.address_region, values.address_country]
+  const area = [
+    values.address_region,
+    countryBeyondCity(values.address_city, values.address_country),
+  ]
     .filter(Boolean)
     .join(", ");
   return [values.address_line1, values.address_line2, place, area]

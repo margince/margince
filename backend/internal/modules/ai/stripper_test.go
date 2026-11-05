@@ -33,6 +33,8 @@ func TestSecretStripperRemovesCredentials(t *testing.T) {
 		{"bearer header", "Authorization: Bearer abcdef0123456789TOKEN", "abcdef0123456789TOKEN", "bearer_token"},
 		{"jwt", "session eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U expired", "eyJhbGciOiJIUzI1NiJ9", "jwt"},
 		{"password assignment", "the config has password=hunter2secret in it", "hunter2secret", "credential_assignment"},
+		{"password with a bracket", "the vendor sent password: ab[cd1234 today", "cd1234", "credential_assignment"},
+		{"password on the next line", "password:\n  hunter2secret", "hunter2secret", "credential_assignment"},
 		{"password colon", `settings: api_key: "sk_live_verysecretvalue"`, "sk_live_verysecretvalue", "credential_assignment"},
 		// Bare secrets with NO key: prefix — the F-004 gap. Each must be
 		// caught by its own class rule, not only when an api_key: label

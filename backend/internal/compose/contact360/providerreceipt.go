@@ -13,7 +13,6 @@ package contact360
 import (
 	"sort"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -107,14 +106,23 @@ func issued(desc provider.Descriptor, category provider.Category, delivered map[
 // worst of all for completed_claims_unwritten, where the provider DID answer
 // and the hand-off dropped it, which would blame the vendor for our own defect.
 func answerable(run providerRunRow) bool {
-	return run.state == string(provider.RunCompleted) && !run.claimsUnwritten
+	return run.State == provider.RunCompleted && !run.ClaimsUnwritten
+}
+
+// requestedNames is the categories a run asked for, spelled as the receipt keys them.
+func requestedNames(run providerRunRow) []string {
+	names := make([]string, 0, len(run.RequestedCategories))
+	for _, c := range run.RequestedCategories {
+		names = append(names, string(c))
+	}
+	return names
 }
 
 // deliveredKeys is the set of claim keys one run actually produced.
-func deliveredKeys(runID ids.UUID, claims []storedClaim) map[string]bool {
+func deliveredKeys(runID string, claims []storedClaim) map[string]bool {
 	delivered := map[string]bool{}
 	for _, c := range claims {
-		if c.runID == runID {
+		if c.runID.String() == runID {
 			delivered[c.key] = true
 		}
 	}

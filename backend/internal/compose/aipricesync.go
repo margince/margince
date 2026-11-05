@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
@@ -25,16 +24,18 @@ func newAIPriceCatalogues() aiPriceCatalogues {
 }
 
 // newAIPriceSync is the one assembly of the price sync, for "Refresh now" and the
-// daily sweep alike. env answers for a key the vault has not sealed yet.
-func newAIPriceSync(pool *pgxpool.Pool, vault keyvault.Vault, env config.Lookup, log *slog.Logger, cats aiPriceCatalogues) *ai.PriceSync {
-	store := NewSettingsStore(pool)
+// daily sweep alike. Each vendor's key is read through its setting, sealed in vault.
+func newAIPriceSync(pool *pgxpool.Pool, vault keyvault.Vault, log *slog.Logger, cats aiPriceCatalogues) *ai.PriceSync {
+	store, stored := NewSettingsStore(pool), StoredConfig(pool)
+	sealed := WithVault(stored, vault, log)
 	return ai.NewPriceSync(ai.PriceSyncDeps{
 		Rates:     ai.NewRateStore(InstallationDB(pool)),
-		Routing:   ai.NewRoutingStore(store, env).WithCatalogue(cats.broker).WithVault(vault),
-		Keys:      ai.NewProviderKeyStore(store, vault, log),
+		Routing:   ai.NewRoutingStore(store, sealed).WithCatalogue(cats.broker),
+		Keys:      ai.NewProviderKeyStore(sealed),
 		Broker:    cats.broker,
 		ModelsDev: cats.modelsDev,
 		Settings:  store,
+		Config:    stored,
 	})
 }
 
@@ -46,11 +47,9 @@ func WithPriceCatalogues(broker, modelsDev ai.CatalogueFetcher) Option {
 			broker:    ai.NewModelCatalogueOver(broker, systemClock{}),
 			modelsDev: ai.NewModelsDevCatalogueOver(modelsDev, systemClock{}),
 		}
-		routing := ai.NewRoutingStore(NewSettingsStore(pool), config.FromOS).WithCatalogue(s.priceCatalogues.broker)
-		if s.vault != nil {
-			routing = routing.WithVault(s.vault)
-		}
+		sealed := WithVault(StoredConfig(pool), s.vault, s.log)
+		routing := ai.NewRoutingStore(NewSettingsStore(pool), sealed).WithCatalogue(s.priceCatalogues.broker)
 		s.aiRoutingHandlers = aiRoutingHandlers{store: routing}
-		s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, config.FromOS, s.log, s.priceCatalogues))
+		s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, s.log, s.priceCatalogues))
 	}
 }

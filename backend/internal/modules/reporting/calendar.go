@@ -11,6 +11,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/reportperiod"
 )
 
 func location(calendar Calendar) (*time.Location, error) {
@@ -38,18 +39,25 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	case "last_month":
 		end = start
 		start = start.AddDate(0, -1, 0)
+	case reportingThisWeek:
+		start = reportperiod.WeekStart(at, zone)
+		// At Monday midnight the week holds no time yet. The answer says so
+		// with an empty interval rather than a made-up first second.
+		if !at.After(start) {
+			return crmcontracts.ReportingWindow{StartAt: start, EndAt: start}, nil
+		}
 	case "last_week":
-		monday := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone).AddDate(0, 0, -(int(day.Weekday())+6)%7)
+		monday := reportperiod.WeekStart(at, zone)
 		start, end = monday.AddDate(0, 0, -7), monday
-	case "this_quarter":
+	case reportingThisQuarter:
 		start = quarterStart(day, calendar.FiscalStartMonth)
-	case "custom":
+	case reportingCustom:
 		if selection.Interval == nil {
 			return crmcontracts.ReportingWindow{}, intervalError("choose the reporting interval")
 		}
 		start, end = selection.Interval.StartAt.In(zone), selection.Interval.EndAt.In(zone)
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_month, last_month, last_week, this_quarter or custom")
+		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_week, this_month, last_month, last_week, this_quarter or custom")
 	}
 	if !end.After(start) {
 		return crmcontracts.ReportingWindow{}, intervalError("choose an end date after the start date")
@@ -66,9 +74,35 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, nil
 }
 
+// quarterStart is the first instant of day's fiscal quarter. Its callers
+// validate fiscalStart through location, which is all Containing refuses.
 func quarterStart(day time.Time, fiscalStart int) time.Time {
-	offset := (int(day.Month()) - fiscalStart + 12) % 12
-	return time.Date(day.Year(), day.Month()-time.Month(offset%3), 1, 0, 0, 0, 0, day.Location())
+	start, _, _ := reportperiod.Containing(reportperiod.GrainQuarter, day, day.Location(), fiscalStart)
+	return start
+}
+
+// Horizon is the whole period a selection names. Interval stops at the
+// cutoff, so a current week, month or quarter runs on here to its own end.
+func Horizon(selection crmcontracts.ReportingSelection, calendar Calendar, interval crmcontracts.ReportingWindow) (crmcontracts.ReportingWindow, error) {
+	zone, err := location(calendar)
+	if err != nil {
+		return crmcontracts.ReportingWindow{}, err
+	}
+	start := interval.StartAt.In(zone)
+	out := crmcontracts.ReportingWindow{StartAt: start, EndAt: interval.EndAt}
+	switch selection.Period {
+	case reportingThisWeek:
+		out.EndAt = start.AddDate(0, 0, 7)
+	case reportingThisMonth:
+		out.EndAt = start.AddDate(0, 1, 0)
+	case reportingThisQuarter:
+		out.EndAt = start.AddDate(0, 3, 0)
+	case reportingCustom:
+		if selection.Interval != nil {
+			out.EndAt = selection.Interval.EndAt.In(zone)
+		}
+	}
+	return out, nil
 }
 
 // TargetWindow uses the complete containing period for target attainment.
@@ -77,7 +111,13 @@ func TargetWindow(interval crmcontracts.ReportingWindow, basis string, calendar 
 	if err != nil {
 		return crmcontracts.ReportingWindow{}, err
 	}
-	day := interval.EndAt.Add(-time.Nanosecond).In(zone)
+	// The containing period holds the interval's last instant; an empty
+	// interval has none, so its start stands in.
+	last := interval.EndAt
+	if last.After(interval.StartAt) {
+		last = last.Add(-time.Nanosecond)
+	}
+	day := last.In(zone)
 	start := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, zone)
 	months := 1
 	switch basis {
@@ -118,10 +158,10 @@ func NextDue(rule crmcontracts.ReportingScheduleInput, timezone string, after ti
 
 func scheduleMinutes(rule crmcontracts.ReportingScheduleInput) (int, error) {
 	if rule.Day < 1 || (rule.Frequency == reportingWeekly && rule.Day > 7) || rule.Day > 31 {
-		return 0, invalid("choose a valid run day")
+		return 0, refuse("day", "out_of_range", "choose a valid run day")
 	}
 	if rule.Frequency != reportingWeekly && rule.Frequency != "monthly" {
-		return 0, invalid("choose weekly or monthly")
+		return 0, refuse("frequency", "invalid", "choose weekly or monthly")
 	}
 	return reportingClockMinutes(rule.LocalTime)
 }
@@ -153,15 +193,15 @@ func invalid(message string) error {
 func reportingClockMinutes(localTime string) (int, error) {
 	clock := strings.Split(localTime, ":")
 	if len(clock) != 2 || len(clock[0]) != 2 || len(clock[1]) != 2 {
-		return 0, invalid("enter a time as HH:MM")
+		return 0, refuse("local_time", "invalid", "enter a time as HH:MM")
 	}
 	hour, err := strconv.Atoi(clock[0])
 	if err != nil || hour < 0 || hour > 23 {
-		return 0, invalid("enter a valid hour")
+		return 0, refuse("local_time", "invalid", "enter a valid hour")
 	}
 	minute, err := strconv.Atoi(clock[1])
 	if err != nil || minute < 0 || minute > 59 {
-		return 0, invalid("enter a valid minute")
+		return 0, refuse("local_time", "invalid", "enter a valid minute")
 	}
 	return hour*60 + minute, nil
 }

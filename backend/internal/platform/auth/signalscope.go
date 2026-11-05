@@ -57,8 +57,8 @@ func SignalScopeClause(ctx context.Context, alias string, arg func(any) int) (st
 	if p.Type == principal.PrincipalSystem {
 		return "", nil
 	}
-	private := fmt.Sprintf("(%[1]s.visibility <> 'owner' OR %[1]s.owner_id = $%d)",
-		alias, arg(p.UserID))
+	private := fmt.Sprintf("(%s.visibility <> 'owner' OR %s.owner_id IN (%s))",
+		alias, alias, memberIdentitySQL(arg(p.UserID)))
 	if UnboundedFor(p, tableContact, tableCompany, tableDeal, tableProject) {
 		return private, nil
 	}

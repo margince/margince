@@ -9,15 +9,15 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// WithSettings wires the installation settings store the legal review switch
-// is read and written through.
-func (h Handlers) WithSettings(store *settings.Store) Handlers {
-	h.settings = store
+// WithSettings wires the configuration the legal review switch is read and
+// saved through.
+func (h Handlers) WithSettings(cfg *config.Config) Handlers {
+	h.settings = cfg
 	return h
 }
 
@@ -114,12 +114,12 @@ func (h Handlers) GetLegalReviewSettings(w http.ResponseWriter, r *http.Request)
 		httperr.NotImplemented(w, r, "GetLegalReviewSettings")
 		return
 	}
-	on, err := settings.Get(r.Context(), h.settings, LegalReviewEnabled)
+	on, err := config.StoredVal(r.Context(), h.settings, LegalReviewEnabled)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.LegalReviewSettings{Enabled: on})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.LegalReviewSettings{Enabled: on, Locks: h.settingLocks(LegalReviewEnabled)})
 }
 
 // UpdateLegalReviewSettings switches legal review on or off.
@@ -136,5 +136,20 @@ func (h Handlers) UpdateLegalReviewSettings(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, err)
 		return
 	}
+	req.Locks = h.settingLocks(LegalReviewEnabled)
 	httperr.WriteJSON(w, http.StatusOK, req)
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

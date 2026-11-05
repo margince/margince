@@ -10,11 +10,9 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // Column references shared across the per-entity segment engines below —
@@ -88,6 +86,7 @@ func tagLinkFor(entity string) storekit.Field {
 		Type:       storekit.FieldID,
 		References: storekit.RefTag,
 		Link:       storekit.TagLinkTemplate(entity),
+		ReadsLink:  true,
 	}
 }
 
@@ -107,6 +106,9 @@ const domainFilterField = "domain"
 // because it varies by nothing — a constructor like tagLinkFor would be a
 // function returning a constant. It reads colOwnerID for the same reason the
 // base-table owner leaf does: one spelling of the owner column.
+//
+// An archived team keeps its memberships but names nobody, the same rule
+// storekit.OwnershipClause applies to the `owner_team_id` parameter.
 //
 // The dial has a third position the vocabulary needs no leaf for: unassigned is
 // `owner_id` with `exists: false`. A reader looking for it here should not
@@ -130,8 +132,10 @@ var ownerTeamField = storekit.Field{
 	Expr:       "tm.team_id",
 	Type:       storekit.FieldID,
 	References: storekit.RefTeam,
-	Link: "EXISTS (SELECT 1 FROM team_membership tm WHERE tm.user_id = " + colOwnerID +
-		" AND %s)",
+	ReadsLink:  true,
+	Link: "EXISTS (SELECT 1 FROM team_membership tm" +
+		" JOIN team tt ON tt.id = tm.team_id AND tt.archived_at IS NULL" +
+		" WHERE tm.user_id = " + colOwnerID + " AND %s)",
 }
 
 // customerLink is the EXISTS template a deal's filter reaches its customer
@@ -162,9 +166,16 @@ func projectCompanyField() storekit.Field {
 		Expr:       "c.company_id",
 		Type:       storekit.FieldID,
 		References: storekit.RefCompany,
+		ReadsLink:  true,
 		Link: "EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'" +
 			" AND c.project_id = t.id AND c.archived_at IS NULL AND %s)",
 	}
+}
+
+// productLinkField matches a record through the products it names: the
+// template is the EXISTS that reaches the deal_product row.
+func productLinkField(link string) storekit.Field {
+	return storekit.Field{Expr: "dp.product_id", Type: storekit.FieldID, References: storekit.RefProduct, Link: link, ReadsLink: true}
 }
 
 // customerField types one company column as a deal-side filter leaf. The
@@ -174,7 +185,7 @@ func customerField(
 	column string, fieldType storekit.FieldType, options ...string,
 ) storekit.Field {
 	return storekit.Field{
-		Expr: "o." + column, Type: fieldType, Link: customerLink, Options: options,
+		Expr: "o." + column, Type: fieldType, Link: customerLink, ReadsLink: true, Options: options,
 	}
 }
 
@@ -188,17 +199,17 @@ func customerField(
 // directions when the two part company.
 //
 // Written out here rather than assembled from the generated constants because of
-// how the generator spells a NULLABLE enum: it emits a `<nil>` member, so a set
-// built from CompanySizeBand's or DealForecastCategory's constants would
-// offer "<nil>" as something a human could pick. Only those two are nullable
-// today, and one is enough — a set is either derived or it is not.
+// how the generator spells a nullable enum. It emits a `<nil>` member, so a set
+// built from CompanySizeBand's constants would
+// offer "<nil>" as something a human could pick. One nullable enum is
+// enough, because a set is either derived or it is not.
 //
 // A null in a contract enum is the COLUMN's nullability, never a value worth
 // offering — `exists: false` is how a filter asks for empty — so the sets below
 // carry no null and the gate compares against the document minus it.
 var (
 	lifecycleValues = []string{
-		"unknown", "target", "prospect", "opportunity",
+		"unknown", "target", "prospect", "opportunity", "onboarding", "live",
 		"customer", "former_customer", "disqualified",
 	}
 	sizeBandValues = []string{
@@ -209,7 +220,6 @@ var (
 		"portfolio_company", "competitor", "other",
 	}
 	dealStatusValues   = []string{"open", "won", "lost"}
-	forecastValues     = []string{"commit", "best_case", "pipeline", "omitted"}
 	leadStatusValues   = []string{"new", "contacted", "engaged", "promoted", "disqualified"}
 	projectPhaseValues = []string{"initiative", "pursuing", "delivering", "closed"}
 	// The technical vocabularies, mirroring platform/techprofile's classifiers
@@ -251,7 +261,7 @@ var segmentEngines = map[string]storekit.Query{
 		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
-			"industry":       {Expr: "t.industry", Type: storekit.FieldText},
+			"industry":       {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
 			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
 			"lifecycle":      {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
 			// RETIRED with the column (ADR-0079/A124), and kept here for the one
@@ -272,6 +282,8 @@ var segmentEngines = map[string]storekit.Query{
 			"hosting_provider": hostingProviderField,
 			"operated_service": operatedServiceField,
 			"technology":       technologyField,
+			// Compiles through geocode.Within; it has no value to read back.
+			"location": {Expr: "t", Type: storekit.FieldDistance, GeoTarget: typeCompany},
 		}),
 	},
 	"deal": {
@@ -286,7 +298,7 @@ var segmentEngines = map[string]storekit.Query{
 			"partner_company_id": {Expr: "t.partner_company_id", Type: storekit.FieldID, References: storekit.RefCompany},
 			"project_id":         {Expr: "t.project_id", Type: storekit.FieldID, References: storekit.RefProject},
 			"status":             {Expr: "t.status", Type: storekit.FieldPicklist, Options: dealStatusValues},
-			"forecast_category":  {Expr: "t.forecast_category", Type: storekit.FieldPicklist, Options: forecastValues},
+			"win_probability":    {Expr: winprobability.SQL("t"), Type: storekit.FieldNumber},
 			tagFilterField:       tagLinkFor("deal"),
 			// The customer's own attributes, so "the pipeline for manufacturing"
 			// is a filter rather than a spreadsheet. Same columns and same types
@@ -297,9 +309,12 @@ var segmentEngines = map[string]storekit.Query{
 			// and survives on the company engine only so segments already
 			// written against it keep evaluating — a NEW way to name it would be
 			// a fresh dependency on a column that is going away.
-			"company_industry":  customerField("industry", storekit.FieldText),
+			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
 			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
+			"company_country":   customerField("address_country", storekit.FieldText),
+			// The products a deal sells, from its accepted offer or set by hand.
+			"product_id": productLinkField("EXISTS (SELECT 1 FROM deal_product dp WHERE dp.deal_id = t.id AND %s)"),
 		}),
 	},
 	"lead": {
@@ -311,6 +326,12 @@ var segmentEngines = map[string]storekit.Query{
 			ownerTeamIDField:        ownerTeamField,
 			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
 			tagFilterField:          tagLinkFor("lead"),
+			// The industry a rep typed on the lead, and the linked company's own
+			// facts, so one rule names a market on leads and deals alike.
+			"industry":         {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
+			"company_industry": customerField("industry", storekit.FieldPicklist, industryValues...),
+			"company_country":  customerField("address_country", storekit.FieldText),
+			"product_id":       {Expr: "t.product_id", Type: storekit.FieldID, References: storekit.RefProduct},
 		}),
 	},
 	projectEntity: {
@@ -402,57 +423,6 @@ func (s *Store) SegmentEngine(ctx context.Context, resource string) (storekit.Qu
 	}
 	withholdFromCaller(ctx, resource, merged.Fields)
 	return merged, true, nil
-}
-
-// customFieldTypes maps the six closed catalog types onto the predicate
-// engine's own. Both sets are closed and neither is this file's to extend: a
-// seventh catalog type arrives with its own entry here, and
-// TestEveryCustomFieldTypeIsFilterable fails until it has one.
-var customFieldTypes = map[string]storekit.FieldType{
-	fieldcatalog.TypeText:        storekit.FieldText,
-	fieldcatalog.TypeNumber:      storekit.FieldNumber,
-	fieldcatalog.TypeDate:        storekit.FieldDate,
-	fieldcatalog.TypeCurrency:    storekit.FieldCurrency,
-	fieldcatalog.TypeMultiselect: storekit.FieldMultiselect,
-	fieldcatalog.TypePicklist:    storekit.FieldPicklist,
-	fieldcatalog.TypeBoolean:     storekit.FieldBoolean,
-}
-
-// customField types one custom column for the predicate engine, and answers
-// false for a catalog type this engine has no operators for.
-//
-// LEFT OUT rather than refused, and the difference is the blast radius. This
-// mapping runs over EVERY column of the object, so a refusal here costs the
-// whole resolution — list-create validation, membership evaluation and
-// filtered export all fail for that record type, including for filters that
-// never name the field. Omitting contains the damage to the one field, which
-// is the same call `search`'s vocabulary makes next door on its own stated
-// grounds — an unasked field is a smaller failure than one that answers the
-// wrong comparison.
-//
-// Omission does not hide anything either, because a field the vocabulary does
-// not carry is not silently dropped from a predicate: CompilePredicate refuses
-// an unknown name with CodeFilterFieldNotAllowed, so a saved segment that
-// actually NAMES such a field says "not filterable on this resource" rather
-// than quietly matching a different set of rows. What omission must never
-// become is a guess — defaulting an unknown type to text would admit
-// `contains` on a number and read as a working filter — which is why the
-// mapping is a closed map with a gate over it rather than a switch with a
-// fallback.
-func customField(column fieldcatalog.Column) (storekit.Field, bool) {
-	fieldType, ok := customFieldTypes[column.Type]
-	if !ok {
-		return storekit.Field{}, false
-	}
-	return storekit.Field{
-		Expr: `t.` + pgx.Identifier{column.Name}.Sanitize(),
-		Type: fieldType,
-		// Straight from the catalogue, which owns them for the same reason it owns
-		// labels: they are per-workspace admin state. Empty for every non-picklist
-		// type, which is what the column itself reports.
-		Options:  column.Options,
-		Currency: column.Currency,
-	}, true
 }
 
 // errNotAFilterTree is what a jsonb value that does not decode into the

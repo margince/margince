@@ -4,7 +4,7 @@
 // Package commissions owns what a partner earned on a won deal: the ledger of
 // accruals, their approval and payment, and the reversals that undo them.
 //
-// Tables owned: commission_entry.
+// Tables owned: docs/reference/entity-model/commissions.md.
 //
 // Spine: Handlers→Store. An entry is a record with a small closed lifecycle
 // (accrued → approved → paid, or void at any point), and each transition is one

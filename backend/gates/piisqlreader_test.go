@@ -88,16 +88,27 @@ func sqlLiterals(t *testing.T, path string) []string {
 	return out
 }
 
-// erasureCascadeFiles are the sources that make up the Art. 17 cascade — the
-// files EraseContact's own transaction executes SQL from. It is a LIST because
-// the cascade spans more than one file, and a gate pinned to a single path
-// silently stops covering a table the moment its scrub is extracted to a
-// neighbour. It is deliberately NOT the whole privacy
-// package: retention.go also writes subject tables, and letting a retention
-// sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
-// exists to prevent.
+// erasureCascadeFiles are the files EraseContact's own transaction executes SQL
+// from: the Art. 17 cascade. It is a list because a gate pinned to one path stops
+// covering a table once its scrub moves to a neighbour file. It is not the whole
+// privacy package: retention.go also writes subject tables, and a retention sweep
+// must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	// Capture owns the projection purge reached through privacy.RawCapturePurger.
+	"internal/modules/capture/partysourceerase.go",
+	// ai owns the voice samples copied from sent mail, emptied through the
+	// same seam's PurgeTextCopiesTx.
+	"internal/modules/ai/voicesentmailerase.go",
+	"internal/modules/privacy/partyprojections.go",
+	// The addresses a merge bound the subject's recorded requests to.
+	"internal/modules/privacy/requestaddresses.go",
+	"internal/modules/privacy/commitmentlegacy.go",
+	"internal/modules/privacy/activityerase.go",
+	"internal/modules/privacy/commitmenterasure.go",
+	"internal/modules/privacy/activitycontenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
+	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/erasure.go",
 	// The per-reader brief cache, which both acts purge: the row holds
 	// generated prose about the subject and no cascade reaches it while the
@@ -152,6 +163,7 @@ var erasureCascadeFiles = []string{
 	// Same Art. 17 transaction; its own file because it belongs to neither
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
+	"internal/modules/privacy/erasure_approvalnotices.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
@@ -197,6 +209,9 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
+	"internal/modules/ai/voice_corpus_summary.go":      "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
+	"internal/modules/ai/voice_source_mutations.go":    "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
+	"internal/modules/privacy/erasuretally.go":         "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
 	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
@@ -228,7 +243,10 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 // failure mode a glob buys here, and it is the one with no failing assertion
 // to notice it.
 var retentionSweepFiles = []string{
+	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
+	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
@@ -286,14 +304,6 @@ var retentionSweepFiles = []string{
 // Comments matter as much as quotes here — `SET body = NULL /* ; */ ,
 // counterparty_email = NULL` splits at the comment's semicolon and the
 // destruction rides out in a fragment sqlWriteTargets drops.
-//
-// ONE form it still does not understand, and does not guess at: the E” escape,
-// where a backslashed apostrophe leaves the scan believing it has closed a
-// string it has not. quotingBeyondTheSplit answers for it at the collection
-// site, so its arrival is a failure naming the literal rather than a green run
-// over a split nobody can trust — and it looks for it OUTSIDE the spans the
-// scan does understand, or an E-string MENTIONED inside a value or a comment
-// would refuse a statement that reads perfectly well.
 func sqlStatements(literal string) []string {
 	var out []string
 	start := 0
@@ -316,30 +326,17 @@ func sqlStatements(literal string) []string {
 	return out
 }
 
-// escapeStringRe is the one form the split cannot track: E'…' takes a
-// BACKSLASH escape, so `E'a\';b'` leaves the scan believing it has closed a
-// string it has not, and an inverted scan splits inside one.
-var escapeStringRe = regexp.MustCompile(`(?i)\bE'`)
-
-// quotingBeyondTheSplit names the form in a literal that sqlStatements would
-// mis-scan, or "" when there is none. Nothing in the swept files uses it today;
-// this is the tripwire for the day one does, and it fails CLOSED — the caller
-// reports the literal — because the alternative is a split landing inside a
-// string and a destructive assignment riding out in a fragment that names no
-// table.
-//
-// Looked for OUTSIDE the spans the scan does understand, which is the half a
-// bare regex gets wrong in the expensive direction: `SET body = 'E”s note'` or
-// a comment mentioning one would refuse a statement that is read perfectly
-// well, and a tripwire that fires on correct SQL is one somebody turns off.
-func quotingBeyondTheSplit(literal string) string {
+// A truncated span hides every later assignment, so collection refuses it before splitting.
+func unclosedWriteSpan(literal string) string {
+	if len(sqlWriteTargets(literal)) == 0 {
+		return ""
+	}
 	for i := 0; i < len(literal); i++ {
-		if skip, _ := gatekit.SQLSpanAt(literal, i); skip > 0 {
+		if skip, closed := gatekit.SQLSpanAt(literal, i); skip > 0 {
+			if !closed {
+				return literal[i:]
+			}
 			i += skip - 1
-			continue
-		}
-		if m := escapeStringRe.FindString(literal[i:]); m != "" && strings.HasPrefix(strings.ToLower(literal[i:]), "e'") {
-			return m
 		}
 	}
 	return ""

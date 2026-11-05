@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -12,38 +13,74 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Fact retains contribution provenance so frozen values can be safely projected later.
 type Fact struct {
-	StagePosition int                               `json:"stage_position,omitempty"`
-	Scope         *crmcontracts.ReportingScope      `json:"scope,omitempty"`
-	StageID       string                            `json:"stage_id,omitempty"`
-	StageLabel    string                            `json:"stage_label,omitempty"`
-	OwnerLabel    string                            `json:"owner_label,omitempty"`
-	Outcome       string                            `json:"outcome,omitempty"`
-	Money         *int64                            `json:"money,omitempty"`
-	Provenance    string                            `json:"provenance,omitempty"`
-	Metric        crmcontracts.ReportingMetricID    `json:"metric"`
-	ContextID     string                            `json:"context_id"`
-	GroupKey      string                            `json:"group_key"`
-	Row           crmcontracts.ReportingEvidenceRow `json:"row"`
-	SourceID      ids.UUID                          `json:"source_id"`
-	SourceType    string                            `json:"source_type"`
-	OwnerID       ids.UUID                          `json:"owner_id"`
+	// EvidenceAt is a display date, independent of period and privacy buckets.
+	EvidenceAt    *time.Time                     `json:"evidence_at,omitempty"`
+	StagePosition int                            `json:"stage_position,omitempty"`
+	Scope         *crmcontracts.ReportingScope   `json:"scope,omitempty"`
+	StageID       string                         `json:"stage_id,omitempty"`
+	StageLabel    string                         `json:"stage_label,omitempty"`
+	OwnerLabel    string                         `json:"owner_label,omitempty"`
+	Outcome       string                         `json:"outcome,omitempty"`
+	Money         *int64                         `json:"money,omitempty"`
+	Provenance    string                         `json:"provenance,omitempty"`
+	Metric        crmcontracts.ReportingMetricID `json:"metric"`
+	ContextID     string                         `json:"context_id"`
+	GroupKey      string                         `json:"group_key"`
+	// GroupLabel names GroupKey's group for a reader, in the base language.
+	GroupLabel string                            `json:"group_label,omitempty"`
+	Row        crmcontracts.ReportingEvidenceRow `json:"row"`
+	SourceID   ids.UUID                          `json:"source_id"`
+	SourceType string                            `json:"source_type"`
+	OwnerID    ids.UUID                          `json:"owner_id"`
+	// OwnerWithheld marks a fact whose owner the reader may not measure one by
+	// one. It still counts in totals; per-owner outputs skip it. Absent on
+	// stored contributions, which decode as false.
+	OwnerWithheld bool `json:"owner_withheld,omitempty"`
+	// PlacedAt is where a day row falls in a period: its date's start in the
+	// installation zone. The row keeps the stored anchor a reader draws a date from.
+	PlacedAt *time.Time `json:"placed_at,omitempty"`
+	// Entry says how a stage cohort member entered its stage: first or repeat.
+	// Reopened marks an entry made straight from a won or lost close.
+	Entry    string `json:"entry,omitempty"`
+	Reopened bool   `json:"reopened,omitempty"`
+}
+
+// SetEvidenceDate keeps a display date out of event and privacy buckets.
+func (f *Fact) SetEvidenceDate(at *time.Time) {
+	f.EvidenceAt = at
+	f.Row.OccurredAt = nil
+}
+
+// At is the moment that places the fact in a period or bucket.
+func (f Fact) At() *time.Time {
+	if f.PlacedAt != nil {
+		return f.PlacedAt
+	}
+	return f.Row.OccurredAt
 }
 
 // Evaluation keeps calculated values and supporting facts in one result.
 type Evaluation struct {
 	Result crmcontracts.ReportingEvaluation
 	Facts  []Fact
+	// Forecast is what the forecast landing was read from, nil when the
+	// selection holds no forecast or its reading failed. The comparison it
+	// feeds is part of Result, so the key does not hash it a second time.
+	Forecast *ForecastOperands `json:"-"`
 }
 
 // Evaluator shares calculations across transport and publication boundaries.
 type Evaluator interface {
 	ProjectFrozen(crmcontracts.ReportingEvaluation, []Fact) (crmcontracts.ReportingEvaluation, error)
-	Catalog(context.Context) (crmcontracts.ReportingCatalog, error)
+	Catalog(context.Context, textlang.Lang) (crmcontracts.ReportingCatalog, error)
 	Evaluate(context.Context, pgx.Tx, crmcontracts.ReportingSelection, crmcontracts.ReportingFramework, time.Time) (Evaluation, error)
+	// MetricVersions is each named metric's current definition version.
+	MetricVersions([]crmcontracts.ReportingMetricID) MetricVersions
 }
 
 // Authority injects live identity and source visibility without sibling imports.
@@ -51,10 +88,49 @@ type Authority interface {
 	MembersFor(context.Context, pgx.Tx, crmcontracts.ReportingScope) ([]ids.UUID, error)
 	PublicationHuman(context.Context, pgx.Tx, ids.UUID) (context.Context, error)
 	Pipeline(context.Context, pgx.Tx, *ids.UUID) error
-	Members(context.Context, pgx.Tx) ([]ids.UUID, error)
+	// MeasurableOwnerSet answers whose figures the reader may see one by one.
+	// Resolve it once per evaluation and pass it down.
+	MeasurableOwnerSet(context.Context, pgx.Tx) (MeasurableOwners, error)
+	// MeasurableOwners answers which candidates the reader may measure one by
+	// one, the owner rule of Scope asked of many owners in one statement.
+	MeasurableOwners(context.Context, pgx.Tx, []ids.UUID) ([]ids.UUID, error)
+	// TargetFloor answers which whole-scope targets stay shown while the
+	// installation shows no individual performance.
+	TargetFloor(context.Context, pgx.Tx) (TargetFloor, error)
 	ValidateFramework(context.Context, pgx.Tx, crmcontracts.ReportingFrameworkInput) error
 	Scope(context.Context, pgx.Tx, crmcontracts.ReportingScope, bool) (crmcontracts.ReportingScope, error)
-	Visible(context.Context, pgx.Tx, []Fact) ([]Fact, bool, error)
+	// AssertedScope resolves the scope a report revision records. A revision is
+	// published about its population, so it needs the strict tier rule that a
+	// read of the totals does not.
+	AssertedScope(context.Context, pgx.Tx, crmcontracts.ReportingScope) (crmcontracts.ReportingScope, error)
+	// Visible narrows frozen facts to what the reader may see today. The
+	// context is the one they were captured under; a population the
+	// small-group floor holds back today shows none of them.
+	Visible(context.Context, pgx.Tx, crmcontracts.ReportingContext, []Fact) ([]Fact, bool, error)
+}
+
+// MeasurableOwners is whose figures a reader may see one by one.
+type MeasurableOwners struct {
+	// Every is a reader who measures every owner. Members is then unused.
+	Every   bool
+	Members []ids.UUID
+	// IndividualOff is the installation's switch turned off: Members is the
+	// reader alone, whatever their row scope.
+	IndividualOff bool
+}
+
+// Includes answers whether the reader may see this owner's figures.
+func (m MeasurableOwners) Includes(owner ids.UUID) bool {
+	return m.Every || slices.Contains(m.Members, owner)
+}
+
+// TargetFloor lists the team and company targets a reader sees while the
+// switch is off: those whose members were checked and hold enough colleagues.
+// Applies is false while the switch is on, and then nothing is withheld.
+type TargetFloor struct {
+	Applies   bool
+	Workspace bool
+	Teams     []ids.UUID
 }
 
 // Calendar defines the installation’s civil-time and money context.
@@ -69,10 +145,13 @@ type CalendarSource func(context.Context, pgx.Tx) (Calendar, error)
 
 // Service coordinates saved reporting over injected calculation and authority seams.
 type Service struct {
+	language  func(context.Context, pgx.Tx) textlang.Lang
+	reader    func(context.Context, pgx.Tx) textlang.Lang
 	store     *store
 	evaluator Evaluator
 	authority Authority
 	calendar  CalendarSource
+	questions Questions
 	now       func() time.Time
 }
 

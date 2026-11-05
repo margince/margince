@@ -166,13 +166,12 @@ func TestEveryScheduleSettingDefaultsToWholeSeconds(t *testing.T) {
 		t.Fatal("no cadence reads a setting — this test has stopped reading the contract")
 	}
 	for _, key := range keys {
-		raw, err := settingDefault(key)
+		interval, err := scheduleValue(key, settingDefault)
 		if err != nil {
 			t.Fatal(err)
 		}
-		var seconds int
-		if err := json.Unmarshal(raw, &seconds); err != nil || seconds <= 0 {
-			t.Errorf("%s defaults to %s, want a positive whole number of seconds", key, raw)
+		if interval <= 0 {
+			t.Errorf("%s defaults to %s, want a positive whole number of seconds", key, interval)
 		}
 	}
 }

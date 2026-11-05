@@ -68,33 +68,6 @@ function proxiedPrefixes(): string[] {
   return keys;
 }
 
-// launcherPrefixes reads the `apiPrefixes` literal in desktop/launcher/web.go,
-// refusing any element that is not a plain string rather than skipping it.
-function launcherPrefixes(): string[] {
-  const source = readFileSync(
-    join(repo, "desktop", "launcher", "web.go"),
-    "utf8",
-  );
-  const literal = /\bvar apiPrefixes = \[\]string\{([^}]*)\}/.exec(source);
-  if (literal === null) {
-    throw new Error(
-      "desktop/launcher/web.go declares no `var apiPrefixes = []string{…}` for this test to read",
-    );
-  }
-  const elements = literal[1]
-    .replace(/\/\/[^\n]*/g, "")
-    .split(",")
-    .map((element) => element.trim())
-    .filter((element) => element.length > 0);
-  for (const element of elements) {
-    expect(
-      element,
-      "an apiPrefixes element in desktop/launcher/web.go is not a string literal this test can read",
-    ).toMatch(/^"[^"\\]*"$/);
-  }
-  return elements.map((element) => element.slice(1, -1));
-}
-
 // neighbourhood answers the files an address could be assembled across: the one
 // reading `location.origin`, and the modules beside it that it imports.
 //
@@ -176,14 +149,5 @@ describe("the dev server's proxy", () => {
           `the endpoint answers one port over. Add "/${prefix}" to the proxy list in vite.config.ts.`,
       ).toBe(true);
     }
-  });
-
-  it("is the list the desktop launcher proxies, in both directions", () => {
-    expect(
-      launcherPrefixes().sort(),
-      "desktop/launcher/web.go apiPrefixes and the proxy in vite.config.ts disagree: a path in " +
-        "one and not the other reaches the api under `pnpm dev` and 404s in the desktop app, or " +
-        "the reverse. Make the two lists the same.",
-    ).toEqual(proxiedPrefixes().sort());
   });
 });

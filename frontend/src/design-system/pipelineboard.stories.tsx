@@ -3,11 +3,16 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
+import { expect, within } from "storybook/test";
+import { lastEmailAgo } from "../testing/dealmail";
+import { AnsweredSearch } from "./answeredsearch";
 import { Button, SegmentedControl } from "./atoms";
 import { ListSurface } from "./listsurface";
 import {
+  type BoardColumn,
   type BoardDeal,
   type BoardMoneyColumn,
+  type BoardRecord,
   PipelineBoard,
 } from "./pipelineboard";
 import { Select } from "./select";
@@ -36,7 +41,10 @@ function boardDeal(
     companyId: "o-1",
     valueMinor,
     currency: "EUR",
-    ageMs: ageDays * DAY_MS,
+    idleSince: new Date(
+      Date.parse("2026-09-15T12:00:00Z") - ageDays * DAY_MS,
+    ).toISOString(),
+    measuredAt: Date.parse("2026-09-15T12:00:00Z"),
     ...extra,
   };
 }
@@ -56,7 +64,7 @@ const boardColumns: BoardMoneyColumn[] = [
         singleThreaded: true,
         closeDate: "2026-10-14",
         owner: { id: "u-1", name: "Ada Lindqvist" },
-        lastEmail: { agoMs: 2 * DAY_MS, direction: "inbound" },
+        lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
       }),
       // A close date the nightly run set and nobody confirmed: marked, not
       // hidden.
@@ -64,7 +72,7 @@ const boardColumns: BoardMoneyColumn[] = [
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,
-        lastEmail: { agoMs: 10 * DAY_MS, direction: "outbound" },
+        lastEmail: lastEmailAgo(10 * DAY_MS, "outbound"),
       }),
     ],
   },
@@ -193,11 +201,12 @@ const absentMoneyColumns: BoardMoneyColumn[] = [
     stage: "mixed",
     label: "Mixed currencies",
     probabilityPct: 40,
-    rawMinor: null,
-    weightedMinor: null,
-    currency: null,
-    sumHidden: true,
-    count: 2,
+    rawMinor: 57_000,
+    weightedMinor: 22_800,
+    currency: "EUR",
+    asOf: "2026-10-01",
+    unpricedCount: 1,
+    count: 3,
     deals: [
       boardDeal("a4", "Globex EU", 28_000, 6),
       boardDeal("a5", "Globex US", 31_000, 8, { currency: "USD" }),
@@ -354,8 +363,98 @@ export const WithAFoldedStage: Story = {
   ),
 };
 
+// A plain board's one total is its count. Withheld, the head drops the figure
+// and the column says why, folded or open.
+const withheldCountColumns: BoardColumn<BoardRecord>[] = [
+  {
+    stage: "new",
+    label: "New",
+    count: 1,
+    deals: [{ id: "p1", name: "Jonas Petersen" }],
+  },
+  {
+    stage: "promoted",
+    label: "Qualified",
+    count: 0,
+    sumHidden: true,
+    sumHiddenReason: "No count while a score filter is on.",
+    collapsed: true,
+    deals: [],
+  },
+  {
+    stage: "disqualified",
+    label: "Disqualified",
+    count: 0,
+    sumHidden: true,
+    sumHiddenReason: "No count while a score filter is on.",
+    collapsed: false,
+    deals: [{ id: "p2", name: "Petra Vogel" }],
+  },
+];
+
+export const WithAWithheldCount: Story = {
+  render: () => (
+    <PipelineBoard
+      variant="plain"
+      columns={withheldCountColumns}
+      renderCard={(record) => <span>{record.name}</span>}
+      onToggleColumn={() => undefined}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const qualified = within(canvasElement).getByRole("region", {
+      name: "Qualified",
+    });
+    await expect(qualified).toHaveTextContent(
+      "No count while a score filter is on.",
+    );
+    await expect(
+      qualified.querySelector(".board-col-count:not([hidden])"),
+    ).toBeNull();
+  },
+};
+
+// A column still reading its cards, with no total yet. The head states no
+// figure, since a zero would read as an empty stage.
+export const WithACountNotYetKnown: Story = {
+  render: () => (
+    <PipelineBoard
+      columns={[
+        {
+          stage: "discovery",
+          label: "Discovery",
+          probabilityPct: 10,
+          rawMinor: null,
+          weightedMinor: null,
+          currency: null,
+          count: null,
+          deals: [],
+        },
+      ]}
+      cardHref={(d) => `#/deals/${d.id}`}
+      zone="Europe/Berlin"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const discovery = within(canvasElement).getByRole("region", {
+      name: "Discovery",
+    });
+    await expect(
+      discovery.querySelector(".board-col-count:not([hidden])"),
+    ).toBeNull();
+    await expect(
+      discovery.querySelector(".board-col-sub > .sr-only"),
+    ).toHaveAttribute("hidden");
+  },
+};
+
 // A card passing under the head is the only thing that shows the band seals
-// the column; at rest the two share one ground.
+// the column; at rest the two share one ground. The owner chip and company link
+// are raised over the card's own link, so they are what would break through.
+const passing: Partial<BoardDeal> = {
+  owner: { id: "u-1", name: "Ada Lindqvist" },
+  companyHref: "#/companies/o-1",
+};
 const scrollingStageColumns: BoardMoneyColumn[] = [
   {
     stage: "discovery",
@@ -365,12 +464,12 @@ const scrollingStageColumns: BoardMoneyColumn[] = [
     weightedMinor: 19_700,
     currency: "EUR",
     deals: [
-      boardDeal("s1", "Contoso renewal", 12_000, 3),
-      boardDeal("s2", "Fabrikam expansion", 33_000, 9),
-      boardDeal("s3", "Globex onboarding", 28_000, 14),
-      boardDeal("s4", "Initech upgrade", 54_000, 21),
-      boardDeal("s5", "Umbrella Corp", 61_000, 2),
-      boardDeal("s6", "Northwind pilot", 9_000, 6),
+      boardDeal("s1", "Contoso renewal", 12_000, 3, passing),
+      boardDeal("s2", "Fabrikam expansion", 33_000, 9, passing),
+      boardDeal("s3", "Globex onboarding", 28_000, 14, passing),
+      boardDeal("s4", "Initech upgrade", 54_000, 21, passing),
+      boardDeal("s5", "Umbrella Corp", 61_000, 2, passing),
+      boardDeal("s6", "Northwind pilot", 9_000, 6, passing),
     ],
   },
   {
@@ -421,6 +520,66 @@ function StageMidScroll() {
 
 export const WithAScrolledStage: Story = {
   render: () => <StageMidScroll />,
+};
+
+// A search whose only match sits in the last stage, in a frame too narrow to
+// show it. The board says where the match is and scrolls that stage in.
+const offScreenMatchColumns: BoardMoneyColumn[] = boardColumns.map(
+  (column) => ({
+    ...column,
+    deals: column.stage === "won" ? column.deals : [],
+  }),
+);
+
+export const SearchMatchesOffScreen: Story = {
+  render: () => (
+    <div style={{ inlineSize: 640 }}>
+      <AnsweredSearch.Provider value="umbrella">
+        <PipelineBoard
+          columns={offScreenMatchColumns}
+          cardHref={(d) => `#/deals/${d.id}`}
+          zone="Europe/Berlin"
+        />
+      </AnsweredSearch.Provider>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement).findByRole("status");
+    await expect(hint.textContent).toContain("1 result in Closed Won");
+  },
+};
+
+// The same search inside the list surface that hosts the board: the note keeps
+// the stages' gutter instead of meeting the surface's edge.
+export const SearchMatchesOffScreenInSurface: Story = {
+  render: () => (
+    <div style={{ inlineSize: 640 }}>
+      <ListSurface count="1 deal">
+        <AnsweredSearch.Provider value="umbrella">
+          <PipelineBoard
+            columns={offScreenMatchColumns}
+            cardHref={(d) => `#/deals/${d.id}`}
+            zone="Europe/Berlin"
+          />
+        </AnsweredSearch.Provider>
+      </ListSurface>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement).findByRole("status");
+    const surface = canvasElement.querySelector(".lt");
+    const stage = canvasElement.querySelector(".lt > .board");
+    if (!surface || !stage) {
+      throw new Error("the board drew outside a list surface");
+    }
+    const inset =
+      hint.getBoundingClientRect().left - surface.getBoundingClientRect().left;
+    const stageInset = Number.parseFloat(getComputedStyle(stage).paddingLeft);
+    await expect(stageInset).toBeGreaterThan(0);
+    await expect(Math.round(inset)).toBeGreaterThanOrEqual(
+      Math.round(stageInset),
+    );
+  },
 };
 
 // `uat-phone` drives the capture gate to 390px, which Storybook's own viewport

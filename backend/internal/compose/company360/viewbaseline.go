@@ -43,15 +43,10 @@ const entityTypeCompany = "company"
 // ack can never rewind a newer one — two tabs open on the same account
 // converge on the later visit instead of racing the baseline backwards.
 //
-// The human gate is explicit and load-bearing, not defense in depth. An
-// agent principal carries the granting human's id as its UserID
-// (identity/passport.go stamps OnBehalfOf there for row scope), so
-// "resolve the acting user" would happily write a baseline marking an
-// account as SEEN by a human who never opened it — consuming their unread
-// marker on their behalf. The transport's x-agent-access: human-only says
-// the same thing one layer up; this is the layer that owns the write.
+// An agent carries its user's id, so this spends that user's unread marker. Only
+// an agent on a passport may, and its tool tells it to ask first.
 func (s *Service) Acknowledge(ctx context.Context, companyID ids.CompanyID) (crmcontracts.RecordViewAck, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.RecordViewAck{}, err
 	}
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
@@ -154,12 +149,12 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 	// activities.CompanyLinkedActivityExists, so a mail filed against a contact at
 	// the account is new here exactly when the page lists it as new. EXISTS
 	// gives one row per activity, so the plain count needs no DISTINCT.
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT count(*)
 		FROM activity a
 		WHERE a.archived_at IS NULL AND a.created_at > $%d AND %s AND (%s)%s`,
-		sincePos, activities.CompanyLinkedActivityExists(companyPos), activityScope, a.opts.projectScope(arg)),
-		args...).Scan(&out.NewActivities); err != nil {
+		sincePos, activities.CompanyLinkedActivityExists(companyPos), activityScope, a.opts.projectScope(arg))
+	if err := tx.QueryRow(ctx, query, args...).Scan(&out.NewActivities); err != nil {
 		return out, fmt.Errorf("count new activities: %w", err)
 	}
 
@@ -171,16 +166,15 @@ func (s *Service) sinceLastVisit(ctx context.Context, tx pgx.Tx, companyID ids.C
 		out.DealStageMoves = &moves
 	}
 
-	// The same decidable set the approvals section already read: counting it
-	// again would run the whole scan and its per-kind grant checks twice
-	// against one account in one transaction.
-	staged, triageable, err := a.pendingApprovals()
+	// The section's list stops at its scan cap, so the figure is the total the
+	// same walk counted past it. That read decides whether the reader may
+	// triage here at all.
+	_, total, triageable, err := a.pendingApprovals()
 	if err != nil {
 		return out, err
 	}
 	if triageable {
-		count := len(staged)
-		out.PendingProposals = &count
+		out.PendingProposals = &total
 	}
 
 	return out, nil
@@ -243,12 +237,11 @@ func (s *Service) dealStageMoves(ctx context.Context, tx pgx.Tx, companyID ids.C
 	return moves, true, nil
 }
 
-// actingUser resolves the user this baseline belongs to. It answers for
-// agents too — an agent's UserID is the granting human's — so it is a
-// lookup, not a gate: Acknowledge's auth.RequireHuman is what keeps an
-// agent from writing that human's mark. A principal with no user id at
-// all (system, connector) has no baseline, and that is a refusal rather
-// than a shared default row.
+// actingUser resolves the user this baseline belongs to. An agent's UserID is
+// the granting human's, so this is a lookup and not a gate. Acknowledge's
+// auth.RequireHumanOrItsAgent decides who may write that human's mark. A
+// principal with no user id at all (system, connector) has no baseline, and
+// that is a refusal rather than a shared default row.
 func actingUser(ctx context.Context) (ids.UserID, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok || p.UserID == (ids.UUID{}) {
@@ -257,4 +250,60 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 			apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
+}
+
+// keyVisitsSQL deletes a page's marks whose record is gone, as the cascade
+// would have. It clears the marker on the rest, so the trigger keys them. It
+// writes no last_viewed_at, so only RecordVisit moves a mark. The marker
+// filter makes a replay change nothing.
+const keyVisitsSQL = `
+	WITH page AS (
+	    SELECT v.id, NOT COALESCE(CASE v.entity_type
+	             WHEN 'company' THEN EXISTS (SELECT 1 FROM company r WHERE r.id = v.entity_id)
+	             WHEN 'contact' THEN EXISTS (SELECT 1 FROM contact r WHERE r.id = v.entity_id)
+	           END, false) AS gone
+	      FROM user_record_view v
+	     WHERE v.entity_unkeyed AND v.id > $1
+	     ORDER BY v.id
+	     LIMIT $2
+	       FOR UPDATE
+	), dropped AS (
+	    DELETE FROM user_record_view v USING page WHERE v.id = page.id AND page.gone RETURNING v.id
+	), keyed AS (
+	    UPDATE user_record_view v SET entity_unkeyed = false
+	      FROM page WHERE v.id = page.id AND NOT page.gone
+	    RETURNING v.id
+	)
+	SELECT id FROM dropped UNION ALL SELECT id FROM keyed ORDER BY id`
+
+// KeyVisitsTx keys one page of the marks written before the entity keys, after
+// the given id. It returns the page's ids, each of which it changed.
+func KeyVisitsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, keyVisitsSQL, after, limit)
+	if err != nil {
+		return nil, fmt.Errorf("company360: keying visits: %w", err)
+	}
+	changed, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("company360: keying visits: %w", err)
+	}
+	return changed, nil
+}
+
+// EstimateUnkeyedVisits counts, up to limit+1, the marks KeyVisitsTx still has
+// to inspect.
+func EstimateUnkeyedVisits(ctx context.Context, q interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}, limit int64,
+) (int64, error) {
+	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+		return 0, err
+	}
+	var count int64
+	err := q.QueryRow(ctx, `SELECT count(*) FROM (
+		SELECT 1 FROM user_record_view WHERE entity_unkeyed LIMIT $1) unkeyed`, limit+1).Scan(&count)
+	return count, err
 }

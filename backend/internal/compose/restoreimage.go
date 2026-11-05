@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -225,7 +224,7 @@ func spell(entityType, key string, value json.RawMessage, allowed map[string]boo
 	// A cf_* key is a custom field: the catalog decides whether it is still
 	// writable, and that is a live-state question the value check owns. The
 	// shape check admits it here so the value check can name it.
-	if !allowed[key] && !strings.HasPrefix(key, "cf_") {
+	if !allowed[key] && !datasource.IsCustomFieldKey(key) {
 		return spelledUnspellable
 	}
 	return spelledAsItself

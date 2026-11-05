@@ -3,36 +3,21 @@
 
 package ai
 
-// Where a provider's BYOK key lives.
+// Where a provider's BYOK key comes from.
 //
-// It was the process environment, which is the 12-factor answer and has one
-// property nobody chose: an environment variable is readable for the life of
-// the process by anything that can read /proc, by a crash dump, and by every
-// child process the server ever forks. A key an installation holds for years
-// sits in all of those the whole time.
-//
-// Sealed in the key vault it is at rest under AEAD, addressed by an opaque ref,
-// and reachable only by a process holding the vault's root key. The root key
-// still comes from the environment, so the environment does not leave the
-// picture — it holds ONE secret instead of one per vendor, which is the actual
-// improvement.
-//
-// The environment stays the way a key ARRIVES. An installation exporting
-// GEMINI_API_KEY today keeps working and needs no action: the key is sealed on
-// the next boot and the variable becomes a seed rather than the source. That is
-// the same shape the routing file took when routing moved into the database.
+// Each key is one stored secret setting. A boot source, usually the vendor's
+// own environment variable, wins and locks it. Otherwise an administrator sets
+// it under Settings -> AI, and the row holds only the key vault's ref to it.
+// A boot value is read where it is and never copied into the vault.
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
-	"github.com/margince/margince/backend/internal/platform/settings"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// providerKeysObject is the RBAC object gating the sealed credentials.
+// providerKeysObject is the RBAC object gating the BYOK credentials.
 //
 // The same object routing carries, deliberately: both are admin/ops-only on
 // both verbs, and no seeded role holds one without the other. A second object
@@ -40,89 +25,107 @@ import (
 // a backfill migration that has to reach installations that already exist.
 const providerKeysObject = routingSettingsObject
 
-// ProviderKeysKey is the settings key the vault refs are stored under.
-const ProviderKeysKey = "ai.provider_keys"
+// providerKeyStore is how every BYOK key is stored: sealed, and kept through a
+// data reset. A reset wipes an installation's records, not the credentials it
+// reaches its vendors with.
+var providerKeyStore = config.Store{
+	RBACObject: providerKeysObject, AuditVerb: settingsAuditVerb, SecretReference: true, SurvivesDataReset: true,
+}
 
-// ProviderKeys maps a provider name to the vault ref holding its BYOK key.
-//
-// The REF is stored, never the key. A ref is opaque and workspace-bound — the
-// vault refuses one presented under another workspace — so a reader who can
-// see this setting learns which vendors have a credential and nothing about
-// any of them.
-var ProviderKeys = settings.Define[map[string]string](
-	ProviderKeysKey,
-	providerKeysObject,
-	"update",
-	map[string]string{},
-	validateProviderKeyRefs,
-).AsInstallationIdentity().AsSecretReference()
+// The BYOK keys, under each vendor's own variable name, so an operator already
+// exporting one needs no extra wiring. None is required: a cloud binding
+// without its key fails at construction, naming the variable (byokKeyRequired).
+var (
+	keyRoles = []config.Role{config.RoleAPI, config.RoleWorker}
 
-// validateProviderKeyRefs refuses a ref for a provider this build cannot serve.
-// A key sealed against a name nothing routes is a credential nobody can use and
-// nobody will remember is there.
-func validateProviderKeyRefs(refs map[string]string) error {
-	for provider, ref := range refs {
-		if _, cloud := cloudKeyEnv[provider]; !cloud {
-			return fmt.Errorf("ai: %q takes no api key", provider)
-		}
-		if ref == "" {
-			return fmt.Errorf("ai: %s has an empty credential reference", provider)
-		}
+	AnthropicKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_anthropic", Env: "ANTHROPIC_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK API key for the Anthropic provider; required only when a binding names it.",
+	}, providerKeyStore)
+	OpenAICompatibleKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_openai_compatible", Env: "OPENAI_COMPATIBLE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK API key for the openai_compatible provider; required only when a binding names it.",
+	}, providerKeyStore)
+	OpenAIKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_openai", Env: "OPENAI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK API key for the OpenAI provider; required only when a binding names it.",
+	}, providerKeyStore)
+	GeminiKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_gemini", Env: "GEMINI_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK API key for the Gemini provider; required only when a binding names it.",
+	}, providerKeyStore)
+	GeminiVertexKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_gemini_vertex", Env: "GEMINI_VERTEX_SA_JSON", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "BYOK service-account key (the JSON key file's contents) for the gemini_vertex provider; required only when a binding names it.",
+	}, providerKeyStore)
+	JevKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_jev", Env: "TYPESAFE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "API key for the TypeSafe decision provider; required only when the decisions lane binds it.",
+	}, providerKeyStore)
+	JevCompatibleKey = config.DefineStored(config.Spec[string]{
+		Key: "ai.provider_keys_jev_compatible", Env: "JEV_COMPATIBLE_API_KEY", Type: config.String, Secret: true, Roles: keyRoles,
+		Doc: "API key for a jev_compatible decision server; sent when set and never required.",
+	}, providerKeyStore)
+)
+
+// Settings are the BYOK keys, one per provider that takes one.
+func Settings() []config.Any {
+	keys := KeySettings()
+	out := make([]config.Any, 0, len(keys))
+	for _, s := range keys {
+		out = append(out, s)
 	}
-	return nil
+	return out
 }
 
-// KeyDefinitions is the ai module's credential contribution to the settings
-// registry, kept beside Definitions so a module declares its catalog in one
-// place.
-func keyDefinitions() []settings.Definition {
-	return []settings.Definition{ProviderKeys}
+// KeySettings are the BYOK keys in the routing table's order.
+func KeySettings() []*config.Setting[string] {
+	out := make([]*config.Setting[string], 0, len(keySettings))
+	for _, provider := range CloudProvidersNeedingKeys() {
+		out = append(out, keySettings[provider])
+	}
+	return out
 }
 
-// SealedKeys resolves BYOK keys from the vault, falling back to the environment
-// for one that has not been sealed yet.
+// keySettings maps a provider to the setting its key is read through.
+var keySettings = projectProviders(
+	func(d providerDescriptor) *config.Setting[string] { return d.key },
+	func(d providerDescriptor) bool { return d.key != nil })
+
+// KeyLookup resolves each provider's key through its setting: the boot value
+// where a boot source sets one, else the sealed row. It satisfies config.Lookup,
+// so a client still asks for the variable a key arrives in and byokKeyRequired
+// still names that variable.
 //
-// It satisfies config.Lookup so nothing downstream changes: buildClients still
-// asks for a variable NAME, cloudKey still resolves it, and byokKeyRequired
-// still names the variable to set when there is no key at all. Only where the
-// bytes come from moved.
-//
-// The environment fallback is what makes the move invisible to a running
-// installation. It is also what the seeder uses to fill the vault, so an
-// operator who exported a key once never exports it again.
-func SealedKeys(ctx context.Context, vault keyvault.Vault, ws ids.WorkspaceID, refs map[string]string, env config.Lookup) config.Lookup {
-	byName := make(map[string]string, len(cloudKeyEnv))
-	for provider, name := range cloudKeyEnv {
-		byName[name] = provider
+// A key that cannot be read answers empty, and the binding then fails naming
+// the variable to set. The read's error goes to log; it never holds the key.
+func KeyLookup(ctx context.Context, cfg *config.Config, log *slog.Logger) config.Lookup {
+	byEnv := make(map[string]*config.Setting[string], len(keySettings))
+	for _, s := range keySettings {
+		byEnv[s.Env()] = s
 	}
 	return func(name string) string {
-		provider, cloud := byName[name]
-		if !cloud || vault == nil {
-			return envOrEmpty(env, name)
+		s, ok := byEnv[name]
+		if !ok {
+			return ""
 		}
-		ref, sealed := refs[provider]
-		if !sealed {
-			return envOrEmpty(env, name)
-		}
-		secret, err := vault.Get(ctx, ws, keyvault.Ref(ref))
+		key, err := config.StoredVal(ctx, cfg, s)
 		if err != nil {
-			// Falling back rather than failing: a vault that cannot answer
-			// leaves the installation exactly where it was before the key was
-			// sealed, and the caller's own byokKeyRequired says what is missing
-			// if the environment cannot answer either. Refusing here would turn
-			// an unreadable vault into "this provider does not work" with no
-			// sentence naming the vault.
-			return envOrEmpty(env, name)
+			log.WarnContext(ctx, "cannot read a provider key; the provider is treated as unkeyed", "setting", s.Key(), "error", err)
+			return ""
 		}
-		return string(secret)
+		return key
 	}
 }
 
-func envOrEmpty(env config.Lookup, name string) string {
-	if env == nil {
-		return ""
+// keyHeld reports whether a provider holds a key: one a boot source sets, or a
+// sealed row. Neither is opened.
+func keyHeld(ctx context.Context, cfg *config.Config, s *config.Setting[string]) (bool, error) {
+	if _, locked := cfg.Locked(s.Key()); locked {
+		return true, nil
 	}
-	return env(name)
+	_, stored, err := config.SealedRef(ctx, cfg, s)
+	return stored, err
 }
 
 // CloudProvidersBound names the cloud vendors THIS binding actually calls, in a
@@ -162,8 +165,7 @@ func (cfg RoutingConfig) CloudProvidersBound() []string {
 // holds, in a stable order so a log line reads the same on every boot.
 //
 // Derived from cloudKeyEnv rather than restated, so a provider added there is
-// covered by the sealer the day it appears — the alternative is a second list
-// that silently leaves a new vendor's key in the environment.
+// covered by the key store the day it appears.
 func CloudProvidersNeedingKeys() []string {
 	out := make([]string, 0, len(cloudKeyEnv))
 	for _, provider := range providerNames() {

@@ -13,6 +13,7 @@ import {
   resolveRelative,
 } from "../../scripts/lib/source-tree";
 import { SCREENS, type Screen } from "../lib/router";
+import { bindingOf } from "../testing/classnames";
 import { NAV } from "./nav";
 
 // A capability nobody can navigate to is, from a user's seat, indistinguishable
@@ -162,7 +163,6 @@ function readModule(
 ): ModuleReach {
   const linked = new Set<string>();
   const viaName = new Set<string>();
-  const aliases = new Map<string, string>();
   const imports = new Map<string, Import>();
   // An address, and not a MENTION of one. The chunk has to BEGIN with the
   // address — bare, or joined to an origin, whether the origin is spliced in at
@@ -177,6 +177,23 @@ function readModule(
       linked.add(id);
     }
   };
+  // A name is read in the scope it is written in, so a same-named constant in
+  // another function cannot answer for it. A name the file never binds is an
+  // import, which `doorsIn` follows once every module is read.
+  const named = (name: ts.Identifier): void => {
+    const bound = bindingOf(name);
+    if (bound === undefined) {
+      viaName.add(name.text);
+      return;
+    }
+    const value =
+      ts.isVariableDeclaration(bound) && bound.initializer
+        ? literal(bound.initializer)
+        : null;
+    if (value !== null && screens.has(value)) {
+      linked.add(value);
+    }
+  };
   const walk = (node: ts.Node): void => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
       address(node.text);
@@ -188,16 +205,6 @@ function readModule(
       address(node.head.text);
       for (const span of node.templateSpans) {
         address(span.literal.text);
-      }
-    }
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer
-    ) {
-      const value = literal(node.initializer);
-      if (value !== null && screens.has(value)) {
-        aliases.set(node.name.text, value);
       }
     }
     if (
@@ -228,13 +235,41 @@ function readModule(
         linked.add(value);
       }
       if (ts.isIdentifier(node.initializer)) {
-        viaName.add(node.initializer.text);
+        named(node.initializer);
       }
     }
     ts.forEachChild(node, walk);
   };
-  walk(parse(path, source));
-  return { linked, viaName, aliases, imports };
+  const parsed = parse(path, source);
+  walk(parsed);
+  return {
+    linked,
+    viaName,
+    aliases: exportedScreens(parsed, screens),
+    imports,
+  };
+}
+
+/** The screens a module's top-level constants hold: the only constants of it
+ * another module can import. */
+function exportedScreens(
+  parsed: ts.SourceFile,
+  screens: ReadonlySet<string>,
+): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const statement of parsed.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declared of statement.declarationList.declarations) {
+      const value =
+        ts.isIdentifier(declared.name) && declared.initializer
+          ? literal(declared.initializer)
+          : null;
+      if (value !== null && screens.has(value)) {
+        out.set(declared.name.getText(), value);
+      }
+    }
+  }
+  return out;
 }
 
 /** Every screen the shipped tree opens a door to. */
@@ -313,15 +348,14 @@ function doorsIn(
  * refuses a ceiling it cannot statically fold, correctly, since one no reader
  * can evaluate is one no reader can audit.
  *
- * 40ms a file is an order of magnitude over the local measurement, matching the
- * allowance the plural gate arrived at empirically on the same corpus with the
- * same parser. 1400 files is that gate's budgeted corpus too, chosen against
- * this tree's merge rate; the corpus is asserted in the body rather than read
- * into the constant, so outgrowing it fails by name and count instead of
- * returning as an opaque timeout.
+ * 40ms a file is an order of magnitude over the local measurement. The plural
+ * gate measured the same allowance on the same corpus with the same parser.
+ * The body asserts the corpus size, so outgrowing it fails by name and count
+ * instead of as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
-const BUDGETED_CORPUS_FILES = 1_500;
+// Headroom for the file-length splits, which turn one long module into several.
+const BUDGETED_CORPUS_FILES = 2_500;
 const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("every screen has a door", () => {
@@ -472,6 +506,29 @@ describe("every screen has a door", () => {
       ].join("\n"),
     ] as const;
     expect(doorsIn([elsewhere, packaged], screens).size).toBe(0);
+  });
+
+  it("reads a name in its own scope, not a same-named one beside it", () => {
+    const screens = new Set(["planted", "other"]);
+    const linkedBy = (source: string) =>
+      doorsIn([[join(srcRoot, "scoped.ts"), source] as const], screens);
+    const twoLocals = (opened: string, beside: string) =>
+      [
+        `function opens() { const id = "${opened}"; navigate({ screen: id }); }`,
+        `function names() { const id = "${beside}"; return id; }`,
+      ].join("\n");
+
+    expect([...linkedBy(twoLocals("planted", "other"))]).toEqual(["planted"]);
+    expect([...linkedBy(twoLocals("other", "planted"))]).toEqual(["other"]);
+    // A parameter shadows the module's constant of the same name.
+    expect(
+      linkedBy(
+        [
+          `const id = "planted";`,
+          `function opens(id: string) { navigate({ screen: id }); }`,
+        ].join("\n"),
+      ).size,
+    ).toBe(0);
   });
 
   it("does not accept a waiver with no reason", () => {

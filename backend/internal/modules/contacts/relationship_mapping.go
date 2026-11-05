@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The wire names of the two nullable dates a patch may clear.
@@ -37,14 +38,18 @@ const (
 // kind needs is the rel_*_shape CHECKs' rule, and dropping a field here turns
 // their refusal into a lie about what the caller sent.
 func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) (CreateRelationshipInput, error) {
+	if err := refuseUnknownEmploymentStatus(req.EmploymentStatus); err != nil {
+		return CreateRelationshipInput{}, err
+	}
 	source, err := httperr.RequireNonBlank("source", req.Source)
 	if err != nil {
 		return CreateRelationshipInput{}, err
 	}
 	in := CreateRelationshipInput{
-		Kind:   string(req.Kind),
-		Role:   req.Role,
-		Source: source,
+		ReferencesFromRequest: true,
+		Kind:                  string(req.Kind),
+		Role:                  req.Role,
+		Source:                source,
 		// Passed through as the pointer, not collapsed to a bool: the store
 		// decides the flag only for a caller who omitted it, and an omitted
 		// field and an explicit false are different requests.
@@ -76,6 +81,9 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) (Create
 // one is a new edge and an archive, never an update — which is why this takes
 // the version pin the create mapper has no use for.
 func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersion *int64, cleared []string) (UpdateRelationshipInput, error) {
+	if err := refuseUnknownEmploymentStatus(req.EmploymentStatus); err != nil {
+		return UpdateRelationshipInput{}, err
+	}
 	in := UpdateRelationshipInput{
 		Role:             req.Role,
 		IsCurrentPrimary: req.IsCurrentPrimary,
@@ -91,6 +99,10 @@ func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersi
 	}
 	if req.EndedAt != nil {
 		in.EndedAt = &req.EndedAt.Time
+	}
+	// A role with nothing visible in it is a cleared role, not an empty title.
+	if in.Role != nil && !values.HasVisibleText(*in.Role) {
+		in.Role, in.ClearRole = nil, true
 	}
 	for _, field := range cleared {
 		switch field {
@@ -150,4 +162,14 @@ func wireEnum[T ~string](value *string) *T {
 	}
 	out := T(*value)
 	return &out
+}
+
+func refuseUnknownEmploymentStatus[T interface {
+	~string
+	Valid() bool
+}](status *T) error {
+	if status != nil && !(*status).Valid() {
+		return &EmploymentImportError{Field: employmentStatusField, Message: "Choose current or former, or omit employment_status when no further status is known."}
+	}
+	return nil
 }

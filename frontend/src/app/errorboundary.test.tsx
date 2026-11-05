@@ -113,4 +113,33 @@ describe("the app-level error boundary", () => {
 
     expect(await screen.findByText(SHELL)).toBeTruthy();
   });
+  // A deploy replaced the screen's code under a tab opened before it. Retrying
+  // inside the page re-runs the failed import, so the boundary reloads instead.
+  it("reloads onto the new build when a screen's code is gone", () => {
+    sessionStorage.clear();
+    const reload = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({
+      ...window.location,
+      reload,
+    });
+    function Stale(): never {
+      throw new TypeError(
+        "Failed to fetch dynamically imported module: /assets/settings-a1.js",
+      );
+    }
+    renderBoundary(<Stale />);
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload for a defect in the screen", () => {
+    const reload = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({
+      ...window.location,
+      reload,
+    });
+    renderBoundary(<Fragile />);
+
+    expect(reload).not.toHaveBeenCalled();
+  });
 });

@@ -354,12 +354,11 @@ func refuseUnpairedAmount(seen map[string]bool) error {
 // setAcceptedDealField coerces one accepted value onto its UpdateDealInput
 // slot. The switch IS the closed allowlist, derived from what the deals
 // partial-update path accepts as a plain document fact. Its remaining
-// fields are deliberately refused: the row references (company_id,
-// owner_id, partner_company_id) are links to records, not facts a quote can
-// carry, and each demands its own link-target visibility gate;
-// forecast_category is a rep's pipeline judgment; wait_until is a
-// workflow timer; a cf_* passthrough would hand the extractor an open
-// column surface. A grounded field outside this set answers
+// fields are refused. The row references (company_id, owner_id,
+// partner_company_id) link to records a quote cannot carry, and each
+// demands its own link-target visibility gate. win_probability is a rep's
+// pipeline judgment. wait_until is a workflow timer. A cf_* passthrough
+// would hand the extractor an open column surface. A grounded field outside this set answers
 // not_deal_writable, whole-request.
 func setAcceptedDealField(patch *deals.UpdateDealInput, position int, field acceptedExtractionField) error {
 	switch field.Field {
@@ -376,10 +375,9 @@ func setAcceptedDealField(patch *deals.UpdateDealInput, position int, field acce
 		}
 		patch.AmountMinor = &amount
 	case acceptFieldCurrency:
-		// values.NewMoney is the ONE spelling of a valid ISO-4217 code (the
-		// amount is irrelevant to that check); its ParseError already
+		// values.RequireAssignableCurrency is the one spelling of a settable ISO-4217 code; its ParseError already
 		// carries the field and machine code the wire mapping expects.
-		if _, err := values.NewMoney(0, field.Value); err != nil {
+		if err := values.RequireAssignableCurrency(field.Value); err != nil {
 			return err
 		}
 		currency := field.Value

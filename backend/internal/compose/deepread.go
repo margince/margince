@@ -203,16 +203,16 @@ func newSiteDeepReadWorker(pool *pgxpool.Pool, brain, factBrain, triageBrain com
 	fetcher := webread.New()
 	return &siteDeepReadWorker{
 		pool:        pool,
-		contacts:    contacts.NewStore(InstallationDB(pool)),
+		contacts:    newContactsStore(InstallationDB(pool)),
 		crawler:     newSiteCrawler(fetcher, crawlCeiling),
 		extract:     evidenceExtractor{fetch: fetcher, brain: brain, factBrain: factBrain},
 		triageBrain: triageBrain,
 		fetch:       fetcher,
 		blob:        blob,
-		approvals:   approvals.NewService(InstallationDB(pool)),
+		approvals:   NewApprovalsService(InstallationDB(pool)),
 		authority:   identity.NewService(pool),
 		autoEnrich:  capture.NewAutoEnrichStore(InstallationDB(pool)),
-		settings:    capture.NewSettings(NewSettingsStore(pool)),
+		settings:    capture.NewSettings(NewSettingsStore(pool), StoredConfig(pool)),
 		log:         log,
 		now:         time.Now,
 	}

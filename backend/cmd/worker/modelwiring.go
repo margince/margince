@@ -25,6 +25,8 @@ type modelPathSpec struct {
 	// deployconfig.Seeds and not the yaml.Node inside it.
 	seeds           deployconfig.Seeds
 	capturePayloads bool
+	// keys resolve the binding's credentials; compose.RoutingKeys builds them.
+	keys config.Lookup
 }
 
 // selectModelPath resolves the model path: a routing config for real
@@ -43,7 +45,7 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
 		return compose.ModelPath{}, err
 	}
-	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
+	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, spec.keys, log)
 	if err != nil {
 		return compose.ModelPath{}, err
 	}
@@ -54,13 +56,11 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 		return compose.ModelPath{}, nil
 	}
 	if !cfg.Unconfigured() {
-		// A task whose whole fallback ladder has no bound tier is not a
-		// boot error (a deployment may legitimately not run every
-		// workload), but it must be loud: log it now, not discover it
-		// from a refused call.
-		for _, w := range cfg.UnboundLadderWarnings() {
-			log.Warn(w)
-		}
+		// A deployment may legitimately not run every workload, so a task
+		// with no bound tier is no boot error. It must still be loud, so the
+		// gap is read here and not from a refused call. A ladder whose
+		// rungs reach one API is named in the same place.
+		ai.LogLadderWarnings(log, cfg)
 	}
 	for i, candidate := range candidates {
 		path, err := compose.NewModelPath(ctx, candidate, pool, spec.capturePayloads, log)

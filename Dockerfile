@@ -47,7 +47,7 @@
 # The base always runs on the build platform and cross-compiles to the target:
 # in a multi-platform bake only the thin runtime stages run emulated, never
 # the toolchains.
-FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine@sha256:85dc1069ac644ea3c527b177303a406eb3358192816cd7f9e5848eb658851673 AS gobase
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS gobase
 
 RUN apk add --no-cache git ca-certificates
 
@@ -101,17 +101,17 @@ ARG MARGINCE_BUILD_REVISION=""
 # comparison; see internal/shared/buildinfo.
 ARG MARGINCE_RELEASE_VERSION=dev
 ARG TARGETARCH
-# cmd/migrate is deliberately NOT stamped: it ships in this image, so it is the
-# same release by construction, and it applies the schema rather than joining
-# the set the guard compares.
+# cmd/migrate joins no comparison: it applies the schema rather than joining the
+# set the guard compares. It is stamped all the same, because the server bundle
+# ships it as a bare binary and `--version` is how that install names its release.
 RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
-    GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
-        go build -ldflags="-s -w \
-            -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MARGINCE_BUILD_REVISION \
-            -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION" \
-        -o /bin/margince-api ./cmd/api \
+    stamp="-s -w \
+        -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MARGINCE_BUILD_REVISION \
+        -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION" \
     && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
-        go build -ldflags="-s -w" -o /bin/margince-migrate ./cmd/migrate
+        go build -ldflags="$stamp" -o /bin/margince-api ./cmd/api \
+    && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
+        go build -ldflags="$stamp" -o /bin/margince-migrate ./cmd/migrate
 
 # ── worker: build ─────────────────────────────────────────────────────────────
 # cmd/worker — the background process role: the outbox relay (mail does not
@@ -125,11 +125,14 @@ FROM gobase AS worker-build
 # The same release version the api target is stamped with. The worker is the
 # role that REFUSES: at boot it compares this against the release the api
 # recorded and exits rather than run half of one release beside half of another.
+# The revision only names the commit for `--version`; the worker compares none.
+ARG MARGINCE_BUILD_REVISION=""
 ARG MARGINCE_RELEASE_VERSION=dev
 ARG TARGETARCH
 RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
     GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
         go build -ldflags="-s -w \
+            -X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=$MARGINCE_BUILD_REVISION \
             -X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MARGINCE_RELEASE_VERSION" \
         -o /bin/margince-worker ./cmd/worker
 
@@ -276,12 +279,8 @@ RUN --mount=type=cache,id=margince-pnpm-store,target=/pnpm-store \
 # none of the installation's units.
 ENV MARGINCE_COMPOSITION_FRONTEND=/app/build/composition/frontend
 WORKDIR /app/frontend
-# `tsc -b` dominates this step (~40s of ~51s locally; vite itself is ~6s). Both
-# composite projects write their .tsbuildinfo into node_modules/.tmp, which is
-# discarded with this stage, so every build type-checks the whole tree from
-# scratch. Persisting just that directory makes tsc incremental across builds;
-# it keys off recorded file content hashes, so changed files are still re-checked
-# and the type gate over the freshly generated schema.d.ts is unchanged.
+# `pnpm build:composed` type-checks incrementally, and the cache mount below keeps
+# its .tsbuildinfo across builds. Content hashes still re-check a changed file.
 # The same revision the api target is built with, written into each MCP App view
 # document so the api can report skew between the two tiers. See the api-build
 # stage for why an absent value disables the comparison rather than alarming.
@@ -370,7 +369,7 @@ ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── web: runtime ──────────────────────────────────────────────────────────────
 # nginx-unprivileged runs as a non-root user (uid 101) and listens on 8080.
-FROM nginxinc/nginx-unprivileged:alpine@sha256:884e0b7f42f303641b0f4e78755aea647521dca0b89ca3be7992ad78b5c07434 AS web
+FROM nginxinc/nginx-unprivileged:alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e AS web
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=web-build /app/frontend/dist /usr/share/nginx/html
@@ -390,3 +389,23 @@ USER 101
 EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
+
+# ── bundle: a server install without containers ──────────────────────────────
+# The same binaries and the same SPA the three images carry, as files: the
+# release lane exports this stage per platform (`docker buildx bake bundle`) and
+# scripts/release-bundle.sh packs each into a tarball. Built from the stages
+# above rather than by a second build, so a bundle and an image of one release
+# cannot differ in what they run.
+FROM scratch AS bundle
+
+COPY --from=api-build /bin/margince-api /bin/margince-migrate /bin/
+COPY --from=worker-build /bin/margince-worker /bin/
+COPY --from=web-build /app/frontend/dist /web/
+COPY scripts/deploy/ /deploy/
+COPY config/margince.example.yaml /config/margince.example.yaml
+COPY .env.example /margince.env.example
+COPY LICENSE /LICENSE
+
+# Exported as files and never run, so no account is named; a non-root id keeps
+# a `docker run` of it from starting as root.
+USER 65532:65532

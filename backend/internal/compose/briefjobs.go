@@ -3,17 +3,6 @@
 
 package compose
 
-// The overnight Morning-Brief assembly: an hourly dispatcher fanning out one
-// pass per workspace, each of which snapshots a run for every full-seat rep
-// whose local morning has arrived and who has no run for that day yet.
-//
-// Hourly rather than once at a fixed UTC hour, because the morning being aimed
-// at is the installation's local one: an hourly tick crosses briefingHour in
-// every zone the setting can name, and the per-rep day uniqueness is what keeps
-// twenty-four ticks from producing twenty-four runs. The same property makes a
-// missed night self-healing — a worker down until 09:00 assembles the morning
-// on its next tick rather than skipping the day.
-
 import (
 	"context"
 	"errors"
@@ -33,11 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// briefingHour is the local hour from which a rep's brief is expected to be
-// waiting. Early enough that the first coffee finds it already there, late
-// enough that "overnight" covers a real night's activity.
-const briefingHour = 5
 
 // BriefGenerateArgs runs one overnight brief-assembly pass.
 type BriefGenerateArgs struct{}
@@ -105,12 +89,9 @@ func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UU
 	if err != nil {
 		return err
 	}
-	if !pass.due {
-		return nil
-	}
 	var failures []error
 	for _, userID := range pass.reps {
-		if err := w.assembleFor(sysCtx, wsID, userID, now); err != nil {
+		if err := w.assembleFor(sysCtx, wsID, userID, now, pass.assemblyFrom); err != nil {
 			failures = append(failures, fmt.Errorf("brief for user %s: %w", userID, err))
 		}
 	}
@@ -139,15 +120,10 @@ func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UU
 // morningPass is what one workspace tick resolved before it did anything: which
 // local day this is, what hour it is there, and which reps still need a run.
 type morningPass struct {
-	// due is false when this tick is not the workspace's morning at all — an
-	// hour before the briefing hour. Nothing follows.
-	due bool
 	// day is the installation's local date, which every run is filed under.
-	day time.Time
-	// hour is the local wall-clock hour, which is what a rep's own delivery
-	// hour is compared against.
-	hour int
-	reps []ids.UUID
+	day          time.Time
+	assemblyFrom time.Time
+	reps         []ids.UUID
 }
 
 // mailTheMorning hands every unmailed run of this local day to the mail lane,
@@ -182,7 +158,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 			// the message, and its unmailed run stays unmailed.
 			continue
 		}
-		w.mailMorning(repCtx, run, now, pass.hour)
+		w.mailMorning(repCtx, run, now)
 	}
 	return nil
 }
@@ -206,7 +182,7 @@ func (w *briefGenerateWorker) repContext(
 // The MAIL is not here. It is a pass of its own over whatever is still unmailed
 // once the whole workspace is assembled — mailTheMorning says why, and the short
 // version is that a run may be mailed hours after it is written.
-func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now time.Time) error {
+func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now, assemblyFrom time.Time) error {
 	repCtx, live, err := w.repContext(ctx, wsID, userID)
 	if err != nil {
 		return err
@@ -215,6 +191,16 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 		// A seat archived between the roster read and its turn has no morning
 		// left to assemble, and it must not fail the workspace's pass.
 		return nil
+	}
+	if now.Before(assemblyFrom) {
+		settings, err := w.users.MyDelivery(repCtx)
+		if err != nil {
+			return err
+		}
+		_, allowed, err := w.morningWindow(repCtx, now, settings)
+		if err != nil || !allowed {
+			return err
+		}
 	}
 	// The run itself is not read back here. SnapshotRun writes it, and the
 	// mailing pass reads whatever is still unmailed for the day — including
@@ -238,8 +224,7 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 	return nil
 }
 
-// repsDueTheirMorning lists the workspace's active full-seat humans whose local
-// day has reached briefingHour and who hold no run for that day.
+// morningPassFor lists active full-seat humans without a run for the reporting day.
 //
 // Agents are excluded: a brief is a colleague's morning, and an agent seat has no
 // morning to prepare. Read seats are excluded because the brief's whole content
@@ -255,10 +240,7 @@ func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID,
 		if err != nil {
 			return err
 		}
-		if local.Hour() < briefingHour {
-			return nil
-		}
-		pass = morningPass{due: true, day: day, hour: local.Hour()}
+		pass = morningPass{day: day, assemblyFrom: time.Date(local.Year(), local.Month(), local.Day(), 5, 0, 0, 0, local.Location())}
 		pass.reps, err = repsWithoutARunFor(ctx, tx, day)
 		return err
 	})

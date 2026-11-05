@@ -176,7 +176,15 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// restored by omission rather than by decision. Raising is the shape the
 	// resolver contract already takes (it may only ever raise), and a human is
 	// the safe answer to "this server could not establish the record's state".
-	if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
+	// An agent acting as its user (principal.ActsAsItsUser) runs whatever the
+	// tier says: what the colleague may do unaided, their agent may do too. The
+	// tier then decides nothing, so a version it could not name raises nothing,
+	// and one it did name is still bound below. Automatic work with nobody
+	// behind it keeps both rules.
+	resolvedAuto := tier == mcp.TierAutoExecute
+	if TierFor(p, spec) == mcp.TierAutoExecute {
+		tier = mcp.TierAutoExecute
+	} else if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
 		return ctx, fmt.Errorf(
 			"gate: %s resolved to auto-execute without naming the record version it was resolved from: %w",
 			spec.Name, apperrors.ErrRequiresApproval)
@@ -195,7 +203,10 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// agent gate both come through Admit, and a rule spelled twice on this seam
 	// is how the tier itself came to judge both endpoints of a deal move on one
 	// door and only the destination on the other.
-	if observed != nil {
+	// A tier lifted for an agent acting as its user binds no pin. The pin also
+	// tells the store the move is the open one the tier admitted. A lifted call
+	// is the colleague's own move, which the tier model does not govern.
+	if observed != nil && resolvedAuto {
 		ctx = withAutoExecutePin(ctx, *observed)
 	}
 	return ctx, nil
@@ -291,4 +302,16 @@ func (g *Gate) AdmitRead(ctx context.Context) error {
 		return &VolumeExceededError{Reading: reading}
 	}
 	return nil
+}
+
+// TierFor is the tier spec carries for p before any argument is read. An agent
+// acting as its user (principal.ActsAsItsUser) runs every tool as the colleague
+// could, so it sees auto-execute, except where spec.WaitsEvenForItsUser. The
+// gate admits on it, and the tool listing advertises it, so what a caller is
+// told is what it is admitted on.
+func TierFor(p principal.Principal, spec mcp.ToolSpec) mcp.RiskTier {
+	if p.ActsAsItsUser() && !spec.WaitsEvenForItsUser {
+		return mcp.TierAutoExecute
+	}
+	return spec.Tier
 }

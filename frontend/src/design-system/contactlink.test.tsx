@@ -2,22 +2,48 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WriteToProvider } from "../lib/writeto";
+import { renderWithQueryClient as render } from "../testing/queryrender";
 import { ContactLink } from "./contactlink";
 
-afterEach(cleanup);
+// A number with its country code also offers its chats, which the
+// installation's settings turn on.
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            call_whatsapp: true,
+            call_telegram: false,
+            call_zalo: false,
+          }),
+          { headers: { "Content-Type": "application/json" } },
+        ),
+    ),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const dana = { entityType: "contact", entityId: "p-1" } as const;
 
 describe("ContactLink", () => {
-  it("opens the composer on the address's record, and links a number with tel", () => {
+  it("opens the composer on the address's record, and links a number with tel", async () => {
     const writeTo = vi.fn();
     render(
       <WriteToProvider writeTo={writeTo}>
         <ContactLink kind="email" value=" dana@brandt.example " record={dana} />
-        <ContactLink kind="phone" value="+33 6 12 44 08 91" />
+        <ContactLink kind="phone" value="+33 6 12 44 08 91" record={dana} />
       </WriteToProvider>,
     );
     // A button and not a link: nothing here has an href for the reader's own
@@ -35,6 +61,12 @@ describe("ContactLink", () => {
         .getByRole("link", { name: "+33 6 12 44 08 91" })
         .getAttribute("href"),
     ).toBe("tel:+33612440891");
+    fireEvent.click(await screen.findByRole("button", { name: "Open a chat" }));
+    expect(
+      screen
+        .getByRole("link", { name: "Open chat in WhatsApp" })
+        .getAttribute("href"),
+    ).toBe("https://wa.me/33612440891");
   });
 
   it("keeps a refused value as text rather than hiding it", () => {
@@ -112,3 +144,99 @@ describe("ContactLink", () => {
     );
   });
 });
+
+describe("ContactLink's labelled email verb", () => {
+  it("opens the composer on the record with the address", () => {
+    const writeTo = vi.fn();
+    render(
+      <WriteToProvider writeTo={writeTo}>
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address=" dana@brandt.example "
+          record={dana}
+        />
+      </WriteToProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Email" }));
+    expect(writeTo).toHaveBeenCalledWith({
+      entityType: "contact",
+      entityId: "p-1",
+      address: "dana@brandt.example",
+    });
+  });
+
+  it("hands the address to the reader's own client with no composer host", () => {
+    render(
+      <ContactLink
+        kind="email"
+        appearance="button"
+        label="Email"
+        address="dana@brandt.example"
+        record={dana}
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Email" });
+    expect(link.getAttribute("href")).toBe("mailto:dana@brandt.example");
+    expect(link.className).toBe("btn btn-ghost");
+  });
+
+  it("draws nothing for a refused address, no address or a read-only record", () => {
+    const { container } = render(
+      <WriteToProvider writeTo={vi.fn()}>
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address="dana@brandt.example?bcc=x"
+          record={dana}
+        />
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address={undefined}
+          record={dana}
+        />
+        <ContactLink
+          kind="email"
+          appearance="button"
+          label="Email"
+          address="dana@brandt.example"
+          record={dana}
+          readOnly
+        />
+      </WriteToProvider>,
+    );
+    expect(container.childElementCount).toBe(0);
+  });
+});
+
+// A `mailto:` built from an address sends the message around the composer.
+// Only ContactLink may build one, for a reader with no mailbox. Every product
+// source file is read, so a new surface cannot slip by.
+describe("an address to write to", () => {
+  it("becomes a mailto only inside ContactLink", () => {
+    const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+    const builders = productSources(srcRoot)
+      .filter((path) => /mailto:\$\{/.test(readFileSync(path, "utf8")))
+      .map((path) => relative(srcRoot, path));
+    expect(builders).toEqual([
+      "design-system/contactlink.tsx",
+      // A link the writer puts in their own message, opened by the recipient.
+      "design-system/richtext-html.ts",
+    ]);
+  });
+});
+
+function productSources(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return productSources(path);
+    return /\.tsx?$/.test(entry.name) &&
+      !/\.(test|stories)\.tsx?$/.test(entry.name)
+      ? [path]
+      : [];
+  });
+}

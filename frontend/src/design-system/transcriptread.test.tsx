@@ -50,8 +50,13 @@ type Report = {
   activity_id: string;
   status: "queued" | "running" | "done" | "failed";
   status_detail?: string | null;
+  detail?: string | null;
   line_count: number;
   proposal_ids: string[];
+  proposals: {
+    id: string;
+    asked_of: { seat_id: string; name?: string | null; is_you: boolean };
+  }[];
   created_at: string;
 };
 
@@ -62,6 +67,7 @@ function report(overrides: Partial<Report>): Report {
     status: "done",
     line_count: 48,
     proposal_ids: [],
+    proposals: [],
     created_at: "2026-08-01T09:00:00Z",
     ...overrides,
   };
@@ -129,6 +135,32 @@ function stubReads(options: {
     }),
   );
   return { calls };
+}
+
+function renderWatched(initial: Report["status"]) {
+  let status = initial;
+  stubReads({
+    stored: report({ status }),
+    read: () => jsonResponse(report({ status })),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const invalidated = vi.spyOn(client, "invalidateQueries");
+  rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <TranscriptReadCard activityId="a-1" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return {
+    client,
+    invalidated,
+    setStatus: (next: Report["status"]) => {
+      status = next;
+    },
+  };
 }
 
 describe("reading a transcript for its next steps", () => {
@@ -324,7 +356,12 @@ describe("reading a transcript for its next steps", () => {
   // direction.
   it("says a status it could not read is unavailable", async () => {
     stubReads({
-      stored: report({ proposal_ids: ["ap-1"] }),
+      stored: report({
+        proposal_ids: ["ap-1"],
+        proposals: [
+          { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
+        ],
+      }),
       approvalStatus: 403,
     });
     render(<TranscriptReadCard activityId="a-1" />);
@@ -334,6 +371,97 @@ describe("reading a transcript for its next steps", () => {
     ).toBeTruthy();
     // A status nobody could read is not a decision somebody made.
     expect(screen.queryByText("1 suggestion reviewed")).toBeNull();
+  });
+
+  // A suggestion put to the colleague who made the promise is theirs to
+  // decide. The card says who it was sent to and never asks for a status it
+  // may not read, so nothing reads as a failure.
+  it("says a colleague's suggestion was sent to them, and reads no status for it", async () => {
+    const { calls } = stubReads({
+      stored: report({
+        detail:
+          "added 1 task for you; sent 1 suggestion to Anna Example to confirm",
+        proposal_ids: ["ap-1"],
+        proposals: [
+          {
+            id: "ap-1",
+            asked_of: {
+              seat_id: "u-anna",
+              name: "Anna Example",
+              is_you: false,
+            },
+          },
+        ],
+      }),
+      approvalStatus: 403,
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText(
+        "added 1 task for you; sent 1 suggestion to Anna Example to confirm",
+      ),
+    ).toBeTruthy();
+    expect(calls.some((call) => call.includes("/approvals/"))).toBe(false);
+    expect(screen.queryByText(/Status unavailable/)).toBeNull();
+  });
+
+  it("shows what the reading did beside the suggestions waiting on the reader", async () => {
+    stubReads({
+      stored: report({
+        detail:
+          "added 1 task for Anna Example; you were asked to confirm 1 suggestion",
+        proposal_ids: ["ap-1"],
+        proposals: [
+          { id: "ap-1", asked_of: { seat_id: "u-me", is_you: true } },
+        ],
+      }),
+    });
+    render(<TranscriptReadCard activityId="a-1" />);
+
+    expect(
+      await screen.findByText(
+        "added 1 task for Anna Example; you were asked to confirm 1 suggestion",
+      ),
+    ).toBeTruthy();
+    expect(await screen.findByText("1 next step awaiting review")).toBeTruthy();
+  });
+
+  it("refreshes timelines, tasks, worklist and the activity when a running reading turns done", async () => {
+    const { client, invalidated, setStatus } = renderWatched("running");
+    expect(await screen.findByText("Reading…")).toBeTruthy();
+    expect(invalidated).not.toHaveBeenCalled();
+
+    setStatus("done");
+    await client.refetchQueries({ queryKey: ["transcript-read"] });
+
+    await waitFor(() =>
+      expect(invalidated).toHaveBeenCalledWith({ queryKey: ["tasks"] }),
+    );
+    expect(invalidated).toHaveBeenCalledWith({ queryKey: ["worklist"] });
+    expect(invalidated).toHaveBeenCalledWith({ queryKey: ["activity", "a-1"] });
+    const predicate = invalidated.mock.calls
+      .map(([filters]) => filters?.predicate)
+      .find((one) => one !== undefined);
+    expect(predicate).toBeDefined();
+    const matches = (queryKey: unknown[]) =>
+      predicate?.({ queryKey } as never) ?? false;
+    expect(matches(["activities", "contact", "c-1"])).toBe(true);
+    expect(matches(["company360", "co-1"])).toBe(true);
+    expect(matches(["contact360", "c-1"])).toBe(true);
+    expect(matches(["project", "p-1", "360"])).toBe(true);
+    expect(matches(["settings", "profile"])).toBe(false);
+  });
+
+  it("refreshes nothing when a running reading fails", async () => {
+    const { client, invalidated, setStatus } = renderWatched("running");
+    expect(await screen.findByText("Reading…")).toBeTruthy();
+
+    setStatus("failed");
+    await client.refetchQueries({ queryKey: ["transcript-read"] });
+
+    expect(await screen.findByText("Failed")).toBeTruthy();
+    expect(invalidated).not.toHaveBeenCalled();
   });
 
   it("offers a first reading, and no outcome, on a transcript nobody has read", async () => {
@@ -378,6 +506,8 @@ describe("which activity carries a transcript", () => {
   it("recognises a call or a meeting logged as a transcript", () => {
     expect(
       isTranscriptActivity({
+        occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "call",
         source_system: "transcript",
@@ -385,6 +515,8 @@ describe("which activity carries a transcript", () => {
     ).toBe(true);
     expect(
       isTranscriptActivity({
+        occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "meeting",
         source_system: "transcript",
@@ -393,9 +525,18 @@ describe("which activity carries a transcript", () => {
   });
 
   it("leaves an ordinary meeting and a mail-sourced row alone", () => {
-    expect(isTranscriptActivity({ ...base, kind: "meeting" })).toBe(false);
     expect(
       isTranscriptActivity({
+        occurred_precision: "instant",
+        offers_email: false,
+        ...base,
+        kind: "meeting",
+      }),
+    ).toBe(false);
+    expect(
+      isTranscriptActivity({
+        occurred_precision: "instant",
+        offers_email: false,
         ...base,
         kind: "email",
         source_system: "transcript",
@@ -405,8 +546,20 @@ describe("which activity carries a transcript", () => {
 
   it("attaches the reading card to the transcript row of a timeline, and only it", () => {
     const [transcript, note] = activityTimeline([
-      { ...base, kind: "call", source_system: "transcript" },
-      { ...base, id: "a-2", kind: "note" },
+      {
+        occurred_precision: "instant",
+        offers_email: false,
+        ...base,
+        kind: "call",
+        source_system: "transcript",
+      },
+      {
+        occurred_precision: "instant",
+        offers_email: false,
+        ...base,
+        id: "a-2",
+        kind: "note",
+      },
     ]);
     expect(transcript.detail).toBeTruthy();
     expect(note.detail).toBeUndefined();

@@ -15,6 +15,8 @@ import (
 // the failing branch happened to use.
 const linkedinURLField = "linkedin_url"
 
+const linkedInCanonicalHost = "www.linkedin.com"
+
 // NormalizeLinkedInURL reduces a LinkedIn profile URL to the one stored
 // spelling the E12.11 exact-match dedupe key compares on: https scheme,
 // lowercased host, no query, no fragment, no trailing slash. Parsed once
@@ -75,7 +77,35 @@ func NormalizeContactLinkedInURL(raw string) (string, error) {
 			Message: "a LinkedIn profile URL is on linkedin.com",
 		}
 	}
-	return normalized, nil
+	if _, isProfile := linkedInProfileSlug(normalized); !isProfile {
+		return "", &values.ParseError{
+			Field: linkedinURLField, Code: "linkedin_url_not_profile",
+			Message: "a contact's LinkedIn is a profile URL like https://www.linkedin.com/in/<name>",
+		}
+	}
+	u, err := url.Parse(normalized)
+	if err != nil {
+		return "", err
+	}
+	return "https://" + linkedInCanonicalHost + u.EscapedPath(), nil
+}
+
+// linkedInProfilePrefix is the one path shape a profile takes.
+// Company, school and showcase pages live under other prefixes, so a contact's
+// slot refuses them by this prefix alone.
+const linkedInProfilePrefix = "/in/"
+
+// linkedInProfileSlug answers the profile name of a normalized LinkedIn URL:
+// the first path segment under /in/. A deeper path (/in/sam/details) names the
+// same profile as /in/sam.
+func linkedInProfileSlug(normalized string) (string, bool) {
+	_, path, ok := splitLinkedInHostPath(normalized)
+	if !ok {
+		return "", false
+	}
+	rest, isProfile := strings.CutPrefix(path, linkedInProfilePrefix)
+	slug, _, _ := strings.Cut(rest, "/")
+	return slug, isProfile && slug != ""
 }
 
 // LinkedInSlotHosts are the hosts a value has to be on before this product will
@@ -112,4 +142,16 @@ func onHost(host string, allowed []string) bool {
 		}
 	}
 	return false
+}
+
+// leadLinkedInForUpdate normalizes a lead's LinkedIn as a profile URL. A value
+// the lead already stores stays as written, so a lead saved before the profile
+// rule can still be edited in its other fields.
+func leadLinkedInForUpdate(raw string, stored *string) (string, error) {
+	if stored != nil {
+		if same, err := NormalizeLinkedInURL(raw); err == nil && same == *stored {
+			return same, nil
+		}
+	}
+	return NormalizeContactLinkedInURL(raw)
 }

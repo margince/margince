@@ -62,7 +62,7 @@ export function sessionOnlyFetch() {
         headers: { "Content-Type": "application/json" },
       });
     }
-    return new Response(JSON.stringify({ code: "unavailable" }), {
+    return new Response(JSON.stringify({ code: "service_unavailable" }), {
       status: 503,
       headers: { "Content-Type": "application/problem+json" },
     });

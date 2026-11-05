@@ -4,29 +4,31 @@
 import { Bell } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNoticeRead } from "../components/taskactions";
+import { AppLink } from "../design-system/applink";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
 import { approvalHref } from "../features/automations/approvaldrawer";
-import { useNoticeRead } from "../features/worklist/taskactions";
-import { worklistKey } from "../features/worklist/worklist.queries";
-import { formatDateTime, formatNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import { useLocale, usePlural, useT } from "../i18n";
-import { recordRoute } from "../lib/entity";
-import { problemMessageOf } from "../lib/problem";
-import { routeHash } from "../lib/router";
 import {
   NOTIFICATIONS_KEY,
   type NotificationItem,
   useMarkAllNoticesRead,
   useNotifications,
-} from "../screens/notifications.queries";
+} from "../features/settings/notifications.queries";
+import { worklistKey } from "../features/worklist/worklist.queries";
+import { formatDateTime, formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
+import { recordRoute } from "../lib/entity";
+import { problemMessageOf } from "../lib/problem";
+import { routeHash } from "../lib/router";
+import { useViewerZone } from "../lib/viewerzone";
 import { noticeHeadline } from "./noticeheadline";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
+import "./topbar-popover.css";
 
 // The notification centre, as the chrome carries it: a count somebody sees
 // without opening anything, and the history behind it.
@@ -134,7 +136,7 @@ export function NotificationBell() {
       {open &&
         createPortal(
           <div
-            className="notifbell-loose"
+            className="notifbell-loose topbar-popover"
             ref={panel}
             id={panelId}
             {...panelFocus}
@@ -278,6 +280,7 @@ function NoticeRow({
   /** Whether the write in flight is THIS row's, rather than any row's. */
   settling: boolean;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   // A notice asking for a decision opens that decision; any other names a record.
   const href =
@@ -291,20 +294,20 @@ function NoticeRow({
     <li className={settled ? "notifrow notifrow-settled" : "notifrow"}>
       <div className="notifrow-head">
         {href ? (
-          <a
+          <AppLink
             className="entity-link notifrow-subject"
             href={href}
             onClick={onActivate}
           >
             {headline}
-          </a>
+          </AppLink>
         ) : (
           // A kind this app has no page for is NAMED and not linked. A link
           // into nothing is worse than no link: it promises a page the product
           // cannot reach.
           <span className="notifrow-subject">{headline}</span>
         )}
-        {!settled && <Badge tone="accent">{t("notifications.new")}</Badge>}
+        {!settled && <Badge tone="accent">{t("notifications.unread")}</Badge>}
         {agentAuthored(notice) && (
           <Badge tone="ai">{t("notifications.byAgent")}</Badge>
         )}
@@ -314,7 +317,7 @@ function NoticeRow({
         <p className="notifrow-body t-sub">{notice.body}</p>
       )}
       <time className="t-caption" dateTime={notice.created_at}>
-        {formatDateTime(notice.created_at, locale, viewerZone())}
+        {formatDateTime(notice.created_at, locale, readerZone)}
       </time>
       {/* The verb is its own control rather than something the link does on its
           way out: a mutation fired as the reader navigates away races the

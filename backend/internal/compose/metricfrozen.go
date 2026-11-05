@@ -21,18 +21,15 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 	before.Context.Interval.StartAt = before.Context.Interval.StartAt.In(zone)
 	before.Context.Interval.EndAt = before.Context.Interval.EndAt.In(zone)
 	before.Context.EvaluatedAt = before.Context.EvaluatedAt.In(zone)
-	if before.Context.TargetInterval != nil {
-		target := *before.Context.TargetInterval
-		target.StartAt, target.EndAt = target.StartAt.In(zone), target.EndAt.In(zone)
-		before.Context.TargetInterval = &target
-	}
+	before.Context.TargetInterval = windowIn(before.Context.TargetInterval, zone)
+	before.Context.Horizon = windowIn(before.Context.Horizon, zone)
 	out := reporting.Evaluation{Result: before, Facts: facts}
 	out.Result.Metrics = []crmcontracts.ReportingMetric{}
 	out.Result.Charts = []crmcontracts.ReportingChart{}
 	out.Result.Context.MemberIds = []openapi_types.UUID{}
 	for _, fact := range facts {
 		owner := openapi_types.UUID(fact.OwnerID)
-		if !fact.OwnerID.IsZero() && !slices.Contains(out.Result.Context.MemberIds, owner) {
+		if !fact.OwnerID.IsZero() && !fact.OwnerWithheld && !slices.Contains(out.Result.Context.MemberIds, owner) {
 			out.Result.Context.MemberIds = append(out.Result.Context.MemberIds, owner)
 		}
 	}
@@ -60,7 +57,7 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 			projected.Value = nil
 			projected.Numerator = nil
 			projected.Denominator = nil
-			projected.Coverage = reportingGap(reportingUnavailable, "Some historical evidence is restricted; this reading cannot be compared")
+			projected.Coverage = reportingGap(reportingUnavailable, reporting.ExplanationCopy(before.Context).Say(reportingWords.RestrictedHistory))
 			projected.Coverage.Withheld = true
 		}
 		out.Result.Metrics = append(out.Result.Metrics, projected)
@@ -69,7 +66,17 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 		return crmcontracts.ReportingEvaluation{}, err
 	}
 	restrictFrozenCharts(out.Result.Charts)
+	actions := reportingOverviewActions(out.Result, out.Facts)
+	out.Result.OverviewActions = &actions
 	return out.Result, nil
+}
+
+func windowIn(window *crmcontracts.ReportingWindow, zone *time.Location) *crmcontracts.ReportingWindow {
+	if window == nil {
+		return nil
+	}
+	out := crmcontracts.ReportingWindow{StartAt: window.StartAt.In(zone), EndAt: window.EndAt.In(zone)}
+	return &out
 }
 
 func restrictFrozenCharts(charts []crmcontracts.ReportingChart) {

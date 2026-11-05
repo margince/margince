@@ -14,10 +14,9 @@
  * a confirmation must not be hidden by a gauge, so a toast covers it for the
  * seconds it is up.
  *
- * Dressed like the toast — the rail's dark ground, the pop shadow — because it
+ * Dressed like the toast — the dark ink field, the pop shadow — because it
  * is the same kind of thing: something passing through, not part of the page.
- * The Core on it therefore takes `surface="dark"` in both themes, exactly as
- * the rail's does.
+ * The Core on it therefore takes `surface="dark"` in both themes.
  */
 .capturechip {
   position: absolute;
@@ -42,7 +41,7 @@
   padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgRail);
+  background: var(--bgInkField);
   color: var(--textOnAccent);
   box-shadow: var(--shadow-pop);
   text-decoration: none;

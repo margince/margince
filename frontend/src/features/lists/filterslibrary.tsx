@@ -22,9 +22,27 @@ import { Popover } from "../../design-system/popover";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import {
+  type LibraryAnchor,
+  type LibraryType,
+  NEW_FILTER_LABEL,
+  NO_TYPE_HITS_LABEL,
+  OBJECT_TABS,
+  type ObjectTab,
+  TAB_LABEL,
+} from "../../lib/filtersaddress";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useFoldedViewport } from "../../lib/viewport";
+import {
+  ARCHIVED_PARAM,
+  cutOf,
+  type LibraryReads,
+  SEARCH_PARAM,
+  TYPE_PARAM,
+  useCaptions,
+  useLibraryReads,
+} from "./filterslibrary.reads";
 import {
   cutLibrary,
   groupOf,
@@ -35,26 +53,8 @@ import {
   pillCounts,
   typeOf,
   visibleGroups,
-} from "../../screens/library";
-import {
-  type LibraryAnchor,
-  type LibraryType,
-  NEW_FILTER_LABEL,
-  NO_TYPE_HITS_LABEL,
-  OBJECT_TABS,
-  type ObjectTab,
-  TAB_LABEL,
-} from "./filtersaddress";
-import {
-  ARCHIVED_PARAM,
-  cutOf,
-  type LibraryReads,
-  SEARCH_PARAM,
-  TYPE_PARAM,
-  useCaptions,
-  useLibraryReads,
-} from "./filterslibrary.reads";
-import "../../screens/library.css";
+} from "./library";
+import "../voice-knowledge/library.css";
 import { useListsAvailable } from "../../lib/lists.queries";
 import {
   LibraryTable,

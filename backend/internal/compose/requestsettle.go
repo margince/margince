@@ -3,27 +3,8 @@
 
 package compose
 
-// Judging whether our own reply settled what a customer asked of us.
-//
-// owed_verdict beside this answers a question about ONE message — does it ask
-// the recipient side for something — and is written once, from that message
-// alone. That is right for what it says and insufficient for what a reader then
-// sees: a request answered within the hour still reads as owed a week later,
-// because nothing ever asks the second question.
-//
-// This is the second question, and it is a question about the THREAD. It is
-// only askable once the workspace has written back, so the candidates are
-// requests carrying a later outbound message and a conversation nobody has
-// answered is never judged here at all.
-//
-// WHY A MODEL AND NOT A SQL PREDICATE. "Thanks, I will check" is a reply and
-// discharges nothing; "Passt, bis zum 30ten" answers a scheduling ask
-// completely. Nothing about the shape of the rows tells those apart — only the
-// words do — and a predicate that settled on the existence of an outbound
-// message would close every request the moment somebody acknowledged it, which
-// is the behaviour the two acknowledgement tests in the activities module pin
-// against. With no model configured this engine does not run and those tests
-// describe the product exactly as they did before.
+// The model judges whether later conversation evidence fulfills one request.
+// An acknowledgement alone cannot settle it; without a configured model it remains owed.
 
 import (
 	"context"
@@ -40,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -117,11 +100,15 @@ func NewRequestSettler(pool *pgxpool.Pool, brain completer, now func() time.Time
 // reason the owed pass gives: a batch where every verdict abstains makes no
 // progress by the verdict count and would re-ask the same threads forever.
 func (s *RequestSettler) RunWorkspace(ctx context.Context, maxVerdicts int) error {
-	if s.brain == nil {
-		return nil
-	}
 	if maxVerdicts <= 0 {
 		maxVerdicts = settleCatchUpCap
+	}
+	// No model is needed to see that a verdict's evidence is gone.
+	if _, err := s.store.WithdrawLostSettlements(ctx, s.now(), maxVerdicts); err != nil {
+		return fmt.Errorf("request settle: withdrawing verdicts whose evidence is gone: %w", err)
+	}
+	if s.brain == nil {
+		return nil
 	}
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, settleBatchSize)
@@ -239,7 +226,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 ) ([]threadMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
-		       coalesce(left(body, $1), ''), occurred_at
+		       coalesce(left(body, $1), ''), occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
 		  FROM activity
 		 WHERE thread_key = (SELECT thread_key FROM activity WHERE id = $2)
 		   AND thread_key IS NOT NULL
@@ -255,14 +242,14 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- having sent it to this address — or a colleague's mail held as a
 		   -- copy, the one exception activities.ourOutboundInThisThread makes.
 		   AND counterparty_email = $5
-		   AND (direction = 'inbound' OR counterparty_outbound_attested OR sent_by_colleague IS NOT NULL)
+		   AND (id = $2 OR `+activities.CapturedInboundSQL("activity")+` OR counterparty_outbound_attested OR sent_by_colleague IS NOT NULL)
 		   AND archived_at IS NULL
 		   -- The audience, tested HERE and not only in the read that offered
 		   -- this request: the candidate query runs in its own statement and a
 		   -- thread can be narrowed between the two, which under read-committed
 		   -- this statement is the first to see.
 		   AND audience = 'workspace' AND restricted_at IS NULL
-		   AND occurred_at <= $3
+		   AND `+occurredday.BegunSQL("activity", "$3")+`
 		   AND (occurred_at, id) >= ((SELECT occurred_at FROM activity WHERE id = $2), $2)
 		   AND ($6::uuid IS NULL OR id = $6)
 		 ORDER BY id = $2 DESC, occurred_at DESC, id DESC
@@ -275,7 +262,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 	for rows.Next() {
 		var message threadMessage
 		if err := rows.Scan(&message.ID, &message.Direction, &message.Subject,
-			&message.Body, &message.At); err != nil {
+			&message.Body, &message.At, &message.Incomplete); err != nil {
 			return nil, err
 		}
 		out = append(out, message)
@@ -286,10 +273,10 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 // judgeBatch judges one batch with ONE model call and commits each verdict.
 //
 // The per-call commit IS the checkpoint. A thread below the floor is re-asked
-// on its own — which escalates the routing ladder by being its own structured
-// call — and one still below it is recorded UNSURE rather than guessed: the
-// request stays owed and the watermark advances, so the same conversation is
-// not re-read until somebody writes on it again.
+// on its own, as a different request from its batch, so the model answers it
+// afresh. One still below the floor is recorded UNSURE rather than guessed. The
+// request stays owed and the watermark advances. The same conversation is not
+// re-read until somebody writes on it again.
 func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate, calls *sweepCalls) (int, error) {
 	if !calls.take() {
 		return 0, nil
@@ -312,7 +299,7 @@ func (s *RequestSettler) judgeBatch(ctx context.Context, batch []settleCandidate
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
-		if v.Confidence < settleConfidenceFloor {
+		if v.Confidence < settleConfidenceFloor || !settleRemainderStands(v, batch) {
 			retry = append(retry, candidate)
 			continue
 		}

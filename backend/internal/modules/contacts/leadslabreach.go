@@ -14,6 +14,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -51,72 +53,124 @@ type SLABreach struct {
 // Each breach lands one audit row and lead.sla_breached; the escalation
 // task hangs off that event.
 //
-// With the target switched off the scan is a no-op: no deadline exists to
-// breach, and a breach row the installation never asked for would page an
-// owner about a rule they did not set.
+// With the target switched off the scan marks no breach. No deadline exists to
+// breach, and a breach row nobody asked for would page an owner. It still stamps
+// day answers.
 func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, error) {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return nil, err
 	}
 	var breaches []SLABreach
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		policy, err := loadLeadSLAPolicy(ctx, tx)
+		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
 		if err != nil {
 			return err
 		}
-		if !policy.enabled {
-			return nil
+		if policy.enabled {
+			if breaches, err = markBreaches(ctx, tx, policy, now); err != nil {
+				return err
+			}
 		}
-		rows, err := tx.Query(ctx, `
-			SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
-			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
-			FROM lead
-			WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
-			  AND (source_system IS NULL OR source_system <> ALL($3))
-			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
-			ORDER BY created_at
-			FOR UPDATE SKIP LOCKED`,
-			policy.targetMinutes(), now, leadsource.PassiveDiscoverySources())
+		// After the breaches: a date that ended past the deadline answered late,
+		// and stamped first the lead would no longer owe the reply it missed.
+		return stampDayAnswers(ctx, tx, now)
+	})
+	return breaches, err
+}
+
+// markBreaches marks each lead whose deadline under policy passed unanswered.
+func markBreaches(ctx context.Context, tx pgx.Tx, policy leadSLAPolicy, now time.Time) ([]SLABreach, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
+		       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
+		FROM lead
+		WHERE `+leadOwesAReplySQL+` AND sla_breached_at IS NULL
+		  AND (source_system IS NULL OR source_system <> ALL($3))
+		  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
+		ORDER BY created_at
+		FOR UPDATE SKIP LOCKED`,
+		policy.targetMinutes(), now, leadsource.PassiveDiscoverySources())
+	if err != nil {
+		return nil, fmt.Errorf("select breached leads: %w", err)
+	}
+	candidates, err := collectBreaches(rows)
+	if err != nil {
+		return nil, err
+	}
+	// first_response_at is a projection the bus writes late, and a breach pages
+	// someone. So each candidate is judged on its activities, and an answer found
+	// there is stamped here; the subscriber's later write is then a replay.
+	var breaches []SLABreach
+	for _, b := range candidates {
+		answered, err := answeredBy(ctx, tx, b.LeadID, b.Deadline)
 		if err != nil {
-			return fmt.Errorf("select breached leads: %w", err)
+			return nil, err
 		}
-		candidates, err := collectBreaches(rows)
+		if answered != nil {
+			if _, err := recordFirstResponseTx(ctx, tx, b.LeadID, *answered); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		if err := markBreach(ctx, tx, b, now); err != nil {
+			return nil, err
+		}
+		breaches = append(breaches, b)
+	}
+	return breaches, nil
+}
+
+// stampDayAnswers stamps the first response of each lead that a day touch has
+// answered by now. The subscriber skips a day touch while its date runs, and
+// this scan runs on the clock whether or not a target is set. It reads the
+// candidates a page at a time, so no scan holds them all at once.
+func stampDayAnswers(ctx context.Context, tx pgx.Tx, now time.Time) error {
+	var after ids.LeadID
+	for {
+		leads, err := dayAnswerCandidates(ctx, tx, now, after)
 		if err != nil {
 			return err
 		}
-		// Each candidate is re-checked against the ACTIVITIES before it is
-		// marked. first_response_at is projected by an event subscriber
-		// reacting to activity.captured, so it lags the activity's own commit
-		// by the bus's latency: a reply committed at 11:59 against a 12:00
-		// deadline can still be unprojected when a 12:01 scan runs, and the
-		// lead reads as unanswered because the projection has not caught up
-		// rather than because nobody answered.
-		//
-		// The scan owns the consequence — a breach event, an escalation task,
-		// and a number on somebody's review — so it reads the ground truth
-		// rather than the projection. Where it finds one, it stamps the column
-		// itself: the subscriber's later write is then the replay
-		// recordFirstResponseTx already answers as a no-op.
-		breaches = breaches[:0]
-		for _, b := range candidates {
-			answered, err := answeredBy(ctx, tx, b.LeadID, b.Deadline)
+		for _, lead := range leads {
+			answered, err := answeredBy(ctx, tx, lead, now)
 			if err != nil {
 				return err
 			}
-			if answered != nil {
-				if _, err := recordFirstResponseTx(ctx, tx, b.LeadID, *answered); err != nil {
-					return err
-				}
+			if answered == nil {
 				continue
 			}
-			if err := markBreach(ctx, tx, b, now); err != nil {
+			if _, err := recordFirstResponseTx(ctx, tx, lead, *answered); err != nil {
 				return err
 			}
-			breaches = append(breaches, b)
 		}
-		return nil
-	})
-	return breaches, err
+		if len(leads) < dayAnswerPage {
+			return nil
+		}
+		after = leads[len(leads)-1]
+	}
+}
+
+// dayAnswerPage is how many leads one read of the day-answer sweep returns.
+const dayAnswerPage = 500
+
+// dayAnswerCandidates are the leads after `after`, in id order, holding a day
+// touch that may answer them by now. mayAnswerSQL admits the touch, and the
+// lead takes its answer (leadTakesFirstResponseSQL), as the subscriber's write asks.
+func dayAnswerCandidates(ctx context.Context, tx pgx.Tx, now time.Time, after ids.LeadID) ([]ids.LeadID, error) {
+	proven := occurredday.ProvenSQL("a")
+	rows, err := tx.Query(ctx, `
+		SELECT lead.id FROM lead
+		 WHERE lead.id > $2
+		   AND EXISTS (SELECT 1 FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		                WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.occurred_precision = 'day'
+		                  AND `+mayAnswerSQL("lead.id", "a")+` AND `+proven+` <= $1
+		                  AND `+leadTakesFirstResponseSQL("lead", proven)+`
+		                  AND `+auth.ActivityAvailableClause("a")+`)
+		 ORDER BY lead.id LIMIT $3`, now, after, dayAnswerPage)
+	if err != nil {
+		return nil, fmt.Errorf("select leads a day touch may have answered: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.LeadID])
 }
 
 func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {
@@ -130,6 +184,24 @@ func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {
 		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+// SeatAnswersBreach says whether a seat can be handed a lead's escalation: an
+// active human colleague whose seat can write. It asks auth.EnsureAssignee,
+// which also vets the intake seat. The scan and the delivery of its event share it.
+func SeatAnswersBreach(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error) {
+	err := auth.EnsureAssignee(ctx, tx, seat)
+	if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (b SLABreach) ownerAnswers(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if b.OwnerID == nil {
+		return false, nil
+	}
+	return SeatAnswersBreach(ctx, tx, b.OwnerID.UUID)
 }
 
 func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) error {
@@ -164,23 +236,28 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		return fmt.Errorf("audit sla breach: %w", err)
 	}
 	payload := crmcontracts.PublicEventLeadSlaBreached{Deadline: b.Deadline}
-	switch {
-	case b.OwnerID != nil:
+	ownerAnswers, err := b.ownerAnswers(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if b.OwnerID != nil {
 		owner := openapi_types.UUID(b.OwnerID.UUID)
 		payload.OwnerId = &owner
+	}
+	switch {
+	case ownerAnswers:
 		// An owned lead escalates to its OWNER: the desk that owes the answer
 		// is the desk that hears about the miss.
-		payload.EscalationTarget = &owner
+		payload.EscalationTarget = payload.OwnerId
 	default:
-		// A lead NOBODY owns is the queue's worst case — past its response
-		// target with no one who has picked it up — and it was the one case
-		// that reached nobody at all: an unassigned task and no notice.
+		// A lead nobody answers for is the queue's worst case. An owner who has
+		// left is that case too: their task would be refused and their notice
+		// read by nobody. The configured intake seat answers for it.
 		//
-		// The configured intake seat answers for it. Unset means the
-		// installation has not said who runs the queue, and the breach stays
-		// where it was rather than being addressed to somebody who did not
-		// agree to it; the unassigned view is what surfaces those.
-		target, configured, err := unassignedEscalationTarget(ctx, tx)
+		// Unset means nobody has said who runs the queue, so the breach stays
+		// unaddressed rather than going to someone who never agreed to it.
+		// The unassigned view surfaces those.
+		target, configured, err := IntakeSeat(ctx, tx)
 		if err != nil {
 			return err
 		}

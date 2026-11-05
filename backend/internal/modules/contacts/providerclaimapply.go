@@ -97,7 +97,26 @@ func ApplyProviderClaims(ctx context.Context, tx pgx.Tx, runID, contactID, provi
 	if err := recordApplied(ctx, tx, subject, run, providerName, applied); err != nil {
 		return err
 	}
-	return auditApplied(ctx, tx, subject, run, providerName, applied)
+	if err := auditApplied(ctx, tx, subject, run, providerName, applied); err != nil {
+		return err
+	}
+	return recheckIfAddressFilled(ctx, tx, subject, providerName, applied)
+}
+
+// providerFillRecheckSource names the duplicate re-check a bought address runs
+// on the queue rows it files.
+const providerFillRecheckSource = "provider_fill_recheck"
+
+// recheckIfAddressFilled runs the edit re-check when a purchase gave the
+// contact an address, which can make it the same human as another contact.
+func recheckIfAddressFilled(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName string, applied []appliedField) error {
+	for _, f := range applied {
+		if f.table == tableContactEmail {
+			return recheckContactForDuplicates(ctx, tx, ids.ContactID{UUID: subject},
+				providerFillRecheckSource, connectorCapturedBy(providerName))
+		}
+	}
+	return nil
 }
 
 // applyEach runs every fill this run's answers support, collecting what landed.

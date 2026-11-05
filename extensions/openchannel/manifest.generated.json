@@ -69,5 +69,14 @@
         }
       }
     }
+  ],
+  "entries": [
+    {
+      "slot": "record_header.contact",
+      "label": "extOpenchannel.title",
+      "icon": "plug",
+      "target": "",
+      "object": "ext_openchannel_endpoint"
+    }
   ]
 }

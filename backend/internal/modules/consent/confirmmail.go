@@ -4,6 +4,8 @@
 package consent
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -27,7 +29,11 @@ import (
 // only ever mailed, and returning it would hand a caller the capability that the
 // delivered-to-their-own-mailbox claim rests on.
 func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	issued, err := h.store.IssueConfirmToken(r.Context(), pathID[ids.ContactKind](id))
+	language, ok := sendLanguageOf(w, r)
+	if !ok {
+		return
+	}
+	issued, err := h.store.IssueConfirmToken(r.Context(), pathID[ids.ContactKind](id), language)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -73,7 +79,11 @@ func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Requ
 // this installation has one, and neither claims delivery. The plaintext token
 // is absent because this link is only ever mailed.
 func (h Handlers) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	issued, err := h.store.IssuePrivacyNotice(r.Context(), pathID[ids.ContactKind](id))
+	language, ok := sendLanguageOf(w, r)
+	if !ok {
+		return
+	}
+	issued, err := h.store.IssuePrivacyNotice(r.Context(), pathID[ids.ContactKind](id), language)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -89,4 +99,20 @@ func (h Handlers) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id c
 		Queued:      issued.Staged,
 		Sendable:    h.store.canSendConfirm(),
 	})
+}
+
+// sendLanguageOf reads the optional body of a controller send. An empty body,
+// however it arrives, picks no language.
+func sendLanguageOf(w http.ResponseWriter, r *http.Request) (string, bool) {
+	var body crmcontracts.ControllerMailSend
+	if err := httperr.DecodeOrRefusal(w, r, &body); errors.Is(err, io.EOF) {
+		return "", true
+	} else if err != nil {
+		httperr.Write(w, r, err)
+		return "", false
+	}
+	if body.Language == nil {
+		return "", true
+	}
+	return string(*body.Language), true
 }

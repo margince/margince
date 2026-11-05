@@ -50,7 +50,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	// every message anyway, the floor could be broken, and every assertion here
 	// would still pass.
 	sharedOn := true
-	settingsStore := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	settingsStore := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	optInCtx := principal.WithCorrelationID(
 		principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
 			principal.Principal{
@@ -86,7 +86,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	off := false
 	if _, err := store.Update(adminCtx, capturemod.SettingsPatch{MailSharing: &off}); err != nil {
 		t.Fatalf("switching mail sharing off: %v", err)

@@ -21,7 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -51,7 +53,7 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
 		raw := fields[target]
-		if !strings.HasPrefix(target, customFieldPrefix) || strings.TrimSpace(raw) == "" {
+		if !datasource.IsCustomFieldKey(target) || strings.TrimSpace(raw) == "" {
 			continue
 		}
 		col, active := cat.byName[target]
@@ -93,8 +95,8 @@ func checkParsedCells(object string, fields map[string]string) (map[string]any, 
 }
 
 // storedSpelling is the parser each object's store runs on a phone or a
-// LinkedIn URL. A company's page and a contact's slot are narrower than a
-// lead's profile URL.
+// LinkedIn URL. A company takes a company page; a contact and a lead take a
+// profile.
 func storedSpelling(object, target, text string) (string, error) {
 	switch {
 	case target == fieldPhone:
@@ -102,10 +104,8 @@ func storedSpelling(object, target, text string) (string, error) {
 		return phone.String(), err
 	case object == migration.ObjectCompany:
 		return contacts.NormalizeCompanyLinkedInURL(text)
-	case object == migration.ObjectContact:
-		return contacts.NormalizeContactLinkedInURL(text)
 	default:
-		return contacts.NormalizeLinkedInURL(text)
+		return contacts.NormalizeContactLinkedInURL(text)
 	}
 }
 
@@ -268,7 +268,7 @@ func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, *migration
 		typed, problem = checkLeadStatus(fields, typed)
 	}
 	if problem == nil && w.object == migration.ObjectActivity {
-		typed, problem = checkActivityCells(fields, typed, w.nowUTC())
+		typed, problem = checkActivityCells(fields, typed, w.cellClock())
 	}
 	if problem == nil {
 		return typed, nil
@@ -293,15 +293,15 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if problem := tagCellProblem(fields[csvTargetTags]); problem != nil {
 		return problem
 	}
+	if object == migration.ObjectContact || object == migration.ObjectCompany {
+		if problem := countryCellProblem(fields); problem != nil {
+			return problem
+		}
+	}
+	if problem := emailCellProblem(object, fields); problem != nil {
+		return problem
+	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
-		// Both stores parse the address before the write and refuse a malformed one.
-		email := strings.TrimSpace(fields[fieldEmail])
-		if email == "" {
-			return nil
-		}
-		if _, err := values.ParseEmail(email); err != nil {
-			return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonNotAnEmail, "value", fields[fieldEmail]))
-		}
 		return nil
 	}
 	if object != migration.ObjectCompany {
@@ -325,6 +325,19 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 		"value", fields[fieldSizeBand], "allowed", strings.Join(sizeBandVocabulary(), ", ")))
 }
 
+// countryCellProblem refuses an address country the stores would refuse, by the
+// store's own rule, so the preview and the commit agree on the cell.
+func countryCellProblem(fields map[string]string) *cellProblem {
+	raw := fields[fieldAddressCountry]
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	if _, err := contacts.NormalizeCountryCode(raw); err != nil {
+		return problemOf(fieldAddressCountry, raw, migration.Why(migration.ReasonValueRefused, "value", raw, "detail", err.Error()))
+	}
+	return nil
+}
+
 // importableSizeBands is the closed size_band vocabulary, off the contract.
 var importableSizeBands = map[string]bool{
 	string(crmcontracts.CompanySizeBandN110):      true,
@@ -345,4 +358,22 @@ func sizeBandVocabulary() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// emailCellProblem refuses an address the store would refuse. Every store
+// parses it before the write, so a malformed one is a problem of the test run.
+// The contacts store also refuses a sending system's address; a lead or a
+// company may hold one.
+func emailCellProblem(object string, fields map[string]string) *cellProblem {
+	email := strings.TrimSpace(fields[fieldEmail])
+	if email == "" {
+		return nil
+	}
+	if _, err := values.ParseEmail(email); err != nil {
+		return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonNotAnEmail, "value", fields[fieldEmail]))
+	}
+	if object == migration.ObjectContact && mailidentity.HasMachineLocalpart(email) {
+		return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonEmailNamesNoContact, "value", email))
+	}
+	return nil
 }

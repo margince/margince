@@ -57,7 +57,7 @@ func DossierRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   dossierSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in, lang))}},
 		// Deliberately NOT set: the dossier describes the company, and our own
 		// context is only ever an input to a judgment about fit. A writer given
 		// it would start comparing, which is the other surface's job.
@@ -128,7 +128,7 @@ func ParseDossier(reply string, in Input) ([]Section, error) {
 	known := KnownRecords(in)
 	bySection := map[string][]claims.Sentence{}
 	for _, section := range parsed.Sections {
-		kept := claims.Keep(section.Sentences, known, knownNature, natureFact)
+		kept := keepNatures(section.Sentences, known, map[string]bool{natureFact: true})
 		bySection[section.Kind] = append(bySection[section.Kind], kept...)
 	}
 	// orderedSections emits only the kinds the contract declares, in reading

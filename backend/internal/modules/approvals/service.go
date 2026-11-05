@@ -8,7 +8,7 @@
 // object — bound to the exact proposed change (diff_hash), the staging
 // passport, and the target row's version, consumed exactly once.
 //
-// Tables owned: approval. Imports shared + platform + the generated
+// Imports shared + platform + the generated
 // contract only; never a sibling module — the agent surface stages and
 // redeems through an adapter injected at the composition root.
 package approvals
@@ -22,11 +22,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type Service struct {
+	preview             func(context.Context, crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error)
+	assigneeCanHoldWork func(context.Context, pgx.Tx, ids.UserID) (bool, error)
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
 	// now is the service's clock: both expiry windows (staging TTL,
@@ -80,6 +83,11 @@ type Service struct {
 	// undoable classifies the staged kinds whose release a credential may give
 	// to a proposal of its own human's (ownrelease.go). Nil answers no kind.
 	undoable UndoableRelease
+	// contextPins digest, per kind, the facts outside the target row that the
+	// reviewed outcome reads (contextpin.go).
+	contextPins map[string]ContextPin
+	// effectActor is who an agent's proposal runs as (effectactor.go).
+	effectActor EffectActor
 }
 
 const (
@@ -151,6 +159,8 @@ func NewService(db *database.DB) *Service {
 		prechecks: map[string]ReleasePrecheck{},
 		declines:  map[string]DeclinedEffect{},
 		expiries:  map[string]ExpiredEffect{},
+
+		contextPins: map[string]ContextPin{},
 	}
 }
 

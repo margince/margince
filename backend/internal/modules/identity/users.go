@@ -102,7 +102,7 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		}
 		var status, seat string
 		err := tx.QueryRow(ctx,
-			`SELECT status, seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+			`SELECT status, seat_type FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
 			userID).Scan(&status, &seat)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -187,13 +187,21 @@ func (id Identity) hasRole(key string) bool {
 // methods that take an explicit Identity are their own admission gate,
 // so they must not depend on a transport middleware having bound the
 // actor for the audit stamp — a direct service caller is just as valid.
+//
+// An agent acting for id keeps its own principal. The audit names the agent
+// and the passport, its grants stay the ones its passport lends, and the agent
+// limits still see an agent.
 func actorCtx(ctx context.Context, id Identity) context.Context {
+	if p, ok := principal.Actor(ctx); ok && p.ActsAsItsUser() && p.OnBehalfOf == id.UserID.UUID {
+		return ctx
+	}
 	return principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + id.UserID.String(),
 		UserID:      id.UserID.UUID,
 		TeamIDs:     rawTeamIDs(id.Teams),
 		SeatType:    principal.SeatType(id.SeatType),
+		Locale:      id.Locale,
 		Permissions: id.Permissions,
 	})
 }
@@ -229,7 +237,7 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		var status string
 		err := tx.QueryRow(ctx,
-			`SELECT status FROM app_user WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+			`SELECT status FROM app_user WHERE id = $1 AND archived_at IS NULL AND removed_at IS NULL FOR UPDATE`,
 			in.UserID).Scan(&status)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

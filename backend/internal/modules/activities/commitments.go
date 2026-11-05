@@ -37,8 +37,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -61,6 +61,8 @@ type OpenTask struct {
 	// a pointer the whole way to the wire rather than collapsing to a zero
 	// time somewhere in the middle.
 	DueAt *time.Time
+	// DueHasTime is true when DueAt names a time of day rather than a day.
+	DueHasTime bool
 	// AssigneeID and AssigneeName are absent together for an unassigned
 	// task: a promise with no owner, which is the single most useful thing
 	// this read surfaces.
@@ -74,6 +76,8 @@ type OpenTask struct {
 // bound: an empty input is the whole workspace's open promises, which is
 // what "who owes what" asks for.
 type ListOpenTasksInput struct {
+	// AsOf pins automatic admission to the composite read; zero uses the store clock.
+	AsOf       time.Time
 	AssigneeID *ids.UUID
 	// EntityType and EntityID narrow to the promises made about ONE record,
 	// spelled with the same vocabulary the timeline filter uses. Both or
@@ -117,11 +121,11 @@ type ListOpenTasksInput struct {
 // boundary changes its position in an over-long list, never the verdict shown.
 func openTasksOrder(slippedFirst bool) string {
 	if slippedFirst {
-		return `(a.due_at IS NOT NULL AND a.due_at < now()) DESC,
-		         CASE WHEN a.due_at < now() THEN a.due_at END DESC,
-		         a.due_at ASC NULLS LAST, a.created_at ASC, a.id ASC`
+		return `(` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` < now()) DESC,
+		         CASE WHEN ` + storekit.TaskDueSQL("a") + ` < now() THEN ` + storekit.TaskDueSQL("a") + ` END DESC,
+		         ` + storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.created_at ASC, a.id ASC`
 	}
-	return `a.due_at ASC NULLS LAST, a.id ASC`
+	return storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.id ASC`
 }
 
 // openTasksDefaultLimit and openTasksMaxLimit bound one sweep. The read is a
@@ -147,6 +151,9 @@ func (s *Store) ListOpenTasks(ctx context.Context, in ListOpenTasksInput) ([]Ope
 	var tasks []OpenTask
 	var truncated bool
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if in.AsOf.IsZero() {
+			in.AsOf = s.now()
+		}
 		tasks, truncated, err = listOpenTasks(ctx, tx, in)
 		return err
 	})
@@ -160,6 +167,9 @@ func (s *Store) ListOpenTasksTx(ctx context.Context, tx pgx.Tx, in ListOpenTasks
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
+	if in.AsOf.IsZero() {
+		in.AsOf = s.now()
+	}
 	return listOpenTasks(ctx, tx, in)
 }
 
@@ -170,12 +180,15 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	limit := openTasksLimit(in.Limit)
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where, err := openTasksFilter(ctx, in, arg)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(a.subject, ''), a.due_at,
-			a.assignee_id, coalesce(u.display_name, ''), a.created_at
+	where, err := openTasksFilter(ctx, in, identities, arg)
+	if err != nil {
+		return nil, false, err
+	}
+	rows, err := tx.Query(ctx, `SELECT `+openTaskColumns()+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id
 		WHERE `+joinAnd(where)+
@@ -235,6 +248,11 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 	if linkColumn(*entityType) == "" {
 		return &InvalidLinkTypeError{EntityType: *entityType}
 	}
+	// Row scope reads every deal and company, so a role without the type's
+	// read grant would learn which activities a record it cannot open holds.
+	if err := auth.Require(ctx, *entityType, principal.ActionRead); err != nil {
+		return err
+	}
 	// The record type IS the table name for every arm of this vocabulary, which
 	// is the same identity linkNameCoalesce reads.
 	return auth.EnsureVisible(ctx, tx, *entityType, *entityID)
@@ -242,10 +260,10 @@ func ensureNarrowingTargetVisible(ctx context.Context, tx pgx.Tx, entityType *st
 
 // openTasksFilter builds the predicate: the two columns that define an open
 // promise, the caller's row scope, and whatever the input narrowed to.
-func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) int) (where []string, err error) {
+func openTasksFilter(ctx context.Context, in ListOpenTasksInput, identities string, arg func(any) int) (where []string, err error) {
 	where = []string{
 		// The definition of the set, and the partial index's own predicate.
-		sprintf("a.kind = $%d", arg(string(crmcontracts.ActivityKindTask))),
+		"a.kind = 'task'",
 		"a.is_done = false",
 		activityLive,
 	}
@@ -260,11 +278,14 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) i
 	if scope != "" {
 		where = append(where, scope)
 	}
+	if !in.AsOf.IsZero() {
+		where = append(where, CurrentTaskClause("a", in.AsOf, identities, arg))
+	}
 	if in.AssigneeID != nil {
 		where = append(where, sprintf("a.assignee_id = $%d", arg(*in.AssigneeID)))
 	}
 	if in.ExcludeSystemMinted {
-		where = append(where, NotSystemMinted("a", arg))
+		where = append(where, "NOT "+SystemMintedExpr("a"))
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
@@ -294,7 +315,7 @@ func openTasksFilter(ctx context.Context, in ListOpenTasksInput, arg func(any) i
 // projection keeps and for the same reason: "may I read this task" is an
 // any-link question, and answering it yes does not license naming every
 // other record the task touches. The rule has one spelling —
-// auth.LinkTargetVisibleClause — and both readers ask it.
+// auth.LinkTargetReadableClause, and both readers ask it.
 func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 	if len(tasks) == 0 {
 		return nil
@@ -307,7 +328,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 	}
 	args := []any{taskIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}
@@ -339,7 +360,8 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt)
+	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
 
@@ -368,4 +390,9 @@ func joinAnd(terms []string) string {
 	}
 	out += outSb364.String()
 	return out
+}
+
+func openTaskColumns() string {
+	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
+		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at"
 }

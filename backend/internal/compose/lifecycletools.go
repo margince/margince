@@ -45,21 +45,9 @@ func (a activityRelinker) RelinkActivity(
 	return json.Marshal(out)
 }
 
-// RelinkThread and RelinkActivities reach the store's batch doors, which
-// perform the single relink's guarded write per row; the count-and-ids answer
-// is marshalled here as the contract shape the REST route serves.
-func (a activityRelinker) RelinkThread(
-	ctx context.Context, threadKey string, entityType string, entityID ids.UUID, replaceExistingOfType bool,
-) (json.RawMessage, error) {
-	out, err := a.store.RelinkThread(ctx, threadKey, activities.RelinkActivityInput{
-		EntityType: entityType, EntityID: entityID, ReplaceExistingOfType: replaceExistingOfType,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(relinkBatchWire(out))
-}
-
+// RelinkActivities reaches the store's batch door, which performs the single
+// relink's guarded write per row. The count-and-ids answer is marshalled here
+// as the contract shape the REST route serves.
 func (a activityRelinker) RelinkActivities(
 	ctx context.Context, activityIDs []ids.UUID, entityType string, entityID ids.UUID, replaceExistingOfType bool,
 ) (json.RawMessage, error) {
@@ -79,8 +67,12 @@ func relinkBatchWire(out activities.RelinkBatchResult) agents.RelinkBatchResult 
 
 type leadDisqualifier struct{ store *contacts.Store }
 
-func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID, ifVersion *int64) (json.RawMessage, error) {
-	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), contacts.DisqualifyLeadInput{},
+func (l leadDisqualifier) CheckDisqualifyReason(ctx context.Context, id ids.UUID) error {
+	return l.store.CheckDisqualifyReason(ctx, id)
+}
+
+func (l leadDisqualifier) DisqualifyLead(ctx context.Context, id ids.UUID, why agents.LeadDisqualification, ifVersion *int64) (json.RawMessage, error) {
+	out, err := l.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](id), contacts.DisqualifyLeadInput{ReasonID: why.ReasonID, Note: why.Note},
 		contacts.OnlyAtVersion(ifVersion))
 	if err != nil {
 		return nil, err
@@ -166,7 +158,7 @@ func (c companyEnricher) EnrichCompany(
 
 // lifecycleSeams builds the three adapters over one pool.
 func lifecycleSeams(pool *pgxpool.Pool) (activityRelinker, leadDisqualifier, leadDemoter, projectPhaseAdvancer) {
-	contactsStore := contacts.NewStore(InstallationDB(pool))
+	contactsStore := newContactsStore(InstallationDB(pool))
 	return activityRelinker{store: activities.NewStore(InstallationDB(pool))},
 		leadDisqualifier{store: contactsStore},
 		leadDemoter{store: contactsStore},

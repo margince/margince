@@ -15,8 +15,6 @@ package contactdraft
 // no claim about what the recipient thinks, no invented urgency.
 
 import (
-	"strings"
-
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -54,15 +52,13 @@ func Deterministic(in Input) Draft {
 // does not exist.
 func deterministicSubject(in Input) string {
 	lang, band := in.Envelope.Lang(), in.Envelope.Band()
+	topic := in.Recipient.Employer
 	if in.Deal != nil {
-		return draftfloor.Subject(lang, band, in.Deal.Name, false)
+		topic = in.Deal.Name
 	}
-	// Only a message THEY sent us is a thread to reply to. Our own last
-	// outbound carries a subject too, and "Re:" on it replies to ourselves.
-	if mail, ok := in.threadMail(); ok {
-		return draftfloor.Subject(lang, band, mail.Subject, mail.Inbound)
-	}
-	return draftfloor.Subject(lang, band, in.Recipient.Employer, false)
+	// A thread outranks the deal and the employer, whoever wrote last, and the
+	// model's draft gets the same subject from the same call.
+	return draftcore.ContinueThread(draftfloor.Subject(lang, band, topic, false), in)
 }
 
 // The body: a greeting, where the conversation stands, the one thing there is
@@ -74,14 +70,7 @@ func deterministicSubject(in Input) string {
 func deterministicBody(in Input) string {
 	phrases := draftfloor.For(in.Envelope.Lang(), in.Envelope.Band())
 
-	lines := []string{greeting(in), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
-	if opener := deterministicOpener(in); opener != "" {
-		lines = append(lines, opener, "")
-	}
-	return strings.Join(append(lines, phrases.Ask), "\n")
+	return draftfloor.Body(in.Envelope.Lang(), greeting(in), phrases.Opener, deterministicOpener(in), phrases.Ask)
 }
 
 // greeting names the recipient, or greets the group when the message goes to
@@ -192,12 +181,11 @@ func dealLine(deal *DealIn) string {
 // A claim is cited by its SOURCE activity, not by its own id: the claim row has
 // no page, and a chip has to open something.
 func deterministicReasons(in Input) []Reason {
-	reasons := []Reason{{
-		Kind:       crmcontracts.AccountDraftReasonKindRecipient,
-		Label:      in.Recipient.Name,
-		EntityType: citeContact,
-		EntityID:   in.Recipient.ID,
-	}}
+	recipient := Reason{Kind: crmcontracts.AccountDraftReasonKindRecipient, Label: in.Recipient.Name}
+	if cited := in.Recipient.citedAs(); cited != "" {
+		recipient.EntityType, recipient.EntityID = cited, in.Recipient.ID
+	}
+	reasons := []Reason{recipient}
 	claim, hasClaim := leadClaim(in)
 	if hasClaim {
 		reasons = append(reasons, Reason{

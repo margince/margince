@@ -68,7 +68,7 @@ func TestAQueueHidingNothingReportsAClearBacklog(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Question about pricing", "contact_id", contact)
+	e.seedPersonalWait(t, "Question about pricing", contact)
 
 	got := moved(before, hiddenNow(t, e))
 
@@ -91,8 +91,8 @@ func TestAMessageSetAsideIsCountedAsHidden(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Still waiting", "contact_id", contact)
-	aside := e.seedWait(t, "Set aside", "contact_id", contact)
+	e.seedPersonalWait(t, "Still waiting", contact)
+	aside := e.seedPersonalWait(t, "Set aside", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
 
@@ -119,8 +119,8 @@ func TestAThreadJudgedNotSalesIsCountedAsHidden(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Still waiting", "contact_id", contact)
-	judged := e.seedWait(t, "Newsletter", "contact_id", contact)
+	e.seedPersonalWait(t, "Still waiting", contact)
+	judged := e.seedPersonalWait(t, "Newsletter", contact)
 	// Keyed on the THREAD, the way SetThreadNotSales writes it — an activity id
 	// here would be judged by a rule that reads thread_key and match nothing.
 	// The table has no state column: a ROW is the judgement, which is why the
@@ -153,8 +153,8 @@ func TestAWaitPastTheHorizonIsCountedAsHidden(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Recent question", "contact_id", contact)
-	old := e.seedWait(t, "Asked in the spring", "contact_id", contact)
+	e.seedPersonalWait(t, "Recent question", contact)
+	old := e.seedPersonalWait(t, "Asked in the spring", contact)
 	// Past waitingHorizonDays and inside hiddenHorizonDays, so it is work the
 	// queue drops and the guardrail still reaches.
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '150 days' WHERE id = $1`, old)
@@ -182,7 +182,7 @@ func TestAWaitPastTheGuardrailsOwnReachIsNotCounted(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	ancient := e.seedWait(t, "Two years ago", "contact_id", contact)
+	ancient := e.seedPersonalWait(t, "Two years ago", contact)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '800 days' WHERE id = $1`, ancient)
 
 	got := moved(before, hiddenNow(t, e))
@@ -201,7 +201,7 @@ func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "A real customer", "contact_id", contact)
+	e.seedPersonalWait(t, "A real customer", contact)
 	// The same shape minus the sales link — every other rule still satisfied.
 	loose := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
@@ -209,6 +209,7 @@ func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
 		loose, "thread-"+loose.String())
 	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
 		VALUES ($1, $2, 'from', 'reception@dentist.test')`, ids.NewV7(), loose)
+	e.directlyTo(t, loose, e.rep)
 
 	got := moved(before, hiddenNow(t, e))
 
@@ -234,8 +235,8 @@ func TestMailFromOurOwnDomainIsCountedSeparately(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	before := hiddenKnowing(t, e, "ourco.test")
-	e.waitingFrom(t, "A real customer", "buyer@customer.test", contact)
-	e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact)
+	e.directlyTo(t, e.waitingFrom(t, "A real customer", "buyer@customer.test", contact), e.rep)
+	e.directlyTo(t, e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact), e.rep)
 
 	got := moved(before, hiddenKnowing(t, e, "ourco.test"))
 
@@ -275,21 +276,21 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
 	for _, subject := range []string{"One", "Two", "Three"} {
-		e.seedWait(t, subject, "contact_id", contact)
+		e.seedPersonalWait(t, subject, contact)
 	}
 	// One message hidden by EACH rule, so every relaxation has something of its
 	// own to find and a wiring that answers the wrong hole cannot pass by
 	// finding somebody else's row.
-	aside := e.seedWait(t, "Set aside", "contact_id", contact)
+	aside := e.seedPersonalWait(t, "Set aside", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
-	judged := e.seedWait(t, "Judged", "contact_id", contact)
+	judged := e.seedPersonalWait(t, "Judged", contact)
 	// The table has no state column: a ROW is the judgement, which is why the
 	// query anti-joins on its existence rather than on a value.
 	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
 		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, ''), 'system'
 		  FROM activity a WHERE a.id = $1`, judged)
-	old := e.seedWait(t, "Old", "contact_id", contact)
+	old := e.seedPersonalWait(t, "Old", contact)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '150 days' WHERE id = $1`, old)
 
 	got := moved(before, hiddenNow(t, e))
@@ -314,9 +315,8 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 	}
 }
 
-// A mail a colleague holds a request on stays in the queue for this reader, so
-// it must stay in the read the set-aside figure is the difference against.
-func TestASetAsideFigureIsNotShortenedByARequestAColleagueHolds(t *testing.T) {
+// A colleague's request must not enter this reader's personal hidden figures.
+func TestAColleagueRequestDoesNotEnterPersonalHiddenFigures(t *testing.T) {
 	colleague := setupLoad(t)
 	first, firstAddress := colleague.mailContact(t, "first", "workspace")
 	second, secondAddress := colleague.mailContact(t, "second", "workspace")
@@ -333,10 +333,10 @@ func TestASetAsideFigureIsNotShortenedByARequestAColleagueHolds(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	if before.Shown == 0 {
-		t.Fatal("the mail the colleague holds a request on is not in this reader's queue, so the test shows nothing")
+	if before.Shown != 0 {
+		t.Fatal("a colleague's request entered this reader's personal queue")
 	}
-	aside := e.seedWait(t, "Set aside", "contact_id", contact)
+	aside := e.seedPersonalWait(t, "Set aside", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
 
@@ -365,7 +365,7 @@ func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	// One past the cap, so the read is genuinely cut rather than exactly filled.
 	for i := 0; i <= WaitingScanCap; i++ {
-		e.seedWait(t, "Waiting", "contact_id", contact)
+		e.seedPersonalWait(t, "Waiting", contact)
 	}
 
 	got := hiddenNow(t, e)
@@ -416,7 +416,7 @@ func TestShownCountsWhatTheQueryFoundRatherThanWhatThePageDraws(t *testing.T) {
 	// A wait seeded the way every other case here seeds one — so it satisfies
 	// every eligibility rule — with only the SENDER changed to a relay domain.
 	// The seam drops it downstream; this query has no way to.
-	machine := e.seedWait(t, "Your receipt", "contact_id", contact)
+	machine := e.seedPersonalWait(t, "Your receipt", contact)
 	e.exec(t, `UPDATE activity_participant SET address = 'receipts@mail.sendgrid.net'
 		WHERE activity_id = $1 AND role = 'from'`, machine)
 
@@ -439,4 +439,17 @@ func TestShownCountsWhatTheQueryFoundRatherThanWhatThePageDraws(t *testing.T) {
 	// compose's waitingfilter_test.go, where keepWaitingCustomers lives. This
 	// package cannot assert it: a module never imports a sibling, which is the
 	// same rule that makes the two filters live apart in the first place.
+}
+
+func (e *loadEnv) seedPersonalWait(t *testing.T, subject string, target ids.UUID) ids.UUID {
+	t.Helper()
+	id := e.seedWait(t, subject, "contact_id", target)
+	e.directlyTo(t, id, e.rep)
+	return id
+}
+
+func (e *loadEnv) directlyTo(t *testing.T, message, seat ids.UUID) {
+	t.Helper()
+	e.exec(t, `INSERT INTO activity_participant (activity_id, role, address)
+ SELECT $1, 'to', email FROM app_user WHERE id=$2`, message, seat)
 }

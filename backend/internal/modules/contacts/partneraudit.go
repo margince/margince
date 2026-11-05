@@ -24,12 +24,13 @@ import (
 // blob would make every partner field unownable.
 func partnerAuditImage(r partnerRow) map[string]any {
 	return map[string]any{
-		"partner_role": r.PartnerRole, "cert_status": r.CertStatus,
+		"partner_kinds": r.PartnerKinds, "cert_status": r.CertStatus,
 		"margin_tier": r.MarginTier, "certified_staff": r.CertifiedStaff,
 		"retention_rate": r.RetentionRate, "relationship_stage": r.RelationshipStage,
 		"next_step": r.NextStep, "next_step_due_at": r.NextStepDueAt,
 		"served_segments":   r.ServedSegments,
 		"partner_fit_score": r.FitScore, "partner_fit_override_reason": r.FitOverrideReason,
+		"activation_basis": r.Activation.Basis, "activated_at": r.Activation.At,
 	}
 }
 

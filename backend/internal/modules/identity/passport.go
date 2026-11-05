@@ -404,8 +404,8 @@ const liveClientPredicate = `c.disabled_at IS NULL AND c.deleted_at IS NULL`
 // live passport to the principal its calls carry: the passport's own scopes
 // over the granting human's RBAC, loaded here and now.
 //
-//craft:ignore naked-any a pgx query argument is untyped by the driver's own signature, and the two callers pass different column types
-func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predicate string, arg any) (AgentIdentity, error) {
+//craft:ignore naked-any a pgx query argument is untyped by the driver's own signature, and the callers pass different column types
+func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predicate string, args ...any) (AgentIdentity, error) {
 	// The workspace is the installation's, not a column on the granting human:
 	// ADR-0091 §8 phase D took the tenant column off app_user. Resolved before
 	// the row is read so a passport and a session mint the same value.
@@ -418,7 +418,7 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	// oauth_grant_id is NULL for a locally minted passport, which the principal
 	// spells as a zero connection rather than a pointer nobody else carries.
 	var connection *ids.UUID
-	err = tx.QueryRow(ctx, agentAuthQuery(predicate), arg).
+	err = tx.QueryRow(ctx, agentAuthQuery(predicate), args...).
 		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AgentIdentity{}, apperrors.ErrNotFound

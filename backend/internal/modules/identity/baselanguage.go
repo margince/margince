@@ -11,8 +11,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -32,18 +34,19 @@ import (
 // No freeze, unlike BaseCurrency. Changing it re-means nothing already stored:
 // old artifacts stay in the language they were written in, and nothing converts
 // against the answer the way money does.
-var BaseLanguage = settings.Define[string](
-	"installation.base_language",
-	installationSettingsObject,
-	"update",
-	string(textlang.English),
-	func(v string) error {
+var BaseLanguage = config.DefineStored(config.Spec[string]{
+	Key:     "installation.base_language",
+	Env:     "MARGINCE_INSTALLATION_BASE_LANGUAGE",
+	Type:    config.String,
+	Default: config.Some(string(textlang.English)),
+	Validate: func(v string) error {
 		if !textlang.Known(v) {
 			return errors.New("a base language is one of en, de, vi")
 		}
 		return nil
 	},
-).AsInstallationIdentity().MachineryApplied()
+	Doc: "The language AI writes the shared record in: en, de or vi.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // BaseLanguageOf resolves the language shared AI writing is written in, inside
 // a transaction the caller already holds.
@@ -57,7 +60,7 @@ var BaseLanguage = settings.Define[string](
 // is worse than one that comes out in English, which is what those
 // installations get today anyway.
 func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.GetTx(ctx, tx, BaseLanguage)
+	return config.StoredValTx(ctx, tx, config.Bound(), BaseLanguage)
 }
 
 // BaseLanguageForPrompt resolves the base language for a caller that holds a
@@ -81,6 +84,10 @@ func BaseLanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // went wrong.
 func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 	lang := string(textlang.English)
+	ctx, may := baseLanguageReader(ctx)
+	if !may {
+		return lang
+	}
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		resolved, err := BaseLanguageOf(ctx, tx)
 		if err != nil {
@@ -114,6 +121,10 @@ func BaseLanguageForPrompt(ctx context.Context, pool *pgxpool.Pool) string {
 // text: a summary, a finding, a note, stored once and read by everyone who
 // can see it.
 func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
+	ctx, may := baseLanguageReader(ctx)
+	if !may {
+		return textlang.English
+	}
 	lang, err := BaseLanguageOf(ctx, tx)
 	if err != nil {
 		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
@@ -121,4 +132,17 @@ func BaseLanguageForRecord(ctx context.Context, tx pgx.Tx) textlang.Lang {
 		return textlang.English
 	}
 	return textlang.Lang(lang)
+}
+
+// baseLanguageReader asks the settings read gate unrecorded. A caller it
+// refuses gets English from both readers above, logged as any failed read is,
+// so the call never needs the grant.
+func baseLanguageReader(ctx context.Context) (context.Context, bool) {
+	readCtx, err := auth.Unrecorded(ctx, BaseLanguage.Object(), principal.ActionRead)
+	if err != nil {
+		slog.WarnContext(ctx, "the installation's base language could not be read; English is used instead",
+			"reason", err)
+		return ctx, false
+	}
+	return readCtx, true
 }

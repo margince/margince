@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -43,56 +44,42 @@ type CreateProductInput struct {
 	// product_billing_shape refuses it.
 	BillingModel          *string
 	BillingIntervalMonths *int
-	Source                string
+	// TaxCategory is standard, reduced or exempt. Nil means unclassified.
+	TaxCategory *string
+	// ComponentKind says what kind of value the product is: software,
+	// implementation or other. Nil means nobody has classified it.
+	ComponentKind *string
+	Source        string
 }
 
 func (s *Store) CreateProduct(ctx context.Context, in CreateProductInput) (crmcontracts.Product, error) {
 	if err := auth.Require(ctx, "product", principal.ActionCreate); err != nil {
 		return crmcontracts.Product{}, err
 	}
-	name, err := httperr.RequireNonBlank("name", in.Name)
-	if err != nil {
-		return crmcontracts.Product{}, err
-	}
-	in.Name = name
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return crmcontracts.Product{}, err
 	}
-
-	unit, _, _ := normalizeLineDefaults(in.Unit, nil, nil)
-	taxRate := zeroPct
-	if in.DefaultTaxRate != nil {
-		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
-			return crmcontracts.Product{}, err
-		}
-		taxRate = formatPct(*in.DefaultTaxRate)
-	}
-	if err := checkPrice(in.UnitPriceMinor); err != nil {
+	plan, err := prepareProductCreation(in)
+	if err != nil {
 		return crmcontracts.Product{}, err
 	}
-	if err := checkCurrency(in.Currency); err != nil {
-		return crmcontracts.Product{}, err
-	}
-	active := in.Active == nil || *in.Active
-	// Settled before the transaction opens, so a half-stated classification
-	// earns a field to fix rather than a constraint violation naming a schema
-	// object the caller has never heard of.
-	if err := validBillingShape(in.BillingModel, in.BillingIntervalMonths); err != nil {
-		return crmcontracts.Product{}, err
-	}
+	in = plan.Input
 
 	var out crmcontracts.Product
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		if err := refuseClaimedProductSKU(ctx, tx, in.SKU); err != nil {
+			return err
+		}
 		id := ids.New[ids.ProductKind]()
 		_, err := tx.Exec(ctx,
 			`INSERT INTO product (id, name, sku, description, unit, unit_price_minor,
 			                      currency, default_tax_rate, active, source, captured_by,
-			                      billing_model, billing_interval_months)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-			id, in.Name, in.SKU, in.Description, unit,
-			in.UnitPriceMinor, in.Currency, taxRate, active, in.Source, by,
-			in.BillingModel, in.BillingIntervalMonths)
+			                      billing_model, billing_interval_months, component_kind, tax_category)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+			id, in.Name, in.SKU, in.Description, *in.Unit,
+			in.UnitPriceMinor, in.Currency, plan.TaxRate, *in.Active, in.Source, by,
+			in.BillingModel, in.BillingIntervalMonths, in.ComponentKind, in.TaxCategory)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				// uq_product_sku: the SKU already names a live product.
@@ -127,6 +114,8 @@ type UpdateProductInput struct {
 	Classified            bool
 	BillingModel          *string
 	BillingIntervalMonths *int
+	ComponentKind         *string
+	TaxCategory           *string
 	// Clear are the fields the caller sent as an explicit null.
 	Clear     []string
 	IfVersion *int64
@@ -188,6 +177,8 @@ func clearableProductColumns(current crmcontracts.Product) map[string]storekit.C
 	return map[string]storekit.Clearable{
 		"sku":             {Column: "sku", Current: current.Sku},
 		descriptionColumn: {Column: descriptionColumn, Current: current.Description},
+		"component_kind":  {Column: "component_kind", Current: current.ComponentKind},
+		taxCategoryField:  {Column: taxCategoryField, Current: current.TaxCategory},
 	}
 }
 
@@ -216,7 +207,7 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		if err != nil {
 			return nil, err
 		}
-		p.Set("unit", current.Unit, unit)
+		p.Set("unit", current.Unit, canonicalUnit(unit))
 	}
 	if in.UnitPriceMinor != nil {
 		if err := checkPrice(*in.UnitPriceMinor); err != nil {
@@ -234,10 +225,26 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		if err := checkFigure(defaultTaxLimit, wireDecimal(*in.DefaultTaxRate)); err != nil {
 			return nil, err
 		}
-		p.Set("default_tax_rate", current.DefaultTaxRate, formatPct(*in.DefaultTaxRate))
+		// The column is numeric(…, 2) and the row reads back as a float, so the
+		// two are compared as the same two-decimal text the write binds.
+		if sent := formatPct(*in.DefaultTaxRate); sent != formatPct(current.DefaultTaxRate) {
+			p.Set("default_tax_rate", current.DefaultTaxRate, sent)
+		}
 	}
 	if in.Active != nil {
 		p.Set("active", current.Active, *in.Active)
+	}
+	if in.ComponentKind != nil {
+		if !slices.Contains(componentKinds, *in.ComponentKind) {
+			return nil, httperr.Validation("component_kind", "invalid", "choose software, implementation or other")
+		}
+		p.Set("component_kind", current.ComponentKind, *in.ComponentKind)
+	}
+	if in.TaxCategory != nil {
+		if err := checkTaxCategory(*in.TaxCategory); err != nil {
+			return nil, err
+		}
+		p.Set(taxCategoryField, current.TaxCategory, *in.TaxCategory)
 	}
 	// The classification is ONE fact in two columns, so it is patched as one.
 	// Setting the model without the cadence would leave a recurring product
@@ -267,6 +274,11 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 }
 
 func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontracts.Product, error) {
+	return s.ArchiveProductAt(ctx, id, nil)
+}
+
+// ArchiveProductAt keeps a stale review from retiring a changed product.
+func (s *Store) ArchiveProductAt(ctx context.Context, id ids.ProductID, ifVersion *int64) (crmcontracts.Product, error) {
 	if err := auth.Require(ctx, "product", principal.ActionDelete); err != nil {
 		return crmcontracts.Product{}, err
 	}
@@ -275,8 +287,9 @@ func (s *Store) ArchiveProduct(ctx context.Context, id ids.ProductID) (crmcontra
 		if _, err := readProduct(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE product SET archived_at = now() WHERE id = $1 AND archived_at IS NULL`, id); err != nil {
+		patch := storekit.NewPatch()
+		patch.Set("archived_at", nil, time.Now().UTC())
+		if err := patch.ApplyGuarded(ctx, tx, "product", id.UUID, ifVersion); err != nil {
 			return fmt.Errorf("archive product: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "archive", "product", id.UUID, nil, nil); err != nil {
@@ -304,10 +317,12 @@ func (s *Store) GetProduct(ctx context.Context, id ids.ProductID, archived store
 }
 
 type ListProductsInput struct {
-	Cursor          *string
-	Limit           *int
-	Query           *string
-	Active          *bool
+	Cursor *string
+	Limit  *int
+	Query  *string
+	Active *bool
+	// TaxCategory narrows to one category, or to the unclassified products.
+	TaxCategory     *string
 	IncludeArchived bool
 	// Sort is the contract's sort spec, validated against the vocabulary
 	// below — the catalogue is read by price and by name at least as often
@@ -353,6 +368,9 @@ func (s *Store) ListProducts(ctx context.Context, in ListProductsInput) ([]crmco
 	if in.Active != nil {
 		where = append(where, storekit.SQLf(productActiveField+" = $%d", pre.Arg(*in.Active)))
 	}
+	if in.TaxCategory != nil {
+		where = append(where, taxCategoryFilter(*in.TaxCategory, pre.Arg))
+	}
 	if in.Query != nil && *in.Query != "" {
 		pos := pre.Arg("%" + storekit.EscapeLike(*in.Query) + "%")
 		where = append(where, storekit.SQLf("(name ILIKE $%d OR sku ILIKE $%d)", pos, pos))
@@ -388,7 +406,10 @@ func scanProductPage(rows pgx.Rows, _ []fieldcatalog.Column, sorted *storekit.Li
 
 const productColumns = `id, name, sku, description, unit, unit_price_minor,
 	currency, default_tax_rate::text, active, billing_model, billing_interval_months,
-	source, captured_by, version, created_at, updated_at, archived_at`
+	source, captured_by, version, created_at, updated_at, archived_at, component_kind, tax_category`
+
+// componentKinds are the values product.component_kind admits.
+var componentKinds = []string{"software", "implementation", "other"}
 
 func readProduct(ctx context.Context, tx pgx.Tx, id ids.ProductID, archived storekit.ArchivedFilter) (crmcontracts.Product, error) {
 	q := `SELECT ` + productColumns + ` FROM product WHERE id = $1`
@@ -409,11 +430,13 @@ func scanProduct(row pgx.Row, extra ...any) (crmcontracts.Product, error) {
 	var capturedBy string
 	var version int64
 	var billingModel *string
+	var componentKind, taxCategory *string
 
 	dests := []any{
 		&id, &p.Name, &p.Sku, &p.Description, &p.Unit, &p.UnitPriceMinor,
 		&p.Currency, &taxRate, &p.Active, &billingModel, &p.BillingIntervalMonths,
 		&p.Source, &capturedBy, &version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt,
+		&componentKind, &taxCategory,
 	}
 	err := row.Scan(append(dests, extra...)...)
 	if err != nil {
@@ -426,6 +449,14 @@ func scanProduct(row pgx.Row, extra ...any) (crmcontracts.Product, error) {
 	if billingModel != nil {
 		model := crmcontracts.ProductBillingModel(*billingModel)
 		p.BillingModel = &model
+	}
+	if componentKind != nil {
+		kind := crmcontracts.ProductComponentKind(*componentKind)
+		p.ComponentKind = &kind
+	}
+	if taxCategory != nil {
+		category := crmcontracts.ProductTaxCategory(*taxCategory)
+		p.TaxCategory = &category
 	}
 	p.Id = openapi_types.UUID(id)
 	p.DefaultTaxRate = rate

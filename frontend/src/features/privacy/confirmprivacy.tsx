@@ -4,15 +4,15 @@
 import type { components } from "../../api/schema";
 import { Card } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
+import { formatDate } from "../../format/format";
+import { browserZone } from "../../format/timezone";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
   type AcquisitionKind,
   isAcquisitionKind,
-} from "../../format/acquisitionkinds";
-import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { labelOf } from "../../screens/preferences.logic";
+} from "../../lib/acquisitionkinds";
+import { labelOf } from "../../lib/preferences.logic";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 
@@ -62,7 +62,7 @@ export function PrivacyNotice({
 }: Readonly<{ card: PrivacyInformationPage }>) {
   const t = useT();
   const { locale } = useLocale();
-  const tz = viewerZone();
+  const tz = browserZone();
 
   const sourceKey = isAcquisitionKind(card.acquired_as)
     ? SOURCE_LABEL[card.acquired_as]

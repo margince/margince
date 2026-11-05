@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -15,18 +16,42 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// ourPromiseNotYetATask is an open promise of ours that no task holds yet.
+// A withheld promise remains history without appearing as current work.
+// unplacedPromiseSQL holds a promise the scan could not place. Its admission
+// records no current work: no task was written, and the finding waits under
+// Commitment review. The promise itself is open and still owed.
 //
-// Every reader that counts promises beside the open tasks uses it, because a
-// promise the dispatch turned into a task is that task from then on: counting
-// the claim as well would show one promise twice. Readers of one record's
-// claims keep the task-backed ones, so the quote and the task stay reachable.
-const ourPromiseNotYetATask = ourPromiseWithNoTask + ` AND c.status = 'open'`
+// A colleague taking it over is the one route it has to a task. So the claim
+// reads as current here, while the admission keeps its own answer.
+const unplacedPromiseSQL = `EXISTS (SELECT 1 FROM activity_commitment_admission unplaced
+ WHERE unplaced.source_activity_id = c.source_activity_id
+   AND unplaced.locator = c.evidence_fingerprint
+   AND unplaced.outcome = 'promiser_not_assignable')`
+
+// writtenForAMember holds a claim a user wrote, or their agent on its passport.
+var writtenForAMember = storekit.StampForAUserSQL("c.captured_by")
+
+func currentCommitmentAdmission(asOf time.Time, arg func(any) int) string {
+	current := provenance.CurrentCommitmentClause("c.source_activity_id", "c.evidence_fingerprint", "c.due_at", asOf, arg)
+	return `(` + unplacedPromiseSQL + ` OR c.corrected_at IS NOT NULL OR (` + writtenForAMember + ` AND NOT EXISTS (
+ SELECT 1 FROM audit_log imported WHERE imported.entity_type='contact' AND imported.entity_id=c.contact_id
+ AND imported.after->>'claim_id'=c.id::text AND NOT ` + storekit.AuditNotFromAnImport("imported") + `)) OR ` + current + `
+ OR EXISTS (SELECT 1 FROM activity adopted_task WHERE adopted_task.id=c.task_activity_id
+ AND adopted_task.archived_at IS NULL AND NOT adopted_task.is_done AND (` + storekit.HumanWroteActivityClause("adopted_task") + `
+ OR (adopted_task.assignee_id, adopted_task.id::text) IN (SELECT reader_id,row_id FROM ` + auth.EffectiveWorklistPinsSQL(arg) + ` pins WHERE pins.source='task'))))`
+}
+
+func ourPromiseNotYetATask(asOf time.Time, arg func(any) int) string {
+	return ourPromiseWithNoTask + ` AND c.status = 'open' AND ` + currentCommitmentAdmission(asOf, arg)
+}
 
 // ourPromiseWithNoTask is ourPromiseNotYetATask whatever its status: the
 // claims a Worklist promise row names, open or settled since.
@@ -45,9 +70,9 @@ func (s *Store) RecordConversationClaimTx(
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
-	// RequireHuman refuses an agent passport and admits the product's own
-	// passes, which is what an extractor runs as.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Admits a user, their agent, and the product's own passes, which is what
+	// an extractor runs as.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -112,6 +137,9 @@ func recordClaimInTx(
 		fingerprint, in.Source, by).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		existing, err := filedClaim(ctx, tx, in, fingerprint)
+		if err == nil && in.Renewal {
+			existing, err = renewClaimDeadline(ctx, tx, in, existing, by)
+		}
 		return existing, false, err
 	}
 	if err != nil {
@@ -135,21 +163,23 @@ func recordClaimInTx(
 		Body:             in.Body,
 		SourceActivityId: openapi_types.UUID(in.ActivityID),
 		SourceQuote:      in.Quote,
-		Status:           crmcontracts.ConversationClaimStatusOpen,
-		DueAt:            in.DueAt,
+		// No source time is read on the write, and a claim without one says instant.
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionInstant,
+		Status:            crmcontracts.ConversationClaimStatusOpen,
+		DueAt:             in.DueAt,
 	}, true, nil
 }
 
-// requireQuoteInActivity refuses a claim whose quote is not in the message it
-// cites. A quote nobody can find in what was written grounds nothing, and it
-// would read as trustworthy as one that does.
+// requireQuoteInActivity refuses a claim whose quote is not in what the sender
+// of the cited message wrote. A quote nobody can find there grounds nothing,
+// and one found only in the quoted reply is somebody else's words.
 func requireQuoteInActivity(ctx context.Context, tx pgx.Tx, in ClaimInput) error {
 	var subject, body string
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(subject, ''), COALESCE(body, '') FROM activity WHERE id = $1`,
 		in.ActivityID).Scan(&subject, &body); err != nil {
 		return fmt.Errorf("read the message a claim cites: %w", err)
 	}
-	if values.Quoted(body, in.Quote) || values.Quoted(subject, in.Quote) {
+	if values.Quoted(textlang.SenderText(body), in.Quote) || values.Quoted(subject, in.Quote) {
 		return nil
 	}
 	return httperr.Validation("source_quote", "not_in_source",
@@ -168,15 +198,19 @@ func filedClaim(
 		       needs_review, corrected_at, task_activity_id
 		  FROM conversation_claim
 		 WHERE contact_id = $1 AND source_activity_id = $2 AND evidence_fingerprint = $3
-		   AND archived_at IS NULL`,
+		   AND archived_at IS NULL FOR UPDATE`,
 		in.ContactID, in.ActivityID, fingerprint).Scan(&id, &claim.Kind, &claim.Body,
 		&activityID, &claim.SourceQuote, &claim.Status, &claim.DueAt,
 		&claim.NeedsReview, &claim.CorrectedAt, &taskID)
 	if err != nil {
 		return crmcontracts.ConversationClaim{}, fmt.Errorf("read the claim already filed for this evidence: %w", err)
 	}
+	if err := ensureClaimContentVisible(ctx, tx, id); err != nil {
+		return crmcontracts.ConversationClaim{}, err
+	}
 	claim.Id = openapi_types.UUID(id)
 	claim.SourceActivityId = openapi_types.UUID(activityID)
+	claim.OccurredPrecision = crmcontracts.OccurredPrecisionOccurredPrecisionInstant
 	if taskID != nil {
 		task := openapi_types.UUID(*taskID)
 		claim.TaskActivityId = &task
@@ -192,24 +226,56 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
 	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return err
+	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", taskID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
 		return err
 	}
 	var contactID ids.UUID
+	var currentTask *ids.UUID
 	var status string
-	err := tx.QueryRow(ctx, `
-		UPDATE conversation_claim SET task_activity_id = $2
-		 WHERE id = $1 AND task_activity_id IS NULL
-		RETURNING contact_id, status`, claimID, taskID).Scan(&contactID, &status)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if err := tx.QueryRow(ctx, `SELECT contact_id, task_activity_id, status FROM conversation_claim WHERE id = $1`, claimID).Scan(&contactID, &currentTask, &status); err != nil {
+		return fmt.Errorf("read claim task relation: %w", err)
+	}
+	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
+		return err
+	}
+	if err := ensureClaimContentVisible(ctx, tx, claimID); err != nil {
+		return err
+	}
+	if currentTask != nil {
 		return nil
 	}
+	var done bool
+	err := tx.QueryRow(ctx, `SELECT is_done FROM activity WHERE id = $1 AND kind = 'task'`, taskID).Scan(&done)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
 	if err != nil {
+		return fmt.Errorf("read recipient task status: %w", err)
+	}
+	// Open work and an open promise move together. Accepting a proposal must
+	// not reopen a promise settled or dismissed since. An open promise is not
+	// filed under finished work either.
+	if done == (status == claimStatusOpen) {
+		return apperrors.ErrConflict
+	}
+	if _, err := tx.Exec(ctx, `UPDATE conversation_claim SET task_activity_id = $2 WHERE id = $1`, claimID, taskID); err != nil {
 		return fmt.Errorf("link the claim to its task: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
-		map[string]any{claimIDKey: claimID.String(), "task_activity_id": nil},
-		map[string]any{claimIDKey: claimID.String(), "task_activity_id": taskID.String()})
+		map[string]any{claimIDKey: claimID.String(), claimTaskKey: nil},
+		map[string]any{claimIDKey: claimID.String(), claimTaskKey: taskID.String()})
 	if err != nil {
 		return fmt.Errorf("audit the claim's task: %w", err)
 	}

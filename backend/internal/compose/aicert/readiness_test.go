@@ -190,7 +190,7 @@ func TestCurrentStampsAreSplitPerSiteAndFoldToTheTaskStamp(t *testing.T) {
 			t.Errorf("scenario %q is missing from its own site bucket %q", sc.Name, key)
 		}
 		for other, bucket := range perSite {
-			if other == key {
+			if other == key || !strings.HasPrefix(other, sc.Task+"/") {
 				continue
 			}
 			if _, leaked := bucket[sc.Name]; leaked {

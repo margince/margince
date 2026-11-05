@@ -24,7 +24,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `context_scopes` | `text[]`, default `'{}'::text[]` | yes |  |
 | `context_tokens_estimate` | `bigint`, default `0` | yes |  |
 | `decision_choice` | `text` |  |  |
-| `decision_confidence` | `double precision` |  |  |
+| `decision_confidence` | `numeric(4,3)` |  |  |
 | `degraded` | `boolean`, default `false` | yes |  |
 | `error_sentinel` | `text` |  |  |
 | `finish_reason` | `text`, default `''::text` | yes |  |
@@ -67,6 +67,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_context_tokens_estimate_check`: `CHECK ((context_tokens_estimate >= 0))`
 - `ai_call_decision_answer_kind`: `CHECK (((decision_choice IS NULL) OR (kind = 'decision')))`
 - `ai_call_decision_answer_shape`: `CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))`
+- `ai_call_decision_confidence_range`: `CHECK (((decision_confidence IS NULL) OR ((decision_confidence >= (0)::numeric) AND (decision_confidence <= (1)::numeric))))`
 - `ai_call_kind_check`: `CHECK ((kind = ANY (ARRAY['completion', 'embedding', 'decision'])))`
 - `ai_call_latency_ms_js_safe`: `CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))`
 - `ai_call_reasoning_tokens_js_safe`: `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`
@@ -166,7 +167,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## ai_model_rate
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -176,6 +177,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `effective_date` | `date` | yes |  |
 | `input_per_mtok_microusd` | `bigint` | yes |  |
 | `lane` | `text`, default `'chat'::text` | yes | What the model is FOR. |
+| `long_context_above_tokens` | `integer` |  |  |
+| `long_context_cache_read_per_mtok_microusd` | `bigint` |  |  |
+| `long_context_cache_write_per_mtok_microusd` | `bigint` |  |  |
+| `long_context_input_per_mtok_microusd` | `bigint` |  |  |
+| `long_context_output_per_mtok_microusd` | `bigint` |  |  |
 | `model_id` | `text` | yes |  |
 | `output_per_mtok_microusd` | `bigint` | yes |  |
 | `provider` | `text` | yes |  |
@@ -189,6 +195,12 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_model_rate_input_per_mtok_microusd_check`: `CHECK ((input_per_mtok_microusd >= 0))`
 - `ai_model_rate_key`: `UNIQUE (provider, model_id, effective_date)`
 - `ai_model_rate_lane_check`: `CHECK ((lane = ANY (ARRAY['chat', 'embeddings', 'decisions'])))`
+- `ai_model_rate_long_context_above_tokens_check`: `CHECK ((long_context_above_tokens > 0))`
+- `ai_model_rate_long_context_cache_read_check`: `CHECK ((long_context_cache_read_per_mtok_microusd >= 0))`
+- `ai_model_rate_long_context_cache_write_check`: `CHECK ((long_context_cache_write_per_mtok_microusd >= 0))`
+- `ai_model_rate_long_context_complete_check`: `CHECK ((((long_context_above_tokens IS NULL) = (long_context_input_per_mtok_microusd IS NULL)) AND ((long_context_above_tokens IS NULL) = (long_context_output_per_mtok_microusd IS NULL)) AND ((long_context_above_tokens IS NULL) = (long_context_cache_read_per_mtok_microusd IS NULL)) AND ((long_context_above_tokens IS NULL) = (long_context_cache_write_per_mtok_microusd IS NULL))))`
+- `ai_model_rate_long_context_input_check`: `CHECK ((long_context_input_per_mtok_microusd >= 0))`
+- `ai_model_rate_long_context_output_check`: `CHECK ((long_context_output_per_mtok_microusd >= 0))`
 - `ai_model_rate_output_per_mtok_microusd_check`: `CHECK ((output_per_mtok_microusd >= 0))`
 - `ai_model_rate_source_check`: `CHECK ((source = ANY (ARRAY['manual', 'catalogue', 'seed'])))`
 
@@ -282,7 +294,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_build_one_active`: `unique, btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued', 'deferred', 'running']))`
 - `voice_build_pkey`: `unique, btree (id)`
 - `voice_build_poll`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
-- `voice_build_profile_fk`: `btree (voice_profile_id)`
+- `voice_build_profile_version_ix`: `btree (voice_profile_id, result_version)`
 - `voice_build_requester_fk`: `btree (requested_by) WHERE (requested_by IS NOT NULL)`
 
 ## voice_corpus_source
@@ -385,7 +397,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 - `uq_voice_learning_signal_draft`: `unique, btree (draft_ref_hash)`
 - `voice_learning_signal_pkey`: `unique, btree (id)`
-- `voice_learning_signal_profile_fk`: `btree (voice_profile_id)`
+- `voice_learning_signal_profile_version_ix`: `btree (voice_profile_id, profile_version)`
 - `voice_learning_signal_retention`: `btree (retention_until) WHERE (content_erased_at IS NULL)`
 
 ## voice_profile
@@ -436,6 +448,10 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_pkey`: `unique, btree (id)`
 - `voice_profile_team_fk`: `btree (team_id) WHERE (team_id IS NOT NULL)`
 
+**Triggers**
+
+- `voice_profile_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+
 ## voice_profile_delta
 
 10 columns · primary key `(id)` · referenced by 0 foreign keys
@@ -472,6 +488,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Indexes**
 
 - `uq_voice_profile_delta_version`: `unique, btree (voice_profile_id, to_version)`
+- `voice_profile_delta_from_version_ix`: `btree (voice_profile_id, from_version)`
 - `voice_profile_delta_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_delta_pkey`: `unique, btree (id)`
 
@@ -529,3 +546,4 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_profile_version_history`: `btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `voice_profile_version_one_active`: `unique, btree (voice_profile_id) WHERE (status = 'active')`
 - `voice_profile_version_pkey`: `unique, btree (id)`
+- `voice_profile_version_predecessor_ix`: `btree (voice_profile_id, predecessor_version)`

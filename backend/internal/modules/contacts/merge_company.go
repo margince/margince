@@ -11,6 +11,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -82,25 +83,18 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	src, tgt, err := mergePair(ctx, tx, "company", sourceID, targetID, ifVersion, readCompanyMergeState)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// AFTER the pair lock, so the answer cannot change under the merge, and
-	// before anything is relinked. Either endpoint: merging the anchor away
-	// retires it, and merging a customer INTO it folds their contacts, deals
-	// and history onto the installation's own company with no way to tell
-	// them apart afterwards.
-	// Neither direction is open when one side is the anchor, so neither
-	// message may point at the other direction as the way out: archiving the
-	// duplicate is the only move that actually works.
-	if err := refuseIfAnchor(ctx, tx, sourceID, "id", "it cannot be merged into another company. Archive the duplicate instead, and edit this one on the company page"); err != nil {
+	if err := companyMergeAllowed(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Company{}, err
 	}
-	if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
-		return crmcontracts.Company{}, err
-	}
-	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
+	employersBefore, err := primaryEmployersOf(ctx, tx, sourceID)
+	if err != nil {
 		return crmcontracts.Company{}, err
 	}
 	targetIsPartner, err := relinkCompanyAssociations(ctx, tx, sourceID, targetID)
@@ -121,6 +115,13 @@ func (s *Store) mergeCompanyTx(
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return crmcontracts.Company{}, err
+	}
+	if err := fileMergedEmployerTwins(ctx, tx, employersBefore, by); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	// A survivor that just inherited the retired record's legal name can now
 	// be the twin of a THIRD company, and resolving one duplicate is no
 	// reason to leave that one unfiled. Only when the name actually moved: a
@@ -134,10 +135,6 @@ func (s *Store) mergeCompanyTx(
 	// it. The genuine third record is never reached, since the walk stops at
 	// the first unfiled rival.
 	if _, renamed := filled[fieldLegalName]; renamed {
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return crmcontracts.Company{}, err
-		}
 		if err := recheckCompanyNameForDuplicates(ctx, tx, targetID, by); err != nil {
 			return crmcontracts.Company{}, err
 		}
@@ -150,12 +147,9 @@ func (s *Store) mergeCompanyTx(
 // edges, activity/list/tag rows, and the deal/hierarchy/partner references
 // — and reports whether the survivor ends up holding a partner row.
 func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) (bool, error) {
-	if _, err := relinkDemotingPrimary(ctx, tx, `
-		UPDATE company_domain a SET company_id = $2,
-		  is_primary = a.is_primary AND NOT EXISTS (
-		    SELECT 1 FROM company_domain b
-		    WHERE b.company_id = $2 AND b.is_primary AND b.archived_at IS NULL)
-		WHERE a.company_id = $1 AND a.archived_at IS NULL`, sourceID.UUID, targetID.UUID); err != nil {
+	if _, err := relinkDemotingPrimary(ctx, tx,
+		`UPDATE company_domain a SET company_id = @target, is_primary = `+mergeDomainPrimary+` WHERE `+mergeCompanyDomainSource,
+		sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink domains: %w", err)
 	}
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {
@@ -183,28 +177,9 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // extension row with nothing saying it is a partner, which is exactly the
 // half-state the enforced invariant exists to make impossible.
 func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.Company, targetIsPartner bool, tgtLock storekit.RowLock) (map[string]any, error) {
-	p := storekit.NewPatch()
-	fillString(p, fieldLegalName, tgt.LegalName, src.LegalName)
-	fillString(p, "description", tgt.Description, src.Description)
-	fillString(p, "industry", tgt.Industry, src.Industry)
-	// The source is already archived, which frees its unique slot on the address.
-	fillString(p, "linkedin_url", tgt.LinkedinUrl, src.LinkedinUrl)
-	// The postal address moves as ONE block, on the same rule as the contact
-	// merge (buildSurvivorshipPatch): a survivor with no address at all takes
-	// the retired record's whole address, and a survivor that has one keeps
-	// every line of it. Filling line by line would build an address that
-	// neither company ever had — this city with that postcode — which is worse
-	// than the blank it replaced, because it looks deliberate.
-	if tgt.Address == nil && src.Address != nil {
-		p.Set("address_line1", nil, src.Address.Line1)
-		p.Set("address_line2", nil, src.Address.Line2)
-		p.Set("address_city", nil, src.Address.City)
-		p.Set("address_region", nil, src.Address.Region)
-		p.Set("address_postal_code", nil, src.Address.PostalCode)
-		p.Set("address_country", nil, src.Address.Country)
-	}
+	p := buildCompanySurvivorshipPatch(tgt, src)
 	if targetIsPartner {
-		if err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
+		if _, err := ensureCompanyRelationshipType(ctx, tx, ids.CompanyID{UUID: ids.UUID(tgt.Id)},
 			relationshipTypePartner, "system", "system:merge"); err != nil {
 			return nil, err
 		}
@@ -231,7 +206,7 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID, filled map[string]any, active []fieldcatalog.Column) (crmcontracts.Company, error) {
 	auditID, err := storekit.Audit(ctx, tx, "merge", "company", sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filled})
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(filled)})
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("audit company merge: %w", err)
 	}
@@ -240,6 +215,13 @@ func finalizeCompanyMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids
 		MergedIntoId: openapi_types.UUID(targetID.UUID),
 	}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("emit company.merged: %w", err)
+	}
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
+	maps.Copy(before, heldNothing(filled))
+	maps.Copy(after, filled)
+	if _, err := storekit.Audit(ctx, tx, "merge", "company", targetID.UUID, before, after); err != nil {
+		return crmcontracts.Company{}, fmt.Errorf("audit company merge on the survivor: %w", err)
 	}
 	out, err := readCompany(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
@@ -345,7 +327,7 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 func readCompanyMergeState(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (crmcontracts.Company, *ids.UUID, error) {
 	// A merge-state read feeds the resolution decision, never the wire —
 	// core columns suffice.
-	o, err := readCompany(ctx, tx, id, storekit.IncludeArchived, nil)
+	o, err := readCompanyRow(ctx, tx, id, storekit.IncludeArchived, nil)
 	if err != nil {
 		return crmcontracts.Company{}, nil, err
 	}
@@ -396,7 +378,7 @@ func refuseWhenBothCarryProjects(ctx context.Context, tx pgx.Tx, sourceID, targe
 	// naming asks for the grant it actually needs, and a caller without it is
 	// still refused the merge — on counts, which say the work exists without
 	// saying whose it is or what it is called.
-	mayName := auth.Require(ctx, "project", principal.ActionRead) == nil
+	mayName := auth.Allows(ctx, "project", principal.ActionRead)
 
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

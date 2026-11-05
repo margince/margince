@@ -35,8 +35,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // lastMessage is the newest two-way exchange on an account, as the no-reply
@@ -46,6 +48,8 @@ type lastMessage struct {
 	ID        ids.UUID
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's anchor, so only its date is known.
+	DateOnly bool
 	// Kind is the channel the exchange happened on, which is what lets the
 	// citation say "email you sent" rather than "activity".
 	Kind string
@@ -55,6 +59,8 @@ type lastMessage struct {
 	// on the fact of the silence while the citation carries no words.
 	Subject string
 	Excerpt string
+	// Move is the History badge's move when the message is a mail.
+	Move *crmcontracts.EmailSummaryMove
 }
 
 // excerptRunes bounds what a citation quotes of a message body. A quote is
@@ -78,11 +84,12 @@ const excerptRunes = 200
 // the account's timeline uses — one spelling, so they cannot drift. Every
 // candidate still passes the activity row scope, so the reader can open it.
 func newestMessage(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, opts AssembleOptions,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (lastMessage, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
+	nowPos := arg(now)
 	activityScope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
 		return lastMessage{}, false, err
@@ -99,19 +106,27 @@ func newestMessage(
 	if err != nil {
 		return lastMessage{}, false, err
 	}
+	// A mail's own History badge says whose move it is, so the strip and the
+	// no-reply advice read the same rule as the message's row.
+	move, err := activities.MailMoveColumnSQL(ctx, arg, now)
+	if err != nil {
+		return lastMessage{}, false, err
+	}
 	var found lastMessage
 	var direction, subject, excerpt *string
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.direction, a.occurred_at, a.kind,
+	query := fmt.Sprintf(`
+		SELECT a.id, a.direction, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[3]s THEN a.subject END,
-		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END
+		       CASE WHEN %[3]s THEN left(a.body, %[4]d) END,
+		       %[6]s
 		FROM activity a
 		WHERE %[5]s AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s`+opts.projectScope(arg)+`
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, activityScope, activities.CompanyLinkedActivityExists(companyPos), audience, excerptRunes,
-		relstrength.InteractionCountsSQL("a")), args...).
-		Scan(&found.ID, &direction, &found.At, &found.Kind, &subject, &excerpt)
+		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos)), move)
+	err = tx.QueryRow(ctx, query, args...).
+		Scan(&found.ID, &direction, &found.At, &found.DateOnly, &found.Kind, &subject, &excerpt, &found.Move)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lastMessage{}, false, nil
 	}
@@ -147,7 +162,7 @@ func oneLine(text string) string {
 // Reachability is activities.CompanyLinkedActivityExists, the same walk
 // nextStepsSection uses.
 func hasOpenTask(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, opts AssembleOptions,
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -159,13 +174,18 @@ func hasOpenTask(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return false, err
+	}
 	var scheduled bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
-		    AND %[2]s`+opts.projectScope(arg)+`)`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos)), args...).Scan(&scheduled)
+		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
+	err = tx.QueryRow(ctx, query, args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
 	}
@@ -179,6 +199,9 @@ func hasOpenTask(
 // gatherers would let the two disagree about what a suggestion IS, and then a
 // dismissal would silently match nothing.
 type suggestionInputs struct {
+	language textlang.Lang
+	// loc is the installation zone the advice counts its days in.
+	loc *time.Location
 	// timeline and pipeline are the two grants that decide which rules run at
 	// all. They are the object grants, which is exactly what makes a 360 section
 	// absent — row scope narrows a section, it does not withhold it.
@@ -203,14 +226,14 @@ type suggestionInputs struct {
 	// relationship is over. Filled from the shared signal read, so the
 	// contradiction rule and the health section count one query between them.
 	contractEnded bool
-	// contractEndedSaid and contractEndedAt are that signal's own sentence and
-	// the instant it was read — the words the contradiction is checked
-	// against, carried on the citation rather than paraphrased in the reason.
-	contractEndedSaid string
-	contractEndedAt   time.Time
-	open              pipeline
-	contractStrip     contractStrip
-	scheduled         bool
+	// Current source evidence supports the conflict; legacy signals retain
+	// a summary without claiming a source date or link.
+	contractEndedSaid   string
+	contractEndedAt     time.Time
+	contractEndedSource ids.UUID
+	open                pipeline
+	contractStrip       contractStrip
+	scheduled           bool
 }
 
 // advisable reports whether this caller can be advised at all. Neither input
@@ -235,12 +258,12 @@ func (in suggestionInputs) advisable() bool { return in.timeline || in.pipeline 
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 	facts signalFacts, heading companyHeading, baseCurrency string,
-	opts AssembleOptions,
+	opts AssembleOptions, language textlang.Lang, loc *time.Location,
 ) (suggestionInputs, error) {
 	timeline := auth.ReadGranted(ctx, "activity")
 	pipeline := auth.ReadGranted(ctx, "deal")
 	contractsGranted := auth.ReadGranted(ctx, "contract")
-	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted}
+	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
 		if err != nil {
@@ -249,12 +272,12 @@ func gatherSuggestionInputs(
 		in.contractStrip = strip
 	}
 	if in.timeline {
-		newest, found, err := newestMessage(ctx, tx, companyID, opts)
+		newest, found, err := newestMessage(ctx, tx, companyID, now, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}
 		in.newest, in.hasNewest = newest, found
-		scheduled, err := hasOpenTask(ctx, tx, companyID, opts)
+		scheduled, err := hasOpenTask(ctx, tx, companyID, now, opts)
 		if err != nil {
 			return suggestionInputs{}, err
 		}
@@ -270,6 +293,7 @@ func gatherSuggestionInputs(
 	in.contractEnded = facts.ContractEnded
 	in.contractEndedSaid = facts.ContractEndedSaid
 	in.contractEndedAt = facts.ContractEndedAt
+	in.contractEndedSource = facts.ContractEndedSource
 	in.lifecycle = heading.lifecycle
 	in.companyName = heading.name
 	return in, nil
@@ -322,9 +346,9 @@ func engagementState(in suggestionInputs, now time.Time) crmcontracts.Company360
 	switch {
 	case age > engagementDormantDays*24*time.Hour:
 		return "dormant"
-	case in.newest.Direction == "outbound" && age >= noReplyDays*24*time.Hour:
+	case in.newest.awaitsThem() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_them"
-	case in.newest.Direction == "inbound" && age >= noReplyDays*24*time.Hour:
+	case in.newest.owedByUs() && age >= noReplyDays*24*time.Hour:
 		return "waiting_on_us"
 	}
 	return "active"

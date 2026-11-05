@@ -28,12 +28,29 @@ import (
 // took, and an administrator comparing them would be told the difference is a
 // backlog.
 func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontracts.CaptureHealth, error) {
-	out := crmcontracts.CaptureHealth{GeneratedAt: now.UTC()}
+	out := crmcontracts.CaptureHealth{GeneratedAt: now.UTC(), ConnectionConcerns: []crmcontracts.CaptureConnectionConcern{}}
+	concerns, err := capture.FleetConcernsTx(ctx, tx, now)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	for _, concern := range concerns {
+		v := concern.Connection
+		out.ConnectionConcerns = append(out.ConnectionConcerns, crmcontracts.CaptureConnectionConcern{
+			UserId: openapi_types.UUID(concern.UserID), DisplayName: concern.DisplayName, ConnectionId: openapi_types.UUID(v.ID),
+			Provider: v.Provider, AccountLabel: v.AccountLabel, Concern: crmcontracts.CaptureConcernKind(v.Concern),
+			Since: v.ConcernSince, LastSuccessAt: v.LastSuccessAt, ErrorClass: v.LastErrorClass,
+		})
+	}
 	mailboxes, err := captureMailboxHealth(ctx, tx, now)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Mailboxes = mailboxes
+	owners, err := captureOwnerReviews(ctx, tx)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.OwnerReviews = &owners
 	classifier, err := captureClassifierHealth(ctx, tx, now)
 	if err != nil {
 		return crmcontracts.CaptureHealth{}, err
@@ -49,6 +66,11 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 		return crmcontracts.CaptureHealth{}, err
 	}
 	out.Sweeps = sweeps
+	categories, err := capture.ReadOperationalCategoriesTx(ctx, tx)
+	if err != nil {
+		return crmcontracts.CaptureHealth{}, err
+	}
+	out.Categories = &crmcontracts.CaptureHealthCategories{MachineThreads: categories.MachineThreads, UncertainThreads: categories.UncertainThreads, OwnerReviewMailboxes: categories.OwnerReviewMailboxes, UnreadMailboxes: categories.UnreadMailboxes}
 	return out, nil
 }
 
@@ -63,10 +85,11 @@ func captureHeldMeetings(
 		oldest *time.Time
 	)
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	if err := tx.QueryRow(ctx, `
+	query := `
 		SELECT count(*), min(a.created_at)
 		  FROM activity a
-		 WHERE `+filedMeetingHeldClause("a", arg), args...).Scan(&out.Count, &oldest); err != nil {
+		 WHERE ` + filedMeetingHeldClause("a", arg)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&out.Count, &oldest); err != nil {
 		return crmcontracts.CaptureHeldMeetings{}, fmt.Errorf(
 			"compose: counting the filed meetings still held: %w", err)
 	}
@@ -141,19 +164,27 @@ func captureMailboxHealth(
 		    FROM contact p
 		   WHERE `+capture.AwaitingSenderDecisionClause("p")+`
 		   GROUP BY p.owner_id),
+		unread_periods AS (
+		  SELECT user_id, min(unread_from) AS unread_from, max(unread_to) AS unread_to
+		    FROM capture_connection
+		   WHERE unread_from IS NOT NULL
+		   GROUP BY user_id),
 		waiting_threads AS (
 		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest
 		    FROM capture_thread_verdict v
 		   WHERE v.status IN ('pending', 'unsure')
 		   GROUP BY v.user_id)
-		SELECT coalesce(c.user_id, t.user_id),
+		SELECT coalesce(c.user_id, t.user_id, g.user_id),
 		       u.display_name,
 		       coalesce(c.n, 0), c.oldest,
-		       coalesce(t.n, 0), t.oldest
+		       coalesce(t.n, 0), t.oldest,
+		       g.unread_from, g.unread_to
 		  FROM waiting_contacts c
 		  FULL JOIN waiting_threads t ON t.user_id = c.user_id
-		  LEFT JOIN app_user u ON u.id = coalesce(c.user_id, t.user_id)
-		 ORDER BY coalesce(c.n, 0) + coalesce(t.n, 0) DESC, coalesce(c.user_id, t.user_id)`)
+		  FULL JOIN unread_periods g ON g.user_id = coalesce(c.user_id, t.user_id)
+		  LEFT JOIN app_user u ON u.id = coalesce(c.user_id, t.user_id, g.user_id)
+		 ORDER BY coalesce(c.n, 0) + coalesce(t.n, 0) DESC,
+		          coalesce(c.user_id, t.user_id, g.user_id)`)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading what each mailbox is waiting on: %w", err)
 	}
@@ -168,8 +199,10 @@ func captureMailboxHealth(
 			name                   *string
 			contacts, threads      int
 			oldestContact, oldestT *time.Time
+			unreadFrom, unreadTo   *time.Time
 		)
-		if err := rows.Scan(&userID, &name, &contacts, &oldestContact, &threads, &oldestT); err != nil {
+		if err := rows.Scan(&userID, &name, &contacts, &oldestContact, &threads, &oldestT,
+			&unreadFrom, &unreadTo); err != nil {
 			return nil, err
 		}
 		row := crmcontracts.CaptureMailboxHealth{
@@ -180,6 +213,7 @@ func captureMailboxHealth(
 			OldestThreadAgeSeconds:   ageSeconds(now, oldestT),
 		}
 		row.DisplayName = name
+		row.UnreadPeriod = unreadPeriodOf(unreadFrom, unreadTo)
 		out = append(out, row)
 	}
 	return out, rows.Err()
@@ -218,10 +252,41 @@ func captureClassifierHealth(
 // nothing is. Absent and zero are different answers — one is an empty queue,
 // the other a queue that just filled — and a page reading zero as empty would
 // report the busiest moment as the calmest.
+// unreadPeriodOf is the gap a mailbox was never read for, or nil when there is
+// none to report.
+//
+// Both ends or neither, which the column CHECK holds. Read for it anyway. A
+// half period on the wire is one a client cannot choose a backfill window
+// from, and this is where that shape would reach it.
+func unreadPeriodOf(from, to *time.Time) *crmcontracts.CaptureUnreadPeriod {
+	if from == nil || to == nil {
+		return nil
+	}
+	return &crmcontracts.CaptureUnreadPeriod{From: from.UTC(), To: to.UTC()}
+}
+
 func ageSeconds(now time.Time, since *time.Time) *int {
 	if since == nil {
 		return nil
 	}
 	seconds := max(int(now.UTC().Sub(since.UTC()).Seconds()), 0)
 	return &seconds
+}
+
+func captureOwnerReviews(ctx context.Context, tx pgx.Tx) ([]crmcontracts.CaptureOwnerReview, error) {
+	rows, err := tx.Query(ctx, `SELECT r.user_id, u.display_name, r.sender_decisions, r.thread_decisions
+ FROM (`+capture.OwnerReviewCountsSQL()+`) r LEFT JOIN app_user u ON u.id=r.user_id ORDER BY (r.sender_decisions+r.thread_decisions) DESC, u.display_name, r.user_id`)
+	if err != nil {
+		return nil, fmt.Errorf("read mailbox decision owners: %w", err)
+	}
+	defer rows.Close()
+	out := []crmcontracts.CaptureOwnerReview{}
+	for rows.Next() {
+		var owner crmcontracts.CaptureOwnerReview
+		if err := rows.Scan(&owner.UserId, &owner.DisplayName, &owner.SenderDecisions, &owner.ThreadDecisions); err != nil {
+			return nil, fmt.Errorf("reading mailbox review owner: %w", err)
+		}
+		out = append(out, owner)
+	}
+	return out, rows.Err()
 }

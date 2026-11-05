@@ -1,57 +1,54 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The two zones this product renders dates in, and the rule for which one a
+// The three zones this product renders times in, and the rule for which one a
 // screen owes its reader. `formatDate`/`formatDateTime`/`formatDateAbbrev` take
-// their zone as an argument and only attach it (format.ts, zone-by-purpose) —
-// picking the zone is the caller's judgement, and this file is where that
+// their zone as an argument and only attach it (format.ts, zone-by-purpose).
+// Picking the zone is the caller's judgement, and this file is where that
 // judgement is written down once.
 //
-// The two purposes are NOT interchangeable, and each has its own way of being
-// wrong:
+//   useViewerZone() — the signed-in user's own clock (lib/viewerzone.tsx):
+//   the zone they chose under Settings → Account, or their browser's until they
+//   have one. EVERY time a signed-in screen shows is read in it: activities,
+//   notes, captured mail, tasks, meetings, approvals, history and Home. A note
+//   saved at 16:03 in Berlin shows 16:03 to a reader in Berlin, whatever zone
+//   the installation uses. This is the default; the two below are exceptions.
 //
-//   useRecordZone() — the company's own clock, as the installation
-//   configured it (`installation.timezone`, served by lib/recordzone.tsx). Its
-//   dates belong to the record, not to whoever is looking at it. Following the
-//   reader here MISSTATES the record: a close date, a renewal, an invoice's
-//   issue day and a timeline's day headings have to read the same for every
-//   colleague, or two contacts quoting the same page quote different days. It is
-//   also the only correct answer for a date-only wire value (OpenAPI
-//   `format: date`): there is no instant in `2026-08-21` to localize, and
-//   reading it in a zone behind UTC prints the day before.
+//   useCompanyZone() — the company's own clock (`installation.timezone`, served
+//   by lib/companyzone.tsx). It is for what belongs to the company: report
+//   periods and runs, and the days and weeks the server buckets on the
+//   company's clock (the morning brief's day, the weekly's week, the server's
+//   "today" and "overdue" lists). Naming those in another zone would label a
+//   bucket with days it does not hold.
 //
-//   It is a HOOK rather than a constant because the answer belongs to the
-//   installation and arrives over the wire. A plain helper that needs it takes
-//   it as a parameter from the component that read it — never by importing the
-//   fallback below, which is a different value that only happens to agree.
+//   browserZone() — the browser's own clock. Only for screens with no
+//   signed-in reader (public booking, confirm, the buyer room, sign-in), for
+//   the reader's fallback, and for a datetime-local input, which the browser
+//   parses in its own zone.
 //
-//   viewerZone() — the reader's own clock, for a moment they relate to
-//   themselves: when a credential they are lending expires, when a paused job
-//   resumes, how stale a mailbox is, when a slot they are about to book starts.
-//   Pinning these to a fixed zone shows a reader outside it a different
-//   calendar day than the one the thing actually happens on, which is how the
-//   consent screen came to promise an expiry on a day that had not arrived.
+// The census in zone-by-purpose.readers.test.ts lists every file that reads the
+// company or the browser zone, each with its reason. A file not on that list
+// reads the reader's zone.
 //
-// When a site is genuinely both — a personal deadline on a record page — the
-// page wins: a record surface is ONE clock, so a due date and the activity
-// beside it can never be read in two different zones.
+// A date-only wire value (OpenAPI `format: date`) has no instant to localize.
+// The formatters read it at its midday in the zone they are given, so it names
+// the same calendar day in every zone a user can live in.
 //
-// An activity's `due_at` is one of those sites, and the page wins it. A
-// deadline is a promise colleagues read back — the worklist already buckets
-// overdue on the installation's clock — so `dueInstant` mints the picked day's
-// end in the RECORD's zone and every task date is rendered in it: the tasks
-// queue, the record's next steps, the task detail, the picker that seeds from
-// it. The activity's `occurred_at` beside it is on the same clock, because when
-// something happened is a fact about the record too.
+// A task's due day is set in the zone of the user who picks it (decision A1
+// on #7894): `dueInstant` mints the picked day's end in the picker's own zone,
+// and every reader then sees that moment in theirs. Tasks stored before this
+// were minted in the company zone and keep that moment.
 //
-// It read viewerZone() until a transcript proposal approved for 9 September
-// came back as a task due the 10th. The stamp is the day's LAST SECOND, so a
-// reader one second east of the minting zone already sees tomorrow; nothing
-// about that was a preference to respect.
+// It is a HOOK rather than a constant for both stored zones, because each
+// answer arrives over the wire. A plain helper that needs one takes it as a
+// parameter from the component that read it — never by importing the fallback
+// below, which is a different value that only happens to agree.
+
+import { isRealCalendarDay } from "./calendarday";
 
 // The zone a record's dates are read in when the installation's own answer is
-// missing. It is only the last resort. `useRecordZone` in
-// lib/recordzone.tsx serves `installation.timezone`. The authenticated shell
+// missing. It is only the last resort. `useCompanyZone` in
+// lib/companyzone.tsx serves `installation.timezone`. The authenticated shell
 // holds its first paint until that read lands, so no signed-in surface renders
 // a record date against this constant.
 //
@@ -64,22 +61,43 @@
 // that, and names this comment when it does.
 export const UTC_ZONE = "UTC";
 
-export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
+// The zone the AI model rate sheet counts its effective days in: the server
+// stores and compares each price's day as a UTC date (ai/ratewrite.go).
+export const AI_RATE_DAY_ZONE = UTC_ZONE;
+
+export const FALLBACK_COMPANY_ZONE = "Europe/Berlin";
+
+// IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
+// freeze DST rules without a sign, so they throw at the edge.
+export function assertIanaZone(zone: string): void {
+  if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
+    throw new Error(
+      `timezone must be an IANA name, got fixed offset "${zone}"`,
+    );
+  }
+  // Intl rejects unknown names: constructing with the zone throws a RangeError
+  // that propagates. format() forces the value to be consumed.
+  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+}
 
 /**
- * The zone the reader's own browser is in, or `UTC` when it will not say.
+ * Whether the formatters will accept this zone, asked without throwing.
  *
- * A function, not a constant, on purpose. A module-level constant is evaluated
- * once at import time, which is before the app has rendered anything — so it
- * would freeze the answer for the whole session, outlive a reader who changed
- * their machine's zone or crossed one, and be captured before a test that
- * pretends to be elsewhere had installed its own answer. Constructing an
- * `Intl.DateTimeFormat` per call is cheap next to the render it feeds.
- *
- * A runtime with no zone to report leaves `timeZone` empty, and an empty string
- * is not a zone Intl accepts — it throws. `UTC` is the honest fallback: it
- * names a real zone, and it is the one every wire instant is already stored in.
+ * A page rendering a list of moments cannot let one row's zone take it down,
+ * so it asks before it formats. A probe with Intl alone learns only that the
+ * name resolves. `Etc/GMT-1`, `GMT` and `+01:00` resolve, then throw inside
+ * `formatDate`. So this derives from the assertion, the one reading of
+ * "a zone this renders".
  */
+export function isRenderableZone(zone: string): boolean {
+  try {
+    assertIanaZone(zone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The reader's own zone, named and offset — "Indochina Time · UTC+7".
  *
@@ -88,13 +106,21 @@ export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
  * of those places, and "Tuesday, 08:00" with no zone is the sentence that gets
  * that wrong.
  *
+ * A named `zone` reads that zone instead of the reader's own.
+ *
  * Both halves come from Intl's own names, so the zone reads in the reader's
  * language; the offset is spelled UTC rather than Intl's GMT, because that is
  * what the rest of the product says.
  */
-export function zoneNameAndOffset(locale: string, at: Date): string {
+export function zoneNameAndOffset(
+  locale: string,
+  at: Date,
+  zone?: string,
+): string {
+  // A zone the formatters refuse is shown as stored, not dropped.
+  if (zone !== undefined && !isRenderableZone(zone)) return zone;
   const named = (style: "long" | "shortOffset") =>
-    new Intl.DateTimeFormat(locale, { timeZoneName: style })
+    new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
       .formatToParts(at)
       .find((piece) => piece.type === "timeZoneName")?.value ?? "";
   return [named("long"), named("shortOffset").replace("GMT", "UTC")]
@@ -102,16 +128,16 @@ export function zoneNameAndOffset(locale: string, at: Date): string {
     .join(" · ");
 }
 
-export function viewerZone(): string {
+// A function, so a change of zone is read on the next call. A runtime that
+// reports no zone gets UTC, since Intl throws on an empty one.
+export function browserZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || UTC_ZONE;
 }
 
-// The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
-// names — positive east of UTC, negative west. Derived by re-reading the
-// instant's wall clock through the zone and comparing it back against UTC,
-// the standard technique for converting a zoned wall clock to an instant
-// without a timezone-database library.
-export function zoneOffsetMs(utcMs: number, zone: string): number {
+// The wall clock `zone` reads at the instant `utcMs` names, spelled as if it
+// were a UTC instant, so two readings compare and subtract as plain numbers.
+// Read to the second: Intl never reports a fraction.
+function wallClockMs(utcMs: number, zone: string): number {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone: zone,
@@ -126,7 +152,7 @@ export function zoneOffsetMs(utcMs: number, zone: string): number {
       .formatToParts(new Date(utcMs))
       .map((part) => [part.type, part.value]),
   );
-  const asIfUtc = Date.UTC(
+  return Date.UTC(
     Number(parts.year),
     Number(parts.month) - 1,
     Number(parts.day),
@@ -134,9 +160,15 @@ export function zoneOffsetMs(utcMs: number, zone: string): number {
     Number(parts.minute),
     Number(parts.second),
   );
+}
+
+// The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
+// names: positive east of UTC, negative west. It is the zone's wall clock
+// read back against UTC, which needs no timezone-database library.
+export function zoneOffsetMs(utcMs: number, zone: string): number {
   // The wall clock is read to the second, so the instant is too: compared
   // with its milliseconds, an instant 1ms past a second read 1ms off UTC.
-  return asIfUtc - Math.floor(utcMs / 1000) * 1000;
+  return wallClockMs(utcMs, zone) - Math.floor(utcMs / 1000) * 1000;
 }
 
 // instantInZone resolves the UTC instant at which `zone`'s wall clock reads
@@ -206,20 +238,140 @@ function startOfDayInstant(dateOnly: string, zone: string): number {
   if (dayInZone(resolved, zone) === dateOnly) {
     return resolved;
   }
-  const minute = 60_000;
-  // Two hours covers every transition tzdata records; the loop exits at the
-  // first minute that reads as the wanted day.
-  for (let step = 1; step <= 120; step += 1) {
-    const candidate = resolved + step * minute;
-    if (dayInZone(candidate, zone) === dateOnly) {
-      return candidate;
-    }
-  }
   // No minute in two hours reads as the wanted day. That is not a zone rule
   // this code knows how to interpret, and guessing would silently file records
   // under a day nobody picked — so the honest answer is the unadjusted one,
   // which is what every caller got before this correction existed.
-  return resolved;
+  return (
+    firstMinuteReadingAtLeast(wallClockOfDay(dateOnly, 0), zone, resolved) ??
+    resolved
+  );
+}
+
+const MINUTE_MS = 60_000;
+export const DAY_MS = 86_400_000;
+
+// The first whole minute after `from` at which `zone`'s wall clock reads
+// `wall` or later: the end of a removed span. Two hours covers every
+// transition tzdata records, so the walk gives up after 120 steps.
+function firstMinuteReadingAtLeast(
+  wall: number,
+  zone: string,
+  from: number,
+): number | undefined {
+  const start = Math.floor(from / MINUTE_MS) * MINUTE_MS;
+  for (let step = 1; step <= 120; step += 1) {
+    const candidate = start + step * MINUTE_MS;
+    if (wallClockMs(candidate, zone) >= wall) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+// A `yyyy-mm-dd` day plus a time of day, in the wallClockMs spelling.
+function wallClockOfDay(dateOnly: string, timeOfDayMs: number): number {
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = dateOnly
+    .split("-")
+    .map(Number);
+  return Date.UTC(year, month - 1, day) + timeOfDayMs;
+}
+
+/**
+ * The time of day a task is due at, as `HH:MM` on `zone`'s wall clock, or
+ * `""` for a task due by a day. `hasTime` is the task's own `due_has_time`:
+ * the server's flag decides, never what the clock happens to read, so a task
+ * stored at any instant of its day reads as a day until it says otherwise.
+ */
+export function dueTimeOf(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  zone: string,
+): string {
+  const at = Date.parse(dueAt);
+  if (hasTime !== true || Number.isNaN(at)) {
+    return "";
+  }
+  return wallClockTime(at, zone);
+}
+
+/** `HH:MM` on `zone`'s wall clock at the instant `at`. */
+export function wallClockTime(at: number, zone: string): string {
+  const timeOfDay = ((wallClockMs(at, zone) % DAY_MS) + DAY_MS) % DAY_MS;
+  const minutes = Math.floor(timeOfDay / 60_000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
+/**
+ * The instant on `day` at which `zone`'s wall clock reads `timeOfDayMs` past
+ * midnight, in whole seconds. On a DST switch day a wall time can be missing
+ * or happen twice:
+ * - missing (02:30 in Berlin on 29 March 2026): the first instant after the
+ *   gap, 03:00;
+ * - twice (02:30 in Berlin on 25 October 2026): the earlier one, on summer time.
+ *
+ * A day the zone skipped whole (30 December 2011 in Apia) has no such instant,
+ * so it is refused rather than filed on a neighbouring day.
+ */
+export function instantAtWallClock(
+  day: string,
+  timeOfDayMs: number,
+  zone: string,
+): number {
+  if (!isRealCalendarDay(day)) {
+    throw new RangeError(`not a calendar day: ${day}`);
+  }
+  // Date.UTC maps years 0-99 onto 1900-1999, so such a day would resolve to
+  // another century without a sign.
+  if (Number(day.slice(0, 4)) < 100) {
+    throw new RangeError(`year out of range: ${day}`);
+  }
+  const wanted = wallClockOfDay(day, timeOfDayMs);
+  // The offsets a day either side of the wanted time. On a switch day they
+  // are the two in force; on any other day they agree.
+  const offsets = [
+    zoneOffsetMs(wanted - DAY_MS, zone),
+    zoneOffsetMs(wanted + DAY_MS, zone),
+  ];
+  const readings = offsets
+    .map((offset) => wanted - offset)
+    .filter((candidate) => wallClockMs(candidate, zone) === wanted);
+  if (readings.length > 0) {
+    return Math.min(...readings);
+  }
+  const afterGap = firstMinuteReadingAtLeast(
+    wanted,
+    zone,
+    wanted - Math.max(...offsets),
+  );
+  if (afterGap === undefined || dayInZone(afterGap, zone) !== day) {
+    throw new RangeError(`${day} has no such time in ${zone}`);
+  }
+  return afterGap;
+}
+
+/**
+ * The instant on `day` at which `zone`'s wall clock reads what it read at
+ * `instant`. A meeting moved to another day keeps its time of day there, by
+ * the DST rule of `instantAtWallClock`. The source's milliseconds are kept,
+ * because the wall clock is read to the second.
+ */
+export function sameWallClockOnDay(
+  instant: string,
+  day: string,
+  zone: string,
+): string {
+  const sourceMs = Date.parse(instant);
+  if (Number.isNaN(sourceMs)) {
+    throw new RangeError(`not an instant: ${instant}`);
+  }
+  const fraction = sourceMs - Math.floor(sourceMs / 1000) * 1000;
+  const sourceWall = wallClockMs(sourceMs, zone);
+  const timeOfDay = ((sourceWall % DAY_MS) + DAY_MS) % DAY_MS;
+  return new Date(
+    instantAtWallClock(day, timeOfDay, zone) + fraction,
+  ).toISOString();
 }
 
 /**
@@ -260,7 +412,7 @@ export function endOfDayInZone(dateOnly: string, zone: string): string {
 export function timezoneOptions(locale: string, selected: string, at: Date) {
   const zones = new Set([
     UTC_ZONE,
-    viewerZone(),
+    browserZone(),
     ...(typeof Intl.supportedValuesOf === "function"
       ? Intl.supportedValuesOf("timeZone")
       : []),

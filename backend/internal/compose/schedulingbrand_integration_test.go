@@ -32,10 +32,10 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
 	uploadMark(t, e, companyHandlers{store: e.Contacts, blob: blob}, logoFixture(t, 400, 100), "logo.png")
-	store := e.Activities.WithSchedulingBrand(e.Contacts)
+	store := e.Activities.WithSchedulingBrand(e.Contacts).WithSchedulingCalendar(privateCalendar{}).WithPublicBaseURL("https://crm.example.test")
 	obsoleteName, obsoleteLogo := "Obsolete company", "https://old.example/logo.png"
 	profile, err := store.SaveSchedulingProfile(e.Admin(), crmcontracts.SchedulingProfile{
-		CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30,
+		Enabled: true, Provider: "gcal", CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30,
 		Title: "Let's meet", CompanyName: &obsoleteName, LogoUrl: &obsoleteLogo,
 	})
 	if err != nil {
@@ -44,7 +44,7 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	if profile.CompanyName == nil || *profile.CompanyName != "Acme GmbH" || profile.LogoUrl == nil {
 		t.Fatalf("profile did not use anchor identity: %+v", profile)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
 	logo := httptest.NewRecorder()
 	server.ServeHTTP(logo, httptest.NewRequest(http.MethodGet, *profile.LogoUrl, nil))
 	if logo.Code != http.StatusOK || logo.Header().Get("Content-Type") != "image/png" {
@@ -76,8 +76,8 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	if err := json.Unmarshal(guest.Body.Bytes(), &public); err != nil {
 		t.Fatal(err)
 	}
-	if guest.Code != http.StatusOK || public.CompanyName != "New anchor name" || public.Enabled {
-		t.Fatalf("public profile did not follow the anchor or changed paused status: %d %+v", guest.Code, public)
+	if guest.Code != http.StatusOK || public.CompanyName != "New anchor name" || !public.Enabled {
+		t.Fatalf("public profile did not follow the anchor or changed its open status: %d %+v", guest.Code, public)
 	}
 	if _, err := e.Contacts.ClearCompanyLogo(e.Admin(), contacts.LogoWide); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T
 	if _, err := e.Contacts.SetAnchorCompanyLogo(e.Admin(), contacts.LogoWide, key, "legacy.png"); err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/booking/company-logo", nil))
 	picture, err := png.Decode(response.Body)
@@ -161,7 +161,7 @@ func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob), WithKeyvault(vault), WithPublicBaseURL("https://crm.example.test"))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob), WithKeyvault(vault), WithPublicBaseURL("https://crm.example.test"))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/proposal/"+strings.Split(proposal.URL, "proposal-")[1], nil))
 	var public crmcontracts.PublicMeetingProposal
@@ -175,7 +175,7 @@ func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
 
 type unavailableBookingBrand struct{ reads int }
 
-func (b *unavailableBookingBrand) PublicBookingBrand(context.Context) (string, *string, error) {
+func (b *unavailableBookingBrand) PublicBookingBrand(context.Context, ids.UserID) (string, *string, error) {
 	b.reads++
 	return "", nil, errors.New("branding unavailable")
 }
@@ -199,5 +199,66 @@ func TestBookingBrandFailureDoesNotFailCommittedSettingsOrAvailability(t *testin
 	}
 	if len(slots) == 0 || brand.reads != 0 {
 		t.Fatalf("availability depends on brand: slots=%d brand reads=%d", len(slots), brand.reads)
+	}
+}
+
+// Two hosts working for two legal entities each show their own entity on the
+// booking page, and an entity's logo is served without login. An entity with no
+// logo shows its name and borrows no other entity's.
+func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
+	e := integration.Setup(t)
+	blob := blobstore.NewMemory()
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
+	theCompanyExists(t, e)
+	uploadMark(t, e, handlers, logoFixture(t, 400, 100), "logo.png")
+	admin := e.As(e.Rep1, nil, integration.AdminPerms)
+	vienna := describeVienna(t, e)
+	if recorder := uploadEntityMark(admin, t, handlers, vienna.ID); recorder.Code != http.StatusOK {
+		t.Fatalf("upload the entity logo → %d %s", recorder.Code, recorder.Body)
+	}
+	if err := e.Contacts.AssignLegalEntityMember(admin, vienna.ID, ids.From[ids.UserKind](e.Rep1)); err != nil {
+		t.Fatalf("assign: %v", err)
+	}
+	store := e.Activities.WithSchedulingBrand(e.Contacts)
+	profileOf := func(ctx context.Context) crmcontracts.SchedulingProfile {
+		t.Helper()
+		profile, err := store.SaveSchedulingProfile(ctx, crmcontracts.SchedulingProfile{
+			CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30, Title: "Let's meet",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return profile
+	}
+
+	anchorHost := profileOf(e.Admin())
+	if anchorHost.CompanyName == nil || *anchorHost.CompanyName != "Acme GmbH" ||
+		anchorHost.LogoUrl == nil || *anchorHost.LogoUrl != "/v1/public/booking/company-logo" {
+		t.Fatalf("a default-entity host: %q %q, want the anchor's name and logo", deref(anchorHost.CompanyName), deref(anchorHost.LogoUrl))
+	}
+	viennaHost := profileOf(e.As(e.Rep1, nil, integration.AdminPerms))
+	if viennaHost.CompanyName == nil || *viennaHost.CompanyName != "Wien" ||
+		viennaHost.LogoUrl == nil || *viennaHost.LogoUrl != "/v1/public/booking/company-logo?entity="+vienna.ID.String() {
+		t.Fatalf("a Vienna host: %q %q, want Wien and its own logo", deref(viennaHost.CompanyName), deref(viennaHost.LogoUrl))
+	}
+
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
+	logo := httptest.NewRecorder()
+	server.ServeHTTP(logo, httptest.NewRequest(http.MethodGet, *viennaHost.LogoUrl, nil))
+	if logo.Code != http.StatusOK || logo.Header().Get("Content-Type") != "image/png" {
+		t.Fatalf("anonymous entity logo: %d %s", logo.Code, logo.Body.String())
+	}
+
+	if _, err := e.Contacts.ClearLegalEntityLogo(admin, vienna.ID, nil); err != nil {
+		t.Fatalf("clear: %v", err)
+	}
+	bare := profileOf(e.As(e.Rep1, nil, integration.AdminPerms))
+	if bare.CompanyName == nil || *bare.CompanyName != "Wien" || bare.LogoUrl != nil {
+		t.Fatalf("an entity with no logo: %q %q, want its name and no logo", deref(bare.CompanyName), deref(bare.LogoUrl))
+	}
+	gone := httptest.NewRecorder()
+	server.ServeHTTP(gone, httptest.NewRequest(http.MethodGet, *viennaHost.LogoUrl, nil))
+	if gone.Code != http.StatusNotFound {
+		t.Fatalf("a removed entity logo is still public: %d", gone.Code)
 	}
 }

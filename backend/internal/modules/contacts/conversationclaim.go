@@ -52,6 +52,7 @@ type ClaimInput struct {
 	// quotes a slightly different clause of the same promise finds the same
 	// claim. Empty for a human's claim, which is keyed on its exact quote.
 	Locator string
+	Renewal bool
 }
 
 // RecordConversationClaim writes one claim through the audited write shape.
@@ -67,11 +68,9 @@ func (s *Store) RecordConversationClaim(ctx context.Context, in ClaimInput) (crm
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
-	// Human-only in the STORE as well as the router table. The route is
-	// declared human-only today, but a store that relies on the routing
-	// declaration alone is one x-mcp-tool away from being agent-reachable
-	// without anybody revisiting this function.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Checked in the STORE as well as the router table. The user or their agent
+	// records a promise; passportless work never does.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
@@ -137,7 +136,7 @@ func activityWithinProject(alias string, projectPos int) string {
 // whose source the caller may not read is not returned, because the claim
 // would otherwise quote a message the reader has no grant for.
 func (s *Store) ClaimsForContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
-	return s.readClaims(ctx, tx, contactID, within, sqlAlwaysVisible, "c.created_at DESC", limit)
+	return s.readClaims(ctx, tx, contactID, within, false, "c.created_at DESC", limit)
 }
 
 // OpenCommitmentsForContact reads the open promises WE made to this contact,
@@ -156,8 +155,7 @@ func (s *Store) ClaimsForContact(ctx context.Context, tx pgx.Tx, contactID ids.C
 // Two spellings of one read is how the two end up disagreeing about which
 // claims exist.
 func (s *Store) OpenCommitmentsForContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error) {
-	const open = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review`
-	return s.readClaims(ctx, tx, contactID, within, open, "c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id", limit)
+	return s.readClaims(ctx, tx, contactID, within, true, "c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id", limit)
 }
 
 // readClaims is the read both entry points share. `extra` narrows the
@@ -165,7 +163,7 @@ func (s *Store) OpenCommitmentsForContact(ctx context.Context, tx pgx.Tx, contac
 // never anything off a request.
 func (s *Store) readClaims(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID,
-	extra, order string, limit int,
+	onlyOpen bool, order string, limit int,
 ) ([]crmcontracts.ConversationClaim, error) {
 	// The object grant first, then the audience clause. The clause narrows rows
 	// for a caller already admitted; it asks nobody whether the caller may read
@@ -179,7 +177,13 @@ func (s *Store) readClaims(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
-	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	admission := currentCommitmentAdmission(s.clock(), arg)
+	extra := sqlAlwaysVisible
+	if onlyOpen {
+		extra = `c.kind = 'commitment_ours' AND c.status = 'open' AND NOT c.needs_review AND ` + admission
+	}
+
+	scope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -192,10 +196,12 @@ func (s *Store) readClaims(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id, c.kind, c.body, c.source_activity_id, c.source_quote,
-		       a.subject, a.occurred_at, c.status, c.due_at, c.needs_review,
-		       c.corrected_at, c.task_activity_id
+		       a.subject, a.occurred_at, a.occurred_precision, c.status, c.due_at,
+ (c.needs_review OR (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`)),
+		       c.corrected_at, c.task_activity_id, c.taken_by_user_id, taker.display_name, c.taken_at
 		FROM conversation_claim c
 		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
 		WHERE c.contact_id = $%d AND c.archived_at IS NULL AND (%s) AND %s AND (%s)
 		ORDER BY %s
 		LIMIT %d`, contactPos, scope, filed, extra, order, limit), args...)
@@ -208,12 +214,12 @@ func (s *Store) readClaims(
 	for rows.Next() {
 		var claim crmcontracts.ConversationClaim
 		var id, activityID ids.UUID
-		var taskID *ids.UUID
+		var taskID, takerID *ids.UUID
 		var subject *string
 		var occurredAt time.Time
 		if err := rows.Scan(&id, &claim.Kind, &claim.Body, &activityID, &claim.SourceQuote,
-			&subject, &occurredAt, &claim.Status, &claim.DueAt, &claim.NeedsReview,
-			&claim.CorrectedAt, &taskID); err != nil {
+			&subject, &occurredAt, &claim.OccurredPrecision, &claim.Status, &claim.DueAt, &claim.NeedsReview,
+			&claim.CorrectedAt, &taskID, &takerID, &claim.TakenByName, &claim.TakenAt); err != nil {
 			return nil, fmt.Errorf("scan a conversation claim: %w", err)
 		}
 		claim.Id = openapi_types.UUID(id)
@@ -223,6 +229,10 @@ func (s *Store) readClaims(
 		if taskID != nil {
 			task := openapi_types.UUID(*taskID)
 			claim.TaskActivityId = &task
+		}
+		if takerID != nil {
+			taker := openapi_types.UUID(*takerID)
+			claim.TakenByUserId = &taker
 		}
 		out = append(out, claim)
 	}
@@ -308,7 +318,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectsPos := arg(projectIDs)
 	nowPos := arg(now)
-	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	activityScope, err := claimContentClause(ctx, arg)
 	if err != nil {
 		return nil, false, err
 	}
@@ -330,7 +340,7 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 	// DISTINCT ON needs its key first in ORDER BY, and the id breaks the tie
 	// so two equally urgent commitments do not swap places between two reads
 	// of the same page.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		SELECT DISTINCT ON (l.project_id)
 		       l.project_id, c.body, coalesce(pr.full_name, ''), c.due_at,
 		       c.source_activity_id, (%[4]s) AS contact_visible
@@ -338,13 +348,14 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN activity_link l ON l.activity_id = a.id AND l.project_id = ANY($%[1]d)
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE `+theirPromiseOpen+`
+		 WHERE `+theirPromiseOpen(now, arg)+`
 		   AND c.archived_at IS NULL
 		   AND (%[3]s)
 		 ORDER BY l.project_id,
 		          (c.due_at IS NOT NULL AND c.due_at < $%[2]d) DESC,
 		          c.created_at DESC, c.id`,
-		projectsPos, nowPos, activityScope, contactScope), args...)
+		projectsPos, nowPos, activityScope, contactScope)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
 	}

@@ -19,7 +19,7 @@
 #              so a running dev stack and this lane never collide either. More
 #              than one package touches Redis, and at least two FLUSHDB between
 #              tests, so this is an isolation boundary rather than a convenience
-#              — see the NPKGS guard below for what happens when it is short.
+#              — batches wait before reusing the reserved test block.
 # Within a package nothing changes — still -p 1, the same sequential model that is
 # green today — so no test file needs editing.
 #
@@ -53,7 +53,7 @@
 #                           covdata pods for the CI fan-in to reconcile + merge;
 #                           coverage instrumentation is on iff this is set
 #   INTEGRATION_TIMEOUT     per-package go-test timeout, as <seconds>s (default
-#                           600s; the budget column parses this). Resolved in
+#                           900s; the budget column parses this). Resolved in
 #                           scripts/lib-testdb.sh, shared with the one-package lane
 #   MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN   owner + app DSNs (Makefile defaults)
 #
@@ -119,19 +119,19 @@ IT_BUDGET="$IT_TIMEOUT"
 # A sharded run executes a SLICE — CI's matrix gives each shard a sixth of the
 # tree — so the budget is generous headroom for it. An unsharded run executes
 # whole packages, and compose/integration alone is 2284 tests: measured at 886s
-# on an unmodified main, against a 600s bound. go test kills it at the ceiling,
+# on an unmodified main, past the bound a slice needs. go test kills it at the ceiling,
 # so NONE of its tests report, and a real regression in the same push would be
 # invisible behind a timeout.
 #
 # So an unsharded run gets a multiple, and the budget column still prices every
-# package against the 600s policy — "split it before it crosses" keeps being
+# package against the budget policy — "split it before it crosses" keeps being
 # said about a package that is genuinely too big. What stops is a hang detector
 # calibrated for a sixth of the work killing a run doing all of it.
 #
 # An explicit INTEGRATION_TIMEOUT overrides both halves, because a caller naming
 # a bound means it.
 if [[ -z "${INTEGRATION_TIMEOUT:-}" ]] && (( SHARD_TOTAL <= 1 )); then
-  # Three times the budget. The slowest package measures 1.5x it today, so this
+  # Twice the budget. The slowest package measures about 1x it today, so this
   # is headroom for a slower machine rather than a number chosen to fit — and it
   # is still far under the CI job limit this bound exists to pre-empt with a
   # legible message.
@@ -191,11 +191,12 @@ echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_
 GO_DIRS=(backend)
 
 # Redis logical dbs available to the lane: every db the server serves except 0,
-# which `make dev` owns. Must match --databases in docker-compose.dev.yml.
-# It is one PER PACKAGE, not per concurrent job — a package's keys must survive
-# the whole package, and a slot freed by a finished package cannot be handed on
-# while its successor is still reading.
-REDIS_DBS=63
+# which `make dev` owns, and the block above this one, which the per-worktree
+# dev stacks take. So --databases in docker-compose.dev.yml is higher than this
+# number, not equal to it, and the gate asserts the offset rather than equality.
+# Packages in each batch own distinct databases until the whole batch exits.
+# Later batches reuse that block without entering the worktree dev allocation.
+REDIS_DBS=64
 
 # Candidate packages: every directory in the module that holds test files. Which
 # of them belong to THIS lane is decided by the build-constraint scan in
@@ -239,6 +240,9 @@ TIMEDOUT="$(mktemp)"
 LANE_T0="$(date +%s)"
 export LANE_T0 WALLCLOCK
 OUTDIR="$(mktemp -d)"
+# Each package process appends the large statements it sends here; the lane
+# checks them for a repeated content gate once every package passed.
+export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # Set on the failing path only, and read by the trap below, which then leaves
 # $OUTDIR behind. The per-package logs are the ONLY copy of a failure that is not
 # interleaved with 35 other packages; deleting them on the way out made an
@@ -345,6 +349,9 @@ while IFS='|' read -r d rel; do
         # slice — does not apply, because `bench` is not built-in and nothing
         # in this lane defines it.
         'integration && bench') skip_file=1 ;;
+        # The weekly role sweep (make test-roles), kept out of the merge gate
+        # the same way and for the same reason as the benchmarks.
+        'integration && rolesweep') skip_file=1 ;;
         *)
           echo "FAIL: $f carries build constraint '$expr' — not one the static shard discovery knows" >&2
           echo "  teach the allowlist in scripts/test-integration-parallel.sh or simplify the constraint" >&2
@@ -454,17 +461,6 @@ done < "$GROUPED"
 rm -f "$GROUPED"
 
 NPKGS=$(wc -l < "$WORK" | tr -d ' ')
-# One Redis logical db per package, and there must be enough of them. Wrapping
-# the mapping instead is what this guard exists to prevent: two packages on one
-# db do not run slowly, they corrupt each other — platform/events and every
-# suite on platform/redistest FLUSHDB between tests, so a collision wipes the
-# other package's keys mid-test and the failure surfaces in whichever suite was
-# reading them, with nothing pointing back here. Redis serves REDIS_DBS+1
-# databases (docker-compose.dev.yml); db 0 is reserved for `make dev`.
-if (( NPKGS > REDIS_DBS )); then
-  echo "FAIL: $NPKGS integration packages but only $REDIS_DBS Redis logical dbs — raise all three together: REDIS_DBS here, testdb.RedisDBs in backend/internal/platform/testdb/redis.go (same value), and --databases in docker-compose.dev.yml (one MORE, it counts the reserved db 0)"
-  exit 1
-fi
 # Say what was left to the unit lane. An unreported exclusion and a broken
 # selector produce the same silence, and this lane's whole contract is that a
 # thinner run must never read as a passing one.
@@ -489,9 +485,8 @@ run_one() {
   local db="margince_it_p${idx}_$$"
   local log="$outdir/$idx.log"
   local bucket; bucket="$(bucket_for "$idx")"
-  # Redis logical db per slot — db 0 stays reserved for `make dev`. The modulo
-  # never wraps in practice: the NPKGS guard above refuses the run rather than
-  # let two packages land on one db.
+  # The batch barrier lets this wrap only after the previous holder exits.
+  # Database 0 and the higher worktree dev block stay outside this mapping.
   local redis_db=$(( 1 + (idx - 1) % REDIS_DBS ))
   # Coverage args (empty unless COVERDIR is set — shard mode with a manifest
   # dir). -coverpkg=./... attributes cross-package exercise; binary output goes
@@ -549,11 +544,7 @@ export REDIS_DBS
 # is this script's to reduce.
 FANOUT_T0=$(( $(date +%s) - LANE_T0 ))
 
-# Fan out with a bounded worker pool. nl numbers the lines → stable per-job db
-# names + logs. The work line rides as a positional arg, not spliced into the
-# script, so the shard-mode regex characters never meet the shell.
-nl -ba -w1 -s'|' "$WORK" \
-  | xargs -P "$JOBS" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$OUTDIR"
+run_integration_packages "$WORK" "$JOBS" "$REDIS_DBS" "$OUTDIR"
 
 # Aggregate: print every log in package (idx) order, then enforce the teeth.
 fail=0
@@ -817,6 +808,15 @@ if [[ "$fail" -ne 0 ]]; then
     echo "    copied to the shard artifact: $SHARD_OUT/"
   fi
   exit 1
+fi
+
+# A shard saw a slice of the statements, so it hands its seen senders to the
+# fan-in, which judges staleness over every shard. A whole lane judges it here.
+check_repeated_gates "$MARGINCE_SQL_CENSUS_DIR" "$OUTDIR/repeated-gates.txt"
+if [[ -n "$SHARD_OUT" ]]; then
+  cp "$OUTDIR/repeated-gates.txt" "$SHARD_OUT/repeated-gates.txt"
+else
+  stale_repeated_gates "$OUTDIR/repeated-gates.txt"
 fi
 
 # The manifests the fan-in reconciles: full discovery (identical across

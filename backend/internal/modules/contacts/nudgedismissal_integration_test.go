@@ -59,9 +59,10 @@ func dismissedNow(
 		for _, c := range contacts {
 			ids_ = append(ids_, c.UUID)
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(
+		query := fmt.Sprintf(
 			`SELECT e.contact_id FROM (SELECT unnest($%d::uuid[]) AS contact_id) e
-			  WHERE NOT (%s)`, arg(ids_), keep), args...)
+			  WHERE NOT (%s)`, arg(ids_), keep)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}

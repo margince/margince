@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -205,7 +204,7 @@ func (s *PolicyStore) List(ctx context.Context) ([]Policy, error) {
 	}
 	var out []Policy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		retainOnly, err := settings.GetTx(ctx, tx, RetainOnly)
+		retainOnly, err := retainOnlyTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -258,7 +257,7 @@ func (s *PolicyStore) Create(ctx context.Context, in PolicyInput) (Policy, error
 	}
 	var out Policy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		retainOnly, err := settings.GetTx(ctx, tx, RetainOnly)
+		retainOnly, err := retainOnlyTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -300,7 +299,7 @@ func (s *PolicyStore) Update(ctx context.Context, id ids.UUID, patch PolicyPatch
 	}
 	var out Policy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		retainOnly, err := settings.GetTx(ctx, tx, RetainOnly)
+		retainOnly, err := retainOnlyTx(ctx, tx)
 		if err != nil {
 			return err
 		}

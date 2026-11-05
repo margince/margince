@@ -43,28 +43,18 @@ func NewStore(db *database.DB) *Store {
 
 // Notice is one durable line addressed to one contact.
 type Notice struct {
-	Origin    *crmcontracts.NoticeOrigin
-	ID        ids.UUID
-	Kind      string
-	Subject   string
-	Body      string
-	Target    Target
-	CreatedAt time.Time
+	ApprovalID *ids.ApprovalID
+	Origin     *crmcontracts.NoticeOrigin
+	ID         ids.UUID
+	Kind       string
+	Subject    string
+	// SubjectParts is Subject taken apart, on an approval notice whose summary
+	// lists field values. Nil on any other notice, and on one written before.
+	SubjectParts *crmcontracts.ApprovalSummaryParts
+	Body         string
+	Target       Target
+	CreatedAt    time.Time
 }
-
-// Target is the record a notice is about, when it is about one.
-//
-// Both halves or neither, which the table's own constraint holds: a type with
-// no id names a KIND of thing and cannot be opened, and an id with no type
-// cannot be routed to a screen. The zero value is a notice about no record —
-// a capture backlog, a coach's word — and those are the majority.
-type Target struct {
-	Type string
-	ID   ids.UUID
-}
-
-// Named reports whether this notice points at a record.
-func (t Target) Named() bool { return t.Type != "" && !t.ID.IsZero() }
 
 // NewNotice is one notice to record. It is a struct rather than a parameter
 // list because the dedupe key is the fifth thing a caller might say about a
@@ -75,7 +65,10 @@ type NewNotice struct {
 	Recipient ids.UserID
 	Kind      string
 	Subject   string
-	Body      string
+	// SubjectParts is Subject taken apart, when it is an approval's summary of
+	// a sentence and field values. The bell shows the values as a list.
+	SubjectParts *crmcontracts.ApprovalSummaryParts
+	Body         string
 	// DedupeKey is the caller's natural key for the EVENT this notice is
 	// about. A second Create carrying the same key for the same recipient
 	// answers the first notice's id and writes nothing.
@@ -144,13 +137,20 @@ func (s *Store) Create(ctx context.Context, in NewNotice) (ids.UUID, error) {
 // ClassFor does not place would otherwise land a line in a centre whose
 // settings page has no row governing it, and no reader could ever route it.
 func (s *Store) CreateTx(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID, error) {
+	id, _, err := s.CreateTxNew(ctx, tx, in)
+	return id, err
+}
+
+// CreateTxNew is CreateTx that also says whether this call wrote the notice, so
+// a caller counting who was told does not count a dedupe replay.
+func (s *Store) CreateTxNew(ctx context.Context, tx pgx.Tx, in NewNotice) (ids.UUID, bool, error) {
 	if _, err := ClassFor(in.Kind); err != nil {
-		return ids.Nil, err
+		return ids.Nil, false, err
 	}
 	// No evidence: a system flow's authority is the engine's own, which the
 	// audit row's actor already states.
-	row, err := s.insertNoticeTx(ctx, tx, in, nil)
-	return row.ID, err
+	row, written, err := s.insertNoticeTx(ctx, tx, in, nil)
+	return row.ID, written, err
 }
 
 // insertNotice is the write in a transaction of its own — the coaching path,
@@ -163,7 +163,7 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	var written Notice
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var txErr error
-		written, txErr = s.insertNoticeTx(ctx, tx, in, evidence)
+		written, _, txErr = s.insertNoticeTx(ctx, tx, in, evidence)
 		return txErr
 	}); err != nil {
 		return Notice{}, err
@@ -177,13 +177,13 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 // wants nothing else, and widening it would make four call sites carry a value
 // none of them reads. The coach path does read it: it answers 201 with the
 // notice, and the created_at on that answer has to be the row's own.
-func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evidence map[string]any) (Notice, error) {
+func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evidence map[string]any) (Notice, bool, error) {
 	if in.Kind == "" || in.Subject == "" {
-		return Notice{}, errors.New("notices: a notice names its kind and its subject")
+		return Notice{}, false, errors.New("notices: a notice names its kind and its subject")
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return Notice{}, err
+		return Notice{}, false, err
 	}
 	subject := textcut.Runes(in.Subject, subjectBound)
 	body := textcut.Runes(in.Body, bodyBound)
@@ -209,7 +209,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	//
 	// created_at is the column's own default, so the insert returns it rather
 	// than the caller stamping a second clock beside it.
-	args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, in.Origin}
+	args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, in.Origin, in.SubjectParts}
 	holders := make([]string, len(args))
 	for i := range args {
 		holders[i] = "$" + strconv.Itoa(i+1)
@@ -217,7 +217,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	placeholders := strings.Join(holders, ", ")
 	row := tx.QueryRow(ctx, `
 		INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by,
-		                    dedupe_key, target_type, target_id, origin)
+		                    dedupe_key, target_type, target_id, origin, subject_parts)
 		VALUES (`+placeholders+`)
 		ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
 		DO NOTHING
@@ -225,14 +225,15 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 		args...)
 	switch scanErr := row.Scan(&createdAt); {
 	case errors.Is(scanErr, pgx.ErrNoRows):
-		return storedNotice(ctx, tx, in.Recipient, in.DedupeKey)
+		stored, err := storedNotice(ctx, tx, in.Recipient, in.DedupeKey)
+		return stored, false, err
 	case scanErr != nil:
-		return Notice{}, fmt.Errorf("notices: recording the notice: %w", scanErr)
+		return Notice{}, false, fmt.Errorf("notices: recording the notice: %w", scanErr)
 	}
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "create", "notice", id,
 		map[string]any{"kind": in.Kind, "recipient_user_id": in.Recipient.String()}, evidence)
 	if err != nil {
-		return Notice{}, err
+		return Notice{}, false, err
 	}
 	recipientID := in.Recipient.UUID
 	if err := storekit.EmitEvent(ctx, tx, auditID, recipientID, crmcontracts.PublicEventNoticeCreated{
@@ -240,12 +241,12 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 		RecipientUserId: openapi_types.UUID(recipientID),
 		Kind:            in.Kind,
 	}); err != nil {
-		return Notice{}, err
+		return Notice{}, false, err
 	}
 	return Notice{
 		ID: id, Kind: in.Kind, Subject: subject, Body: body,
 		Target: in.Target, CreatedAt: createdAt, Origin: in.Origin,
-	}, nil
+	}, true, nil
 }
 
 // storedNotice answers the notice a repeat delivery collided with — ALL of it,
@@ -294,9 +295,10 @@ func storedNotice(ctx context.Context, tx pgx.Tx, recipient ids.UserID, dedupeKe
 //
 // A boolean expression over `notice` columns only, so it composes into a WHERE
 // arm and into RETURNING alike.
-const notTheReadersOwnStageMove = `NOT coalesce(
-	kind = 'automation' AND target_type = 'deal'
-	AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))
+const stageMoveNotice = `kind = 'automation' AND target_type = 'deal'
+ AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))`
+
+const notTheReadersOwnStageMove = `NOT coalesce(` + stageMoveNotice + `
 	AND origin->>'actor_type' = 'human'
 	AND lower(origin->>'actor_id') IN
 	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
@@ -328,6 +330,18 @@ func inTheReadersLane(mutedAt int) string {
 // contact behind it is refused with the permission sentinel, which the
 // attention feed renders as a withheld lane.
 func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
+	return s.unreadPage(ctx, limit, false)
+}
+
+// UnreadWorkFor omits stage history and mirrors of the authoritative approval queue.
+func (s *Store) UnreadWorkFor(ctx context.Context, limit int) ([]Notice, error) {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
+		return nil, err
+	}
+	return s.unreadPage(ctx, limit, true)
+}
+
+func (s *Store) unreadPage(ctx context.Context, limit int, workOnly bool) ([]Notice, error) {
 	seat, err := actingSeat(ctx, "reading your notices")
 	if err != nil {
 		return nil, err
@@ -342,8 +356,12 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		recipient, page := arg(seat), arg(limit)
 		lane := inTheReadersLane(arg(muted))
+		if workOnly {
+			lane += " AND NOT coalesce(" + stageMoveNotice + ", false)"
+			lane += fmt.Sprintf(" AND kind <> $%d", arg(KindApprovalPending))
+		}
 		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, coalesce(dedupe_key, '')
 			  FROM notice
 			 WHERE recipient_user_id = $%d AND read_at IS NULL
 			   AND %s
@@ -356,16 +374,21 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		unread = []Notice{}
 		for rows.Next() {
 			var n Notice
+			var noticeKey string
 			// Both halves are nullable and the table pairs them, so either
 			// arriving alone is a row the constraint should have refused.
 			var targetType *string
 			var targetID *ids.UUID
 			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-				&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
+				&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
 				return scanErr
 			}
 			if targetType != nil && targetID != nil {
 				n.Target = Target{Type: *targetType, ID: *targetID}
+			}
+			if approval, ok := approvalOfNoticeKey(n.Kind, noticeKey); ok {
+				typed := ids.From[ids.ApprovalKind](approval)
+				n.ApprovalID = &typed
 			}
 			unread = append(unread, n)
 		}
@@ -447,6 +470,21 @@ func (s *Store) Retract(ctx context.Context, tx pgx.Tx, dedupeKey string) (int64
 		 WHERE dedupe_key = $1 AND retracted_at IS NULL`, dedupeKey)
 	if err != nil {
 		return 0, fmt.Errorf("notices: taking back an announcement: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
+// RetractCopy takes back one member's copy of an announcement that was never
+// theirs to answer, leaving every other copy standing. Idempotent as Retract is.
+func (s *Store) RetractCopy(ctx context.Context, tx pgx.Tx, id ids.UUID) (int64, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE notice SET retracted_at = now()
+		 WHERE id = $1 AND retracted_at IS NULL`, id)
+	if err != nil {
+		return 0, fmt.Errorf("notices: taking back one copy of an announcement: %w", err)
 	}
 	return tag.RowsAffected(), nil
 }

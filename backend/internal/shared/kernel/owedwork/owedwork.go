@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // Source names where a promise was written down. It travels with the item
@@ -78,15 +79,19 @@ func (i Item) Overdue(now time.Time) bool { return deadline.Passed(i.DueAt, now)
 // that broke rather than as a date that just passed. Not "today" either: a
 // promise due at 23:00 is in that state at 01:00, and that is yesterday's
 // date on the reader's calendar.
-func LateWords(due *time.Time, now time.Time) (string, bool) {
+func LateWords(due *time.Time, now time.Time, language string) (string, bool) {
+	said := langcopy.For(language)
 	past, ok := deadline.DaysPast(due, now)
 	if !ok {
 		return "", false
 	}
 	if past == 0 {
-		return "Due less than a day ago and still open.", true
+		return said.Say(lateWords.Hours), true
 	}
-	return fmt.Sprintf("Due %d days ago and still open.", past), true
+	if past == 1 {
+		return said.Say(lateWords.Day), true
+	}
+	return fmt.Sprintf(said.Say(lateWords.Days), past), true
 }
 
 // MostRecentlySlipped is the overdue promise whose date passed LAST, and

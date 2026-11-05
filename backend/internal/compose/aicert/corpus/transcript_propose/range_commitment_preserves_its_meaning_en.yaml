@@ -1,0 +1,21 @@
+name: transcript_range_commitment_preserves_its_meaning_en
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - "Mira: I will send the revised scope next week."
+expect:
+  outcome: accepted
+  answer:
+    - line: 1
+      due_date: ""
+      meaning:
+        state: open
+        condition: ""
+        deadline_precision: range
+        deadline_quote: "next week"
+  judge: none
+  judge_none_reason: >
+    The definite promise remains actionable, but a range is not an exact due day.
+    The deterministic checks require the stated action set and exact deadline behavior.

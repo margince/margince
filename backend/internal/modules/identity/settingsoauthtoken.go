@@ -7,12 +7,13 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // minOAuthAccessTokenTTLMinutes is the shortest lifetime an admin may choose.
@@ -33,23 +34,34 @@ const minOAuthAccessTokenTTLMinutes = 5
 // MachineryApplied because the mint has no session to gate against: the token
 // endpoint is reached by the connector, not by a signed-in member, and the
 // lifetime must bind whoever completed the consent.
-var OAuthAccessTokenTTLMinutes = settings.Define[int](
-	"installation.oauth_access_token_ttl_minutes",
-	installationSettingsObject,
-	"update",
-	int(defaultPassportTTL/time.Minute),
-	func(minutes int) error {
-		if highest := int(maxPassportTTL / time.Minute); minutes < minOAuthAccessTokenTTLMinutes || minutes > highest {
-			return fmt.Errorf("an access token lives %d..%d minutes, not %d", minOAuthAccessTokenTTLMinutes, highest, minutes)
-		}
-		return nil
-	},
-).MachineryApplied() // both OAuth mints apply it to the passport they issue
+var OAuthAccessTokenTTLMinutes = config.DefineStored(config.Spec[int]{
+	Key:     "installation.oauth_access_token_ttl_minutes",
+	Env:     "MARGINCE_INSTALLATION_OAUTH_ACCESS_TOKEN_TTL_MINUTES",
+	Type:    config.Int,
+	Default: config.Some(int(defaultPassportTTL / time.Minute)),
+	Min:     config.Some(minOAuthAccessTokenTTLMinutes),
+	Max:     config.Some(int(maxPassportTTL / time.Minute)),
+	Doc:     "Minutes an access token from the OAuth handshake of a connector lives, for the first token and every refresh.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true})
+
+// errOAuthMintUnwired refuses a mint on a service composed without the
+// configuration, which would otherwise ignore a lifetime a boot source sets.
+var errOAuthMintUnwired = errors.New("identity: this service mints no OAuth token, because its configuration is not wired")
+
+// WithConfig wires the configuration the OAuth mint reads its token lifetime
+// through.
+func (s *Service) WithConfig(c *config.Config) *Service {
+	s.config = c
+	return s
+}
 
 // oauthAccessTokenTTL reads the lifetime inside the mint's own transaction, so
 // the token and the value it was minted under come from one snapshot.
-func oauthAccessTokenTTL(ctx context.Context, tx pgx.Tx) (time.Duration, error) {
-	minutes, err := settings.ApplyTx(ctx, tx, OAuthAccessTokenTTLMinutes)
+func (s *Service) oauthAccessTokenTTL(ctx context.Context, tx pgx.Tx) (time.Duration, error) {
+	if s.config == nil {
+		return 0, errOAuthMintUnwired
+	}
+	minutes, err := config.StoredApplyTx(ctx, tx, s.config, OAuthAccessTokenTTLMinutes)
 	if err != nil {
 		return 0, fmt.Errorf("identity: reading the OAuth access-token lifetime: %w", err)
 	}

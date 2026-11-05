@@ -7,6 +7,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -121,6 +127,12 @@
         "read": true,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -206,6 +218,12 @@
         "update": true
       },
       "lead": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "legal_entity": {
         "create": true,
         "delete": true,
         "read": true,
@@ -325,6 +343,12 @@
         "read": true,
         "update": true
       },
+      "sales_initiative": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "sales_target": {
         "create": true,
         "delete": false,
@@ -360,6 +384,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "tax_rate": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "team_admin": {
         "create": true,
@@ -414,6 +444,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -481,9 +517,9 @@
         "update": true
       },
       "communication_exception": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
+        "read": true,
         "update": false
       },
       "company": {
@@ -523,6 +559,12 @@
         "update": false
       },
       "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "data_task": {
         "create": false,
         "delete": false,
         "read": false,
@@ -617,6 +659,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -732,6 +780,12 @@
         "read": false,
         "update": false
       },
+      "sales_initiative": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "sales_target": {
         "create": true,
         "delete": false,
@@ -766,6 +820,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "team_admin": {
@@ -821,6 +881,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -888,9 +954,9 @@
         "update": true
       },
       "communication_exception": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
+        "read": true,
         "update": false
       },
       "company": {
@@ -930,6 +996,12 @@
         "update": false
       },
       "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "data_task": {
         "create": false,
         "delete": false,
         "read": false,
@@ -1024,6 +1096,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -1139,6 +1217,12 @@
         "read": false,
         "update": false
       },
+      "sales_initiative": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "sales_target": {
         "create": true,
         "delete": false,
@@ -1173,6 +1257,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "team_admin": {
@@ -1228,6 +1318,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -1342,6 +1438,12 @@
         "read": true,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -1431,6 +1533,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -1546,6 +1654,12 @@
         "read": true,
         "update": false
       },
+      "sales_initiative": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "sales_target": {
         "create": false,
         "delete": false,
@@ -1581,6 +1695,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "tax_rate": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "team_admin": {
         "create": false,
@@ -1635,6 +1755,12 @@
         "read": true,
         "update": false
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -1749,6 +1875,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": false,
         "delete": false,
@@ -1834,6 +1966,12 @@
         "update": false
       },
       "lead": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "legal_entity": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1953,6 +2091,12 @@
         "read": false,
         "update": false
       },
+      "sales_initiative": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "sales_target": {
         "create": false,
         "delete": false,
@@ -1987,6 +2131,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "team_admin": {
@@ -2042,6 +2192,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -2109,9 +2265,9 @@
         "update": false
       },
       "communication_exception": {
-        "create": false,
+        "create": true,
         "delete": false,
-        "read": false,
+        "read": true,
         "update": false
       },
       "company": {
@@ -2151,6 +2307,12 @@
         "update": false
       },
       "data_coverage": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
+      "data_task": {
         "create": false,
         "delete": false,
         "read": false,
@@ -2245,6 +2407,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -2360,6 +2528,12 @@
         "read": false,
         "update": false
       },
+      "sales_initiative": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "sales_target": {
         "create": false,
         "delete": false,
@@ -2394,6 +2568,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "team_admin": {

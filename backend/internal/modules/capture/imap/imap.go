@@ -221,7 +221,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // automated/unparseable/suppressed, else upsert through the Sink and tally the
 // counterparty. A dropped message is counted as skipped and returns nil; only
 // a real Sink write fault returns a non-nil error (which stops the pull).
-func (c *Connector) capture(ctx context.Context, raw []byte, sink connector.Sink, st *syncState) error {
+func (c *Connector) capture(ctx context.Context, raw []byte, sink connector.Sink, st *syncState, receivedAt time.Time) error {
 	parsed, err := mailmap.Parse(raw, st.owner)
 	if err != nil {
 		// A single unparseable message is dropped, not fatal — one bad MIME
@@ -238,6 +238,7 @@ func (c *Connector) capture(ctx context.Context, raw []byte, sink connector.Sink
 	}
 	parsed = parsed.AttestSentByOwner(st.sentMailbox)
 	rec := parsed.ToRecord(connectorName, raw)
+	rec.ProviderReceivedAt = receivedAt
 	// The mailbox this pull selected, so an owner who keeps a container out of
 	// the CRM is answered before the message is stored. Set here rather than in
 	// mailmap.ToRecord because the mailbox is a property of the SESSION and not
@@ -307,10 +308,11 @@ func (c *Connector) AccountLabel(auth connector.Auth) (string, error) {
 // data items to the end so the streamed literal is fully consumed (or
 // discarded, past the cap) before the next message — leaving it half-read
 // would desync the connection.
-func readMessageBodyUID(msg *imapclient.FetchMessageData) ([]byte, uint32, error) {
+func readMessageBodyUID(msg *imapclient.FetchMessageData) ([]byte, uint32, time.Time, error) {
 	var raw []byte
 	var readErr error
 	var uid uint32
+	var receivedAt time.Time
 	found := false
 	for {
 		item := msg.Next()
@@ -318,6 +320,8 @@ func readMessageBodyUID(msg *imapclient.FetchMessageData) ([]byte, uint32, error
 			break
 		}
 		switch it := item.(type) {
+		case imapclient.FetchItemDataInternalDate:
+			receivedAt = it.Time.UTC()
 		case imapclient.FetchItemDataUID:
 			uid = uint32(it.UID)
 		case imapclient.FetchItemDataBodySection:
@@ -329,9 +333,9 @@ func readMessageBodyUID(msg *imapclient.FetchMessageData) ([]byte, uint32, error
 		}
 	}
 	if !found {
-		return nil, uid, errNoBodySection
+		return nil, uid, receivedAt, errNoBodySection
 	}
-	return raw, uid, readErr
+	return raw, uid, receivedAt, readErr
 }
 
 // readCapped reads at most maxRawLen bytes from r; a source larger than the cap

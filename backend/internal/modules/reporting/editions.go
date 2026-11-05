@@ -6,9 +6,11 @@ package reporting
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -35,7 +37,8 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	}
 	b = bindings{}
 	var redacted *time.Time
-	err = tx.QueryRow(ctx, "SELECT manifest,redacted_at FROM report_edition WHERE id="+b.add(id), b.values...).Scan(&out, &redacted)
+	query := "SELECT manifest,redacted_at FROM report_edition WHERE id=" + b.add(id)
+	err = tx.QueryRow(ctx, query, b.values...).Scan(&out, &redacted)
 	if err != nil {
 		return out, nil, storedError(err)
 	}
@@ -43,7 +46,8 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 		return out, nil, err
 	}
 	b = bindings{}
-	rows, err := tx.Query(ctx, "SELECT fact FROM report_edition_contribution WHERE edition_id="+b.add(id)+" ORDER BY metric,context_id,contribution_key", b.values...)
+	statement := "SELECT fact FROM report_edition_contribution WHERE edition_id=" + b.add(id) + " ORDER BY metric,context_id,contribution_key"
+	rows, err := tx.Query(ctx, statement, b.values...)
 	if err != nil {
 		return out, nil, err
 	}
@@ -51,7 +55,7 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	if err != nil {
 		return out, nil, err
 	}
-	visible, withheld, err := s.authority.Visible(ctx, tx, facts)
+	visible, withheld, err := s.authority.Visible(ctx, tx, out.Evaluation.Context, facts)
 	if err != nil {
 		return out, nil, err
 	}
@@ -59,7 +63,12 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	if err != nil {
 		return out, nil, err
 	}
-	withheld = withheld || contextWithheld
+	ownerNarrowed := slices.ContainsFunc(visible, func(f Fact) bool { return f.OwnerWithheld })
+	rosterNarrowed, err := s.rosterNarrowed(ctx, tx, out.Evaluation.Context.MemberIds)
+	if err != nil {
+		return out, nil, err
+	}
+	withheld = withheld || contextWithheld || ownerNarrowed || rosterNarrowed
 	out.Redacted = redacted != nil
 	out.Withheld = withheld || out.Redacted
 	if out.Withheld {
@@ -84,7 +93,10 @@ func (s *Service) GetEditionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (crm
 		return crmcontracts.ReportingEdition{}, err
 	}
 	out, _, err := s.edition(ctx, tx, id)
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.editionQuestions(ctx, tx, &out)
 }
 
 // ListEditions projects retained editions through the current reader’s permissions.
@@ -190,4 +202,17 @@ func (s *Service) editionContextWithheld(ctx context.Context, tx pgx.Tx, scope c
 		return true, nil
 	}
 	return false, nil
+}
+
+// rosterNarrowed answers whether a stored roster names owners the reader may
+// not measure one by one. A company or team edition is open to every seat for
+// totals, but its owner list and targets are not.
+func (s *Service) rosterNarrowed(ctx context.Context, tx pgx.Tx, roster []openapi_types.UUID) (bool, error) {
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	return slices.ContainsFunc(roster, func(id openapi_types.UUID) bool {
+		return !owners.Includes(ids.UUID(id))
+	}), nil
 }

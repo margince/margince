@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -27,8 +28,8 @@ import (
 //   - It is all-or-nothing. A partial reservation rolls back with the
 //     transaction and the run is skipped, never half-submitted.
 func (s *Store) reserve(ctx context.Context, tx pgx.Tx, desc provider.Descriptor,
-	conn admittedConnection, runID string, cats []provider.Category) (provider.SkipReason, error) {
-
+	conn admittedConnection, runID string, cats []provider.Category,
+) (provider.SkipReason, error) {
 	cost, err := desc.WorstCase(cats)
 	if err != nil {
 		return "", fmt.Errorf("integrations: pricing the run: %w", err)
@@ -125,13 +126,13 @@ func (s *Store) poolUsedThisMonth(ctx context.Context, tx pgx.Tx, connID, pool s
 	// can never say there is budget left while the ceiling says otherwise.
 	var used int
 	err := tx.QueryRow(ctx, `
-		SELECT COALESCE(SUM(`+chargedCredits+`), 0)
+		SELECT COALESCE(SUM(`+storekit.ProviderChargedCredits+`), 0)
 		  FROM provider_run_reservation r
 		  JOIN provider_run run ON run.id = r.run_id
 		 WHERE r.pool = $2
 		   AND run.provider = (SELECT provider FROM provider_connection WHERE id = $1)
 		   AND run.created_at >= (date_trunc('month', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')
-		   AND `+spendExcludedStates,
+		   AND `+storekit.ProviderRunCharges,
 		connID, pool).Scan(&used)
 	if err != nil {
 		return 0, fmt.Errorf("integrations: reading %s spend: %w", pool, err)
@@ -167,8 +168,8 @@ func unreportedPoolCharge(desc provider.Descriptor, reserved int) int {
 // once for a run that matched nothing, and once per pool for a run that matched
 // some categories and not others.
 func (s *Store) reconcile(ctx context.Context, tx pgx.Tx, desc provider.Descriptor,
-	runID string, spend map[provider.Pool]int, matched bool) error {
-
+	runID string, spend map[provider.Pool]int, matched bool,
+) error {
 	if desc.Billing == provider.BillingPerSuccessfulResult && !matched {
 		// Nothing was bought, so nothing is owed: release the whole hold.
 		if _, err := tx.Exec(ctx, `

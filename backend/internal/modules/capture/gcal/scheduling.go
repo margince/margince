@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/calendarwire"
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -82,6 +83,11 @@ type busyCalendar struct {
 }
 
 func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
+	busy, err := a.readBusy(ctx, token, calendar, from, to)
+	return busy, connector.CalendarReadFailed(calendar, err)
+}
+
+func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	var result struct {
 		Calendars map[string]busyCalendar `json:"calendars"`
 	}
@@ -90,12 +96,23 @@ func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to tim
 		return nil, err
 	}
 	found, ok := result.Calendars[calendar]
-	if !ok || len(found.Errors) != 0 {
-		return nil, errors.New("calendar: selected calendar could not be checked")
+	if !ok {
+		return nil, connector.NewCalendarUnavailable(calendar, "omitted", nil)
+	}
+	for _, failure := range found.Errors {
+		if failure.Reason != freeBusyNotFound {
+			return nil, connector.NewCalendarUnavailable(calendar, failure.Reason, nil)
+		}
 	}
 	// Read only occupancy metadata, so rescheduling can exclude its own event.
 	return a.eventBusy(ctx, token, calendar, from, to)
 }
+
+// freeBusyNotFound is the one freeBusy error the events read overrules. Google's
+// freeBusy does not serve some readable calendars, public holidays among them,
+// and answers notFound for them. The events read then decides: a calendar it
+// cannot find either is refused there.
+const freeBusyNotFound = "notFound"
 
 type eventTime struct {
 	At time.Time `json:"dateTime"`
@@ -146,7 +163,7 @@ func (e scheduledEvent) conferencePending() bool {
 
 func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarAppointment) (connector.CalendarReceipt, error) {
 	event := scheduledEvent{
-		Summary: in.Subject, Description: in.Description, Location: in.Location,
+		Summary: in.Subject, Description: emailview.MeetingDescription(in.Description), Location: in.Location,
 		Start: eventTime{in.Start}, End: eventTime{in.End},
 	}
 	for _, email := range in.Attendees {

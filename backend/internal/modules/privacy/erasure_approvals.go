@@ -72,9 +72,9 @@ const subjectApprovalMatch = `
 	OR proposed_change::text ~* ANY($3::text[])
 	OR summary               ~* ANY($3::text[])`
 
-// blankStagedProposal is what emptying a staged proposal IS: the payload, the
-// summary a human reads, the name of the record it was about, and the material
-// it was read out of.
+// blankStagedProposal is what emptying a staged proposal means. It clears the
+// payload, the summary in both forms, and the name of the record it was about.
+// It clears the material the proposal was read out of as well.
 //
 // One spelling because three statements in this package perform it, and a
 // content column added to one of them is a content column the other two leave
@@ -87,6 +87,7 @@ const subjectApprovalMatch = `
 // where a name used to be.
 const blankStagedProposal = `proposed_change = '{}'::jsonb,
 	       summary         = '',
+	       summary_parts   = NULL,
 	       target_label    = NULL,
 	       evidence        = NULL`
 
@@ -184,6 +185,10 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 	leadIDs := leads
 	if leadIDs == nil {
 		leadIDs = []ids.UUID{}
+	}
+
+	if err := eraseApprovalNoticesMatching(ctx, tx, subjectWithdrawal, causeContactErasure, subjectApprovalMatch, subject.UUID, leadIDs, addresses); err != nil {
+		return err
 	}
 
 	// Pending first, and separately from the decided rows: only these carry a
@@ -349,13 +354,16 @@ var evidenceCitesSubjectActivity = `
 // rather than off a reason string. Until then the erasure's ordering carries
 // it: this runs AFTER redactStagedApprovals, so a proposal that answers to both
 // is withdrawn there, with its run ended, before this statement sees it.
-func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string) error {
+func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason, cause string) error {
 	if len(activities) == 0 {
 		return nil
 	}
 	cited := make([]string, 0, len(activities))
 	for _, activity := range activities {
 		cited = append(cited, activity.String())
+	}
+	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, evidenceCitesActivity, cited); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE approval

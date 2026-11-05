@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,7 +25,14 @@ import (
 // Injected rather than imported: the scope clause is over `deal`, which this
 // module does not own and may not import. Applying it in the composition layer
 // is also where the caller's authority already sits.
-type ExceptionsFunc func(ctx context.Context, tx pgx.Tx) ([]Exception, error)
+type ExceptionsFunc func(ctx context.Context, tx pgx.Tx, population Population) ([]Exception, error)
+
+// Population narrows a list to the deals of one team, owner or the whole
+// workspace. The zero value narrows nothing beyond what the caller may see.
+type Population struct {
+	Kind string
+	ID   *ids.UUID
+}
 
 // Handlers is the assurance surface.
 type Handlers struct {
@@ -32,7 +40,10 @@ type Handlers struct {
 	exceptions ExceptionsFunc
 	// now is injected so the suppression ceiling is a function of the request's
 	// own clock rather than of whenever the process happened to start.
-	now func() time.Time
+	now      func() time.Time
+	settings *config.Config
+	locks    func(surface []config.Any) *[]crmcontracts.SettingLock
+	preview  PreviewFunc
 }
 
 // NewHandlers binds the routes to the store and its scoped read.
@@ -41,33 +52,85 @@ func NewHandlers(store *Store, exceptions ExceptionsFunc, now func() time.Time) 
 }
 
 // ListInputChecks answers the open findings this caller can see.
-func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) ListInputChecks(w http.ResponseWriter, r *http.Request, params crmcontracts.ListInputChecksParams) {
+	population := Population{ID: (*ids.UUID)(params.ScopeId)}
+	if params.ScopeKind != nil {
+		population.Kind = string(*params.ScopeKind)
+	}
 	var found []Exception
+	var answerable map[ids.UUID]bool
 	err := h.store.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		found, err = h.exceptions(ctx, tx)
+		if found, err = h.exceptions(ctx, tx, population); err != nil {
+			return err
+		}
+		answerable, err = AnswerableFindings(ctx, tx, found)
 		return err
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, struct {
-		Data []crmcontracts.InputCheck `json:"data"`
-	}{Data: ExceptionsToWire(found)})
+	httperr.WriteJSON(w, http.StatusOK, InputCheckListToWire(found, answerable))
 }
 
-// subjectOf names the record a finding is about, so the row can open it.
-//
-// Only a NAMED subject becomes one: the label comes from the surface read's own
-// join, under the caller's own deal scope, so an empty one means the reader was
-// never shown the name and a row carrying the id alone is the honest answer.
-//
-// The kind is mapped rather than cast. `subject_kind` and AttentionSubject's
-// vocabulary overlap on `deal` and nowhere else — an offer, a contract and a
-// signal are not screens a subject routes to — so a kind this map does not know
-// yields no subject rather than a link that opens nothing.
+// InputCheckList is the listInputChecks answer: the findings, each with where
+// it is reviewed, and their groups and totals over the whole list.
+type InputCheckList struct {
+	Data   []crmcontracts.InputCheck      `json:"data"`
+	Groups []crmcontracts.InputCheckGroup `json:"groups"`
+	Totals crmcontracts.InputCheckTotals  `json:"totals"`
+}
+
+// InputCheckListToWire renders a list and what the caller may answer in it.
+// The route and its model tool both answer with it.
+func InputCheckListToWire(found []Exception, answerable map[ids.UUID]bool) InputCheckList {
+	data := ExceptionsToWire(found)
+	for i, e := range found {
+		destination := reviewDestination(answerable[e.ID])
+		data[i].Destination = &destination
+	}
+	groups, totals := GroupFindings(found, answerable)
+	out := InputCheckList{
+		Data:   data,
+		Groups: make([]crmcontracts.InputCheckGroup, 0, len(groups)),
+		Totals: crmcontracts.InputCheckTotals{Findings: totals.Findings, Deals: totals.Deals, OtherFindings: totals.OtherFindings},
+	}
+	for _, g := range groups {
+		exposure := make([]crmcontracts.InputCheckExposure, 0, len(g.Exposure))
+		for _, money := range g.Exposure {
+			exposure = append(exposure, crmcontracts.InputCheckExposure{Currency: money.Currency, AmountMinor: money.AmountMinor})
+		}
+		out.Groups = append(out.Groups, crmcontracts.InputCheckGroup{
+			Type: g.Type, Findings: g.Findings, Deals: g.Deals, OtherFindings: g.OtherFindings,
+			Exposure: exposure, Destination: reviewDestination(g.Answerable),
+		})
+	}
+	return out
+}
+
+func reviewDestination(answerable bool) crmcontracts.InputCheckDestination {
+	mode := crmcontracts.InputCheckDestinationModeRead
+	if answerable {
+		mode = crmcontracts.InputCheckDestinationModeAnswer
+	}
+	return crmcontracts.InputCheckDestination{Screen: crmcontracts.InputCheckDestinationScreenForecastReview, Mode: mode}
+}
+
+// Signal findings open their verified company; the signal remains the review subject.
 func subjectOf(e Exception) *crmcontracts.AttentionSubject {
+	if e.SubjectKind == subjectKindSignal {
+		slots := decodeSlots(e.Claim)
+		company, ok := (*slots)["company_id"].(string)
+		if !ok || e.SubjectLabel == "" {
+			return nil
+		}
+		id, err := ids.Parse(company)
+		if err != nil {
+			return nil
+		}
+		return &crmcontracts.AttentionSubject{Type: crmcontracts.AttentionSubjectTypeCompany, Id: openapi_types.UUID(id), Label: &e.SubjectLabel}
+	}
 	kind, ok := subjectKinds[e.SubjectKind]
 	if !ok || e.SubjectLabel == "" {
 		return nil
@@ -80,9 +143,6 @@ func subjectOf(e Exception) *crmcontracts.AttentionSubject {
 	}
 }
 
-// subjectKinds maps a finding's subject onto the contract's subject vocabulary.
-// Today the surface read returns deal findings only; the map is what makes a
-// second kind arriving later a deliberate act rather than a silent link.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	"deal": crmcontracts.AttentionSubjectTypeDeal,
 }
@@ -105,6 +165,7 @@ func ExceptionsToWire(in []Exception) []crmcontracts.InputCheck {
 			AffectedMinor: e.AffectedMinor,
 			FirstSeenAt:   e.FirstSeenAt,
 			LastSeenAt:    e.LastSeenAt,
+			InputsChanged: e.InputsChanged,
 		}
 		if e.Currency != "" {
 			currency := e.Currency
@@ -165,7 +226,11 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		// Empty, never nil. A run that recorded no coverage is a real answer
 		// and arrives shaped like the array it is; null reads as "unknown",
 		// which is a different claim from "nothing was tried".
-		Sources: CoverageToWire(coverage),
+		Sources:   CoverageToWire(coverage),
+		Freshness: FreshnessToWire(run.Freshness),
+		ReviewDeliveries: crmcontracts.AssuranceReviewDeliveries{
+			Pending: run.Deliveries.Pending, Failed: run.Deliveries.Failed, Delivered: run.Deliveries.Delivered,
+		},
 	}
 	if run.EligibleSignals > 0 {
 		signals := run.EligibleSignals
@@ -176,6 +241,22 @@ func runToWire(run Run, coverage []SourceCoverage) crmcontracts.ForecastAssuranc
 		out.Readiness = &verdict
 	}
 	return out
+}
+
+// FreshnessToWire renders what changed after a reading. A reading no run has
+// recorded the inputs of is unknown, never current.
+func FreshnessToWire(f Freshness) crmcontracts.AssuranceFreshness {
+	state := crmcontracts.AssuranceFreshnessStateCurrent
+	switch {
+	case !f.Known:
+		state = crmcontracts.AssuranceFreshnessStateUnknown
+	case f.OutOfDate():
+		state = crmcontracts.AssuranceFreshnessStateOutOfDate
+	}
+	return crmcontracts.AssuranceFreshness{
+		State: state, ChangedDeals: f.ChangedDeals, ChangedSignals: f.ChangedSignals,
+		WorkspaceChanged: f.WorkspaceChanged, ChangedSince: f.FirstChangedAt,
+	}
 }
 
 // CoverageToWire renders one run's source health.
@@ -214,6 +295,7 @@ func (h Handlers) ResolveInputCheck(
 		return
 	}
 	in := Resolution{
+		DealID:      (*ids.UUID)(body.DealId),
 		Outcome:     string(body.Outcome),
 		Reason:      derefString(body.Reason),
 		EvidenceRef: derefString(body.EvidenceRef),

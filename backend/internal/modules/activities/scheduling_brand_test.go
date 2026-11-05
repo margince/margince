@@ -10,11 +10,12 @@ import (
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type namedBookingBrand string
 
-func (b namedBookingBrand) PublicBookingBrand(context.Context) (string, *string, error) {
+func (b namedBookingBrand) PublicBookingBrand(context.Context, ids.UserID) (string, *string, error) {
 	return string(b), nil, nil
 }
 
@@ -22,7 +23,7 @@ func TestBookingCompanyNameKeepsThePublishedCharacterLimit(t *testing.T) {
 	for _, name := range []string{"Example company", strings.Repeat("界", 201)} {
 		t.Run(name[:min(len(name), 12)], func(t *testing.T) {
 			store := (&Store{}).WithSchedulingBrand(namedBookingBrand(name))
-			profile := store.brandSchedulingProfile(context.Background(), crmcontracts.SchedulingProfile{})
+			profile := store.brandSchedulingProfile(context.Background(), ids.UserID{}, crmcontracts.SchedulingProfile{})
 			if profile.CompanyName == nil {
 				t.Fatal("company name absent")
 			}

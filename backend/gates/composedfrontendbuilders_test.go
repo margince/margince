@@ -5,9 +5,8 @@
 
 package gates
 
-// Four builders compile the composed SPA (the make lane, the release image and
-// the desktop bundle on each platform), and every one of them must install the
-// composed workspace before it does.
+// Two builders compile the composed SPA (the make lane and the release image),
+// and each of them must install the composed workspace before it does.
 //
 // That install is the ONLY thing that gives a unit's frontend layer its own
 // dependencies. It stopped being the root workspace's job when a unit's
@@ -25,8 +24,8 @@ package gates
 // install on one lane and lost it on another still reads clean here. That gap is
 // covered elsewhere and not by argument: `make check-fe` runs the make lanes on
 // every pull request, so a lane that loses its install goes red the same day.
-// Nothing in the merge gate builds the image or the desktop bundles, which is
-// precisely where the defect lived and what this gate is for.
+// Nothing in the merge gate builds the image, which is precisely where the
+// defect lived and what this gate is for.
 
 import (
 	"os"

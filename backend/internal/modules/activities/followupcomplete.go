@@ -32,6 +32,18 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 	return s.completeOpenSystemTasksLinkedBy(ctx, leadLinkColumn, leadID.UUID)
 }
 
+// CompleteFollowUpsTouchingLead completes tasks that a new lead activity
+// answers. A qualify task stays open until qualification or disqualification.
+func (s *Store) CompleteFollowUpsTouchingLead(ctx context.Context, leadID ids.LeadID) (int, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where := storekit.SQLf(`EXISTS (SELECT 1 FROM activity_link l
+			WHERE l.activity_id = a.id AND l.%s = $%d)
+			AND a.source_system IS DISTINCT FROM $%d`,
+		leadLinkColumn, arg(leadID.UUID), arg(provenance.LeadRepliedSource))
+	return s.completeOpenSystemTasks(ctx, where, arg, &args)
+}
+
 // CompleteOpenSystemTasksForContact is CompleteOpenSystemTasksForLead's
 // sibling for a lead that PROMOTED: carryLeadActivities (contacts/promote.go)
 // re-points a follow-up task's link from the lead onto the contact it became,
@@ -61,8 +73,9 @@ func (s *Store) CompleteOpenSystemTasksForContact(ctx context.Context, contactID
 }
 
 // CompleteCarriedSystemTasks completes the open system-minted tasks among a
-// NAMED set of activities — the ones a promotion moved from the lead onto the
-// contact, which the lead.promoted payload carries.
+// NAMED set of activities. A promotion names the ones it moved from the lead
+// onto the contact, which the lead.promoted payload carries. The review pass
+// names the review tasks whose findings are all settled.
 //
 // Named ids rather than a link column, which is what makes it exact for a
 // MERGE. The contact-keyed reading answers "every open system task on this
@@ -101,7 +114,8 @@ func (s *Store) CompleteQuietRemindersReachedBy(ctx context.Context, activityID 
 	landed := arg(activityID)
 	where := storekit.SQLf(`a.source_system = ANY($%[2]d)
 			AND EXISTS (SELECT 1 FROM activity landed WHERE landed.id = $%[1]d AND %[3]s
-			            AND landed.occurred_at > coalesce(%[5]s, '-infinity'))
+			            AND landed.occurred_at > coalesce(%[5]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
+			            )
 			AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND (
 			      l.deal_id IN (SELECT t.deal_id FROM activity_link t WHERE t.activity_id = $%[1]d)
 			   OR l.contact_id IN (SELECT t.contact_id FROM activity_link t WHERE t.activity_id = $%[1]d)
@@ -149,7 +163,8 @@ func (s *Store) ReopenQuietRemindersStillQuietAround(
 			     JOIN activity_link al ON al.activity_id = a.id
 			      AND (al.deal_id = tl.deal_id OR al.contact_id = tl.contact_id
 			           OR al.company_id = tl.company_id)
-			     WHERE %[3]s AND touch.occurred_at > coalesce(%[4]s, '-infinity'))`,
+			     WHERE %[3]s AND touch.occurred_at > coalesce(%[4]s, '-infinity') -- occurred_at raw: past the reminder's anchor, a window's lower edge
+			)`,
 		arg(provenance.EngineReminderSources()), sameRecord,
 		genuineEngagement("touch", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)),
 		reminderAnchor("a", arg(provenance.ReminderAnchorSeparator)))

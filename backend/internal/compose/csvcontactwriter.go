@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,11 +44,16 @@ import (
 //
 //nolint:dupl // createCompany has the same SHAPE and not the same job: a
 func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
-	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
+	in, err := w.contactInputForRow(ctx, row, typed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	var employer contacts.EmployerAttached
+	in.EmployerResult = &employer
 	if in.FullName == "" {
 		return skippedFor(contactUnnamedWhy), nil
 	}
-	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
+	err = w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
 		}
@@ -55,12 +61,26 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("import: creating contact %s: %w", row.ExternalID, err)
 		}
+		if err := w.recordCreatedEmployer(ctx, tx, employer); err != nil {
+			return ids.UUID{}, err
+		}
 		return ids.UUID(contact.Id), nil
 	})
-	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
+	// The row's own transaction has ended, so a colleague holding the address
+	// is asked to share it, as on every other create door.
+	err = w.contacts.AskHolderToShare(ctx, err)
+	_, leadHolds := errors.AsType[*contacts.LeadHoldsIdentityError](err)
+	if contacts.IsClaimedEmail(err) || leadHolds {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
+		// A live lead's address is held too: an import never converts a lead.
 		return skippedFor(contactEmailClaimedWhy), nil
+	}
+	if refusedAsErased(err) {
+		return skippedFor(addressErasedWhy), nil
+	}
+	if why, refused := employerRefusalWhy(err); refused {
+		return skippedFor(why), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -71,11 +91,14 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 // applyContact writes a contact's changed fields. It merges the file's address,
 // email, phone and LinkedIn handle onto what the contact holds, because the
 // store replaces each of those wholesale.
-func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+func (w *csvWriters) applyContact(
+	ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, changed map[string]string, current []byte, source string,
+) error {
+	in.IfVersion = w.reviewedVersion(id)
 	// Emails and phones added by an update carry the provenance the create
 	// path stamps; without it their source lands empty.
 	in.Source = source
-	merged, given, err := addressMergedOnto(current, in.Address)
+	merged, given, err := addressMergedOnto(current, in.Address, changed)
 	if err != nil {
 		return err
 	}
@@ -141,23 +164,14 @@ func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.
 	return held[email], nil
 }
 
-// emailsHeld answers which of these addresses a live contact holds, in one
-// query. Postgres lowers each address, as the store's own key does.
+// emailsHeld answers which of these addresses a live contact or a live lead
+// holds, in one query: the identity check the create itself asks.
 func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[string]bool, error) {
 	held := make(map[string]bool, len(emails))
-	for _, email := range emails {
-		held[email] = false
-	}
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT given FROM unnest($1::text[]) AS given
-			 WHERE EXISTS (SELECT 1 FROM contact_email WHERE email = lower(given) AND archived_at IS NULL)`, emails)
-		if err != nil {
-			return err
-		}
-		claimed, err := pgx.CollectRows(rows, pgx.RowTo[string])
-		for _, email := range claimed {
-			held[email] = true
+		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: emails})
+		for _, email := range emails {
+			held[email] = holders.ContactHoldsEmail(email) || holders.LeadHoldsEmail(email)
 		}
 		return err
 	}); err != nil {
@@ -252,4 +266,17 @@ func (w *csvWriters) consumerMailList(ctx context.Context, tx pgx.Tx) (*freemail
 		w.consumerMail = matcher
 	}
 	return w.consumerMail, nil
+}
+
+// leadKeyHeld names the skip for a row refused over a key a live lead holds.
+// That is a lead row with another lead's address, or a contact row with a
+// lead's. An import never converts, so the lead keeps its address.
+func leadKeyHeld(err error) (migration.Reason, bool) {
+	if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+		return naturalKeyTakenWhy, true
+	}
+	if _, ok := errors.AsType[*contacts.LeadHoldsIdentityError](err); ok {
+		return contactEmailClaimedWhy, true
+	}
+	return migration.Reason{}, false
 }

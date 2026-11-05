@@ -1,0 +1,11 @@
+name: named_third_party_promiser
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture: {"lines": ["Mira Chen: Theo Bauer agreed to send the pricing by Friday."], "participants": [{"key": "mira", "kind": "seat", "role": "organizer", "name": "Mira Chen", "address": ""}, {"key": "theo", "kind": "seat", "role": "attendee", "name": "Theo Bauer", "address": ""}, {"key": "ines", "kind": "contact", "role": "attendee", "name": "Ines Huber", "address": ""}]}
+expect:
+  outcome: accepted
+  answer: [{"line": 1, "due_date": "2026-03-06", "promiser": "theo"}]
+  rubric: "The speaker reports another participant's promise. Return theo's verified reference. Do not substitute the speaker or organizer."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

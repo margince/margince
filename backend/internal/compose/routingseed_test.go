@@ -8,6 +8,8 @@ package compose
 // rather than at the first model call at 3am.
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,7 +29,7 @@ import (
 func declaredSeed(t *testing.T, routing string) yaml.Node {
 	t.Helper()
 	doc := "version: 1\nseeds:\n  ai_routing:\n" + indent(routing, "    ")
-	cfg, err := deployconfig.Parse([]byte(doc))
+	cfg, err := bootstrapFrom(t, doc)
 	if err != nil {
 		t.Fatalf("deployconfig.Parse refused the declared binding: %v", err)
 	}
@@ -154,7 +156,7 @@ seeds:
       frontier: {provider: *v, model: m}
     embeddings: {provider: *v, model: e, dimensions: 8}
 `
-	cfg, err := deployconfig.Parse([]byte(doc))
+	cfg, err := bootstrapFrom(t, doc)
 	if err != nil {
 		t.Fatalf("deployconfig.Parse: %v", err)
 	}
@@ -168,4 +170,15 @@ seeds:
 	if m, ok := bound.Tiers["premium"]; !ok || m.Provider != "fake" {
 		t.Errorf("premium = %+v ok=%v; the alias did not resolve to what it points at", m, ok)
 	}
+}
+
+// bootstrapFrom loads a margince.yaml body's bootstrap roots the way a boot
+// does, through LoadBootstrap.
+func bootstrapFrom(t *testing.T, doc string) (deployconfig.Bootstrap, error) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "margince.yaml")
+	if err := os.WriteFile(path, []byte(doc), 0o600); err != nil {
+		t.Fatalf("writing %s: %v", path, err)
+	}
+	return deployconfig.LoadBootstrap(path)
 }

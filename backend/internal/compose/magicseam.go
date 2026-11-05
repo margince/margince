@@ -47,17 +47,33 @@ func newMagicService(
 	}, now).
 		WithTroubledRuns(automation.NewAutomationStore(db)).
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
-		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)})
+		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
+		WithDecidedReceipts(magicDecidedReceipts{
+			receipts: attentionReceipts{svc: staged, deals: deals.NewStore(db, DealsInstallation())},
+		})
 }
 
-// magicPendingDecisions reads the staged queue for the needs-you lane.
-//
-// Only the approvals this caller could themselves decide come back, because
-// that filter lives in the engine: the lane adds no authority of its own, and a
-// receipt that widened the inbox would be a side channel around it.
-//
-// attentionApprovals.ListWire spells the same read for the feed; the two stay
-// separate because each satisfies its own consumer's interface.
+// magicDecidedReceipts hands the done lane the receipts the worklist reads,
+// by their canonical ids. The two surfaces then show one population.
+type magicDecidedReceipts struct{ receipts attentionReceipts }
+
+func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time, limit int) ([]magic.DecidedReceipt, bool, error) {
+	recent, more, err := m.receipts.RecentWithMore(ctx, since, limit)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]magic.DecidedReceipt, 0, len(recent))
+	for _, receipt := range recent {
+		out = append(out, magic.DecidedReceipt{
+			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
+			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
+			Approval: !deals.IsCorrectionReceiptKind(receipt.Kind),
+		})
+	}
+	return out, more, nil
+}
+
+// Home uses the owning inbox policy for both authority and explicit responsibility.
 type magicPendingDecisions struct{ svc *approvals.Service }
 
 // stagedAndUndecided is the status the inbox filter takes, in the contract's
@@ -68,7 +84,7 @@ func (m magicPendingDecisions) PendingApprovals(
 	ctx context.Context, limit int,
 ) ([]crmcontracts.Approval, error) {
 	status := stagedAndUndecided
-	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: limit})
+	rows, _, err := m.svc.ListWire(ctx, approvals.ListInput{Status: &status, Actionable: true, Limit: limit, RequestedForReader: true})
 	return rows, err
 }
 
@@ -117,14 +133,14 @@ type magicBriefCutoff struct {
 // not-found rather than as an error for the same reason — a rep who has never
 // had a brief is an ordinary state, not a broken read.
 func (m magicBriefCutoff) CutoffFor(ctx context.Context) (time.Time, bool, error) {
-	run, err := m.engine.LatestRun(ctx, m.now())
+	asOf, err := m.engine.LatestCutoff(ctx, m.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return time.Time{}, false, nil
 	}
 	if err != nil {
 		return time.Time{}, false, err
 	}
-	return run.AsOf, true, nil
+	return asOf, true, nil
 }
 
 // magicUndoJudge answers the receipt's "can this be taken back".
@@ -186,7 +202,7 @@ func (g undoGrants) holds(ctx context.Context, row AuditRow) bool {
 	key := row.EntityType + "/" + string(grant)
 	held, asked := g[key]
 	if !asked {
-		held = auth.Require(ctx, row.EntityType, grant) == nil
+		held = auth.Allows(ctx, row.EntityType, grant)
 		g[key] = held
 	}
 	return held

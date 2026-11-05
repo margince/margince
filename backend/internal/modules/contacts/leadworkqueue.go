@@ -80,6 +80,23 @@ func (s *Store) listLeadWorkQueue(ctx context.Context, in ListLeadsInput) ([]crm
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	var leads []crmcontracts.Lead
+	var page storekit.Page
+	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		prepared, err := withLeadTaskIdentities(ctx, tx)
+		if err != nil {
+			return err
+		}
+		leads, page, err = readLeadWorkQueue(prepared, tx, in, active, limit, policy)
+		return err
+	})
+	return leads, page, err
+}
+
+func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active []fieldcatalog.Column, limit int, policy leadSLAPolicy) ([]crmcontracts.Lead, storekit.Page, error) {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	where, args, arg, err := leadQueueWhere(ctx, in, active, policy)
 	if err != nil {
 		return nil, storekit.Page{}, err
@@ -113,10 +130,14 @@ func (s *Store) listLeadWorkQueue(ctx context.Context, in ListLeadsInput) ([]crm
 		where = append(where, storekit.SQLf("("+rank+", -score, created_at, id) > ($%d, $%d, $%d, $%d)",
 			arg(cursor.Rank), arg(-cursor.Score), arg(cursor.CreatedAt), arg(cursor.ID)))
 	}
-	query := `SELECT ` + leadColumns + storekit.SelectSuffix(active) + `, ` + rank +
+	columns, err := leadColumns(withPinnedSLANow(ctx, asOf), arg)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	query := `SELECT ` + columns + storekit.SelectSuffix(active) + `, ` + rank +
 		` FROM lead WHERE ` + strings.Join(where, " AND ") +
 		` ORDER BY ` + rank + `, score DESC, created_at, id` + storekit.SQLf(` LIMIT %d`, limit+1)
-	return s.readLeadQueuePage(ctx, query, *args, active, limit, asOf, policy, total)
+	return readLeadQueuePage(ctx, tx, query, *args, active, limit, asOf, policy, total)
 }
 
 func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, policy leadSLAPolicy) ([]string, *[]any, func(any) int, error) {
@@ -134,18 +155,13 @@ func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalo
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	shared := listFilters{
-		IncludeArchived: in.IncludeArchived, CapturedByKind: in.CapturedByKind,
-		AiWritten: in.AiWritten, entity: leadEntity, OwnerID: in.OwnerID,
-		OwnerTeamID: in.OwnerTeamID, Unassigned: in.Unassigned, Query: nil,
-	}
-	filters, err := shared.clauses(ctx, active, defaultSort, arg)
+	// The queue pages by its own keyset, so the sorted page's cursor is not its filter.
+	in.Cursor = nil
+	filters, err := leadListWhere(ctx, in, active, defaultSort, policy, arg)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	where = append(where, filters...)
-	where = append(where, leadNarrowing(ctx, in, policy, arg)...)
-	return where, &args, arg, nil
+	return append(where, filters...), &args, arg, nil
 }
 
 // leadQueueRank renders the SLA band as a CASE over the lead's own columns.
@@ -174,41 +190,35 @@ func leadQueueRank(policy leadSLAPolicy, arg func(any) int, asOf time.Time) stri
 		deadline, arg(risk), arg(asOf), leadQueueRankAtRisk, leadQueueRankWithinTarget)
 }
 
-func (s *Store) readLeadQueuePage(ctx context.Context, query string, args []any, active []fieldcatalog.Column, limit int, asOf time.Time, policy leadSLAPolicy, total countQuery) ([]crmcontracts.Lead, storekit.Page, error) {
+func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any, active []fieldcatalog.Column, limit int, asOf time.Time, policy leadSLAPolicy, total countQuery) ([]crmcontracts.Lead, storekit.Page, error) {
 	var leads []crmcontracts.Lead
 	var ranks []int
 	var matching int
-	// One snapshot for the page and the count beside it, as the record lists
-	// take: see Store.txSnapshot.
-	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var rank int
-			lead, err := scanLead(rows, active, policy, &rank)
-			if err != nil {
-				return err
-			}
-			leads = append(leads, lead)
-			ranks = append(ranks, rank)
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		// Counted on the page's own transaction, so the number and the rows
-		// describe one instant.
-		if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&matching); err != nil {
-			return fmt.Errorf("count lead: %w", err)
-		}
-		// The work queue is its own page path, not a filter over the list, so
-		// it stamps writability itself; a queue that reported every lead
-		// writable would put an edit affordance on a colleague's row.
-		return attachLeadRows(ctx, tx, leads)
-	})
+
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var rank int
+		lead, err := scanLead(rows, active, policy, &rank)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		leads = append(leads, lead)
+		ranks = append(ranks, rank)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	// Counted on the page's own transaction, so the number and the rows
+	// describe one instant.
+	if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&matching); err != nil {
+		return nil, storekit.Page{}, fmt.Errorf("count lead: %w", err)
+	}
+	// This page path must stamp writability before offering edits to colleagues’ rows.
+	if err := attachLeadRows(ctx, tx, leads); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	page := storekit.Page{Total: &matching}

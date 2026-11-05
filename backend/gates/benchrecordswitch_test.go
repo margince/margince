@@ -8,13 +8,10 @@ package gates
 // Both bench harnesses ask the same variable whether to publish a record, and
 // both answer only to the same value.
 //
-// "A record is a human's to publish" is one rule, and it is now enforced in two
-// languages: Go reads MARGINCE_BENCH_RECORD in RecordingEnabled(), TypeScript
-// reads it in the mobile spec's recordingEnabled(). A rule spelled on both
-// sides of a wire is one item, and the failure mode of letting them drift is
-// silent in the direction that matters — a scheduled job whose spec no longer
-// consults the variable writes a runner's numbers into the published page and
-// reports success, because writing the record is not what the run is judged on.
+// "Only a recording target writes a record" is one rule in two languages. Go
+// reads MARGINCE_BENCH_RECORD in RecordingEnabled(); TypeScript reads it in the
+// mobile spec's recordingEnabled(). If the two drift, a check target
+// rewrites the published record and still reports success.
 //
 // The VALUE is checked as well as the variable, and that half is the one worth
 // having. `bench-perf-check` and `bench-mobile-check` both CLEAR the variable
@@ -84,8 +81,8 @@ func TestBothBenchHarnessesReadOneRecordingSwitch(t *testing.T) {
 		matches := recordComparison.FindAllStringSubmatch(string(b), -1)
 		if len(matches) == 0 {
 			t.Errorf("%s does not compare %s against a literal value, so it no longer decides whether to "+
-				"publish a record the way the other harness does: a scheduled run of this lane would write a "+
-				"runner's numbers into the published page and still report success", path, recordSwitch)
+				"publish a record the way the other harness does: a check target would rewrite the published "+
+				"record and still report success", path, recordSwitch)
 			continue
 		}
 		for _, m := range matches {

@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The newest email on each deal of a page, as the board card states it.
@@ -23,10 +24,9 @@ import (
 // a hundred times on a board that draws a hundred cards.
 //
 // An AGGREGATE about mail, so it asks the audience the way last_activity_at
-// does: a colleague who may not read a message must not see its date in the
-// shape of a number either, and a mail the installation sent itself is not the
-// buyer engaging. The two clauses are the shared spellings, so a third system
-// origin or a fourth audience reaches this reader without anybody editing it.
+// does. A colleague who may not read a message must not see its date either. A mail no human wrote, the installation's own
+// included, is not the buyer engaging. The clauses are the shared spellings,
+// so a new system origin or audience reaches this reader unedited.
 
 // attachLastEmail puts each deal's newest workspace-visible email on the wire
 // shape, leaving it absent where nobody has mailed about the deal.
@@ -39,12 +39,13 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 		dealIDs[i] = ids.UUID(deals[i].Id)
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT ON (l.deal_id) l.deal_id, a.occurred_at, a.direction
+		SELECT DISTINCT ON (l.deal_id) l.deal_id, a.occurred_at, a.occurred_precision, a.direction
 		  FROM activity_link l
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = ANY($1)
 		   AND a.kind = 'email'
-		   AND a.archived_at IS NULL
+		   AND a.archived_at IS NULL AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
+		   AND `+relstrength.WrittenByHumanSQL("a")+`
 		   `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		 ORDER BY l.deal_id, a.occurred_at DESC, a.id DESC`, dealIDs)
 	if err != nil {
@@ -55,11 +56,12 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 	for rows.Next() {
 		var deal ids.UUID
 		var occurredAt time.Time
+		var precision crmcontracts.OccurredPrecision
 		var direction *string
-		if err := rows.Scan(&deal, &occurredAt, &direction); err != nil {
+		if err := rows.Scan(&deal, &occurredAt, &precision, &direction); err != nil {
 			return fmt.Errorf("deals: reading a deal's newest email: %w", err)
 		}
-		newest[deal] = crmcontracts.DealLastEmail{OccurredAt: occurredAt, Direction: wireDirection(direction)}
+		newest[deal] = crmcontracts.DealLastEmail{OccurredAt: occurredAt, OccurredPrecision: precision, Direction: wireDirection(direction)}
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("deals: reading the newest email on a page of deals: %w", err)

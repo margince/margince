@@ -13,22 +13,23 @@ import (
 )
 
 func comparisonReason(left, right crmcontracts.ReportingEdition) string {
+	said := ExplanationCopy(right.Evaluation.Context)
 	if left.Withheld || right.Withheld || left.Redacted || right.Redacted {
-		return "Historical evidence is restricted or redacted"
+		return said.Say(comparisonWords.Restricted)
 	}
 	if left.ReportId != right.ReportId {
-		return "Choose two editions of the same report"
+		return said.Say(comparisonWords.Report)
 	}
 	a, b := left.Evaluation.Context, right.Evaluation.Context
 	if a.PopulationFingerprint != b.PopulationFingerprint {
-		return "Team membership or population changed"
+		return said.Say(comparisonWords.Population)
 	}
 	if differentComparisonContext(a, b) {
-		return "Reporting definitions or context differ"
+		return said.Say(comparisonWords.Context)
 	}
 	sa, sb := left.Evaluation.Selection, right.Evaluation.Selection
 	if sa.Scope.Kind != sb.Scope.Kind || !sameID(sa.Scope.Id, sb.Scope.Id) || sa.TargetBasis != sb.TargetBasis || sa.CloseWindow != sb.CloseWindow || !slices.Equal(slices.Sorted(slices.Values(sa.Metrics)), slices.Sorted(slices.Values(sb.Metrics))) {
-		return "Saved report selections differ"
+		return said.Say(comparisonWords.Selection)
 	}
 	return comparisonPeriodsAndMetrics(left, right)
 }
@@ -68,20 +69,21 @@ func comparisonDeltas(left, right crmcontracts.ReportingEdition) []crmcontracts.
 }
 
 func comparisonPeriodsAndMetrics(left, right crmcontracts.ReportingEdition) string {
+	said := ExplanationCopy(right.Evaluation.Context)
 	a, b := left.Evaluation.Context, right.Evaluation.Context
 	zone, err := time.LoadLocation(a.Timezone)
 	if err != nil {
-		return "Reporting timezone is unavailable"
+		return said.Say(comparisonWords.Timezone)
 	}
 	leftPeriod := reportperiod.Context{Start: a.Interval.StartAt, End: a.Interval.EndAt, Timezone: zone.String(), Currency: a.Currency, Version: a.DefinitionVersion, Complete: true}
 	rightPeriod := reportperiod.Context{Start: b.Interval.StartAt, End: b.Interval.EndAt, Timezone: b.Timezone, Currency: b.Currency, Version: b.DefinitionVersion, Complete: true}
 	if !reportperiod.Comparable(leftPeriod, rightPeriod) {
-		return "Compare adjacent complete weeks, months or quarters"
+		return said.Say(comparisonWords.Period)
 	}
 	for _, before := range left.Evaluation.Metrics {
 		after, found := comparisonMetric(right.Evaluation.Metrics, before.Id)
 		if !found || before.Version != after.Version || before.Unit != after.Unit {
-			return "Metric versions differ"
+			return said.Say(comparisonWords.Metric)
 		}
 	}
 	return ""

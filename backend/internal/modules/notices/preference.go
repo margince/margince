@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -59,16 +59,29 @@ const (
 	classCapture    = "capture"
 	classCoach      = "coach"
 	classSystem     = "system"
+	// classProjectHealth holds the readings the health job writes. Muting
+	// housekeeping is not asking to hear nothing when the product itself marks
+	// a project of yours at risk.
+	classProjectHealth = "project_health"
+
+	// KindProjectHealthAI tells a project's owner the health job judged it.
+	KindProjectHealthAI = "project_health_ai"
 
 	KindApprovalPending  = "approval_pending"
 	ClassApprovalPending = KindApprovalPending
+
+	// KindExtension is a notice an extension raised. It rides the system class,
+	// which is delivered in the app and can be switched off. A unit's notice is
+	// housekeeping a reader may mute. A class of its own would need a row on
+	// every settings screen before any unit had earned one.
+	KindExtension = "extension_notice"
 )
 
 // noticeClasses is the closed set a seat is offered, in the order a settings
 // screen reads them: the lanes that carry the most first, the housekeeping
 // last.
 var noticeClasses = []string{
-	classAutomation, classLeadSLA, ClassApprovalPending, classCapture, classCoach, classSystem,
+	classAutomation, classLeadSLA, ClassApprovalPending, classProjectHealth, classCapture, classCoach, classSystem,
 }
 
 // classByKind places every kind a system flow raises.
@@ -77,12 +90,24 @@ var noticeClasses = []string{
 // vcardstagereview.go — and a module may not import compose, so this map is
 // where the two meet. A kind missing from it is refused by ClassFor rather than
 // delivered under whatever the fallback happened to be.
+// KindMeetingInvitationAttention tells a host an invitation of theirs waits for them.
+const KindMeetingInvitationAttention = "meeting_invitation_attention"
+
 var classByKind = map[string]string{
-	"automation":              classAutomation,
-	"lead_sla":                classLeadSLA,
-	"capture_backlog_stalled": classCapture,
-	"vcard_staging_failed":    classSystem,
-	KindApprovalPending:       ClassApprovalPending,
+	"data_task_failed":             classSystem,
+	"automation":                   classAutomation,
+	"lead_sla":                     classLeadSLA,
+	"capture_backlog_stalled":      classCapture,
+	"vcard_staging_failed":         classSystem,
+	KindMeetingInvitationAttention: classSystem,
+	KindApprovalPending:            ClassApprovalPending,
+	KindExtension:                  classSystem,
+	KindProjectHealthAI:            classProjectHealth,
+	// The answer to a colleague's own request to be handed a record.
+	"ownership_request_accepted":  classSystem,
+	"ownership_request_declined":  classSystem,
+	"ownership_request_expired":   classSystem,
+	"ownership_request_withdrawn": classSystem,
 }
 
 // ClassFor answers which class a notice kind is decided about under.
@@ -163,7 +188,7 @@ func (s *Store) MyNotificationPreferences(ctx context.Context) ([]Preference, er
 // and answers their WHOLE set, so a screen rendering one row per class cannot
 // take a stale copy of the others from its own memory.
 func (s *Store) SaveNotificationPreference(ctx context.Context, class, delivery string) ([]Preference, error) {
-	human, err := actingSeat(ctx, "changing your notification settings")
+	human, err := deliverySeat(ctx, "changing your notification settings")
 	if err != nil {
 		return nil, err
 	}
@@ -282,16 +307,21 @@ func preferenceIdentity(human ids.UUID) string {
 
 // actingSeat is the acting human, named by the act for the refusal message.
 //
-// The CONTACT and not merely a user id: an agent or system principal can carry
-// a human's id, and an agent acting under its grantor's authority must not
-// decide what reaches its grantor, nor read or settle what already has — the
-// same ruling identity's delivery settings make, for the same inbox.
-//
-// One gate for the whole module: reading a notice, settling one, settling them
-// all and deciding where a class is delivered ask the same question of the same
-// principal, and five inline copies of it would drift the first time the answer
-// moved.
+// The CONTACT and not merely a user id: a system principal can carry a human's
+// id. Automatic work must not read or settle what reached a human; their agent
+// may.
 func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
+		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
+	}
+	return actor.UserID, nil
+}
+
+// deliverySeat is actingSeat for deciding what reaches a human, which only that
+// human does. An agent choosing that would decide what its grantor hears about
+// the agent. Identity's delivery settings make the same ruling.
+func deliverySeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
 		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
@@ -437,19 +467,11 @@ const TargetApproval = "approval"
 // ApprovalNoticeKey names one announcement of a pending decision across every
 // seat told about it. The writer, the retraction and the centre's routing all
 // read this one spelling.
-func ApprovalNoticeKey(approvalID ids.UUID) string {
-	return approvalNoticePrefix + approvalID.String()
-}
+func ApprovalNoticeKey(approvalID ids.UUID) string { return noticekeys.Approval(approvalID) }
 
-// approvalNoticePrefix opens every approval notice's dedupe key.
-const approvalNoticePrefix = KindApprovalPending + ":"
-
-// approvalOfNoticeKey is the decision an approval notice announces.
 func approvalOfNoticeKey(kind, noticeKey string) (ids.UUID, bool) {
-	rest, ok := strings.CutPrefix(noticeKey, approvalNoticePrefix)
-	if kind != KindApprovalPending || !ok {
-		return ids.UUID{}, false
+	if kind != KindApprovalPending {
+		return ids.Nil, false
 	}
-	id, err := ids.Parse(rest)
-	return id, err == nil
+	return noticekeys.ParseApproval(noticeKey)
 }

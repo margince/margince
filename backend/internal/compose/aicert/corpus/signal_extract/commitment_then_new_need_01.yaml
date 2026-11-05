@@ -1,0 +1,53 @@
+name: a_promise_and_a_later_new_need_are_both_reported
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - direction: outbound
+    subject: 'Podcast recording'
+    sent: '2026-09-07'
+    body: |
+      Hi Mira,
+
+      thanks for joining the session. I will send you the edited recording
+      once it is ready.
+
+      Best,
+      Lars
+  - direction: inbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    body: |
+      Thanks Lars. By the way, we would like to join the beta of your new
+      product. Who should we talk to about getting access?
+
+      Mira
+  - direction: outbound
+    subject: 'Re: Podcast recording'
+    sent: '2026-09-08'
+    body: |
+      Happy to help: Jana Weber runs the beta, and you can write to her at
+      beta@example.com.
+
+      Lars
+expect:
+  outcome: accepted
+  answer:
+    - kind: commitment_made
+      message: 1
+    - kind: new_opportunity
+      message: 2
+  rubric: >
+    Two unrelated events are stated in different messages, and both belong on
+    the account. "I will send you the edited recording once it is ready" is a
+    commitment_made cited on message 1. The reply asking to join the beta is a
+    new_opportunity cited on message 2. A later message carrying one event does
+    not replace the earlier unrelated one. Score both; a reading with only one
+    of the two is partial and scores lower. Reporting a contract_ended is
+    wrong. Then score each summary as one plain sentence a colleague could act
+    on, and each confidence as a real judgement.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

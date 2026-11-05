@@ -42,14 +42,14 @@ import (
 	"encoding/json"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// SearchRecordsResult is what search_records answers: the matching records and,
-// when the search was confined to one type and more remain, the cursor that
-// resumes it.
-type SearchRecordsResult struct {
+// ListRecordsResult is what list_records answers: one page of records and,
+// when more remain, the cursor that resumes it.
+type ListRecordsResult struct {
 	Records []recordWithOwner `json:"records"`
 	// NextCursor is absent rather than empty when there is no next page — an
 	// empty string reads as a cursor a caller might try to use.
@@ -238,6 +238,9 @@ type MergeRecordsResult struct {
 	// SurvivorID is the target, never the source: the source is archived and
 	// redirected, so an id a caller keeps has to be the one that still resolves.
 	SurvivorID ids.UUID `json:"survivor_id"`
+	// Case is a contact case decision's outcome: who keeps access, who was
+	// skipped, and whether it was only a preview.
+	Case *crmcontracts.ContactCaseOutcome `json:"case,omitempty"`
 }
 
 // DraftEmailResult is what draft_email answers: a message nobody has sent.
@@ -314,8 +317,11 @@ type ContextItem struct {
 	// that needs a timezone (tools_commitments.go says the same of due dates),
 	// so a reader converts to the acting user's zone — whoami reports it —
 	// before saying "on the 13th".
-	OccurredAt *time.Time        `json:"occurred_at,omitempty"`
-	Evidence   []ContextEvidence `json:"evidence"`
+	OccurredAt *time.Time `json:"occurred_at,omitempty"`
+	// OccurredPrecision is "day" when only OccurredAt's date is known; absent
+	// on an instant. A day's date is its UTC date, so it is named unconverted.
+	OccurredPrecision string            `json:"occurred_precision,omitempty"`
+	Evidence          []ContextEvidence `json:"evidence"`
 }
 
 // ContextSection groups items by what they are — recent activity, open tasks,
@@ -349,6 +355,9 @@ type PrepForMeetingResult struct {
 	// other anchors name a record rather than a room, and there is no brief to
 	// write for them.
 	Brief *MeetingBriefResult `json:"brief,omitempty"`
+	// Preparation is the caller's own readiness for a meeting anchor they
+	// attend, with the revision confirm_meeting_ready takes.
+	Preparation *MeetingPreparationResult `json:"preparation,omitempty"`
 }
 
 // QualifiedField is one gap the tool filled and the evidence it filled it from.
@@ -370,6 +379,9 @@ type QualifyLeadResult struct {
 // and the note it left if it left one.
 type ProgressDealResult struct {
 	Deal wireRecord `json:"deal"`
+	// ProbabilityNote says the probability the move set from the new stage,
+	// absent when the move changed no stage.
+	ProbabilityNote string `json:"probability_note,omitempty"`
 	// NoteActivityID is absent when the call carried no note. It is a pointer
 	// rather than a zero uuid because "no note was asked for" and "a note whose
 	// id is all zeroes" are different claims, and only one of them is true.
@@ -415,21 +427,15 @@ type DraftFollowUpsResult struct {
 	Drafts  []FollowUpDraft `json:"drafts"`
 }
 
-// UpdateWithStagedApprovalResult is update_record's OTHER answer: the fields
-// that applied, plus the ones a human last edited, which did not.
+// UpdateResult is what update_record answers: the record as it stands after
+// the write, and what each field was and is now.
 //
-// It embeds the record rather than nesting it, because the applied half IS a
-// record read-back and a caller reading the result should find the fields where
-// every other tool puts them.
-type UpdateWithStagedApprovalResult struct {
+// It embeds the record rather than nesting it. The answer is a record read-back,
+// so a caller finds the fields where every other tool puts them.
+type UpdateResult struct {
 	wireRecord
-	// A POINTER, and therefore optional, because this type declares BOTH shapes
-	// update_record answers with: the plain read-back when every field applied,
-	// and the read-back plus the staged note when some did not. Two schemas for
-	// one tool would make a caller pick which it was reading; one schema with an
-	// optional member says exactly what is true — the note is there when a human
-	// last wrote one of the fields, and absent otherwise.
-	StagedApproval *stagedApprovalNote `json:"staged_approval,omitempty"`
+	// Changes names each field this call applied, as it was and as it is.
+	Changes []FieldChange `json:"changes,omitempty"`
 }
 
 // SendEmailResult is what send_email answers once a human has released it.

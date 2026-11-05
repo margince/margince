@@ -31,7 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 )
 
-const frontendAutonomyCopy = "../frontend/src/features/automations/autonomy-settings.tsx"
+const frontendAutonomyCopy = "../frontend/src/features/settings/autonomy-settings.tsx"
 
 // autonomyCopyEntry reads one `close_date_correction: {` key out of the map.
 // Quoted keys match too: an entry written `"lifecycle_change":` would otherwise

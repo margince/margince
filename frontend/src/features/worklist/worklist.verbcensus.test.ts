@@ -42,7 +42,7 @@ const ANSWERED_BY = {
   // Answered on this page, so a link would send the reader where they already
   // are — except an introduction ask, which routes to the colleague's own
   // Network tab through decideDestination.
-  decide: { how: "inline", file: "worklist.row.tsx" },
+  decide: { how: "inline", file: "worklist.row.answer.tsx" },
   merge: { how: "inline", file: "worklist.pair.tsx" },
   // The BRIEF's three verbs live in worklist.briefverbs.tsx: they post to the
   // brief's endpoints rather than to an activity's, and that distinction is why
@@ -53,14 +53,14 @@ const ANSWERED_BY = {
   // together inside BriefSetAsides; act is guarded at its placement, because it
   // is the row's primary slot and the row decides what fills it. This census
   // reads the guard, so each verb points at the file holding its own.
-  act: { how: "inline", file: "worklist.row.tsx" },
+  act: { how: "inline", file: "worklist.row.answer.tsx" },
   set_aside: { how: "inline", file: "worklist.briefverbs.tsx" },
   dismiss: { how: "inline", file: "worklist.briefverbs.tsx" },
-  acknowledge: { how: "inline", file: "worklist.row.tsx" },
+  acknowledge: { how: "inline", file: "worklist.row.answer.tsx" },
   // Running a failed rule again acts where the reader is standing. Routing it
   // would open the automations page, which is where the RULE is fixed — a
   // different act from re-running the firing that broke.
-  retry: { how: "inline", file: "worklist.row.tsx" },
+  retry: { how: "inline", file: "worklist.row.answer.tsx" },
   // Answering the buyer opens the composer over the row, through the same
   // ChannelReplyAction the 360 timelines mount. Routing it would send the
   // reader to the record to press reply there, which is the hand-off the queue
@@ -71,8 +71,16 @@ const ANSWERED_BY = {
   // whole act: keeping it creates the company, discarding it writes this
   // reader's own capture exclusion. Routing either would send the reader to a
   // settings screen to retype a domain the row is already holding.
+  // Reopen draws the row's answer, whose Choose opens the focused review
+  // that holds Retry site read.
+  reopen: { how: "inline", file: "worklist.row.answer.tsx" },
   keep: { how: "inline", file: "worklist.domainquestion.tsx" },
+  keep_as_vendor: { how: "inline", file: "worklist.domainquestion.tsx" },
   discard: { how: "inline", file: "worklist.domainquestion.tsx" },
+  // Taking a task nobody holds writes its assignee where the reader stands.
+  take: { how: "inline", file: "worklist.take.tsx" },
+  // Cancelling a meeting owed an outcome writes its status where the reader is.
+  cancel: { how: "inline", file: "worklist.row.answer.tsx" },
   // Putting an overnight correction back acts in place, on the receipt that
   // reported it. It is the one verb this queue draws OUTSIDE the row: the
   // handled panel is where a change nobody was asked about is told, so it is
@@ -80,7 +88,7 @@ const ANSWERED_BY = {
   // deal's history to find the entry themselves.
   undo: {
     how: "inline",
-    file: "worklist.receiptundo.tsx",
+    file: "../../components/receiptundo.tsx",
     // The receipt is not a queue row and carries no `actions` array, so the
     // control asks the field that decides it: a receipt with no `undo` is an
     // approval somebody agreed to, and there is nothing to take back.
@@ -156,11 +164,9 @@ describe("a row claims no verb it cannot perform", () => {
       // that draws nothing.
       //
       // The third spelling is the dispatch table's. ANSWER_BY_SOURCE pairs a
-      // source with the verb that unlocks it and `rowAnswer` asks
-      // `includes(keyed.verb)` once for all of them — so the guard is real and
-      // the verb's name is a `verb:` field rather than a literal argument. The
-      // pattern anchors on that field name, not on the bare word, so a verb
-      // mentioned in a comment beside the table still fails.
+      // source with the verbs that unlock it, and `rowAnswer` asks once for all
+      // of them. The pattern anchors on the `verbs:` field, not on the bare
+      // word, so a verb mentioned in a comment beside the table still fails.
       const source = readFileSync(join(SCREENS, where.file), "utf8");
       if ("guardedBy" in where) {
         // A verb the item's `actions` list does not carry. The receipt has no
@@ -173,7 +179,7 @@ describe("a row claims no verb it cannot perform", () => {
       return !(
         source.includes(`offered("${verb}")`) ||
         source.includes(`includes("${verb}")`) ||
-        source.includes(`verb: "${verb}"`)
+        new RegExp(`verbs: \\[[^\\]]*"${verb}"`).test(source)
       );
     });
 

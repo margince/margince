@@ -26,7 +26,8 @@ import (
 // fields are ignored — the raw original is stored verbatim as evidence
 // (memory-first), so nothing is lost by reading only what we use.
 type rawEvent struct {
-	ID string `json:"id"`
+	Sensitivity string `json:"sensitivity"`
+	ID          string `json:"id"`
 	// ICalUID is the event's cross-provider identity, and `id` is not: `id` is
 	// Graph's own numbering, so the same meeting read from Graph and from
 	// Google carries two ids and would dedupe as two meetings.
@@ -48,6 +49,10 @@ type rawEvent struct {
 	Start       graphTime    `json:"start"`
 	Organizer   graphActor   `json:"organizer"`
 	Attendees   []graphActor `json:"attendees"`
+	// With hideAttendees set, each attendee's copy lists only themselves; the
+	// organizer's copy lists everyone.
+	HideAttendees bool `json:"hideAttendees"` //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
+	IsOrganizer   bool `json:"isOrganizer"`   //nolint:tagliatelle // Microsoft's wire format (camelCase); must match to decode
 	// Removed is Graph's tombstone on a delta round: an event deleted since the
 	// last pull arrives carrying this and little else. It is read as a
 	// cancellation because that is what it is to a calendar.
@@ -73,7 +78,11 @@ type graphTime struct {
 // down and states an attendee's KIND separately — "resource" is a booked room
 // or device rather than a contact.
 type graphActor struct {
-	Type         string `json:"type"`
+	Type string `json:"type"`
+	// Status is this attendee's own answer; "declined" is the one that matters.
+	Status struct {
+		Response string `json:"response"`
+	} `json:"status"`
 	EmailAddress struct {
 		Address string `json:"address"`
 		// Name is what the organizer typed for this party. Carried for the
@@ -97,18 +106,35 @@ func decodeEvent(raw []byte, _ string) (meetingmap.Event, error) {
 	return decode(ev), nil
 }
 
+// guestResponses maps Graph's status.response onto the connector's answers.
+// "none" is Graph's word for an attendee who has not answered yet.
+var guestResponses = map[string]string{
+	"accepted":            connector.ResponseAccepted,
+	"organizer":           connector.ResponseAccepted,
+	"declined":            connector.ResponseDeclined,
+	"tentativelyaccepted": connector.ResponseTentative,
+	"notresponded":        connector.ResponseNeedsAction,
+	"none":                connector.ResponseNeedsAction,
+}
+
+func guestResponse(status string) string {
+	return guestResponses[strings.ToLower(strings.TrimSpace(status))]
+}
+
 // decode maps Microsoft's event resource onto the neutral shape.
 func decode(ev rawEvent) meetingmap.Event {
 	attendees := make([]meetingmap.Actor, 0, len(ev.Attendees))
 	for _, a := range ev.Attendees {
 		attendees = append(attendees, meetingmap.Actor{
-			Email: a.EmailAddress.Address,
-			Name:  a.EmailAddress.Name,
-			Room:  strings.EqualFold(strings.TrimSpace(a.Type), "resource"),
+			Email:    a.EmailAddress.Address,
+			Name:     a.EmailAddress.Name,
+			Room:     strings.EqualFold(strings.TrimSpace(a.Type), "resource"),
+			Response: guestResponse(a.Status.Response),
 		})
 	}
 	return meetingmap.Event{
 		ID:        ev.ID,
+		Private:   ev.Sensitivity != "" && ev.Sensitivity != "normal",
 		ICalUID:   strings.TrimSpace(ev.ICalUID),
 		Cancelled: ev.IsCancelled || ev.Removed != nil,
 		// Only "declined". A tentative answer is an attendance somebody may yet
@@ -122,6 +148,7 @@ func decode(ev rawEvent) meetingmap.Event {
 		AllDay:        ev.IsAllDay,
 		Organizer:     meetingmap.Actor{Email: ev.Organizer.EmailAddress.Address, Name: ev.Organizer.EmailAddress.Name},
 		Attendees:     attendees,
+		PartiesHidden: ev.HideAttendees && !ev.IsOrganizer,
 	}
 }
 
@@ -179,4 +206,13 @@ func parseStart(start graphTime, allDay bool) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// RecordOf uses the live provider normalizer when replaying a stored event.
+func RecordOf(raw []byte, owner string) (connector.NormalizedRecord, error) {
+	records, err := meetingmap.NormalizeOne(raw, owner, connectorName, decodeEvent)
+	if err != nil {
+		return connector.NormalizedRecord{}, err
+	}
+	return records[0], nil
 }

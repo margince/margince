@@ -10,7 +10,7 @@ import {
   waitFor,
   within,
 } from "storybook/test";
-import { RequestsPanel } from "../../screens/settings.privacy";
+import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -18,6 +18,7 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../../testing/story-utils";
+import { RequestsPanel } from "../settings/settings.privacy";
 
 // The DSR inbox: the open form, a request worked in its drawer, and fulfilling
 // an erasure. A legal-hold 409 never carries a retention date; nor does a story.
@@ -31,6 +32,7 @@ const DSRS = {
       status: "open",
       due_at: "2026-08-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-07-01T00:00:00Z",
     },
     {
@@ -41,6 +43,7 @@ const DSRS = {
       resolution: "sent by post",
       due_at: "2026-07-12T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
     {
@@ -52,6 +55,7 @@ const DSRS = {
       assignee_id: "u-1",
       due_at: "2099-11-30T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-06-01T00:00:00Z",
     },
     {
@@ -63,6 +67,7 @@ const DSRS = {
       resolution: "No record of this address",
       due_at: "2026-05-01T00:00:00Z",
       due_overridden: false,
+      dispute_open: false,
       created_at: "2026-04-01T00:00:00Z",
     },
   ],
@@ -230,7 +235,20 @@ export const RefusedWrite: Story = {
   play: async ({ canvasElement }) => {
     await expandRow(canvasElement, "Lena Hoffmann");
     const drawer = await findRow("Lena Hoffmann");
+    // A close needs the answer and how the identity was checked. Typing only
+    // the answer leaves the verb disabled, so the press wrote nothing and the
+    // story showed no refusal.
     await userEvent.type(within(drawer).getByLabelText(/resolution/i), "done");
+    await userEvent.click(
+      within(drawer).getByRole("combobox", {
+        name: en["privacy.identityCheck"],
+      }),
+    );
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole("option", {
+        name: en["privacy.identityCheck.id_document"],
+      }),
+    );
     await userEvent.click(
       within(drawer).getByRole("button", { name: /reject/i }),
     );
@@ -320,8 +338,22 @@ async function armErasureConfirm(canvasElement: HTMLElement) {
   await expandRow(canvasElement, "8f3a-contact-uuid");
   const row = await findRow("8f3a-contact-uuid");
   await userEvent.type(within(row).getByLabelText(/resolution/i), "verified");
+  // The verb arms on the answer and on how the identity was checked, and a
+  // document seen is the one answer an erasure fulfil accepts. Without it the
+  // press did nothing and the confirm never opened.
+  await userEvent.click(
+    within(row).getByRole("combobox", { name: en["privacy.identityCheck"] }),
+  );
+  await userEvent.click(
+    await within(canvasElement.ownerDocument.body).findByRole("option", {
+      name: en["privacy.identityCheck.id_document"],
+    }),
+  );
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-  await userEvent.type(await screen.findByLabelText(/type erase/i), "ERASE");
+  await userEvent.type(
+    await screen.findByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`),
+    "ERASE",
+  );
 }
 
 // The typed-ERASE confirm modal for the destructive erasure fulfil —

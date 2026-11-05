@@ -7,7 +7,7 @@ import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern. MergeAction
-// (screens/merge.tsx) draws it; AddRelationshipAction (screens/relationships.tsx)
+// (components/merge.tsx) draws it; AddRelationshipAction (components/relationships.tsx)
 // still holds its own copy.
 //
 // It is now PUBLISHED to the extension tier (surface/design-system.ts), which
@@ -25,6 +25,9 @@ export type RecordPickerCandidate = {
   id: string;
   name: string;
   detail?: string;
+  // Whether this reader may change the row, as the list read reports it.
+  // Callers whose write needs a writable row treat absent as not writable.
+  writable?: boolean;
 };
 
 // Named once: by `label` standing alone, or by the `<label for>` a `Field`
@@ -114,6 +117,9 @@ export function RecordPicker({
   onPick,
   selected,
   disabled = false,
+  initialTerm = "",
+  unavailableReason,
+  noMatch,
   id,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
@@ -128,10 +134,19 @@ export function RecordPicker({
   // list and the typed query stay on screen, which is what the user needs to
   // see if the write comes back refused.
   disabled?: boolean;
+  // The search the picker opens with, when the caller already knows the
+  // likely name. Read once: the user's typing owns the term after that.
+  initialTerm?: string;
+  // A sentence for a row that is listed but cannot be picked. A function read
+  // at render, not part of the search, so a new translator never restarts it.
+  unavailableReason?: (candidate: RecordPickerCandidate) => string | undefined;
+  // The sentence for a search that finds nothing, when the caller can say why
+  // and what to do next.
+  noMatch?: string;
 }> &
   RecordPickerName) {
   const t = useT();
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState(initialTerm);
   const {
     candidates,
     answered,
@@ -184,33 +199,41 @@ export function RecordPicker({
         </p>
       )}
       {answered && candidates.length === 0 && (
-        <p aria-live="polite">{t("picker.noMatch")}</p>
+        <p aria-live="polite">{noMatch ?? t("picker.noMatch")}</p>
       )}
       {candidates.length > 0 && (
         <ul className="recordpicker-options">
-          {candidates.map((candidate) => (
-            <li key={candidate.id}>
-              <Button
-                className="recordpicker-option"
-                aria-pressed={selected?.id === candidate.id}
-                disabled={disabled}
-                onClick={() => {
-                  onPick(candidate);
-                  // Collapse the list and empty the field so the resolved
-                  // selection reads cleanly instead of sitting under a stale
-                  // result set.
-                  setTerm("");
-                }}
-              >
-                <span>{candidate.name}</span>
-                {candidate.detail && (
-                  <span className="t-caption recordpicker-option-detail">
-                    {candidate.detail}
-                  </span>
-                )}
-              </Button>
-            </li>
-          ))}
+          {candidates.map((candidate) => {
+            const unavailable = unavailableReason?.(candidate);
+            return (
+              <li key={candidate.id}>
+                <Button
+                  className="recordpicker-option"
+                  aria-pressed={selected?.id === candidate.id}
+                  disabled={disabled || !!unavailable}
+                  onClick={() => {
+                    onPick(candidate);
+                    // Collapse the list and empty the field so the resolved
+                    // selection reads cleanly instead of sitting under a stale
+                    // result set.
+                    setTerm("");
+                  }}
+                >
+                  <span>{candidate.name}</span>
+                  {candidate.detail && (
+                    <span className="t-caption recordpicker-option-detail">
+                      {candidate.detail}
+                    </span>
+                  )}
+                  {unavailable && (
+                    <span className="t-caption recordpicker-option-detail">
+                      {unavailable}
+                    </span>
+                  )}
+                </Button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -92,7 +93,7 @@ The mailbox owner is known **only from the connector principal**. `capture_conne
 user per provider, so the registry stamps the human who granted it on the principal that runs the
 sync. By the time any other module sees the activity, its `captured_by` reads `connector:gmail`. The
 human behind it can no longer be known. That is the agreed reason `capture` writes a table
-`activities` owns. `backend/gates/tableownership_test.go` carries it word for word, and a waiver with
+`activities` owns. `backend/gates/tableownershipwaivers_test.go` carries it word for word, and a waiver with
 no reason, or an out-of-date one, fails the gate.
 
 Capture writes the counterparty as an **address**, not a contact. The tier gate that creates contacts
@@ -205,6 +206,13 @@ The real test sits in the **reciprocity part**, not in a role filter. A team mem
 copied has messages in one direction, so reciprocity puts them well below someone in a real exchange.
 They show up, ranked at their real level, and do not drop out.
 
+Copy still is not writing. Each edge also keeps `sent_count_90d`, the mail and chat messages the
+team member sent the contact as `from` (`graphMemberSent` in `search/graphedge.go`). A logged call or
+meeting is not a message sent. A contact's Reach row reads its two-way verdict and its one-way writers
+from this count, so a team member who was only copied is neither. A reader without activity access
+gets the edge without the count. A row folded before the column existed holds NULL, and readers keep
+the outbound count's reading until the row is folded again.
+
 **What does not make an edge**, and why:
 
 - **Anything outside `email`, `call`, `meeting`** (`relstrength.IsInteractionKind`, written into SQL
@@ -212,6 +220,23 @@ They show up, ranked at their real level, and do not drop out.
   record of *thinking*. No such record means a real exchange happened. To count them would let a user's own
   to-do list score as a relationship. If the two paths used different lists, a captured note would
   count as an interaction while the same note logged by hand would not.
+- **A row no human wrote** (`relstrength.WrittenByHumanSQL`, part of
+  `relstrength.InteractionCountsSQL`). A mail with a calendar method is an invite, an answer to one,
+  or a notice that a meeting is off. A mail whose sender capture stamped `sender_is_machine` came
+  from a sending system: a file-share notice, an automatic notice or a delivery report. A mail
+  capture stamped `bulk_mail_attested` carried a List-Unsubscribe header: a newsletter or other
+  mail sent to a list, in either direction. A row with origin `system_notice` or
+  `system_remediation` is the product writing. The same rule moves the contact and company
+  last-touch dates and contact strength, and the read contract names it as `automatic_kind`.
+
+  Such a row stays on every timeline. The nightly `graph_edge_reconcile` folds every edge again, so an
+  edge folded before a kind joined the rule loses that count within a day.
+
+  The email reader (`signal_extract`) uses the sender stamp alone, and still reads a newsletter,
+  because a customer's newsletter can carry account news. It skips a thread in which every message comes
+  from a sending system, so it makes no model call and saves no signal. Such a message also reaches no
+  company, so a notice never puts a finding on the sending tool's company. Such mail does not end a quiet
+  reminder either.
 - **An archived activity.** The fold joins `activity … AND a.archived_at IS NULL`, and the prune step
   removes a pair that has lost all its evidence.
 - **A seat on a deal.** A stakeholder row is a statement about *who should take part*. Only a recorded
@@ -520,7 +545,7 @@ See [authorization.md](authorization.md) and [privacy-and-consent.md](privacy-an
 | Agent-tool seams (`who_knows`, `company_coverage`, `intro_path_to`, `at_risk_relationships`) | `internal/compose/networkseams.go`, `introseams.go`; `internal/modules/agents/tools_network.go` |
 | Erasure of participants, ghosts and edges (one transaction) | `internal/modules/privacy/erasure_graph.go`, `retention_graph.go` |
 | Deactivation deleting a leaving member's network | `internal/modules/identity/users.go` |
-| Cross-store agreements for every table above | `backend/gates/tableownership_test.go` |
+| Cross-store agreements for every table above | `backend/gates/tableownershipwaivers_test.go` |
 | The tables | `backend/migrations/core/0001_baseline.up.sql` (`activity_participant`, `graph_interaction_edge`, `linkedin_connection`, `linkedin_account`) |
 | The REST contract | `backend/api/crm.yaml` (`getContactNetwork`, `getDealCoverage`) |
 | The job contract (schedule, runs per workspace, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |

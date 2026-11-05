@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -29,7 +28,7 @@ import (
 // default. A test that gives every route the same ceiling passes just as
 // happily against a table that hands every route the same one, and a table
 // wired to the wrong field is the likelier mistake than one wired to nothing.
-var testLimits = deployconfig.UploadLimits{
+var testLimits = UploadLimits{
 	Attachment:     31_000_000,
 	CSVImport:      12_000_000,
 	LinkedInImport: 7_000_000,

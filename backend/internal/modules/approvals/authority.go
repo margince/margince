@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,6 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+const objectUserAdmin = "user_admin"
 
 // objectActivity is the RBAC object every timeline write is governed by, spelled
 // once: three staged kinds and the target-visibility switch below all name it,
@@ -78,7 +81,7 @@ const kindHeldDraft = "held_draft"
 // across them would leave the kind half-governed with nothing saying so.
 const (
 	kindDealFollowUp   = "deal_follow_up"
-	kindCommitmentTask = "commitment_task"
+	kindCommitmentTask = approvalsubject.KindCommitmentTask
 	// kindTranscriptProposal is retired: nothing stages it and no effect
 	// applies it. It stays governed so the cards already decided under it stay
 	// readable to whoever decided them.
@@ -87,7 +90,7 @@ const (
 
 // retiredKinds are governed for reading and refused for approving: see
 // kindTranscriptProposal.
-var retiredKinds = map[string]bool{kindTranscriptProposal: true}
+var retiredKinds = map[string]bool{kindTranscriptProposal: true, kindCommunicationReview: true}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -95,20 +98,13 @@ var retiredKinds = map[string]bool{kindTranscriptProposal: true}
 // lives here, so the edge is injected there and both halves name one kind.
 const KindScheduledSendHeld = "scheduled_send_held"
 
-// KindCommunicationReview is a send the engine refused, put in front of
-// somebody who may decide it goes anyway.
-//
-// NOT SELF-ONLY, unlike the held-message kind above, and that is the whole
-// point of routing one. A rep refused at the keyboard may not hold the
-// authority to override the engine; this card exists so they can ask somebody
-// who does. A kind only its initiator could decide would put the question back
-// in front of the colleague who could not answer it.
-const KindCommunicationReview = "communication_review"
+// kindCommunicationReview is retired: it asked a colleague to decide a refused
+// send, and nothing stages or applies it now. It stays governed so the cards
+// already decided under it stay readable.
+const kindCommunicationReview = "communication_review"
 
 // objectCommunicationException is the RBAC object directing a send answers to,
-// spelled here as identity's policy spells it. Deciding one of these cards IS
-// directing a send, so it takes the same grant the direct-send door takes —
-// anything less would make the card a way around that door.
+// spelled here as identity's policy spells it.
 const objectCommunicationException = "communication_exception"
 
 // decisionGrants maps each stageable kind onto the RBAC its effect needs given
@@ -118,6 +114,7 @@ const objectCommunicationException = "communication_exception"
 // both today, and decisionGrantsFor combines them so one that grows a second half
 // gains authority rather than silently losing the first.
 var decisionGrants = map[string][]grantRequirement{
+	"merge_members": {{objectUserAdmin, principal.ActionDelete}},
 	// A held message asks its rep to try again or give up. Both answers move the
 	// message's own state — reschedule and cancel — which the store gates on
 	// activity.UPDATE, so that is what deciding requires. It is the effects'
@@ -144,12 +141,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the two entries are one decision and TestAStepUpIsDecidedByTheLenderAlone
 	// holds them together.
 	KindVolumeRelease: {},
-	// Deciding a refused send is directing it, so it takes the grant the
-	// direct-send door takes. The card is a route to that act, not a second
-	// authority for it — a reviewer who could approve here but not direct
-	// would be releasing work they could not perform, and the effect would
-	// refuse after the decision had already committed.
-	KindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
+	// Retired; read only, see kindCommunicationReview. Reading one takes the
+	// grant directing a send takes, as deciding one did.
+	kindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
 
 	"advance_deal": {{tableDeal, principal.ActionUpdate}},
 	// progress_deal is advance_deal plus a timeline note; the gated effect
@@ -162,20 +156,19 @@ var decisionGrants = map[string][]grantRequirement{
 	// the confirm-first control point sits with someone who could not do the
 	// thing they are releasing.
 	"disqualify_lead": {{tableLead, principal.ActionDelete}},
-	// Demotion reverses a promotion: the lead returns to the open ladder and the
-	// contact the promotion created is archived. Both halves are gated where they
-	// are performed (contacts/demote.go), so deciding takes both — the lead's
-	// update and the contact's delete. The contact grant is the one that matters:
-	// releasing a demotion is releasing the archival of a contact somebody may
-	// have been working, and an approver who could not archive that contact is
-	// not the contact to authorise it.
-	"demote_lead": {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionDelete}},
+	// Reversal spends the writer's lead and contact update grants, including when
+	// it archives a contact created by the promotion.
+	"demote_lead": {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionUpdate}},
 	// A tag merge releases the source's NAME and no later act restores it, which
 	// is why it confirms where a record merge does not: mergeContact archives the
 	// source with `merged_into_id` and audit walks it back, and a tag keeps no
 	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
 	"merge_tags": {{targetTag, principal.ActionUpdate}},
+	// A set-up writes the partner row and adds `partner` to the company's
+	// relationship types (contacts/partner.go UpsertPartner). It carries no
+	// margin tier, so it takes the company grant alone, and so does deciding it.
+	"set_up_partner": {{tableCompany, principal.ActionUpdate}},
 	// Retiring a word is gated on `tag.delete` (collections/tags.go ArchiveTag),
 	// so a floored archive is decided on that grant.
 	"archive_tag": {{targetTag, principal.ActionDelete}},
@@ -255,6 +248,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
+	// Accepting a contact_share request shares the contact with the colleague
+	// who asked, which is the grant the Share button itself requires.
+	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create
@@ -272,7 +268,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// Accepting a company_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
 	// the company — the same update authority the name editor needs.
-	"company_name_promotion": {{tableCompany, principal.ActionUpdate}},
+	kindCompanyNamePromotion: {{tableCompany, principal.ActionUpdate}},
 	// Accepting a lifecycle_change proposal (the account-intelligence arc: the
 	// correspondence says the contract ended while the record still reads as
 	// live) moves the account's stage — the same update authority the header's
@@ -283,7 +279,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// company editor could read model-derived correspondence and close a
 	// signal they have no standing to see — the ordinary triage path takes
 	// signal:update and EnsureSignalVisible for exactly that reason.
-	"lifecycle_change": {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
+	kindLifecycleChange: {{tableCompany, principal.ActionUpdate}, {targetSignal, principal.ActionUpdate}},
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
 	closeDateCorrectionKind: {{tableDeal, principal.ActionUpdate}},
@@ -363,74 +359,48 @@ var targetResolvedGrants = map[string]principal.Action{
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
+	// Accepting a transfer moves a contact or a company to a colleague, which
+	// is an owner change on that record.
+	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate,
 }
 
-// decidable is the ONE visibility-and-authority predicate for the inbox
-// and the decision: true when p holds every grant approving a would
-// require AND could read the staged target itself — the object-read grant
-// on its type, then that record's own row rule (targetvisibility.go). It
-// backs List, Get and Decide alike, so triage visibility and the decision
-// gate can never drift apart — you see exactly what you could act on, and
-// what you cannot see you cannot decide (in either direction). Two shapes
-// narrow that to ONE seat, the member the row was staged for: a self-only
-// kind, a staged create against a table whose rows belong to one human
-// each, and a kind that is one rep's own morning work
-// (decidedByTheSeatStagedFor). An unknown kind (no mapping) or unknown target type is not
-// decidable: fail-closed.
-func decidable(ctx context.Context, tx pgx.Tx, p principal.Principal, a row) (bool, error) {
-	if requireDecisionGrants(p, a) != nil {
-		return false, nil
-	}
-	if withheldFromOtherSeats(p, a) {
-		return false, nil
-	}
-	return targetDecidable(ctx, tx, a.TargetType, a.TargetID)
-}
-
-// PendingDecidableBy answers whether the ACTING principal could decide the
-// named approval RIGHT NOW: the row is still pending, it has not lapsed, and
-// decidable answers yes. It is the same three-conjunct predicate the inbox
-// filters by, asked about one row instead of a page.
-//
-// Exported for the notification fan-out, which has to ask it once per seat and
-// would otherwise grow a third copy of the decision-authority rule — the
-// webhooks module's partial copy is the cautionary precedent, not the pattern.
-// The fan-out must never tell a colleague about a card their own inbox would
-// then hide from them.
-//
-// THE ROW IS RE-READ HERE, which is the whole reason this is not a question the
-// caller can answer from an event. Supersession and withdrawal both write
-// `expired` with no event of their own, so an envelope that says "pending" can
-// be describing a row that has not been pending for hours.
-//
-// An approval that is GONE answers false rather than ErrNotFound, matching what
-// Get already does in the other direction: the inbox deliberately conflates
-// absent with invisible, and a predicate that raised for the one and answered
-// for the other would leak which it was.
+// PendingDecidableBy rechecks current state and authority because a notification event may be stale.
+// Missing and inaccessible decisions both return false, so fan-out reveals neither.
 func (s *Service) PendingDecidableBy(ctx context.Context, id ids.ApprovalID) (bool, error) {
+	var could bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		could, err = s.pendingDecidable(ctx, tx, id)
+		return err
+	})
+	return could, err
+}
+
+func (s *Service) pendingDecidable(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
+	return s.pendingDecidableInScope(ctx, tx, id, ListInput{})
+}
+
+func (s *Service) pendingDecidableInScope(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput) (bool, error) {
+	return pendingDecidableInScopeAt(ctx, tx, id, scope, s.now())
+}
+
+func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput, now time.Time) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
 	p, _ := principal.Actor(ctx)
-	var could bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		a, err := get(ctx, tx, id)
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if a.effectiveStatus(s.now()) != statusPending {
-			return nil
-		}
-		could, err = decidable(ctx, tx, p, a)
-		return err
-	})
+	a, err := get(ctx, tx, id)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	return could, nil
+	eligible, err := pendingEligible(ctx, tx, p, scope, now)([]row{a})
+	if err != nil {
+		return false, err
+	}
+	return eligible[0], nil
 }
 
 func requireDecisionGrants(p principal.Principal, a row) error {
@@ -460,7 +430,7 @@ func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, err
 		// rule every entry above follows: deciding takes the grant performing
 		// it takes. Consulted only AFTER the static maps, so a unit can never
 		// answer for a core kind.
-		if ext, registered := extensionKind(kind); registered {
+		if ext, registered := RegisteredExtensionKind(kind); registered {
 			return []grantRequirement{{ext.RbacObject, ext.RbacAction}}, nil
 		}
 		return nil, fmt.Errorf("crmapprovals: kind %q has no decision-grant mapping", kind)

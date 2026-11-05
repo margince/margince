@@ -2,6 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useId } from "react";
 import { api } from "../../api/client";
 import { ActionRow } from "../../design-system/actionrow";
+import { AppLink } from "../../design-system/applink";
+import {
+  SummaryFields,
+  summaryPartsWithout,
+  summarySentence,
+} from "../../design-system/approvalsummary";
 import {
   Button,
   Disclosure,
@@ -10,31 +16,36 @@ import {
   Textarea,
   TextInput,
 } from "../../design-system/atoms";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
+import { DecisionEvidence } from "../../design-system/decisioncard.content";
 import {
-  DateInput,
-  type ISODate,
-  isISODate,
-} from "../../design-system/dateinput";
+  decisionEvidence,
+  withoutRepeatedLead,
+} from "../../design-system/decisioncard.payload";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { EvidenceChip } from "../../design-system/trust";
 import { isRealCalendarDay } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { summaryWords } from "../../lib/approvalpreviewfields";
+import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
+import { approvalHref } from "./approvalhref";
 import {
   EDITABLE_FIELDS,
   type EditableField,
   humanizeKind,
 } from "./approvalkind";
-import type { Approval } from "./approvals.queries";
+import { useApprovalNames } from "./approvalresponsibility";
+import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "../../design-system/querystates.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -56,6 +67,8 @@ export function editableStrings(
   kind: string,
   change: Record<string, unknown>,
 ): EditableField[] {
+  if (kind === "commitment_task" && typeof change.existing_task_id === "string")
+    return [];
   // Own-property only: `kind` is a wire string, and a value named `constructor`
   // would otherwise find a function on Object's prototype, pass the truthy
   // check, and crash the queue on .filter instead of falling back to the
@@ -75,34 +88,6 @@ export function editableStrings(
     .map(([field]) => ({ field, as: "text" }) as const);
 }
 
-// The per-claim evidence chips, shared by the row and the detail modal (was
-// duplicated verbatim in both). A snippet-less evidence item is dropped.
-//
-// `source_lines` rides along with the snippet rather than being dropped: a
-// proposal read out of a transcript is only checkable if the reader can find
-// the exchange it came from, and a quoted sentence with no address is a claim
-// they have to take on trust.
-function EvidenceList({
-  evidence,
-}: Readonly<{ evidence: Approval["evidence"] }>) {
-  return (
-    <>
-      {evidence?.map((item) =>
-        item.evidence_snippet ? (
-          <EvidenceChip
-            key={`${item.source_id}-${item.evidence_snippet.slice(0, 12)}`}
-            evidence={{
-              snippet: item.evidence_snippet,
-              source: item.source_type ?? "",
-              lines: item.source_lines,
-            }}
-          />
-        ) : null,
-      )}
-    </>
-  );
-}
-
 /**
  * AC-2: the row's "view everything" affordance — the proposal's own fields, the
  * evidence behind them and the timestamps the summary/evidence-chip row
@@ -117,7 +102,7 @@ export function ApprovalDetailModal({
   const { locale } = useLocale();
   // An approval is a thing the reader must act on, so its timestamps belong on
   // the reader's own clock rather than the record's.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const headingId = useId();
   const detail = useQuery({
     queryKey: ["approval", approvalId],
@@ -141,11 +126,24 @@ export function ApprovalDetailModal({
         {open && (
           <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
             {(approval) => (
-              <ApprovalDetailBody
-                approval={approval}
-                locale={locale}
-                zone={zone}
-              />
+              <>
+                <ApprovalDetailBody
+                  approval={approval}
+                  locale={locale}
+                  zone={zone}
+                />
+                {/* A pending request is answered on its decision card; the
+                    detail only reads it. */}
+                {approval.status === "pending" && (
+                  <AppLink
+                    href={approvalHref(approval.id)}
+                    className="link-button"
+                    onClick={onClose}
+                  >
+                    {t("decision.openToDecide")}
+                  </AppLink>
+                )}
+              </>
             )}
           </QueryGate>
         )}
@@ -184,13 +182,24 @@ function ApprovalDetailBody({
 }>) {
   const t = useT();
   const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
+  const approvalNames = useApprovalNames([approval]);
+  const readerZone = useViewerZone();
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
-    stagedDayFormatter(locale, zone),
+    stagedDayFormatter(locale, readerZone),
+    approvalNames,
+    approval.requested_decider_id,
+    approval.assignee_inactive,
+    approval.preview,
+    locale,
+    readerZone,
   );
-  const named = display.filter((entry) => entry.value !== null);
+  const sentence = summarySentence(approval);
+  const named = withoutRepeatedLead(display, sentence).filter(
+    (entry) => entry.value !== null,
+  );
   // The raw payload is shown ONCE, and where it goes says what it is. A kind
   // that named its fields has already told the reader what the proposal says,
   // so the keys behind that are reference material; a kind that named none has
@@ -198,7 +207,16 @@ function ApprovalDetailBody({
   const rawPayload = <RawPayload change={change} />;
   return (
     <div className="form-stack">
-      {approval.summary && <p className="t-body">{approval.summary}</p>}
+      {sentence && <p className="t-body">{sentence}</p>}
+      <SummaryFields
+        parts={summaryPartsWithout(
+          approval.summary_parts,
+          new Set(named.map((entry) => entry.field)),
+        )}
+        words={summaryWords(t)}
+      />
+      <ApprovalTarget approval={approval} />
+      <ApprovalDecider approval={approval} />
       {named.length > 0
         ? named.map((entry) => (
             <FieldLine
@@ -211,7 +229,10 @@ function ApprovalDetailBody({
       {askedOn(approval, locale, zone, t).map(([label, value]) => (
         <FieldLine key={label} name={label} value={value} />
       ))}
-      <EvidenceList evidence={approval.evidence} />
+      <DecisionEvidence
+        evidence={decisionEvidence(approval)}
+        collapsed={false}
+      />
       {named.length > 0 && (
         <Disclosure summary={t("decision.detailTechnical")}>
           <div className="form-stack">{rawPayload}</div>
@@ -339,13 +360,6 @@ export function editableSeed(entry: EditableField, staged: unknown): string {
   return entry.as === "date" && !isRealCalendarDay(staged) ? "" : staged;
 }
 
-// The seeded value narrowed to what the date control's own type accepts. The
-// seed already dropped anything unshowable, so this is the type narrowing and
-// not a second rule.
-function isoOrBlank(staged: string | undefined): ISODate | "" {
-  return staged && isISODate(staged) ? staged : "";
-}
-
 /**
  * The inline staged-draft editor: the string fields of the proposed_change, in
  * the shape the kind declared for them, going up as `edited_payload`.
@@ -358,6 +372,8 @@ function isoOrBlank(staged: string | undefined): ISODate | "" {
  * it does not know what this installation lets a contact change.
  */
 export function StagedEditor({
+  disabled,
+  acceptLabel,
   fields,
   draft,
   onChange,
@@ -365,6 +381,8 @@ export function StagedEditor({
   onApprove,
   onCancel,
 }: Readonly<{
+  disabled?: boolean;
+  acceptLabel?: string;
   fields: readonly EditableField[];
   draft: Record<string, string>;
   onChange: (field: string, value: string) => void;
@@ -374,7 +392,7 @@ export function StagedEditor({
 }>) {
   const t = useT();
   return (
-    <div className="form-stack approval-editor">
+    <div className="form-stack approval-editor" data-date-scope>
       {fields.map((entry) => (
         <Field
           key={entry.field}
@@ -401,10 +419,8 @@ export function StagedEditor({
             ) : entry.as === "date" ? (
               <DateInput
                 {...control}
-                // A staged date the control cannot show is shown as empty
-                // rather than passed through: the element would blank a
-                // malformed value on its own, and an empty box a reader can
-                // fill beats one that silently drops what they typed.
+                // A staged date that is not a day shows as an empty box the
+                // reader can fill, not as text the field would refuse.
                 value={isoOrBlank(draft[entry.field])}
                 onChange={(event) => onChange(entry.field, event.target.value)}
               />
@@ -430,8 +446,17 @@ export function StagedEditor({
           /* The edited approve is the same write as the plain one and was the
              one path with no gate at all, so a second press sent a second
              verdict. */
-          <Button variant="primary" pending={pending} onClick={onApprove}>
-            {t("decision.approveEdited")}
+          <Button
+            variant="primary"
+            pending={pending}
+            disabled={disabled}
+            onClick={(event) => {
+              if (!refuseUnreadableField(event.currentTarget)) {
+                onApprove();
+              }
+            }}
+          >
+            {acceptLabel ?? t("decision.approveEdited")}
           </Button>
         }
       >

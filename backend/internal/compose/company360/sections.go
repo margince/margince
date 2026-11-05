@@ -22,7 +22,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -44,11 +46,6 @@ func truncate[T any](rows []T) ([]T, crmcontracts.PageInfo) {
 // scopeAll is the predicate an unbounded (admin) caller gets: the SQL
 // that embeds a row-scope clause then needs only one spelling.
 const scopeAll = "TRUE"
-
-// scopeNone admits no row. It is what a section uses when the caller holds no
-// grant over the rows at all, as against a row scope that narrows a set the
-// grant has already opened.
-const scopeNone = "FALSE"
 
 // scopeClause resolves one object's row-scope predicate for the caller,
 // answering scopeAll for an unbounded caller.
@@ -92,7 +89,7 @@ func edgeScope(ctx context.Context, arg func(any) int) (string, error) {
 // linkScope resolves "this activity_link row points at a record the caller
 // can read" for one table alias, answering scopeAll for an unbounded caller.
 func linkScope(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	clause, err := auth.LinkTargetVisibleClause(ctx, alias, arg)
+	clause, err := auth.LinkTargetReadableClause(ctx, alias, arg)
 	if err != nil {
 		return "", err
 	}
@@ -154,6 +151,38 @@ func openTaskPromises(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, n
 	return steps, filed, err
 }
 
+// hiddenNextStepsExist reports whether an open task of the account lies outside
+// the caller's activity row scope. The section's statement filters on that
+// scope. Without this check a hidden task reads as no task. Then "what is
+// open" would answer from a list that looks whole.
+func hiddenNextStepsExist(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos := arg(companyID)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return false, err
+	}
+	if activityScope == "" {
+		return false, nil
+	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return false, err
+	}
+	current := activities.CurrentTaskClause("a", now, identities, arg)
+	var hidden bool
+	query := fmt.Sprintf(`
+		SELECT EXISTS (
+		  SELECT 1 FROM activity a
+		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
+		    AND NOT coalesce((%s), false) AND %s AND %s%s)`,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), current,
+		opts.projectScope(arg))
+	err = tx.QueryRow(ctx, query, args...).Scan(&hidden)
+	return hidden, err
+}
+
 // readNextSteps is the read both callers share: same statement, same gates,
 // same scan. Two things move per caller: the bound, which the cut honours —
 // the promise read's wide cap and the section's page are different bounds,
@@ -182,12 +211,16 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
-	extra := ""
-	if promisesOnly {
-		extra = " AND " + activities.NotSystemMinted("a", arg)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, crmcontracts.PageInfo{}, nil, err
 	}
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at, a.version,
+	extra := " AND " + activities.CurrentTaskClause("a", now, identities, arg)
+	if promisesOnly {
+		extra += " AND " + activities.NotSystemMinted("a", arg)
+	}
+	query := fmt.Sprintf(`
+		SELECT a.id, coalesce(a.subject, ''), a.body, `+storekit.TaskDueSQL("a")+`, a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -195,41 +228,22 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact' AND %[4]s
 		         ORDER BY pl.id LIMIT 1)
 		FROM activity a
+		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s%[6]s%[7]s
-		ORDER BY (a.due_at IS NULL), a.due_at, a.occurred_at, a.id
+		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueSQL("a")+`, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
-		opts.projectScope(arg), extra), args...)
+		opts.projectScope(arg), extra, identity.LiveMemberSQL("u"))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
 	var filed []time.Time
 	steps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Company360NextStep, error) {
-		var step crmcontracts.Company360NextStep
-		var id ids.UUID
-		var assignee, dealID, contactID *ids.UUID
-		// Read only to order by: the account's task list does not show when a
-		// task was filed, but two tasks due the same day have to rank the same
-		// here as on the contact page, and there the older one leads.
-		var occurredAt time.Time
-		// The version the row's own tick and snooze write with. Read here rather
-		// than fetched per press: a list that offered a verb and made the caller
-		// go and find the version first would be two round trips for one click,
-		// and the version it found could already be the wrong one.
-		var version int64
-		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &occurredAt, &version,
-			&dealID, &contactID); err != nil {
-			return step, err
-		}
-		step.ActivityId = openapi_types.UUID(id)
-		step.Version = &version
-		step.AssigneeId = uuidPtr(assignee)
-		step.LinkedDealId = uuidPtr(dealID)
-		step.LinkedContactId = uuidPtr(contactID)
-		step.Overdue = deadline.Passed(step.DueAt, now)
+		step, occurredAt, err := scanNextStep(row, now)
 		filed = append(filed, occurredAt)
-		return step, nil
+		return step, err
 	})
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
@@ -247,6 +261,33 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		steps = []crmcontracts.Company360NextStep{}
 	}
 	return steps, page, filed, nil
+}
+
+// scanNextStep reads one task row of readNextSteps. occurredAt is returned only
+// to order by: two tasks due the same day rank here as on the contact page,
+// where the older one leads. The version is read with the row so a tick or
+// snooze needs no second round trip.
+func scanNextStep(row pgx.CollectableRow, now time.Time) (crmcontracts.Company360NextStep, time.Time, error) {
+	var step crmcontracts.Company360NextStep
+	var id ids.UUID
+	var assignee, dealID, contactID *ids.UUID
+	var assigneeName string
+	var occurredAt time.Time
+	var version int64
+	var dueHasTime bool
+	if err := row.Scan(&id, &step.Subject, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
+		&dealID, &contactID); err != nil {
+		return step, occurredAt, err
+	}
+	step.ActivityId = openapi_types.UUID(id)
+	step.DueHasTime = new(dueHasTime && step.DueAt != nil)
+	step.Version = &version
+	step.AssigneeId = uuidPtr(assignee)
+	step.AssigneeName = namedOrNobody(assigneeName)
+	step.LinkedDealId = uuidPtr(dealID)
+	step.LinkedContactId = uuidPtr(contactID)
+	step.Overdue = deadline.Passed(step.DueAt, now)
+	return step, occurredAt, nil
 }
 
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {

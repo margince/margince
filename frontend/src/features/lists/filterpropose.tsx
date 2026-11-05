@@ -279,7 +279,7 @@ export function ProposalBar({
         <>
           <Button
             ref={keep}
-            variant="ai"
+            variant="primary"
             onClick={() => dispatch({ type: "keepAll" })}
           >
             {t("filters.proposal.keepAll")}

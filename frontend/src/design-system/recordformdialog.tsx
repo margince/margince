@@ -16,6 +16,8 @@ export function RecordFormDialog({
   fieldCount,
   form,
   actions,
+  unsaved,
+  closeDisabled,
 }: Readonly<{
   open: boolean;
   title: string;
@@ -23,6 +25,10 @@ export function RecordFormDialog({
   fieldCount: number;
   form: ReactNode;
   actions: ReactNode;
+  /** The caller's form holds an edit, so a close that is not a save asks first. */
+  unsaved?: boolean;
+  /** Holds the X, Escape and the backdrop while the caller's save is out. */
+  closeDisabled?: boolean;
 }>) {
   const headingId = useId();
   const live = intentForFieldCount(fieldCount);
@@ -32,7 +38,14 @@ export function RecordFormDialog({
   }
   const shape = open && !opening.open ? live : opening.shape;
   return (
-    <Modal open={open} onClose={onClose} labelledBy={headingId} intent={shape}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy={headingId}
+      intent={shape}
+      unsaved={unsaved}
+      closeDisabled={closeDisabled}
+    >
       {shape === "form" ? (
         <>
           <Heading size="large" id={headingId} className="t-h2 modal-title">

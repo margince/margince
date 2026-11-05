@@ -107,7 +107,9 @@ func (e *privacyEnv) asAgent(user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"contact": {Create: true, Read: true, Update: true},
+				"contact":      {Create: true, Read: true, Update: true},
+				"company":      {Create: true, Read: true},
+				"relationship": {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

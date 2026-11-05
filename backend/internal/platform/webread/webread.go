@@ -228,7 +228,7 @@ func (f *Fetcher) fetchDoc(ctx context.Context, rawURL, accept string) (body, me
 	if final == nil {
 		final = parsed
 	}
-	return string(got.body), parseMediaType(got.contentType), final, nil
+	return got.text(), parseMediaType(got.contentType), final, nil
 }
 
 // FetchAsset retrieves one binary asset a page declared — a logo, an icon, an
@@ -271,7 +271,7 @@ func (f *Fetcher) FetchAsset(ctx context.Context, rawURL string) ([]byte, string
 // robots and sitemap lookups pass "" — they never negotiate markdown.
 func (f *Fetcher) getRaw(ctx context.Context, rawURL, accept string) (string, int, string, error) {
 	got, err := f.getBytes(ctx, rawURL, accept, maxFetchBytes)
-	return string(got.body), got.status, got.contentType, err
+	return got.text(), got.status, got.contentType, err
 }
 
 // fetched is one completed GET: the body, the status, the declared media type,
@@ -279,15 +279,19 @@ func (f *Fetcher) getRaw(ctx context.Context, rawURL, accept string) (string, in
 // when the site redirected. Relative references in a body resolve against
 // where it came from, so that URL has to travel with it.
 type fetched struct {
-	body        []byte
-	status      int
-	contentType string
-	finalURL    *url.URL
+	body          []byte
+	status        int
+	contentType   string
+	finalURL      *url.URL
+	redirectChain []string
 	// header is the whole response header. Most callers want only the media
 	// type above; the fingerprint read wants the rest of it, and re-fetching
 	// the page to see headers the first fetch already received would spend a
 	// second request on a site that owes us nothing.
 	header http.Header
+	// capped reports that the body filled the read limit, so the server may
+	// have sent more and the last character may be cut short.
+	capped bool
 }
 
 // getBytes is the shared capped GET. limit bounds the body read; a body over
@@ -317,7 +321,8 @@ func (f *Fetcher) getBytes(ctx context.Context, rawURL, accept string, limit int
 	return fetched{
 		body: body, status: resp.StatusCode,
 		contentType: resp.Header.Get("Content-Type"), finalURL: resp.Request.URL,
-		header: resp.Header,
+		redirectChain: responseChain(resp.Request),
+		header:        resp.Header, capped: int64(len(body)) >= limit,
 	}, nil
 }
 

@@ -22,6 +22,7 @@ export type List = components["schemas"]["List"];
 export type ListRecordType = List["entity_type"];
 export type ListHistoryEntry = components["schemas"]["ListHistoryEntry"];
 export type ListExplanation = components["schemas"]["ListMemberExplanation"];
+export type ListLinkedValue = components["schemas"]["ListLinkedValue"];
 export type ListClauseVerdict = components["schemas"]["ListClauseVerdict"];
 export type ListVisit = components["schemas"]["ListVisit"];
 export type ListMember = components["schemas"]["ListMember"];

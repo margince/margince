@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -90,15 +91,20 @@ func ownerFromUUID(u *ids.UUID) *ids.UserID {
 // purpose, so a caller's columns are visible at its call site rather than
 // hidden behind a policy enum.
 type ContactSpec struct {
-	FullName  string
-	FirstName *string
-	LastName  *string
-	Title     *string
-	OwnerID   *ids.UserID
-	Address   *crmcontracts.Address
-	Social    map[string]any
-	Emails    []ContactEmailInput
-	Phones    []ContactPhoneInput
+	newContact       bool
+	Employer         EmployerChoice
+	EmployerAttached *EmployerAttached
+	CaptureEmployer  *EnsureCounterpartyInput
+	EmployerResult   *EnsureCounterpartyResult
+	FullName         string
+	FirstName        *string
+	LastName         *string
+	Title            *string
+	OwnerID          *ids.UserID
+	Address          *crmcontracts.Address
+	Social           map[string]any
+	Emails           []ContactEmailInput
+	Phones           []ContactPhoneInput
 
 	// Visibility is "" for the column default; capture mints 'owner' rows
 	// until a human promotes them, the channel bot mints 'workspace' ones.
@@ -109,6 +115,10 @@ type ContactSpec struct {
 	// was done to obtain them. Distinct from Source, which says which surface
 	// typed it in. The zero value records unknown_legacy rather than nothing.
 	Acquisition Acquisition
+	// RelationshipMark marks the contact at birth, and RelationshipMarkSetBy says
+	// who decided it (`agent:<id>` or `human:<uuid>`). Both or neither.
+	RelationshipMark      relationshipmark.Mark
+	RelationshipMarkSetBy string
 	// Quarantined flags the impersonation tells capture screens for; the row
 	// is still created, because hiding suspicious mail is worse than labeling
 	// it.
@@ -123,11 +133,19 @@ type ContactSpec struct {
 	// every path that creates a contact HERE, which is what tells attribution
 	// the row has no external author to name.
 	SourceSystem *string
+	// SourceID is this contact's id in SourceSystem; unique with it.
+	SourceID     *string
 	Author       storekit.SourceAuthorInput
 	CustomFields map[string]any
 	// Active is the custom-field catalog for `contact`; nil on the capture
 	// paths, which carry no request body to source extra columns from.
 	Active []fieldcatalog.Column
+
+	erasure storekit.ErasureAdmission
+	// converting are the live leads this transaction converts into the new
+	// contact, which may share their keys with it. Unexported: only promotion
+	// and a typed create converting the leads it was refused over set it.
+	converting []ids.LeadID
 }
 
 // createContact is the one INSERT INTO contact.
@@ -138,7 +156,7 @@ type ContactSpec struct {
 // deliberately not such a lane: a household line and a switchboard belong to
 // several real contacts, so a shared number creates and the caller records the
 // pair for review (creatededupe.go states the same policy per lane).
-func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) (ids.ContactID, error) {
+func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolution, spec ContactSpec) (ids.ContactID, error) {
 	if match.Decision == DecisionExactCollision && match.MatchedLane != lanePhone {
 		return ids.ContactID{}, refusedContactCreate(ctx, tx, match, spec)
 	}
@@ -148,25 +166,28 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.ContactID{}, err
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
-		spec.SourceSystem, spec.Narrowing,
+		spec.SourceSystem, spec.Narrowing, string(spec.RelationshipMark), spec.RelationshipMarkSetBy,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+authorCols+cfCols+`)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, '')`+authorHolders+cfHolders+`)`,
-		args...); err != nil {
-		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
-	}
-	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social); err != nil {
+	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	if err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails); err != nil {
+	if err := storekit.ExecSourceInsert(ctx, tx, contactEntity,
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by`+provenanceCols+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+		         coalesce(NULLIF($15, ''), 'workspace'),
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, '')`+provenanceHolders+cfHolders+`)`,
+		args); err != nil {
+		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
+	}
+	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social, spec.converting); err != nil {
+		return ids.ContactID{}, err
+	}
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
 	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
@@ -182,6 +203,10 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err := recordAcquisition(ctx, tx, id, spec.Acquisition, spec.CapturedBy); err != nil {
 		return ids.ContactID{}, err
 	}
+	spec.newContact = true
+	if err := s.resolveCreatedEmployer(ctx, tx, id, spec); err != nil {
+		return ids.ContactID{}, err
+	}
 	return id, nil
 }
 
@@ -194,23 +219,13 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 // id (data-model §3.2), never an opaque failure just because a different guard
 // caught it. Every other lane has no such contract and stays a conflict.
 //
-// The id is echoed ONLY when the caller could have read that record. The
-// resolver deliberately matches across the whole workspace — a duplicate the
-// caller cannot see is still a duplicate — so the answer would otherwise
-// confirm the existence of a record outside their row scope, and confirm it
-// by a chosen address at that. The refusal still stands either way; only the
-// pointer is withheld.
+// The id is echoed only when the caller could have read that record. The
+// resolver matches across the whole workspace, because a duplicate the caller
+// cannot see is still a duplicate. A caller who cannot see the record gets the
+// held refusal (heldcontact.go), which names no record.
 func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) error {
 	if match.MatchedLane == LaneEmail && len(spec.Emails) > 0 {
-		dup := &DuplicateEmailError{Email: spec.Emails[0].Email}
-		visible, err := auth.VisibleTo(ctx, tx, entityContact, match.ContactID.UUID)
-		if err != nil {
-			return err
-		}
-		if visible {
-			dup.ExistingID = match.ContactID
-		}
-		return dup
+		return claimedEmailRefusal(ctx, tx, spec.Emails[0].Email, match.ContactID)
 	}
 	// Other lanes name no record: the message says which key collided, never
 	// whose row it was.
@@ -233,6 +248,9 @@ type CompanySpec struct {
 	Domains         []CompanyDomainInput
 	// LinkedInURL is already in its canonical spelling.
 	LinkedInURL *string
+	// Phone and Email are already parsed (parseCompanyReach).
+	Phone *string
+	Email *string
 
 	// NameSource is the ADR-0072/A118 authority ladder entry for the name
 	// being written ("" writes the column default, 'human'). A row named from
@@ -251,6 +269,8 @@ type CompanySpec struct {
 	// every path that creates a company HERE — including the anchor and the
 	// domain-triage ensure — so attribution knows there is no external author.
 	SourceSystem *string
+	// SourceID is this company's id in SourceSystem; unique with it.
+	SourceID     *string
 	Author       storekit.SourceAuthorInput
 	CustomFields map[string]any
 	Active       []fieldcatalog.Column
@@ -289,22 +309,26 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 	}
 	id := ids.New[ids.CompanyKind]()
 	addr := addressColumns(spec.Address)
+	industry, description := CompanyIndustryColumns(spec.Industry, spec.Description)
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.CompanyID{}, err
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
-		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
+		id, spec.DisplayName, spec.LegalName, description, industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
-		spec.SourceSystem, spec.LinkedInURL,
+		spec.SourceSystem, spec.LinkedInURL, spec.Phone, spec.Email,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url`+authorCols+cfCols+`)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(spec.Active, spec.CustomFields, base)
+	if err != nil {
+		return ids.CompanyID{}, err
+	}
+	if err := storekit.ExecSourceInsert(ctx, tx, companyEntity,
+		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url, phone, email`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 		         coalesce(NULLIF($17, ''), 'human'),
-		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20, $21`+authorHolders+cfHolders+`)`,
-		args...); err != nil {
+		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20, $21, $22, $23`+provenanceHolders+cfHolders+`)`,
+		args); err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
 			return ids.CompanyID{}, &DuplicateCompanyLinkedInError{URL: deref(spec.LinkedInURL)}
 		}
@@ -320,4 +344,19 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 		return ids.CompanyID{}, err
 	}
 	return id, nil
+}
+
+// CompanyIndustryColumns decides the industry and description a new company
+// row stores. That is the code the text names, or for text that names none the
+// description with the source note added. A note alone never claims the
+// description, because the stamp follows the caller's own input.
+func CompanyIndustryColumns(raw, description *string) (industry, desc *string) {
+	write := resolveIndustryWrite(raw)
+	if write.note == "" {
+		return write.code, description
+	}
+	if next, changed := withIndustrySource(description, *raw); changed {
+		return nil, &next
+	}
+	return nil, description
 }

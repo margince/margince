@@ -96,9 +96,8 @@ func TestTheCategoryExclusionIsExactlyUnknownPurposeOverEveryReason(t *testing.T
 	}
 }
 
-// reasonConstants reads every Reason* constant off the package's own non-test
-// files, so a reason exists in this census the moment it compiles, whichever
-// file declares it.
+// reasonConstants reads every untyped string const or var off the package's
+// non-test files. Every other vocabulary here has its own type, so the rest are reason codes.
 func reasonConstants(t *testing.T) []string {
 	t.Helper()
 	entries, err := os.ReadDir(".")
@@ -126,39 +125,53 @@ func reasonConstants(t *testing.T) []string {
 	return reasons
 }
 
-// fileReasonConstants returns the string literal of each Reason* constant one
-// file declares.
+// fileReasonConstants returns each untyped or string-typed const and var one
+// file declares. A value it cannot read as a literal fails rather than escaping.
 func fileReasonConstants(t *testing.T, file *ast.File) []string {
 	t.Helper()
 	var reasons []string
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok != token.CONST {
+		if !ok || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
 			continue
 		}
 		for _, spec := range gen.Specs {
 			values, ok := spec.(*ast.ValueSpec)
-			if !ok {
+			if !ok || !untypedOrString(values.Type) {
 				continue
 			}
 			for i, name := range values.Names {
-				if !strings.HasPrefix(name.Name, "Reason") {
-					continue
+				if code, isCode := reasonLiteral(t, name.Name, values, i); isCode {
+					reasons = append(reasons, code)
 				}
-				if i >= len(values.Values) {
-					t.Fatalf("%s has no explicit value; this census reads reason codes as literals", name.Name)
-				}
-				lit, ok := values.Values[i].(*ast.BasicLit)
-				if !ok || lit.Kind != token.STRING {
-					t.Fatalf("%s is not a string literal; this census reads reason codes as literals", name.Name)
-				}
-				code, err := strconv.Unquote(lit.Value)
-				if err != nil {
-					t.Fatalf("unquoting %s: %v", name.Name, err)
-				}
-				reasons = append(reasons, code)
 			}
 		}
 	}
 	return reasons
+}
+
+func untypedOrString(typ ast.Expr) bool {
+	ident, isIdent := typ.(*ast.Ident)
+	return typ == nil || (isIdent && ident.Name == "string")
+}
+
+// reasonLiteral reads one declared name's string value. A composite value is a
+// table rather than a code, and anything else is a declaration this census cannot read.
+func reasonLiteral(t *testing.T, name string, values *ast.ValueSpec, i int) (string, bool) {
+	t.Helper()
+	if i >= len(values.Values) {
+		t.Fatalf("%s has no explicit value; this census reads reason codes as literals", name)
+	}
+	if _, isTable := values.Values[i].(*ast.CompositeLit); isTable {
+		return "", false
+	}
+	lit, ok := values.Values[i].(*ast.BasicLit)
+	if !ok || lit.Kind != token.STRING {
+		t.Fatalf("%s is not a string literal; give it a type of its own or declare it as a literal", name)
+	}
+	code, err := strconv.Unquote(lit.Value)
+	if err != nil {
+		t.Fatalf("unquoting %s: %v", name, err)
+	}
+	return code, true
 }

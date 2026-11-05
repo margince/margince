@@ -164,8 +164,9 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 		rows[1].FromPhase == nil || *rows[1].FromPhase != projects.PhaseInitiative || rows[1].ToPhase != "pursuing" {
 		t.Fatalf("phase_history.data = %+v, want the birth row then initiative→pursuing", rows)
 	}
-	if rows[1].ChangedBy.DisplayName == nil || *rows[1].ChangedBy.DisplayName == "" {
-		t.Errorf("the transition names no display name for changed_by %q; the admin seat is a real app user", rows[1].ChangedBy.Id)
+	if who := rows[1].ChangedBy; who == nil || who.ActorType != crmcontracts.PrincipalAttributionActorTypeHuman ||
+		who.ActorName == nil || *who.ActorName == "" {
+		t.Errorf("the transition's changed_by = %+v, want the human admin seat by name", who)
 	}
 	durations := page.PhaseHistory.PhaseDurations
 	wantInitiative := int64(rows[1].ChangedAt.Sub(rows[0].ChangedAt) / time.Second)

@@ -46,7 +46,7 @@ func captureSettingsCtx(e *integration.SearchEnv, grant principal.ObjectGrant) c
 
 func TestCaptureSettingsStore(t *testing.T) {
 	e := integration.SetupSearch(t)
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
 	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
@@ -123,7 +123,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 // none of them.
 func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
 	e := integration.SetupSearch(t)
-	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
 	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
 
@@ -179,5 +179,59 @@ func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.
 	}
 	if n := audits() - before; n != 2 {
 		t.Fatalf("a refused patch wrote %d more audit rows, want none", n-2)
+	}
+}
+
+// The pass cap rides the same store and gate. Every role reads it and only the
+// update grant changes it. A change is one audit row, and a value outside its
+// range is refused.
+func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing.T) {
+	e := integration.SetupSearch(t)
+	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
+	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
+	rep := captureSettingsCtx(e, principal.ObjectGrant{Read: true})
+
+	got, err := store.Get(rep)
+	if err != nil {
+		t.Fatalf("rep read: %v", err)
+	}
+	if got.ConfidentialityPassCap != capturemod.DefaultConfidentialityPassCap {
+		t.Fatalf("an untouched installation reads a pass cap of %d, want %d",
+			got.ConfidentialityPassCap, capturemod.DefaultConfidentialityPassCap)
+	}
+
+	passCap := 75
+	if _, err := store.Update(rep, capturemod.SettingsPatch{ConfidentialityPassCap: &passCap}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("rep update err = %v, want permission denied", err)
+	}
+	updated, err := store.Update(admin, capturemod.SettingsPatch{ConfidentialityPassCap: &passCap})
+	if err != nil {
+		t.Fatalf("admin update: %v", err)
+	}
+	if updated.ConfidentialityPassCap != passCap {
+		t.Fatalf("update returned a pass cap of %d, want %d", updated.ConfidentialityPassCap, passCap)
+	}
+
+	var audits int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM audit_log WHERE entity_type = 'capture_settings'`).Scan(&audits)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 {
+		t.Fatalf("changing the pass cap wrote %d audit rows, want 1", audits)
+	}
+
+	for _, bad := range []int{0, capturemod.MaxConfidentialityPassCap + 1} {
+		_, err = store.Update(admin, capturemod.SettingsPatch{ConfidentialityPassCap: &bad})
+		var invalid settings.InvalidValue
+		if !errors.As(err, &invalid) || invalid.Setting != capturemod.ConfidentialityPassCap.Key() {
+			t.Fatalf("a pass cap of %d gave %v, want the setting's own refusal", bad, err)
+		}
+	}
+	if reread, err := store.Get(rep); err != nil || reread.ConfidentialityPassCap != passCap {
+		t.Fatalf("after the refusals the pass cap reads %d (err %v), want the %d that stood",
+			reread.ConfidentialityPassCap, err, passCap)
 	}
 }

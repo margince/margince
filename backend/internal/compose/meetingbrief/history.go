@@ -25,13 +25,16 @@ package meetingbrief
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // historyCap bounds the scan. Two hundred conversations is more than a year of
@@ -52,9 +55,18 @@ type HistoryIn struct {
 	Subject   string
 	Direction string
 	At        time.Time
+	// DateOnly says At is a day entry's stored noon.
+	DateOnly  bool
 	ThreadKey string
 	// OnDeal marks a conversation filed under the deal this brief is about.
 	OnDeal bool
+	// OtherDeal is the deal a conversation is filed under when that deal is
+	// not this brief's, and only when the caller may see that deal. Both it and
+	// OnDeal are settled by fileUnderDeal once the brief's deal is chosen.
+	OtherDeal *FiledDeal
+	// Filed lists the deals the caller may see that the conversation is filed
+	// under, an open one first.
+	Filed []FiledDeal
 	// Withheld says this caller is outside the activity's audience: the row
 	// happened, and what it says is not theirs to read. Subject and body are
 	// empty for such a row — not because it was empty, which is the confusion
@@ -62,36 +74,54 @@ type HistoryIn struct {
 	Withheld bool
 }
 
+// FiledDeal names another deal a conversation is filed under, and whether it
+// is open, won or lost. The plan model needs both to keep a lost deal's thread
+// out of this meeting's objective.
+type FiledDeal struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	State string `json:"state"`
+}
+
 const historyQuery = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
-	       a.occurred_at, COALESCE(a.thread_key, ''),
+	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
 	       ($%[3]d::uuid IS NOT NULL AND EXISTS (
 	          SELECT 1 FROM activity_link dl
 	          WHERE dl.activity_id = a.id AND dl.deal_id = $%[3]d)) AS on_deal,
-	       (%[2]s) AS readable
+	       (%[2]s) AS readable,
+	       -- The deals the row is filed under, under the caller's deal scope.
+	       -- An open one first, so a thread on a live and a lost deal is named live.
+	       COALESCE((
+	         SELECT json_agg(json_build_object('id', fd.id, 'name', fd.name, 'state', fd.status)
+	                         ORDER BY (fd.status = 'open') DESC, fd.id)
+	         FROM activity_link ol
+	         JOIN deal fd ON fd.id = ol.deal_id AND fd.archived_at IS NULL
+	         WHERE ol.activity_id = a.id AND ol.deal_id IS NOT NULL AND %[10]s
+	       ), '[]'::json) AS filed
 	FROM activity a
 	WHERE a.archived_at IS NULL
 	  AND a.kind <> 'task'
 	  AND a.id <> $%[4]d
-	  AND a.occurred_at < $%[5]d
-	  AND a.occurred_at >= $%[6]d
+	  AND %[5]s
+	  AND %[9]s
 	  AND (a.kind <> 'meeting' OR a.meeting_status IS NULL OR a.meeting_status = 'held')
 	  AND (EXISTS (
 	         SELECT 1 FROM activity_participant ap
-	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[7]d))
+	         WHERE ap.activity_id = a.id AND ap.contact_id = ANY($%[6]d))
 	       OR EXISTS (
 	         SELECT 1 FROM activity_link pl
 	         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact'
-	           AND pl.contact_id = ANY($%[7]d)))
+	           AND pl.contact_id = ANY($%[6]d)))
 	  AND %[1]s
-	  AND %[8]s
+	  AND %[7]s
 	-- The id breaks a tie on the timestamp. Two conversations captured in the
 	-- same second are common (one sync writes a thread), and without this the
 	-- rows that survive the cap, the messages picked for excerpting and the
 	-- subject a thread is named after would all vary between reads of an
 	-- unchanged database.
 	ORDER BY a.occurred_at DESC, a.id DESC
-	LIMIT %[9]d`
+	LIMIT %[8]d`
 
 // readHistory returns the room's conversations, newest first.
 //
@@ -130,34 +160,47 @@ func (s *Service) readHistory(
 	}
 	dealPos := arg(dealArg)
 	roomPos := arg(room.ID)
-	// The ceiling is the earlier of "now" and the meeting's start: a brief read
-	// three weeks early must not fold in conversations that happen between the
-	// read and the room.
-	ceiling := now
-	if room.StartsAt.Before(ceiling) {
-		ceiling = room.StartsAt
+	// Before the room, and happened by now: a brief read weeks early must not fold
+	// in what comes before the room. A meeting counts once it took place, as in priormeetings.go.
+	opens := fmt.Sprintf("$%d", arg(room.Opens))
+	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	reach := now
+	if room.Opens.Before(reach) {
+		reach = room.Opens
 	}
-	ceilingPos := arg(ceiling)
-	floorPos := arg(ceiling.AddDate(0, -historyMonths, 0))
+	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
 	attendeePos := arg(room.Room)
 	within := projectWithinPredicate("a", "hw", project, arg)
+	otherDeal, err := scopeFor(ctx, "deal", "fd", arg)
+	if err != nil {
+		return nil, err
+	}
 
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyQuery,
-		scope, readable, dealPos, roomPos, ceilingPos, floorPos, attendeePos, within, historyCap,
+		scope, readable, dealPos, roomPos, occurredday.WithinSQL("a", floor, opens), attendeePos, within, historyCap, happened,
+		otherDeal,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}
 	defer rows.Close()
 
+	return scanHistory(rows)
+}
+
+func scanHistory(rows pgx.Rows) ([]HistoryIn, error) {
 	var history []HistoryIn
 	for rows.Next() {
 		var row HistoryIn
 		var id ids.UUID
 		var readableRow bool
+		var filed []byte
 		if err := rows.Scan(&id, &row.Kind, &row.Subject, &row.Direction,
-			&row.At, &row.ThreadKey, &row.OnDeal, &readableRow); err != nil {
+			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow, &filed); err != nil {
 			return nil, fmt.Errorf("read the account history: %w", err)
+		}
+		if err := json.Unmarshal(filed, &row.Filed); err != nil {
+			return nil, fmt.Errorf("read the deals a conversation is filed under: %w", err)
 		}
 		row.ID = id.String()
 		row.Withheld = !readableRow
@@ -165,6 +208,7 @@ func (s *Service) readHistory(
 			// What it was called is content. The row still counts; it says
 			// nothing and, per threads.go, does not shape the arc either.
 			row.Subject = ""
+			row.Filed = nil
 		}
 		history = append(history, row)
 	}
@@ -172,6 +216,36 @@ func (s *Service) readHistory(
 		return nil, fmt.Errorf("read the account history: %w", err)
 	}
 	return history, nil
+}
+
+// fileUnderDeal settles which history rows are on the brief's deal and which
+// other deal the rest name. It runs once the deal is chosen: a meeting filed
+// under no deal takes the contact's leading open deal, after history is read.
+func fileUnderDeal(in *Input) {
+	deal := ""
+	if in.Deal != nil {
+		deal = in.Deal.ID
+	}
+	for i := range in.History {
+		row := &in.History[i]
+		row.OnDeal = row.OnDeal || slices.ContainsFunc(row.Filed, func(f FiledDeal) bool { return f.ID == deal })
+		row.OtherDeal = otherDealOf(*row, deal)
+	}
+}
+
+// otherDealOf is the other deal a row may name. A row on this deal is about
+// this deal, whatever else it is filed under. A withheld row names nothing,
+// as it carries no subject.
+func otherDealOf(row HistoryIn, deal string) *FiledDeal {
+	if row.Withheld || row.OnDeal {
+		return nil
+	}
+	for _, filed := range row.Filed {
+		if filed.ID != deal {
+			return &filed
+		}
+	}
+	return nil
 }
 
 // withheldCount is how many conversations this caller may know happened but

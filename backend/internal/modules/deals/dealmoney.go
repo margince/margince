@@ -48,8 +48,7 @@ func moneyPairError(amount, arr *int64, currency *string) error {
 		return &AmountCurrencyPairError{Missing: currencyField}
 	}
 	if amount != nil {
-		// One spelling of "a valid amount+currency" (values.Money), the same
-		// rule the schema CHECKs repeat.
+		// One spelling of "a valid amount+currency" (values.Money).
 		if _, err := values.NewMoney(*amount, *currency); err != nil {
 			return err
 		}
@@ -234,9 +233,35 @@ func (e *ArrCurrencyConflictError) FieldFault() (field, code, message string) {
 	return arrField, "arr_currency_conflict", e.Error()
 }
 
-// NegativeArrError refuses recurring revenue below zero. A negative one-off
-// amount is a credit somebody can argue for; a negative subscription is not a
-// subscription, and deal_expected_arr_nonnegative refuses it in SQL either way.
+// amountSetError refuses a one-off amount below zero, for a write that SETS
+// the amount: a create, an edit that carries one, an accepted suggestion.
+//
+// Apart from moneyPairError, which answers on the resulting row. Judging the
+// sign there would refuse a rename of an older deal that holds a negative
+// amount. It would also read a masked amount back to the caller.
+func amountSetError(amount *int64) error {
+	if amount != nil && *amount < 0 {
+		return &NegativeAmountError{}
+	}
+	return nil
+}
+
+// NegativeAmountError refuses a one-off amount below zero. A negative deal
+// would count against every total that sums open deals.
+type NegativeAmountError struct{}
+
+func (e *NegativeAmountError) Error() string {
+	return "amount_minor cannot be negative"
+}
+
+// FieldFault points a 422 at the amount itself.
+func (e *NegativeAmountError) FieldFault() (field, code, message string) {
+	return amountField, "amount_negative", e.Error()
+}
+
+// NegativeArrError refuses recurring revenue below zero: a negative
+// subscription is not a subscription, and deal_expected_arr_nonnegative
+// refuses it in SQL either way.
 type NegativeArrError struct{}
 
 func (e *NegativeArrError) Error() string {

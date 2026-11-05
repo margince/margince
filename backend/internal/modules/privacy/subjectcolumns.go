@@ -20,10 +20,14 @@ package privacy
 
 import (
 	"context"
+	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -65,4 +69,64 @@ func nullColumnAssignments(cols []fieldcatalog.Column) string {
 		b.WriteString(" = NULL")
 	}
 	return b.String()
+}
+
+// clearActivityCustomValues empties the custom-field values of the given
+// activities. They are content, so every arm that destroys an activity's text
+// calls this in the same transaction.
+func clearActivityCustomValues(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	if len(activityIDs) == 0 {
+		return nil
+	}
+	cols, err := subjectCustomColumns(ctx, tx, string(fieldcatalog.TargetActivity))
+	if err != nil || len(cols) == 0 {
+		return err
+	}
+	held := make([]string, len(cols))
+	for i, c := range cols {
+		held[i] = pgx.Identifier{c.Name}.Sanitize() + " IS NOT NULL"
+	}
+	// Every caller has archived the row already, so that assignment changes
+	// nothing; it gives the erasure census a column to read the statement by.
+	_, err = tx.Exec(ctx, fmt.Sprintf(`UPDATE activity SET archived_at = coalesce(archived_at, now())%s
+		WHERE id = ANY($1) AND (%s)`, nullColumnAssignments(cols), strings.Join(held, " OR ")), activityIDs)
+	return err
+}
+
+// appendActivityCustomValues merges each disclosed activity's custom-field
+// values into the export's activity rows, keyed by column name. The section's
+// own content_disclosed decides which rows those are, so a withheld one gets none.
+func appendActivityCustomValues(ctx context.Context, tx pgx.Tx, activities []map[string]any) error {
+	disclosed := map[string][]map[string]any{}
+	var activityIDs []string
+	for _, row := range activities {
+		id, isID := row["id"].(string)
+		if shown, isBool := row["content_disclosed"].(bool); isID && isBool && shown {
+			if _, seen := disclosed[id]; !seen {
+				activityIDs = append(activityIDs, id)
+			}
+			disclosed[id] = append(disclosed[id], row)
+		}
+	}
+	cols, err := subjectCustomColumns(ctx, tx, string(fieldcatalog.TargetActivity))
+	if err != nil || len(cols) == 0 || len(activityIDs) == 0 {
+		return err
+	}
+	rows, err := tx.Query(ctx, `SELECT id`+storekit.SelectSuffix(cols)+
+		` FROM activity WHERE id = ANY($1::uuid[])`, activityIDs)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id ids.UUID
+		dests := storekit.ScanDests(cols)
+		if err := rows.Scan(append([]any{&id}, dests...)...); err != nil {
+			return err
+		}
+		for _, row := range disclosed[id.String()] {
+			maps.Copy(row, storekit.ExtractValues(cols, dests))
+		}
+	}
+	return rows.Err()
 }

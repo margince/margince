@@ -12,6 +12,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -131,6 +132,7 @@ func toContractHeldThread(t capture.HeldThread) crmcontracts.HeldThread {
 		out.Participants, out.ParticipantCount = &parties, &count
 	}
 	out.OccurredAt = t.OccurredAt
+	out.OccurredPrecision = (*crmcontracts.OccurredPrecision)(t.Precision)
 	return out
 }
 
@@ -183,6 +185,8 @@ func toContractSenderDecision(d capture.SenderDecision) crmcontracts.CaptureSend
 		RecordExists: d.RecordExists,
 		MessageCount: d.MessageCount,
 		LastSeenAt:   d.LastSeenAt,
+
+		LastSeenPrecision: activitywhen.Stated(d.LastSeenPrecision),
 	}
 	if d.ContactID != nil {
 		contact, name := openapi_types.UUID(*d.ContactID), d.ContactName

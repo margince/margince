@@ -9,9 +9,19 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// EnsureReleasedVersion applies an approval pin at the native writer's version check.
+func EnsureReleasedVersion(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	version, pinned := auth.ReleasedRecordVersion(ctx, table, id)
+	if !pinned {
+		return nil
+	}
+	return EnsureIfMatch(ctx, tx, table, id, &version)
+}
 
 // EnsureIfMatch answers the caller's If-Match for an update that writes
 // nothing. ApplyGuarded compares the version inside its UPDATE. An update that

@@ -57,6 +57,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"EnsureVisible":                 {argument: 2},
 	"EnsureVisibleLive":             {argument: 2},
+	"EnsureVisibleExisting":         {argument: 2},
 	"EnsureVisibleForSubjectRights": {argument: 2},
 	// The write-authority family takes the same (ctx, tx, table, id) shape as
 	// the visible family it opens with, so the table is in the same position.
@@ -71,9 +72,11 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
 	"VisibleSubset":      {argument: 2},
+	"PassingSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
-	"LinkTargetVisibleClause": {table: anyTable},
+	"LinkTargetVisibleClause":  {table: anyTable},
+	"LinkTargetReadableClause": {table: anyTable},
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},
@@ -81,10 +84,12 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureActivityVisibleLive":        {table: "activity"},
 	"EnsureActivityContentVisible":     {table: "activity"},
 	"EnsureActivityContentVisibleLive": {table: "activity"},
+	"ActivityContentSubset":            {table: "activity"},
 
 	"SignalScopeClause":       {table: "signal"},
 	"EnsureSignalVisible":     {table: "signal"},
 	"EnsureSignalVisibleLive": {table: "signal"},
+	"SignalVisibleLiveSubset": {table: "signal"},
 
 	// The edge conjunction bounds the relationship by its ENDPOINTS: each
 	// endpoint column is tested with VisiblePredicate over its own table, so a
@@ -95,6 +100,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"RelationshipEndpointScope": {endpoints: true},
 	"EnsureRelationshipVisible": {endpoints: true},
 	"EdgeReadScope":             {endpoints: true},
+	"RelationshipVisibleSubset": {endpoints: true},
 }
 
 // scopeSpelling is one spelling's table: fixed, read off an argument, or the
@@ -357,9 +363,9 @@ const (
 	// THE FIRST RISE, and why it is not a widening anybody should copy.
 	// contacts.RetractMisattributedSignatureFields takes back the profile fields
 	// an earlier build wrote off a message the contact never sent. It is a
-	// repair pass, chosen by DATA — the same SenderPredicate that decides what
-	// may be written decides what may still stand — and run by the enrichment
-	// job's own system principal, which has no seat for a scope to narrow to.
+	// repair pass, chosen by data. The same relstrength.SenderSQL that decides what
+	// may be written decides what may still stand. The enrichment job's own system
+	// principal runs it, and that principal has no seat for a scope to narrow to.
 	// Narrowing it to one caller's rows would leave every other contact wearing
 	// another sender's title while the pass reported success, which is the
 	// storage-limitation shape the privacy sweeps are exempted for.
@@ -532,5 +538,98 @@ const (
 	// 121: deals.readReviewTerms and deals.readOfferTerms read the deal's
 	// company and each offer's buyer company into the legal review terms. The
 	// ids feed a SHA-256 the stage gate compares and never leave the server.
-	modulesTierUnscopedCeiling = 121
+	//
+	// 123: privacy.subjectQuestionSources follows a rights-case subject to the
+	// deals and projects they are a stakeholder of. Subject access and erasure
+	// then reach every kept question answer those records were counted in.
+	// The operator's own seat must not narrow a subject's rights case.
+	//
+	// 124: privacy.leadTwinOf follows the same subject through merged contacts
+	// to the leads they were, for the same rights case.
+	//
+	// 125-127: activities.PassedActivitiesTx reads the contact, deal and company
+	// an activity whose time has come is filed under. System-only, and the ids
+	// go straight into the clock refold; nothing returns one to a reader.
+	// 128-131: contacts' nightly duplicate re-check (deduperecheck.go) reads the
+	// two ends of every open pair, and a contact's current employer, under the
+	// system principal. It walks the whole queue by design, and the ids decide
+	// only whether a pair stays open; none leaves the server.
+	//
+	// 132-133: capture.mailContacts and capture.threadDeals read the contacts
+	// on a mail and the company of a deal its thread is filed under, for the
+	// deal rule. A seat that sees only part of them would file on a guess. So
+	// they are read whole; the ids stay in the rule, and its link passes
+	// EnsureLinkTarget.
+	//
+	// 134: contacts.subdomainClaimants is the sibling of nameDomainClaimant for
+	// a company on a subdomain of a held domain, unscoped for the same reason.
+	// The ladder scores every company, and the id becomes a review row.
+	//
+	// 135: contacts.addressVariantContact finds the contact holding the same
+	// address under another plus tag. The ladder searches the whole workspace
+	// by design. The id becomes a review row, or a possible-duplicate answer
+	// that asks the caller's visibility before it names the contact.
+	//
+	// 136: activities.DeliveryReportsTx names the leads a delivery report is
+	// linked to, so the repair can re-derive each. It runs as the system actor
+	// over the whole workspace, and the id is only handed to
+	// contacts.ReDeriveLeadFromRemainingTouchesTx, which probes writability.
+	//
+	// 137: projects.LinkPhaseHistoryTx pages over phase-history rows under the
+	// system principal and matches each to its audit row. It returns the
+	// history row ids only to advance the cursor; none leaves the server.
+	//
+	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
+	// repair data task, as the system actor over the whole workspace. The ids
+	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
+	//
+	// 139: contacts.primaryEmployersOf lists every current employee of the
+	// company a merge retires, past the reader's scope, because the merge moves
+	// every edge. The ids go only to the merge's twin re-check; none is returned.
+	//
+	// 140: contacts.leadLinkedCompany reads the company a lead row is linked to.
+	// The link, the unlink, the promotion's edge and the match offer must see it
+	// whether or not the caller may open the company. Every read of a lead
+	// withholds it through withholdUnreadableCompanies.
+	//
+	// 141: deals.reconcileEvidenceAuthorshipTx pages activity evidence for the
+	// own-domain repair, as the system actor over the whole workspace. Its deal
+	// ids go only to correctEvidenceAuthor, which locks and audits the row it
+	// corrects. None is returned to a caller.
+	//
+	// 142: deals.reconcileMeetingProof pages machine event_held claims for the
+	// same pass, as the system actor. Its deal ids go only to
+	// withdrawMeetingClaim, which locks and audits the row. None is returned.
+	//
+	// 143-144: contacts.MergeExistingLeadContactPairsTx and its bounded count
+	// find the contact ids held by a live lead's historical or identity links.
+	// The data task runs as the system principal over the workspace. A unique id
+	// goes only into promoteLeadTx, which locks both records and rechecks the
+	// promotion; several ids leave the lead untouched. No id reaches a caller.
+	//
+	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
+	// audit unsupported signature numbers. Its caller requires the system actor;
+	// the workspace repair returns a count, never contacts to a reader.
+	//
+	// 147-148: activities.lockMeetingFacts and readPreparations read a meeting's
+	// participant contact ids only to hash them into the guest-list fingerprint
+	// of the preparation revision. The meeting itself is content-gated first.
+	// No id is returned.
+	//
+	// 149: forecasting.attachOpenDeals reads the deal ids of frozen contribution
+	// rows for the forecast evaluation, which only a system principal may run.
+	// Each id joins a deal to its outcome and is dropped from the dataset.
+	//
+	// 150: contacts.fileLinkedInTwins finds every live contact holding the
+	// LinkedIn profile a write just set. The lane searches the whole workspace
+	// by design, as the address-variant lane does. The ids become review rows
+	// inside the write, and none is returned to its caller.
+	//
+	// 151: deals.StuckAfter returns the won-deal stage pace keyed by stage id.
+	// A stage is configuration every member reads, and the pace is a duration.
+	//
+	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
+	// guests onto the meeting that stays, under a system job or a calendar sync.
+	// The contacts move between two rows of one meeting, and nothing is returned.
+	modulesTierUnscopedCeiling = 152
 )

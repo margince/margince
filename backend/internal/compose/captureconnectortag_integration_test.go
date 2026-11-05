@@ -59,9 +59,15 @@ func seedFilingConnection(t *testing.T, e *integration.Env, owner ids.UUID, prov
 	}
 }
 
-// seedMailFrom is seedMail for a chosen connector, so a test can put two
-// providers in one workspace and tell their records apart.
-func seedMailFrom(t *testing.T, e *integration.Env, provider, from string) ids.UUID {
+// seedMailFrom is seedMail for a chosen connector and the seat it captured
+// for, stamped `connector:<provider>:<seat>` the way the capture sink stamps it.
+func seedMailFrom(t *testing.T, e *integration.Env, provider string, seat ids.UUID, from string) ids.UUID {
+	t.Helper()
+	return seedMailStamped(t, e, provider, "connector:"+provider+":"+seat.String(), from)
+}
+
+// seedMailStamped is seedMailFrom with captured_by spelled out.
+func seedMailStamped(t *testing.T, e *integration.Env, provider, capturedBy, from string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -69,8 +75,8 @@ func seedMailFrom(t *testing.T, e *integration.Env, provider, from string) ids.U
 			INSERT INTO activity (id, kind, subject, body, raw, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email)
 			VALUES ($1, 'email', 'hello', 'the message body', '{"headers":"…"}'::jsonb, 'inbound',
-			        $2, $3, $2||':'||$3, 'connector:'||$2, $4)`,
-			id, provider, "ctag-"+id.String(), from)
+			        $2, $3, $2||':'||$3, $4, $5)`,
+			id, provider, "ctag-"+id.String(), capturedBy, from)
 		return err
 	})
 	if err != nil {
@@ -138,8 +144,8 @@ func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
 	seedFilingConnection(t, e, e.Rep1, "gmail", &nord)
 	seedFilingConnection(t, e, e.Rep2, "graph", &sued)
 
-	fromNord := seedMailFrom(t, e, "gmail", "a@nord.example")
-	fromSued := seedMailFrom(t, e, "graph", "b@sued.example")
+	fromNord := seedMailFrom(t, e, "gmail", e.Rep1, "a@nord.example")
+	fromSued := seedMailFrom(t, e, "graph", e.Rep2, "b@sued.example")
 	nordID := seedOwnedDisposition(t, e, e.Rep1, "a@nord.example", "nord.example", fromNord)
 	suedID := seedOwnedDisposition(t, e, e.Rep2, "b@sued.example", "sued.example", fromSued)
 
@@ -168,7 +174,7 @@ func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
 	seedTag(t, e, "Nord inbox", false)
 	seedFilingConnection(t, e, e.Rep1, "gmail", nil)
 
-	activityID := seedMailFrom(t, e, "gmail", "c@plain.example")
+	activityID := seedMailFrom(t, e, "gmail", e.Rep1, "c@plain.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "c@plain.example", "plain.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
@@ -190,7 +196,7 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 	retired := seedTag(t, e, "Retired inbox", true)
 	seedFilingConnection(t, e, e.Rep1, "gmail", &retired)
 
-	activityID := seedMailFrom(t, e, "gmail", "d@retired.example")
+	activityID := seedMailFrom(t, e, "gmail", e.Rep1, "d@retired.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "d@retired.example", "retired.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
@@ -241,7 +247,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 		t.Fatalf("seeding the incumbent: %v", err)
 	}
 
-	activityID := seedMailFrom(t, e, "gmail", address)
+	activityID := seedMailFrom(t, e, "gmail", e.Rep1, address)
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, address, "nord.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
@@ -252,5 +258,29 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 
 	if got := tagsOn(t, e, address); len(got) != 0 {
 		t.Errorf("a contact that already existed was filed under %v, claiming this connector brought them in", got)
+	}
+}
+
+// A bare `connector:gmail` stamp names no mailbox, so even the only gmail
+// connection in the workspace does not claim the mail for its word.
+func TestABareConnectorStampFilesUnderNoWord(t *testing.T) {
+	e := integration.Setup(t)
+	nord := seedTag(t, e, "Nord inbox", false)
+	seedFilingConnection(t, e, e.Rep1, "gmail", &nord)
+
+	activityID := seedMailStamped(t, e, "gmail", "connector:gmail", "e@bare.example")
+	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "e@bare.example", "bare.example", activityID)
+
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if got := tagsOn(t, e, "e@bare.example"); len(got) != 0 {
+		t.Errorf("mail whose stamp names no mailbox was filed under %v", got)
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM contact_email WHERE email = 'e@bare.example'`); n != 1 {
+		t.Errorf("%d contacts behind the address, want 1: the contact is still made", n)
 	}
 }

@@ -1,0 +1,23 @@
+name: an_old_promise_was_fulfilled_later
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+  - direction: outbound
+    subject: 'Pricing tiers'
+    sent: '2026-09-07'
+    body: |
+      I will send the standard and enterprise pricing by Friday.
+  - direction: outbound
+    subject: 'Re: Pricing tiers'
+    sent: '2026-09-09'
+    body: |
+      Here is the pricing we promised. All requested tiers are attached.
+expect:
+  outcome: accepted
+  answer: []
+  judge: none
+  judge_none_reason: >
+    The expected answer is empty. The production evaluator rejects every reported event,
+    so a rubric adds no further check.

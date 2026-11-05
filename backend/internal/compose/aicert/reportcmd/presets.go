@@ -73,7 +73,9 @@ func writePresetTable(b *strings.Builder, rungs []aicert.PresetRungState) error 
 		return err
 	}
 	for _, r := range rungs {
-		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n", r.Task, rungCell(r.FirstTier, r.FirstModel, r.FirstState), fallbackCell(r)); err != nil {
+		if _, err := fmt.Fprintf(w, "%s\t%s\t%s\n", r.Task,
+			rungCell(r.FirstTier, r.FirstModel, r.FirstState, r.FirstVerdict),
+			fallbackCell(r)); err != nil {
 			return err
 		}
 	}
@@ -84,9 +86,15 @@ func fallbackCell(r aicert.PresetRungState) string {
 	if r.FallbackState == aicert.RungSameModel || r.FallbackState == aicert.RungNone {
 		return r.FallbackState
 	}
-	return rungCell(r.FallbackTier, r.FallbackModel, r.FallbackState)
+	return rungCell(r.FallbackTier, r.FallbackModel, r.FallbackState, r.FallbackVerdict)
 }
 
-func rungCell(tier ai.Tier, model, state string) string {
-	return fmt.Sprintf("%s · %s · %s", tier, model, state)
+// rungCell names the binding, how current its record is, and what that record
+// graded it.
+//
+// The verdict is the column an operator binding a task needs. A current record
+// saying not_supported is a worse answer than a stale one saying certified,
+// and the state alone cannot tell them apart.
+func rungCell(tier ai.Tier, model, state, verdict string) string {
+	return fmt.Sprintf("%s · %s · %s · %s", tier, model, state, verdict)
 }

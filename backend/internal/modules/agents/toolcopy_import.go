@@ -27,7 +27,7 @@ var previewImportCopy = toolCopy{
 		"`object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's " +
 		"`company_ref` names a company's ref. " +
 		"read_import with view format lists each file's columns.",
-	Instead: "create_record for one record you already know.",
+	Instead: "create_record for one record you already know, and change_capture to import a vCard file.",
 	Retain: "Keep the run_id. The counts its report answers — created, duplicates, skipped — and the " +
 		"mapping it settled on are what the user weighs, so report both: a column this placed by " +
 		"a name they did not write is a decision they did not make.",
@@ -46,7 +46,7 @@ var describeImportFormatCopy = toolCopy{
 	Limits: "Includes this workspace's custom fields. Writes nothing.",
 }
 
-// A commit writes the file and cannot be undone from this surface. That, and
+// A commit writes the file, and taking it back asks the user first. That, and
 // not the run's state name, is what earns the dry run its turn.
 //
 // The copy does not call awaiting_approval an approval, because it is not one:
@@ -60,8 +60,7 @@ var commitImportCopy = toolCopy{
 		"write and answers at once with the run running.",
 	Limits: "Only from awaiting_approval, the state a run reaches by producing a dry-run report, " +
 		"so there is always a report first, or from a failed commit, which resumes at the row it " +
-		"stopped at. This cannot be undone from here — undoing an import " +
-		"needs the web app. A request to get a file in is not a review of it: unless the asker " +
+		"stopped at. change_capture takes it back, and asks the user first. A request to get a file in is not a review of it: unless the asker " +
 		"says they have already been through these rows, show the counts and the mapping and wait " +
 		"for their go-ahead.",
 	Instead: "Use read_import for the report first: numbers nobody read are not a check.",
@@ -76,4 +75,5 @@ var readImportCopy = toolCopy{
 		"unusable and duplicates. format: each file's columns, their order and the key rules.",
 	Limits: "The report's counts are what the user weighs before committing. After a commit, read " +
 		"report again until the state is complete or failed.",
+	Instead: "Use change_capture to change, test, cancel or undo a run.",
 }

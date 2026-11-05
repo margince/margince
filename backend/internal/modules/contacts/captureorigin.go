@@ -14,20 +14,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// capturedOriginSQL is the test that capture created the contact aliased p,
-// read from captured_by, which is stamped once at create.
-//
-// Capture sinks run as `connector:` principals, the verdict and accept paths as
-// their two actors. Two connector doors are not capture: the vCard ingest and an
-// import, which names its system in source_system.
-func capturedOriginSQL(verdict, accept, vcard string) string {
-	return `(p.captured_by LIKE 'connector:%' OR p.captured_by IN (` + verdict + `, ` + accept + `))
-		   AND p.source IS DISTINCT FROM ` + vcard + `
-		   AND p.source_system IS NULL`
-}
 
 // captureWriterSQL is the test that capture or the display-name repair is the
 // principal in column. A human, an agent, an import, an API caller or a missing
@@ -48,6 +37,10 @@ func writtenAboutByAnybodySQL(verdict, accept, repair string) string {
 		          AND NOT ` + captureWriterSQL("act.captured_by", verdict, accept, repair) + `)`
 }
 
+// linkedFromALeadSQL is the test that a lead was promoted into contact p or made
+// from it. Either may fold in a record somebody typed.
+const linkedFromALeadSQL = `EXISTS (SELECT 1 FROM lead l WHERE l.promoted_contact_id = p.id OR l.from_contact_id = p.id)`
+
 // CaptureMintedForSeatTx keeps the candidates a mailbox purge may anonymise for
 // one seat: contacts capture created for that seat that nobody has worked on.
 //
@@ -65,10 +58,8 @@ func CaptureMintedForSeatTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, candi
 		SELECT p.id
 		  FROM contact p
 		 WHERE p.id = ANY($1) AND p.owner_id = $2
-		   AND `+capturedOriginSQL("$3", "$4", "$5")+`
-		   AND NOT EXISTS (
-		       SELECT 1 FROM lead l
-		        WHERE l.promoted_contact_id = p.id OR l.from_contact_id = p.id)
+		   AND `+captureorigin.ContactSQL("$3", "$4", "$5")+`
+		   AND NOT `+linkedFromALeadSQL+`
 		   AND NOT EXISTS (
 		       SELECT 1 FROM audit_log a
 		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id

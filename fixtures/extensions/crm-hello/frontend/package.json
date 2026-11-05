@@ -1,0 +1,14 @@
+{
+  "name": "@margince-ext/crm-hello",
+  "private": true,
+  "type": "module",
+  "main": "screen.tsx",
+  "peerDependencies": {
+    "@margince/frontend": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0"
+  }
+}

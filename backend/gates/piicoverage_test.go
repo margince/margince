@@ -116,10 +116,14 @@ type piiHandling struct {
 var piiTables = map[string]piiHandling{
 	"report_edition":              {erasureWrite: true, sarRead: true},
 	"report_edition_contribution": {erasureWrite: true, sarRead: true},
-	"contact":                     {erasureWrite: true, sarRead: true},
-	"contact_email":               {erasureWrite: true, sarRead: true},
-	"contact_social":              {erasureWrite: true, sarRead: true},
-	"contact_phone":               {erasureWrite: true, sarRead: true},
+	// A report card's kept question holds its filters, and a filter value can
+	// be a subject's id or address. Erasure removes the kept question that
+	// names one; Art. 15 hands back the filters that name the subject.
+	"report_definition_revision": {erasureWrite: true, sarRead: true},
+	"contact":                    {erasureWrite: true, sarRead: true},
+	"contact_email":              {erasureWrite: true, sarRead: true},
+	"contact_social":             {erasureWrite: true, sarRead: true},
+	"contact_phone":              {erasureWrite: true, sarRead: true},
 	// The channel identity binds a human to their Telegram account: the
 	// provider's user id for them plus the @username they message under. Both
 	// identify the subject as directly as an address does, and the id is the
@@ -172,7 +176,7 @@ var piiTables = map[string]piiHandling{
 			// the row keeps saying a meeting happened while saying nothing
 			// about what was in it, and a sweep that stopped writing it would
 			// leave the old subject line standing.
-			"subject = $2",
+			"subject = @subject",
 			// Read FROM the words being emptied, so it describes erased text
 			// rather than the row. Same ruling as reply_verdict on the sibling
 			// eraser: a conclusion drawn from content does not outlive it.
@@ -208,7 +212,14 @@ var piiTables = map[string]piiHandling{
 	// TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything
 	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
 	"raw_capture": {erasureWrite: true, sarRead: true},
-	"embedding":   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
+	// A voice sample read from the owner's sent mail is a copy of that mail's
+	// words, and names whoever the owner wrote to. Both erasers that destroy a
+	// mail's content empty the sample through privacy.RawCapturePurger. Not
+	// exported: the subject's copy of the correspondence is the activity,
+	// which AssembleSAR already hands back.
+	"voice_corpus_source":  {erasureWrite: true, sarRead: false},
+	"capture_party_source": {erasureWrite: true, sarRead: true},
+	"embedding":            {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// The 24-hour capture trace names its counterparty — by address for mail,
 	// by DISPLAY NAME for a channel where there is no address to write — and
 	// keeps a clamped subject line. It was absent from this registry for as
@@ -247,6 +258,11 @@ var piiTables = map[string]piiHandling{
 	// given by them, which makes it disclosable twice over — the values and
 	// the fact that they were purchased.
 	"contact_provider_claim": {erasureWrite: true, sarRead: true},
+	// What a feed last offered for a company's text fields. The text can quote
+	// an employee, so the erasure of a subject deletes the offers of every
+	// company they were employed by. Not exported: the rows describe the
+	// company, which the subject's Art. 15 package does not carry.
+	"company_offered_value": {erasureWrite: true, sarRead: false},
 	// What a purchase FILLED on the record. It keeps the value it wrote for a
 	// plain column — the title, the profile URL — because the revert has
 	// nothing else to recognise the value by, and a hash of an address or a
@@ -382,7 +398,8 @@ var piiTables = map[string]piiHandling{
 	// reply verdicts' own ground, and more plainly still: a subject asking what
 	// we concluded about their mail is asking for exactly this, and here the
 	// answer can be an outstanding obligation TO them.
-	"activity_request_settlement": {erasureWrite: true, sarRead: true},
+	"activity_request_settlement":   {erasureWrite: true, sarRead: true},
+	"activity_commitment_admission": {erasureWrite: true, sarRead: true},
 	// The preference-center token (0048) is a live capability over the
 	// subject's consent record — held by whoever has the emailed
 	// List-Unsubscribe URL, honoured with no session at all. Registered so
@@ -495,6 +512,8 @@ var piiTables = map[string]piiHandling{
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarreporting.go",
+	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
 	// What this installation CONCLUDED about the subject's correspondence —
@@ -525,6 +544,7 @@ var sarAssemblyFiles = []string{
 // erasure's writes as disclosures, which is the confusion the list was made to
 // avoid in the first place.
 var sarReachedButNotAssembly = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/erasuretally.go":      "reached because the walk follows any call named Query or QueryRow to the methods tallyTx declares. The SAR never runs on a tallyTx; the file passes an erasure arm's statements through and counts them",
 	"internal/modules/privacy/scheduledsends.go":    "reached because sarmessages.go calls loweredAddresses, a string helper living here. Its own SQL is the queued-send scrub's, on the erasure path",
 	"internal/modules/privacy/erasure_approvals.go": "reached because sarmessages.go calls addressPatterns, likewise. Its SQL erases staged proposals and discloses nothing",
 	"internal/modules/privacy/erasure_channels.go":  "reached because sarjudgements.go calls channelIdentityPairs, a pairing helper living here. Its SQL reads and erases the subject's channel identities on the erasure path",
@@ -613,14 +633,8 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	for _, path := range retentionSweepFiles {
 		maps.Copy(assembled, assembledSweepTargets(t, path))
 		for _, lit := range sqlLiterals(t, path) {
-			// Before the split, whether the split can be trusted. A quoting
-			// form the scan cannot track leaves it inverted, and an inverted
-			// scan cuts inside a string — which is the fragment naming no
-			// table that sqlStatements was written to prevent.
-			if form := quotingBeyondTheSplit(lit); form != "" {
-				t.Fatalf("%s carries a `%s` literal, which the statement split cannot track: %q\n"+
-					"the split would cut inside the string and the fragment carrying the assignment would name no table. "+
-					"Teach sqlStatements this form, or keep the statement out of the swept files", path, form, collapsedSQL(lit))
+			if form := unclosedWriteSpan(lit); form != "" {
+				t.Fatalf("%s carries an unclosed SQL span %q; complete the literal before the statement scan", path, form)
 			}
 			// SPLIT, because the unit both checks below name is the statement
 			// and a literal is not one. Read whole, a literal carrying two

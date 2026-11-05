@@ -4,7 +4,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { Button } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
+import { readMemberPage } from "../lib/memberpages";
 import { unwrap } from "../lib/problem";
 
 // The workspace roster as the frontend reads it: one walk over `/users` or
@@ -56,21 +59,12 @@ type Roster = { entries: RosterEntry[]; partial: boolean };
 async function readRosterPage(
   kind: RosterKind,
   cursor: string | null,
+  everyone: boolean,
 ): Promise<{ entries: RosterEntry[]; next: string | null }> {
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
   if (kind === "user") {
-    const data = unwrap(
-      await api.GET("/users", {
-        params: {
-          query: {
-            limit: ROSTER_PAGE_SIZE,
-            ...(cursor ? { cursor } : {}),
-          },
-        },
-      }),
-    );
-    return { entries: data.data, next: data.page.next_cursor ?? null };
+    return readMemberPage(cursor, everyone);
   }
   const data = unwrap(
     await api.GET("/teams", {
@@ -82,7 +76,7 @@ async function readRosterPage(
   return { entries: data.data, next: data.page.next_cursor ?? null };
 }
 
-async function walkRoster(kind: RosterKind): Promise<Roster> {
+async function walkRoster(kind: RosterKind, everyone = false): Promise<Roster> {
   const entries: RosterEntry[] = [];
   let cursor = FIRST_PAGE;
   for (let page = 0; page < ROSTER_WALK_PAGES; page += 1) {
@@ -90,7 +84,7 @@ async function walkRoster(kind: RosterKind): Promise<Roster> {
     // inside `readRosterPage`), so react-query holds the read as an error.
     // Caught and dropped here it would come back as a SHORT list that reads as
     // complete — the one shape a caller cannot tell from a small workspace.
-    const answered = await readRosterPage(kind, cursor);
+    const answered = await readRosterPage(kind, cursor, everyone);
     entries.push(...answered.entries);
     // The CURSOR is what the walk can continue with, and `has_more` without one
     // is a list nothing can read the rest of — so both ends of the walk stop
@@ -119,6 +113,23 @@ function rosterQueryOptions(kind: RosterKind, enabled: boolean) {
 // entries AND whether they are all of them; one observer rather than two.
 export function useRosterWalk(kind: RosterKind, enabled: boolean) {
   return useQuery(rosterQueryOptions(kind, enabled));
+}
+
+/**
+ * Every member a list can be FILTERED by, including those who left.
+ *
+ * A colleague who left still owns their records until someone takes them over,
+ * and this is how a filter finds them. The server widens the walk for a member
+ * administrator only and serves everyone else the live roster. The cache entry
+ * sits under the `users` prefix, so a roster refresh reaches it too.
+ */
+export function useEveryMember(enabled: boolean) {
+  return useQuery({
+    queryKey: ["users", "everyone"],
+    queryFn: () => walkRoster("user", true),
+    enabled,
+    staleTime: 60_000,
+  });
 }
 
 /**
@@ -180,6 +191,21 @@ export function useRosterPartialHint(partial: boolean): string | undefined {
 }
 
 /**
+ * The hint a picker's `Field` owes its reader about the roster behind it: that
+ * the read failed, or that it stopped short. The string form of
+ * `RosterFailedLine` and `RosterPartialNote`, for a hint slot that owns its
+ * own paragraph and cannot hold either line.
+ */
+export function useRosterHint(
+  roster: Readonly<{ isError: boolean }>,
+  partial: boolean,
+): string | undefined {
+  const t = useT();
+  const partialHint = useRosterPartialHint(partial);
+  return roster.isError ? t("owner.rosterFailed") : partialHint;
+}
+
+/**
  * The caveat as its own line, for a picker with room for one beside it.
  *
  * Takes the FACT rather than reading the roster itself — `useRosterPartial` at
@@ -206,5 +232,37 @@ export function RosterPartialNote({
     <p className="t-caption" id={id} aria-live="off">
       {hint}
     </p>
+  );
+}
+
+/** What `RosterFailedLine` reads of a roster query. */
+export type RosterRead = Readonly<{ isError: boolean; refetch: () => unknown }>;
+
+/**
+ * The line a surface owes its reader when the roster read failed.
+ *
+ * A failed walk leaves `data` undefined, so a picker built on `data ?? []`
+ * offers nobody. That reads as a workspace with no colleagues, under a Save
+ * that stays disabled for no stated reason. It takes the query the surface
+ * already holds, like `RosterPartialNote`, so it never arms a deferred read.
+ */
+export function RosterFailedLine({
+  kind,
+  roster,
+}: Readonly<{ kind: RosterKind; roster: RosterRead }>) {
+  const t = useT();
+  if (!roster.isError) {
+    return null;
+  }
+  return (
+    <ErrorLine
+      actions={
+        <Button variant="ghost" onClick={() => roster.refetch()}>
+          {t("common.retry")}
+        </Button>
+      }
+    >
+      {t(kind === "user" ? "roster.failedUsers" : "roster.failedTeams")}
+    </ErrorLine>
   );
 }

@@ -8,7 +8,8 @@
 # the wrong contact. The nightly lane in scheduled.yml answers the same question
 # once a day; at eight merges an hour that is a working day of exposure.
 #
-# So this runs every two hours and, when it finds main broken, files ONE issue per
+# So this runs at most every two hours while main is moving, started by
+# main-health-pace.yml, and when it finds main broken it files ONE issue per
 # broken lane naming the commits that landed since the last green run and who
 # authored them. The point is attribution and speed, not prevention.
 #
@@ -18,15 +19,17 @@
 #
 # The cadence is the one knob. Every two hours costs ~15 jobs a run against a
 # 20-concurrent runner ceiling that the pull-request lanes also queue in, and narrows
-# the suspect range to roughly a dozen commits. Tighten the cron if a dozen is too
-# many to bisect; it is one line.
+# the suspect range to roughly a dozen commits. Tighten INTERVAL_SECONDS in
+# scripts/main-health-pace.sh if a dozen is too many to bisect; it is one line.
 name: main-health
 
 on:
   schedule:
+    # The floor for a quiet main, where no push arrives to start a run. Slower than
+    # the pacer so the two do not stack, and GitHub can drop any of these.
     # :17 rather than :00 — the top of the hour is when every other cron in every
     # other repository fires, and this lane competes for the same runner pool.
-    - cron: "17 */2 * * *"
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -277,8 +280,11 @@ jobs:
           path: frontend/coverage
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
-        # A CAP ON THE HANG, not on the scan. The scan itself runs in 72-125
-        # seconds; eight minutes is a hang, not a slow day.
+        # A CAP ON THE HANG, not on the scan. The scan of today's tree takes
+        # about eight minutes, upload and dependency data included: 7.5 on a
+        # green run, and one cut at eight after its analysis had published.
+        # Twenty minutes is a hang, not a slow day, and still ends inside the
+        # job's thirty with the step's own message.
         #
         # What it bounds is the action's signature verification of the scanner
         # download, which fetches SonarSource's key from a public keyserver. On
@@ -291,7 +297,7 @@ jobs:
         # NOT skipSignatureVerification. That would make the hang impossible by
         # not verifying the scanner binary at all, trading an occasional lost
         # scan for permanently trusting an unverified download.
-        timeout-minutes: 8
+        timeout-minutes: 20
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           args: -Dsonar.branch.name=main

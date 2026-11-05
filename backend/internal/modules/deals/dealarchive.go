@@ -22,7 +22,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+const (
+	dealArchiveRelationships = "deal_id = @record AND archived_at IS NULL"
+	dealArchiveMemberships   = "entity_type = 'deal' AND entity_id = @record"
 )
 
 // RefuseArchiveDeal answers every authority refusal ArchiveDeal would answer
@@ -31,11 +35,14 @@ import (
 // version probe: see RefuseArchiveActivity on why a pin is the write's
 // business rather than a staging's.
 func (s *Store) RefuseArchiveDeal(ctx context.Context, id ids.DealID) error {
-	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.DealArchive); err != nil {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritableLive(ctx, tx, dealTable, id.UUID)
+		if err := auth.EnsureWritableLive(ctx, tx, dealTable, id.UUID); err != nil {
+			return err
+		}
+		return auth.EnsureArchivable(ctx, tx, auth.DealArchive, id.UUID)
 	})
 }
 
@@ -46,7 +53,7 @@ func (s *Store) RefuseArchiveDeal(ctx context.Context, id ids.DealID) error {
 // stays a plain statement because it is a cascade off that row rather than a
 // second decision — the guard on the deal is what serializes both.
 func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64, opts ...ArchiveOption) (crmcontracts.Deal, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.DealArchive); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	active, err := s.activeColumns(ctx)
@@ -70,16 +77,19 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 // that archives many deals in one commit. It asks every gate ArchiveDeal asks
 // and answers nothing: the caller already knows which row it archived.
 func (s *Store) ArchiveDealTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, opts ...ArchiveOption) error {
-	if err := auth.Require(ctx, "deal", principal.ActionDelete); err != nil {
+	if err := auth.RequireArchiveGrant(ctx, auth.DealArchive); err != nil {
 		return err
 	}
 	return archiveDealInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts))
 }
 
-// archiveDealInTx is the archive itself, behind the object gate its callers
-// ask: the row's write check, the guarded patch and the cascade.
+// archiveDealInTx is the archive itself, behind the up-front grant its callers
+// ask: the row's write and archive checks, the guarded patch and the cascade.
 func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *int64, o archiveOptions) error {
-	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+	if err := lockThenEnsureWritable(ctx, tx, id); err != nil {
+		return err
+	}
+	if err := auth.EnsureArchivable(ctx, tx, auth.DealArchive, id.UUID); err != nil {
 		return err
 	}
 	// Under the row lock the write takes, so a colleague's save lands wholly
@@ -101,13 +111,13 @@ func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *i
 	// row, which is what an un-archive reads to put it back.
 	var cascade storekit.ArchiveCascade
 	if err := cascade.Retire(ctx, tx, "relationship",
-		`UPDATE relationship SET archived_at = $2 WHERE deal_id = $1 AND archived_at IS NULL RETURNING id`,
-		id, now); err != nil {
+		`UPDATE relationship SET archived_at = @archived WHERE `+dealArchiveRelationships+` RETURNING id`,
+		pgx.StrictNamedArgs{"record": id, "archived": now}); err != nil {
 		return fmt.Errorf("archive the deal's relationships: %w", err)
 	}
 	if err := cascade.DropMemberships(ctx, tx,
 		`WITH gone AS (
-			DELETE FROM list_member WHERE entity_type = 'deal' AND entity_id = @record
+			DELETE FROM list_member WHERE `+dealArchiveMemberships+`
 			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
 		logged AS (
 			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
@@ -116,7 +126,7 @@ func archiveDealInTx(ctx context.Context, tx pgx.Tx, id ids.DealID, ifVersion *i
 		return fmt.Errorf("detach list memberships: %w", err)
 	}
 	if err := cascade.DropTags(ctx, tx,
-		`DELETE FROM taggable WHERE entity_type = 'deal' AND entity_id = $1 RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, id.UUID); err != nil {
+		`DELETE FROM taggable WHERE `+dealArchiveMemberships+` RETURNING tag_id, assigned_by, assigned_by_kind, assigned_at`, pgx.StrictNamedArgs{"record": id.UUID}); err != nil {
 		return fmt.Errorf("detach tags: %w", err)
 	}
 

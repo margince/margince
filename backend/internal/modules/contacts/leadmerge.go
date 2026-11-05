@@ -6,7 +6,7 @@ package contacts
 import (
 	"context"
 	"fmt"
-	"time"
+	"maps"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -64,8 +64,15 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		commsauthz.LeadStopSubject(targetID)); err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	company, err := lockLeadCompanyBeforeLead(ctx, tx, sourceID)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, entityLead, sourceID.UUID, targetID.UUID)
 	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if ctx, err = admitDuplicatePairMerge(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
 	if err := refuseWebsiteLeadNotYetTold(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
@@ -91,6 +98,9 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if err := carryWorkedFromContact(ctx, tx, p, sourceID, targetID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
+	if err := carryLeadCompanyLink(ctx, tx, p, tgt, src, company); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if !p.Empty() {
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
 			return crmcontracts.Lead{}, fmt.Errorf("apply lead survivorship fill: %w", err)
@@ -98,7 +108,7 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	}
 	auditID, err := storekit.Audit(ctx, tx, "merge", entityLead, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
-		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: p.After()})
+		map[string]any{auditKeyMergedInto: targetID, auditKeyFilled: filledColumns(p.After())})
 	if err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge: %w", err)
 	}
@@ -106,6 +116,13 @@ func (s *Store) mergeLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		MergedFromId: openapi_types.UUID(sourceID.UUID), MergedIntoId: openapi_types.UUID(targetID.UUID),
 	}); err != nil {
 		return crmcontracts.Lead{}, fmt.Errorf("emit lead.merged: %w", err)
+	}
+	before := map[string]any{auditKeyMergedFrom: nil}
+	after := map[string]any{auditKeyMergedFrom: sourceID.UUID}
+	maps.Copy(before, p.Before())
+	maps.Copy(after, p.After())
+	if _, err := storekit.Audit(ctx, tx, "merge", entityLead, targetID.UUID, before, after); err != nil {
+		return crmcontracts.Lead{}, fmt.Errorf("audit lead merge on the survivor: %w", err)
 	}
 	out, err := readLead(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
@@ -134,6 +151,15 @@ func (s *Store) carryLeadToLeadTx(ctx context.Context, tx pgx.Tx, sourceID, targ
 	}
 	if err := s.carryGrantsTx(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("carry the merged-away lead's grants: %w", err)
+	}
+	// The polymorphic references, which carry no foreign key naming a lead and
+	// so cannot be found by one.
+	//
+	// The contact and company merges have always called this. The lead merge
+	// did not. So six kinds of row stayed where no read returns them: drafts,
+	// verdicts, notices, attachments, commitments and signals.
+	if err := moveKindIDRows(ctx, tx, entityLead, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("carry the merged-away lead's references by kind and id: %w", err)
 	}
 	return carryLeadMembershipsToLead(ctx, tx, sourceID, targetID)
 }
@@ -168,6 +194,7 @@ func buildLeadSurvivorshipPatch(target, source crmcontracts.Lead) *storekit.Patc
 	fillString(p, "title", target.Title, source.Title)
 	fillString(p, leadCompanyColumn, target.CompanyName, source.CompanyName)
 	fillString(p, "candidate_company_key", target.CandidateCompanyKey, source.CandidateCompanyKey)
+	fillString(p, leadIndustryField, (*string)(target.Industry), (*string)(source.Industry))
 	fillString(p, "linkedin_url", target.LinkedinUrl, source.LinkedinUrl)
 	if target.Email == nil && source.Email != nil {
 		p.Set(leadEmailColumn, nil, string(*source.Email))
@@ -210,12 +237,22 @@ func carryLeadConsentToLead(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 // that can only fail on merge is worse than none. Archived, not disposed —
 // nobody judged those pairs, and the row survives as the pair-unique fact.
 func retireStaleCandidates(ctx context.Context, tx pgx.Tx, loser ids.LeadID) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE dedupe_candidate SET archived_at = $2
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM dedupe_candidate
 		WHERE entity_type = 'lead' AND disposition = 'open' AND archived_at IS NULL
-		  AND (left_lead_id = $1 OR right_lead_id = $1)`,
-		loser, time.Now().UTC()); err != nil {
+		  AND (left_lead_id = $1 OR right_lead_id = $1)`, loser)
+	if err != nil {
 		return fmt.Errorf("retire stale lead candidates: %w", err)
+	}
+	stale, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("retire stale lead candidates: %w", err)
+	}
+	for _, id := range stale {
+		if _, err := archiveDedupeCandidateTx(ctx, tx, id, archiveReasonEndpointMerged,
+			map[string]any{auditKeyEntityType: entityLead}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -253,5 +290,57 @@ func carryWorkedFromContact(ctx context.Context, tx pgx.Tx, p *storekit.Patch, s
 		return err
 	}
 	p.Set("from_contact_id", nil, source.UUID)
+	return nil
+}
+
+// lockedCompany is the company a lead merge locked before its leads, and
+// whether it was live then.
+type lockedCompany struct {
+	id   *ids.CompanyID
+	live bool
+}
+
+// lockLeadCompanyBeforeLead locks the company the loser is linked to before any
+// lead row, the order a company merge takes when it moves linked leads.
+func lockLeadCompanyBeforeLead(ctx context.Context, tx pgx.Tx, sourceID ids.LeadID) (lockedCompany, error) {
+	company, err := leadLinkedCompany(ctx, tx, sourceID)
+	if err != nil || company == nil {
+		return lockedCompany{}, err
+	}
+	live, err := companyIsLive(ctx, tx, *company)
+	if err != nil {
+		return lockedCompany{}, err
+	}
+	return lockedCompany{id: company, live: live}, nil
+}
+
+// carryLeadCompanyLink gives the survivor the loser's company link, fill-only.
+// It does so only when the survivor has none and its name or domain still
+// names that company. A loser relinked since the lock answers a conflict.
+func carryLeadCompanyLink(ctx context.Context, tx pgx.Tx, p *storekit.Patch, target, source crmcontracts.Lead, locked lockedCompany) error {
+	var sourceCompany *ids.CompanyID
+	if source.CompanyId != nil {
+		id := ids.From[ids.CompanyKind](ids.UUID(*source.CompanyId))
+		sourceCompany = &id
+	}
+	if !sameCompany(sourceCompany, locked.id) {
+		return apperrors.ErrConflict
+	}
+	if target.CompanyId != nil || locked.id == nil || !locked.live {
+		return nil
+	}
+	name := target.CompanyName
+	if name == nil {
+		name = source.CompanyName
+	}
+	key := target.CandidateCompanyKey
+	if key == nil {
+		key = source.CandidateCompanyKey
+	}
+	named, err := namesCompany(ctx, tx, *locked.id, name, key)
+	if err != nil || !named {
+		return err
+	}
+	p.Set(leadCompanyIDColumn, nil, locked.id.UUID)
 	return nil
 }

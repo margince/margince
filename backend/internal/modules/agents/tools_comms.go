@@ -5,8 +5,8 @@ package agents
 
 // The communication verbs on the MCP surface (crm.yaml x-mcp-tool):
 // draft_email / check_availability are 🟢 (propose, never commit);
-// send_email / send_message / book_meeting are 🟡 — the registry's admission gate
-// stages them for approval exactly like every other confirmation_required tool. The
+// send_email / send_message are 🟢 with scope send. A passport
+// without send is refused, and a tier floor stages them for approval instead. The
 // module never touches activities' internals: compose injects the
 // Comms seam, which delegates to the SAME store methods the HTTP
 // transport uses.
@@ -57,7 +57,6 @@ type Comms interface {
 	// reaches that resolver holding the question alone (commandcomms.go).
 	ChannelKinds
 	Availability(ctx context.Context, host *ids.UUID, from, to time.Time, durationMinutes int) (AvailabilityResult, error)
-	BookMeeting(ctx context.Context, in BookMeetingArgs) (json.RawMessage, error)
 }
 
 type SendEmailArgs struct {
@@ -124,33 +123,23 @@ type SendMessageArgs struct {
 	SendContextArgs
 }
 
-type BookMeetingArgs struct {
-	HostUserID *ids.UUID    `json:"host_user_id"`
-	Start      time.Time    `json:"start"`
-	End        time.Time    `json:"end"`
-	Subject    string       `json:"subject"`
-	Links      []RecordLink `json:"links"`
-}
-
 // RegisterCommsTools wires the six verbs over the injected seam. The provider
-// is the record reader the four 🟡 verbs stage against; draft_email and
+// is the record reader the four send verbs stage against; draft_email and
 // check_availability propose nothing durable and never read it.
 //
 // A nil comms seam is a legal composition and registers nothing — the verbs
-// simply are not offered. A nil provider is NOT: the four 🟡 verbs would
-// register, advertise themselves on tools/list, and then dereference it the
-// first time a human-approvable call was staged. Failing at wiring time is the
-// difference between a boot that does not start and a surface that offers
-// four sends it panics on, so this asserts rather than silently dropping them
-// — a comms surface missing exactly its outbound verbs is the confusing
-// middle, not a safe default.
+// simply are not offered. A nil provider is not. The four send verbs would
+// register and show on tools/list, then dereference it on the first staged call.
+// So this asserts at wiring time instead of offering four sends that panic.
+// Dropping them would leave a comms surface without its outbound verbs, which
+// confuses more than a boot that does not start.
 func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordProvider) {
 	if comms == nil {
 		return
 	}
 	if p == nil {
 		//craft:ignore panic-in-domain composition-time wiring assertion — fires only while cmd wiring runs, never on a request path
-		panic("crmagents: RegisterCommsTools needs a record provider — the confirm-first sends, the account-started send and book_meeting all read the records they stage against")
+		panic("crmagents: RegisterCommsTools needs a record provider — send_email, send_message and the account-started send all read the records they stage against")
 	}
 	r.Register(draftEmailTool{comms: comms, p: p})
 	r.Register(sendEmailTool{comms: comms, p: p, language: r.language})
@@ -158,7 +147,6 @@ func RegisterCommsTools(r *Registry, comms Comms, p datasource.SystemOfRecordPro
 	r.Register(sendMessageTool{comms: comms, p: p, language: r.language})
 	r.Register(sendOutbound{})
 	r.Register(checkAvailability{comms: comms})
-	r.Register(bookMeetingTool{comms: comms, p: p, language: r.language})
 }
 
 // --- draft_email (🟢: proposes, never sends) ---
@@ -217,7 +205,7 @@ func (t draftEmailTool) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		// The same cap and de-duplication send_company_email applies, so a
 		// draft cannot succeed with a link set the advertised follow-on send
 		// would refuse.
-		links, err := uniqueRecordLinks(args.Links)
+		links, err := UniqueRecordLinks(args.Links)
 		if err != nil {
 			return nil, err
 		}
@@ -301,13 +289,12 @@ type sendEmailTool struct {
 // advertising a check the system does not perform teaches a model something
 // false. That was the honest answer while nothing read the field.
 //
-// It is no longer. validateInvoice, validateContract and validateQuote resolve a
-// category FROM the named record (authorizevalidators.go), and three of the
-// categories this tool may claim — invoice_or_payment, contract_notice,
-// precontract_quote — cannot be borne out without one. An agent claiming one
-// with no evidence to offer resolved to `review` and parked, which reads to a
-// rep as the tool being broken rather than as the model having named a
-// category it could not support.
+// It is no longer. validateInvoice and validateContract resolve a category from
+// the named record (authorizevalidators.go). Two categories this tool may claim
+// (invoice_or_payment, contract_notice) cannot be borne out without one. A quote
+// can: a recorded request bears it out before any deal exists. An agent that
+// claimed one with no evidence was parked for review. A rep reads that as a
+// broken tool, when the model named a category it could not support.
 //
 // NOT active_deal_followup, though a deal id is offered. That category has no
 // validator: it is supported by arm 2 of resolveCategory, which reads a live
@@ -330,7 +317,7 @@ const sendContextProperties = `,
 	`"description":"What kind of message this is. Omit to let the server resolve it from the thread; the claim is recorded and grants nothing."},
 	"marketing_purpose":{"type":"string","description":"For marketing, the purpose key naming the topic"},
 	"operator_reason":{"type":"string","maxLength":500,"description":"Why this first message is being sent. Recorded; grants nothing."},
-	"evidence":{"type":"object","description":"The record that bears out the category: required for invoice_or_payment, contract_notice and precontract_quote, which cannot be allowed without one","properties":{
+	"evidence":{"type":"object","description":"The record that bears out the category: required for invoice_or_payment and contract_notice, which cannot be allowed without one","properties":{
 		"invoice_id":{"type":"string","format":"uuid"},
 		"contract_id":{"type":"string","format":"uuid"},
 		"deal_id":{"type":"string","format":"uuid"}},"additionalProperties":false}`
@@ -338,6 +325,7 @@ const sendContextProperties = `,
 func (t sendEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_email", Title: "Send an email", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   sendEmailCopy.render(),
 		Instead:       sendEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,
@@ -426,6 +414,7 @@ type sendMessageTool struct {
 func (t sendMessageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_message", Title: "Reply on a channel conversation", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   sendMessageCopy.render(),
 		Instead:       sendMessageCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,

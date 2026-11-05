@@ -123,8 +123,8 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 	if done.Stale != nil && *done.Stale {
 		t.Error("a scan just read is reported stale")
 	}
-	if done.Read == nil || done.Read.Exchanges != 1 {
-		t.Errorf("read = %+v, want the one exchange counted", done.Read)
+	if done.Read == nil || done.Read.Exchanges != 1 || done.Read.WindowDays != 180 {
+		t.Errorf("read = %+v, want the one exchange counted over 180 days", done.Read)
 	}
 	if len(done.Findings) != 1 {
 		t.Fatalf("findings = %v, want the one grounded finding", kindsOf(done.Findings))

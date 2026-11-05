@@ -15,10 +15,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/filedpairs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -52,23 +54,19 @@ type StageResolver interface {
 	StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error)
 }
 
-// RegisterCoreTools wires the §2.1 CRUD set over one provider: the 🟢
-// tools, `advance_deal` (🟢→🟡 dynamic), and the 🟡 confirm-first tools the
-// approval loop carries — `archive_record`, `promote_lead` and
-// `merge_records`. The two write-shaped §2.2 intents that compose over the
-// SAME provider + stage seams — `qualify_lead` and `progress_deal` —
-// register here too; the read/draft intents and the lifecycle transitions
-// have their own seams (RegisterIntentTools, RegisterSlippingTools,
-// RegisterLifecycleTools).
+// RegisterCoreTools wires the record CRUD set over one provider. It holds the 🟢
+// tools, `advance_deal` (dynamic), and `archive_record`, `promote_lead` and
+// `merge_records`, which a tier floor can make confirm-first. `qualify_lead` and
+// `progress_deal` share the provider and stage seams, so they register here too.
 //
-// Every verb the contract declares with `x-mcp-tool` is registered by one of
-// those functions. A declared verb with no tool is not a gap to describe here:
+// Every verb the contract declares with `x-mcp-tool` is registered here or by
+// RegisterIntentTools, RegisterSlippingTools or RegisterLifecycleTools. A
+// declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
-func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, ownership FieldOwnership, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
-	r.Register(searchRecords{p: p, name: r.seats})
+func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
 	r.Register(readRecord{p: p, name: r.seats})
-	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language})
-	r.Register(updateRecord{p: p, ownership: ownership, staging: r.approvals, language: r.language})
+	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
+	r.Register(updateRecord{p: p, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
 	r.Register(createTask{p: p})
 	r.Register(advanceDeal{p: p, stages: stages, language: r.language})
@@ -76,16 +74,7 @@ func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages 
 	r.Register(qualifyLead{p: p, consumerMail: consumerMail})
 	r.Register(archiveRecord{p: p, language: r.language})
 	r.Register(promoteLead{p: p, promoter: promoter, language: r.language})
-	r.Register(mergeRecords{p: p, language: r.language})
-}
-
-// FieldOwnership answers the human-edit-precedence question
-// (interfaces.md §2.1): which of a patch's fields hold a value whose
-// most recent write was HUMAN, with a differing proposed value. The
-// audit trail is the source of truth; compose implements this over it —
-// this module never reads storage directly.
-type FieldOwnership interface {
-	HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error)
+	r.Register(mergeRecords{p: p, language: r.language, cases: r.contactCases})
 }
 
 // schema turns a hand-written JSON schema into the wire form, COMPACTED.
@@ -107,63 +96,6 @@ func schema(s string) json.RawMessage {
 		return json.RawMessage(s)
 	}
 	return json.RawMessage(compact.String())
-}
-
-// --- search_records (🟢 read) ---
-
-type searchRecords struct {
-	p    datasource.SystemOfRecordProvider
-	name SeatNamer
-}
-
-func (t searchRecords) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{
-		Name: "search_records", Title: "Search records", Version: toolVersionV1,
-		Description:   searchRecordsCopy.render(),
-		Instead:       searchRecordsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		Unlisted: true,
-		// The cross-object search operation, not the per-type list ones: those
-		// declare list_records now, and naming them here would leave the two
-		// tools claiming one operation family between them.
-		OpenAPIOp: "search",
-		InputSchema: schema(`{"type":"object","properties":{
-			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
-			"record_types":{"type":"array","items":{"type":"string","enum":["contact","company","deal","lead","project"]},"description":"Restrict the sweep to these types, in place of record_type."},
-			"limit":{"type":"integer","minimum":1,"maximum":50},
-			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
-			"additionalProperties":false}`),
-		OutputSchema: schemaFor[SearchRecordsResult](),
-	}
-}
-
-func (t searchRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		Q           string   `json:"q"`
-		RecordType  string   `json:"record_type"`
-		RecordTypes []string `json:"record_types"`
-		Limit       int      `json:"limit"`
-		Cursor      string   `json:"cursor"`
-	}
-	if err := decodeArgs(in, &args); err != nil {
-		return nil, err
-	}
-	if args.RecordType != "" && len(args.RecordTypes) > 0 {
-		return nil, &BadArgsError{Field: "record_types", Cause: errors.New("name one record_type or a list of record_types, not both")}
-	}
-	q := datasource.SearchQuery{Text: args.Q, Limit: args.Limit, Cursor: args.Cursor}
-	if args.RecordType != "" {
-		q.EntityTypes = []datasource.EntityType{datasource.EntityType(args.RecordType)}
-	}
-	for _, recordType := range args.RecordTypes {
-		q.EntityTypes = append(q.EntityTypes, datasource.EntityType(recordType))
-	}
-	res, err := t.p.Search(ctx, q)
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(searchResult(ctx, t.name, res))
 }
 
 type wireRecord struct {
@@ -200,12 +132,12 @@ func newWireRecord(ctx context.Context, rec datasource.Record) wireRecord {
 	}
 }
 
-func searchResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) SearchRecordsResult {
+func listResult(ctx context.Context, name SeatNamer, res datasource.SearchResult) ListRecordsResult {
 	records := make([]wireRecord, 0, len(res.Records))
 	for _, r := range res.Records {
 		records = append(records, newWireRecord(ctx, r))
 	}
-	return SearchRecordsResult{Records: withOwners(ctx, name, records), NextCursor: res.NextCursor}
+	return ListRecordsResult{Records: withOwners(ctx, name, records), NextCursor: res.NextCursor}
 }
 
 // --- read_record (🟢 read) ---
@@ -259,6 +191,7 @@ type createRecord struct {
 	// vocabulary is bound, and a nil seam offers nothing.
 	tagOffer TagOfferFor
 	language baselanguage.Resolver
+	words    ChangeWords
 }
 
 func (t createRecord) Spec() mcp.ToolSpec {
@@ -296,6 +229,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if err := rejectUnknownFields(createWriteShapes, args.RecordType, args.Fields); err != nil {
 		return nil, err
 	}
+	ctx, filed := filedpairs.Collect(ctx)
 	ref, err := t.p.Create(ctx, datasource.CreateInput{
 		EntityType: datasource.EntityType(args.RecordType),
 		Fields:     args.Fields,
@@ -310,7 +244,8 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		DuplicateCandidates: t.reportDuplicates(ctx, args.RecordType, ref.ID),
+		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.Fields, rec.Fields),
+		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
 }
@@ -424,19 +359,24 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider the workspace's channel provider list names."},
+			"channel_provider":{"type":"string","description":"Required for kind \"message\", else refused; one the workspace's channel providers name."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
 			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
+			"occurred_precision":{"enum":["instant","day"]},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
+			"meeting_status":{"type":"string","enum":` + activityMeetingStatusEnum + `,"description":"held only if the user says it happened"},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made by relinking the activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
-				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
+				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
+			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
+			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
+			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key from describe_vocabulary. A key no active activity field names is refused."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}

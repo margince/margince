@@ -590,10 +590,12 @@ func narrowAndRescope(t *testing.T, e *SearchEnv, activity ids.UUID) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The trace SetAudience stamps: the retraction it causes emits events.
 	if err := compose.NewAudienceRescopeGen(e.Pool).HandleEvent(ctx, kevents.Envelope{
 		Type:    "activity.updated",
 		Entity:  kevents.EntityRef{Type: "activity", ID: activity},
 		Payload: payload,
+		Trace:   kevents.Trace{CorrelationID: ids.NewV7()},
 	}); err != nil {
 		t.Fatalf("the rescope consumer refused the narrowing: %v", err)
 	}

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -81,7 +82,7 @@ func TestACcdContactIsFiledUnderTheirOwnRecord(t *testing.T) {
 	// Through the real contacts store: the resolution under test reads
 	// contact_email, and a row a test invents is not the row production writes.
 	store := contacts.NewStore(e.DB())
-	cc, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual")
+	cc, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the cc'd contact: %v", err)
 	}
@@ -107,7 +108,7 @@ func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
 	e, sync := env.e, env.sync
 
 	store := contacts.NewStore(e.DB())
-	if _, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual"); err != nil {
+	if _, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual", storekit.RefuseErased); err != nil {
 		t.Fatalf("seeding the cc'd contact: %v", err)
 	}
 
@@ -138,7 +139,7 @@ func TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt(t *testing.T) {
 	e, sync := env.e, env.sync
 
 	store := contacts.NewStore(e.DB())
-	cc, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual")
+	cc, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the cc'd contact: %v", err)
 	}

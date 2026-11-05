@@ -1,0 +1,16 @@
+/* The sentence that refuses Email takes a line of its own after every verb,
+   in whichever row of verbs the steps stand. */
+.task-next-reason {
+  flex-basis: 100%;
+  order: 1;
+  margin: 0;
+}
+.form-actions > .task-next-reason {
+  text-align: end;
+}
+
+/* The verbs' placeholder adds no box of its own: the skeleton inside stands in
+   the verb row exactly where the first verb will. */
+.task-next-pending {
+  display: contents;
+}

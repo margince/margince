@@ -1,7 +1,6 @@
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { formatTimeOfDay } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
@@ -11,18 +10,23 @@ import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
 import {
-  directionClass,
+  AutomaticFlag,
+  CommitmentReviewFlag,
   dotClass,
+  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   noteClass,
+  sideClass,
+  sideOf,
+  TaskStateFlag,
   TIMELINE_ICON,
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
   TimelineWhen,
 } from "./timelineentry";
-import { TimelineText } from "./timelinetext";
+import { TimelineBody } from "./timelinetext";
 import { ThreadRow } from "./timelinethread";
 
 export function TimelineList({
@@ -89,8 +93,8 @@ export function GroupedTimelineList({
   );
 }
 
-// BulkGroupRow is one send to several contacts, folded. While closed, the
-// newest copy stands for the send. Opening it lists every copy through the
+// BulkGroupRow is one send to several contacts, or a run of newsletters the
+// team received, folded. While closed, the newest message stands for the group. Opening it lists every copy through the
 // ordinary row. A thread is not drawn here: it is a conversation, and
 // ThreadRow draws it open, as one card of messages.
 function BulkGroupRow({
@@ -109,22 +113,22 @@ function BulkGroupRow({
   }
   const Icon = TIMELINE_ICON[newest.kind];
   return (
-    <li className={directionClass(newest.direction)}>
+    <li className={sideClass(newest)}>
       {/* A group sits on the same three columns a single row does (date,
           rail, what happened), because it is a row of the chronology. One
           that stepped out of the axis read as a different list wedged into
           this one. Its mark is the kind's own icon: the whole conversation is
           one thing that happened, and a dot would say it was one message. */}
-      <TimelineWhen atIso={newest.atIso} zone={zone} />
+      <TimelineWhen entry={newest} zone={zone} />
       <span className="tl-rail" aria-hidden="true">
         <span className="tl-icon">
           <Icon aria-hidden />
         </span>
       </span>
       <div className="tl-body">
-        {/* What the send is, while it is closed. No whose-move flag: a bulk
-            group is one outbound send with no reply expected, so it carries
-            no claim.
+        {/* What the group is, while it is closed. No whose-move flag: a
+            mailing expects no reply, whichever way it went, so it carries no
+            claim.
 
             The newest copy stands for the send, and that copy is drawn by
             the SAME component a lone one is — subject, who, the preview the
@@ -139,7 +143,7 @@ function BulkGroupRow({
         ) : newest.kind === "email" && newest.emailSummary ? (
           <EmailEntry
             summary={newest.emailSummary}
-            timestamp={formatTimeOfDay(newest.atIso, locale, zone)}
+            timestamp={entryTimeOfDay(newest, locale, zone)}
             onOpen={newest.onOpenEmail}
             // Absent on the reply composer, whose rows are the thread being
             // answered rather than a place to act from. Every other surface
@@ -152,7 +156,7 @@ function BulkGroupRow({
             {/* Never for a withheld entry: a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText text={newest.body} entry={newest} />
+              <TimelineBody body={newest.body} entry={newest} />
             )}
           </>
         )}
@@ -196,20 +200,31 @@ function directionPhrase(
   t: ReturnType<typeof useT>,
 ): string {
   const who = entry.counterparts;
+  const side = sideOf(entry);
   if (!who) {
-    return entry.direction === "outbound"
-      ? t("timeline.sent")
-      : t("timeline.received");
+    return side === "ours" ? t("timeline.sent") : t("timeline.received");
   }
-  if (entry.direction === "outbound") {
+  if (side === "ours") {
     return t("timeline.sentTo", { who });
   }
-  if (entry.direction === "inbound") {
+  if (side === "theirs") {
     return t("timeline.receivedFrom", { who });
   }
   // A meeting or a note has no side. It still has contacts in it, and naming
   // them is the whole reason this line exists.
   return t("timeline.withWhom", { who });
+}
+
+// A relay send names its sender, or it reads as the rep's own mail.
+function RelayTag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  if (entry.provenance.kind !== "system" || !entry.provenance.relay) {
+    return null;
+  }
+  return (
+    <span className="tl-meta">
+      <ProvenanceTag provenance={entry.provenance} />
+    </span>
+  );
 }
 
 /**
@@ -235,7 +250,7 @@ export function TimelineRow({
   // A note is the rep's own words about the record, not an exchange with it.
   // The row says so: its body sits on a plate of its own instead of running
   // in the message rhythm around it.
-  const rowClass = [directionClass(entry.direction), noteClass(entry)]
+  const rowClass = [sideClass(entry), noteClass(entry)]
     .filter(Boolean)
     .join(" ");
   // An email draws the canonical row, the one reading of a message in the
@@ -250,7 +265,7 @@ export function TimelineRow({
   if (entry.kind === "email" && entry.emailSummary) {
     return (
       <li className={rowClass}>
-        <TimelineWhen atIso={entry.atIso} zone={zone} />
+        <TimelineWhen entry={entry} zone={zone} />
         <span className="tl-rail" aria-hidden="true">
           <span className={dotClass(entry)} />
         </span>
@@ -260,10 +275,15 @@ export function TimelineRow({
               tells two messages on one subject apart. */}
           <EmailEntry
             summary={entry.emailSummary}
-            timestamp={formatTimeOfDay(entry.atIso, locale, zone)}
+            timestamp={entryTimeOfDay(entry, locale, zone)}
             onOpen={entry.onOpenEmail}
             // As above: absent on the reply composer and nowhere else.
             whyNotOpenable="noReader"
+          />
+          <RelayTag entry={entry} />
+          <AutomaticFlag entry={entry} />
+          <CommitmentReviewFlag
+            count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
           {flag}
           {entry.actions && <span className="tl-actions">{entry.actions}</span>}
@@ -276,7 +296,7 @@ export function TimelineRow({
       {/* The date leads the row, in its own gutter. A chronology is read down
           the dates — a reader looking for "what happened in August" scans one
           column rather than the end of every line. */}
-      <TimelineWhen atIso={entry.atIso} zone={zone} />
+      <TimelineWhen entry={entry} zone={zone} />
       {/* The axis, and this row's place on it. The rail runs THROUGH the row
           rather than a rule sitting under it: a chronology is one thread, and a
           border per entry drew it as a stack of unrelated cards. Filled for
@@ -294,10 +314,14 @@ export function TimelineRow({
             which way it went — one line above the headline, because both
             qualify it and set inline they read as the subject's first words. */}
         <span className="tl-head">
-          <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
+          <Eyebrow className="tl-head-part">
+            {t(TIMELINE_KIND_LABEL[entry.kind])}
+          </Eyebrow>
           {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
-          {entry.qualifier && <span>{entry.qualifier}</span>}
+          {entry.qualifier && (
+            <span className="tl-head-part">{entry.qualifier}</span>
+          )}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
               fact about the relationship, which is what the row is for.
@@ -306,7 +330,7 @@ export function TimelineRow({
               still says who this record is talking to, which is the thing the
               audience limited. */}
           {(entry.direction || entry.counterparts) && (
-            <span>
+            <span className="tl-head-part">
               {directionPhrase(
                 entry.withheld ? { ...entry, counterparts: undefined } : entry,
                 t,
@@ -314,6 +338,7 @@ export function TimelineRow({
             </span>
           )}
           {entry.via}
+          <TaskStateFlag entry={entry} />
           {/* Who may read it, when that is worth a mark: sealed rows and
               withheld ones. Withheld first, because a held row's `audience`
               is not the reader's to see and the mark must not claim one. */}
@@ -325,6 +350,10 @@ export function TimelineRow({
               <VisibilityBadge state={entry.audience} />
             )
           )}
+          <AutomaticFlag entry={entry} />
+          <CommitmentReviewFlag
+            count={entry.withheld ? 0 : entry.commitmentReviewCount}
+          />
           {flag}
         </span>
         {entry.withheld ? (
@@ -343,7 +372,7 @@ export function TimelineRow({
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} entry={entry} />
+          <TimelineBody entry={entry} body={entry.body} />
         )}
         {entry.detail}
         <span className="tl-meta">

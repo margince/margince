@@ -50,12 +50,10 @@ func NewAutomationStore(db *database.DB) *AutomationStore {
 	return &AutomationStore{db: db, now: time.Now}
 }
 
-// WithClock overrides the store's clock — the fixture a Preview proof
-// pins so "MatchesNow"/"WouldHaveFired" are measured against seeded
-// timestamps, never the wall clock (P3: no real-clock flakiness in a
-// test), mirroring TimeScanner's own NewTimeScannerWithClock. Returns
-// the store for chaining, like WithFieldCatalog above.
-func (s *AutomationStore) WithClock(now func() time.Time) *AutomationStore {
+// SetClock overrides the store's clock and returns the store. A Preview test
+// pins it so "MatchesNow" and "WouldHaveFired" read seeded timestamps, never
+// the wall clock.
+func (s *AutomationStore) SetClock(now func() time.Time) *AutomationStore {
 	s.now = now
 	return s
 }
@@ -80,6 +78,7 @@ func (s *AutomationStore) WithLists(lists Lists) *AutomationStore {
 // Automation is one configured instance.
 type Automation struct {
 	ID        ids.AutomationID
+	OwnerID   *ids.UserID
 	Key       string
 	Name      string
 	Enabled   bool
@@ -90,6 +89,9 @@ type Automation struct {
 	// PausedReason says why a rule paused itself; nil for a rule paused by
 	// hand or running.
 	PausedReason *string
+	// SetterPassportID is the passport of the agent that created or enabled the
+	// rule, until a user enables or edits it. Revoking that passport stops it.
+	SetterPassportID *ids.UUID
 	// Runs is how the rule has been running; only List reads it.
 	Runs *RunSummary
 }
@@ -107,6 +109,7 @@ type UpdateAutomationInput struct {
 	Name      *string
 	Params    map[string]any
 	Enabled   *bool
+	OwnerID   *ids.UserID
 	IfVersion *int64
 }
 
@@ -117,13 +120,13 @@ type AutomationPage struct {
 	HasMore    bool
 }
 
-const automationColumns = `id, key, name, enabled, params, version, created_at, updated_at, paused_reason`
+const automationColumns = `id, key, name, enabled, params, version, created_at, updated_at, paused_reason, owner_id, setter_passport_id`
 
 // scanAutomation reads automationColumns, then any extra columns the
 // statement selects after them.
 func scanAutomation(row pgx.Row, extra ...any) (Automation, error) {
 	var a Automation
-	dest := append([]any{&a.ID, &a.Key, &a.Name, &a.Enabled, &a.Params, &a.Version, &a.CreatedAt, &a.UpdatedAt, &a.PausedReason}, extra...)
+	dest := append([]any{&a.ID, &a.Key, &a.Name, &a.Enabled, &a.Params, &a.Version, &a.CreatedAt, &a.UpdatedAt, &a.PausedReason, &a.OwnerID, &a.SetterPassportID}, extra...)
 	err := row.Scan(dest...)
 	return a, err
 }
@@ -195,7 +198,8 @@ func (s *AutomationStore) Get(ctx context.Context, id ids.AutomationID) (Automat
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(
-			`SELECT %s FROM automation WHERE id = $1 AND archived_at IS NULL`, automationColumns), id))
+			`SELECT %s FROM automation WHERE id = $1 AND archived_at IS NULL`, automationColumns,
+		), id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -221,7 +225,7 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 		return Automation{}, err
 	}
 	if in.Name == "" {
-		return Automation{}, &ParamError{Field: "name", Reason: "must not be empty"}
+		return Automation{}, &ParamError{Field: keyName, Reason: "must not be empty"}
 	}
 	if err := entry.Validate(in.Params); err != nil {
 		return Automation{}, err
@@ -244,17 +248,20 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 
 	var a Automation
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		setter, err := agentSetterOf(ctx, tx)
+		if err != nil {
+			return err
+		}
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(`
-			INSERT INTO automation (key, name, origin, trigger, action, params, owner_id, enabled, tier)
-			VALUES ($1, $2, 'catalog', $3, $4, $5, $6, false, $7)
+			INSERT INTO automation (key, name, origin, trigger, action, params, owner_id, enabled, tier, setter_passport_id)
+			VALUES ($1, $2, 'catalog', $3, $4, $5, $6, false, $7, $8)
 			RETURNING %s`, automationColumns),
-			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), entry.Tier))
+			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), entry.Tier, storekit.UUIDOrNil(setter)))
 		if err != nil {
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "automation", a.ID.UUID, nil, map[string]any{
-			"key": a.Key, "name": a.Name, "params": in.Params, "status": "paused",
+			"key": a.Key, keyName: a.Name, keyParams: in.Params, keyStatus: "paused", keySetterPassport: storekit.UUIDOrNil(setter),
 		})
 		return err
 	})
@@ -278,7 +285,8 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 			return err
 		}
 		before, err := scanAutomation(tx.QueryRow(ctx, storekit.SQLf(
-			`SELECT %s FROM automation WHERE id = $1 AND archived_at IS NULL`, automationColumns), id))
+			`SELECT %s FROM automation WHERE id = $1 AND archived_at IS NULL`, automationColumns,
+		), id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -288,16 +296,21 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
 			return apperrors.ErrVersionSkew
 		}
-		if in.Enabled != nil && *in.Enabled {
-			owner, err := claimDraftStarter(ctx, tx, before)
-			if err != nil {
+		if updateChangesNothing(before, in) && !takesOverAgentsRule(ctx, before) {
+			a = before
+			return nil
+		}
+		if err := refuseAgentRuleChange(ctx, before, in); err != nil {
+			return err
+		}
+		claimed, err := settleRuleOwner(ctx, tx, before, in)
+		if err != nil {
+			return err
+		}
+		if !claimed.IsZero() {
+			if _, err := storekit.Audit(ctx, tx, "update", "automation", id.UUID,
+				map[string]string{keyOwnerID: ""}, map[string]string{keyOwnerID: claimed.String()}); err != nil {
 				return err
-			}
-			if !owner.IsZero() {
-				if _, err := storekit.Audit(ctx, tx, "update", "automation", id.UUID,
-					map[string]string{keyOwnerID: ""}, map[string]string{keyOwnerID: owner.String()}); err != nil {
-					return err
-				}
 			}
 		}
 		if err := s.revalidate(ctx, before, in); err != nil {
@@ -309,23 +322,28 @@ func (s *AutomationStore) Update(ctx context.Context, id ids.AutomationID, in Up
 				return err
 			}
 		}
+		setter, err := setterAfterUpdate(ctx, tx, before, in)
+		if err != nil {
+			return err
+		}
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE automation SET
 			  name = coalesce($2, name),
 			  params = coalesce($3, params),
 			  enabled = coalesce($4, enabled),
+			  owner_id = coalesce($6, owner_id),
+			  setter_passport_id = $7,
 			  paused_reason = CASE WHEN $4::boolean IS NULL THEN paused_reason END,
 			  version = version + 1,
 			  updated_at = $5
 			WHERE id = $1
 			RETURNING %s`, automationColumns),
-			id, in.Name, paramsJSON, in.Enabled, s.now().UTC()))
+			id, in.Name, paramsJSON, in.Enabled, s.now().UTC(), in.OwnerID, setter))
 		if err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "automation", id.UUID,
-			map[string]any{"name": before.Name, "enabled": before.Enabled, "params": json.RawMessage(before.Params)},
-			map[string]any{"name": a.Name, "enabled": a.Enabled, "params": json.RawMessage(a.Params)})
+		beforeImage, afterImage := ruleUpdateImages(before, a, in)
+		_, err = storekit.Audit(ctx, tx, "update", "automation", id.UUID, beforeImage, afterImage)
 		return err
 	})
 	if err != nil {
@@ -383,11 +401,15 @@ func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) erro
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := scanAutomation(tx.QueryRow(ctx, storekit.SQLf(
-			`SELECT %s FROM automation WHERE id = $1 AND archived_at IS NULL`, automationColumns), id))
+			`SELECT %s FROM automation WHERE id = $1 AND archived_at IS NULL`, automationColumns,
+		), id))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
+			return err
+		}
+		if err := refuseAgentArchivingSeeded(ctx, before); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -395,7 +417,7 @@ func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) erro
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "archive", "automation", id.UUID,
-			map[string]any{"key": before.Key, "name": before.Name, "enabled": before.Enabled}, nil)
+			map[string]any{"key": before.Key, keyName: before.Name, auditEnabled: before.Enabled}, nil)
 		return err
 	})
 }
@@ -423,9 +445,9 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 			INSERT INTO automation (key, name, origin, trigger, action, params, enabled, tier)
 			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
 			pgx.NamedArgs{
-				"key": entry.Key, "name": entry.Name, "trigger": triggerJSON,
-				"action": actionJSON, "params": paramsJSON, "tier": entry.Tier,
-				"enabled": entry.Action != string(ActionTypeDraftEmail),
+				"key": entry.Key, keyName: entry.Name, "trigger": triggerJSON,
+				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier,
+				auditEnabled: entry.Action != string(ActionTypeDraftEmail),
 			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
 		}

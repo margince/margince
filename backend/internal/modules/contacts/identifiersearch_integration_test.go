@@ -187,7 +187,7 @@ func TestTheIdentifierArmDoesNotWidenRowScope(t *testing.T) {
 	}
 
 	teammate := e.as(e.teammate, principal.RowScopeTeam)
-	q := "private@captured.example"
+	q := "private@captured"
 	rows, _, err := e.store.ListContacts(teammate, ListContactsInput{Query: &q})
 	if err != nil {
 		t.Fatalf("the teammate's search: %v", err)
@@ -197,5 +197,87 @@ func TestTheIdentifierArmDoesNotWidenRowScope(t *testing.T) {
 			t.Error("a teammate found a captured contact by pasting its address — the identifier " +
 				"arm answered about a row the record scope withholds")
 		}
+	}
+}
+
+func (e *privacyEnv) seedLead(t *testing.T, name, email string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	ctx := e.as(e.owner, principal.RowScopeOwn)
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO lead (id, full_name, email, status, source, captured_by, owner_id)
+			VALUES ($1, $2, $3, 'new', 'manual', 'human:test', $4)`, id, name, email, e.owner)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding lead %s: %v", name, err)
+	}
+	return id
+}
+
+func (e *privacyEnv) findLeads(t *testing.T, q string) []ids.UUID {
+	t.Helper()
+	rows, _, err := e.store.ListLeads(e.as(e.owner, principal.RowScopeAll), ListLeadsInput{Query: &q})
+	if err != nil {
+		t.Fatalf("searching leads for %q: %v", q, err)
+	}
+	out := make([]ids.UUID, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, ids.UUID(r.Id))
+	}
+	return out
+}
+
+func TestAFragmentOfAnAddressFindsItsContact(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	anna := e.seedContact(t, "Zz Qq", "anna.weber@example.com")
+	underscore := e.seedContact(t, "Yy Rr", "a_b@example.com")
+	wildcard := e.seedContact(t, "Xx Ss", "axb@example.com")
+	archived := e.seedContact(t, "Ww Tt", "old.address@former.example")
+	ctx := e.as(e.owner, principal.RowScopeAll)
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, archived)
+		return err
+	}); err != nil {
+		t.Fatalf("archiving the address: %v", err)
+	}
+
+	for _, q := range []string{"anna.weber", "weber@exam", "EXAMPLE", "mple.com"} {
+		if got := e.findContacts(t, q); !holds(got, anna.UUID) {
+			t.Errorf("%q does not find anna.weber@example.com", q)
+		}
+	}
+	if got := e.findContacts(t, "a_b"); !holds(got, underscore.UUID) || holds(got, wildcard.UUID) {
+		t.Error("`_` in the query must match itself, not any character")
+	}
+	if got := e.findContacts(t, "%"); len(got) != 0 {
+		t.Errorf("`%%` must match only a literal percent sign, found %d contact(s)", len(got))
+	}
+	if got := e.findContacts(t, "old.address"); holds(got, archived.UUID) {
+		t.Error("a fragment of an archived address still finds its contact")
+	}
+}
+
+func TestAFragmentOfADomainFindsItsCompany(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	account := e.seedAccount(t, "Qq Zz Holding", "example.com")
+	if got := e.findAccounts(t, "exam"); !holds(got, account.UUID) {
+		t.Error("a fragment of the domain does not find the company")
+	}
+	if got := e.findAccounts(t, "weber@exam"); !holds(got, account.UUID) {
+		t.Error("a pasted sender fragment does not find the company by its domain")
+	}
+}
+
+func TestAFragmentOfAnAddressFindsItsLead(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	lead := e.seedLead(t, "Zz Qq", "lead.one@example.com")
+	other := e.seedLead(t, "Yy Rr", "someone@elsewhere.example")
+	got := e.findLeads(t, "lead.one")
+	if !holds(got, lead) || holds(got, other) {
+		t.Errorf("a fragment of the lead's address found %d lead(s), want only the one", len(got))
+	}
+	if got := e.findLeads(t, "LEAD.ONE@EXAMPLE.COM"); !holds(got, lead) {
+		t.Error("the whole address, in other case, no longer finds the lead")
 	}
 }

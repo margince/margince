@@ -18,15 +18,20 @@ package compose
 // their gates, their normalization and their audited writes.
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type domainQuestionHandlers struct {
@@ -42,8 +47,13 @@ type domainQuestionHandlers struct {
 // which is the same name the pre-triage path always produced — worse than a
 // site would have given, never invented.
 func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
-	// Human-only (x-agent-access): capture posture, not record data.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// Taken before the question is read. Otherwise the refusal would depend on
+	// whether the domain is open, and tell a seat without the grant which are.
+	if err := auth.Require(r.Context(), "company", principal.ActionUpdate); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -57,14 +67,35 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 			"expected a domain name like example.com; a full email address or a URL is not one"))
 		return
 	}
+	// Only a colleague who was asked may answer, so a seat cannot settle a
+	// colleague's question by guessing the domain.
+	asked, err := h.contacts.OwnsDomainQuestion(r.Context(), base)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if !asked {
+		httperr.Write(w, r, fmt.Errorf("compose: no open question about %s for this reader: %w", base, apperrors.ErrNotFound))
+		return
+	}
+	var input crmcontracts.KeepDomainQuestionJSONRequestBody
+	if err := httperr.DecodeOrRefusal(w, r, &input); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
+		return
+	}
+	var companyID *ids.CompanyID
+	if input.CompanyId != nil {
+		typed := ids.From[ids.CompanyKind](ids.UUID(*input.CompanyId))
+		companyID = &typed
+	}
 	res, err := h.contacts.ResolveDomainTriage(r.Context(), contacts.ResolveDomainTriageInput{
-		Domain: base,
-		Status: contacts.DomainCompany,
-		// HUMAN, not heuristic: a colleague looked at the domain and said it is
-		// a company. The triage reads this too — a human answer is not withheld
-		// for stale evidence, because a human is exactly who that withholding
-		// was waiting for.
-		Source: contacts.DomainSourceHuman,
+		Domain:    base,
+		CompanyID: companyID,
+		Status:    contacts.DomainCompany,
+		// Not heuristic: a colleague, or their agent, said it is a company. The
+		// triage reads this too: a user's answer is not withheld for stale
+		// evidence, because that withholding waited for a user.
+		Source: contacts.DomainDecisionSource(r.Context()),
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -81,20 +112,42 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 			base, apperrors.ErrConflict))
 		return
 	}
-	// ADMITTED, recorded as a human decision. Two things hang on this beyond
-	// the response: the sticky rule in setDomainAdmissionTx guards on
-	// admission_source, so without it the next automatic bulk-sender verdict
-	// may suppress the domain a colleague just kept; and settleDisposition
-	// writes none of the admission columns, so the row would answer with an
-	// empty admission and an empty source — neither of which the contract
-	// publishes. It carries the company-update gate the contract promises for
-	// this endpoint, which RequireHuman alone does not.
-	stored, err := h.contacts.SetDomainAdmission(r.Context(), base, contacts.DomainAdmitted, contacts.KeptDomainReason)
+	// Admitted, recorded as a user's decision. The sticky rule in
+	// setDomainAdmissionTx guards on admission_source, so without it the next
+	// bulk-sender verdict may suppress the domain a colleague just kept. And
+	// settleDisposition writes no admission column, so the row would answer an
+	// empty admission and source, which the contract does not publish.
+	stored, err := h.contacts.KeepDomainAsCompany(r.Context(), base)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, contacts.ToContractBlockedDomain(stored))
+}
+
+// KeepDomainAsVendor answers a vendor question by agreeing with the triage:
+// the domain stays a vendor and no company is created.
+func (h domainQuestionHandlers) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string) {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// Taken before the question is read, as KeepDomainQuestion does.
+	if err := auth.Require(r.Context(), "company", principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	base, ok := freemail.Hostname(domain)
+	if !ok {
+		httperr.Write(w, r, httperr.Validation("domain", "invalid",
+			"expected a domain name like example.com; a full email address or a URL is not one"))
+		return
+	}
+	if err := h.contacts.KeepDomainAsVendor(r.Context(), base); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // DiscardDomainQuestion stops capturing a domain for the caller's own mailboxes.
@@ -108,7 +161,7 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 // It does not destroy mail already captured — purging what a rule matched is
 // its own irreversible endpoint.
 func (h domainQuestionHandlers) DiscardDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

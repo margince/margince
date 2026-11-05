@@ -101,6 +101,14 @@ function stubRead(body: unknown) {
   );
 }
 
+// The envelope (From, To, Sent, Bcc) opens from the "to …" line under the
+// sender, as a mail client's does.
+async function openEnvelope() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^(to |Details)/ }),
+  );
+}
+
 function draw(node: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -255,9 +263,12 @@ describe("the drawer's participants", () => {
       }),
     );
     draw(open());
+    await openEnvelope();
 
-    const contact = await screen.findByText("Ana Sommer");
-    expect(contact.getAttribute("href")).toBe(`#/contacts/${ANA}`);
+    const contact = await screen.findByRole("link", { name: "Ana Sommer" });
+    expect(contact.getAttribute("href")).toBe(
+      `/r/contacts/${ANA}#/contacts/${ANA}`,
+    );
     // BESIDE the message, not over it: the reader is part-way through a mail
     // in a drawer over the record they were working on, and following the
     // contact in this tab would close both to reach a page they could have
@@ -342,45 +353,40 @@ describe("the drawer's filing line", () => {
   });
 });
 
-// The verb that answers the message, in the header where a reader meets it
-// before the body rather than after one.
-describe("the drawer's reply", () => {
-  it("draws the host's verb beside the way out", async () => {
+// Message actions must use the message whose words surround them.
+describe("the drawer's actions", () => {
+  it("draws the host's verbs under the message", async () => {
     stubRead(presentation());
     draw(
       <EmailDetail
         activityId={ACTIVITY}
         onClose={() => {}}
         formatWhen={(iso) => iso}
-        // The catalog's own control, which is what the real host renders: a
-        // native button here would place a shape in the header that no
-        // production caller can produce, and the claim is about where the
-        // header puts the verb it is given.
-        renderReply={() => <Button>Reply</Button>}
+        renderActions={() => <Button>Reply</Button>}
       />,
     );
 
     const verb = await screen.findByRole("button", { name: "Reply" });
-    // In the header's action cluster, which is what puts it within reach of a
-    // message that runs past a screen.
-    expect(verb.closest(".emaildetail__actions")).not.toBeNull();
+    expect(verb.closest("article")?.textContent).toContain(
+      "Attached, as agreed.",
+    );
   });
 
   it("asks for no verb before the message has arrived", () => {
     // The host decides from the presentation — `can_reply` is the server's
     // answer — so there is nothing to ask until the read lands.
     stubRead(presentation());
-    const renderReply = vi.fn(() => null);
+    const renderActions = vi.fn(() => null);
     draw(
       <EmailDetail
         activityId={ACTIVITY}
         onClose={() => {}}
         formatWhen={(iso) => iso}
-        renderReply={renderReply}
+        renderActions={renderActions}
       />,
     );
 
-    expect(renderReply).not.toHaveBeenCalled();
+    expect(renderActions).not.toHaveBeenCalled();
   });
 });
 
@@ -462,5 +468,199 @@ describe("reopening the drawer after access was withdrawn", () => {
       expect(screen.getByText("This section did not load.")).toBeTruthy(),
     );
     expect(screen.queryByText("The signed contract")).toBeNull();
+  });
+});
+
+// A mail whose text the server could not decode still has a body: the From and
+// To lines. The drawer says the rest is missing, so the mail does not read as
+// complete.
+describe("a mail whose text could not be read", () => {
+  it("says so above the body", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unreadable",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText("The text of this mail could not be read."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Open it in your mail program to see it."),
+    ).toBeTruthy();
+  });
+
+  it("says when only part of the text was read", async () => {
+    stubRead(presentation({ body_completeness: "partial" }));
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "Part of the text of this mail could not be read.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Attached, as agreed.")).toBeTruthy();
+  });
+
+  it("says when the text is a forwarded original's", async () => {
+    stubRead(presentation({ body_completeness: "forwarded" }));
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "The text below is the forwarded mail, not words the sender wrote.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("explains what unverified text prevents and how to follow up", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unassessed",
+      }),
+    );
+    draw(open());
+
+    expect(await screen.findByText("Email text not verified")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Margince cannot detect requests or commitments here. Read the original in your mail app if text is missing; add any needed task manually.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Open it in your mail program to see it."),
+    ).toBeNull();
+  });
+
+  // A mail whose original is gone will never be checked, so its notice says so
+  // and promises no check.
+  it("says a mail with no original left can no longer be checked", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unverifiable",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText("This mail’s text can no longer be checked"),
+    ).toBeTruthy();
+    expect(screen.getByText(/Its stored original is gone/)).toBeTruthy();
+    expect(screen.queryByText("Email text not verified")).toBeNull();
+  });
+
+  // A hostile fixture: the server sends no completeness on a withheld mail,
+  // so the drawer's own check is what must refuse it.
+  it("says nothing of a withheld mail's text", async () => {
+    stubRead(
+      presentation({
+        body_completeness: "unassessed",
+        access: {
+          ...presentation().access,
+          content_state: "withheld",
+          display_status: "withheld",
+        },
+      }),
+    );
+    draw(open());
+
+    await waitFor(() =>
+      expect(screen.getByText("Not shared with you")).toBeTruthy(),
+    );
+    expect(screen.queryByText("Email text not verified")).toBeNull();
+  });
+
+  it("says nothing for a mail that was read", async () => {
+    stubRead(presentation({ body_completeness: "complete" }));
+    draw(open());
+
+    await screen.findByText("Attached, as agreed.");
+    expect(screen.queryByText(/could not be read/)).toBeNull();
+  });
+});
+
+describe("a mail the installation's relay sent for a rep", () => {
+  const REP = "01a05500-0000-7000-8000-0000000000u1";
+  const COLLEAGUE = "01a05500-0000-7000-8000-0000000000u2";
+  // As the read answers it: the rep is the activity's participant, the relay
+  // is what sent it.
+  const relayed = (fromAddress: string | null) =>
+    presentation({
+      from: [
+        { address: "anna@kps.test", display_name: "Anna Weber", user_id: REP },
+      ],
+      to: [{ address: "lena@kps.test", display_name: "Lena Hoffmann" }],
+      controller_send: { from_address: fromAddress },
+    });
+
+  function openAs(viewer: string) {
+    return (
+      <EmailDetail
+        activityId={ACTIVITY}
+        onClose={() => {}}
+        formatWhen={(iso) => iso}
+        viewerUserId={viewer}
+      />
+    );
+  }
+
+  it("says Margince sent it for the reader, from the relay's address", async () => {
+    stubRead(relayed("privacy@kps.test"));
+    draw(openAs(REP));
+
+    expect(await screen.findByText("Sent by Margince for you")).toBeTruthy();
+    expect(screen.getByText("From privacy@kps.test")).toBeTruthy();
+    await openEnvelope();
+    const from = screen.getByText("From", {
+      selector: ".emaildetail__partyLabel",
+    });
+    expect(from.parentElement?.textContent).toBe("Fromprivacy@kps.test");
+    expect(screen.queryByText("Anna Weber")).toBeNull();
+    expect(screen.queryByText("anna@kps.test")).toBeNull();
+  });
+
+  it("tells a colleague it was sent for a colleague", async () => {
+    stubRead(relayed("privacy@kps.test"));
+    draw(openAs(COLLEAGUE));
+
+    expect(
+      await screen.findByText("Sent by Margince for a colleague"),
+    ).toBeTruthy();
+    expect(screen.queryByText("Sent by Margince for you")).toBeNull();
+  });
+
+  it("names no sender address the relay did not record, and still not the rep", async () => {
+    stubRead(relayed(null));
+    draw(openAs(REP));
+
+    expect(await screen.findByText("Sent by Margince for you")).toBeTruthy();
+    expect(screen.queryByText(/^From /)).toBeNull();
+    await openEnvelope();
+    expect(
+      screen.queryByText("From", { selector: ".emaildetail__partyLabel" }),
+    ).toBeNull();
+    expect(screen.queryByText("Anna Weber")).toBeNull();
+  });
+
+  it("leaves a mail the rep sent from their own mailbox as it was", async () => {
+    stubRead(
+      presentation({
+        from: [
+          {
+            address: "anna@kps.test",
+            display_name: "Anna Weber",
+            user_id: REP,
+          },
+        ],
+      }),
+    );
+    draw(openAs(REP));
+
+    expect(await screen.findAllByText("Anna Weber")).not.toHaveLength(0);
+    expect(screen.queryByText(/Sent by Margince/)).toBeNull();
   });
 });

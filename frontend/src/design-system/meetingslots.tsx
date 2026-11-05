@@ -57,12 +57,15 @@ export type MeetingDay = Readonly<{
 export function MeetingWeek({
   days,
   selected,
+  blocked = [],
   onSelect,
   emptyDay,
   disabled = false,
 }: Readonly<{
   days: readonly MeetingDay[];
   selected: readonly string[];
+  // Starts that cannot be pressed now, such as a time overlapping a choice.
+  blocked?: readonly string[];
   onSelect?: (slot: { start: string; end: string }) => void;
   emptyDay: string;
   disabled?: boolean;
@@ -94,7 +97,7 @@ export function MeetingWeek({
                 variant={on ? "primary" : "ghost"}
                 aria-pressed={on}
                 aria-label={slot.label}
-                disabled={disabled}
+                disabled={disabled || (!on && blocked.includes(slot.start))}
                 onClick={() => onSelect({ start: slot.start, end: slot.end })}
               >
                 {slot.time}

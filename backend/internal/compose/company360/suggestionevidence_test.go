@@ -4,6 +4,7 @@
 package company360
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ func TestTheNoReplyCitationCarriesTheMessagesOwnWords(t *testing.T) {
 	newest.Subject = "Slots for the pilot review"
 	newest.Excerpt = "Hi Anna, two slots next week would work on our side."
 
-	got := staleThread(testCompanyID(t), suggestNow, newest)
+	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest)
 	if got == nil {
 		t.Fatal("the rule did not fire on a 10-day-old unanswered email")
 	}
@@ -42,6 +43,22 @@ func TestTheNoReplyCitationCarriesTheMessagesOwnWords(t *testing.T) {
 	}
 }
 
+// The rule reads a mail's History badge. A colleague's mail nobody answered
+// does not tell the reader to chase a reply they never asked for.
+func TestTheNoReplyRuleSkipsAMailTheReaderDidNotSend(t *testing.T) {
+	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
+	newest.Kind = string(crmcontracts.ActivityKindEmail)
+	newest.Move = new(crmcontracts.EmailSummaryMoveNone)
+
+	if got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest); got != nil {
+		t.Fatalf("the rule fired on a colleague's mail: %+v", got)
+	}
+	newest.Move = new(crmcontracts.EmailSummaryMoveWaitingForThem)
+	if englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest) == nil {
+		t.Fatal("the rule went silent on the reader's own unanswered mail")
+	}
+}
+
 // A limited audience withholds the words and not the fact: the reader is
 // still told they are waiting on a reply, and the chip carries no quote it
 // would have to invent.
@@ -49,7 +66,7 @@ func TestTheNoReplyCitationWithholdsWordsTheReaderMayNotRead(t *testing.T) {
 	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
 	newest.Kind = string(crmcontracts.ActivityKindCall)
 
-	got := staleThread(testCompanyID(t), suggestNow, newest)
+	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest)
 	if got == nil {
 		t.Fatal("the rule went silent on a message whose words are withheld")
 	}
@@ -65,7 +82,7 @@ func TestTheNoReplyCitationWithholdsWordsTheReaderMayNotRead(t *testing.T) {
 func TestTheStalledDealCitationSaysWhenItWasLastWorked(t *testing.T) {
 	deal := idle("Renewal")
 
-	got := stalledDealSuggestions([]stalledDeal{deal})
+	got := englishSuggestions.stalledDealSuggestions([]stalledDeal{deal})
 	if len(got) != 1 {
 		t.Fatalf("got %d suggestions, want one", len(got))
 	}
@@ -76,8 +93,8 @@ func TestTheStalledDealCitationSaysWhenItWasLastWorked(t *testing.T) {
 	if cited.At == nil || !cited.At.Equal(deal.IdleSince) {
 		t.Errorf("at = %v, want the instant the deal was last worked", cited.At)
 	}
-	if cited.Origin == nil || *cited.Origin != originStalledDeal {
-		t.Errorf("origin = %v, want %q", cited.Origin, originStalledDeal)
+	if cited.Origin == nil || *cited.Origin != "Open deal, last worked" {
+		t.Errorf("origin = %v, want %q", cited.Origin, "Open deal, last worked")
 	}
 }
 
@@ -101,8 +118,8 @@ func TestTheConflictQuotesTheMailThatEndedTheContract(t *testing.T) {
 	if cited.At == nil || !cited.At.Equal(read) {
 		t.Errorf("at = %v, want when the signal was read", cited.At)
 	}
-	if cited.Origin == nil || *cited.Origin != originContractEnded {
-		t.Errorf("origin = %v, want %q", cited.Origin, originContractEnded)
+	if cited.Origin == nil || *cited.Origin != "Read from their correspondence" {
+		t.Errorf("origin = %v, want %q", cited.Origin, "Read from their correspondence")
 	}
 }
 
@@ -115,15 +132,33 @@ func TestTheCitationsWordsNeverReachTheFingerprint(t *testing.T) {
 	worded := bare
 	worded.Kind, worded.Subject, worded.Excerpt = "email", "Re: pilot", "Two slots next week."
 
-	if a, b := staleThread(companyID, suggestNow, bare), staleThread(companyID, suggestNow, worded); a.Fingerprint != b.Fingerprint {
+	if a, b := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, bare), englishSuggestions.staleThread(companyID, suggestNow, time.UTC, worded); a.Fingerprint != b.Fingerprint {
 		t.Errorf("the no-reply fingerprint moved with the words:\n  %s\n  %s", a.Fingerprint, b.Fingerprint)
 	}
 
 	dealID := ids.NewV7()
 	unnamed := stalledDeal{ID: dealID, Name: "Renewal", IdleSince: suggestNow.AddDate(0, 0, -90)}
 	renamed := stalledDeal{ID: dealID, Name: "Renewal 2027", IdleSince: unnamed.IdleSince}
-	a, b := stalledDealSuggestions([]stalledDeal{unnamed}), stalledDealSuggestions([]stalledDeal{renamed})
+	a, b := englishSuggestions.stalledDealSuggestions([]stalledDeal{unnamed}), englishSuggestions.stalledDealSuggestions([]stalledDeal{renamed})
 	if a[0].Fingerprint != b[0].Fingerprint {
 		t.Errorf("the stalled-deal fingerprint moved with the name:\n  %s\n  %s", a[0].Fingerprint, b[0].Fingerprint)
+	}
+}
+
+// A day message counts its wait from the date it names. Its stored noon UTC is
+// already the next morning in Kiritimati, a day short.
+func TestAQuietDayMessageCountsFromItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 8, 17, 9, 0, 0, 0, kiritimati)
+	newest := lastMessage{
+		ID: ids.NewV7(), Direction: "outbound", DateOnly: true,
+		At: time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC),
+	}
+	got := englishSuggestions.staleThread(testCompanyID(t), now, kiritimati, newest)
+	if got == nil || got.Title == nil || !strings.Contains(*got.Title, "14") {
+		t.Fatalf("a day message dated 14 days ago reads %+v, want a 14-day wait", got)
 	}
 }

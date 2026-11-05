@@ -42,6 +42,9 @@ type Review struct {
 	AsOf           time.Time
 	Counts         Counts
 	Deals          []DealLine
+	// MeetingsWithheld marks a week read by a seat that may not read meetings.
+	// Its meeting figures are zero, and the wire says they are withheld.
+	MeetingsWithheld bool
 	// Narrative is the sentence a model wrote about the week, empty when none
 	// did. NarratedAt is what tells "no pass ran" from "a pass ran and found
 	// the week unremarkable" — the two read identically as silence otherwise.
@@ -96,9 +99,10 @@ type Review struct {
 
 // PriorWeek is the earlier review a week is compared against.
 type PriorWeek struct {
-	LocalWeekStart time.Time
-	Counts         Counts
-	Money          Money
+	LocalWeekStart   time.Time
+	Counts           Counts
+	Money            Money
+	MeetingsWithheld bool
 }
 
 // Counts are the week's tallies. Every one is as-of the review's AsOf, which
@@ -118,9 +122,10 @@ type Counts struct {
 	BriefItemsActed     int
 	BriefItemsDismissed int
 
-	// How the week's inbound leads were answered. A lead still inside its
-	// target when the row was written is in neither of the last two: it has
-	// not yet been either answered in time or missed.
+	// How the week's inbound leads were answered. LeadsAnsweredInTarget is
+	// every first response recorded by the close, late ones included. A late
+	// answer is also in LeadsBreached, so the two overlap. A lead with neither
+	// stamp had no recorded response and no recorded breach.
 	// What the week's PLAN came to. Read through a seam rather than queried
 	// here: weeklyplan owns those tables, and a review that counted them
 	// itself would be a second reader of somebody else's rows.

@@ -32,7 +32,9 @@ func TestCustomClearsRequireAnActiveColumnAndAnExplicitNull(t *testing.T) {
 
 func TestClearingAnUnsetCustomFieldDoesNotProduceAWrite(t *testing.T) {
 	p := NewPatch()
-	SetCustomFieldPatch(p, []fieldcatalog.Column{{Name: "cf_note", Type: fieldcatalog.TypeText}}, map[string]any{"cf_note": nil}, map[string]any{"cf_note": nil})
+	if err := SetCustomFieldPatch(p, []fieldcatalog.Column{{Name: "cf_note", Type: fieldcatalog.TypeText}}, map[string]any{"cf_note": nil}, map[string]any{"cf_note": nil}); err != nil {
+		t.Fatal(err)
+	}
 	if !p.Empty() {
 		t.Fatal("clearing an unset field produced a patch")
 	}
@@ -45,12 +47,14 @@ func TestClearingAPopulatedCustomFieldWritesTheNull(t *testing.T) {
 	// again. Its sibling above covers null-over-null, which is the half that was
 	// always right, and a suite holding only that half reports green over this.
 	p := NewPatch()
-	SetCustomFieldPatch(
+	if err := SetCustomFieldPatch(
 		p,
 		[]fieldcatalog.Column{{Name: "cf_note", Type: fieldcatalog.TypeText}},
 		map[string]any{"cf_note": nil},
 		map[string]any{"cf_note": "was here"},
-	)
+	); err != nil {
+		t.Fatal(err)
+	}
 	if p.Empty() {
 		t.Fatal("clearing a populated field produced no write")
 	}

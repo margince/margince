@@ -54,7 +54,7 @@ func TestMeetingReminderQueuesOnceThroughTheEmailWriter(t *testing.T) {
 		}
 	}
 	delivery := stager.only(t)
-	if !strings.Contains(delivery.Body, "Reschedule or cancel:") {
+	if !strings.Contains(delivery.Body, "Reschedule or cancel\nhttps://") {
 		t.Fatalf("missing management link: %s", delivery.Body)
 	}
 	current, err := f.store.Invitation(f.ctx, ids.UUID(meeting.Id))

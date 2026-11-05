@@ -133,6 +133,10 @@ type Descriptor struct {
 	RiskTier mcp.RiskTier // capture/read = auto_execute; any outbound = confirmation_required
 	Tools    []mcp.ToolSpec
 	Produces []datasource.EntityType
+	// FirstSyncWindow bounds a first pull, before any cursor exists; zero
+	// reads from the beginning. Declared here because the registry holds the
+	// anchor across a failed attempt and cannot hold an unknown window.
+	FirstSyncWindow time.Duration
 }
 
 // AuthRequest carries whatever the provider handshake needs (OAuth code,
@@ -183,7 +187,7 @@ type IdentifiedMeetingCanceller interface {
 // and only a meeting it captured earlier moves. Optional, for
 // MeetingCanceller's reason.
 type MeetingMover interface {
-	MoveMeeting(ctx context.Context, key NaturalKey, start time.Time, duration *int) error
+	MoveMeeting(ctx context.Context, key NaturalKey, slot MeetingSlot) error
 }
 
 // MessageRemover is the mail connectors' equivalent: the provider reports that
@@ -260,7 +264,6 @@ type NormalizedRecord struct {
 	Raw        []byte // re-parseable original → raw jsonb, off the hot path
 
 	// StoredOriginal names the raw_capture row this record was read from.
-	//
 	// A connector that persisted the original ITSELF — a poll that has to
 	// store the update before it can queue the work — fills it, and hands over
 	// no Raw. Every other lane leaves it zero and the sink fills it from the
@@ -285,6 +288,8 @@ type NormalizedRecord struct {
 	// because the key's spelling belongs to the module owning `activity_identity`
 	// and a connector may not import it.
 	CrossDoorIdentity CrossDoorIdentity
+	OwnerDomainOnly   string // the calendar owner's domain when every party is on it; the sink judges it
+	PartiesIncomplete bool   // the provider may have left parties out of Addresses, so they cannot prove it internal
 
 	// The address the RECEIVING infrastructure recorded delivery to, empty when
 	// no such claim could be trusted. It is how a forwarding alias is
@@ -429,7 +434,7 @@ type CrossDoorIdentity struct {
 	// identity: a series without one names every meeting in it at once.
 	Occurrence time.Time
 	// AllDay says the occurrence is a calendar DATE rather than an instant. An
-	// all-day start is stored at noon UTC (meetingmap.AllDayStart), which no
+	// all-day start arrives at noon UTC (meetingmap.AllDayStart), which no
 	// other door states: an importer or an ICS client says the date, or its
 	// midnight. The key is composed from the date alone, so both doors name the
 	// same all-day meeting once.

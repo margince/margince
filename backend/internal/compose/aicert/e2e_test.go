@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // TestE2ECertify runs one certification pass against the configured
@@ -113,7 +112,7 @@ func TestE2ECertify(t *testing.T) {
 			"accepted and then applied to nothing")
 	}
 	if routingPath != "" {
-		resolved, rerr := compose.RoutingFromDeployConfig(routingPath, runtimeenv.Development)
+		resolved, rerr := compose.RoutingFromDeployConfig(routingPath)
 		if rerr != nil {
 			t.Fatalf("MARGINCE_AICERT_ROUTING=%s: %v", routingPath, rerr)
 		}

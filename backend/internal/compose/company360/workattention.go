@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -219,21 +220,29 @@ func overdueTasksBy(
 	// withheld the kept row is a withheld one, which is why `visible` is
 	// scanned and not assumed — its subject and assignee are read but never
 	// hung on the card.
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT ON (l.%[1]s)
-		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), a.due_at,
-		       coalesce((%[5]s), false) AS visible,
-		       bool_or(NOT coalesce((%[5]s), false)) OVER (PARTITION BY l.%[1]s) AS dropped
-		  FROM activity a
-		  JOIN activity_link l ON l.activity_id = a.id AND l.%[1]s = ANY($%[2]d)
-		  LEFT JOIN app_user u ON u.id = a.assignee_id
-		         AND `+identity.LiveMemberSQL("u")+`
-		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND a.due_at IS NOT NULL AND a.due_at < $%[4]d
-		   AND %[6]s
-		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, a.due_at, a.id`,
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, false, err
+	}
+	// The scope is computed once, in the inner select, and OFFSET 0 keeps the
+	// planner from pulling it up into a copy per reference of t.visible.
+	query := fmt.Sprintf(`
+		SELECT DISTINCT ON (t.key) t.key, t.subject, t.assignee, t.due, t.visible,
+		       bool_or(NOT t.visible) OVER (PARTITION BY t.key) AS dropped
+		  FROM (SELECT l.%[1]s AS key, coalesce(a.subject, '') AS subject,
+		               coalesce(u.display_name, '') AS assignee, `+storekit.TaskDueSQL("a")+` AS due,
+		               a.id, coalesce((%[5]s), false) AS visible
+		          FROM activity a
+		          JOIN activity_link l ON l.activity_id = a.id AND l.%[1]s = ANY($%[2]d)
+		          LEFT JOIN app_user u ON u.id = a.assignee_id
+		                 AND `+identity.LiveMemberSQL("u")+`
+		         WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
+		           AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
+		           AND %[6]s AND %[7]s OFFSET 0) t
+		 ORDER BY t.key, t.visible DESC, t.due, t.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
-		activities.CompanyLinkedActivityExists(companyPos)), args...)
+		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's overdue tasks: %w", err)
 	}

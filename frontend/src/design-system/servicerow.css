@@ -1,0 +1,76 @@
+/* ServiceRow: one service under an account. Three columns (glyph, words, side)
+ * so every row in a list puts its name and its verb on the same x. */
+
+.service-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+}
+
+.service-list > * + * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* One size for the glyph's box and the glyph, read from one property. */
+.service-row {
+  --serviceIconSize: 20px;
+  display: grid;
+  grid-template-columns: var(--serviceIconSize) minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+/* The glyph centres on the name's first line: `1lh` of the name's own type. */
+.service-row-icon {
+  display: flex;
+  align-items: center;
+  block-size: 1lh;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+}
+.service-row-icon > svg {
+  width: var(--serviceIconSize);
+  height: var(--serviceIconSize);
+}
+
+.service-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.service-row-name {
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
+.service-row-reason {
+  color: var(--textPrimary);
+}
+
+.service-row-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+/* Narrow: the status and verb drop under the words rather than squeezing them. */
+@media (max-width: 640px) {
+  .service-row {
+    grid-template-columns: var(--serviceIconSize) minmax(0, 1fr);
+  }
+  .service-row-side {
+    grid-column: 2;
+    justify-content: flex-start;
+    margin-top: var(--space-2);
+  }
+}

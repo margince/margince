@@ -115,13 +115,14 @@ func TestEachSectionPublishesTheFieldsItsOwnWriteDecodes(t *testing.T) {
 	doc := readRecordFields(t)
 	checked := 0
 	for _, table := range []struct {
-		tool    string
-		section recordFieldsWrite
-		decoded map[datasource.EntityType]reflect.Type
-		parents map[string][]string
+		tool     string
+		section  recordFieldsWrite
+		decoded  map[datasource.EntityType]reflect.Type
+		parents  map[string][]string
+		withheld map[string][]string
 	}{
-		{"create_record", doc.Create, createShapes, createParentFields},
-		{"update_record", doc.Update, updateShapes, nil},
+		{"create_record", doc.Create, createShapes, createParentFields, createWithheldFields},
+		{"update_record", doc.Update, updateShapes, nil, nil},
 	} {
 		if len(table.section.Fields) != len(table.decoded) {
 			t.Errorf("%s publishes %d record types and decodes %d",
@@ -134,7 +135,7 @@ func TestEachSectionPublishesTheFieldsItsOwnWriteDecodes(t *testing.T) {
 				continue
 			}
 			checked++
-			got, want := renderedKeys(published), acceptedFieldNames(shape, table.parents[string(recordType)])
+			got, want := renderedKeys(published), acceptedFieldNames(shape, table.parents[string(recordType)], table.withheld[string(recordType)])
 			slices.Sort(got)
 			if !slices.Equal(got, want) {
 				t.Errorf("%s %s publishes keys %v, the decoder accepts %v", table.tool, recordType, got, want)
@@ -199,9 +200,9 @@ func TestThePerWriteNotesGiveEachToolOnlyAdviceItCanAct(t *testing.T) {
 // The custom-field note must not promise carriage the surface withholds.
 //
 // Both sections tell a caller that an extra cf_<slug> key is read as a
-// custom-field value. That is false for activity and relationship: neither
-// contract shape carries the additionalProperties bag a cf_ value travels in,
-// so an agent following the note writes a key the strict decoder refuses.
+// custom-field value. That is false for relationship, whose contract shape has
+// no additionalProperties bag. An agent following the note would write a key
+// the strict decoder refuses.
 func TestTheCustomFieldNoteNamesTheTypesThatTakeNone(t *testing.T) {
 	doc := readRecordFields(t)
 	for name, section := range map[string]recordFieldsWrite{"create_record": doc.Create, "update_record": doc.Update} {
@@ -215,13 +216,13 @@ func TestTheCustomFieldNoteNamesTheTypesThatTakeNone(t *testing.T) {
 		// without any exclusion being stated.
 		_, exclusion, found := strings.Cut(notes, "No custom fields on")
 		if !found {
-			t.Errorf("%s promises cf_ carriage and excludes nothing, though activity and relationship carry no "+
+			t.Errorf("%s promises cf_ carriage and excludes nothing, though relationship carries no "+
 				"additionalProperties bag — a cf_ key on either is refused, not stored:\n%s", name, notes)
 			continue
 		}
-		// Both, and by name: an agent reads prose, so "some types are excluded"
-		// would leave it guessing which.
-		for _, excluded := range []string{"activity", "relationship"} {
+		// By name: an agent reads prose, so "some types are excluded" would leave
+		// it guessing which.
+		for _, excluded := range []string{"relationship"} {
 			if !strings.Contains(exclusion, excluded) {
 				t.Errorf("%s's cf_ exclusion clause %q does not name %q", name, exclusion, excluded)
 			}

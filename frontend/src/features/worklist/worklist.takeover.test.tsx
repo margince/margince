@@ -147,6 +147,9 @@ function stubTeam(
         ? json({ title: "Forbidden", status: 403 }, 403)
         : json({});
     }
+    if (request?.method === "GET" && url.endsWith("/activities/a1")) {
+      return json({ id: "a1", version: 3 });
+    }
     if (url.includes("/me")) {
       return json({ user: { id: VIEWER, name: "A lead" } });
     }

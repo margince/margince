@@ -68,6 +68,22 @@ type listedNumber struct {
 // row takes over the replaced number's row, so the undo buffer names the one
 // number it is about.
 func applyObservedNumbers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, s observedNumbers) ([]string, error) {
+	listed, err := applyObservedNumberList(ctx, tx, contactID, s)
+	if err != nil {
+		return nil, err
+	}
+	var landed []string
+	for _, n := range listed {
+		if n.outcome == observedApplied || n.outcome == observedReplaced {
+			landed = append(landed, n.phone.String())
+		}
+	}
+	return landed, nil
+}
+
+// applyObservedNumberList is applyObservedNumbers with each parsed number's own
+// outcome, for a caller that reports number by number.
+func applyObservedNumberList(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, s observedNumbers) ([]listedNumber, error) {
 	listed := parseListedNumbers(s.Numbers)
 	if len(listed) == 0 {
 		return nil, nil
@@ -97,7 +113,6 @@ func applyObservedNumbers(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 			return nil, err
 		}
 	}
-	var landed []string
 	for _, n := range listed {
 		if n.outcome != observedApplied && n.outcome != observedReplaced {
 			continue
@@ -109,9 +124,8 @@ func applyObservedNumbers(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		}, supersedeOnNewerObservation); err != nil {
 			return nil, err
 		}
-		landed = append(landed, n.phone.String())
 	}
-	return landed, nil
+	return listed, nil
 }
 
 // parseListedNumbers keeps the numbers this reader can parse, once each.

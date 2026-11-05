@@ -5,14 +5,8 @@ package customfields
 
 // A custom field this engine accepts must be one the wire can actually carry.
 //
-// FieldObjects used to be datasource.EntityTypes(), and that derivation was
-// wrong in a way no test noticed: `object=activity` has been accepted since it
-// shipped and served by nobody, because a cf_* value travels in the contract
-// schema's additionalProperties bag and Activity has none. The field could be
-// created, the ALTER ran, the column existed — and every read dropped it. Only
-// the SPA's picker hid it, which is a screen, not a gate.
-//
-// So the list is explicit now, and this is what stops it over-promising again.
+// A cf_* value travels in the contract schema's additionalProperties bag. A
+// target whose shapes have none accepts the field and drops every value on read.
 // The PROPERTY is derived (reflection over the generated contract structs); only
 // the object → shape pairing is written down, and a member missing from that
 // pairing fails rather than being skipped.
@@ -46,14 +40,14 @@ var carriageShapes = map[string]struct{ create, read reflect.Type }{
 	string(datasource.EntityProject): {
 		reflect.TypeFor[crmcontracts.CreateProjectRequest](), reflect.TypeFor[crmcontracts.Project](),
 	},
-	string(fieldcatalog.TargetContract): {
-		reflect.TypeFor[crmcontracts.CreateContractRequest](), reflect.TypeFor[crmcontracts.Contract](),
-	},
-	// The two exclusions, carried here so the assertion below can state WHY
-	// each is excluded rather than assert an absence from FieldObjects.
 	string(datasource.EntityActivity): {
 		reflect.TypeFor[crmcontracts.CreateActivityRequest](), reflect.TypeFor[crmcontracts.Activity](),
 	},
+	string(fieldcatalog.TargetContract): {
+		reflect.TypeFor[crmcontracts.CreateContractRequest](), reflect.TypeFor[crmcontracts.Contract](),
+	},
+	// The exclusion, carried here so the assertion below can state why it is
+	// excluded rather than assert an absence from FieldObjects.
 	string(datasource.EntityRelationship): {
 		reflect.TypeFor[crmcontracts.CreateRelationshipRequest](), reflect.TypeFor[crmcontracts.Relationship](),
 	},
@@ -87,16 +81,14 @@ func TestEveryFieldObjectCarriesItsValuesOnTheWire(t *testing.T) {
 	}
 }
 
-// The exclusions are excluded for a REASON, and the reason is checkable. When
-// upstream gives one of these shapes carriage, this goes red and says so —
-// which is the moment to revisit the exclusion rather than to discover months
-// later that the gap closed and nobody noticed.
+// The exclusion is excluded for a REASON, and the reason is checkable. When
+// upstream gives its shapes carriage, this goes red and says so.
 func TestTheExcludedObjectsStillLackTheCarriageThatWouldAdmitThem(t *testing.T) {
 	admitted := map[string]bool{}
 	for _, object := range FieldObjects {
 		admitted[object] = true
 	}
-	for _, object := range []string{string(datasource.EntityActivity), string(datasource.EntityRelationship)} {
+	for _, object := range []string{string(datasource.EntityRelationship)} {
 		if admitted[object] {
 			continue // it is a target now; the gate above governs it
 		}

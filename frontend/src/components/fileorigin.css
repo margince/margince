@@ -1,0 +1,6 @@
+/* The origin line sits under a file's name and starts where the name starts,
+   in a column that would otherwise stretch and centre it. */
+.file-origin {
+  align-self: flex-start;
+  text-align: start;
+}

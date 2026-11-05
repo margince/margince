@@ -34,13 +34,13 @@ import (
 // table exists for, and it reaches this code through the replay path, where the
 // activity already exists and nothing else is written.
 //
-// ON CONFLICT DO NOTHING rather than an upsert: a re-sync of the same message
-// into the same mailbox is the same import, and the columns a later step writes
-// onto this row (the posture at import, the verdict) are decisions that must not
-// be reset by the mailbox simply syncing again.
+// Recapture fills missing transport timestamps and a missing Bcc fact, and adds
+// a new delivering connector. It never resets the posture, the verdict or a Bcc
+// fact already judged.
 func recordImportTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-	ownerUserID ids.UUID, birth birthDecision, receivedAt time.Time,
+	ownerUserID ids.UUID, provider string, birth birthDecision, receivedAt, sourceAt time.Time,
+	bccOnly *bool,
 ) error {
 	if ownerUserID == ids.Nil {
 		// No identifiable seat behind this capture. Nothing to attribute the
@@ -48,40 +48,40 @@ func recordImportTx(
 		// does not exist.
 		return nil
 	}
-	// The SEAT, not the connection that delivered the message. The Sink is
-	// handed a record and a principal, not the grant that produced them, so the
-	// delivering connection is not in reach here — and guessing it from the
-	// seat's newest live connection would name the wrong mailbox for anyone who
-	// has two. A seat's decisions are per seat anyway, so the column would have
-	// no reader; it lands with the code that can fill it honestly.
-	//
+	// delivered_by names this seat's connection and the generation of its bound account.
 	// provider_received_at is the provider's own arrival time in THIS seat's
 	// mailbox (connector.NormalizedRecord.ProviderReceivedAt), NULL when the
 	// transport stated none or stated one outside the storable range. It is
 	// what proves the mail was already held before the seat connected the
 	// mailbox (contacts.receivedBeforeConnectedTx).
-	var received *time.Time
+	var received, occurred *time.Time
 	if !receivedAt.IsZero() && datasource.InstantInRange(receivedAt) {
 		received = &receivedAt
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
-		                            provider_received_at)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6, $7)
-		ON CONFLICT (activity_id, user_id) DO NOTHING`,
-		activityID, ownerUserID, birth.posture, birth.verdictStatus, birth.reason, birth.reasons, received); err != nil {
-		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
+	if !sourceAt.IsZero() && datasource.InstantInRange(sourceAt) {
+		occurred = &sourceAt
 	}
-	// A row written before the provider's time was known (a delta round names
-	// ids only) learns it from the next capture that carries it, such as the
-	// backfill. Only an empty value is filled: the decisions on the row stay.
-	if received != nil {
-		if _, err := tx.Exec(ctx, `
-			UPDATE capture_import SET provider_received_at = $3
-			 WHERE activity_id = $1 AND user_id = $2 AND provider_received_at IS NULL`,
-			activityID, ownerUserID, received); err != nil {
-			return fmt.Errorf("capture: recording when %s arrived: %w", activityID, err)
-		}
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	query := fmt.Sprintf(`
+		INSERT INTO capture_import (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
+		                            provider_received_at, source_occurred_at, delivered_by, bcc_only)
+		VALUES ($%[1]d, $%[2]d, NULLIF($%[3]d, ''), NULLIF($%[4]d, ''), NULLIF($%[5]d, ''), $%[6]d, $%[7]d, $%[8]d,
+		        ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE c.user_id = $%[2]d AND c.provider = $%[9]d),
+		        $%[10]d)
+		ON CONFLICT (activity_id, user_id) DO UPDATE SET
+		 provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
+		 source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
+		 delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
+		 bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only)
+		WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
+		   OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
+		   OR (capture_import.bcc_only IS NULL AND EXCLUDED.bcc_only IS NOT NULL)
+		   OR NOT (EXCLUDED.delivered_by <@ capture_import.delivered_by)`,
+		arg(activityID), arg(ownerUserID), arg(birth.posture), arg(birth.verdictStatus), arg(birth.reason), arg(birth.reasons), arg(received), arg(occurred), arg(provider),
+		arg(bccOnly))
+	if _, err := tx.Exec(ctx, query, args...); err != nil {
+		return fmt.Errorf("capture: recording the import of %s: %w", activityID, err)
 	}
 	return nil
 }
@@ -123,6 +123,20 @@ func (s *Sink) WithParticipantNamer(name ParticipantNamer) *Sink {
 	return &c
 }
 
+// LeadScorer scores a lead the sink is about to insert. It answers the opening
+// score for the row and a function that writes the first score-history point
+// once the row exists. The contacts module owns the scoring and the history
+// table, so compose injects it. Nil leaves the database default, which is what
+// fixtures get.
+type LeadScorer func(ctx context.Context, tx pgx.Tx, title, origin string) (int, func(context.Context, pgx.Tx, ids.LeadID) error, error)
+
+// WithLeadScorer returns a copy that scores every lead it creates.
+func (s *Sink) WithLeadScorer(score LeadScorer) *Sink {
+	c := *s
+	c.scoreLead = score
+	return &c
+}
+
 // recordThisImport writes the acting seat's import row, makes them a
 // participant, and re-derives the audience over the contributors that now
 // includes them.
@@ -159,10 +173,18 @@ func (s *Sink) recordThisImport(
 		// belongs to.
 		return nil
 	}
-	if err := recordImportTx(ctx, tx, id, owner, birth, rec.ProviderReceivedAt); err != nil {
+	var sourceAt time.Time
+	if original, ok := rec.Fields.(ActivityFields); ok && original.Kind == kindEmail {
+		sourceAt = original.OccurredAt
+	}
+	if err := recordImportTx(ctx, tx, id, owner, deliveringConnector(ctx), birth, rec.ProviderReceivedAt, sourceAt,
+		fields.judged.bccOnly); err != nil {
 		return err
 	}
-	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec.Counterparty); err != nil {
+	if err := stampMessageEnds(ctx, tx, id, owner, fields, rec); err != nil {
+		return err
+	}
+	if err := recordPartyEvidenceTx(ctx, tx, id, owner, deliveringConnector(ctx), rec, fields); err != nil {
 		return err
 	}
 	// The confidentiality question for THIS seat's view of the thread, opened
@@ -237,6 +259,18 @@ func seatDeliveredTx(
 	return mine, nil
 }
 
+// arrivalIsProvenTx is replayClaimIsProvenTx, except for a row the identity
+// resolve bound. That row is proven already: it is this seat's own, or names a
+// proven address of theirs. Two calendars' copies never match byte for byte.
+func arrivalIsProvenTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, fields ActivityFields, parts []connector.Part, resolved bool,
+) (bool, error) {
+	if resolved {
+		return true, nil
+	}
+	return replayClaimIsProvenTx(ctx, tx, id, fields, parts)
+}
+
 // replayClaimIsProvenTx answers whether this seat may record itself as an
 // importer of the message a replay just collided with.
 //
@@ -247,7 +281,8 @@ func seatDeliveredTx(
 // rewrote the identity, a mailbox echoing its own send.
 //
 // Otherwise only on evidence that the two mailboxes hold ONE message rather than
-// two that share a Message-ID: the same subject, body and files.
+// two that share a Message-ID: the same subject, body and files. Masked text is
+// no such evidence, so masked mail asks maskedReplayIsProvenTx instead.
 //
 // The address test below cannot answer that on its own. It reads the addresses
 // off the record being captured, and on a replay that record is whatever this
@@ -292,18 +327,23 @@ func replayClaimIsProvenTx(
 	if err != nil || held {
 		return held, err
 	}
+	masked, err := eitherSideMaskedTx(ctx, tx, id, fields)
+	if err != nil {
+		return false, err
+	}
+	if masked {
+		return maskedReplayIsProvenTx(ctx, tx, id, seat, carried)
+	}
 	var same bool
+	args := []any{id, fields.Subject, fields.Body, carried}
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM activity a
 			 WHERE a.id = $1
 			   AND a.subject IS NOT DISTINCT FROM NULLIF($2, '')
 			   AND a.body IS NOT DISTINCT FROM NULLIF($3, '')
-			   AND NOT EXISTS (
-			       SELECT 1 FROM attachment f
-			        WHERE f.activity_id = a.id
-			          AND (f.checksum IS NULL OR f.checksum <> ALL($4))))`,
-		id, fields.Subject, fields.Body, carried).Scan(&same); err != nil {
+			   AND `+storedFilesWereCarried(len(args))+`)`,
+		args...).Scan(&same); err != nil {
 		return false, fmt.Errorf("capture: comparing %s with the message it collided with: %w", id, err)
 	}
 	return same, nil

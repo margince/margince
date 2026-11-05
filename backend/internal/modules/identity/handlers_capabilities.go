@@ -88,34 +88,13 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	// a flood must cost an attacker the same one budget rather than each
 	// added read buying itself a second, uncapped one.
 	allowed := h.capabilitiesAllowed(r)
-	if h.oidcProvidersEnabledFn != nil && allowed {
-		// A failed read reports NO providers rather than refusing the request.
-		// This endpoint is what the login screen renders from, so an error here
-		// must cost a reader the buttons and not the page. The routes
-		// themselves fail closed separately (StartOidcSignIn), so reporting a
-		// short list can never admit a sign-in the policy would refuse.
-		//
-		// Where the password method is ON, that degradation lands on it. Where
-		// a deployment closed the password door it lands on nothing, and the
-		// screen says so — which is the honest report of a momentary read
-		// failure at an installation whose only method is federated, and the
-		// reason boot refuses that posture with no provider mounted at all.
-		enabled, err := h.oidcProvidersEnabledFn(r.Context())
-		if err != nil {
-			slog.WarnContext(r.Context(), "the enabled sign-in providers could not be read; this login screen offers password only",
-				"reason", err)
-		}
-		for _, p := range enabled {
-			if !h.oidcProviderOffered(r.Context(), p.Key) {
-				continue
-			}
+	if allowed {
+		for _, p := range h.SignInScreenProviders(r.Context()) {
 			caps.OidcProviders = append(caps.OidcProviders, struct {
 				Key   string `json:"key"`
 				Label string `json:"label"`
 			}{Key: p.Key, Label: p.Label})
 		}
-	}
-	if allowed {
 		caps.FirstRun = h.resolveFirstRun(r.Context())
 	}
 	// NO-STORE, and the release version is what makes it mandatory rather than
@@ -127,6 +106,31 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	// what an intermediary assigns heuristic freshness to.
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, caps)
+}
+
+// SignInScreenProviders answers which buttons the login screen draws: the
+// providers the policy enables that also hold a client right now.
+//
+// A failed policy read reports no providers rather than an error, so a failure
+// costs a reader the buttons and not the page. The routes fail closed
+// separately (StartOidcSignIn), so a short list never admits a refused sign-in.
+// With the password method off, the screen shows nothing to click.
+func (h Handlers) SignInScreenProviders(ctx context.Context) []OIDCProviderConfig {
+	drawn := make([]OIDCProviderConfig, 0)
+	if h.oidcProvidersEnabledFn == nil {
+		return drawn
+	}
+	enabled, err := h.oidcProvidersEnabledFn(ctx)
+	if err != nil {
+		slog.WarnContext(ctx, "the enabled sign-in providers could not be read; this login screen offers password only",
+			"reason", err)
+	}
+	for _, p := range enabled {
+		if h.oidcProviderOffered(ctx, p.Key) {
+			drawn = append(drawn, p)
+		}
+	}
+	return drawn
 }
 
 // oidcProviderOffered reports whether a provider the policy allows has a client

@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,19 +27,31 @@ func factVisibilityKey(fact reporting.Fact) reportingVisibilityKey {
 	return reportingVisibilityKey{table: fact.SourceType, metric: fact.Metric, money: fact.SourceType == string(recordTypeDeal) && fact.Metric != reportingClosedWinRate && fact.Metric != reportingStageAge}
 }
 
-func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
-	members, err := a.Members(ctx, tx)
+func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
+	if _, ok := principal.Actor(ctx); !ok {
+		return nil, false, apperrors.ErrPermissionDenied
+	}
+	owners, err := readerMeasurableOwners(ctx, tx)
 	if err != nil {
 		return nil, false, err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, false, apperrors.ErrPermissionDenied
+	thin, err := frozenPopulationBelowFloor(ctx, tx, frame, owners)
+	if err != nil || thin {
+		return []reporting.Fact{}, thin, err
 	}
-	all := auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll
+	return a.visibleFacts(ctx, tx, owners, facts)
+}
+
+// visibleFacts narrows facts to the records and owners this reader may see.
+func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners reporting.MeasurableOwners, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
+	markOwnerWithheld(owners, facts)
+	facts, lone, err := withoutLoneColleagueMetrics(ctx, tx, facts)
+	if err != nil {
+		return nil, false, err
+	}
 	groups := map[reportingVisibilityKey][]ids.UUID{}
 	for _, fact := range facts {
-		if fact.SourceType != reportingForecastProjection && (all || slices.Contains(members, fact.OwnerID)) {
+		if fact.SourceType != reportingForecastProjection {
 			key := factVisibilityKey(fact)
 			groups[key] = append(groups[key], fact.SourceID)
 		}
@@ -61,13 +72,13 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 			projections = append(projections, fact)
 			continue
 		}
-		if (!all && !slices.Contains(members, fact.OwnerID)) || !visible[factVisibilityKey(fact)][fact.SourceID] {
+		if !visible[factVisibilityKey(fact)][fact.SourceID] {
 			withheld = true
 			continue
 		}
 		out = append(out, fact)
 	}
-	return a.visibleForecastProjections(ctx, tx, out, projections, withheld)
+	return a.visibleForecastProjections(ctx, tx, out, projections, withheld || lone)
 }
 
 func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibilityKey, sourceIDs []ids.UUID) (map[ids.UUID]bool, error) {
@@ -162,4 +173,17 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 		}
 	}
 	return clause, nil
+}
+
+// markOwnerWithheld sets OwnerWithheld on every fact whose owner falls
+// outside the owners the reader may measure. Live readings and frozen editions
+// share this rule. A total counts the fact and an owner breakdown skips it. A
+// fact with no owner names no owner, so nothing is withheld on it.
+func markOwnerWithheld(owners reporting.MeasurableOwners, facts []reporting.Fact) {
+	if owners.Every {
+		return
+	}
+	for i := range facts {
+		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.Includes(facts[i].OwnerID)
+	}
 }

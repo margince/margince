@@ -10,7 +10,7 @@ export type CreateFieldOption = { value: string; label: string };
 export type SubField = {
   key: string;
   label: MessageKey;
-  type?: "text" | "email" | "number" | "date" | "datetime-local" | "select";
+  type?: "text" | "email" | "number" | "date" | "select";
   required?: boolean;
   options?: CreateFieldOption[];
   multiselectEncoding?: "json";
@@ -19,6 +19,8 @@ export type SubField = {
   // Granularity for a number input. Omitted means the browser's default of 1,
   // which rejects any fractional entry.
   step?: string;
+  // See CreateField.min.
+  min?: string;
 };
 
 export type CreateField = {
@@ -36,7 +38,6 @@ export type CreateField = {
     | "email"
     | "number"
     | "date"
-    | "datetime-local"
     | "select"
     | "multiselect"
     | "repeatable"
@@ -70,6 +71,12 @@ export type CreateField = {
   toInput?: (raw: unknown) => string;
   // See SubField.step: a money field must declare its cents.
   step?: string;
+  // Lowest value a number input accepts. A money amount that cannot be below
+  // zero declares it, so the browser refuses a minus before the server does.
+  min?: string;
+  // The API field a refusal names when it differs from `key`: an amount typed
+  // in major units is sent as amount_minor.
+  wireField?: string;
   // Hidden fields are neither required nor submitted.
   showWhen?: (values: Record<string, string>) => boolean;
   // Recompute dependent choices; clear values no longer valid after a change.

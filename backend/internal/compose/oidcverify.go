@@ -153,7 +153,7 @@ func (v *oidcTokenVerifier) withHTTPClient(c *http.Client) *oidcTokenVerifier {
 	return v
 }
 
-func (v *oidcTokenVerifier) withClock(now func() time.Time) *oidcTokenVerifier {
+func (v *oidcTokenVerifier) setClock(now func() time.Time) *oidcTokenVerifier {
 	v.now = now
 	return v
 }

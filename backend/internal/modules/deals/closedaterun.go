@@ -209,8 +209,8 @@ func (c *CloseDateCorrector) nextMembers(
 	// — a number for a reader, not a predicate for the query.
 	rows, err := tx.Query(ctx, `
 		SELECT m.deal_id, m.deal_created_at,
-		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until,
-		       d.expected_close_date, d.close_date_provisional, d.forecast_category,
+		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until, `+MeetingAheadSQL("d")+`,
+		       d.expected_close_date, d.close_date_provisional, d.win_probability_override, d.win_probability_set_by,
 		       d.pipeline_id, d.owner_id, s.win_probability,
 		       (SELECT count(*) FROM stage s2
 		         WHERE s2.pipeline_id = d.pipeline_id AND s2.archived_at IS NULL
@@ -239,8 +239,8 @@ func (c *CloseDateCorrector) nextMembers(
 		var pipelineID *ids.PipelineID
 		var winProbability, remainingOpen *int
 		if err := rows.Scan(&m.dealID, &m.createdAt,
-			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil,
-			&cand.expectedClose, &provisional, &cand.forecastCat,
+			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil, &cand.meetingAhead,
+			&cand.expectedClose, &provisional, &cand.override, &cand.overrideBy,
 			&pipelineID, &cand.ownerID, &winProbability, &remainingOpen); err != nil {
 			return nil, nil, err
 		}
@@ -253,7 +253,7 @@ func (c *CloseDateCorrector) nextMembers(
 		}
 		cand.id, cand.name, cand.createdAt = *dealID, *name, *createdAt
 		cand.provisional, cand.pipelineID = *provisional, *pipelineID
-		cand.winProbability, cand.remainingOpen = *winProbability, *remainingOpen
+		cand.stageProbability, cand.remainingOpen = *winProbability, *remainingOpen
 		live = append(live, cand)
 		members = append(members, m)
 	}

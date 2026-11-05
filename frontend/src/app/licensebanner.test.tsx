@@ -96,7 +96,7 @@ it("names a refused licence and links to the seats settings", async () => {
   const link = screen.getByRole("link", {
     name: `Open ${en["settings.tab.seats"]}`,
   });
-  expect(link.getAttribute("href")).toBe("#/settings/seats");
+  expect(link.getAttribute("href")).toBe("/#/settings/seats");
 });
 
 it("offers no way to dismiss a refused licence", async () => {

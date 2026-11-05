@@ -35,6 +35,9 @@ const AVAILABLE: SettingsAvailability = {
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;
 
+/** The zone the fixture user stores, for fixtures that need a zone string. */
+export const FIXTURE_TIMEZONE = "Europe/Berlin";
+
 /**
  * A /me response granting exactly `allow` and nothing else.
  *
@@ -49,6 +52,8 @@ export function meFixture({
   allow = {},
   rowScope = "own",
   settingsAvailability = {},
+  refusedDealFilters,
+  refusedLeadFilters,
 }: {
   roles?: string[];
   seat?: "full" | "read";
@@ -72,6 +77,10 @@ export function meFixture({
    * absence needs its own spelling rather than riding the default.
    */
   settingsAvailability?: Partial<SettingsAvailability> | null;
+  /** The deal list filters the server says this role is refused. */
+  refusedDealFilters?: string[];
+  /** The lead list filters the server says this role is refused. */
+  refusedLeadFilters?: string[];
 } = {}): MeResponse {
   const objects: Record<string, RbacObjectGrant> = {};
   for (const [object, actions] of Object.entries(allow)) {
@@ -86,7 +95,7 @@ export function meFixture({
       id: "00000000-0000-4000-8000-000000000001",
       email: "test@example.test",
       display_name: "Test User",
-      timezone: "Europe/Berlin",
+      timezone: FIXTURE_TIMEZONE,
       status: "active",
       is_agent: false,
     },
@@ -96,7 +105,14 @@ export function meFixture({
     non_production: false,
     data_reset_available: false,
     admin_password_link: false,
-    authorization: { seat_type: seat, objects, row_scope: rowScope },
+    confirm_requests_sendable: true,
+    authorization: {
+      seat_type: seat,
+      objects,
+      row_scope: rowScope,
+      refused_deal_filters: refusedDealFilters,
+      refused_lead_filters: refusedLeadFilters,
+    },
     settings_availability:
       settingsAvailability === null
         ? undefined

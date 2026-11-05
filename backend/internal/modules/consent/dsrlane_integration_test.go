@@ -44,7 +44,7 @@ func TestOpenDSRsComeBackSoonestDeadlineFirst(t *testing.T) {
 	}
 	resolution := "handled"
 	if _, err := e.store.UpdateDSR(e.ctx, answered.ID, UpdateDSRInput{
-		Status: new("fulfilled"), Resolution: &resolution,
+		Status: new("fulfilled"), Resolution: &resolution, Proof: idDocumentChecked,
 	}); err != nil {
 		t.Fatalf("closing the answered request: %v", err)
 	}

@@ -124,12 +124,11 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 		// exists once correspondence has made them counterparties.
 		syncSent(
 			t, map[string]bool{"fzo1@myco.example": true, "fzo2@myco.example": true},
-			email(captureOwner, "", "alice@acme.example", "fzo1@myco.example", ""),
-			email(captureOwner, "", "alice2@acme.example", "fzo2@myco.example", ""),
+			email(captureOwner, "", "Alice Example <alice@acme.example>", "fzo1@myco.example", ""),
+			email(captureOwner, "", "Alice Exampel <alice2@acme.example>", "fzo2@myco.example", ""),
 		)
-		// Both answer on the thread they were written on, which is the exchange
-		// the create tier needs. The subject here is the fuzzy near-duplicate,
-		// so the reply is fixture rather than finding.
+		// The attested send names the recipient before birth, so the fuzzy
+		// comparison sees the same name the later reply states.
 		sync(
 			t,
 			email("alice@acme.example", "Alice Example", captureOwner, "fz0@acme.example", "fzo1@myco.example"),

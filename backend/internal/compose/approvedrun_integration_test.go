@@ -285,8 +285,11 @@ func TestApprovingAnyStageableKindLeavesItsRunTerminal(t *testing.T) {
 		}
 		t.Run(kind, func(t *testing.T) {
 			contact := e.SeedContact(t, "Terminal Run "+kind, nil)
-			id, handler := parkedRun(t, e, svc, kind, contact,
-				`{"owner_id":"`+e.Rep1.String()+`"}`)
+			patch := `{"owner_id":"` + e.Rep1.String() + `"}`
+			if kind == "emit_flow_event" {
+				patch = `{"question":"Has the buyer confirmed the scope?"}`
+			}
+			id, handler := parkedRun(t, e, svc, kind, contact, patch)
 
 			if _, err := svc.Decide(decider(e), id, true, nil); err != nil {
 				t.Fatalf("Decide(approve) → %v", err)

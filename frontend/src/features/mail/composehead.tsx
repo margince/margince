@@ -1,0 +1,363 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The head of a message: how it travels, who it is to, and what it is about.
+//
+// Its own file because it is the part of the composer a rep touches on EVERY
+// send, and because compose.tsx already carries the drafting, the consent gate,
+// the refusal vocabulary and the send itself. What is here is only the form.
+
+import { Mail, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
+import type { components } from "../../api/schema";
+import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { ErrorLine } from "../../design-system/errorline";
+import { Select } from "../../design-system/select";
+import {
+  type TokenCard,
+  TokenInput,
+  type TokenParse,
+  type TokenSuggestion,
+} from "../../design-system/tokeninput";
+import { usePlural, useT } from "../../i18n";
+import type { Transport } from "../../lib/contacttransports";
+import { ENTITY } from "../../lib/entity";
+import { routeHash } from "../../lib/router";
+import { readAddressList } from "./composeaddresslist";
+import "./composehead.css";
+
+type Contact360 = components["schemas"]["Contact360"];
+type Company360 = components["schemas"]["Company360"];
+type User = components["schemas"]["User"];
+type Team = components["schemas"]["Team"];
+
+export type AddressLine = "to" | "cc" | "bcc";
+
+const ADDRESS_KEYS = [",", ";"];
+
+const MAILABLE_STATUS: ReadonlySet<User["status"]> = new Set([
+  "active",
+  "invited",
+]);
+
+/** What a pressed Send is still waiting for, under the field it waits on. */
+export function FieldNeed({
+  show,
+  need,
+}: Readonly<{ show: boolean; need: string }>) {
+  if (!show) {
+    return null;
+  }
+  return <ErrorLine>{need}</ErrorLine>;
+}
+
+/**
+ * The addresses this message can be built out of.
+ *
+ * Read off the two 360s the composer ALREADY holds — the contact it was opened
+ * on, and the account behind it — so the offer costs no request of its own and
+ * cannot disagree with what the page behind the drawer is showing. A reader
+ * remembers a colleague's NAME and not their address, which is why the contact is
+ * the label; the address is the value AND the hint beside it, because one contact
+ * can have several and a row that showed only the name would be a choice between
+ * two identical-looking options.
+ *
+ * The record's own contact leads, because a message written from a contact's page
+ * is overwhelmingly to that contact; the account's roster follows in the order
+ * the 360 already put it in. A contact with no address on file is not offered —
+ * a row that commits an empty recipient is help that refuses at the send.
+ */
+export function recipientSuggestions(
+  contact: Contact360 | undefined,
+  company: Company360 | undefined,
+  colleagues: readonly (User | Team)[] = [],
+): readonly TokenSuggestion[] {
+  const seen = new Set<string>();
+  const out: TokenSuggestion[] = [];
+  const offer = (
+    value: string | null | undefined,
+    label: string,
+    card?: TokenCard,
+  ) => {
+    const address = value?.trim();
+    if (!address || seen.has(address)) {
+      return;
+    }
+    seen.add(address);
+    out.push({ value: address, label, hint: address, card });
+  };
+  const account = company?.company?.display_name;
+  const contactCard = (id: string, title: string | null | undefined) => ({
+    identity: id,
+    href: routeHash(ENTITY.contact.route(id)),
+    about: [title, account].filter(Boolean).join(" · ") || undefined,
+  });
+  const subject = contact?.contact;
+  for (const address of subject?.emails ?? []) {
+    offer(
+      address.email,
+      subject?.full_name ?? address.email,
+      subject && contactCard(subject.id, subject.title),
+    );
+  }
+  for (const contact of company?.contacts?.data ?? []) {
+    offer(
+      contact.primary_email,
+      contact.full_name,
+      contactCard(contact.contact_id, contact.title),
+    );
+  }
+  for (const member of colleagues) {
+    // Members come last: a message goes to the record's contacts first.
+    // An agent seat has no mailbox anyone writes to, and a suspended or
+    // deactivated member no longer reads one.
+    if (
+      !("email" in member) ||
+      member.is_agent ||
+      !MAILABLE_STATUS.has(member.status)
+    ) {
+      continue;
+    }
+    offer(member.email, member.display_name, { identity: member.id });
+  }
+  return out;
+}
+
+/**
+ * How this message travels, when the record can be written to more than one way.
+ *
+ * Drawn only where there is a CHOICE. One transport is not a decision, and a
+ * dropdown holding a single option asks a reader to confirm something they were
+ * never offered an alternative to — the record page's own verb already names it.
+ */
+export function TransportRow({
+  transports,
+  selected,
+  onChange,
+}: Readonly<{
+  transports: readonly Transport[];
+  selected: Transport | undefined;
+  onChange: (id: string) => void;
+}>) {
+  const t = useT();
+  if (transports.length < 2) {
+    return null;
+  }
+  const isChannel = selected != null && selected.id !== "email";
+  return (
+    <Field label={t("compose.transport")}>
+      {(control) => (
+        <div className="compose-transport">
+          {isChannel ? (
+            <MessageSquare size={15} aria-hidden="true" />
+          ) : (
+            <Mail size={15} aria-hidden="true" />
+          )}
+          <Select
+            {...control}
+            options={transports.map((transport) => ({
+              value: transport.id,
+              label: transport.label,
+            }))}
+            value={selected?.id ?? ""}
+            onChange={onChange}
+          />
+        </div>
+      )}
+    </Field>
+  );
+}
+
+/**
+ * Who the message is to.
+ *
+ * To stands; **Cc and Bcc are one link until they are asked for**. Copies are
+ * the rare half of addressing. Two always-drawn rows made every ordinary mail
+ * read as a form with empty fields in it. Once opened they stay open. They
+ * open on their own when either holds an address, because a field with a value
+ * in it may never be hidden.
+ */
+export function AddressBlock({
+  to,
+  onToChange,
+  cc,
+  onCcChange,
+  bcc,
+  onBccChange,
+  copiesOpen,
+  onOpenCopies,
+  suggestions,
+  onToEditing,
+  refused,
+  onRefuse,
+  invalidTo,
+  needTo,
+  deadRecipients,
+  disabled,
+}: Readonly<{
+  to: string[];
+  onToChange: (next: string[]) => void;
+  cc: string[];
+  onCcChange: (next: string[]) => void;
+  bcc: string[];
+  onBccChange: (next: string[]) => void;
+  copiesOpen: boolean;
+  onOpenCopies: () => void;
+  suggestions: readonly TokenSuggestion[];
+  /** The reader has taken the To line over — see TokenInput's own prop. */
+  onToEditing: () => void;
+  /** Text each line could not read as addresses. */
+  refused: Readonly<Record<AddressLine, readonly string[]>>;
+  onRefuse: (line: AddressLine, parts: readonly string[]) => void;
+  invalidTo: boolean;
+  needTo: string;
+  /** The recipients on this draft that are known not to arrive. */
+  deadRecipients: readonly string[];
+  disabled?: boolean;
+}>) {
+  const t = useT();
+  const plural = usePlural();
+  const parse = (line: AddressLine): TokenParse => ({
+    keys: ADDRESS_KEYS,
+    read: readAddressList,
+    onRefuse: (parts) => onRefuse(line, parts),
+  });
+  const refusal = (line: AddressLine) =>
+    refused[line].length === 0
+      ? undefined
+      : plural("compose.notAnAddress", refused[line].length, {
+          parts: refused[line].join(", "),
+        });
+  const commit = (next: readonly string[]) => [...next];
+  const copies = copiesOpen || cc.length > 0 || bcc.length > 0;
+  return (
+    <>
+      <Field
+        className="compose-address-field"
+        label={t("compose.to")}
+        error={refusal("to") ?? (invalidTo ? needTo : undefined)}
+        trailing={
+          copies ? undefined : (
+            // Against the field it extends, not at the dialog's margin.
+            <Button variant="link" onClick={onOpenCopies}>
+              {t("compose.copies")}
+            </Button>
+          )
+        }
+      >
+        {(control) => (
+          <TokenInput
+            {...control}
+            values={to}
+            onChange={(next) => onToChange(commit(next))}
+            parse={parse("to")}
+            suggestions={suggestions}
+            onEditing={onToEditing}
+            disabled={disabled}
+            placeholder={t("compose.recipientHint")}
+          />
+        )}
+      </Field>
+      {copies && (
+        <>
+          <Field
+            className="compose-address-field"
+            label={t("compose.cc")}
+            error={refusal("cc")}
+          >
+            {(control) => (
+              <TokenInput
+                {...control}
+                values={cc}
+                onChange={(next) => onCcChange(commit(next))}
+                parse={parse("cc")}
+                suggestions={suggestions}
+                disabled={disabled}
+              />
+            )}
+          </Field>
+          <Field
+            className="compose-address-field"
+            label={t("compose.bcc")}
+            error={refusal("bcc")}
+          >
+            {(control) => (
+              <TokenInput
+                {...control}
+                values={bcc}
+                onChange={(next) => onBccChange(commit(next))}
+                parse={parse("bcc")}
+                suggestions={suggestions}
+                disabled={disabled}
+              />
+            )}
+          </Field>
+        </>
+      )}
+      {/* Under the addresses, because it is about the ones standing there — and
+          a warning rather than a refusal: the rep may know something the ledger
+          does not, and a bounce is a fact about the past. */}
+      {deadRecipients.length > 0 && (
+        <Callout
+          tone="warning"
+          kind="standing"
+          // Standing on open, yet it also appears as a rep TYPES a recipient,
+          // and a reader who cannot see the field would otherwise never learn
+          // the address they just added is dead.
+          live="status"
+          title={t("compose.deadRecipientsTitle")}
+        >
+          {t("compose.deadRecipients", {
+            addresses: deadRecipients.join(", "),
+          })}
+        </Callout>
+      )}
+    </>
+  );
+}
+
+/** What the message is about. Mail only: a channel carries no subject. */
+export function SubjectRow({
+  subject,
+  onChange,
+  invalid,
+  need,
+  disabled,
+  aside,
+  under,
+}: Readonly<{
+  subject: string;
+  onChange: (next: string) => void;
+  invalid: boolean;
+  need: string;
+  disabled?: boolean;
+  /** A control on the subject's own line (the project whose tag it carries). */
+  aside?: ReactNode;
+  /** A line under the subject, about what the subject carries. */
+  under?: ReactNode;
+}>) {
+  const t = useT();
+  return (
+    <div className="compose-subject">
+      <Field
+        className="compose-subject-field"
+        label={t("compose.subject")}
+        labelHidden
+        error={invalid ? need : undefined}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            placeholder={t("compose.subject")}
+            value={subject}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
+      </Field>
+      {aside}
+      {under && <div className="compose-subject-under">{under}</div>}
+    </div>
+  );
+}

@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -36,7 +38,12 @@ func scanTarget(row pgx.Row) (crmcontracts.ReportingTarget, error) {
 
 func (s *Service) target(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (crmcontracts.ReportingTarget, error) {
 	var b bindings
-	query := "SELECT " + targetColumns + targetFrom + " WHERE t.id=" + b.add(id)
+	// One target by id answers to the same visibility as the list.
+	visible, err := s.targetClause(ctx, tx, &b)
+	if err != nil {
+		return crmcontracts.ReportingTarget{}, err
+	}
+	query := "SELECT " + targetColumns + targetFrom + " WHERE " + visible + " AND t.id=" + b.add(id)
 	if lock {
 		query += " FOR UPDATE OF t"
 	}
@@ -63,24 +70,90 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 		if err := s.targetHistory(ctx, tx, &out); err != nil {
 			return err
 		}
-		return s.targetAllocation(ctx, tx, &out)
+		owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return s.targetAllocation(ctx, tx, owners, &out)
 	})
 	return out, err
 }
 
 func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (string, error) {
+	reach, err := s.targetReach(ctx, tx)
+	return reach.clause(b), err
+}
+
+// targetReach is which targets a seat reads, resolved once so a read that
+// matches many targets asks for the seat's members once. every covers the
+// team and company targets; whose owner targets the seat reads is owners.
+type targetReach struct {
+	every  bool
+	owners MeasurableOwners
+	teams  []ids.UUID
+	floor  TargetFloor
+}
+
+func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
-		return "", apperrors.ErrPermissionDenied
+		return targetReach{}, apperrors.ErrPermissionDenied
+	}
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+	if err != nil {
+		return targetReach{}, err
+	}
+	floor, err := s.authority.TargetFloor(ctx, tx)
+	if err != nil {
+		return targetReach{}, err
 	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return "TRUE", nil
+		return targetReach{every: true, owners: owners, floor: floor}, nil
 	}
-	members, err := s.authority.Members(ctx, tx)
-	if err != nil {
-		return "", err
+	// Only a seat that reaches every team and owner may set the company's
+	// target, so it reads every target it may set.
+	every, err := s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingWorkspace})
+	if every && !owners.IndividualOff {
+		owners.Every = true
 	}
-	return "((t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(actor.TeamIDs) + ")))", nil
+	return targetReach{every: every, owners: owners, teams: actor.TeamIDs, floor: floor}, err
+}
+
+func (r targetReach) clause(b *bindings) string {
+	reach := r.reachClause(b)
+	if !r.floor.Applies {
+		return reach
+	}
+	// An allow-list, so a scope kind or team the floor never checked is withheld.
+	shown := "t.scope_kind='owner' OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.floor.Teams) + "))"
+	if r.floor.Workspace {
+		shown += " OR t.scope_kind='workspace'"
+	}
+	return "(" + reach + " AND (" + shown + "))"
+}
+
+func (r targetReach) reachClause(b *bindings) string {
+	if r.every && r.owners.Every {
+		return "TRUE"
+	}
+	owner := "(t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.owners.Members) + "))"
+	if r.every {
+		return "(t.scope_kind<>'owner' OR " + owner + ")"
+	}
+	return "(t.scope_kind='workspace' OR " + owner + " OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
+}
+
+// writeReaches reports whether the seat may set a target on scope, under the
+// reach CreateTarget checks.
+func (s *Service) writeReaches(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error) {
+	if !auth.Allows(ctx, "sales_target", principal.ActionCreate) && !auth.Allows(ctx, "sales_target", principal.ActionUpdate) {
+		return false, nil
+	}
+	_, err := s.authority.Scope(ctx, tx, scope, true)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // TargetFilter selects current target definitions before pagination.
@@ -97,11 +170,12 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	limit = max(1, min(limit, 100))
 	out := crmcontracts.ReportingTargetList{Data: []crmcontracts.ReportingTarget{}}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		var b bindings
-		where, err := s.targetClause(ctx, tx, &b)
+		reach, err := s.targetReach(ctx, tx)
 		if err != nil {
 			return err
 		}
+		var b bindings
+		where := reach.clause(&b)
 		if after != nil {
 			where += " AND t.id>" + b.add(*after)
 		}
@@ -112,7 +186,8 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 			// The filter is a local calendar date; t.period_start is its zoned instant.
 			where += " AND r.definition->>'period_start'=" + b.add(filter.PeriodStart.Format("2006-01-02"))
 		}
-		rows, err := tx.Query(ctx, "SELECT "+targetColumns+targetFrom+" WHERE "+where+" ORDER BY t.id LIMIT "+b.add(limit+1), b.values...)
+		query := "SELECT " + targetColumns + targetFrom + " WHERE " + where + " ORDER BY t.id LIMIT " + b.add(limit+1)
+		rows, err := tx.Query(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -121,7 +196,7 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 			return err
 		}
 		for i := range out.Data {
-			if err := s.targetAllocation(ctx, tx, &out.Data[i]); err != nil {
+			if err := s.targetAllocation(ctx, tx, reach.owners, &out.Data[i]); err != nil {
 				return err
 			}
 		}
@@ -135,49 +210,61 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	return out, err
 }
 
-func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
-	empty := crmcontracts.ReportingWindow{}
-	if in.Value < 0 || in.Value > values.MaxExactInteger || !values.HasVisibleText(in.Reason) || utf8.RuneCountInString(in.Reason) > 1000 {
-		return empty, "", invalid("enter a non-negative target and a revision reason")
+// checkedTarget is what validateTarget derived from a valid target input.
+type checkedTarget struct {
+	interval crmcontracts.ReportingWindow
+	unit     string
+	metric   crmcontracts.ReportingMetricDefinition
+}
+
+func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (checkedTarget, error) {
+	if in.Value < 0 || in.Value > values.MaxExactInteger {
+		return checkedTarget{}, refuse("value", "out_of_range", "enter a non-negative target")
 	}
-	catalog, err := s.evaluator.Catalog(ctx)
+	if !values.HasVisibleText(in.Reason) {
+		return checkedTarget{}, refuse("reason", "required", "enter a revision reason")
+	}
+	if utf8.RuneCountInString(in.Reason) > 1000 {
+		return checkedTarget{}, refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
+	}
+	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == in.Metric && m.SupportsTarget })
 	if index < 0 {
-		return empty, "", invalid("this metric does not support targets")
+		return checkedTarget{}, refuse("metric", "unsupported", "this metric does not support targets")
 	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, refusedField("scope", err)
 	}
 	in.Scope = scope
 	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(in.PipelineId)); err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	calendar, err := s.calendar(ctx, tx)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	zone, err := location(calendar)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	day := in.PeriodStart.Time
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
 	interval, err := TargetWindow(crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 1)}, string(in.PeriodKind), calendar)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, refusedField("period_kind", err)
 	}
 	if !interval.StartAt.Equal(start) {
-		return empty, "", invalid("the target must start on the first day of its month or fiscal quarter")
+		return checkedTarget{}, refuse("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
 	}
 	unit := catalog.Metrics[index].Unit
 	if unit == "money" {
 		unit = calendar.Currency
 	}
-	return interval, unit, nil
+	return checkedTarget{interval: interval, unit: unit, metric: catalog.Metrics[index]}, nil
 }
 
 // CreateTarget records an explicit allocation without inferring child targets.
@@ -187,10 +274,14 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 	}
 	out := crmcontracts.ReportingTarget{Id: openapi_types.UUID(ids.NewV7()), Definition: in, Revision: 1, Version: 1, CreatedAt: s.now()}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		interval, unit, err := s.validateTarget(ctx, tx, &in)
+		checked, err := s.validateTarget(ctx, tx, &in)
 		if err != nil {
 			return err
 		}
+		if err := refuseUnfilteredPipeline(checked.metric, in); err != nil {
+			return err
+		}
+		interval, unit := checked.interval, checked.unit
 		out.Definition = in
 		out.Interval = interval
 		out.Unit = unit
@@ -206,6 +297,15 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 		return recordChange(ctx, tx, "sales_target", ids.UUID(out.Id), "create", nil, out)
 	})
 	return out, storedError(err)
+}
+
+// refuseUnfilteredPipeline refuses a new target on a pipeline its figure ignores.
+// Only a create asks, since a stored target can never change its pipeline.
+func refuseUnfilteredPipeline(metric crmcontracts.ReportingMetricDefinition, in crmcontracts.ReportingTargetInput) error {
+	if in.PipelineId != nil && (metric.AllowedFilters == nil || !slices.Contains(*metric.AllowedFilters, "pipeline")) {
+		return refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
+	}
+	return nil
 }
 
 func (s *Service) saveTargetRevision(ctx context.Context, tx pgx.Tx, target crmcontracts.ReportingTarget) error {
@@ -230,6 +330,26 @@ func sameID(left, right *openapi_types.UUID) bool {
 	return *left == *right
 }
 
+// refuseIdentityChange names the field that differs. A revision keeps its
+// target's metric, scope, pipeline and period, and a caller fixing one field
+// must not be pointed at another.
+func refuseIdentityChange(before crmcontracts.ReportingTarget, in crmcontracts.ReportingTargetInput, interval crmcontracts.ReportingWindow, unit string) error {
+	const message = "create a separate target for a different metric, scope, pipeline or period"
+	switch {
+	case before.Definition.Metric != in.Metric || before.Unit != unit:
+		return refuse("metric", "immutable", message)
+	case before.Definition.Scope.Kind != in.Scope.Kind || !sameID(before.Definition.Scope.Id, in.Scope.Id):
+		return refuse("scope", "immutable", message)
+	case !sameID(before.Definition.PipelineId, in.PipelineId):
+		return refuse("pipeline_id", "immutable", message)
+	case before.Definition.PeriodKind != in.PeriodKind:
+		return refuse("period_kind", "immutable", message)
+	case !interval.StartAt.Equal(before.Interval.StartAt) || !interval.EndAt.Equal(before.Interval.EndAt):
+		return refuse("period_start", "immutable", message)
+	}
+	return nil
+}
+
 // UpdateTarget appends a reasoned revision while preserving prior editions.
 func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, in crmcontracts.ReportingTargetInput) (crmcontracts.ReportingTarget, error) {
 	if err := requireReadWrite(ctx, "sales_target", principal.ActionUpdate); err != nil {
@@ -244,12 +364,13 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 		if before.Version != version {
 			return apperrors.ErrVersionSkew
 		}
-		interval, unit, err := s.validateTarget(ctx, tx, &in)
+		checked, err := s.validateTarget(ctx, tx, &in)
 		if err != nil {
 			return err
 		}
-		if before.Definition.Metric != in.Metric || before.Definition.Scope.Kind != in.Scope.Kind || !sameID(before.Definition.Scope.Id, in.Scope.Id) || !sameID(before.Definition.PipelineId, in.PipelineId) || !interval.StartAt.Equal(before.Interval.StartAt) || !interval.EndAt.Equal(before.Interval.EndAt) || before.Unit != unit {
-			return invalid("create a separate target for a different metric, scope or period")
+		interval, unit := checked.interval, checked.unit
+		if err := refuseIdentityChange(before, in, interval, unit); err != nil {
+			return err
 		}
 		out = before
 		out.Definition = in

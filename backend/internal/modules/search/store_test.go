@@ -4,14 +4,19 @@
 package search
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
+	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestRankedCursorRoundTripsFullPrecision(t *testing.T) {
-	in := rankedCursor{Score: 0.1234567890123456789, Type: "activity", ID: ids.NewV7()}
+	in := rankedCursor{Version: rankedCursorVersion, Score: 0.1234567890123456789, Type: "activity", ID: ids.NewV7()}
 	out, err := decodeCursor(encodeCursor(in))
 	if err != nil {
 		t.Fatal(err)
@@ -38,6 +43,40 @@ func TestClampLimitFollowsTheContractBounds(t *testing.T) {
 	for in, want := range map[int]int{0: 50, -3: 50, 1: 1, 200: 200, 900: 200} {
 		if got := clampLimit(in); got != want {
 			t.Errorf("clampLimit(%d) = %d, want %d", in, got, want)
+		}
+	}
+}
+
+// A query past the word cap is refused before any SQL is built. The Store has
+// no database, so a query that reached one would fail differently.
+func TestAQueryWithTooManyWordsIsRefusedBeforeItRuns(t *testing.T) {
+	words := strings.TrimSpace(strings.Repeat("acme ", maxQueryWords+1))
+	_, err := (&Store{}).Search(context.Background(), Input{Query: words, WithEmployees: true})
+	bad, ok := errors.AsType[*BadQueryError](err)
+	if !ok || bad.Field != "q" || !strings.Contains(bad.Reason, strconv.Itoa(maxQueryWords)) {
+		t.Fatalf("a %d-word query answered %v, want a refusal of q naming the limit %d", maxQueryWords+1, err, maxQueryWords)
+	}
+}
+
+// The refusal reaches both doors, so it names neither door's argument.
+func TestTheTooBroadRefusalNamesNoDoorsArgument(t *testing.T) {
+	_, _, message := (&QueryTooBroadError{Err: errors.New("canceled")}).FieldFault()
+	for _, argument := range []string{"types", "record_types"} {
+		if strings.Contains(message, argument) {
+			t.Errorf("the refusal %q names %q, which only one door takes", message, argument)
+		}
+	}
+}
+
+func TestRankedCursorRefusesAnEarlierRanking(t *testing.T) {
+	t.Parallel()
+	for _, version := range []int{0, 1, rankedCursorVersion + 1} {
+		token, err := storekit.EncodeOpaque(rankedCursor{Version: version, Score: 1, Type: "contact", ID: ids.NewV7()})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := decodeCursor(token); err == nil {
+			t.Fatalf("ranking version %d was accepted", version)
 		}
 	}
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -56,7 +57,7 @@ func connectorCreator(e *integration.SearchEnv) context.Context {
 		SeatType: principal.SeatFull,
 		Scopes:   principal.NewScopeSet(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}, "company": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -71,7 +72,7 @@ func contactCreator(e *integration.SearchEnv) context.Context {
 		SeatType: principal.SeatFull,
 		Scopes:   principal.NewScopeSet(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}, "company": {Create: true, Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -162,7 +163,7 @@ func TestACapturedMeetingIsFiledUnderTheAttendeeWhoIsAContact(t *testing.T) {
 	// this depends on reads contact_email, and a row a test invents is not the
 	// row production writes.
 	store := contacts.NewStore(e.DB())
-	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Buyer Example", "buyer@acme.com", "manual")
+	buyer, err := store.EnsureContactByEmail(contactCreator(e), "Buyer Example", "buyer@acme.com", "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("seeding the attendee: %v", err)
 	}

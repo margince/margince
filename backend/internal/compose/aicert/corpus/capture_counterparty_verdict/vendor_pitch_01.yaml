@@ -1,0 +1,40 @@
+name: a_named_salespersons_one_way_demo_pitch_is_a_vendor_pitch
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  display_name: Jonas Brandt
+  email: jonas.brandt@leadpilot.example
+  subject: 15 minutes to show you our outbound platform?
+  body: |
+    Hi,
+
+    I run partnerships at LeadPilot. We help logistics companies fill their
+    calendars with qualified meetings, and I would love to book a short demo
+    to walk you through the platform and what it could do for you.
+
+    Would Tuesday or Wednesday work for a quick call?
+
+    Best regards,
+    Jonas Brandt
+    Partnerships Manager, LeadPilot GmbH
+    Torstrasse 12, 10119 Berlin
+expect:
+  outcome: accepted
+  answer: vendor_pitch
+  rubric: >
+    A named salesperson selling this business a service it never asked for,
+    asking for a demo. Every signal of a contact is present: a full name, a job
+    title, a signature block with a company and street address, courteous prose.
+    What decides it is the direction of the offer: the sender wants to sell, the
+    business never wrote to them, and nothing in the mail continues agreed work.
+    "vendor_pitch" scores high: the mail stays visible and the sender is recorded
+    as a vendor. "spam" is a near miss scoring in the middle: it hides the mail
+    and records no sender, which is safe. "contact" is the failure this scenario
+    exists to catch and scores zero above the floor: it files the vendor as the
+    rep's contact and puts "book their demo" on the rep's list.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

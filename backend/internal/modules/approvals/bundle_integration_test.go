@@ -15,12 +15,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -293,6 +295,38 @@ func TestABundleWithNoDecidableMemberReadsAsAbsent(t *testing.T) {
 	}
 }
 
+// A bundle hidden by the caller's authority is noted as a hidden row. An agent
+// rule can keep a bundle the caller sees. That bundle reads as absent too, and
+// is not noted as a row its scope hides.
+func TestOnlyABundleTheScopeHidesIsNotedAsAHiddenRow(t *testing.T) {
+	e := setupStaging(t)
+	staging := e.asHumanWith(decidesEverything())
+	bundle := ids.NewV7()
+	e.stageInto(staging, t, bundle, e.company(t), kindDeepRead, "facts-hash")
+
+	ungranted, hidden := auth.RecordChecksForTest(e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{})))
+	if _, err := e.svc.DecideBundle(ungranted, bundle, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound for a caller without the grants", err)
+	}
+	if got := hidden().Refused; !slices.Contains(got, "row:approval") {
+		t.Errorf("a bundle the caller's grants hide noted %v, want row:approval", got)
+	}
+
+	p, ok := principal.Actor(staging)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	p.Type, p.ID, p.PassportID, p.OnBehalfOf = principal.PrincipalAgent, "agent:"+ids.NewV7().String(), ids.NewV7(), p.UserID
+	p.Scopes = principal.ScopeSet{principal.ScopeRead: {}}
+	readOnly, kept := auth.RecordChecksForTest(principal.WithActor(staging, p))
+	if _, err := e.svc.DecideBundle(readOnly, bundle, true, nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound for an agent without the write cap", err)
+	}
+	if got := kept().Refused; slices.Contains(got, "row:approval") {
+		t.Errorf("an agent rule refusing a bundle it sees noted %v, which reads as a row its scope hides", got)
+	}
+}
+
 // A re-proposal JOINS the row already pending, and that row MOVES onto the fresh
 // act's bundle. Without the move a second read of the same site produces a bundle
 // holding only the part that happened to be new, and whoever reviews "what this
@@ -420,8 +454,10 @@ func TestABundleTooLargeToDecideIsRefusedAndStillHiddenFromOutsiders(t *testing.
 	// prove nothing this test is about and would cost a transaction each.
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO approval (kind, proposed_by, on_behalf_of, target_entity_type,
-		                      target_entity_id, proposed_change, diff_hash, expires_at, bundle_id)
-		SELECT $1, 'human:seed', $2, $3, $4, '{}'::jsonb, 'hash-' || n, now() + interval '1 day', $5
+		                      target_entity_id, proposed_change, diff_hash, expires_at, bundle_id,
+		                      requested_decider_id, requested_decider_source)
+		SELECT $1, 'human:seed', $2, $3, $4, '{}'::jsonb, 'hash-' || n, now() + interval '1 day', $5,
+		       $2, 'on_behalf_of'
 		FROM generate_series(1, $6) AS n`,
 		kindSiteLead, e.rep, tableCompany, company, bundle, bundleDecisionCap+1); err != nil {
 		t.Fatalf("seeding an oversized bundle: %v", err)

@@ -3,25 +3,14 @@
 
 package approvals
 
-// The inbox summary is the sentence a human reads before deciding, and it
-// is the ONE part of an approval that is prose. Everything else on the row
-// is structured and rendered by the UI; the summary is a string some stager
-// composed, and several stagers compose it partly out of record text — a
-// contact's display name, a company's name — which arrives from
-// inbound capture or from a create an agent itself performed.
-//
-// So it is treated as untrusted at the point it is persisted, not at each
-// place it is rendered: a marker that hides the rest of the line, a
-// bidirectional override that reverses what follows it, or a benign prefix
-// long enough to push the real content out of view are all cheap ways to
-// make a human approve one thing while reading another. Sanitizing here
-// means no stager can skip it and no renderer has to remember.
-
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -31,16 +20,9 @@ import (
 // crafted prefix cannot push them past what a human reads.
 const maxSummaryLen = 240
 
-// sanitizeSummary renders a staged summary safe to display: control
-// characters and Unicode format marks (bidi overrides and isolates among
-// them) are dropped, every run of whitespace collapses to one space, and the
-// result is bounded on a rune boundary.
-//
-// Dropping rather than escaping is deliberate. An escape leaves the operator
-// reading a mangled line and still having to reason about it; these
-// characters carry no meaning a summary needs, and a name that relies on one
-// is a name whose rendering was the point.
-func sanitizeSummary(s string) string {
+// SanitizeSummary bounds untrusted approval captions and removes characters
+// that can hide or reverse the action a reader is deciding.
+func SanitizeSummary(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	lastWasSpace := false
@@ -64,6 +46,60 @@ func sanitizeSummary(s string) string {
 		}
 	}
 	return boundRunes(strings.TrimSpace(b.String()), maxSummaryLen)
+}
+
+// SanitizeSummaryParts applies SanitizeSummary to every piece. A field whose
+// name is left empty is dropped and counted among the fields left out.
+func SanitizeSummaryParts(parts *crmcontracts.ApprovalSummaryParts) *crmcontracts.ApprovalSummaryParts {
+	if parts == nil {
+		return nil
+	}
+	clean := crmcontracts.ApprovalSummaryParts{
+		Sentence:   SanitizeSummary(parts.Sentence),
+		Fields:     make([]crmcontracts.ApprovalSummaryField, 0, len(parts.Fields)),
+		MoreFields: max(parts.MoreFields, 0),
+	}
+	for _, field := range parts.Fields {
+		name := SanitizeSummary(field.Field)
+		if name == "" {
+			clean.MoreFields++
+			continue
+		}
+		clean.Fields = append(clean.Fields, crmcontracts.ApprovalSummaryField{Field: name, Value: SanitizeSummary(field.Value)})
+	}
+	return &clean
+}
+
+// marshalSummaryParts is the summary_parts column value: NULL for no parts.
+func marshalSummaryParts(parts *crmcontracts.ApprovalSummaryParts) (json.RawMessage, error) {
+	if parts == nil {
+		return nil, nil
+	}
+	encoded, err := json.Marshal(parts)
+	if err != nil {
+		return nil, fmt.Errorf("encode approval summary parts: %w", err)
+	}
+	return encoded, nil
+}
+
+// readSummaryParts decodes the stored column. A value that does not decode
+// reads as absent, and the reader falls back to the joined summary.
+func readSummaryParts(stored json.RawMessage) *crmcontracts.ApprovalSummaryParts {
+	if len(stored) == 0 {
+		return nil
+	}
+	var parts crmcontracts.ApprovalSummaryParts
+	if json.Unmarshal(stored, &parts) != nil {
+		return nil
+	}
+	return &parts
+}
+
+// withholdPayload clears what a reader may not see once the preview held the
+// staged call back. That is the call, its evidence and both summary forms.
+func withholdPayload(approval *crmcontracts.Approval) {
+	approval.ProposedChange, approval.Evidence = nil, nil
+	approval.Summary, approval.SummaryParts = nil, nil
 }
 
 // boundRunes truncates so the RESULT is at most n bytes, marking that it did

@@ -73,70 +73,66 @@ type Pattern struct {
 //
 // The labels are composed here rather than by a model. Each states a stored
 // figure and nothing else, so it says nothing the snapshot does not hold.
-func patternsFor(counts Counts, help int, deals *DealBlock) []Pattern {
+func (said teamCopy) patternsFor(counts Counts, help int, deals *DealBlock) []Pattern {
 	var out []Pattern
 	add := func(kind, label string) { out = append(out, Pattern{Kind: kind, Label: label}) }
 	if help > 0 {
-		add(FocusHelpRequested, fmt.Sprintf("Asked for help on %s", plural(help, "commitment")))
+		add(FocusHelpRequested, said.countPhrase(patternWords.HelpOne, patternWords.HelpMany, help))
 	}
 	if counts.LeadsBreached > 0 {
-		add(FocusLeadsBreached, fmt.Sprintf("%s went past the response target",
-			plural(counts.LeadsBreached, "lead")))
+		add(FocusLeadsBreached, said.countPhrase(patternWords.BreachOne, patternWords.BreachMany, counts.LeadsBreached))
 	}
 	if counts.CommitmentsDue > counts.CommitmentsKept {
-		add(FocusCommitmentsMissed, fmt.Sprintf("Kept %d of %d commitments",
+		add(FocusCommitmentsMissed, fmt.Sprintf(said.Say(patternWords.Kept),
 			counts.CommitmentsKept, counts.CommitmentsDue))
 	}
 	if deals != nil {
-		out = append(out, dealPatterns(*deals)...)
+		out = append(out, said.dealPatterns(*deals)...)
 	}
 	// Once, whichever of the two reasons holds: two rows saying "copy this
 	// rep" are one finding spelled twice.
 	switch {
 	case counts.DealsWon > 0:
-		add(FocusStrongWeek, fmt.Sprintf("Won %s — worth asking how", plural(counts.DealsWon, "deal")))
+		add(FocusStrongWeek, said.countPhrase(patternWords.WonOne, patternWords.WonMany, counts.DealsWon))
 	case counts.CommitmentsDue > 0 && counts.CommitmentsDue == counts.CommitmentsKept:
-		add(FocusStrongWeek, fmt.Sprintf("Kept every commitment (%d)", counts.CommitmentsDue))
+		add(FocusStrongWeek, fmt.Sprintf(said.Say(patternWords.KeptAll), counts.CommitmentsDue))
 	}
 	if counts.MeetingsHeld > counts.MeetingsWithNextStep {
-		add(FocusMeetingsWithoutNextStep, fmt.Sprintf("%s have no linked follow-up recorded",
-			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting")))
+		add(FocusMeetingsWithoutNextStep, said.countPhrase(patternWords.MeetingOne, patternWords.MeetingMany, counts.MeetingsHeld-counts.MeetingsWithNextStep))
 	}
 	if len(out) == 0 {
-		add(FocusQuietWeek, "No priority indicated by the recorded metrics")
+		add(FocusQuietWeek, said.Say(patternWords.Quiet))
 	}
 	return out
 }
 
 // dealPatterns are the four rules over the frozen deal scorecard.
-func dealPatterns(d DealBlock) []Pattern {
+func (said teamCopy) dealPatterns(d DealBlock) []Pattern {
 	var out []Pattern
 	if d.ForecastDown > 0 {
-		out = append(out, Pattern{FocusForecastDowngrades, fmt.Sprintf(
-			"Forecast downgraded on %s — review the recovery plan", plural(d.ForecastDown, "deal"))})
+		out = append(out, Pattern{FocusForecastDowngrades, said.countPhrase(patternWords.ForecastOne, patternWords.ForecastMany, d.ForecastDown)})
 	}
 	if d.Regressions > 0 {
-		out = append(out, Pattern{FocusStageRegressions, fmt.Sprintf(
-			"%s moved backwards — review the recovery plan", plural(d.Regressions, "deal"))})
+		out = append(out, Pattern{FocusStageRegressions, said.countPhrase(patternWords.RegressedOne, patternWords.RegressedMany, d.Regressions)})
 	}
 	// A nil count is a scorecard frozen before it was measured, which says
 	// nothing about the rep's close dates.
 	if p := d.CloseDateProvisional; p != nil && d.Open >= coverageRuleMinimumOpenDeals &&
 		*p*basisPointsWhole > provisionalCloseDatesCeilingBp*d.Open {
 		out = append(out, Pattern{FocusCloseDatesProvisional, fmt.Sprintf(
-			"%d of %d open deals have a provisional close date — confirm the forecast", *p, d.Open)})
+			said.Say(patternWords.Provisional), *p, d.Open)})
 	}
 	if d.Open >= coverageRuleMinimumOpenDeals &&
 		d.WithNextStep*basisPointsWhole < nextStepCoverageFloorBp*d.Open {
 		out = append(out, Pattern{FocusNoNextStepCoverage, fmt.Sprintf(
-			"%d of %d open deals have a next step — agree an owner and date", d.WithNextStep, d.Open)})
+			said.Say(patternWords.NextStep), d.WithNextStep, d.Open)})
 	}
 	return out
 }
 
 // focusFor is the one thing to raise first: the head of the pattern list.
-func focusFor(counts Counts, help int, deals *DealBlock) (kind, label string) {
-	first := patternsFor(counts, help, deals)[0]
+func (said teamCopy) focusFor(counts Counts, help int, deals *DealBlock) (kind, label string) {
+	first := said.patternsFor(counts, help, deals)[0]
 	return first.Kind, first.Label
 }
 
@@ -159,12 +155,4 @@ func memberDealBlock(ctx context.Context, tx pgx.Tx, userID ids.UUID, week time.
 		return nil, fmt.Errorf("weekly: reading the member's frozen deal scorecard: %w", err)
 	}
 	return &d, nil
-}
-
-// plural renders a count with its noun, so a label reads as a sentence.
-func plural(n int, noun string) string {
-	if n == 1 {
-		return "1 " + noun
-	}
-	return fmt.Sprintf("%d %ss", n, noun)
 }

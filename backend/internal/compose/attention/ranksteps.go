@@ -53,7 +53,10 @@ var rankSteps = []rankStep{
 			}
 			return true, a.item.Level == levelPinned
 		},
-		explain: func(ranked, ranked) crmcontracts.WorklistComparison {
+		explain: func(a, _ ranked) crmcontracts.WorklistComparison {
+			if a.reminded && !a.pinned {
+				return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorReminder}
+			}
 			return crmcontracts.WorklistComparison{Comparator: crmcontracts.WorklistComparisonComparatorPin}
 		},
 	},

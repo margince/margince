@@ -229,8 +229,8 @@ func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 }
 
 // A duplicate-email conflict hands back the existing id so a client can open
-// the record — unless the caller may not read it. The contact they may not
-// read is a capture-private one of another rep's.
+// the record. A caller who may not read it gets the held refusal instead. The
+// contact they may not read is a capture-private one of another rep's.
 func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
@@ -248,13 +248,11 @@ func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 		FullName: "Duplicate attempt", Source: "manual",
 		Emails: []contacts.ContactEmailInput{{Email: "taken@example.com", EmailType: "work", IsPrimary: true, Position: 1}},
 	})
+	// The held refusal, which carries no id at all.
+	if _, held := errors.AsType[*contacts.ContactHeldByColleagueError](err); !held {
+		t.Fatalf("duplicate create → %v, want contacts.ContactHeldByColleagueError", err)
+	}
 	var dup *contacts.DuplicateEmailError
-	if !errors.As(err, &dup) {
-		t.Fatalf("duplicate create → %v, want contacts.DuplicateEmailError", err)
-	}
-	if !dup.ExistingID.IsZero() {
-		t.Errorf("409 disclosed out-of-scope id %s", dup.ExistingID)
-	}
 
 	// The same conflict against a row the rep CAN see keeps the id — the
 	// dedupe UX ("open the existing record") survives for legit cases.
@@ -464,7 +462,7 @@ func TestReopeningWithARedundantLostReasonStillCleans(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: lost, LostReason: new("price")}); err != nil {
+	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: lost, LostReason: new("price"), LostReasonCode: new("price")}); err != nil {
 		t.Fatalf("closing as lost: %v", err)
 	}
 	reopened, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: open, LostReason: new("price")})
@@ -534,19 +532,19 @@ func TestActivityLinkTargetsMustBeVisible(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCapture())
 
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: theirContact}},
 	}); err != nil {
 		t.Errorf("link to another team's readable contact → %v, want success", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: foreignContact}},
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("link to a capture-private contact → %v, want ErrNotFound", err)
 	}
 	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.NewV7()}},
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("link to a nonexistent contact → %v, want ErrNotFound", err)

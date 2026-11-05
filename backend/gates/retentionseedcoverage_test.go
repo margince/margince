@@ -38,6 +38,12 @@ var deliberatelyUnseeded = gatekit.Waive(map[string]string{
 	"deal/won": "a won deal is the record of revenue earned and the evidence behind it, so " +
 		"archiving one on a timer is a decision an operator makes rather than one they " +
 		"inherit — retentionselectors.go says the same beside the selector",
+	"activity/transcript": "erasing clears the transcript text for good, and Margince does not destroy " +
+		"a record just because it is old; transcripts age under the seeded activity archive row, " +
+		"which keeps them restorable",
+	"contact/no_consent_no_deal": "anonymizing strips the contact's identity for good, and Margince does " +
+		"not destroy a record just because it is old; erasure stays available through an Art. 17 " +
+		"request, which an admin fulfills for one named contact",
 })
 
 var seedRowRE = regexp.MustCompile(`\(\s*'([a-z_]+)'\s*,\s*(?:'([a-z_]+)'|NULL)\s*,\s*(\d+)\s*,\s*'([a-z]+)'\s*\)`)

@@ -83,6 +83,13 @@ func (h Handlers) WithRecipientDirectory(dir RecipientDirectory) Handlers {
 	return h
 }
 
+// WithRecipientFiler returns handlers whose account-started sends and previews
+// make a contact for a typed address that no record holds.
+func (h Handlers) WithRecipientFiler(filer RecipientFiler) Handlers {
+	h.store = h.store.WithRecipientFiler(filer)
+	return h
+}
+
 // GetReplyRecipient answers who a reply to this message would go to, without
 // drafting one. A composer opening on a thread shows the recipient straight
 // away rather than after a model call that takes tens of seconds.
@@ -101,28 +108,51 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 		writeStoreErr(w, r, err)
 		return
 	}
-	address, err := h.replyAddress(ctx, anchor, recipient.FiledAddress)
+	address, err := h.offeredAddress(ctx, anchor, recipient)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	// Whose mailbox this arrived in, which is a different question from who a
 	// reply goes to: the names above are the counterparty, this is our own side.
-	mailboxes, err := h.store.MailboxesFor(ctx, anchor)
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
+	var mailboxes []ids.UUID
+	if !recipient.WrittenAbout {
+		if mailboxes, err = h.store.MailboxesFor(ctx, anchor); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
 	}
 	seats := make([]openapi_types.UUID, 0, len(mailboxes))
 	for _, seat := range mailboxes {
 		seats = append(seats, openapi_types.UUID(seat))
 	}
+	standing, err := h.store.ConversationStandingFor(ctx, anchor)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	var dealOwner *openapi_types.UUID
+	if standing.DealOwner != nil {
+		owner := openapi_types.UUID(*standing.DealOwner)
+		dealOwner = &owner
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReplyRecipient{
-		FullName:       recipient.FullName,
-		FirstName:      recipient.FirstName,
-		Address:        address,
-		MailboxUserIds: seats,
+		FullName:             recipient.FullName,
+		FirstName:            recipient.FirstName,
+		Address:              address,
+		MailboxUserIds:       seats,
+		ViewerOnConversation: standing.OnConversation,
+		DealOwnerUserId:      dealOwner,
 	})
+}
+
+// offeredAddress is what the composer and a draft prefill. A written-about row offers its
+// filed contact, and only here: an automation stages unread and stays on ReplyAddressFor.
+func (h Handlers) offeredAddress(ctx context.Context, anchor ids.ActivityID, recipient ReplyRecipient) (string, error) {
+	if recipient.WrittenAbout {
+		return recipient.FiledAddress, nil
+	}
+	return h.replyAddress(ctx, anchor)
 }
 
 // replyAddress is the counterparty address for this anchor, empty when the
@@ -132,10 +162,7 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 // fault: ReplyAddressFor refuses it as NoReplyAddressError, and a composer
 // that shows an empty field there is telling the truth. Every other failure
 // is the caller's to see.
-//
-// filed (a note's contact) is offered only here: a rep sees it in To before
-// anything sends, while an automation stages unread and stays on ReplyAddressFor.
-func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed string) (string, error) {
+func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (string, error) {
 	if h.colleagues == nil {
 		return "", nil
 	}
@@ -144,11 +171,8 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed
 		return "", err
 	}
 	address, err := h.store.ReplyAddressFor(ctx, anchor, covers)
-	if none, ok := errors.AsType[*NoReplyAddressError](err); ok {
-		if none.Colleague || filed == "" || (covers != nil && covers(filed)) {
-			return "", nil
-		}
-		return filed, nil
+	if _, ok := errors.AsType[*NoReplyAddressError](err); ok {
+		return "", nil
 	}
 	if err != nil {
 		return "", err
@@ -165,7 +189,11 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID, filed
 // counterparty produce the same empty field, and only the log tells them
 // apart afterwards.
 func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]openapi_types.Email {
-	address, err := h.replyAddress(ctx, anchor, "")
+	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
+	address := ""
+	if err == nil {
+		address, err = h.offeredAddress(ctx, anchor, recipient)
+	}
 	if err != nil {
 		slog.WarnContext(ctx, "reply address unavailable; drafting without a recipient", "err", err)
 		return nil
@@ -185,7 +213,7 @@ func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]
 // (DRAFT-AC-E-1). answering is the correspondence the draft replies into: its
 // text decides the language, and its shape decides whether there is a thread to
 // reply to at all.
-func DeterministicEmailDraft(answering DraftContext, intent string) (subject, body string) {
+func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	lang := answering.language()
 	band := answering.Band
 
@@ -193,19 +221,14 @@ func DeterministicEmailDraft(answering DraftContext, intent string) (subject, bo
 	subject = draftfloor.Subject(lang, band, topic, answering.Threaded)
 
 	phrases := draftfloor.For(lang, band)
-	lines := []string{draftfloor.Greeting(lang, band, answering.Recipient), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
 	// The topic is the only substance this floor has, and dropping it would
 	// leave a draft that says nothing about what it is answering.
+	thread := ""
 	if topic != "" {
-		lines = append(lines, draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic), "")
+		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	if intent := strings.TrimSpace(intent); intent != "" {
-		lines = append(lines, intent, "")
-	}
-	return subject, strings.Join(append(lines, phrases.Ask), "\n")
+	greeting := draftfloor.Greeting(lang, band, answering.Recipient)
+	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
 // DraftContext is what the floor knows about the correspondence it is writing
@@ -270,21 +293,31 @@ func (c DraftContext) language() textlang.Lang {
 	return draftfloor.DefaultLang
 }
 
-// The wire names of the two fields every mail send requires, shared with the
-// agent door that refuses them blank.
-const (
-	FieldSubject = fieldSubject
-	FieldBody    = fieldBody
-)
+// RefuseBlankMail answers a subject or body that holds nothing but white space.
+// Both send doors call it, so a message never goes out with a blank field on
+// one door that the other refuses.
+func RefuseBlankMail(subject, body string) error {
+	if strings.TrimSpace(subject) == "" {
+		return &RequiredFieldError{Field: fieldSubject}
+	}
+	if strings.TrimSpace(body) == "" {
+		return &RequiredFieldError{Field: fieldBody}
+	}
+	return nil
+}
 
 // requiredSent answers a send body that left out `subject` or `body`, which
-// both send requests require. An empty string is a value the caller chose.
-func requiredSent(w http.ResponseWriter, r *http.Request) bool {
+// both send requests require, or that left either one blank.
+func requiredSent(w http.ResponseWriter, r *http.Request, subject, body string) bool {
 	for _, field := range []string{fieldSubject, fieldBody} {
 		if err := httperr.RequireSent(r, field, field+" is required"); err != nil {
 			httperr.Write(w, r, err)
 			return false
 		}
+	}
+	if err := RefuseBlankMail(subject, body); err != nil {
+		writeStoreErr(w, r, err)
+		return false
 	}
 	return true
 }
@@ -296,7 +329,7 @@ func requiredSent(w http.ResponseWriter, r *http.Request) bool {
 // drift between the two surfaces (ADR-0087 §1).
 func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crmcontracts.SendCompanyEmailParams) {
 	var req crmcontracts.SendCompanyEmailRequest
-	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r, req.Subject, req.Body) {
 		return
 	}
 	links := linkInputsOf(&req.Links)
@@ -313,7 +346,7 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 		writeStoreErr(w, r, err)
 		return
 	}
-	in, err := accountSendInput(req)
+	in, err := DecodeCompanyEmailRequest(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -394,7 +427,7 @@ func sendInputFrom(to []openapi_types.Email, cc, bcc *[]openapi_types.Email, sub
 // inherits. Its account-started twin above shares everything after the origin.
 func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SendEmailParams) {
 	var req crmcontracts.SendEmailRequest
-	if !httperr.Decode(w, r, &req) || !requiredSent(w, r) {
+	if !httperr.Decode(w, r, &req) || !requiredSent(w, r, req.Subject, req.Body) {
 		return
 	}
 	// Deliverability — the RFC 8058 header and the visible footer — is

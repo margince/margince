@@ -39,6 +39,20 @@ func (r *fakeRuntime) Caller() Caller { return r.caller }
 // layer's (compose/extsyncnow.go), which is where its bounds are tested.
 func (r *fakeRuntime) SyncNow(context.Context, JobName) error { return nil }
 
+// The OAuth pair answers for the seam's shape only; compose/extoauthtoken.go
+// is where the token store and the refresh are tested.
+func (r *fakeRuntime) OAuthAccessToken(context.Context, OAuthProvider) (string, error) {
+	return "", ErrOAuthNotConnected
+}
+
+func (r *fakeRuntime) OAuthDisconnect(context.Context, OAuthProvider) error { return nil }
+
+// The system reads answer for the seam's shape only; their behaviour is the
+// composition layer's (compose/extsystemread.go), tested there on a database.
+func (r *fakeRuntime) Deals() Deals         { return nil }
+func (r *fakeRuntime) Authority() Authority { return nil }
+func (r *fakeRuntime) Directory() Directory { return nil }
+
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {
 		return ErrRuntimeExpired
@@ -56,6 +70,16 @@ func (r *fakeRuntime) Ingest(_ context.Context, on UserID, rec Record) (Result, 
 	}
 	r.ingested = append(r.ingested, ingestCall{on: on, rec: rec})
 	return Result{Ref: Ref{Type: "activity", ID: "00000000-0000-7000-8000-000000000001"}, Disposition: DispositionAccepted}, nil
+}
+
+// The batch pair answers for the seam's shape only; compose/extingressbatch.go
+// is where the saved position is tested, on a database.
+func (r *fakeRuntime) IngestBatch(context.Context, UserID, SourceName, []Record, BatchPosition) ([]Result, error) {
+	return nil, nil
+}
+
+func (r *fakeRuntime) IngestPosition(context.Context, SourceName) (BatchPosition, error) {
+	return "", nil
 }
 
 // ingestCall is one recorded Ingest, so a test can assert WHAT was handed over

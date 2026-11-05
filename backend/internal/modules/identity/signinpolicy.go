@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -62,19 +62,19 @@ func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) (SignInPol
 	}
 	// Only after the caller is admitted, and read as the installation.
 	readCtx := s.asInstallation(ctx)
-	chosen, err := settings.Get(readCtx, s.settings, EnabledOidcProviders)
+	chosen, err := config.StoredVal(readCtx, s.config, EnabledOidcProviders)
 	if err != nil {
 		return SignInPolicyView{}, fmt.Errorf("identity: reading the sign-in policy: %w", err)
 	}
-	requireSSO, err := settings.Get(readCtx, s.settings, RequireSSO)
+	requireSSO, err := config.StoredVal(readCtx, s.config, RequireSSO)
 	if err != nil {
 		return SignInPolicyView{}, fmt.Errorf("identity: reading the sign-in policy: %w", err)
 	}
-	requireMFA, err := settings.Get(readCtx, s.settings, RequireMFA)
+	requireMFA, err := config.StoredVal(readCtx, s.config, RequireMFA)
 	if err != nil {
 		return SignInPolicyView{}, fmt.Errorf("identity: reading the sign-in policy: %w", err)
 	}
-	groupRoleMap, err := settings.Get(readCtx, s.settings, OidcGroupRoleMap)
+	groupRoleMap, err := config.StoredVal(readCtx, s.config, OidcGroupRoleMap)
 	if err != nil {
 		return SignInPolicyView{}, fmt.Errorf("identity: reading the sign-in policy: %w", err)
 	}
@@ -87,7 +87,7 @@ func (s *InstallationSettingsStore) SignInPolicy(ctx context.Context) (SignInPol
 // whether a request may proceed. Read as the installation, the same system actor
 // SignInPolicy uses once its own gate has passed.
 func (s *InstallationSettingsStore) SSOEnforced(ctx context.Context) (bool, error) {
-	enforced, err := settings.Get(s.asInstallation(ctx), s.settings, RequireSSO)
+	enforced, err := config.StoredVal(s.asInstallation(ctx), s.config, RequireSSO)
 	if err != nil {
 		return false, fmt.Errorf("identity: reading the enforced-SSO policy: %w", err)
 	}
@@ -99,7 +99,7 @@ func (s *InstallationSettingsStore) SSOEnforced(ctx context.Context) (bool, erro
 // caller, so admission can decide whether a member with no factor is confined to
 // the enrolment routes.
 func (s *InstallationSettingsStore) MFARequired(ctx context.Context) (bool, error) {
-	required, err := settings.Get(s.asInstallation(ctx), s.settings, RequireMFA)
+	required, err := config.StoredVal(s.asInstallation(ctx), s.config, RequireMFA)
 	if err != nil {
 		return false, fmt.Errorf("identity: reading the require-MFA policy: %w", err)
 	}
@@ -118,7 +118,7 @@ func (s *InstallationSettingsStore) MFARequired(ctx context.Context) (bool, erro
 // in — so the map an admin retires between a pre-transaction read and the
 // commit cannot still hand out the role it no longer holds.
 func (s *InstallationSettingsStore) GroupRoleMap(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
-	m, err := settings.GetTx(s.asInstallation(ctx), tx, OidcGroupRoleMap)
+	m, err := config.StoredValTx(s.asInstallation(ctx), tx, s.config, OidcGroupRoleMap)
 	if err != nil {
 		return nil, fmt.Errorf("identity: reading the group-role grant map: %w", err)
 	}

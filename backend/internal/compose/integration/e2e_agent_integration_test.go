@@ -84,7 +84,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 		Code string `json:"code"`
 	}
 	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Should not exist", "source": "manual", "captured_by": "x",
+		"full_name": "Should not exist", "source": "manual",
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "scope_exceeds_grantor" {
 		t.Fatalf("read-scope write → %d %q, want 403 scope_exceeds_grantor", status, problem.Code)
@@ -130,9 +130,15 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		CapturedBy string `json:"captured_by"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Governed Green Write", "source": "manual", "captured_by": "human:forged",
+		"full_name": "Governed Green Write", "source": "manual",
 	}, bearer, &created); status != 201 {
 		t.Fatalf("write-scope 🟢 REST mutation → %d, want 201 (ADR-0055 admits governed agent writes)", status)
+	}
+	// A body that claims its own author is refused, not obeyed and not ignored.
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"full_name": "Forged Author", "source": "manual", "captured_by": "human:forged",
+	}, bearer, nil); status != 422 {
+		t.Fatalf("a body naming captured_by → %d, want 422", status)
 	}
 	if !strings.HasPrefix(created.CapturedBy, "agent:") {
 		t.Fatalf("agent create stamped captured_by=%q, want the authenticated agent", created.CapturedBy)
@@ -158,7 +164,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 
 	// 🟡 still exists on the calls that reach outside the workspace: an
 	// enrichment reads the company's website, so it asks a human first.
-	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual"})
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual", "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}})
 	enrichPath := "/v1/companies/" + companyID + "/enrich"
 	var problem struct {
 		Code   string `json:"code"`
@@ -184,9 +190,9 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		t.Fatalf("agent self-approval → %d %q, want 403 permission_denied", status, denyBody.Code)
 	}
 
-	// Human-only config surface rejects the agent whatever its scopes.
-	if status := e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Shadow"}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
-		t.Fatalf("agent on human-only pipeline config → %d %q, want 403 permission_denied", status, denyBody.Code)
+	// A human-only surface rejects the agent whatever its scopes.
+	if status := e.Call(t, "POST", "/v1/consent-purposes", AnyMap{"name": "Shadow"}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
+		t.Fatalf("agent on human-only consent purposes → %d %q, want 403 permission_denied", status, denyBody.Code)
 	}
 
 	// A human approves; the agent repeats the IDENTICAL request with the
@@ -219,7 +225,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Full Seat Made", "source": "manual", "captured_by": "admin",
+		"full_name": "Full Seat Made", "source": "manual",
 	}, nil, &created); status != 201 {
 		t.Fatalf("full-seat create → %d", status)
 	}
@@ -237,7 +243,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 		Code string `json:"code"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Read Seat Blocked", "source": "manual", "captured_by": "admin",
+		"full_name": "Read Seat Blocked", "source": "manual",
 	}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat create → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}

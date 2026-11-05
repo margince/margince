@@ -41,9 +41,6 @@ import (
 // deciding who may read, it belongs in the read clause too and this list is
 // where the next author is told to look.
 var resolutionOnlyRelations = gatekit.Waive(map[string]string{
-	// The read clause is given the caller's own uuid; the existential has to
-	// ask which uuids exist at all to match the captured_by suffix arm.
-	"app_user": "resolves the captured_by suffix arm against every user, where the read clause is handed one",
 	// The read clause is given p.TeamIDs, already filtered to live teams by
 	// identity's loadGrants; the existential has to do that filtering itself.
 	"team_membership": "resolves a selected team to its members, which the read clause receives as p.TeamIDs",
@@ -79,6 +76,9 @@ func sqlOf(t *testing.T, file, fn string) string {
 				sql.WriteString(lit.Value)
 				sql.WriteString("\n")
 			}
+			if call, ok := n.(*ast.CallExpr); ok {
+				sql.WriteString(composedFragment(call))
+			}
 			return true
 		})
 	}
@@ -88,13 +88,40 @@ func sqlOf(t *testing.T, file, fn string) string {
 	return sql.String()
 }
 
+// composedFragment renders a shared SQL fragment the function splices in, so
+// the relations it reads count as the function's own.
+func composedFragment(call *ast.CallExpr) string {
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return ""
+	}
+	switch name.Name {
+	case "ParticipantStandsSQL":
+		return ParticipantStandsSQL("ap", "a") + "\n"
+	case "memberIdentitySetSQL":
+		return memberIdentitySetSQL(1) + "\n"
+	default:
+		return ""
+	}
+}
+
 // relationsIn collects the relations a SQL text reads, from its own FROM and
 // JOIN clauses. Derived from the text so neither spelling can grow a source this
 // test does not see.
+//
+// A name called like a function after `FROM` is a set-returning function, not a
+// relation. member_identity_family reads app_user for the merged accounts, so
+// a call to it counts as reading app_user.
 func relationsIn(sql string) map[string]bool {
 	out := map[string]bool{}
-	for _, m := range regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)`).FindAllStringSubmatch(sql, -1) {
+	for _, m := range regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+([a-z_][a-z0-9_]*)(\s*\()?`).FindAllStringSubmatch(sql, -1) {
+		if m[2] != "" {
+			continue
+		}
 		out[strings.ToLower(m[1])] = true
+	}
+	if strings.Contains(sql, "member_identity_family(") {
+		out["app_user"] = true
 	}
 	return out
 }
@@ -113,7 +140,7 @@ func TestBothSpellingsOfTheAudienceGateDrawOnTheSameArms(t *testing.T) {
 	if len(readSide) == 0 {
 		t.Fatal("the read clause names no relation at all — the extraction is broken, so every comparison below is vacuous")
 	}
-	existential := relationsIn(sqlOf(t, "audienceorphan.go", "ActivityHasAReaderTx"))
+	existential := relationsIn(sqlOf(t, "audienceorphan.go", "activityHasReaderExceptTx"))
 
 	var missing, extra []string
 	for rel := range readSide {

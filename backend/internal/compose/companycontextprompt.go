@@ -50,7 +50,7 @@ func companyContextScopesFor(task ai.Task) ([]contacts.CompanyContextScope, erro
 // inside the boundary the calling prompt declared.
 
 type companyContextReader interface {
-	GetCompanyContext(context.Context, []contacts.CompanyContextScope) (contacts.CompanyContext, error)
+	GetCompanyContext(context.Context, []contacts.CompanyContextScope, contacts.OfferingSelector) (contacts.CompanyContext, error)
 }
 
 type companyContextProvider struct {
@@ -71,7 +71,9 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 		return model.Request{}, fmt.Errorf("compose: AI task %q has no company-context policy", task)
 	}
 	requested := req.IncludeCompanyContext
+	chosenOffering := req.CompanyContextOffering
 	req.IncludeCompanyContext = false
+	req.CompanyContextOffering = ""
 	req.ContextScopes = nil
 	req.ContextFingerprint = ""
 	req.ContextBytes = 0
@@ -91,7 +93,13 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 	if p == nil || p.reader == nil {
 		return req, nil
 	}
-	companyContext, err := p.reader.GetCompanyContext(ctx, scopes)
+	offering := contacts.OfferingSelector{}
+	if policy.OfferingSelectable {
+		if offering, err = contacts.ParseOfferingSelector(chosenOffering); err != nil {
+			return model.Request{}, fmt.Errorf("compose: company-context offering for %s: %w", task, err)
+		}
+	}
+	companyContext, err := p.reader.GetCompanyContext(ctx, scopes, offering)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return req, nil
@@ -199,7 +207,7 @@ func renderCompanyContext(companyContext contacts.CompanyContext, tokenBudget in
 
 	// The caller's fence markers wrap this block, so the budget has to account
 	// for them: two nonce markers plus their newlines.
-	const wrapperBytes = 2*len("<untrusted-0198c0de-0000-7000-8000-000000000000>") + 3
+	const wrapperBytes = 2*len("<untrusted-abcdefghijklmnopqrstuvwxyz>") + 3
 	maxBytes := tokenBudget * 4
 	if _, err := marshalCompanyContextBlock(payload, maxBytes, wrapperBytes); err != nil {
 		return "", err

@@ -122,11 +122,24 @@ export function useCloseOnOutsideClick(close: () => void) {
       if (!target.isConnected) {
         return;
       }
-      if (!target.closest(".lt-menu-wrap, .lt-menu")) {
-        latest.current();
+      if (target.closest(".lt-menu-wrap, .lt-menu") || inPopupOfAMenu(target)) {
+        return;
       }
+      latest.current();
     };
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, []);
+}
+
+// A control inside a menu may open its own modal popup in a portal, as a date
+// field's calendar does. A press there belongs to the menu beneath it. A modal
+// that holds a list of its own is a page, and its presses close as before.
+function inPopupOfAMenu(target: Element): boolean {
+  const modal = target.closest('[aria-modal="true"]');
+  return (
+    modal !== null &&
+    modal.querySelector(".lt-menu") === null &&
+    document.querySelector(".lt-menu.open") !== null
+  );
 }

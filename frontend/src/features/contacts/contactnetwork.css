@@ -86,16 +86,19 @@
   min-width: 0;
 }
 .pn-verdict-main {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--padPanel);
   display: grid;
   gap: var(--space-3);
   align-content: start;
 }
 .pn-evidence {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--padPanel);
   border-left: 1px solid var(--accentMed);
   background: var(--accentLight);
   display: grid;
+  /* Not the implicit `auto` track: it grows to a citation's full subject, and
+     the subject must cut short inside the plate instead. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   align-content: start;
 }
@@ -114,9 +117,10 @@
   font-family: var(--fontFamilyHeading);
   font-variant-numeric: tabular-nums;
 }
+/* The gap is a real space in the text, so a screen reader and a copy read
+   "4 in 90 days" rather than "4in 90 days". */
 .pn-reading b small {
   font-family: var(--fontFamilyBody);
-  margin-left: var(--space-1);
 }
 /* Who sent what: the target's share in full accent, the colleague's in the
    lighter one, and the counts in words under it. */
@@ -163,6 +167,7 @@
 }
 .pn-evidence-receipts {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
 }
 .pn-evidence-receipts .pn-receipts {
@@ -198,8 +203,7 @@
   padding: var(--space-3);
   border-radius: var(--r-md);
   corner-shape: round;
-  border: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
+  border: 1px solid var(--groundEdge);
 }
 .pn-hero-who {
   min-width: 0;
@@ -273,7 +277,7 @@
   display: grid;
   place-items: center;
   border: 2px solid var(--borderStrong);
-  background: var(--bgElevated);
+  background: var(--ground);
   font-variant-numeric: tabular-nums;
 }
 .pn-relay-done .pn-relay-num {

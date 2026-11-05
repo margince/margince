@@ -267,6 +267,37 @@ describe("OAuthConsent", () => {
     );
   });
 
+  it("narrows the grant to reading and drafting in one press, and back", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    const full = await screen.findByRole("button", { name: "Full assistant" });
+    expect(full).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Read and draft" }));
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft",
+    );
+    expect(
+      screen.getByRole("checkbox", { name: /Change records/ }),
+    ).not.toBeChecked();
+
+    await user.click(full);
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft write send enrich",
+    );
+  });
+
+  it("calls a grant that matches neither preset its own", async () => {
+    renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Buy contact data/ }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Pick your own" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("refuses to approve nothing", async () => {
     renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
     const user = userEvent.setup();
@@ -377,6 +408,38 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
     expect(
       screen.getByRole("button", { name: /back to margince/i }),
     ).toBeTruthy();
+  });
+});
+
+describe("OAuthConsent — a way of connecting the admin turned off", () => {
+  it("says the tool cannot connect and who can change that, with no form", async () => {
+    globalThis.location.hash = hashWithError("method_off");
+    stubConsentUnavailable();
+    render(<OAuthConsent />);
+    expect(await screen.findByText("This AI tool cannot connect")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Your admin has turned off this way of connecting AI tools. Ask them to let this tool connect, or to register it for your company.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /authorize/i })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /back to margince/i }),
+    ).toBeTruthy();
+    expect(screen.getByText("Would return to: client.example")).toBeTruthy();
+    expect(screen.queryByText(/^Tool:/)).toBeNull();
+  });
+
+  it("names the refused tool when the client can still be read", async () => {
+    globalThis.location.hash = hashWithError("method_off");
+    stubConsent({
+      client_name: "Example Assistant",
+      offline: false,
+      scopes: [],
+    });
+    render(<OAuthConsent />);
+    expect(await screen.findByText("Tool: Example Assistant")).toBeTruthy();
+    expect(screen.getByText("Would return to: client.example")).toBeTruthy();
   });
 });
 

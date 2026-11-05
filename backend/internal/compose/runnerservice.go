@@ -348,7 +348,7 @@ func (s *RunnerService) executeJob(ctx context.Context, job runner.QueuedJob) {
 	// own timeout it would otherwise age the row toward the abandoned sweep while
 	// the loop had not started a single step — and grounding already degrades to
 	// an ungrounded run rather than failing one.
-	grounding := s.seedGrounding(bounded, spec.Goal)
+	grounding := s.seedGrounding(bounded, spec)
 	res, err := s.runner.Run(bounded, runner.Job{
 		Goal:       spec.Goal,
 		TriggerRef: job.TriggerRef,
@@ -386,15 +386,14 @@ func (s *RunnerService) finishJob(ctx context.Context, jobID ids.UUID, runID *id
 	}
 }
 
-// seedGrounding retrieves T2 seed context for the run's goal under the
-// AGENT's own principal — the run grounds on exactly what its passport
-// may see, and a retrieval failure degrades to an ungrounded run
-// rather than blocking the brief.
-func (s *RunnerService) seedGrounding(ctx context.Context, goal string) []runner.Grounding {
-	if s.retriever == nil {
+// seedGrounding retrieves T2 seed context for the spec's seed query under the
+// AGENT's own principal. The run grounds only on what its passport may see.
+// A retrieval failure degrades to an ungrounded run rather than blocking it.
+func (s *RunnerService) seedGrounding(ctx context.Context, spec runner.AgentSpec) []runner.Grounding {
+	if s.retriever == nil || spec.SeedQuery == "" {
 		return nil
 	}
-	found, err := s.retriever.Search(ctx, retrieval.Query{Text: goal, Limit: 5})
+	found, err := s.retriever.Search(ctx, retrieval.Query{Text: spec.SeedQuery, Limit: 5})
 	if err != nil {
 		s.log.Warn("runner: seed retrieval failed — running ungrounded", "err", err)
 		return nil

@@ -57,7 +57,7 @@ func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
 		t.Fatalf("the save that types the first answers: %v", err)
 	}
 
-	renewables := "Renewables"
+	renewables := "Insurance"
 	if _, err := env.store.SaveCompany(env.ctx, SaveCompanyInput{
 		DisplayName: "Nordwind Systeme GmbH",
 		Fields:      map[string]*string{fieldIndustry: &renewables},
@@ -68,8 +68,8 @@ func TestACompanySaveRecordsWhatTheFormReplaced(t *testing.T) {
 	before, after := auditImagesHolding(env.ctx, t, env.store, "company", env.anchorID.UUID, fieldDisplayName)
 	wantImage(t, before, "before", fieldDisplayName, "Our Company")
 	wantImage(t, after, "after", fieldDisplayName, "Nordwind Systeme GmbH")
-	wantImage(t, before, "before", fieldIndustry, automotive)
-	wantImage(t, after, "after", fieldIndustry, renewables)
+	wantImage(t, before, "before", fieldIndustry, "automotive")
+	wantImage(t, after, "after", fieldIndustry, "insurance")
 	for _, key := range []string{auditKeySource, "anchor", auditKeyFields} {
 		if _, folded := after[key]; folded {
 			t.Errorf("the after image carries %q, which is not a field of the company: %v", key, after)
@@ -103,7 +103,7 @@ func TestACompanySaveRecordsOnlyTheFieldsThatMoved(t *testing.T) {
 	}
 
 	// The same submission again, with one word changed.
-	renewables := "Renewables"
+	renewables := "Insurance"
 	if _, err := env.store.SaveCompany(env.ctx, SaveCompanyInput{
 		DisplayName: "Our Company",
 		Fields:      map[string]*string{fieldIndustry: &renewables, fieldOfferSummary: &summary},
@@ -112,8 +112,8 @@ func TestACompanySaveRecordsOnlyTheFieldsThatMoved(t *testing.T) {
 	}
 
 	before, after := auditImagesHolding(env.ctx, t, env.store, "company", env.anchorID.UUID, fieldIndustry)
-	wantImage(t, before, "before", fieldIndustry, automotive)
-	wantImage(t, after, "after", fieldIndustry, renewables)
+	wantImage(t, before, "before", fieldIndustry, "automotive")
+	wantImage(t, after, "after", fieldIndustry, "insurance")
 	for _, key := range []string{fieldDisplayName, fieldOfferSummary} {
 		if _, moved := after[key]; moved {
 			t.Errorf("the after image presents %q as a change, and the submission re-sent it unchanged: %v", key, after)

@@ -29,7 +29,9 @@ type advanceDealArgs struct {
 	DealID     ids.UUID `json:"deal_id"`
 	ToStageID  ids.UUID `json:"to_stage_id"`
 	LostReason *string  `json:"lost_reason"`
-	IfVersion  *int64   `json:"if_version"`
+	// LostReasonCode is a key from /loss-reasons; a note alone records unmapped.
+	LostReasonCode *string `json:"lost_reason_code"`
+	IfVersion      *int64  `json:"if_version"`
 	WinEvidenceArgs
 }
 
@@ -86,11 +88,12 @@ func (t advanceDeal) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["deal_id","to_stage_id"],"properties":{
 			"deal_id":{"type":"string","format":"uuid"},
 			"to_stage_id":{"type":"string","format":"uuid"` + stageIDNote + `},
-			"lost_reason":{"type":"string","description":"Required when the target stage closes the deal as lost"}` + winEvidenceProperties + `,
+			"lost_reason":{"type":"string","description":"A free note explaining a loss"},
+			"lost_reason_code":{"type":"string","description":"An active loss reason key, expected when the target stage closes the deal as lost. A loss with only a note is recorded as unmapped"}` + winEvidenceProperties + `,
 			"if_version":{"type":"integer"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on retry after a human approved a won/lost move"}},
 			"additionalProperties":false}`),
-		OutputSchema: schemaFor[wireRecord](),
+		OutputSchema: schemaFor[AdvancedDealRecord](),
 	}
 }
 
@@ -131,19 +134,24 @@ func (t advanceDeal) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err != nil {
 		return nil, err
 	}
-	ref, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
+	moved, err := t.p.AdvanceDeal(ctx, datasource.AdvanceDealInput{
 		WonWithoutContractReason: args.WonWithoutContractReason,
 		WonWithoutContractDetail: args.WonWithoutContractDetail,
 		DealID:                   args.DealID,
 		ToStageID:                args.ToStageID,
 		LostReason:               args.LostReason,
+		LostReasonCode:           args.LostReasonCode,
 		Source:                   ToolSource,
 		IfVersion:                pin,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return readBack(ctx, t.p, ref)
+	record, err := readBackRecord(ctx, t.p, moved.Ref)
+	if err != nil {
+		return nil, err
+	}
+	return marshalResult(AdvancedDealRecord{wireRecord: record, ProbabilityNote: moved.ProbabilityNote}, nil)
 }
 
 // readBack answers every write with the resulting record — the agent
@@ -162,4 +170,11 @@ func readBackRecord(ctx context.Context, p datasource.SystemOfRecordProvider, re
 		return wireRecord{}, fmt.Errorf("crmagents: write landed but read-back failed: %w", err)
 	}
 	return newWireRecord(ctx, rec), nil
+}
+
+// AdvancedDealRecord is what advance_deal answers: the deal as it now stands
+// and the probability the move set from the new stage.
+type AdvancedDealRecord struct {
+	wireRecord
+	ProbabilityNote string `json:"probability_note,omitempty"`
 }

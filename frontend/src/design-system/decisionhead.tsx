@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
 import {
+  SummaryFields,
+  type SummaryParts,
+  type SummaryWords,
+  summarySentence,
+} from "./approvalsummary";
+import {
   type DecisionDiff,
   type DecisionDisplay,
   type DecisionDraft,
@@ -7,6 +13,7 @@ import {
   draftOf,
   type PayloadField,
   restFields,
+  withoutRepeatedLead,
 } from "./decisioncard.payload";
 import type { DecisionApproval } from "./decisionstatus";
 import {
@@ -51,6 +58,8 @@ export type DecisionCardLabels = Readonly<{
   showLess?: string;
   /** What there is none of: a proposal whose payload carries nothing to read. */
   noContent: string;
+  /** The labels of the fields a summary lists under its sentence. */
+  summaryWords: SummaryWords;
   // What the card's body is waiting for, spoken while it waits. It sits beside
   // noContent because both answer one question for the two states of an absent
   // body. The card knows neither state; only the screen does.
@@ -90,11 +99,31 @@ type PayloadReading = Readonly<{
 export function readPayload(
   approval: DecisionApproval,
   layout: "deck" | "row",
-  display: readonly DecisionDisplay[],
+  declared: readonly DecisionDisplay[],
 ): PayloadReading {
   const change = approval.proposed_change ?? {};
-  const draft = draftOf(change);
-  const diffs = diffsOf(change);
+  // A field the kind declares is drawn as declared. The draft reading must not
+  // take it again as a drafted message.
+  const owned = new Set(declared.map((entry) => entry.field));
+  const read = draftOf(change);
+  const draft = {
+    subject: owned.has("subject") ? null : read.subject,
+    body: owned.has("body") ? null : read.body,
+  };
+  // The headline and the summary are already on the card; a lead that only
+  // repeats either is not drawn again.
+  const display = withoutRepeatedLead(
+    withoutRepeatedLead(declared, summarySentence(approval)),
+    cardName(approval, draft),
+  );
+  const comparisons = display.flatMap((entry) =>
+    entry.comparison
+      ? [{ field: entry.field, label: entry.label, ...entry.comparison }]
+      : [],
+  );
+  const diffs = display.some((entry) => entry.comparison !== undefined)
+    ? comparisons
+    : diffsOf(change);
   // The lead survives both layouts: the one sentence explaining why a decision
   // is in front of somebody is the thing a row is most missing.
   const lead = display.find((entry) => entry.lead)?.value ?? null;
@@ -103,10 +132,12 @@ export function readPayload(
   // keys made a queue unreadable, which is why it stays for an undeclared kind.
   // A declared list is at most four short labelled rows. Suppressing them cost
   // the reader what they were asked about. The Worklist shows one decision at a
-  // time, and its close-date card showed the reason with no proposed date.
+  // time, and its close-date card showed the reason with no proposed date. The
+  // full declaration decides it, so dropping a repeated lead keeps a kind
+  // declared rather than turning it raw.
   const rest =
-    layout === "deck" || display.length > 0
-      ? restFields(change, draft, diffs, display)
+    layout === "deck" || declared.length > 0
+      ? restFields(change, draft, diffs, declared)
       : [];
   return {
     draft,
@@ -160,6 +191,7 @@ export function DecisionHead({
   provenance,
   confidence,
   compact,
+  listed,
 }: Readonly<{
   approval: DecisionApproval;
   draft: DecisionDraft;
@@ -171,9 +203,12 @@ export function DecisionHead({
   confidence?: ConfidenceLevel;
   /** One line: the question first, its qualifiers after it. */
   compact?: boolean;
+  /** The summary's fields the card's body does not draw already. */
+  listed?: SummaryParts;
 }>) {
   const named = cardName(approval, draft);
-  const headline = named ?? approval.summary ?? null;
+  const sentence = summarySentence(approval);
+  const headline = named ?? sentence;
   const chips = (
     <div className="dcard-meta">
       {meta}
@@ -215,9 +250,8 @@ export function DecisionHead({
           {headline}
         </p>
       )}
-      {named && approval.summary && (
-        <p className="approval-why">{approval.summary}</p>
-      )}
+      {named && sentence && <p className="approval-why">{sentence}</p>}
+      <SummaryFields parts={listed} words={labels.summaryWords} />
     </>
   );
 }

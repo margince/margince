@@ -26,11 +26,10 @@ type Store struct {
 	// now is injected so a summary's staleness and its trailing window are
 	// testable without waiting for the clock to move.
 	now func() time.Time
-	// baseCurrency resolves the installation's reporting currency
-	// (ADR-0090/A135). REQUIRED by the constructor: the mirror converts and
-	// then FREEZES a rate onto rows it will not revisit, so a store that only
-	// looked constructed would write a mistake it cannot take back.
-	baseCurrency BaseCurrencyFunc
+	// rates resolves the installation's reporting currency, the rate in force
+	// on a day, and the conversion. The constructor requires
+	// it, because the mirror freezes a rate onto rows it will not revisit.
+	rates Rates
 	// billingContacts answers who handles this customer's invoices, bound by
 	// compose because the relationship table belongs to contacts. Nil in an
 	// installation that has not wired it, which serves the card without the
@@ -49,14 +48,13 @@ type BaseCurrencyFunc func(context.Context, pgx.Tx) (string, error)
 // NewStore binds the store to the pool every tenant read runs through.
 // NewStore opens this module's store on a handle already bound to the
 // workspace it serves.
-func NewStore(db *database.DB, baseCurrency BaseCurrencyFunc) *Store {
-	return &Store{db: db, now: time.Now, baseCurrency: baseCurrency}
+func NewStore(db *database.DB, rates Rates) *Store {
+	return &Store{db: db, now: time.Now, rates: rates}
 }
 
-// WithClock replaces the store's clock. Tests only: a summary that reads
-// "stale" is a function of the wall clock, and a test that waited for one
-// would be a test that sometimes fails.
-func (s *Store) WithClock(now func() time.Time) *Store {
+// SetClock replaces the store's clock, for tests. Whether a summary reads
+// "stale" depends on the clock, and a test must not wait for it.
+func (s *Store) SetClock(now func() time.Time) *Store {
 	s.now = now
 	return s
 }

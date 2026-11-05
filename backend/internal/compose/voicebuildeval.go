@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -43,6 +44,8 @@ const (
 // A ceiling and no floor: the held-out mail brings questions but none of the
 // facts that answer them, and a word floor over a factless reply is filled
 // with invented reasons. Each built-voice call states its own length.
+//
+// Carries no draftrules.Shared; exemptFromSharedRules says why and when that ends.
 const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
 	"Length: at most two or three short paragraphs, under 140 words — as long as the answers need, never padded to a length.\n" +
 	voiceDraftFactsAndShape
@@ -83,7 +86,7 @@ type voiceEvaluationResult struct {
 	Classification string
 	Action         string
 	StatusCode     string
-	ReviewReasons  []string
+	Reasons        []crmcontracts.VoiceReviewReason
 }
 
 // splitVoiceHeldOut deterministically reserves up to voiceEvalHeldOutPrompts
@@ -221,8 +224,8 @@ type voiceEvalDraft struct {
 // times, and a model asked the byte-identical question three times has every
 // reason to answer it identically three times.
 //
-//promptlang:exempt an eval harness reproducing one member's writing voice from their own samples; the sample decides the language and a rule of ours would measure the wrong thing
-//promptvoice:exempt an eval harness measuring how closely drafts match one member's own writing samples; imposing our register would measure the wrong thing.
+//promptlang:exempt an eval harness reproducing one member's writing voice from their own samples; the sample decides the language and a rule of ours would measure the wrong thing; lapses if the eval scores correspondence rules or supplies a recipient and conversation state
+//promptvoice:exempt an eval harness measuring how closely drafts match one member's own writing samples; imposing our register would measure the wrong thing; lapses if the eval scores correspondence rules or supplies a recipient and conversation state.
 func voiceEvalDraftRequest(personality string, artifact ai.VoiceArtifact, sample ai.VoiceSample, repeat int) model.Request {
 	// One fence per call, so the profile block and the excerpt are bounded by
 	// the marker THIS call's system prompt names.
@@ -277,14 +280,14 @@ func readVoiceEvalDraft(text string) (voiceEvalDraftReply, error) {
 // evaluateVoiceCandidate drafts against the held-out prompts and scores the
 // candidate. Every model error bubbles unwrapped so the worker can map
 // budget deferral onto the build row.
-func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string, heldOut []ai.VoiceSample, predecessor *ai.VoiceProfileVersion) (voiceEvaluationResult, error) {
+func (said voiceCopy) evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.VoiceArtifact, personality string, heldOut []ai.VoiceSample, predecessor *ai.VoiceProfileVersion) (voiceEvaluationResult, error) {
 	if len(heldOut) == 0 {
 		// A starter corpus barely over the build floor cannot spare held-out
 		// samples. The builder's own validation already ran; a FIRST profile
 		// activates as the starter voice, while an unevaluable REBUILD of an
 		// existing profile goes to review — never silently replacing an
 		// evaluated artifact with an unevaluated one.
-		return unevaluatedVoiceResult(artifact, predecessor), nil
+		return said.unevaluatedVoiceResult(artifact, predecessor), nil
 	}
 	drafts := make([]voiceEvalDraft, 0, len(heldOut)*voiceEvalRepeatsPerPrompt)
 	hardFailures := 0
@@ -331,7 +334,7 @@ func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.Vo
 			drafts[base+i].score = round4(0.5*proximity + 0.5*judged)
 		}
 	}
-	return scoreVoiceCandidate(artifact, drafts, hardFailures, structuredValid, predecessor), nil
+	return said.scoreVoiceCandidate(artifact, drafts, hardFailures, structuredValid, predecessor), nil
 }
 
 // voiceEvalJudgeSchema is the judge's answer: a list of scores.

@@ -36,13 +36,29 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readActivity(ctx, tx, id, archived)
+		out, err = readActivityAt(ctx, tx, id, archived, s.now())
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
-// activitySortFields is what a caller may order the timeline by: the four
+// GetActivityTx is GetActivity inside a caller-opened transaction, with the
+// catalog answer threaded in.
+func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, active CustomColumns) (crmcontracts.Activity, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	out, err := readActivityAt(ctx, tx, id, archived, s.now())
+	if err != nil {
+		return out, err
+	}
+	return out, withCustomValuesOf(ctx, tx, active.cols, &out)
+}
+
+// activitySortFields is what a caller may order the timeline by: the five
 // instants an activity carries, and nothing else.
 //
 // They are the axes a timeline HAS. `kind`, `direction` and the rest are
@@ -53,21 +69,24 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 // subject of the issue behind this.
 var activitySortFields = map[string]storekit.SortField{
 	"occurred_at": storekit.Column(storekit.KindTimestamp),
-	"due_at":      storekit.Column(storekit.KindTimestamp),
+	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v2", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueSQL("a"), nil }},
 	"created_at":  storekit.Column(storekit.KindTimestamp),
 	"updated_at":  storekit.Column(storekit.KindTimestamp),
+	"remind_at":   storekit.Column(storekit.KindTimestamp),
 }
 
-// The two orders this read takes when the caller names none.
+// The orders this read takes when the caller names none.
 //
 // Newest-first is the timeline. The task queue orders by the date the work is
 // OWED rather than the date it was logged: a cap applied over the wrong order
 // keeps the tasks most recently filed, and capping this one keeps the tasks
 // nearest their deadline — which is what a page capped at a dozen can actually
 // afford to drop.
+// Due reminders lead with the latest to come due.
 const (
 	defaultTimelineSort = "-occurred_at"
 	dueQueueSort        = "due_at"
+	reminderQueueSort   = "-remind_at"
 )
 
 // requestPriorityOrder is the ONE order this read still builds by hand, and it
@@ -106,7 +125,7 @@ func TimelineCursor(ctx context.Context, last crmcontracts.Activity) (string, er
 // they gave one, else the default this narrowing implies.
 func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int) (*storekit.ListSort, error) {
 	if in.Sort != nil && *in.Sort != "" {
-		if in.RequestReviewAsOf != nil {
+		if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 			return nil, &storekit.SortError{
 				Code:    storekit.CodeSortUnsupported,
 				Message: "the request queue is ordered by what is owed and when it arrived, and cannot be re-ordered",
@@ -115,7 +134,10 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 		return storekit.ParseListSort(ctx, in.Sort, activitySortFields, arg)
 	}
 	spec := defaultTimelineSort
-	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
+	switch {
+	case in.RemindersDue:
+		spec = reminderQueueSort
+	case in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil:
 		spec = dueQueueSort
 	}
 	return storekit.ParseListSort(ctx, &spec, activitySortFields, arg)
@@ -136,122 +158,71 @@ var errRequestReviewWithCursor = errors.New("activities: a recency cursor cannot
 // ListActivities is the timeline read: newest first, optionally scoped to
 // one entity through activity_link (the indexed 360-view join).
 func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]crmcontracts.Activity, storekit.Page, error) {
+	if in.AsOf == nil {
+		in.AsOf = new(s.now())
+	}
+	asReminderQueue(ctx, &in)
 	var activities []crmcontracts.Activity
 	var page storekit.Page
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		// The colleague-domain snapshot for THIS read, taken beside the rows it
-		// judges. ListActivitiesTx cannot take it itself: it is a free function
-		// for a caller that already holds a transaction, so it has no seam to
-		// ask — and a composite record read that carries none simply excludes
-		// no sender, which is the same open default WithOwnDomains documents.
-		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
-			return err
-		}
-		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
-			return err
-		}
-		if in.WaitingReply && in.WaitingReplyAsOf == nil {
-			asOf := s.now()
-			in.WaitingReplyAsOf = &asOf
-		}
-		// Measured only when the waiting filter is actually asked for. Every
-		// activity list runs through here, and the spread is a percentile over
-		// a year — a scan no read that never mentions waiting should pay for.
-		if in.WaitingReplyAsOf != nil {
-			if in.horizonDays, err = s.waitingHorizonFor(ctx, tx); err != nil {
-				return err
-			}
-		}
-		activities, page, err = ListActivitiesTx(ctx, tx, in)
+	var err error
+	if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+		activities, page, err = s.ListActivitiesIn(ctx, tx, in)
 		return err
 	})
 	return activities, page, err
 }
 
-// ListActivitiesTx is ListActivities for a caller that already opened a
-// transaction — the composite record read, whose timeline section must
-// describe the same instant as its sibling sections. Same gate, same
-// ordering; only the transaction is borrowed.
-func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([]crmcontracts.Activity, storekit.Page, error) {
+// ListActivitiesPositioned is ListActivities that also answers, for each row,
+// the cursor that resumes the list after it. A caller merging this list with
+// another stops between any two rows and resumes there.
+func (s *Store) ListActivitiesPositioned(
+	ctx context.Context, in ListActivitiesInput,
+) ([]crmcontracts.Activity, []string, storekit.Page, error) {
+	positions := []string{}
+	in.positions = &positions
+	rows, page, err := s.ListActivities(ctx, in)
+	return rows, positions, page, err
+}
+
+// ListActivitiesIn is ListActivities inside a caller-opened transaction. in.Columns
+// is the caller's to fill, from a catalog it reads on that transaction.
+func (s *Store) ListActivitiesIn(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) (activities []crmcontracts.Activity, page storekit.Page, err error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	// The record the timeline was narrowed TO is gated before it is filtered
-	// on. The scope below is an ANY-LINK rule, so an activity linked to both a
-	// visible contact and a lead the caller may not read passes it — and
-	// filtering on that lead's id would then answer "this lead exists, and here
-	// is what happened on it" to someone with no right to either fact.
-	if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
+	if in.AsOf == nil {
+		in.AsOf = new(s.now())
+	}
+	// The colleague-domain snapshot for this read, taken beside the rows it
+	// judges. ListActivitiesTx is a free function with no store to ask. A
+	// composite record read that carries none excludes no sender, the open
+	// default WithOwnDomains documents.
+	if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if in.WithinProjectID != nil {
-		if err := RequireProjectScope(ctx, tx, *in.WithinProjectID); err != nil {
+	if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	if in.ConversationOf != nil {
+		if in.conversationDomain, err = s.correspondenceDomainTx(ctx, tx, *in.ConversationOf); err != nil {
 			return nil, storekit.Page{}, err
 		}
 	}
-	limit := storekit.ClampLimit(in.Limit)
-	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
-	if err != nil {
-		return nil, storekit.Page{}, err
+	if in.WaitingReply && in.WaitingReplyAsOf == nil {
+		asOf := s.now()
+		in.WaitingReplyAsOf = &asOf
 	}
-	order := sorted.OrderBy()
-	if in.RequestReviewAsOf != nil {
-		order = requestPriorityOrder
-	}
-
-	rows, err := tx.Query(ctx,
-		`SELECT `+activityColumns(content)+sorted.CursorKeySuffix()+
-			` FROM activity a WHERE `+strings.Join(where, " AND ")+
-			order+sprintf(" LIMIT %d", limit+1),
-		waitingListArgs(in, args)...)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	// Collected rather than streamed: attachLinks runs a second query on
-	// this same transaction, which needs the cursor already closed.
-	type pagedRow struct {
-		activity crmcontracts.Activity
-		key      *string
-	}
-	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
-		activity, key, err := scanActivityPage(row, sorted)
-		return pagedRow{activity, key}, err
-	})
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	activities := make([]crmcontracts.Activity, 0, len(paged))
-	for _, row := range paged {
-		activities = append(activities, row.activity)
-	}
-	var page storekit.Page
-	if len(activities) > limit {
-		activities = activities[:limit]
-		if in.RequestReviewAsOf == nil {
-			last := activities[limit-1]
-			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
-			if err != nil {
-				return nil, storekit.Page{}, err
-			}
-			page = storekit.Page{HasMore: true, NextCursor: next}
+	// Measured only when the waiting filter is asked for. The spread is a
+	// percentile over a year, a scan no other list should pay for.
+	if in.WaitingReplyAsOf != nil {
+		if in.horizonDays, err = s.waitingHorizonFor(ctx, tx, *in.WaitingReplyAsOf); err != nil {
+			return nil, storekit.Page{}, err
 		}
-		// Else: the request queue's order is hand-built and no cursor can
-		// continue it (requestPriorityOrder says why), so it reports no
-		// resumable page rather than a HasMore a caller has no way to act on.
-		// Rows beyond the cap still exist; CountOpenForViewer answers how many.
 	}
-	// What came with each message, on the same transaction and in one
-	// statement — the batching rule attachLinks above already follows.
-	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := attachLinks(ctx, tx, activities); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if activities == nil {
-		activities = []crmcontracts.Activity{}
-	}
-	return activities, page, nil
+	return ListActivitiesTx(ctx, tx, in)
 }
 
 // readActivity is the module's ONE single-row activity read, and it
@@ -271,7 +242,17 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	return readActivityRow(ctx, tx, id, archived)
+	return readActivityRow(ctx, tx, id, archived, time.Now())
+}
+
+// readActivityAt is readActivity judging awaiting_outcome at asOf, the store's
+// clock or the write's recordedAt, for a row a caller is answered with. Neither
+// wraps the other: gates/restrictedreaders_test.go credits a probe one call deep.
+func readActivityAt(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
+	if err := auth.EnsureActivityVisible(ctx, tx, id.UUID); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivityRow(ctx, tx, id, archived, asOf)
 }
 
 // readHeldActivity is readActivity for a caller in lockActivityForWrite's
@@ -286,20 +267,29 @@ func readActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived st
 // that would answer the wrong one. gates/restrictedreaders_test.go's
 // call-graph walk credits it through lockActivityForWrite's own
 // restricted_at check one hop away, rather than through a waiver entry.
-func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
-	return readActivityRow(ctx, tx, id, archived)
+func readHeldActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
+	return readActivityRow(ctx, tx, id, archived, asOf)
 }
 
 // readActivityRow is the SELECT + scan + link attachment readActivity and
 // readHeldActivity share; it carries no row-scope gate of its own, so every
 // caller composes one first.
-func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
+func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter, asOf time.Time) (crmcontracts.Activity, error) {
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	content, err := auth.ActivityAudienceArm(ctx, "a", arg)
+	audience, err := auth.ActivityAudienceArm(ctx, "a", arg)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	// Content answers to availability as well as audience. readActivity's own
+	// DISCOVER gate folds restricted_at in, so this adds nothing there.
+	//
+	// readHeldActivity skips that gate, so this term is what withholds there.
+	// Without it, write authority over a held row's audience reads that row's
+	// text back from a write.
+	//
+	// The hold says no principal reads restricted content.
+	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
 	q := `SELECT ` + activityColumns(content) + ` FROM activity a WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
@@ -312,10 +302,8 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
-		return crmcontracts.Activity{}, err
-	}
-	if err := attachLinks(ctx, tx, one); err != nil {
+	// No columns: each caller fills the custom values with the catalog it read.
+	if err := FinishActivityRows(ctx, tx, CustomColumns{}, one, asOf); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachColleagues(ctx, tx, &one[0]); err != nil {
@@ -324,7 +312,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	return one[0], nil
 }
 
-// attachLinks fills the contract's links[] on a page of activities in ONE
+// AttachLinks fills the contract's links[] on a page of activities in one
 // query — the column the timeline's "via" chips and the per-contact filter
 // read. Batched rather than per-row because the timeline reads a page at a
 // time.
@@ -336,7 +324,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 // deal on the same thread — to a caller who cannot read them. A link whose
 // target is out of scope is dropped, so links[] answers "what this is about,
 // as far as you can see".
-func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
+func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activity) error {
 	if len(activities) == 0 {
 		return nil
 	}
@@ -348,7 +336,7 @@ func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	}
 	args := []any{activityIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return err
 	}
@@ -429,12 +417,19 @@ func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 // of the rows it counts, and a number that moved when a colleague captured a
 // contact the reader may not see would disclose that contact.
 func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (int, error) {
+	if in.AsOf == nil {
+		in.AsOf = new(s.now())
+	}
+	asReminderQueue(ctx, &in)
 	var total int
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-			return err
+	var err error
+	if len(in.CustomFilters) > 0 {
+		if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
+			return 0, err
 		}
-		if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
+	}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := requireActivityListScope(ctx, tx, in); err != nil {
 			return err
 		}
 		var err error
@@ -444,10 +439,11 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
-		if in.WithinProjectID != nil {
-			if err := RequireProjectScope(ctx, tx, *in.WithinProjectID); err != nil {
-				return err
-			}
+		if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+			return err
+		}
+		if in.WithOutsideParty {
+			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {

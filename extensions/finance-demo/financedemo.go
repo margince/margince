@@ -10,6 +10,9 @@
 // same. Its provider is `offline_demo` on every row and on the
 // card, because a figure a reader cannot tell from a real one is worse than
 // none.
+//
+// Its OAuth app is the reference for an OAuthApp. Its vendor is a reserved
+// example host, so an admin who connects it lands on a failure, not a vendor.
 package financedemo
 
 import (
@@ -35,6 +38,13 @@ func New() extension.Extension {
 			Check:       check,
 			Customers:   customers,
 			InvoicesFor: invoicesFor,
+		}},
+		OAuthApps: []extension.OAuthApp{{ //nolint:gosec // G101: TokenURL is an endpoint address, not a credential
+			Provider: "offline_demo",
+			Title:    "Demo accounting sign-in (example only, cannot connect)",
+			AuthURL:  "https://auth.ledger.example/authorize",
+			TokenURL: "https://auth.ledger.example/token",
+			Scopes:   []string{"ledger.read"},
 		}},
 	}
 }

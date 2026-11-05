@@ -1,12 +1,20 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import { en, type MessageKey } from "../src/i18n/en";
-import { SETTINGS_PAGES } from "../src/screens/settingscatalog";
+import { SETTINGS_PAGES } from "../src/lib/settingscatalog";
 import { meFixture } from "../src/testing/mefixture";
 import { copy } from "./copy";
+import {
+  CALLED_CONTACT,
+  loggedCall,
+  loggedNote,
+  PRIMARY_PHONE,
+  taskFromCall,
+  typedTask,
+} from "./mockapi/calls";
 import { anna, mockApi } from "./seed";
-import { openedAt, pageOverflow, textsOf } from "./waits";
+import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
 
 /**
  * Settle the page's motion before measuring the colours it paints.
@@ -159,7 +167,7 @@ const CORE_SCREENS = [
   "analytics",
   "settings",
   // Settings is many pages behind one route (SETTINGS_PAGES in
-  // screens/settingscatalog.ts), and a bare `settings` resolves to Account —
+  // lib/settingscatalog.ts), and a bare `settings` resolves to Account,
   // the shortest of them. Sweeping that alone and calling settings covered is
   // how the widest page in the product went unmeasured: `fields` carries two
   // full list surfaces with their own toolbars, `integrations` four
@@ -196,17 +204,14 @@ async function expectSettingsViewLanded(page: Page, view: string) {
     return;
   }
   const tab = view.slice("settings/".length);
-  // The trail rather than the settings nav level, because the nav level is not
-  // there at 390px — the rail becomes a phone bar and the tabs go with it, and
-  // an assertion that reads the rail passes vacuously on the one viewport this
-  // sweep exists for. The trail's current crumb names the tab at every width.
-  //
-  // The expected wording comes from the catalog under the SAME key the nav
-  // builds its label from, so this is not a second copy of the tab names.
+  // The page heading, because the nav level and the trail both leave a phone
+  // bar. The heading is named by the tab at every width, its switcher included.
+  // The expected wording comes from the catalog key the nav labels the tab with,
+  // so this is not a second copy of the tab names.
   await expect(
-    page.locator(".crumbs-current"),
+    page.locator(".pagetitle").getByRole("heading"),
     `#/${view} did not land on the ${tab} tab — the address fell back, so this sweep measured a page it never opened`,
-  ).toHaveText(de[`settings.tab.${tab}` as MessageKey]);
+  ).toHaveAccessibleName(de[`settings.tab.${tab}` as MessageKey]);
 }
 
 /**
@@ -344,7 +349,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   const heading = page.getByRole("heading", { level: 1 });
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText("Anna Weber");
-  await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
+  await expect(page.locator(".record-split-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
   await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");
@@ -397,22 +402,27 @@ test("AC-shell-3: ⌘K does nothing while a dialog is up", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
+test("AC-shell-7: the top bar's search opens the palette, and Enter on a row closes it for good", async ({
+  page,
+}) => {
   await page.goto("/#/home");
+  const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
   // input taking one here is exactly what this criterion forbids.
   await expect(topbar.locator("input")).toHaveCount(0);
   await topbar.locator(".topbar-search").click();
-  await expect(
-    page.getByRole("searchbox", { name: "Befehlspalette" }),
-  ).toBeVisible();
+  await expect(input).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
   await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
     primaryDestinations.length,
   );
+  await input.fill("Pipeline");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#\/deals$/);
+  await expect(input).toHaveCount(0);
 });
 
 // The account menu carries what belongs to the CONTACT rather than to the page:
@@ -431,12 +441,20 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
-    menu.getByRole("menuitem", { name: "Einstellungen" }),
-  ).toHaveAttribute("href", "#/settings");
+    menu.getByRole("menuitem", { name: "Einstellungen", exact: true }),
+  ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
-  ).toHaveAttribute("href", "#/settings/meetings");
-  await expect(menu.locator("a[href]")).toHaveCount(2);
+  ).toHaveAttribute("href", "/#/settings/meetings");
+  // The head is the third link: the seat's own page, named by who it is for.
+  await expect(
+    menu.getByRole("menuitem", {
+      name: new RegExp(
+        `^${de["shell.accountSettingsAria"].replace("{who}", ".+")}$`,
+      ),
+    }),
+  ).toHaveAttribute("href", "/#/settings/account");
+  await expect(menu.locator("a[href]")).toHaveCount(3);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three
@@ -451,6 +469,35 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await expect(choices.getByRole("radio", { name: "Dunkel" })).toBeChecked();
 });
 
+// Help and feedback is a submenu of real menu items, and the shortcuts it opens
+// are a dialog. Both are swept by axe in the state a reader reaches them in.
+test("help and feedback and the keyboard shortcuts meet AA", async ({
+  page,
+}) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  await accountTrigger(page).click();
+  const help = page
+    .locator(".topbar [role='menu']")
+    .first()
+    .getByRole("menuitem", { name: de["shell.helpMenu"] });
+  await help.press("ArrowRight");
+  const submenu = page.getByRole("menu", { name: de["shell.helpMenu"] });
+  await expect(submenu.getByRole("menuitem").first()).toBeFocused();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — help and feedback");
+
+  await submenu
+    .getByRole("menuitem", { name: de["shell.help.shortcuts"] })
+    .click();
+  const dialog = page.getByRole("dialog", { name: de["shell.help.shortcuts"] });
+  await expect(dialog).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — keyboard shortcuts");
+  await page.keyboard.press("Escape");
+  await expect(accountTrigger(page)).toBeFocused();
+});
+
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
@@ -462,16 +509,22 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   // locales ship, so the control is a list rather than a toggle — a toggle
   // cannot say where the next click lands.
   await page.goto("/#/settings/account");
-  // The panel the language row sits in.
+  // A card title on the page, so the check below reads chrome the language
+  // control does not draw itself.
   await expect(
-    page.getByRole("heading", { name: de["settings.preferencesTitle"] }),
+    page.getByRole("heading", { name: de["account.signInCard"] }),
   ).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
+  // The pick waits in the page's save bar; the language turns once it is saved.
+  await page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true })
+    .click();
   // The surface around the control follows the choice, not just the control's
   // own face: every word on it is rendered from the catalog that just changed.
   await expect(
-    page.getByRole("heading", { name: en["settings.preferencesTitle"] }),
+    page.getByRole("heading", { name: en["account.signInCard"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Language" })).toBeVisible();
 });
@@ -487,12 +540,10 @@ test("features/10 §7: Settings → Account offers language and appearance", asy
 }) => {
   await page.goto("/#/settings/account");
   await expect(
-    page.getByRole("heading", { name: de["settings.preferencesTitle"] }),
+    page.getByRole("heading", { name: de["account.browserCard"] }),
   ).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Sprache" })).toBeVisible();
-  await expect(
-    page.getByRole("combobox", { name: "Darstellung" }),
-  ).toBeVisible();
+  await expect(page.getByRole("group", { name: "Darstellung" })).toBeVisible();
 });
 
 /**
@@ -966,6 +1017,31 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
 });
 
+// A stage busier than one column's page reads its next page from its own Load
+// more, and no other column reads or offers one.
+test("AC-pipeline-12: a busy stage's column loads its next page on its own", async ({
+  page,
+}) => {
+  test.skip(Boolean(process.env.BASE_URL), "it reads the busy-stage mock");
+  await mockApi(page, { busyStage: true });
+  await page.goto("/#/deals");
+  const qualify = page.locator('[data-stage="s1"]');
+  // The head states the report's count over every deal, not the page's cards.
+  await expect(qualify.locator(".board-col-count .optioncount")).toHaveText(
+    "31",
+  );
+  // The seeded Qualify deal and thirty more: 31, of which a page reads 25.
+  const cards = qualify.locator("[data-deal]");
+  await expect(cards).toHaveCount(25);
+  const loadMore = page.getByRole("button", { name: "Mehr laden" });
+  await expect(loadMore).toHaveCount(1);
+
+  await qualify.getByRole("button", { name: "Mehr laden" }).click();
+
+  await expect(cards).toHaveCount(31);
+  await expect(loadMore).toHaveCount(0);
+});
+
 test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
   page,
 }) => {
@@ -981,13 +1057,9 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await card.dragTo(won);
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
 
-  // The first Confirm is REFUSED, and that is the criterion rather than a
-  // detour: this deal carries no signed contract, and a win without paper has
-  // to say how it was won (deals/deal_advance.go's ensureWinEvidence). The
-  // reason panel is deliberately not shown before the refusal — a win the
-  // paperwork already explains stays one click, because a field every rep must
-  // fill is a field every rep fills with the same lie.
-  await page.getByRole("button", { name: "Bestätigen" }).click();
+  // This deal has no signed contract, and a win without one has to say how it
+  // was won. So the dialog asks before Confirm and not after a refusal. A deal
+  // with its contract is never asked.
   await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
   // Still nothing has run: the drop is not applied while the dialog is open.
   await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
@@ -1000,27 +1072,10 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
-// The decision queue lives on Today now, one decision at a time: the focus lane
-// draws the staged proposal through the same ApprovalRow the retired Decisions
-// screen used, so the verb a contact presses is unchanged and this asserts it
-// where a contact now finds it.
-test("AC-inbox: the staged decision is on the day's queue", async ({
+test("AC-inbox: the staged decision is in the Decisions view", async ({
   page,
 }) => {
-  await page.goto("/#/worklist");
-  // The queue shows the decision by the sentence the SERVER composed for it,
-  // not by its kind: the old lane drew "E-Mail senden" from the kind label,
-  // and a queue that has to rank things across producers names each one by
-  // what it actually is. Answering it stays the approvals surface's own job,
-  // so the verbs are asserted where they live rather than here.
-  // That the decision is ANSWERABLE here is the claim worth making, so this
-  // asserts the verb rather than the text.
-  //
-  // The verb is "Entscheiden" and not a verdict: a decision is answered in a
-  // drawer now, so the queue draws the way IN to the answer rather than the
-  // answers themselves (AC-WORKLIST-SDR-03, which walks the drawer and asserts
-  // the verdicts inside it). Asserting "Übernehmen" here would be asserting the
-  // shape the row deliberately stopped having.
+  await page.goto("/#/home?queue=1&queue_view=decisions");
   await expect(
     page.getByText(/Send the follow-up to Anna Weber/).first(),
   ).toBeVisible();
@@ -1153,10 +1208,11 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Agent passports are a credential the COLLEAGUE holds, so they live on the
-  // "Your agents" entry beside autonomy and the tool catalog — not on the
-  // company's AI page, which is spend, model prices and automations.
+  // Passports are a credential the COLLEAGUE holds, so they live on AI access,
+  // behind "For developers": a reader connecting an AI tool never meets one.
   await page.goto("/#/settings/agents");
+  await expect(page.getByText("Marcus' Claude", { exact: true })).toBeHidden();
+  await page.getByText(de["aiAccess.dev.title"], { exact: true }).click();
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
   // A revoked passport can do nothing more, so it waits behind a toggle.
   await expect(page.getByText("Alter Runner")).toHaveCount(0);
@@ -1324,11 +1380,61 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
 
+test("AC-create-3: a company created with a domain offers the contacts on it, none ticked", async ({
+  page,
+}) => {
+  // A reader who may link contacts to a company, which the shared admin is not.
+  await page.route(/\/v1\/me$/, (route) =>
+    route.fulfill({
+      json: meFixture({
+        allow: {
+          company: ["read", "create", "update"],
+          contact: ["read", "update"],
+          relationship: ["read", "create"],
+        },
+      }),
+    }),
+  );
+  await page.goto("/#/companies");
+  await page.getByRole("button", { name: de["create.company"] }).click();
+  await page
+    .getByLabel(`${de["create.displayName"]} *`)
+    .fill("Nordlicht Logistik GmbH");
+  await page.getByRole("button", { name: de["field.addDomain"] }).click();
+  await page
+    .getByLabel(`${de["field.domain"]} *`)
+    .fill("nordlicht-logistik.example");
+  await page.getByRole("button", { name: "Erstellen", exact: true }).click();
+  await expect(page).toHaveURL(/#\/companies\/o-new$/);
+
+  const dialog = page.getByRole("dialog", {
+    name: de["co.domainContacts.dialogTitle"],
+  });
+  const ticks = dialog.getByRole("checkbox");
+  await expect(ticks).toHaveCount(2);
+  await expect(dialog.getByRole("checkbox", { checked: true })).toHaveCount(0);
+  await expect(
+    dialog.getByRole("button", { name: de["co.domainContacts.linkNone"] }),
+  ).toBeDisabled();
+
+  await dialog.getByRole("checkbox", { name: /Anja Petersen/ }).check();
+  const sent = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith("/companies/o-new/link-contacts"),
+  );
+  await dialog
+    .getByRole("button", { name: copy(de["co.domainContacts.link_one"]) })
+    .click();
+  expect((await sent).postDataJSON()).toEqual({ contact_ids: ["p-anja"] });
+  await expect(dialog).toBeHidden();
+});
+
 test.describe("§3.8: 390px mobile", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   for (const screen of CORE_SCREENS) {
-    test(`nothing scrolls sideways at 390px on #/${screen}`, async ({
+    test(`nothing scrolls sideways or hides at 390px on #/${screen}`, async ({
       page,
     }) => {
       await page.goto(`/#/${screen}`);
@@ -1342,6 +1448,7 @@ test.describe("§3.8: 390px mobile", () => {
       // Named offenders rather than a count: a bare number tells whoever broke
       // this that something is 169px too wide and nothing about what.
       expect(await pageOverflow(page)).toEqual([]);
+      expect(await listClipping(page)).toEqual([]);
     });
   }
 
@@ -1353,6 +1460,33 @@ test.describe("§3.8: 390px mobile", () => {
     await expectShellRendered(page);
     await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
     expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("the More menu opens above the bar and meets AA at 390px", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    const more = page.locator("nav.rail .railmore");
+    await more.click();
+    const menu = page.locator("nav.rail .railmenu");
+    await expect(menu).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await settleAnimations(page);
+    const menuBox = await menu.boundingBox();
+    const barBox = await page.locator("nav.rail").boundingBox();
+    expect(menuBox).not.toBeNull();
+    expect(barBox).not.toBeNull();
+    expect((menuBox?.y ?? 0) + (menuBox?.height ?? 0)).toBeLessThan(
+      barBox?.y ?? 0,
+    );
+    expect(await pageOverflow(page)).toEqual([]);
+    await expectNoAaViolations(page, "home, More menu open");
+
+    await more.click();
+    await expect(menu).toHaveCount(0);
+    await expect(more).toBeFocused();
   });
 
   // The palette is a full-height SHEET at this width — a 560px box floated at
@@ -1423,10 +1557,10 @@ test.describe("§3.8: 390px mobile", () => {
       // below the fold — a measurement of the wrong control is a green that
       // means nothing.
       //
-      // `btn-primary` is how the queue marks the one emerald verb. Where a row
-      // draws none — an inline decision offers several equal answers — the
-      // LOWEST control is measured instead, because a row is only workable
-      // when the reader can reach all of it.
+      // `btn-primary` is how the queue marks the one accent verb. An inline
+      // decision offers several equal answers and draws none. There the
+      // lowest control is measured, because a row works only when the reader
+      // can reach all of it.
       //
       // Read off the ROW, never from a list of the containers it groups its
       // verbs into. A selector naming those is a claim about which groups
@@ -1475,7 +1609,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("AC-WORKLIST-SDR-03: a decision is answered in a drawer, not in the row", async ({
     page,
   }) => {
-    await page.goto("/#/worklist");
+    await page.goto("/#/home?queue=1&queue_view=decisions");
     await page.waitForLoadState("networkidle");
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
@@ -1583,8 +1717,9 @@ test.describe("§3.8: 390px mobile", () => {
     test("the day's queue is workable with a thumb at 390px", async ({
       page,
     }) => {
-      await page.goto("/#/worklist");
+      await page.goto("/#/home?queue=1&queue_view=decisions");
       await page.waitForLoadState("networkidle");
+      await settleAnimations(page);
       await expect(
         page.getByText(/Send the follow-up to Anna Weber/).first(),
       ).toBeVisible();
@@ -2837,7 +2972,7 @@ test.describe("filters and views", () => {
       "Branche",
       "Lebenszyklus",
       "Tag",
-      "Zuständig",
+      "Verantwortlich",
       // The custom field, and it sorts after the core ones — a reader scanning
       // for a column they added finds it in one place rather than interleaved.
       "fleet size",
@@ -2908,23 +3043,21 @@ test.describe("filters and views", () => {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
     await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(2);
 
-    // The join is the word between two conditions, and it is the switch: one
-    // group has one join, so pressing it flips the group.
+    // The join is the word between two conditions, and it is the switch for
+    // that word alone.
     const matchAll = page.getByRole("button", {
-      name: de["filters.connector.matchAll"].replace(
-        "{word}",
-        de["filters.join.and"],
-      ),
+      name: de["filters.connector.and"]
+        .replace("{word}", de["filters.join.and"])
+        .replace("{other}", de["filters.join.or"]),
       exact: true,
     });
     await expect(matchAll).toHaveCount(1);
     await matchAll.click();
     await expect(
       page.getByRole("button", {
-        name: de["filters.connector.matchAny"].replace(
-          "{word}",
-          de["filters.join.or"],
-        ),
+        name: de["filters.connector.or"]
+          .replace("{word}", de["filters.join.or"])
+          .replace("{other}", de["filters.join.and"]),
         exact: true,
       }),
     ).toHaveCount(1);
@@ -2943,11 +3076,8 @@ test.describe("filters and views", () => {
     ]);
     await page.keyboard.press("Escape");
 
-    // And nesting: from two conditions, More offers a group of the other join,
-    // arriving with a condition in it — what mixing AND with OR needs.
-    await page
-      .getByRole("button", { name: de["filters.rowsMore"], exact: true })
-      .click();
+    // Nesting: "Add a group" adds a group of the other join with one condition
+    // in it. That is how a filter mixes "and" with "or".
     await page
       .getByRole("button", { name: de["filters.addGroup"], exact: true })
       .click();
@@ -2980,9 +3110,18 @@ test.describe("filters and views", () => {
     await expect(
       page.getByRole("cell", { name: "Kessler Fahrzeugbau", exact: true }),
     ).toBeVisible();
+    // The LABEL the screen renders, not the code the filter was authored with.
+    // The industry cell reads through `industryWords`. Naming the code here
+    // passes only while that column is untranslated.
     await expect(
-      page.getByRole("cell", { name: "automotive", exact: true }),
+      page.getByRole("cell", { name: "Automobilindustrie", exact: true }),
     ).toHaveCount(2);
+    // Counting the rows is what holds "every row satisfies the predicate".
+    // Naming an absent industry does not hold it on its own. `logistics` is not
+    // one of INDUSTRY_CODES, so it renders as the raw code and the name
+    // matches. A row carrying a real code renders as its wording, and the name
+    // would miss it.
+    await expect(page.getByRole("row")).toHaveCount(3);
     await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption that keeps the page honest: 812 match and two are shown, so
     // the reader is told this is a sample rather than the selection.
@@ -3375,4 +3514,148 @@ test.describe("an archived contact opens read-only", () => {
       );
     });
   }
+});
+
+test.describe("calling a contact", () => {
+  const tel = `tel:${PRIMARY_PHONE}`;
+  const callVerb = (scope: Page | Locator) =>
+    scope.getByRole("link", { name: de["record.verb.call"], exact: true });
+
+  test("the number in the details dials the primary of two numbers", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}`);
+    await expectShellRendered(page);
+    await expect(
+      page.locator(".record-aside").locator(`a[href="${tel}"]`),
+    ).toBeVisible();
+  });
+
+  test("a contact with no number offers no Call at all", async ({ page }) => {
+    await page.goto("/#/contacts/p-anna");
+    await expectShellRendered(page);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: de["contact.action.call"], exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", {
+        name: de["contact.action.call"],
+        exact: true,
+      }),
+    ).toHaveCount(0);
+  });
+
+  test("on the Overview a logged call offers Call back and a note does not", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}`);
+    await expectShellRendered(page);
+    const call = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedCall.subject });
+    const note = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedNote.subject });
+    await expect(callVerb(call)).toHaveAttribute("href", tel);
+    await expect(note).toBeVisible();
+    await expect(callVerb(note)).toHaveCount(0);
+    await settleAnimations(page);
+    await expectNoAaViolations(page, `contacts/${CALLED_CONTACT}`);
+  });
+
+  test("on History a logged call offers Call back and a note does not", async ({
+    page,
+  }) => {
+    await page.goto(`/#/contacts/${CALLED_CONTACT}/timeline`);
+    await expectShellRendered(page);
+    const call = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedCall.subject });
+    const note = page
+      .getByRole("listitem")
+      .filter({ hasText: loggedNote.subject });
+    await expect(callVerb(call)).toHaveAttribute("href", tel);
+    await expect(note).toBeVisible();
+    await expect(callVerb(note)).toHaveCount(0);
+    await settleAnimations(page);
+    await expectNoAaViolations(page, `contacts/${CALLED_CONTACT}/timeline`);
+  });
+
+  test.describe("a task on the contact, opened from Home", () => {
+    test.beforeEach(async ({ page }) => {
+      await mockApi(page, { callTasks: true });
+    });
+
+    async function openTask(page: Page, subject: string) {
+      await page.goto("/#/home");
+      await expectShellRendered(page);
+      await page
+        .getByRole("button", { name: new RegExp(`^${de["brief.queue.show"]}`) })
+        .click();
+      const opener = page.getByRole("button", { name: subject, exact: true });
+      await opener.click();
+      const dialog = page.getByRole("dialog", { name: subject });
+      await expect(dialog).toBeVisible();
+      return { opener, dialog };
+    }
+
+    test("a task from a call offers Call, Draft email and Open contact, in tab order", async ({
+      page,
+    }) => {
+      const { opener, dialog } = await openTask(page, taskFromCall.subject);
+      const call = callVerb(dialog);
+      const email = dialog.getByRole("button", {
+        name: de["task.next.draftEmail"],
+        exact: true,
+      });
+      const open = dialog.getByRole("link", {
+        name: de["task.next.openContact"],
+        exact: true,
+      });
+      await expect(call).toHaveAttribute("href", tel);
+      await expect(email).toBeVisible();
+      await expect(open).toHaveAttribute(
+        "href",
+        `/#/contacts/${CALLED_CONTACT}`,
+      );
+      await settleAnimations(page);
+      await expectNoAaViolations(page, "home (task from a call open)");
+
+      await dialog.locator("a[href], button:not([disabled])").first().focus();
+      for (let press = 0; press < 12; press += 1) {
+        if (await call.evaluate((node) => node === document.activeElement)) {
+          break;
+        }
+        await page.keyboard.press("Tab");
+      }
+      await expect(call).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(email).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(open).toBeFocused();
+
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(opener).toBeFocused();
+    });
+
+    test("a task typed by hand offers Draft email and Open contact but no Call", async ({
+      page,
+    }) => {
+      const { dialog } = await openTask(page, typedTask.subject);
+      await expect(
+        dialog.getByRole("link", { name: de["task.next.openContact"] }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByRole("button", {
+          name: de["task.next.draftEmail"],
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(callVerb(dialog)).toHaveCount(0);
+    });
+  });
 });

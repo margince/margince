@@ -21,17 +21,19 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // SignatureMaxRunes bounds a signature. What one is FOR is a name, a role and a
 // way to reach the sender; past this it is a document riding on every message
 // the contact sends.
-const SignatureMaxRunes = 2000
+const SignatureMaxRunes = signature.MaxRunes
 
 // SignatureFieldMaxRunes bounds the title and the phone a template fills in.
 const SignatureFieldMaxRunes = 120
@@ -39,45 +41,85 @@ const SignatureFieldMaxRunes = 120
 // SignatureTemplateMaxRunes bounds the workspace's signature template.
 const SignatureTemplateMaxRunes = 4000
 
-// SignatureTemplate is the workspace's signature layout, set by an admin. Empty
-// means none: each sender signs with their own plain-text signature.
-var SignatureTemplate = settings.Define[string](
-	"contacts.signature_template", "installation_settings", "update", "",
-	func(template string) error {
+// SignatureTemplate is the workspace layout used after personal HTML.
+var SignatureTemplate = config.DefineStored(config.Spec[string]{
+	Key:  "contacts.signature_template",
+	Env:  "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE",
+	Type: config.String,
+	Validate: func(template string) error {
 		if len([]rune(template)) > SignatureTemplateMaxRunes {
 			return fmt.Errorf("the template is at most %d characters", SignatureTemplateMaxRunes)
 		}
 		return nil
 	},
-).MachineryApplied() // the send path applies it to the sender's own sign-off
+	Doc: "Workspace email signature template, used when the sender has no personal HTML; empty means none.",
+}, config.Store{
+	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the send path applies it to the sender's own sign-off
+})
 
 // EmailSignature is the caller's sign-off as the settings tab shows it.
 type EmailSignature struct {
-	// Body empty means none written; the send path then closes with a plain
-	// greeting and the member's name instead.
+	// Body is the plain fallback after personal HTML and the workspace template.
 	Body string
+	HTML string
 	// Title and Phone fill the workspace template's placeholders.
 	Title, Phone string
-	// TemplateActive says the workspace has a template, which then replaces
-	// Body on every send.
+	// TemplateActive says the caller's mail has a template for when they have no
+	// personal HTML: their legal entity's own, or the workspace's.
 	TemplateActive bool
 	UpdatedAt      *time.Time
 }
 
 // SaveSignatureInput is what the caller writes about their own sign-off.
-// A nil Title or Phone leaves the stored value as it is.
+// A nil optional field leaves its stored value unchanged.
 type SaveSignatureInput struct {
-	Body         string
-	Title, Phone *string
+	Body               string
+	Title, Phone, HTML *string
 }
 
-// SenderSignature is what a send needs to sign as the caller: their own text,
-// their template values, and the workspace's template.
+// SenderSignature is what a send needs to sign as the caller. That is their own
+// text and markup, their template values, and their legal entity's template.
 type SenderSignature struct {
-	Body, Title, Phone, Template string
-	// LogoKey is the stored object of the workspace's own logo, empty when it
+	Body, HTML, Title, Phone, Template string
+	// Imprint is the legal notice of the sender's entity, empty when it has none.
+	Imprint string
+	// LogoKey is the stored object of the sender's entity logo, empty when it
 	// has none. A send stages this key, so a retry embeds the same picture.
 	LogoKey string
+}
+
+// signingEntity is what the legal entity a user works for gives their mail:
+// its template, falling back to the workspace's, and its imprint and logo.
+type signingEntity struct {
+	template, imprint string
+	// logoKey is set only on a further entity. The default entity wears the
+	// company logo, which the send reads through the company grant.
+	logoKey   string
+	isDefault bool
+}
+
+func signingEntityTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (signingEntity, error) {
+	workspace, err := config.StoredApplyTx(ctx, tx, config.Bound(), SignatureTemplate)
+	if err != nil {
+		return signingEntity{}, err
+	}
+	entityID, err := UserLegalEntity(ctx, tx, ids.From[ids.UserKind](user))
+	if err != nil {
+		return signingEntity{}, err
+	}
+	entity, err := ResolveEntityIdentity(ctx, tx, entityID)
+	if err != nil {
+		return signingEntity{}, err
+	}
+	out := signingEntity{template: workspace, imprint: deref(entity.Imprint), isDefault: entity.IsDefault}
+	if own := strings.TrimSpace(deref(entity.SignatureTemplate)); own != "" {
+		out.template = own
+	}
+	if !entity.IsDefault {
+		out.logoKey = deref(entity.LogoObjectKey)
+	}
+	return out, nil
 }
 
 // GetMyEmailSignature reads the caller's own signature. A member who has never
@@ -90,15 +132,15 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 	}
 	var out EmailSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		template, err := settings.ApplyTx(ctx, tx, SignatureTemplate)
+		entity, err := signingEntityTx(ctx, tx, actor.UserID)
 		if err != nil {
 			return err
 		}
-		out.TemplateActive = strings.TrimSpace(template) != ""
+		out.TemplateActive = strings.TrimSpace(entity.template) != ""
 		err = tx.QueryRow(ctx, `
-			SELECT body, title, phone, updated_at FROM email_signature
+			SELECT body, html, title, phone, updated_at FROM email_signature
 			 WHERE owner_id = $1 AND archived_at IS NULL`, actor.UserID).
-			Scan(&out.Body, &out.Title, &out.Phone, &out.UpdatedAt)
+			Scan(&out.Body, &out.HTML, &out.Title, &out.Phone, &out.UpdatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -110,11 +152,7 @@ func (s *Store) GetMyEmailSignature(ctx context.Context) (EmailSignature, error)
 	return out, nil
 }
 
-// SaveMyEmailSignature upserts the caller's own row.
-//
-// An empty body CLEARS it: a member emptying the field means "sign off with
-// the plain closing", not "leave what was there". The row survives the clearing so the
-// audit trail keeps both sides of the change.
+// SaveMyEmailSignature saves each supplied field; an omitted optional field keeps its value.
 func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput) (EmailSignature, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
@@ -124,7 +162,12 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 	if len([]rune(trimmed)) > SignatureMaxRunes {
 		return EmailSignature{}, &SignatureTooLongError{Field: "body", Max: SignatureMaxRunes, Runes: len([]rune(trimmed))}
 	}
-	title, phone := trimmedField(in.Title), trimmedField(in.Phone)
+	title, phone, markup := trimmedField(in.Title), trimmedField(in.Phone), trimmedField(in.HTML)
+	if markup != nil {
+		if err := signature.ValidateHTML(*markup); err != nil {
+			return EmailSignature{}, err
+		}
+	}
 	for _, field := range []struct {
 		name  string
 		value *string
@@ -134,17 +177,14 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 		}
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockSignatureWriterTx(ctx, tx, actor.UserID); err != nil {
+			return err
+		}
 		before, err := readSignatureTx(ctx, tx, actor.UserID)
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO email_signature (owner_id, body, title, phone)
-			VALUES ($1, $2, coalesce($3::text, ''), coalesce($4::text, ''))
-			ON CONFLICT (owner_id) DO UPDATE SET body = $2,
-			  title = coalesce($3::text, email_signature.title),
-			  phone = coalesce($4::text, email_signature.phone), archived_at = NULL`,
-			actor.UserID, trimmed, title, phone); err != nil {
+		if err := upsertSignatureTx(ctx, tx, actor.UserID, trimmed, title, phone, markup); err != nil {
 			return err
 		}
 		// A signature goes out under the sender's name on every message they
@@ -156,18 +196,28 @@ func (s *Store) SaveMyEmailSignature(ctx context.Context, in SaveSignatureInput)
 		// sign-off changed rather than what somebody's home address is, and the
 		// audit log is read by more contacts than the signature is.
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", actor.UserID,
-			map[string]any{"has_signature": before != ""},
-			map[string]any{"has_signature": trimmed != ""})
+			map[string]any{"has_signature": before.Body != "", "has_html_signature": before.HTML != ""},
+			map[string]any{"has_signature": trimmed != "", "has_html_signature": savedHTML(before.HTML, markup) != ""})
 		if err != nil {
 			return err
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, actor.UserID,
-			crmcontracts.PublicEventEmailSignatureChanged{HasSignature: trimmed != ""})
+			crmcontracts.PublicEventEmailSignatureChanged{HasSignature: trimmed != "" || savedHTML(before.HTML, markup) != ""})
 	})
 	if err != nil {
 		return EmailSignature{}, fmt.Errorf("contacts: saving the caller's email signature: %w", err)
 	}
 	return s.GetMyEmailSignature(ctx)
+}
+
+func upsertSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID, body string, title, phone, markup *string) error {
+	_, err := tx.Exec(ctx, `INSERT INTO email_signature (owner_id, body, title, phone, html)
+ VALUES (@owner,@body,coalesce(@title::text,''),coalesce(@phone::text,''),coalesce(@html::text,''))
+ ON CONFLICT (owner_id) DO UPDATE SET body=EXCLUDED.body,
+ title=coalesce(@title::text,email_signature.title), phone=coalesce(@phone::text,email_signature.phone),
+ html=coalesce(@html::text,email_signature.html), archived_at=NULL`,
+		pgx.NamedArgs{signatureOwnerArg: userID, "body": body, fieldTitle: title, fieldPhone: phone, "html": markup})
+	return err
 }
 
 // SignatureFor reads one user's signature for the send path.
@@ -185,15 +235,17 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 		return SenderSignature{}, apperrors.ErrPermissionDenied
 	}
 	var out SenderSignature
+	var entity signingEntity
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		template, err := settings.ApplyTx(ctx, tx, SignatureTemplate)
+		var err error
+		entity, err = signingEntityTx(ctx, tx, userID)
 		if err != nil {
 			return err
 		}
-		out.Template = template
+		out.Template, out.Imprint = entity.template, entity.imprint
 		err = tx.QueryRow(ctx, `
-			SELECT body, title, phone FROM email_signature
-			 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&out.Body, &out.Title, &out.Phone)
+			SELECT body, html, title, phone FROM email_signature
+			 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&out.Body, &out.HTML, &out.Title, &out.Phone)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -202,8 +254,14 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 	if err != nil {
 		return SenderSignature{}, fmt.Errorf("contacts: reading the sender's email signature: %w", err)
 	}
-	// Read even with no template stored, so a preview of an unsaved one shows
-	// the logo too. A seat that may not read companies signs without it.
+	// A further entity's logo is its own, or none: it never borrows the
+	// company's. Read even with no template stored, so a preview of an unsaved
+	// one shows the logo too.
+	if !entity.isDefault {
+		out.LogoKey = entity.logoKey
+		return out, nil
+	}
+	// A seat that may not read companies signs without the company logo.
 	out.LogoKey, err = s.AnchorLogoKey(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return out, nil
@@ -211,37 +269,26 @@ func (s *Store) SignatureFor(ctx context.Context, userID ids.UUID) (SenderSignat
 	return out, err
 }
 
-func readSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID) (string, error) {
-	var body string
+func readSignatureTx(ctx context.Context, tx pgx.Tx, userID ids.UUID) (EmailSignature, error) {
+	var stored EmailSignature
 	err := tx.QueryRow(ctx, `
-		SELECT body FROM email_signature
-		 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&body)
+		SELECT body, html FROM email_signature
+		 WHERE owner_id = $1 AND archived_at IS NULL`, userID).Scan(&stored.Body, &stored.HTML)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+		return stored, nil
 	}
-	return body, err
+	return stored, err
 }
 
-// SignatureTooLongError names the field and the bar, because a refusal that
-// only says "too long" leaves the member counting characters by hand.
-type SignatureTooLongError struct {
-	Field      string
-	Max, Runes int
+func savedHTML(stored string, updated *string) string {
+	if updated != nil {
+		return *updated
+	}
+	return stored
 }
 
-func (e *SignatureTooLongError) Error() string {
-	return fmt.Sprintf("contacts: a signature's %s is at most %d characters, this one is %d",
-		e.Field, e.Max, e.Runes)
-}
-
-// FieldFault names the offending input for EVERY surface, not just this
-// module's HTTP transport. The MCP tool surface reaches this code through the
-// datasource seam and never through that transport, so a refusal expressed only
-// as a transport branch would reach an agent as an internal fault it was told
-// to retry — retrying a signature that is too long forever.
-func (e *SignatureTooLongError) FieldFault() (field, code, message string) {
-	return e.Field, "too_long", e.Error()
-}
+// SignatureTooLongError is the shared saved-field and draft refusal.
+type SignatureTooLongError = signature.TooLongError
 
 // trimmedField trims a field the caller sent and keeps an omitted one nil.
 func trimmedField(field *string) *string {
@@ -257,4 +304,21 @@ func fieldRunes(field *string) int {
 		return 0
 	}
 	return len([]rune(*field))
+}
+
+const signatureOwnerArg = "owner"
+
+func lockSignatureWriterTx(ctx context.Context, tx pgx.Tx, user ids.UUID) error {
+	// The identity lock also serializes first saves, before a signature row exists.
+	if err := storekit.LockWriteIdentity(ctx, tx, "email_signature", user.String()); err != nil {
+		return err
+	}
+	var live bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user WHERE id=@owner AND `+workforce.LiveMemberSQL("")+`)`, pgx.NamedArgs{signatureOwnerArg: user}).Scan(&live); err != nil {
+		return err
+	}
+	if !live {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }

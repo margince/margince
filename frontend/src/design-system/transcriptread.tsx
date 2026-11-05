@@ -4,14 +4,16 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
+import { worklistKey } from "../lib/workkeys";
 import { Badge, Button, Card, EmptyState, Skeleton } from "./atoms";
 import { Callout } from "./callout";
 import { ErrorLine } from "./errorline";
@@ -47,6 +49,9 @@ function TranscriptReadOutcome({
   report,
 }: Readonly<{ report: TranscriptReadReport }>) {
   const t = useT();
+  // `detail` is phrased for this reader by the server; `status_detail` is the
+  // stored sentence a reading from before carries instead.
+  const detail = report.detail ?? report.status_detail;
   if (report.status === "failed") {
     return (
       <Callout
@@ -54,7 +59,7 @@ function TranscriptReadOutcome({
         kind="event"
         title={t("transcriptread.failedTitle")}
       >
-        {report.status_detail ?? t("transcriptread.failedFallback")}
+        {detail ?? t("transcriptread.failedFallback")}
       </Callout>
     );
   }
@@ -63,12 +68,29 @@ function TranscriptReadOutcome({
     // other arm lists the proposals — a fact about the transcript, not
     // something the card says about itself.
     return (
-      <EmptyState>
-        {report.status_detail ?? t("transcriptread.nothingStated")}
-      </EmptyState>
+      <EmptyState>{detail ?? t("transcriptread.nothingStated")}</EmptyState>
     );
   }
-  return <TranscriptReadProposals ids={report.proposal_ids} />;
+  const mine = ownProposals(report);
+  return (
+    <>
+      {report.detail && <p className="t-caption">{report.detail}</p>}
+      {mine.length > 0 && <TranscriptReadProposals ids={mine} />}
+    </>
+  );
+}
+
+// The proposals this reader decides. One waiting on a colleague is theirs, and
+// its status is not this reader's to read: the server's sentence already says
+// who it was sent to. A reading from before names nobody, so all of its
+// proposals are read as before.
+function ownProposals(report: TranscriptReadReport): string[] {
+  if (report.proposals.length === 0) {
+    return report.proposal_ids;
+  }
+  return report.proposals
+    .filter((proposal) => proposal.asked_of.is_you)
+    .map((proposal) => proposal.id);
 }
 
 // What became of what the reading staged.
@@ -199,9 +221,6 @@ function TranscriptReadPanel({
   activityId,
   readId,
 }: Readonly<{ activityId: string; readId: string }>) {
-  const plural = usePlural();
-  const t = useT();
-  const { locale } = useLocale();
   const reportQuery = useQuery({
     queryKey: ["transcript-read", activityId, readId],
     queryFn: async () => {
@@ -226,6 +245,47 @@ function TranscriptReadPanel({
 
   const report = reportQuery.data;
   const terminal = report.status === "done" || report.status === "failed";
+  return (
+    <TranscriptReadBody
+      report={report}
+      terminal={terminal}
+      activityId={activityId}
+    />
+  );
+}
+
+// Split from the polling component so the refresh below can sit in an effect
+// that runs only once the data exists.
+function TranscriptReadBody({
+  report,
+  terminal,
+  activityId,
+}: Readonly<{
+  report: TranscriptReadReport;
+  terminal: boolean;
+  activityId: string;
+}>) {
+  const plural = usePlural();
+  const t = useT();
+  const { locale } = useLocale();
+  const queryClient = useQueryClient();
+  const status = report.status;
+  const previous = useRef(status);
+  useEffect(() => {
+    const wasWorking =
+      previous.current === "queued" || previous.current === "running";
+    previous.current = status;
+    if (!(wasWorking && status === "done")) {
+      return;
+    }
+    // The reading wrote tasks and findings onto records this card is not told
+    // about. So every cached timeline, 360 first page, task and worklist read is
+    // refreshed; only mounted queries refetch.
+    queryClient.invalidateQueries({ predicate: showsAMessage });
+    queryClient.invalidateQueries({ queryKey: TASK_QUEUE_KEY });
+    queryClient.invalidateQueries({ queryKey: worklistKey });
+    queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
+  }, [status, queryClient, activityId]);
 
   return (
     <div className="transcript-reading">

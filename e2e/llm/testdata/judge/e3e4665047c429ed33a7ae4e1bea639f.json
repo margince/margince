@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names Rhön Hydraulik as the company that was set to target and replaced by prospect, not Emsland Ventilbau as the criterion requires; it says Emsland Ventilbau was still on the default.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced.",
+  "answer": "All four are now prospects and nothing is waiting on you. Rhön Hydraulik was the one somebody had already set, to target, and prospect replaced it. Kieler Pumpenwerk, Altmark Fördertechnik and Emsland Ventilbau were still on the default."
+}

@@ -123,8 +123,8 @@ type ConfirmRef struct {
 // supersession is expiry, exactly as the double-opt-in path does it, so the
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
-func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "")
+func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
+	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, language)
 }
 
 // IssuePrivacyNotice mints the link that tells a contact what is held about
@@ -142,8 +142,25 @@ func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID) 
 // reach a contact who has asked us to stop: the disclosure duty survives that
 // stop, and only CategoryPrivacyNotice survives it in the engine. Before this
 // the duty was owed to exactly those contacts and undeliverable to them.
-func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "")
+func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
+	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane, language)
+}
+
+// PreviewConsentLink uses the mint's recipient and purpose guards without creating a token.
+func (s *Store) PreviewConsentLink(ctx context.Context, contactID ids.ContactID, purposeID ids.PurposeID) (string, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return "", err
+	}
+	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
+		return "", err
+	}
+	var address string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		address, err = admitLinkTx(ctx, tx, linkRequest{contactID: contactID, purposeID: purposeID})
+		return err
+	})
+	return address, err
 }
 
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
@@ -171,7 +188,22 @@ func (s *Store) IssueConsentLink(ctx context.Context, contactID ids.ContactID, p
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress)
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, "")
+}
+
+// IssueBookedConsentLink mints the same double opt-in for the public booking
+// form, which treats an installation that cannot mail as a question not asked.
+//
+// The operator's door refuses instead. A seat pressing a button has made a
+// mistake it can act on. A visitor booking a meeting has not, and the slot they
+// came for cannot be handed back over a checkbox.
+func (s *Store) IssueBookedConsentLink(ctx context.Context, contactID ids.ContactID,
+	purposeID ids.PurposeID, expectedAddress string,
+) (IssuedConfirm, error) {
+	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
+		return IssuedConfirm{}, err
+	}
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane, "")
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
@@ -259,8 +291,24 @@ func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.P
 	return nil
 }
 
-func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string) (IssuedConfirm, error) {
+// mailLanePolicy says what a mint owes an installation that cannot mail the
+// link.
+//
+// The operator doors refuse: the plaintext never leaves the server, so an
+// unsendable link is one nobody can pass on. The booking form does not, and
+// reports the unstaged link as a question not asked.
+type mailLanePolicy bool
+
+const (
+	refuseWithoutMailLane mailLanePolicy = true
+	mintWithoutMailLane   mailLanePolicy = false
+)
+
+func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, language string) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return IssuedConfirm{}, err
+	}
+	if err := requireMailLanguage(language); err != nil {
 		return IssuedConfirm{}, err
 	}
 	token, err := newConfirmToken()
@@ -277,6 +325,8 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 			kind:            kind,
 			purposeID:       purposeID,
 			expectedAddress: expectedAddress,
+			lane:            lane,
+			language:        language,
 			tokenHash:       hashPublicToken(token),
 			link:            s.confirmLink(token),
 		})

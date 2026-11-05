@@ -51,10 +51,9 @@ func identStart(c byte) bool {
 //   - a semicolon inside a value or a comment splits one statement into two,
 //     and the fragment carrying the destruction names no table.
 //
-// A doubled ” inside a string needs no case of its own: the run ends at the
-// first quote, the next character opens a new run, and that one closes where
-// the real one does. Block comments NEST, which Postgres allows and a naive
-// scan to the first `*/` gets wrong.
+// Doubled quotes stay inside the string. Backslashes escape a character only
+// when a standalone E prefix selects PostgreSQL's escape-string grammar.
+// Block comments nest, so the scanner tracks their depth.
 //
 // A run that never closes is reported rather than swallowed, because swallowing
 // it steps over the whole remainder — the under-recognition direction, which
@@ -66,12 +65,8 @@ func identStart(c byte) bool {
 func SQLSpanAt(text string, pos int) (length int, closed bool) {
 	switch {
 	case text[pos] == '\'':
-		for i := pos + 1; i < len(text); i++ {
-			if text[i] == '\'' {
-				return i - pos + 1, true
-			}
-		}
-		return len(text) - pos, false
+		return quotedStringSpan(text, pos, escapeStringPrefix(text, pos))
+
 	case strings.HasPrefix(text[pos:], "--"):
 		if end := strings.IndexByte(text[pos:], '\n'); end >= 0 {
 			return end + 1, true
@@ -109,4 +104,62 @@ func blockCommentSpan(text string, pos int) (length int, closed bool) {
 		}
 	}
 	return len(text) - pos, false
+}
+
+func quotedStringSpan(text string, pos int, escaped bool) (int, bool) {
+	for i := pos + 1; i < len(text); i++ {
+		if escaped && text[i] == '\\' {
+			i++
+			continue
+		}
+		if text[i] == '\'' {
+			if i+1 < len(text) && text[i+1] == '\'' {
+				i++
+				continue
+			}
+			return i - pos + 1, true
+		}
+	}
+	return len(text) - pos, false
+}
+
+func escapeStringPrefix(text string, pos int) bool {
+	if !possibleEscapePrefix(text, pos) {
+		return false
+	}
+	if pos < 2 || text[pos-2] != '$' {
+		return true
+	}
+	// Track completed dollar spans without recursively rescanning earlier strings.
+	dollarEnd := -1
+	for i := 0; i < pos-1; {
+		var length int
+		var closed bool
+		if text[i] == '\'' {
+			escaped := possibleEscapePrefix(text, i) && (i < 2 || text[i-2] != '$' || dollarEnd == i-1)
+			length, closed = quotedStringSpan(text, i, escaped)
+		} else {
+			length, closed = SQLSpanAt(text, i)
+		}
+		if length > 0 {
+			if text[i] == '$' && closed {
+				dollarEnd = i + length
+			}
+			i += length
+		} else {
+			i++
+		}
+	}
+	return dollarEnd == pos-1
+}
+
+func possibleEscapePrefix(text string, pos int) bool {
+	if pos == 0 || (text[pos-1] != 'E' && text[pos-1] != 'e') {
+		return false
+	}
+	if pos == 1 {
+		return true
+	}
+	before := text[pos-2]
+	return !identStart(before) && (before < '0' || before > '9') && before < 128
 }

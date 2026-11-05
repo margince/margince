@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,7 +17,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // EmailRequestTaskSource identifies tasks derived from a confirmed email request.
@@ -24,24 +24,20 @@ const EmailRequestTaskSource = provenance.EmailRequestSource
 
 const automaticRequestHorizonDays = 14
 
-// capture_import proves mailbox delivery, not who was addressed. Participant
-// user IDs are stamped by import too; only addresses or the mapper's To header
-// establish a direct recipient. mailmap.Message.Record prepends the parsed
-// envelope before all sender text; only that captured-email path may use it.
-// Resolve before the waiting scan's bound.
-const emailRequestAssigneeSQL = `SELECT min(u.id::text)::uuid AS user_id FROM capture_import ci
+// emailRequestAssigneeSQL is the reminder's assignee: the mail's sole
+// directly addressed seat (soleDirectSeatSQL), the decision the waiting queue
+// reads, when that seat's own mailbox delivered it. capture_import proves
+// delivery, not who was addressed, so it only confirms the seat.
+func emailRequestAssigneeSQL(identities string) string {
+	return `SELECT DISTINCT u.id AS user_id FROM capture_import ci
       JOIN (SELECT id AS owner_id, app_user.* FROM app_user) u ON u.id = ci.user_id AND %s
-      WHERE ci.activity_id = a.id AND (EXISTS (
-        SELECT 1 FROM activity_participant recipient
-        WHERE recipient.activity_id = a.id AND recipient.role = 'to'
-          AND lower(recipient.address) = lower(u.email))
-		 OR (a.source_system = '` + connector.EmailSourceSystem + `' AND a.captured_by LIKE 'connector:%%' AND a.body LIKE E'From:%%\nTo:%%\n\n%%'
-		   AND lower(split_part(a.body, E'\n', 2)) = 'to: ' || lower(u.email)))
-      HAVING count(DISTINCT u.id) = 1`
+      WHERE ci.activity_id = a.id AND u.id = ` + strings.ReplaceAll(soleDirectSeatSQL(identities), "%", "%%")
+}
 
-// CaptureEmailRequests reconciles recent confirmed requests into undated tasks
-// for their one directly addressed importing seat, and retires the ones it filed
-// whose request has aged past the waiting horizon untouched. Historical and ambiguously
+// CaptureEmailRequests reconciles recent confirmed requests into tasks for
+// their one directly addressed importing seat. A task is due on the day the
+// request states (statedRequestDue) and is otherwise undated. The pass retires
+// the ones it filed whose request has aged past the waiting horizon untouched. Historical and ambiguously
 // addressed requests remain in review; this pass neither assigns them silently
 // nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
@@ -65,11 +61,15 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
-		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL, auth.AssigneeEligibleSQL(actor, "u", arg))
+		identities, err := s.mailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL(actor, "u", arg))
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
 		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
 			outstandingRequestSQL+`
-     AND a.capture_label IS DISTINCT FROM 'noise'
+     AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND a.audience = 'workspace' AND a.restricted_at IS NULL
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
@@ -118,6 +118,13 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID id
 	request, err := emailRequestTask(ctx, tx, source, seat, asOf)
 	if err != nil {
 		return err
+	}
+	due, stated, err := s.statedRequestDue(ctx, tx, source, asOf)
+	if err != nil {
+		return err
+	}
+	if stated {
+		request.DueAt = &due
 	}
 	_, _, err = s.LogActivityTx(ctx, tx, request)
 	return err

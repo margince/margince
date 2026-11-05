@@ -247,6 +247,7 @@ type ModelWait = "always" | "on-miss";
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "GET /activities/{id}/meeting-brief": "always",
   "GET /deals/{id}/status": "on-miss",
+  "GET /deal-rooms/{id}/brief": "always",
   "GET /companies/{id}/brief": "on-miss",
   "GET /companies/{id}/dossier": "on-miss",
   "GET /companies/{id}/growth-fit": "on-miss",
@@ -258,6 +259,9 @@ const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "POST /company/site-reads/{readId}/messages": "always",
   "POST /deals/{id}/role-proposals": "always",
   "POST /filters/propose": "always",
+  "POST /activities/{id}/reader-rendering": "on-miss",
+  "POST /analytics/assessment": "on-miss",
+  "POST /analytics/setup-proposal": "always",
   "POST /knowledge/corpora/{id}/ask": "always",
   "POST /leads/{id}/draft-email": "always",
   "POST /offers/{id}/regenerate": "always",
@@ -333,6 +337,7 @@ function withGatewayProblem(response: Response, request: Request): Response {
       type: "about:blank",
       title: "Gateway",
       status: response.status,
+      // problem-code:client the gateway sent no Problem, so this writes one
       code: "gateway_unavailable",
       detail: "the server did not finish this request",
     }),

@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -98,10 +99,30 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
-	return fmt.Sprintf(`%[3]s AND (coalesce((SELECT bool_or(%[2]s)
+	return fmt.Sprintf(`%[1]s AND (%[2]s OR %[3]s)`,
+		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg))
+}
+
+// activityReachArms is discovery through the row's own links or its attendance.
+func activityReachArms(p principal.Principal, alias string, arg func(any) int) string {
+	return fmt.Sprintf(`coalesce((SELECT bool_or(%[2]s)
 	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
-	   OR %[4]s)`,
-		alias, linkTargetVisible(p, "l", arg), available, activityAttendanceArm(p, alias, arg))
+	   OR %[3]s`,
+		alias, linkTargetVisible(p, "l", arg, everyLinkTarget), activityAttendanceArm(p, alias, arg))
+}
+
+// assignedCommitmentArm lets the holder of a promise's task find it. Every
+// record it is filed under may be private to the mailbox owner, as on a private
+// thread whose message the holder sent. The holder must still find that source
+// message, so the task tells nobody else that it exists. Its content still
+// needs the source's own content gate (activityContentAudienceArm).
+func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) int) string {
+	source := "assigned_source"
+	return fmt.Sprintf(`(%[1]s.source_system = '%[2]s' AND %[1]s.assignee_id = $%[3]d AND EXISTS (
+	   SELECT 1 FROM activity %[4]s WHERE %[4]s.id = %[1]s.source_activity_id
+	      AND %[5]s AND (%[6]s)))`,
+		alias, provenance.CommitmentTaskSource, arg(p.UserID), source,
+		ActivityAvailableClause(source), activityReachArms(p, source, arg))
 }
 
 // activityAttendanceArm is the discovery half of membership: the caller was on
@@ -120,28 +141,54 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 // chosen Kind straight through with no vocabulary check (compose/extingress.go),
 // so "meeting" is a word a caller picks.
 //
-// The two evidenced sources, both of which a caller controls neither half of:
+// The three evidenced sources, none of which a caller writes:
 //
 //   - capture_import, written only after mailboxWasARecipientTx found one of the
 //     seat's OWN exact addresses on the message — the provider delivered it;
 //   - a participant row carrying an address, which is written from a party list
 //     only when the provider itself enumerated it (capture's
 //     ParticipantListAttested). The seat-stamp above carries no address, so the
-//     `address IS NOT NULL` test is what tells the two apart.
+//     `address IS NOT NULL` test is what tells the two apart;
+//   - capture's sender stamp, sent_by_colleague: From is the seat's exact login
+//     address at a trusted own domain, and Gmail passed DMARC for that domain.
+//     DMARC proves the domain and not the mailbox, so another sender of our own
+//     domain could name the seat. That copy then shows the seat only the words
+//     its writer put in it. The arm stays shut until the data task that
+//     re-checked the older stamps has finished (SenderStampsCheckedStep).
 //
 // Content is unaffected: activityAudienceArm keeps the wider membership test, so
 // a seat that may already read a row still reads it. This arm only decides who
 // may learn a row EXISTS through attendance rather than through its links.
 func activityAttendanceArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
-	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
 	   OR EXISTS (SELECT 1 FROM activity_participant ap
-	               WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND ap.address IS NOT NULL))`,
-		alias, me)
+	               WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
+	   OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
+	        WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
+	       AND %[4]s))`,
+		alias, memberIdentitySQL(me), SenderStampsCheckedStep, senderAtOwnDomain(alias))
 }
 
-// activityMembershipArm is the "I was on this" test for CONTENT: the caller's
-// own seat imported the row, or they are stamped as one of its participants.
+// senderAtOwnDomain re-asks at read time that the stamped seat's login address
+// is at a trusted own domain. A domain that stops being ours closes the arm at
+// once. Both sides are folded by the writers, so the SQL compares capture's
+// answer; a row whose fold is not written yet fails closed.
+func senderAtOwnDomain(alias string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM app_user sender
+	   JOIN (%[2]s) own_domain(domain) ON %[3]s
+	  WHERE sender.id = %[1]s.sent_by_colleague)`,
+		alias, TrustedOwnDomainsFoldedSQL, owndomain.CoversSQL("sender.email_domain_folded", "own_domain.domain"))
+}
+
+// SenderStampsCheckedStep is the data task step that re-checks every sender
+// stamp written before capture required a trusted own domain. Its finished
+// run opens the sender arm of activityAttendanceArm.
+const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
+
+// activityMembershipArm is the "I was on this" test for CONTENT. The caller's
+// own seat imported the row, or a participant row that stands
+// (ParticipantStandsSQL) names them.
 //
 // Its discovery counterpart is activityAttendanceArm above, which is narrower by
 // one column and says why. The two are allowed to differ in exactly that
@@ -162,9 +209,9 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 // than about who was present.
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
-	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d))`,
-		alias, me)
+	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
+	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
+		alias, memberIdentitySQL(me), ParticipantStandsSQL("ap", alias))
 }
 
 // ActivityContentClause is the stronger activity gate: discoverable AND the
@@ -190,7 +237,7 @@ func ActivityContentClause(ctx context.Context, alias string, arg func(any) int)
 	}
 	discover := activityDiscoverClause(p, alias, arg)
 	if p.Type == principal.PrincipalSystem {
-		return discover, nil
+		return discover + " AND " + CommitmentContentRetainedClause(alias), nil
 	}
 	return discover + " AND " + activityContentAudienceArm(p, alias, arg), nil
 }
@@ -204,11 +251,15 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
-	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)
-	return own + fmt.Sprintf(` AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`'
-	 OR EXISTS (SELECT 1 FROM activity request_source
-	   WHERE request_source.id = %[1]s.source_activity_id AND request_source.archived_at IS NULL
-	     AND request_source.restricted_at IS NULL AND %[2]s))`, alias, source)
+	source := activityDiscoverClause(p, contentGateSource, arg) + " AND " + activityAudienceArm(p, contentGateSource, arg)
+	sourceID := provenance.TaskSourceActivitySQL(alias)
+	sourceBound := own + fmt.Sprintf(` AND ((coalesce(%[1]s.source_system, '') NOT IN ('`+provenance.EmailRequestSource+`', '`+provenance.CommitmentTaskSource+`', '`+provenance.LeadRepliedSource+`') AND (%[1]s.kind <> 'task' OR %[1]s.source_activity_id IS NULL))
+	 OR EXISTS (SELECT 1 FROM activity %[4]s
+	   WHERE %[4]s.id = %[3]s
+     AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`' OR %[4]s.archived_at IS NULL)
+	     AND %[4]s.restricted_at IS NULL AND %[2]s))`, alias, source, sourceID, contentGateSource)
+	return sourceBound + fmt.Sprintf(" AND (coalesce(%s.source_system, '') <> '%s' OR %s)",
+		alias, provenance.CommitmentTaskSource, commitmentEvidenceArm(p, alias+".source_activity_id", alias+".source_id", arg))
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the
@@ -222,7 +273,7 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 		return "", err
 	}
 	if p.Type == principal.PrincipalSystem {
-		return "TRUE", nil
+		return CommitmentContentRetainedClause(alias), nil
 	}
 	return activityContentAudienceArm(p, alias, arg), nil
 }
@@ -248,19 +299,18 @@ func activityAudienceArm(p principal.Principal, alias string, arg func(any) int)
 	// cc'd on a held thread whose own sync ran second used to fall through to
 	// the participant arm alone, which is a different question (were you on the
 	// mail) from this one (was this your mail).
-	author := arg("%:" + p.UserID.String())
 	teams := arg(p.TeamIDs)
 	// The two membership arms are activityMembershipArm's, composed rather than
 	// repeated: discovery asks the same question of the same two tables, and a
 	// second copy is how one of them gains an arm the other lacks.
 	return fmt.Sprintf(`(%[1]s.audience = 'workspace'
-	   OR %[1]s.captured_by LIKE $%[3]d
 	   OR %[5]s
+	   OR %[4]s
 	   OR (%[1]s.audience = 'selected' AND EXISTS (
 	      SELECT 1 FROM activity_audience_member am WHERE am.activity_id = %[1]s.id
-	        AND ((am.subject_type = 'user' AND am.subject_id = $%[2]d)
-	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[4]d))))))`,
-		alias, me, author, teams, activityMembershipArm(p, alias, arg))
+	        AND ((am.subject_type = 'user' AND am.subject_id IN (%[2]s))
+	          OR (am.subject_type = 'team' AND am.subject_id = ANY($%[3]d))))))`,
+		alias, memberIdentitySQL(me), teams, activityMembershipArm(p, alias, arg), memberAuthorshipSQL(alias, me, arg))
 }
 
 // EnsureActivityVisible is EnsureVisible for activities under the DISCOVER

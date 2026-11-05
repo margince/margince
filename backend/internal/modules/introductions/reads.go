@@ -5,10 +5,10 @@ package introductions
 
 // Reading an ask, and reading the asks about one contact.
 //
-// The refusal is the same on both paths and it is a NOT-FOUND rather than a
-// denial: telling a stranger that the ask exists but is not theirs discloses
-// that this colleague was asked about this contact, which is the fact the row
-// exists to keep.
+// Both paths answer NOT-FOUND rather than a denial. Telling a stranger an ask
+// exists discloses that this colleague was asked about this contact, which is
+// the fact the row exists to keep. The list is also not found for a contact
+// the caller cannot open or one that is not there.
 
 import (
 	"context"
@@ -39,8 +39,17 @@ func (s *Store) load(ctx context.Context, tx pgx.Tx, id ids.UUID) (*Request, err
 	if err != nil {
 		return nil, fmt.Errorf("introductions: reading the ask: %w", err)
 	}
-	if s.roleOf(ctx, &r) == "" {
+	// A recorded introduction is readable by anyone who can read its contact,
+	// its two colleagues included: losing row scope on the contact closes it.
+	// An ask is the two colleagues' alone.
+	if r.Origin != OriginRecorded {
+		if s.roleOf(ctx, &r) != "" {
+			return &r, nil
+		}
 		return nil, apperrors.ErrNotFound
+	}
+	if err := auth.EnsureVisibleExisting(ctx, tx, "contact", r.ContactID); err != nil {
+		return nil, err
 	}
 	return &r, nil
 }
@@ -50,7 +59,7 @@ func (s *Store) load(ctx context.Context, tx pgx.Tx, id ids.UUID) (*Request, err
 // works is the one whose scan happens to line up.
 const requestColumns = `
 	SELECT id, contact_id, requester_user_id, introducer_user_id, route_type,
-	       through_contact_id, internal_reason, value_for_target, forwardable_note,
+	       through_contact_id, internal_reason, origin, recorded_channel, value_for_target, forwardable_note,
 	       note_generated_by, note_ai_generated, fallback_policy, name_drop_allowed,
 	       status, decision_reason, suggested_user_id, source_activity_id,
 	       due_at, requested_at, decided_at, introduced_at, name_dropped_at,
@@ -62,7 +71,7 @@ type row interface{ Scan(dest ...any) error }
 func scanRequest(src row, r *Request) error {
 	return src.Scan(
 		&r.ID, &r.ContactID, &r.RequesterUserID, &r.IntroducerUser, &r.RouteType,
-		&r.ThroughContactID, &r.InternalReason, &r.ValueForTarget, &r.ForwardableNote,
+		&r.ThroughContactID, &r.InternalReason, &r.Origin, &r.RecordedChannel, &r.ValueForTarget, &r.ForwardableNote,
 		&r.NoteGeneratedBy, &r.NoteAIGenerated, &r.FallbackPolicy, &r.NameDropAllowed,
 		&r.Status, &r.DecisionReason, &r.SuggestedUserID, &r.SourceActivityID,
 		&r.DueAt, &r.RequestedAt, &r.DecidedAt, &r.IntroducedAt, &r.NameDroppedAt,
@@ -71,13 +80,10 @@ func scanRequest(src row, r *Request) error {
 
 // roleOf answers which party the caller is, or "" for anybody else.
 //
-// An agent is nobody here, whatever id it carries. A passport presents its
-// granting human's UserID, so matching on the id alone would make a credential
-// a PARTY to its human's asks — reading the request text, the status and the
-// reason somebody gave for refusing. Being lent authority to act is not the
-// same as being the contact whose favour was asked.
+// A user's agent is that user here, because its passport carries their UserID.
+// Automatic work with no passport is nobody, whatever id it carries.
 func (s *Store) roleOf(ctx context.Context, r *Request) Actor {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return ""
 	}
 	actor, ok := principal.Actor(ctx)
@@ -120,9 +126,9 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// The same human arm roleOf states: an id match would make a passport a
-	// party to its human's asks.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A human, or their agent at their word, is a party to their own asks;
+	// automatic work with no passport is a party to none.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
@@ -131,16 +137,21 @@ func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) (
 	}
 	var out []Request
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisibleExisting(ctx, tx, "contact", contactID); err != nil {
+			return err
+		}
 		// Only the asks this caller is party to. A rep browsing a contact does
 		// not learn which of their colleagues has been asked about them and
 		// refused: that is the introducer's answer to give, not the record's.
+		// A recorded introduction is the exception: two colleagues vouched for
+		// it, so every reader of the contact sees it.
 		// The full row, not a summary: the colleague deciding reads the reason
 		// and the note on this payload, and a second round-trip per ask to
 		// fetch what the list already had in hand would be one.
 		rows, err := tx.Query(ctx, requestColumns+`
 			  FROM intro_request
 			 WHERE contact_id = $1 AND archived_at IS NULL
-			   AND (requester_user_id = $2 OR introducer_user_id = $2)
+			   AND (requester_user_id = $2 OR introducer_user_id = $2 OR origin = 'recorded')
 			 ORDER BY requested_at DESC, id DESC
 			 LIMIT $3`, contactID, actor.UserID, limit)
 		if err != nil {
@@ -179,17 +190,14 @@ func (s *Store) AwaitingMyAnswer(ctx context.Context, limit int) ([]Request, err
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// The paragraph below names the agent case, and an id check does not reach
-	// it: a passport carries its granting human's UserID, so this refused a
-	// caller with NO id and admitted the one the sentence is about.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// A user's agent reads its user's queue. Automatic work carries an id that
+	// answers an id check, so the check names who may ask.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return nil, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		// No human, no queue. A caller with no human behind it has nobody
-		// whose favour was asked for, and answering with somebody else's asks
-		// would be handing an agent a colleague's inbox.
+		// A caller with no user behind it has nobody whose favour was asked for.
 		return nil, apperrors.ErrPermissionDenied
 	}
 	var out []Request

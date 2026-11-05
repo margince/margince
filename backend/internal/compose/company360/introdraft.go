@@ -43,8 +43,11 @@ import (
 
 // IntroRequest names the introduction being asked for.
 type IntroRequest struct {
-	// ContactID is the contact to be introduced TO.
-	ContactID ids.ContactID
+	// ContactID is the contact to be introduced TO, or nil for somebody at the
+	// account the colleague has LinkedIn reach into.
+	ContactID *ids.ContactID
+	// Function narrows an ask with no contact to one function there.
+	Function *crmcontracts.LinkedInReachFunction
 	// ViaUserID is the colleague being asked.
 	ViaUserID ids.UserID
 	// DealID is the deal it is for, or the zero value for the account as a
@@ -85,9 +88,9 @@ type introFacts struct {
 func (s *Service) IntroRequestDraft(
 	ctx context.Context, lane Completer, companyID ids.CompanyID, req IntroRequest,
 ) (crmcontracts.CompanyEmailDraft, error) {
-	// Human-only: this spends the workspace's model budget on prose a colleague
-	// will send under their own name.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// It spends the workspace's model budget on prose the user sends under their
+	// own name, so passportless automatic work may not ask for it.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
 	// The colleague being asked is never the reader asking. The routes this
@@ -97,7 +100,7 @@ func (s *Service) IntroRequestDraft(
 	// own sender, written at the workspace's expense. The same rule holds the
 	// ask itself, in introductions.Store.Create.
 	//
-	// RequireHuman above is what refuses a call with nobody behind it, so this
+	// RequireHumanOrItsAgent above is what refuses a call with nobody behind it, so this
 	// branch only answers whether the reader is also the colleague named.
 	if asker, ok := principal.Actor(ctx); ok &&
 		req.ViaUserID == ids.From[ids.UserKind](asker.UserID) {
@@ -112,6 +115,14 @@ func (s *Service) IntroRequestDraft(
 	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
+	}
+	if req.ContactID == nil {
+		return s.accountIntroDraft(ctx, companyID, active, req)
+	}
+	if req.Function != nil {
+		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
+			"company360: a function narrows an ask with no contact named, and this one names a contact: %w",
+			apperrors.ErrInvalidArgument)
 	}
 	var facts introFacts
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
@@ -141,11 +152,11 @@ func (s *Service) introFactsFor(
 	if err != nil {
 		return introFacts{}, err
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, []ids.ContactID{req.ContactID})
+	identity, err := contactIdentity(ctx, tx, companyID, []ids.ContactID{*req.ContactID})
 	if err != nil {
 		return introFacts{}, err
 	}
-	who, known := identity[req.ContactID]
+	who, known := identity[*req.ContactID]
 	if !known {
 		// Not on this account, or not one this caller may see. The two answer
 		// the same, because telling them apart would confirm the contact exists.
@@ -180,7 +191,7 @@ func (s *Service) introFactsFor(
 	// so a German account was being asked in English. What the contact actually
 	// wrote is the signal every other draft here uses, and this read already
 	// has it: the same authorship-bound messages the role reading quotes.
-	said, err := ownWords(ctx, tx, companyID, []ids.ContactID{req.ContactID}, s.now().UTC())
+	said, err := ownWords(ctx, tx, companyID, []ids.ContactID{*req.ContactID}, s.now().UTC())
 	if err != nil {
 		return introFacts{}, err
 	}

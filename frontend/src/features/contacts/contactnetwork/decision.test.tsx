@@ -127,6 +127,7 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
     introducer_display_name: "Sofia Meier",
     route_type: "direct",
     status: "requested",
+    origin: "asked",
     internal_reason: "Renewal conversation",
     name_drop_allowed: false,
     note_generated_by: "human",
@@ -291,5 +292,26 @@ describe("the ways in are counted, and the reader is one of them", () => {
       await screen.findByText(en["contact.intro.stripWhoOwn"]),
     ).toBeTruthy();
     expect(cardOf("2")).toBeTruthy();
+  });
+});
+
+// An ask list that could not be read is not an empty one, so the handoff slot
+// must not say nothing has started.
+describe("the handoff over an unread ask list", () => {
+  it("says it could not be read instead of not started", () => {
+    stubSession();
+    renderStrip({ openUnread: true });
+
+    expect(cardOf(en["contact.intro.handoffUnread"])).toBeTruthy();
+    expect(
+      screen.queryByText(en["contact.intro.handoffNotStarted"]),
+    ).toBeNull();
+  });
+
+  it("says not started when the list was read and holds no ask", () => {
+    stubSession();
+    renderStrip();
+
+    expect(cardOf(en["contact.intro.handoffNotStarted"])).toBeTruthy();
   });
 });

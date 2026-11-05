@@ -1,12 +1,26 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../design-system/heading";
+import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { navigate, useHash } from "../lib/router";
-import { UnsavedGuard, useGuardedLeave, useUnsavedGuard } from "./unsaved";
+import {
+  UnsavedGuard,
+  useBeforeUnload,
+  useGuardedLeave,
+  useUnsavedGuard,
+} from "./unsaved";
 
 afterEach(() => {
   cleanup();
@@ -16,7 +30,10 @@ afterEach(() => {
 // A page with two addresses and a draft on the first one, which is the shape the
 // settings screen has: the content is chosen by an address the sidebar changes,
 // and the draft lives several components below whatever holds the answer.
-function Page({ onKeep }: Readonly<{ onKeep?: (address: string) => void }>) {
+function Page({
+  onKeep,
+  inDialog = false,
+}: Readonly<{ onKeep?: (address: string) => void; inDialog?: boolean }>) {
   const [address, setAddress] = useState("first");
   return (
     <LocaleProvider>
@@ -30,7 +47,10 @@ function Page({ onKeep }: Readonly<{ onKeep?: (address: string) => void }>) {
           onKeep?.(kept);
         }}
       >
-        {(shown) => (shown === "first" ? <DraftCard /> : <p>Second page</p>)}
+        {(shown) => {
+          if (shown !== "first") return <p>Second page</p>;
+          return inDialog ? <DraftDialog /> : <DraftCard />;
+        }}
       </UnsavedGuard>
     </LocaleProvider>
   );
@@ -44,6 +64,23 @@ function DraftCard() {
       Signature
       <input value={typed} onChange={(event) => setTyped(event.target.value)} />
     </label>
+  );
+}
+
+function DraftDialog() {
+  const [open, setOpen] = useState(true);
+  return (
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      labelledBy="d"
+      intent="form"
+    >
+      <Heading size="large" id="d">
+        Signature
+      </Heading>
+      <DraftCard />
+    </Modal>
   );
 }
 
@@ -71,6 +108,29 @@ describe("UnsavedGuard", () => {
       "Jane",
     );
     expect(screen.queryByText("Second page")).toBeNull();
+  });
+
+  it("holds the page for a draft inside a dialog too", async () => {
+    const user = userEvent.setup();
+    render(<Page inDialog />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
+    fireEvent.click(
+      screen.getByRole("button", { name: "go second", hidden: true }),
+    );
+
+    expect(screen.getByText(/Leaving this page discards/)).toBeInTheDocument();
+    expect(screen.queryByText("Second page")).toBeNull();
+  });
+
+  it("lets the page go once the dialog's draft is discarded", async () => {
+    const user = userEvent.setup();
+    render(<Page inDialog />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    expect(screen.getByText("Second page")).toBeInTheDocument();
   });
 
   it("puts the address back when the reader keeps the edit", async () => {
@@ -131,6 +191,108 @@ describe("UnsavedGuard", () => {
     const dirty = new Event("beforeunload", { cancelable: true });
     globalThis.dispatchEvent(dirty);
     expect(dirty.defaultPrevented).toBe(true);
+  });
+});
+
+/** A draft whose page can save it, and optionally a second one it cannot. */
+function SaveablePage({
+  save,
+  lone = false,
+  onKeep,
+}: Readonly<{
+  save: () => Promise<boolean>;
+  lone?: boolean;
+  onKeep?: (address: string) => void;
+}>) {
+  const [address, setAddress] = useState("first");
+  return (
+    <LocaleProvider>
+      <button type="button" onClick={() => setAddress("second")}>
+        go second
+      </button>
+      <UnsavedGuard
+        address={address}
+        onKeep={(kept) => {
+          setAddress(kept);
+          onKeep?.(kept);
+        }}
+      >
+        {(shown) =>
+          shown === "first" ? (
+            <>
+              <SaveableCard save={save} />
+              {lone && <DraftCard />}
+            </>
+          ) : (
+            <p>Second page</p>
+          )
+        }
+      </UnsavedGuard>
+    </LocaleProvider>
+  );
+}
+
+function SaveableCard({ save }: Readonly<{ save: () => Promise<boolean> }>) {
+  const [typed, setTyped] = useState("");
+  useUnsavedGuard(typed !== "", undefined, save);
+  return (
+    <label>
+      Name
+      <input value={typed} onChange={(event) => setTyped(event.target.value)} />
+    </label>
+  );
+}
+
+describe("UnsavedGuard with a save", () => {
+  it("offers Save, Discard and Stay, and moves on once Save has written", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => true);
+    render(<SaveablePage save={save} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    expect(screen.getByRole("button", { name: "Discard" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Stay" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("Second page")).toBeInTheDocument();
+  });
+
+  it("stays on the page and says so when the save is refused", async () => {
+    const user = userEvent.setup();
+    render(<SaveablePage save={async () => false} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(screen.queryByText("Second page")).toBeNull();
+  });
+
+  it("keeps the edit on Stay", async () => {
+    const user = userEvent.setup();
+    const onKeep = vi.fn();
+    render(<SaveablePage save={async () => true} onKeep={onKeep} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+    await user.click(screen.getByRole("button", { name: "Stay" }));
+
+    expect(onKeep).toHaveBeenCalledWith("first");
+    expect(screen.getByRole("textbox", { name: /Name/ })).toHaveValue("Jane");
+  });
+
+  it("offers no Save while a draft it cannot save is also unsaved", async () => {
+    const user = userEvent.setup();
+    render(<SaveablePage save={async () => true} lone />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "J");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Discard changes" }),
+    ).toBeVisible();
   });
 });
 
@@ -242,5 +404,33 @@ describe("useGuardedLeave", () => {
     await user.click(screen.getByRole("button", { name: "keep it" }));
 
     await waitFor(() => expect(window.location.hash).toBe("#/lists/L1"));
+  });
+});
+
+describe("useBeforeUnload", () => {
+  const asked = () => {
+    const event = new Event("beforeunload", { cancelable: true });
+    globalThis.dispatchEvent(event);
+    return event.defaultPrevented;
+  };
+
+  it("asks the window only while its caller holds something unsaved", () => {
+    const view = renderHook(({ dirty }) => useBeforeUnload(dirty), {
+      initialProps: { dirty: false },
+    });
+    expect(asked()).toBe(false);
+
+    view.rerender({ dirty: true });
+    expect(asked()).toBe(true);
+
+    view.rerender({ dirty: false });
+    expect(asked()).toBe(false);
+  });
+
+  it("stops asking once its caller is gone", () => {
+    const view = renderHook(() => useBeforeUnload(true));
+    view.unmount();
+
+    expect(asked()).toBe(false);
   });
 });

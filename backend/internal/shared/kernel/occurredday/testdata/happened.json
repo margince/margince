@@ -1,0 +1,12 @@
+[
+  {"name": "a day note dated today east of UTC, before its stored noon", "kind": "note", "at": "2026-10-22T12:00:00Z", "precision": "day", "now": "2026-10-21T20:00:00Z", "zone": "Pacific/Kiritimati", "happened": true},
+  {"name": "a day meeting dated today east of UTC", "kind": "meeting", "at": "2026-10-22T12:00:00Z", "precision": "day", "now": "2026-10-21T20:00:00Z", "zone": "Pacific/Kiritimati", "happened": false},
+  {"name": "a day meeting dated yesterday east of UTC", "kind": "meeting", "at": "2026-10-21T12:00:00Z", "precision": "day", "now": "2026-10-21T20:00:00Z", "zone": "Pacific/Kiritimati", "happened": true},
+  {"name": "a day meeting dated today west of UTC, after its stored noon", "kind": "meeting", "at": "2026-10-22T12:00:00Z", "precision": "day", "now": "2026-10-22T20:00:00Z", "zone": "America/Los_Angeles", "happened": false},
+  {"name": "a day call dated today west of UTC", "kind": "call", "at": "2026-10-22T12:00:00Z", "precision": "day", "now": "2026-10-22T20:00:00Z", "zone": "America/Los_Angeles", "happened": true},
+  {"name": "a day meeting just after its date ends west of UTC", "kind": "meeting", "at": "2026-10-22T12:00:00Z", "precision": "day", "now": "2026-10-23T08:00:00Z", "zone": "America/Los_Angeles", "happened": true},
+  {"name": "a day note dated tomorrow", "kind": "note", "at": "2026-10-23T12:00:00Z", "precision": "day", "now": "2026-10-22T20:00:00Z", "zone": "America/Los_Angeles", "happened": false},
+  {"name": "an instant meeting at its start", "kind": "meeting", "at": "2026-10-22T09:00:00Z", "precision": "instant", "now": "2026-10-22T09:00:00Z", "zone": "Pacific/Kiritimati", "happened": true},
+  {"name": "an instant meeting a minute before its start", "kind": "meeting", "at": "2026-10-22T09:00:00Z", "precision": "instant", "now": "2026-10-22T08:59:00Z", "zone": "Pacific/Kiritimati", "happened": false},
+  {"name": "an instant email still ahead", "kind": "email", "at": "2026-10-22T09:00:00Z", "precision": "instant", "now": "2026-10-22T08:00:00Z", "zone": "UTC", "happened": false}
+]

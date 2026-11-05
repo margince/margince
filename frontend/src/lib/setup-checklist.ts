@@ -1,0 +1,358 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useState, useSyncExternalStore } from "react";
+import type { components } from "../api/schema";
+import type { ChecklistStepState } from "../design-system/checklist";
+import {
+  isMailbox,
+  VENDOR_SERVICES,
+  vendorOf,
+} from "../format/connectorprovider";
+import { useConnectorState } from "./connector-state";
+import { missingCalendarWriteGrant } from "./connector-status";
+import { type ConnectorsResult, useConnectors } from "./connectors";
+import {
+  liveConnection,
+  passportName,
+  usePassports,
+} from "./passports.queries";
+import { useSchedulingProfile } from "./scheduling-profile-query";
+import type { SettingsPageId, SettingsReach } from "./settingscatalog";
+import { readStored, STORAGE_KEYS, watchStored, writeStored } from "./storage";
+import { useVoiceProfile } from "./voice-profile";
+import {
+  type VoiceBuildFacts,
+  type VoiceSetupState,
+  voiceSetupState,
+} from "./voice-setup";
+
+// The setup checklist the topbar reminder and the settings home both draw.
+// Every step is read off what the product can already see, never stored, so a
+// skipped calendar keeps being asked for until it is connected.
+
+type CaptureConnection = components["schemas"]["CaptureConnection"];
+type Provider = CaptureConnection["provider"];
+type Readiness = ConnectorsResult["providers"][number]["reason"];
+type VoiceProfile = components["schemas"]["VoiceProfile"];
+type SchedulingProfile = components["schemas"]["SchedulingProfile"];
+type PassportSummary = components["schemas"]["PassportSummary"];
+
+export type SetupStepId = "mail" | "calendar" | "ai" | "voice" | "booking";
+
+/** Why an unfinished step reads differently from its plain reason. */
+export type SetupStepReason =
+  /** Mail came from Google or Microsoft and never had a calendar row. */
+  | "skipped"
+  /** The connection expired, or a calendar cannot write the bookings. */
+  | "needsReconnect"
+  /** The mail is IMAP, which carries no calendar. */
+  | "needsVendor"
+  /** No usable company Google or Microsoft app yet. */
+  | "waitsAdmin"
+  /** The booking link offers times from a calendar. */
+  | "needsCalendar";
+
+export type SetupStep = Readonly<{
+  id: SetupStepId;
+  state: ChecklistStepState;
+  /** The settings page the step's one action opens. */
+  page: SettingsPageId;
+  /** Waiting on somebody or something else: the step offers no action. */
+  blocked: boolean;
+  reason: SetupStepReason | null;
+  /** The connection that finished the step, for a caption naming it. */
+  account: Readonly<{ label: string | null; provider: Provider }> | null;
+  /** The voice step's state, or null when its read failed and it is unknown.
+   * Absent on every other step. */
+  voice?: Readonly<{
+    state: VoiceSetupState;
+    build: VoiceBuildFacts | null;
+    /** The server's count of words still missing for a first build. */
+    wordsRemaining: number | null;
+  }> | null;
+  /** The AI tool step's connection, named as the reader approved it, or null
+   *  while none is connected. Absent on every other step. */
+  agent?: Readonly<{ name: string | null }> | null;
+}>;
+
+/** What the reader's reads answered; null where a read was refused or failed.
+ * The voice read reports its failure, because its step stays on the list as
+ * unknown rather than vanishing and letting the rest read as complete. */
+export type SetupReads = Readonly<{
+  acts: ReadonlySet<SettingsPageId>;
+  connectors: ConnectorsResult | null;
+  voice: Readonly<{ profile: VoiceProfile | null }> | "failed" | null;
+  scheduling: SchedulingProfile | null;
+  /** The reader's passports, or null where AI tools cannot connect at all. */
+  passports: readonly PassportSummary[] | null;
+  /** When the passports were read, so a connection expired by then has ended. */
+  now: number;
+}>;
+
+type Draft = Omit<SetupStep, "state"> & Readonly<{ done: boolean }>;
+
+const VENDORS = Object.values(VENDOR_SERVICES);
+const CALENDARS: ReadonlySet<Provider> = new Set<Provider>(
+  VENDORS.map((services) => services.calendar),
+);
+
+function connected(
+  connectors: ConnectorsResult,
+  kind: (provider: Provider) => boolean,
+): CaptureConnection | undefined {
+  return connectors.data.find(
+    (row) => row.status === "connected" && kind(row.provider),
+  );
+}
+
+/** A refusal only an administrator clears, by registering or repairing the
+ *  company's app. */
+export type AdminWait = Extract<Readiness, "app_missing" | "app_unusable">;
+
+// An unusable stored app is the administrator's fix as much as a missing one.
+// The connect step reads this too, so the step and the checklist agree.
+export function waitsOnAdmin(
+  reason: Readiness | undefined,
+): reason is AdminWait {
+  return reason === "app_missing" || reason === "app_unusable";
+}
+
+function draft(
+  id: SetupStepId,
+  page: SettingsPageId,
+  fields: Partial<Pick<Draft, "done" | "blocked" | "reason">> & {
+    connection?: CaptureConnection;
+  } = {},
+): Draft {
+  const { connection, ...rest } = fields;
+  return {
+    id,
+    page,
+    done: connection !== undefined,
+    blocked: false,
+    reason: null,
+    account: connection
+      ? {
+          label: connection.account_label ?? null,
+          provider: connection.provider,
+        }
+      : null,
+    ...rest,
+  };
+}
+
+function expired(
+  connectors: ConnectorsResult,
+  kind: (provider: Provider) => boolean,
+): boolean {
+  return connectors.data.some(
+    (row) => row.status === "reauth_required" && kind(row.provider),
+  );
+}
+
+function mailStep(connectors: ConnectorsResult): Draft | null {
+  const mailbox = connected(connectors, isMailbox);
+  if (mailbox) {
+    return draft("mail", "connections", { connection: mailbox });
+  }
+  const reasons = connectors.providers.map((entry) => entry.reason);
+  if (reasons.includes("ready")) {
+    return draft("mail", "connections", {
+      reason: expired(connectors, isMailbox) ? "needsReconnect" : null,
+    });
+  }
+  // Nothing connects here and no administrator can change that: no step.
+  return reasons.some(waitsOnAdmin)
+    ? draft("mail", "connections", { blocked: true, reason: "waitsAdmin" })
+    : null;
+}
+
+function calendarStep(connectors: ConnectorsResult): Draft | null {
+  const isCalendar = (provider: Provider) => CALENDARS.has(provider);
+  const calendar = connected(connectors, isCalendar);
+  // A read-only grant blocks no time for bookings it cannot write: not done.
+  if (calendar && !missingCalendarWriteGrant(calendar)) {
+    return draft("calendar", "connections", { connection: calendar });
+  }
+  // A vendor's calendar runs on the same company app as its mail.
+  const readiness = VENDORS.map(
+    (services) =>
+      connectors.providers.find((entry) => entry.provider === services.mail)
+        ?.reason,
+  );
+  if (!readiness.includes("ready")) {
+    return readiness.some(waitsOnAdmin)
+      ? draft("calendar", "connections", {
+          blocked: true,
+          reason: "waitsAdmin",
+        })
+      : null;
+  }
+  if (calendar || expired(connectors, isCalendar)) {
+    return draft("calendar", "connections", { reason: "needsReconnect" });
+  }
+  const mailbox = connected(connectors, isMailbox);
+  if (!mailbox) {
+    return draft("calendar", "connections");
+  }
+  const vendor = vendorOf(mailbox.provider);
+  if (!vendor) {
+    return draft("calendar", "connections", { reason: "needsVendor" });
+  }
+  // A calendar disconnected later was not skipped; only a never-had one was.
+  const hadCalendar = connectors.data.some(
+    (row) => row.provider === VENDOR_SERVICES[vendor].calendar,
+  );
+  return draft("calendar", "connections", {
+    reason: hadCalendar ? null : "skipped",
+  });
+}
+
+function voiceStep(voice: NonNullable<SetupReads["voice"]>): Draft {
+  if (voice === "failed") {
+    return { ...draft("voice", "voice"), voice: null };
+  }
+  const state = voiceSetupState(voice.profile);
+  return {
+    ...draft("voice", "voice", { done: state === "active" }),
+    voice: {
+      state,
+      build: voice.profile?.latest_build ?? null,
+      wordsRemaining: voice.profile?.first_build_words_remaining ?? null,
+    },
+  };
+}
+
+function aiStep(passports: readonly PassportSummary[], now: number): Draft {
+  const connection = liveConnection(passports, now);
+  return {
+    ...draft("ai", "agents", { done: connection !== undefined }),
+    agent: connection ? { name: passportName(connection) ?? null } : null,
+  };
+}
+
+function bookingStep(
+  scheduling: SchedulingProfile,
+  calendar: Draft | null,
+): Draft | null {
+  if (scheduling.enabled) {
+    return draft("booking", "meetings", { done: true });
+  }
+  if (calendar === null) {
+    return null;
+  }
+  return calendar.done
+    ? draft("booking", "meetings")
+    : draft("booking", "meetings", { blocked: true, reason: "needsCalendar" });
+}
+
+/** The steps this reader is asked to finish, in the order they are shown. */
+export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
+  const { acts, connectors, voice, scheduling, passports, now } = reads;
+  // A role or seat that cannot capture is never asked to connect anything.
+  const connections =
+    acts.has("connections") &&
+    connectors !== null &&
+    !connectors.notConfigured &&
+    connectors.captureAllowed
+      ? connectors
+      : null;
+  const calendar = connections && calendarStep(connections);
+  const drafts = [
+    connections && mailStep(connections),
+    calendar,
+    acts.has("agents") && passports ? aiStep(passports, now) : null,
+    acts.has("voice") && voice ? voiceStep(voice) : null,
+    acts.has("meetings") && scheduling
+      ? bookingStep(scheduling, calendar)
+      : null,
+  ].filter((step): step is Draft => step !== null);
+
+  // The step to do next is the first one the reader can act on now.
+  const next = drafts.find((step) => !step.done && !step.blocked);
+  return drafts.map(({ done, ...step }) => ({
+    ...step,
+    state: done ? "done" : step.id === next?.id ? "current" : "open",
+  }));
+}
+
+export type SetupChecklist = Readonly<{
+  /** False until every read the steps depend on has answered. */
+  settled: boolean;
+  steps: readonly SetupStep[];
+  done: number;
+  total: number;
+  /** Every read succeeded and every step is done. A failed read drops its
+   *  steps, so the count alone cannot say setup is finished. */
+  complete: boolean;
+  /** The reader hid the reminder for the rest of this sign-in. */
+  hidden: boolean;
+  hide: () => void;
+}>;
+
+function voiceRead(
+  query: ReturnType<typeof useVoiceProfile>,
+): SetupReads["voice"] {
+  if (query.data !== undefined) {
+    return { profile: query.data };
+  }
+  return query.isError ? "failed" : null;
+}
+
+const storedHidden = () => readStored(STORAGE_KEYS.setupReminderHidden) === "1";
+const watchHidden = (changed: () => void) =>
+  watchStored(STORAGE_KEYS.setupReminderHidden, changed);
+
+export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
+  const acts = new Set(reach.acts.map((page) => page.id));
+  // Each read waits for a page that could show its step.
+  const connectors = useConnectors({ enabled: acts.has("connections") });
+  const voice = useVoiceProfile(acts.has("voice"));
+  const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
+  const connector = useConnectorState({ enabled: acts.has("agents") });
+  const aiConnects = acts.has("agents") && connector.data?.enabled === true;
+  const passports = usePassports({
+    enabled: aiConnects,
+    refreshOnReturn: true,
+  });
+  // Every caller reads the one stored flag, so a hide in the top bar holds in
+  // the phone account menu. The local flag keeps a hide where storage is refused.
+  const hiddenStored = useSyncExternalStore(watchHidden, storedHidden);
+  const [hiddenHere, setHiddenHere] = useState(false);
+
+  const asked = [
+    acts.has("connections") && connectors,
+    acts.has("voice") && voice,
+    acts.has("meetings") && scheduling,
+    acts.has("agents") && connector,
+    aiConnects && passports,
+  ];
+  // A refused or failed read drops the steps it feeds rather than claiming
+  // them open. The voice step stays as unknown instead: dropping it could
+  // leave every remaining step done and hide the reminder on a failed read.
+  const steps = deriveSetupSteps({
+    acts,
+    connectors: connectors.data ?? null,
+    voice: voiceRead(voice),
+    scheduling: scheduling.data ?? null,
+    // No step where the installation turned AI connections off.
+    passports: aiConnects ? (passports.data?.data ?? null) : null,
+    now: passports.dataUpdatedAt,
+  });
+  const done = steps.filter((step) => step.state === "done").length;
+  return {
+    settled: asked.every((query) => query === false || !query.isPending),
+    steps,
+    done,
+    total: steps.length,
+    complete:
+      asked.every((query) => query === false || query.isSuccess) &&
+      done === steps.length,
+    hidden: hiddenStored || hiddenHere,
+    hide: () => {
+      writeStored(STORAGE_KEYS.setupReminderHidden, "1");
+      setHiddenHere(true);
+    },
+  };
+}

@@ -35,6 +35,30 @@ type Field struct {
 	// literal that would have bound — recoverable advice either way, and never
 	// the opaque fault an unbindable value used to become.
 	Shape ColumnShape
+	// Domain bounds the values a filter on this field may name.
+	Domain ValueDomain
+	// Label names a field the installation defined, where no built-in name
+	// exists to translate. Empty for every built-in field.
+	Label string
+	// Options are the choices a builder offers for a field with a closed set
+	// of values. Offered, not enforced: a record may still hold a choice an
+	// administrator has since removed.
+	Options []string
+	// Coverage is how many records hold a value in a field the installation
+	// defined. Nil where nobody counted, which every question run leaves it.
+	Coverage *Coverage
+	// Currency is set on a measure kept in each row's own currency, and nil
+	// on every other field.
+	Currency *PerRowCurrency
+	// Period is set on a field whose value is a period bucket's label.
+	Period *PeriodField
+}
+
+// Coverage counts the live records a reader can see, and how many hold a value.
+// A grouping by a sparse field then does not read as complete.
+type Coverage struct {
+	Records   int
+	WithValue int
 }
 
 // ColumnShape is what a column holds — named for the COLUMN because the
@@ -85,6 +109,9 @@ type Entity struct {
 	// answers the same population the prebuilt report does.
 	BaseWhere string
 	Fields    map[string]Field
+	// Contributor is the seat each row is credited to, "" when the entity
+	// names none. The plan counts the seats behind each group from it.
+	Contributor string
 }
 
 // Schema is the whole vocabulary, for one caller.

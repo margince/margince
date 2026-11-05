@@ -17,14 +17,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The section names, spelled once. They are the contract's
@@ -62,6 +63,9 @@ type Service struct {
 	scans ScanRecogniser
 	// lists: the page names the Shortlists the account is on (lists.enabled).
 	lists bool
+	// activities answers the timeline's custom-field columns (WithActivityFields).
+	activities  *activities.Store
+	signalWords signals.SummaryWords
 }
 
 // NewService binds the composite read to the module stores it composes.
@@ -99,6 +103,10 @@ type AssembleOptions struct {
 	// contacts, deals and tags describe the account, not a project, and stay
 	// whole.
 	ProjectID *ids.ProjectID
+	// WrittenByHumanOnly narrows the recent timeline to rows a human wrote
+	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
+	// drafts. The page itself keeps every record.
+	WrittenByHumanOnly bool
 }
 
 // AssembleScoped is Assemble narrowed by opts.
@@ -121,16 +129,27 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 	if err != nil {
 		return crmcontracts.Company360{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
-		if err != nil {
-			return err
-		}
-		out.Company = company
-		if err := opts.admit(ctx, tx, companyID, &out); err != nil {
-			return err
-		}
-		return s.sections(ctx, tx, companyID, now, opts, &out)
+	activityColumns, err := s.activityColumns(ctx)
+	if err != nil {
+		return crmcontracts.Company360{}, err
+	}
+	// One repeatable-read snapshot, so every section reads the same state.
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
+			if err != nil {
+				return err
+			}
+			out.Company = company
+			if err := opts.admit(ctx, tx, companyID, &out); err != nil {
+				return err
+			}
+			prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
+			if err != nil {
+				return err
+			}
+			return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+		})
 	})
 	if err != nil {
 		return crmcontracts.Company360{}, err
@@ -144,8 +163,8 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 // apperrors.ErrPermissionDenied is omitted and named; any other error
 // fails the whole read, because a section that broke for a real reason
 // must never be reported as one the caller may not see.
-func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, out *crmcontracts.Company360) error {
-	a := &assembly{svc: s, ctx: ctx, tx: tx, companyID: companyID, now: now, opts: opts, out: out}
+func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, activityColumns activities.CustomColumns, out *crmcontracts.Company360) error {
+	a := &assembly{svc: s, ctx: ctx, tx: tx, companyID: companyID, now: now, opts: opts, out: out, activityColumns: activityColumns}
 	each := []struct {
 		name crmcontracts.Company360SectionsOmitted
 		read func() error
@@ -170,6 +189,8 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		// grants and the same row scope, so they can see further back than a
 		// truncated section page without ever seeing wider.
 		{sectionSuggestions, a.readSuggestions},
+		// Before moments, which takes its "ours" claims from the same read.
+		{sectionCommitments, a.readOpenCommitments},
 		// After next_steps, whose rows it ranks. See moment.go.
 		{sectionMoments, a.readMoment},
 	}
@@ -200,6 +221,8 @@ type assembly struct {
 	now       time.Time
 	opts      AssembleOptions
 	out       *crmcontracts.Company360
+	// activityColumns fills the timeline section's custom-field values.
+	activityColumns activities.CustomColumns
 
 	// baseCurrency is the installation's reporting currency, resolved at most
 	// ONCE per assembly. It is one installation-wide value, and every section
@@ -208,6 +231,8 @@ type assembly struct {
 	// them (the 360's query budget is what noticed).
 	baseCurrency     string
 	baseCurrencyRead bool
+	readerLanguage   textlang.Lang
+	loc              *time.Location
 
 	contacts      []contacts.ContactStrength
 	contactsRead  bool
@@ -218,8 +243,14 @@ type assembly struct {
 	signalsRead   bool
 	signalsErr    error
 	staged        []crmcontracts.Approval
+	stagedTotal   int
 	stagedRead    bool
 	stagedRefused bool
+
+	ours         []contacts.CompanyCommitment
+	oursComplete bool
+	oursErr      error
+	oursRead     bool
 }
 
 // contactStrengths reads every visible contact's §4 score once per request.
@@ -231,7 +262,7 @@ func (a *assembly) contactStrengths() ([]contacts.ContactStrength, error) {
 	// active-contact count, its reply balance and its single-threaded flag off
 	// these strengths, so an unscoped read put a number computed across every
 	// project under a timeline showing one.
-	contacts, err := contacts.StrengthForCompanyContacts(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
+	contacts, err := companyContactStrengths(a.ctx, a.tx, a.companyID, a.now, a.opts.ProjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -239,24 +270,21 @@ func (a *assembly) contactStrengths() ([]contacts.ContactStrength, error) {
 	return contacts, nil
 }
 
-// pendingApprovals reads the decidable stagings once per request.
-// stagedRefused records a permission refusal so the count half can answer
-// "not counted" without asking again and getting the same refusal.
-func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, bool, error) {
+// pendingApprovals reads the decidable stagings and their exact total once per
+// request. stagedRefused records a permission refusal so the count half can
+// answer "not counted" without asking again and getting the same refusal.
+func (a *assembly) pendingApprovals() ([]crmcontracts.Approval, int, bool, error) {
 	if a.stagedRead {
-		return a.staged, !a.stagedRefused, nil
+		return a.staged, a.stagedTotal, !a.stagedRefused, nil
 	}
-	staged, err := a.svc.approvals.PendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID, approvals.PendingScanCap)
+	pending, err := a.svc.approvals.PendingForTarget(a.ctx, a.tx, entityTypeCompany, a.companyID.UUID)
 	a.stagedRead = true
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		a.stagedRefused = true
-		return nil, false, nil
+	a.stagedRefused = errors.Is(err, apperrors.ErrPermissionDenied)
+	if err != nil && !a.stagedRefused {
+		return nil, 0, false, err
 	}
-	if err != nil {
-		return nil, false, err
-	}
-	a.staged = staged
-	return staged, true, nil
+	a.staged, a.stagedTotal = pending.Approvals, pending.Total
+	return a.staged, a.stagedTotal, !a.stagedRefused, nil
 }
 
 func (a *assembly) readContacts() error {
@@ -310,28 +338,6 @@ func (a *assembly) readDeals() error {
 	return nil
 }
 
-// readTimeline reads the first page of the account's timeline through the
-// activities module's own list, so the section and GET /activities can
-// never disagree about ordering or row scope. Its gate is that list's own
-// auth.Require, which refuses with the same error every other section uses
-// to declare itself omitted.
-func (a *assembly) readTimeline() error {
-	companyUUID := a.companyID.UUID
-	entityType := "company"
-	limit := sectionLimit
-	data, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
-		EntityType:      &entityType,
-		EntityID:        &companyUUID,
-		Limit:           &limit,
-		WithinProjectID: a.opts.ProjectID,
-	})
-	if err != nil {
-		return err
-	}
-	a.out.Activities = &crmcontracts.ActivityListResponse{Data: data, Page: pageInfo(page)}
-	return nil
-}
-
 // suggestionInputsOnce reads the newest message, the open pipeline and the
 // scheduled-task flag ONCE. The state strip and the suggestions are two
 // readings of the same three facts, and reading them twice would let the strip
@@ -356,8 +362,12 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 			if base, a.adviceErr = a.installationBaseCurrency(); a.adviceErr != nil {
 				return a.advice, a.adviceErr
 			}
+			var loc *time.Location
+			if loc, a.adviceErr = a.zone(); a.adviceErr != nil {
+				return a.advice, a.adviceErr
+			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts)
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage(), loc)
 		}
 		a.adviceRead = true
 	}
@@ -370,7 +380,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 // describing different instants.
 func (a *assembly) signalFactsOnce() (signalFacts, error) {
 	if !a.signalsRead {
-		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID)
+		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID, a.now)
 		a.signalsRead = true
 	}
 	return a.signals, a.signalsErr
@@ -388,6 +398,13 @@ func (a *assembly) readNextSteps() error {
 		Data []crmcontracts.Company360NextStep `json:"data"`
 		Page crmcontracts.PageInfo             `json:"page"`
 	}{Data: data, Page: page}
+	hidden, err := hiddenNextStepsExist(a.ctx, a.tx, a.companyID, a.now, a.opts)
+	if err != nil {
+		return err
+	}
+	if hidden {
+		markAttentionWithheld(a.out)
+	}
 	return nil
 }
 
@@ -412,7 +429,7 @@ func (a *assembly) readNextMeeting() error {
 // channel the inbox refuses to be. Triage is human work, so a
 // passport-driven read is refused there and the section is simply absent.
 func (a *assembly) readPendingApprovals() error {
-	staged, triageable, err := a.pendingApprovals()
+	staged, _, triageable, err := a.pendingApprovals()
 	if err != nil {
 		return err
 	}
@@ -471,19 +488,4 @@ func accountStrengthToWire(account contacts.AccountStrength, now time.Time) *crm
 		out.ContributorContactId = &v
 	}
 	return &out
-}
-
-// installationBaseCurrency resolves the installation's reporting currency once
-// per assembly. The sections that label money each want the same answer, and
-// the 360's query budget counts every read.
-func (a *assembly) installationBaseCurrency() (string, error) {
-	if a.baseCurrencyRead {
-		return a.baseCurrency, nil
-	}
-	base, err := identity.BaseCurrencyOf(a.ctx, a.tx)
-	if err != nil {
-		return "", err
-	}
-	a.baseCurrency, a.baseCurrencyRead = base, true
-	return base, nil
 }

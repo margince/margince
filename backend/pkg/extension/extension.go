@@ -62,7 +62,9 @@
 //     one arrives, `on` becomes that connection's identity and every unit's
 //     poll changes with it. What will NOT change is the pair of facts behind
 //     it: the member has to have deposited a credential with the unit, and the
-//     landing runs on their live authority.
+//     landing runs on their live authority. A service member an operator
+//     declared for the unit is such a member, so a connection that arrives
+//     would carry its id the same way.
 //
 // A unit written against today's surface will need editing when either lands.
 // That is acceptable precisely because the composed set is the trust boundary:
@@ -194,9 +196,8 @@ func (v Version) Validate() error {
 // knows the answer, so the declaration is where it has to come from.
 type Description string
 
-// Validate requires a non-empty, single-line printable sentence. The bound is
-// the same one Version keeps and for the same reason: this string is rendered
-// verbatim to an operator and written into the unit manifest.
+// Validate requires a non-empty, single-line printable sentence. The
+// Extensions settings page shows it to an operator as written.
 func (d Description) Validate() error {
 	if strings.TrimSpace(string(d)) == "" {
 		return errors.New("extension description is empty — the access screen lists the unit by it")
@@ -318,11 +319,9 @@ type Extension struct {
 	// Ingress are the providers this unit brings records IN from, and the
 	// record kinds it lands through the core's own capture pipeline.
 	//
-	// Like a Tool's tier this is a request an operator can see before anything
-	// runs — and unlike a tier it is also load-bearing while it runs: the core
-	// stamps a landed record's provenance from the System declared here, so a
-	// unit never spells its own, and an ingest naming an undeclared source is
-	// refused rather than admitted under an invented namespace.
+	// The core enforces this declaration while the unit runs. It stamps a
+	// landed record's provenance from the System declared here, so a unit never
+	// spells its own. An ingest naming an undeclared source is refused.
 	//
 	// Presence is the enablement, as everywhere in this tier. A unit declaring
 	// none cannot reach capture at all, which is the state every unit was in
@@ -354,6 +353,21 @@ type Extension struct {
 	// Presence is the enablement. A unit declaring none has no anonymous edge,
 	// which is the state every unit was in before this field existed.
 	Inbound []InboundEndpoint
+
+	// OAuthApps are the vendors whose consent flow the core runs for this unit
+	// (see OAuthApp). The core keeps the client credentials and the tokens: a
+	// refresh needs the client secret, and only the core holds it. The unit asks
+	// for a live access token through Runtime.OAuthAccessToken.
+	//
+	// Declared here rather than in a contract fragment for Inbound's reason: the
+	// connect and callback routes are core routes, not the unit's own.
+	OAuthApps []OAuthApp
+
+	// SystemReads are the system reads the unit's jobs and subscriptions make
+	// (see systemread.go). A read not listed answers ErrUndeclaredRead. The list
+	// is published in manifest.generated.json, so an operator sees what the unit
+	// reads without opening its source.
+	SystemReads []SystemRead
 
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
@@ -410,6 +424,18 @@ type Extension struct {
 	// declare costs the unit's own wording and never a classification the failure
 	// would have had anyway. The cause goes to the log in every case.
 	FailureClasses []FailureClass
+
+	// Entries are the unit's ways into its own screen from core screens: the
+	// Log activity form and the contact, company and deal headers. See Entry.
+	Entries []Entry
+
+	// Settings are the values an admin can change for the unit, drawn by the
+	// core on the unit's card of the Extensions page. See Setting.
+	Settings []Setting
+
+	// Panels are the unit's components drawn inline on core pages, such as a
+	// deal page's side column. See Panel.
+	Panels []Panel
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

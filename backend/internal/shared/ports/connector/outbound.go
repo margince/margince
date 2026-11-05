@@ -232,6 +232,9 @@ type SendReceipt struct {
 	// every caller to carry a recovery path that is not theirs. ProviderMessageID
 	// is durable on the delivery, so a later pass can re-ask the provider.
 	RFC822MessageID string
+	// FromAddress is the address the message left from, when the transport
+	// reports it; empty keeps the one recorded at staging.
+	FromAddress string
 }
 
 // InlineImage is one image a message's markup shows by content id.
@@ -244,6 +247,11 @@ type InlineImage struct {
 // SignatureLogoContentID names the workspace logo a signature template
 // embeds. The markup refers to it as cid:<this>, and the send attaches it.
 const SignatureLogoContentID = "signature-logo@margince"
+
+// LetterheadLogoContentID names the installation's company logo that heads
+// mail the system relay sends. It differs from the signature's, so a mail
+// carrying both attaches two parts that never collide.
+const LetterheadLogoContentID = "letterhead-logo@margince"
 
 // SignatureLogoTag is the one form the logo takes in sanitized markup. The
 // sanitizer writes it and the send removes it when the image is gone.

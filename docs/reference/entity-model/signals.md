@@ -6,27 +6,33 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 ## signal
 
-24 columns · primary key `(id)` · referenced by 3 foreign keys
+30 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `detected_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `entity_company_id` | `uuid` |  | Points at `company.id`. |
+| `entity_contact_id` | `uuid` |  | Points at `contact.id`. |
+| `entity_deal_id` | `uuid` |  | Points at `deal.id`. |
 | `entity_id` | `uuid` |  |  |
+| `entity_project_id` | `uuid` |  | Points at `project.id`. |
 | `entity_type` | `text` |  | The subject record the signal is about; null until a raw signal resolves (both entity fields set together). |
+| `entity_unkeyed` | `boolean`, default `false` | yes |  |
 | `evidence` | `jsonb`, default `'[]'::jsonb` | yes | Per-claim evidence; a claim without evidence is omitted. |
 | `fingerprint` | `text` |  |  |
 | `kind` | `text` | yes | The first six are what a human files by hand. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `raw_ref` | `text` |  | Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention. |
-| `resolution_confidence` | `numeric` |  |  |
+| `resolution_confidence` | `numeric(4,3)` |  |  |
 | `resolution_state` | `text`, default `'resolved'::text` | yes | The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`. |
 | `resolved_company_id` | `uuid` |  | The company the raw signal resolved to (the only required attribution level). |
 | `resolved_contact_id` | `uuid` |  | Optional contact resolution, set only under a recorded consent grant and never inferred. |
 | `severity` | `text`, default `'info'::text` | yes | One of `info`, `warn`, `urgent`. |
 | `source_channel` | `text`, default `'derived'::text` | yes | Where the raw signal came from. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `acknowledged`, `resolved`, `dismissed`. |
-| `summary` | `text` | yes |  |
+| `summary` | `text` | yes | The signal's one sentence. |
+| `summary_params` | `jsonb` |  |  |
 | `visibility` | `text`, default `'workspace'::text` | yes | One of `workspace`, `owner`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
@@ -39,13 +45,22 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `entity_company_id` | `company` | deleting the parent deletes this row |
+| `entity_contact_id` | `contact` | deleting the parent deletes this row |
+| `entity_deal_id` | `deal` | deleting the parent deletes this row |
+| `entity_project_id` | `project` | deleting the parent deletes this row |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `resolved_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `resolved_contact_id` | `contact` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
+- `signal_entity_company_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_company_id IS DISTINCT FROM CASE WHEN (entity_type = 'company') THEN entity_id ELSE NULL::uuid END))))`
+- `signal_entity_contact_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_contact_id IS DISTINCT FROM CASE WHEN (entity_type = 'contact') THEN entity_id ELSE NULL::uuid END))))`
+- `signal_entity_deal_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_deal_id IS DISTINCT FROM CASE WHEN (entity_type = 'deal') THEN entity_id ELSE NULL::uuid END))))`
 - `signal_entity_pair`: `CHECK (((entity_type IS NULL) = (entity_id IS NULL)))`
+- `signal_entity_project_id_bound`: `CHECK ((entity_unkeyed OR (NOT (entity_project_id IS DISTINCT FROM CASE WHEN (entity_type = 'project') THEN entity_id ELSE NULL::uuid END))))`
+- `signal_entity_shape`: `CHECK ((entity_unkeyed OR (entity_id IS NULL) OR (num_nonnulls(entity_deal_id, entity_company_id, entity_contact_id, entity_project_id) = 1)))`
 - `signal_entity_type_check`: `CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal', 'company', 'contact', 'project']))))`
 - `signal_kind_check`: `CHECK ((kind = ANY (ARRAY['stalled_deal', 'champion_left', 'reengagement', 'buying_intent', 'risk', 'other', 'contract_ended', 'new_opportunity', 'commitment_made', 'ghosted_thread', 'project_gone_quiet', 'funding', 'leadership_change', 'expansion', 'product_launch', 'technical_change'])))`
 - `signal_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
@@ -60,6 +75,10 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 **Indexes**
 
+- `idx_signal_entity_company`: `btree (entity_company_id) WHERE (entity_company_id IS NOT NULL)`
+- `idx_signal_entity_contact`: `btree (entity_contact_id) WHERE (entity_contact_id IS NOT NULL)`
+- `idx_signal_entity_deal`: `btree (entity_deal_id) WHERE (entity_deal_id IS NOT NULL)`
+- `idx_signal_entity_project`: `btree (entity_project_id) WHERE (entity_project_id IS NOT NULL)`
 - `idx_signal_open`: `btree (status, severity, detected_at DESC)`
 - `idx_signal_owner_private`: `btree (owner_id) WHERE ((visibility = 'owner') AND (archived_at IS NULL))`
 - `idx_signal_unresolved`: `btree (resolution_state, detected_at DESC)`
@@ -70,7 +89,9 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
-- `trg_signal_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `signal_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.status = 'open')))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `trg_signal_entity_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()`
+- `trg_signal_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id'])))) EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## signal_resolution
 
@@ -79,7 +100,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `match_confidence` | `numeric` |  |  |
+| `match_confidence` | `numeric(4,3)` |  |  |
 | `match_detail` | `jsonb` |  |  |
 | `matched_company_id` | `uuid` |  | Points at `company.id`. |
 | `matched_on` | `text` |  | One of `domain`, `name`, `prior_interaction`, `manual`, `none`. |

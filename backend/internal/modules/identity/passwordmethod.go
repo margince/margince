@@ -13,7 +13,7 @@ package identity
 // login screen renders from, and the routes behind it.
 
 // WithPasswordLogin injects whether the deployment offers the password method
-// (deployconfig `auth.password.enabled`).
+// (the `auth.password.enabled` setting).
 //
 // The field it sets is NEGATIVE so that its zero value is "offered", which is
 // what every handler set built without this option has always done and must

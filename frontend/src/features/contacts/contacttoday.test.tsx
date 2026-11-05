@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -13,19 +13,18 @@ import {
 } from "../../testing/story-utils";
 import { ContactToday } from "./contacttoday";
 
-// THE DAY'S WORK GIVES ONE ANSWER, AND GIVES IT ONCE. The panel answers "what
-// needs me" on every contact, so the quiet rung and the thin relationship are
-// answers inside it rather than a reason to draw nothing; and the one thing
-// the move is about is named once, rather than as the ask, the record it
-// rests on and a chore underneath it.
+// The Next bar gives one answer, and gives it once. It answers "what is next"
+// on every contact. So the quiet rung and the thin relationship are answers
+// inside it, not a reason to draw nothing. The one thing the move is about is
+// named once, not again in the "+N tasks" count.
 //
 // Assertions read the catalog rather than quoting English: the sentences here
 // are product copy and a test pinning them fails on a rewrite that changed
 // nothing about the behaviour.
 //
-// Mounted on the card rather than through the whole page: the page's own suite
-// is at its length ceiling, and what is under test here is the panel's
-// composition, which needs neither the header nor the rail.
+// Mounted on the card rather than through the whole page. The page's own suite
+// is at its length ceiling, and the bar's composition under test here needs
+// neither the header nor the rail.
 
 beforeEach(() =>
   installFetchStub({
@@ -40,6 +39,8 @@ afterEach(() => {
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
+type Activity = components["schemas"]["Activity"];
+type ContactPhone = components["schemas"]["ContactPhone"];
 
 const CAPTURED = {
   source: "manual",
@@ -84,10 +85,12 @@ const THIN: ContactMoment = {
 };
 
 const OPEN_TASK = {
+  offers_email: false,
   id: "a-9",
   kind: "task",
   subject: "Send the renewal quote",
   occurred_at: "2026-08-10T09:00:00Z",
+  occurred_precision: "instant",
   is_done: false,
   ...CAPTURED,
 } as const;
@@ -123,10 +126,16 @@ function show(view: Contact360, moment?: ContactMoment) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactToday view={view} moment={moment} onAction={() => {}} />
+        <ContactToday
+          view={view}
+          moment={moment}
+          onAction={() => {}}
+          onOpenTasks={() => {}}
+        />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 describe("the move the panel leads with", () => {
@@ -137,11 +146,21 @@ describe("the move the panel leads with", () => {
     // The server's reason and no other: the facts in it are what a rep
     // judges, and the account brief reads the same moment the same way.
     expect(screen.getByText(PROMISE.why_now)).toBeTruthy();
-    // The rule qualifies the byline: what the record was read against, beside
-    // whose reading it is.
-    expect(
-      screen.getByText(en["contact.moment.rule.open_promise"]),
-    ).toBeTruthy();
+  });
+
+  it("says how late the promise it is about is, against the read's own date", () => {
+    show(
+      {
+        ...VIEW,
+        next_steps: {
+          data: [{ ...OPEN_TASK, due_at: "2026-08-03T09:00:00Z" }],
+          page: { has_more: false },
+        },
+      },
+      PROMISE,
+    );
+
+    expect(screen.getByText("10 days late")).toBeTruthy();
   });
 
   it("names the task it is about once, not as a chore under itself too", () => {
@@ -157,11 +176,12 @@ describe("the move the panel leads with", () => {
     );
 
     expect(screen.getByText(PROMISE.headline)).toBeTruthy();
-    // The subject is in the ask and nowhere else: no row of its own under the
-    // move that already asks for it.
-    expect(screen.queryByText(OPEN_TASK.subject)).toBeNull();
-    // Every other commitment the record carries still stands.
-    expect(screen.getByText(OTHER_TASK.subject)).toBeTruthy();
+    // The named task is the ask; only the other one is counted behind it.
+    expect(
+      screen.getByRole("button", {
+        name: en["standing.next.more_one"].replace("{count}", "1"),
+      }),
+    ).toBeTruthy();
   });
 
   it("shows what it rests on only where that is a record the ask does not name", () => {
@@ -198,16 +218,45 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByText(QUIET.headline)).toBeNull();
   });
 
-  // The quiet rung IS the answer to the panel's question, so it is answered
+  it("shows the task's own words as one plain line under its subject", () => {
+    const worded = {
+      ...OPEN_TASK,
+      body: "**Send** the fleet numbers\n\nThen book the pricing call.",
+    };
+    show(
+      { ...VIEW, next_steps: { data: [worded], page: { has_more: false } } },
+      QUIET,
+    );
+
+    expect(screen.getByText("Send the fleet numbers")).toBeTruthy();
+    expect(screen.queryByText(/Then book the pricing call/)).toBeNull();
+  });
+
+  it("shows no words for a task the reader may not read", () => {
+    const withheld = {
+      ...OPEN_TASK,
+      body: "Send the fleet numbers",
+      content_state: "withheld" as const,
+    };
+    show(
+      { ...VIEW, next_steps: { data: [withheld], page: { has_more: false } } },
+      QUIET,
+    );
+
+    expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
+    expect(screen.queryByText("Send the fleet numbers")).toBeNull();
+  });
+
+  // The quiet rung is the answer to the bar's question, so it is answered
   // where the question is asked. Rendering nothing at all left a reader
   // unable to tell a quiet day from a pane that failed to load.
-  it("answers a quiet record inside the panel", () => {
+  it("answers a quiet record inside the bar", () => {
     show(VIEW, QUIET);
 
-    expect(
-      screen.getByRole("heading", { name: en["today.title"] }),
-    ).toBeTruthy();
-    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    // It says what the read can back: no task is recorded. It never claims
+    // that nothing is left to do.
+    expect(screen.getByText(en["standing.next.noTask"])).toBeTruthy();
+    expect(screen.queryByText(en["standing.next.none"])).toBeNull();
     // Nobody suggested that nothing needs doing, and there is nothing to press
     // about it.
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
@@ -226,9 +275,9 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
   });
 
-  // A truncated list with no count reads as "that is everything", which is
-  // the one thing a list of commitments may not say.
-  it("says how many open tasks the cut left out", () => {
+  // A bar that names one task with no count reads as "that is everything".
+  // A list of commitments may not say that.
+  it("leads with one open task and counts the rest behind it", () => {
     const many = [1, 2, 3, 4, 5].map((n) => ({
       ...OPEN_TASK,
       id: `a-${n}`,
@@ -239,15 +288,18 @@ describe("the day's work on a contact", () => {
       QUIET,
     );
 
+    expect(screen.getByText("Task 1")).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: en["deal360.openTask"] }),
-    ).toHaveLength(3);
+    ).toHaveLength(1);
     expect(
-      screen.getByText(en["co.suggest.more"].replace("{count}", "2")),
+      screen.getByRole("button", {
+        name: en["standing.next.more_other"].replace("{count}", "4"),
+      }),
     ).toBeTruthy();
   });
 
-  // No moment read is not a quiet record: the panel keeps its place and says
+  // No moment read is not a quiet record. The bar keeps its place and says
   // the reading is not shown rather than claiming nothing needs the reader.
   it("keeps an unread moment inside the panel as a reading it does not have", () => {
     show(VIEW);
@@ -282,4 +334,340 @@ it("opens the actual task from the contact's attention list", async () => {
   expect(
     await screen.findByRole("dialog", { name: OPEN_TASK.subject }),
   ).toBeTruthy();
+});
+
+describe("Call on the next task", () => {
+  const DIALABLE: Contact360 = {
+    ...VIEW,
+    contact: {
+      ...VIEW.contact,
+      phones: [
+        {
+          id: "ph-1",
+          phone: "+49 30 1234567",
+          phone_type: "mobile",
+          is_primary: true,
+          position: 0,
+          ...CAPTURED,
+        },
+      ],
+    },
+  };
+  const onTask = (sourceActivityId: string | null): Contact360 => ({
+    ...DIALABLE,
+    next_steps: {
+      data: [
+        {
+          ...OPEN_TASK,
+          source_activity_id: sourceActivityId,
+          links: [{ entity_type: "contact", entity_id: "p-1" }],
+        },
+      ],
+      page: { has_more: false },
+    },
+  });
+  const dial = () => document.querySelector('a[href^="tel:"]');
+
+  beforeEach(() =>
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /activities/call-1": () =>
+        jsonResponse({
+          id: "call-1",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-08-09T09:00:00Z",
+        }),
+    }),
+  );
+
+  it("offers Call beside Open task when the task came from a call", async () => {
+    show(onTask("call-1"), QUIET);
+
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+    expect(
+      screen.getByRole("button", { name: en["deal360.openTask"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no Call on a task typed by hand", () => {
+    show(onTask(null), QUIET);
+
+    expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
+    expect(dial()).toBeNull();
+  });
+
+  // On this page the task is about this contact whatever else it links. The
+  // task dialog, which has no page contact, gives a two-contact task no verbs.
+  it("offers Call for this contact on a task that also links another", async () => {
+    const view = onTask("call-1");
+    const [task] = view.next_steps?.data ?? [];
+    show(
+      {
+        ...view,
+        next_steps: {
+          data: task
+            ? [
+                {
+                  ...task,
+                  links: [
+                    { entity_type: "contact", entity_id: "p-1" },
+                    { entity_type: "contact", entity_id: "p-2" },
+                  ],
+                },
+              ]
+            : [],
+          page: { has_more: false },
+        },
+      },
+      QUIET,
+    );
+
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+  });
+});
+
+describe("Call on the move a call left owed", () => {
+  const PHONE: ContactPhone = {
+    id: "ph-1",
+    phone: "+49 30 1234567",
+    phone_type: "mobile",
+    is_primary: true,
+    position: 0,
+    ...CAPTURED,
+  };
+  const CALLED: Activity = {
+    ...OPEN_TASK,
+    id: "a-7",
+    subject: "Call Dana back on Monday",
+    source_activity_id: "call-1",
+    links: [{ entity_type: "contact", entity_id: "p-1" }],
+  };
+  const TYPED: Activity = { ...CALLED, id: "a-6", source_activity_id: null };
+  const OWED: ContactMoment = {
+    ...PROMISE,
+    headline: "You owe them: Call Dana back on Monday",
+    evidence: [{ type: "task", id: "a-7", label: "Call Dana back" }],
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Write to them",
+      state: "available",
+    },
+  };
+  const viewWith = (contact: Partial<Contact360["contact"]>): Contact360 => ({
+    ...VIEW,
+    contact: { ...VIEW.contact, phones: [PHONE], ...contact },
+    next_steps: { data: [CALLED, TYPED], page: { has_more: false } },
+  });
+  const dial = () => document.querySelector('a[href^="tel:"]');
+
+  beforeEach(() =>
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /activities/call-1": () =>
+        jsonResponse({
+          id: "call-1",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-08-09T09:00:00Z",
+        }),
+    }),
+  );
+
+  it("offers Call beside the server's own action when the task came from a call", async () => {
+    show(viewWith({}), OWED);
+
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+    expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
+  });
+
+  const quiet: [
+    string,
+    Partial<ContactMoment>,
+    Partial<Contact360["contact"]>,
+  ][] = [
+    [
+      "a hand-typed task",
+      { evidence: [{ type: "task", id: "a-6", label: "Typed" }] },
+      {},
+    ],
+    [
+      "a record that is not a task",
+      { evidence: [{ type: "activity", id: "a-7", label: "Re: renewal" }] },
+      {},
+    ],
+    [
+      "a task the record does not list",
+      { evidence: [{ type: "task", id: "a-5", label: "Gone" }] },
+      {},
+    ],
+    ["an archived contact", {}, { archived_at: "2026-08-01T00:00:00Z" }],
+  ];
+  it.each(quiet)(
+    "offers no Call on a move about %s",
+    async (_, moment, contact) => {
+      const client = show(viewWith(contact), { ...OWED, ...moment });
+
+      // Every read has answered, so a missing Call is the decision, not a wait.
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+      expect(
+        screen.getByRole("button", { name: "Write to them" }),
+      ).toBeTruthy();
+      expect(dial()).toBeNull();
+    },
+  );
+
+  // The promise, dated 12 days late and read out of a call; the evidence names
+  // a hand-typed task 2 days late. Both the badge and Call follow the promise.
+  const promised = (evidence: ContactMoment["evidence"]): ContactMoment => ({
+    ...OWED,
+    evidence,
+    may_be_done: {
+      promise_type: "task",
+      promise_id: "a-7",
+      email_activity_id: "e-1",
+      wrote_at: "2026-08-12T10:00:00Z",
+    },
+  });
+  const datedView = (): Contact360 => ({
+    ...viewWith({}),
+    next_steps: {
+      data: [
+        { ...CALLED, due_at: "2026-08-01T09:00:00Z" },
+        { ...TYPED, due_at: "2026-08-11T09:00:00Z" },
+      ],
+      page: { has_more: false },
+    },
+  });
+  const lateBy = (days: number) =>
+    en["contact.standing.late_other"].replace("{count}", String(days));
+
+  it("dates the promise and offers its Call when the evidence names another task", async () => {
+    show(datedView(), promised([{ type: "task", id: "a-6", label: "Typed" }]));
+
+    expect(
+      await screen.findByRole("link", { name: en["record.verb.call"] }),
+    ).toBeTruthy();
+    expect(screen.getByText(lateBy(12))).toBeTruthy();
+    expect(screen.queryByText(lateBy(2))).toBeNull();
+  });
+
+  it("offers Call on a move that rests on the promise alone", async () => {
+    show(datedView(), promised([]));
+
+    expect(
+      await screen.findByRole("link", { name: en["record.verb.call"] }),
+    ).toBeTruthy();
+  });
+});
+
+describe("the face of the move's verb", () => {
+  const FOLLOW_UP: ContactMoment = {
+    ...QUIET,
+    claim_key: "moment:gone_quiet",
+    rule: "gone_quiet",
+    headline: "No reply recorded for 233 days",
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "available",
+      destination: { surface: "composer", prefill: { intent: "follow_up" } },
+    },
+  };
+
+  it("wears indigo where the press has the model draft the mail", () => {
+    show(VIEW, FOLLOW_UP);
+
+    const draft = screen.getByRole("button", { name: "Draft a follow-up" });
+    expect(draft.classList.contains("btn-ai")).toBe(true);
+  });
+
+  it("keeps the accent where the press only opens a form", () => {
+    show(VIEW, {
+      ...FOLLOW_UP,
+      recommended_action: {
+        kind: "log_activity",
+        label: "Log an interaction",
+        state: "available",
+        destination: { surface: "activity_log" },
+      },
+    });
+
+    const log = screen.getByRole("button", { name: "Log an interaction" });
+    expect(log.classList.contains("btn-ai")).toBe(false);
+  });
+});
+
+it("shows a privacy duty in place of the quiet answer and opens its review action", async () => {
+  const action = vi.fn();
+  const privacy: ContactMoment = {
+    ...QUIET,
+    rule: "privacy_notice_due",
+    headline: "Privacy notice owed",
+    why_now: "An unresolved disclosure duty is recorded for this contact.",
+    recommended_action: {
+      kind: "open_record",
+      label: "Review privacy duty",
+      state: "available",
+      destination: { surface: "privacy_notice", entity_id: "case-1" },
+    },
+  };
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider>
+        <ContactToday view={VIEW} moment={privacy} onAction={action} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Privacy notice owed")).not.toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["standing.next.snooze"] }),
+  ).toBeNull();
+  expect(screen.queryByText(en["standing.next.noTask"])).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Review privacy duty" }));
+  expect(action).toHaveBeenCalledWith(privacy.recommended_action);
+});
+
+it("offers a follow-up task on a quiet record to a reader who may log one", async () => {
+  const user = userEvent.setup();
+  const onAddTask = vi.fn();
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ContactToday
+          view={VIEW}
+          moment={QUIET}
+          onAction={() => {}}
+          onAddTask={onAddTask}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["standing.next.addTask"] }),
+  );
+  expect(onAddTask).toHaveBeenCalledTimes(1);
+});
+
+it("keeps a quiet relationship readable when compliance work is outside the reader's role", () => {
+  show({ ...VIEW, sections_omitted: ["privacy_notice_duties"] }, QUIET);
+  expect(screen.getByText(en["standing.next.noTask"])).not.toBeNull();
+  expect(screen.queryByText(/Not included: privacy duties/)).toBeNull();
 });

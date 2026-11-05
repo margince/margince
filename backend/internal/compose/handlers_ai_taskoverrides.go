@@ -22,7 +22,7 @@ func (h aiRoutingHandlers) GetAiTaskOverrides(w http.ResponseWriter, r *http.Req
 		httperr.NotImplemented(w, r, "GetAiTaskOverrides")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -49,7 +49,7 @@ func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http
 	}
 	next, err := ai.TaskOverridesFromWire(req, sentTask(r))
 	if err != nil {
-		httperr.Write(w, r, err)
+		httperr.Write(w, r, h.store.LockFirst(r.Context(), ai.TaskOverridesKey, err))
 		return
 	}
 	expected, err := routingPrecondition(r.Header)
@@ -70,7 +70,7 @@ func (h aiRoutingHandlers) PreviewAiTaskOverrides(w http.ResponseWriter, r *http
 		httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
 		return
 	}
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

@@ -21,10 +21,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -35,6 +38,8 @@ import (
 // installation, and no subject's mailbox grant is involved.
 type ControllerRelay interface {
 	SendControllerMail(ctx context.Context, msg ControllerMessage) error
+	// SenderAddress is the From the relay sends with, "" when it names none.
+	SenderAddress() string
 }
 
 // ControllerMessage is one rendered controller mail, link already substituted.
@@ -42,6 +47,7 @@ type ControllerMessage struct {
 	To        string
 	Subject   string
 	TextBody  string
+	HTMLBody  string
 	MessageID string
 }
 
@@ -74,27 +80,32 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 		return sendSeam{}, ErrNoAddressee
 	}
 	to := del.Recipients[0]
-	body, err := d.substituteLink(ctx, del)
+	bodies, err := d.substituteLink(ctx, del)
 	if err != nil {
 		return sendSeam{}, err
 	}
+
 	return sendSeam{
 		// No granted scopes and no carriage: a controller message carries no
 		// attachments and holds no OAuth grant. profileFor already turns both
 		// gates off; leaving these zero means the seam agrees with it rather
 		// than restating it.
 		transmit: func(ctx context.Context, _ []connector.OutboundFile) (connector.SendReceipt, error) {
+			if deadline.Passed(del.DueAt, d.now()) {
+				slog.ErrorContext(ctx, "controller receipt delivery deadline was missed", "delivery_id", del.ID, "due_at", *del.DueAt)
+			}
 			if err := d.relay.SendControllerMail(ctx, ControllerMessage{
 				To:        to,
 				Subject:   del.Subject,
-				TextBody:  body,
+				TextBody:  bodies.text,
+				HTMLBody:  bodies.html,
 				MessageID: del.MessageID,
 			}); err != nil {
 				return connector.SendReceipt{}, err
 			}
 			// The row's own message id, echoed back. A relay does not rewrite
 			// the identity it was handed, so nothing is owed a re-key.
-			return connector.SendReceipt{RFC822MessageID: del.MessageID}, nil
+			return connector.SendReceipt{RFC822MessageID: del.MessageID, FromAddress: d.relay.SenderAddress()}, nil
 		},
 	}, nil
 }
@@ -106,22 +117,33 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 // is a reference, none when there is not — so a disagreement here is a vault
 // that lost the entry rather than a caller mistake, and it fails the attempt
 // rather than sending a message with "{{confirmation-link}}" in it.
-func (d *Dispatcher) substituteLink(ctx context.Context, del Delivery) (string, error) {
+type controllerBodies struct {
+	text string
+	html string
+}
+
+func (d *Dispatcher) substituteLink(ctx context.Context, del Delivery) (controllerBodies, error) {
+	bodies := controllerBodies{text: del.Body, html: del.HTMLBody}
 	if del.PayloadRef == "" {
-		return del.Body, nil
+		return bodies, nil
 	}
 	if d.payloads == nil {
-		return "", fmt.Errorf("comms: this delivery carries link material and no vault is configured: %w", ErrNoControllerRelay)
+		return controllerBodies{}, ErrNoControllerRelay
 	}
 	link, err := d.payloads.Get(ctx, del.PayloadRef)
 	if err != nil {
-		return "", fmt.Errorf("comms: reading the one-time link material: %w", err)
+		return controllerBodies{}, fmt.Errorf("comms: reading the sealed action: %w", err)
 	}
-	if placeholderCount(del.Body) != 1 {
-		return "", fmt.Errorf("comms: the staged body carries %d placeholder(s) for its link material: %w",
-			placeholderCount(del.Body), ErrTemplateShape)
+	parsed, err := url.Parse(link)
+	if err != nil || parsed.Host == "" || parsed.User != nil || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+		return controllerBodies{}, ErrTemplateShape
 	}
-	return strings.Replace(del.Body, LinkPlaceholder, link, 1), nil
+	if placeholderCount(bodies.text) != 1 || (bodies.html != "" && placeholderCount(bodies.html) != 1) {
+		return controllerBodies{}, ErrTemplateShape
+	}
+	bodies.text = strings.Replace(bodies.text, LinkPlaceholder, link, 1)
+	bodies.html = strings.Replace(bodies.html, LinkPlaceholder, html.EscapeString(link), 1)
+	return bodies, nil
 }
 
 // closePayload retires the one-time material once the message can no longer be

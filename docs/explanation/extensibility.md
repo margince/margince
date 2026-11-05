@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
 # Extensibility: the extension tier
 
 The *extension tier* is how a small, closed add-on comes into this product without a change to any file
@@ -119,7 +120,9 @@ already exists:
 | `Subscriptions` | Event types the unit answers, each with the function that one delivery runs |
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
+| `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
+| `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
 provider it cannot send on, and the channel declaration says which.
@@ -139,7 +142,7 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
 - **`pkg/extension/jurisdiction`**: the jurisdiction pack contract (`Pack`, `Retention`,
   `RetentionClass`, the closed lists of values a pack may use, the calendar `Period`).
 - **`pkg/extension/crm`**: the shapes a unit passes to `tx.Core()` and gets back from it. `tx.Core()` is
-  the governed way onto core records.
+  the governed way onto core records, for writes and for reads.
 - **`pkg/extension/messaging`**: the outbound messaging rules a pack supplies. They say how long a reply
   stays a reply, and what exceptions hold for a customer who already buys. They also say what a first
   message must say, and the limits on sales messages. The core engine that approves a send reads them as
@@ -208,6 +211,8 @@ the harm could go before turning the unit on:
 | `ingress` | `Ingress` | Which providers it lands records from, which kinds, and which identity keys the source **stands behind** (`merges`) |
 | `channels` | `Channels` | Which providers it supplies, whose credential each one uses (`credential_model`: required, no default), and whether it supplies a **transport** (`supplies_transport`) or only captures |
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
+| `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
+| `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.
@@ -395,13 +400,18 @@ checked against the full budget for names, so a name a unit takes today stays go
   The unit builds no timeline entry, and could not: it hands over a record and the core decides what
   becomes of it.
 
+  A record can also be a company or a deal, matched by the provider's id and written through the
+  product's own stores. See [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md).
+
   It sits on `Runtime` instead of `Tx`, the other way from where the core port sits, because the pipeline
   opens its own transaction. To call it from inside a transaction of the unit would take a second
   connection while it holds one. On a small pool that waits with no end instead of failing
   (`ErrNestedIngest` turns the wait into an error). The core sets the source on the row from the unit and
   the source it declared (`Ingress`, which derives into `manifest.generated.json`). So a unit can put
-  nothing under the name of another unit or of a core connector. The `captured_by` of a landed row also
-  names the member behind it.
+  nothing under the name of another unit or of a core connector.
+
+  The `captured_by` of a landed row also names the member behind it. That member may also be a
+  [service member](../how-to/declare-a-service-member.md), which nobody signs in as.
 
   A source also declares the **identity keys it stands behind** (`Merges`, empty by default). A unit
   supplies every field its provider gives it and decides nothing about identity. The declaration says
@@ -549,7 +559,7 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | Only the route of a unit sends a call to its served tool, so one unit cannot take the handler of another by naming its verb | `backend/internal/compose/extparity_test.go` |
 | A unit screen reaches the core only through the public surface (the `exports` in `frontend/package.json`), and npm only through what its own package declares | `frontend/scripts/ext-imports.test.ts`, a vitest fitness function over the TypeScript AST, with its own set of fixture tests |
 | A unit screen keeps to the same design system as core: tokens, the font, each icon, spacing | These gates scan `extensions/*/frontend` and also `frontend/src`: `check-ds-purity.sh`, `check-font-lock.sh`, `check-icon-glyph.sh`, `check-space-tokens.sh`, `check-ds-spacing-roles.sh` and `check-ds-spacing.sh` (the last one scoped to the change, through git paths instead of a walk). `check-ext-frontend-walk.test.sh` holds that they all still reach the tier. It puts a known fault in a fixture unit at two levels and requires each gate to name it. It reads its list of subjects out of the `fe-ds-gates` target, so no gate is added to the lane without being read. It names the two gates it cannot measure, with the reason: its fixture files are `*.tsx`, and the spacing gates read CSS files. `check-ds-spacing-roles.test.sh` puts unit CSS files at both levels instead |
-| …and uses no plain `<select>` | `frontend/src/design-system/native-controls.test.ts`, a vitest fitness function over the TypeScript AST, that reaches every extension frontend layer at any level |
+| …and uses no plain `<select>` and no date input of the browser's own | `frontend/src/design-system/native-controls.test.ts`, a vitest fitness function over the TypeScript AST, that reaches every extension frontend layer at any level |
 | A unit cannot ship a second copy of state the host owns (the hook dispatcher of React, the `QueryClient` of `react-query`) | `gen-composition` refuses them as direct dependencies; `resolve.dedupe` catches one that comes in through another package |
 | The copy of a unit sits in the namespace of that unit and cannot change a core string | `gen-composition` (`mergeUnitLocales`), and core keys win the lookup |
 | The tests of a unit screen run, not only the type check | `frontend/vitest.ext.config.ts` through `make fe-test-ext`, which `make check-fe` calls |

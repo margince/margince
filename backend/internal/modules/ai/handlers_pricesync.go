@@ -8,6 +8,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -17,9 +18,9 @@ func (h Handlers) WithPriceSync(sync *PriceSync) Handlers {
 	return h
 }
 
-// priceSyncReady admits a human to a wired engine, answering the request itself otherwise.
+// priceSyncReady admits a user or their agent to a wired engine, answering the request itself otherwise.
 func (h Handlers) priceSyncReady(w http.ResponseWriter, r *http.Request) bool {
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return false
 	}
@@ -53,7 +54,9 @@ func (h Handlers) GetAiPriceSync(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractPriceSync(state))
+	out := toContractPriceSync(state)
+	out.Locks = h.settingLocks(PriceSyncSettings)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // ReplaceAiPriceSync implements (PUT /ai/price-sync).
@@ -77,7 +80,9 @@ func (h Handlers) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractPriceSync(state))
+	out := toContractPriceSync(state)
+	out.Locks = h.settingLocks(PriceSyncSettings)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 func toContractPriceSync(s PriceSyncState) crmcontracts.AiPriceSync {
@@ -97,8 +102,22 @@ func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateR
 		out.Providers = append(out.Providers, crmcontracts.AiModelRateProviderRefresh{
 			Provider: p.Provider, Outcome: string(p.Outcome),
 			Updated: p.Updated, Unchanged: p.Unchanged, Added: p.Added, Kept: p.Kept,
-			Models: p.Models, Unlisted: p.Unlisted,
+			Models: p.Models, Unlisted: p.Unlisted, Review: &p.Review,
 		})
 	}
 	return out
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
+}
+
+// settingLocks are the locks among surface, the settings one response carries.
+func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks(surface)
 }

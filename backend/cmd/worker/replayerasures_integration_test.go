@@ -10,6 +10,8 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -20,8 +22,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -125,13 +131,45 @@ func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 	}
 }
 
+// workerProgramEnv marks the child process the test below starts.
+const workerProgramEnv = "MARGINCE_TEST_WORKER_PROGRAM"
+
+// The restore drill runs the command as an operator types it, through the
+// worker's whole boot. The boot registers extensions once per process, so the
+// test runs it in a child process of its own.
+func TestTheWorkerProgramRunsReplayErasures(t *testing.T) {
+	if os.Getenv(workerProgramEnv) != "" {
+		if err := run(t.Context(), []string{"replay-erasures", "--empty-journal-ok"}, os.Stdout); err != nil {
+			t.Fatalf("worker replay-erasures: %v", err)
+		}
+		return
+	}
+	// With no config named, the child's boot reads margince.yaml here.
+	if err := gatekit.DeclareInputs(os.Getenv, "margince.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	integration.Setup(t)
+	configureObjectStore(t)
+	child := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^TestTheWorkerProgramRunsReplayErasures$", "-test.v")
+	child.Env = append(os.Environ(), workerProgramEnv+"=1", "MARGINCE_ENV=dev",
+		dbsettings.DSN.Env()+"="+os.Getenv("MARGINCE_TEST_APP_DSN"))
+	out, err := child.CombinedOutput()
+	if err != nil || !strings.Contains(string(out), "holds no entry") {
+		t.Fatalf("worker replay-erasures: %v\n%s\nwant the empty journal named", err, out)
+	}
+}
+
 // replayErasures runs the command through the worker's own dispatch.
 func replayErasures(t *testing.T, e *integration.Env, flags ...string) (string, error) {
 	t.Helper()
 	vault := newTestVault(t, e)
+	settings, err := configtest.Load(t, "", config.Environ(), nil, blobstore.Settings()...)
+	if err != nil {
+		t.Fatalf("loading the blobstore settings: %v", err)
+	}
 	var out bytes.Buffer
 	handled, err := runDatabaseSubcommand(t.Context(), e.Pool,
-		func() (keyvault.Vault, error) { return vault, nil },
+		func() (keyvault.Vault, error) { return vault, nil }, settings,
 		append([]string{"replay-erasures"}, flags...), &out)
 	if !handled {
 		t.Fatal("the worker does not know the replay-erasures command")

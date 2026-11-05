@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -44,7 +45,7 @@ func commercialStrip(open, stalled int) *crmcontracts.Company360StateStrip {
 
 func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: new(0)}
-	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow))
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow, time.UTC))
 
 	// Not "at risk": an unstarted relationship is not a failing one, and rating
 	// it would put a verdict on something that has not begun.
@@ -55,6 +56,14 @@ func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 
 // healthNow is the instant every relationship case states its dates against.
 var healthNow = time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
+
+// instantAt is an instant activity at at; nil is none.
+func instantAt(at *time.Time) *occurredday.Moment {
+	if at == nil {
+		return nil
+	}
+	return &occurredday.Moment{At: *at}
+}
 
 func healthDaysAgo(n int) *time.Time {
 	at := healthNow.AddDate(0, 0, -n)
@@ -132,7 +141,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 				ActiveContacts: new(tc.activeContacts),
 				SingleThreaded: new(tc.singleThreaded),
 			}
-			touch := relstrength.ReadInTouch(tc.lastInbound, tc.lastMeeting, tc.nextMeeting, healthNow)
+			touch := relstrength.ReadInTouch(instantAt(tc.lastInbound), instantAt(tc.lastMeeting), instantAt(tc.nextMeeting), healthNow, time.UTC)
 			rateHealthDimensions(&health, nil, touch)
 
 			got := health.Relationship
@@ -158,11 +167,46 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 // translation has nothing to say.
 func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
-	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(healthDaysAgo(77), nil, healthDaysAgo(-2), healthNow))
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(instantAt(healthDaysAgo(77)), nil, instantAt(healthDaysAgo(-2)), healthNow, time.UTC))
 
 	params := health.Relationship.ReasonParams
 	if params == nil || params.At == nil || !params.At.Equal(*healthDaysAgo(-2)) {
 		t.Fatalf("reason params = %+v, want the booked meeting's start, as an instant", params)
+	}
+	if params.AtPrecision == nil || *params.AtPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Errorf("at_precision = %v, want instant", params.AtPrecision)
+	}
+}
+
+// A quiet account names the exchange its count starts from: the later of their
+// last message and our last meeting. A timeline beside it then reads as the
+// same count.
+func TestAQuietRelationshipNamesTheDayItCountsFrom(t *testing.T) {
+	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(instantAt(healthDaysAgo(77)), instantAt(healthDaysAgo(40)), nil, healthNow, time.UTC))
+
+	params := health.Relationship.ReasonParams
+	if params == nil || params.Days == nil || *params.Days != 40 {
+		t.Fatalf("reason params = %+v, want 40 days", params)
+	}
+	if params.At == nil || !params.At.Equal(*healthDaysAgo(40)) {
+		t.Fatalf("at = %v, want the last meeting, the later exchange", params.At)
+	}
+	if params.AtPrecision == nil || *params.AtPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant {
+		t.Errorf("at_precision = %v, want instant", params.AtPrecision)
+	}
+}
+
+// A day meeting booked ahead is named by its date: the precision travels with
+// its stored noon.
+func TestABookedDayMeetingCarriesItsPrecision(t *testing.T) {
+	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
+	booked := &occurredday.Moment{At: occurredday.Anchor(healthNow.AddDate(0, 0, 2)), DateOnly: true}
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(instantAt(healthDaysAgo(77)), nil, booked, healthNow, time.UTC))
+
+	params := health.Relationship.ReasonParams
+	if params == nil || params.AtPrecision == nil || *params.AtPrecision != crmcontracts.OccurredPrecisionOccurredPrecisionDay {
+		t.Fatalf("reason params = %+v, want the day meeting's date with precision day", params)
 	}
 }
 
@@ -241,5 +285,49 @@ func TestHealthIsAssembledAfterTheStateStripItReads(t *testing.T) {
 	}
 	if strip > health {
 		t.Fatal("health is assembled BEFORE the state strip it reads — commercial would be absent on every account, and absent renders as \"nothing open\"")
+	}
+}
+
+// The last-met count follows the zone the dates are drawn in. East of UTC a
+// meeting at 15:00 local the day before, read at 01:00 local, is one day ago
+// while UTC still says zero. West of UTC the same UTC midnight makes a
+// same-evening meeting read "1 day ago" instead of today.
+func TestLastMetCountsDaysInTheInstallationZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*3600)
+	winterNewYork := time.FixedZone("UTC-5", -5*3600)
+	cases := []struct {
+		name     string
+		loc      *time.Location
+		met, now time.Time
+		days     int
+		sentence string
+	}{
+		{
+			name: "east: yesterday afternoon at 01:00 local", loc: bangkok,
+			met: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), now: time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
+			days: 1, sentence: "Last met them 1 days ago.",
+		},
+		{
+			name: "the same pair counted in UTC", loc: time.UTC,
+			met: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), now: time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
+			days: 0, sentence: "Last met them today.",
+		},
+		{
+			name: "west: this evening after the UTC midnight", loc: winterNewYork,
+			met: time.Date(2026, 12, 5, 23, 0, 0, 0, time.UTC), now: time.Date(2026, 12, 6, 1, 0, 0, 0, time.UTC),
+			days: 0, sentence: "Last met them today.",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			touch := relstrength.ReadInTouch(nil, &occurredday.Moment{At: tc.met}, nil, tc.now, tc.loc)
+			if touch.Days != tc.days {
+				t.Fatalf("days = %d, want %d", touch.Days, tc.days)
+			}
+			got := rateRelationship(touch, 2, false)
+			if got.Reason != tc.sentence {
+				t.Fatalf("reason = %q, want %q", got.Reason, tc.sentence)
+			}
+		})
 	}
 }

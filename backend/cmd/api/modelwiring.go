@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -57,17 +58,20 @@ type modelPathSpec struct {
 	// make it. The node travels as a value through this field instead.
 	seeds           deployconfig.Seeds
 	capturePayloads bool
+	// keys resolve the binding's credentials; compose.RoutingKeys builds them.
+	keys config.Lookup
 }
 
 // modelPathSpecFrom gathers the model-path knobs from where each is declared:
 // the routing choice from the process flags, the capture posture from the
 // deployment config.
-func modelPathSpecFrom(cfg apiConfig, deployCfg deployconfig.Config) modelPathSpec {
+func modelPathSpecFrom(cfg apiConfig, bootstrap deployconfig.Bootstrap) modelPathSpec {
 	return modelPathSpec{
 		routingPath:     cfg.routingPath,
 		fakeBrain:       cfg.fakeBrain,
-		seeds:           deployCfg.Seeds,
-		capturePayloads: deployCfg.AI.CapturePayloads,
+		seeds:           bootstrap.Seeds,
+		capturePayloads: config.Val(cfg.settings, ps.CapturePayloads),
+		keys:            compose.RoutingKeys(cfg.settings),
 	}
 }
 
@@ -84,7 +88,7 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}
-	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, config.FromOS, log)
+	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, spec.keys, log)
 	if err != nil {
 		return nil, "", ai.PublicProfile{}, "", err
 	}
@@ -96,13 +100,11 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 // or the honest-absent posture. Nothing is picked silently.
 func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, ai.PublicProfile, string, error) {
 	if !cfg.Unconfigured() {
-		// A task whose whole fallback ladder has no bound tier is not a
-		// boot error (a deployment may legitimately not run every
-		// workload), but it must be loud: log it now, not discover it
-		// from a refused call.
-		for _, w := range cfg.UnboundLadderWarnings() {
-			log.Warn(w)
-		}
+		// A deployment may legitimately not run every workload, so a task
+		// with no bound tier is no boot error. It must still be loud, so the
+		// gap is read here and not from a refused call. A ladder whose
+		// rungs reach one API is named in the same place.
+		ai.LogLadderWarnings(log, cfg)
 	}
 	// The bindings this boot may run on, best first. A list rather than a switch
 	// because the second entry is a FALLBACK from the first — reached only when
@@ -174,6 +176,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		compose.WithColdStart(fetch, modelPath.ColdStart),
 		compose.WithScrape(fetch, modelPath.ColdStart),
 		compose.WithBrief(modelPath.BriefRanking),
+		compose.WithHomeRepairClassifier(modelPath.OwedVerdict),
 		compose.WithCompanyBrief(modelPath.Summarize, routingVersion),
 		compose.WithCompanyDossier(modelPath.Summarize, routingVersion),
 		compose.WithGrowthFit(modelPath.GrowthFit, routingVersion),
@@ -199,8 +202,14 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// prose over records the caller can already see. It caches, so unlike
 		// the meeting brief it carries the routing version.
 		compose.WithContactBrief(modelPath.Summarize, routingVersion),
+		compose.WithDealRoomBriefWriter(modelPath.Summarize),
 		compose.WithRoleProposals(modelPath.ProposeRoles),
 		compose.WithFilterProposals(modelPath.NlSearch),
+		compose.WithReaderRendering(modelPath.ReaderRendering),
+		// The Sales review's assessment caches per reader, so it carries the
+		// routing version like the other cached writers.
+		compose.WithSalesAssessment(modelPath.ReportInterpret, routingVersion),
+		compose.WithReportSetup(modelPath.ReportSetup),
 		// The ask to a colleague rides the drafting lane: it is the same task
 		// with a different reader, which is what a site is for.
 		compose.WithIntroRequestDraft(modelPath.DraftReply),
@@ -208,6 +217,9 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// differs — this one is read by a customer — but the task is drafting,
 		// which is what the lane is.
 		compose.WithIntroNoteDraft(modelPath.DraftReply),
+		// A photo of business cards rides the document task. It has the same
+		// ladder and the same carriage declaration as an attached document.
+		compose.WithCardPhotoReader(modelPath.DocumentExtract),
 	}
 }
 
@@ -265,8 +277,8 @@ func jobEnqueueOptions(
 	if !vatcheck.Configured(gates.vatCheck) {
 		logger.Warn("api: MARGINCE_VAT_CHECK_BASE_URL is unset — this role queues no VAT consultation, whatever the worker carries")
 	}
-	if !geocode.Configured(gates.geocode) {
-		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL is unset — this role queues no coordinate lookup, whatever the worker carries")
+	if _, on := geocode.Resolve(gates.geocode); !on {
+		logger.Warn("api: MARGINCE_GEOCODE_BASE_URL=off — this role queues no coordinate lookup; the worker must carry the same value")
 	}
 	opts = append(opts, vatCheckEnqueueOptions(inserter, gates.vatCheck)...)
 	return append(opts, geocodeEnqueueOptions(inserter, gates.geocode)...), nil
@@ -286,21 +298,15 @@ type queueGates struct {
 }
 
 // geocodeEnqueueOptions wires the coordinate-lookup enqueue only when
-// geocode.Configured says this installation geocodes — the same predicate
-// cmd/worker's geocoderFor gates its own client on.
+// geocode.Resolve says this installation geocodes. cmd/worker's geocoderFor
+// gates its own client on the same predicate.
 //
-// The api role only ENQUEUES: the provider lives on the worker
-// (JobRunnerConfig.Geocoder), and that split is what keeps the
-// single-requester rule enforceable — several api replicas may queue, exactly
-// one worker asks. Which is also why an unset variable HERE has to stop the
-// queueing rather than being left to the worker: the worker's nil-provider
-// path does answer honestly, but what it writes is contacts.GeocodeFailed, and
-// an operator asking why geocoding does not work then reads a lookup failure
-// on every address when the truth is that no provider was ever configured for
-// the role that queued it. A wrong answer delivered confidently is worse for
-// diagnosis than an empty queue.
+// The api role only enqueues; the provider lives on the worker
+// (JobRunnerConfig.Geocoder). When geocoding is off, the api must not queue.
+// A worker without a provider would write contacts.GeocodeFailed for every
+// address, which reads as a lookup failure instead of "never configured".
 func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
-	if !geocode.Configured(baseURL) {
+	if _, on := geocode.Resolve(baseURL); !on {
 		return nil
 	}
 	return []compose.Option{compose.WithGeocoding(inserter)}

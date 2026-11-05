@@ -122,7 +122,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 				// round after an erasure — erasure deletes contact_phone, so
 				// "no live phone row" is exactly what an erased subject
 				// answers.
-				_, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+				_, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), []SignatureField{
 					{
 						Name: "title", Value: "Head of Procurement",
 						Evidence: "Mira Halvorsen | Head of Procurement", Confidence: 0.9,
@@ -131,7 +131,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 						Name: "phone", Value: "+49 30 1234567",
 						Evidence: "T +49 30 1234567", Confidence: 0.9,
 					},
-				})
+				}, true)
 				return err
 			},
 		},
@@ -217,7 +217,7 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 
 	// Live first, so a statement that refused everything could not pass this.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		filled, err := writeCompanyColumn(ctx, tx, companyID, columnIndustry, "Energietechnik", false)
+		filled, err := writeCompanyColumn(ctx, tx, companyID, columnIndustry, "Energie", false)
 		if err != nil || !filled {
 			t.Errorf("filling industry on a LIVE company: filled=%v err=%v", filled, err)
 		}
@@ -267,7 +267,7 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("reading the columns back: %v", err)
 	}
-	if industry == nil || *industry != "Energietechnik" {
+	if industry == nil || *industry != "energy_utilities" {
 		t.Errorf("industry = %q, want the value written while the company was live", derefOrEmpty(industry))
 	}
 	if legalName != nil {

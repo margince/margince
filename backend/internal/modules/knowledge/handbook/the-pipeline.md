@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stageprogression.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
 The pipeline in Margince is the ladder of stages every deal moves through. Deals
@@ -26,19 +27,19 @@ This offers open stages only, and skips deals already on that stage. You cannot 
 ### How do I mark a deal as won?
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. There is no separate Won button.
 1. Open the deal and click the Won stage on its **Stage** ladder. Or drag the card to the Won column on **Board**.
-2. The dialog says "This closes the deal as won. Nothing changes until you confirm." Press **Confirm**.
-3. With a signed contract attached, the deal closes. Without one, the dialog comes back asking **How was it won?**.
-4. Pick an answer and press **Confirm** again. **Other** also needs **Details**.
+2. The dialog says "This closes the deal as won. Nothing changes until you confirm."
+3. Without a signed contract, the dialog asks **How was it won?** on opening. **Confirm** waits for your answer. **Other** also needs **Details**.
+4. Press **Confirm**. The deal closes.
 
 Also called: close won, close a deal as won, win an opportunity.
 
 ### How do I mark a deal as lost?
-When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and give a **Lost reason**. There is no separate Lost button.
+When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. There is no separate Lost button.
 1. Open the deal and click the Lost stage on its **Stage** ladder. Or drag the card to the Lost column on **Board**.
-2. Type the **Lost reason**. You must give one: **Confirm** stays off until the box says something.
-3. Press **Confirm**.
+2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. The note box has room for several lines, and Enter starts a new line. **Confirm** stays off until you pick a reason.
+3. Press **Confirm**, or press Ctrl+Enter (⌘+Enter on a Mac) in the note.
 
-The reason is kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you typed.
+The reason and the note are kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you picked and typed.
 Also called: close lost, lose a deal, mark an opportunity lost, the customer said no.
 Also called: the client declined, we lost the deal, the prospect said no.
 
@@ -51,7 +52,7 @@ To reopen a won or lost deal in Margince, open it and choose **More actions** �
 Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
 
 ### How do I bring back a deal that went cold?
-A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back.
+A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back. A meeting booked for later keeps the deal off stalled until it starts or is called off.
 1. On **Deals**, turn on the **Stalled only** filter to find them.
 2. Open the deal and send a mail, or use **Log activity** for a call, meeting or note.
 3. If the buyer asked you to wait, edit the deal and set **Wait until** to a later date. The mark stays hidden until then.
@@ -70,7 +71,7 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only settings" at the top of the page.
 
-An agent is always refused. Also called: deal stages, sales process, customise the pipeline, reorder stages.
+An agent acting for someone who may edit pipelines can do the same. It cannot add a won or lost stage or change what a stage means. While a move runs by itself on the pipeline, it cannot change the stages or **Exit criteria** either. Also called: deal stages, sales process, customise the pipeline, reorder stages.
 
 ### How do I create another pipeline?
 To add a pipeline, open **Settings** → **Pipelines** and choose **New pipeline**.
@@ -117,8 +118,8 @@ Rename them, reorder them, add your own. Two rules you cannot change: a won stag
 is always 100 and a lost stage is always 0.
 
 You edit pipelines and stages at **Settings → Pipelines**, in the Sales group.
-Only a human can edit them. An agent is refused, because every "should this deal
-move?" idea is judged against the stage ladder.
+An agent acting for you can edit them too. What a stage means stays with you, and so do the
+stages while a move runs by itself: automatic moves are judged on them.
 
 Removing a stage tells you what happens. The stages after it move up, and past
 stage changes still read well. Deals still on it have to move first.
@@ -142,13 +143,13 @@ or lost stage asks first:
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
 
-If the deal has open tasks, the dialog lists them, and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
+If the deal has open tasks, the dialog lists them under the question, each with its due date or **No due date**. It lists at most five, then says how many more there are, if any. **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
 
 ### Losing
 
-**A lost deal needs a reason.** The **Lost reason** box must say something
-before **Confirm** works. If you cancel (or press Escape, or click outside),
-anything you typed is cleared.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Loss reasons**. The **Note** is optional.
+**How it stands** shows the reason beside the day the deal closed, with the note under it. A long note shows its first two lines, and **Show more** opens the rest.
+Reopening clears the reason, and the deal's history keeps every time it was lost.
 
 ### Winning
 
@@ -162,9 +163,8 @@ It must also have a file attached that is not archived, filed under Contract or
 Legal, in the Current or Final state. A contract record with no file on it, or
 only archived files, is not enough.
 
-**Or** there is not. You will not see the question until you press Confirm.
-When you press Confirm without a signed contract, the dialog comes back with a
-question:
+**Or** there is not. The dialog checks the deal when it opens, and with no
+signed contract it shows a question and holds **Confirm** until you answer it:
 
 > **How was it won?** No signed contract is attached. Record how the deal was
 > won; the answer is kept on the deal and counted in reports.
@@ -240,10 +240,9 @@ explains.
 
 ## Stalled deals
 
-**A deal in Margince is stalled when it is open and nothing has touched it for
-more than 60 days.** The deal card then carries a **stalled** badge. "Touched"
-means real activity (a mail, a meeting, a note). Opening the record does not
-count. At 60 days a deal is not yet stalled; past 60 it is.
+A deal in Margince is stalled when it is open and nothing has touched it for more than 60 days. The deal card then carries a **stalled** badge. "Touched" means real activity (a mail, a meeting, a note). Opening the record does not count. At 60 days a deal is not yet stalled; past 60 it is.
+
+The board and list count activity ages by calendar days in the installation time zone, as the deal page does. Within today, they show hours or minutes. A day-only email shows its stated date.
 
 A **wait until** date that is still to come hides the stalled mark, and the mark
 comes back on its own after that date. It does not hide a close date that has
@@ -263,8 +262,8 @@ dismissed deal back.
 ## Where a deal came from
 
 A deal carries an **acquisition source**: the business channel it came from. It
-is a different field from a lead source. A lead source records how a record
-reached Margince; an acquisition source records which channel won the business.
+is a different field from a lead origin. A lead origin records where a lead
+came from; an acquisition source records which channel won the business.
 
 The list is for an administrator, at **Settings → Acquisition sources**. A name
 you add makes a key that never changes after that, so renaming it later keeps
@@ -272,40 +271,38 @@ the reports behind it whole. You can retire a source instead of deleting it.
 Deals that already name it still read "(retired)" instead of going empty. A deal
 that names none reads "Not set".
 
-## Forecast category
+## Win probability
 
-A deal's forecast category is separate from its stage, and is your call. You set it when you edit the deal, to **Commit**, **Best case**,
-**Pipeline** or **Omitted**.
-
-Two more appear in reports, but nobody chooses them: **Slipped** and **No
-category**. Margince marks a Commit or Best case deal Slipped when its close date
-has passed, is missing, or is still only a guess. Nobody sets it; it is what the
-dates say.
+A deal's **Probability**, from 0 to 100%, starts as its stage's. Set the deal's
+own when you edit it; it then reads "set by hand", with the stage's value beside
+it. Empty the field to use the stage's again. A stage move sets it back to the
+new stage's and says so: "Probability set to 75% by the stage Negotiating". A
+won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
+it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
+close date counts as **Likely**.
 
 ## Close dates Margince sets
 
-Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its future date, and its forecast category drops one step. The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. With fewer than 20 won deals, Margince uses 14 days per stage.
+Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%). The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
 
-A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Changes made for you** on **Home**, to accept or undo; see [Your day](your-day.md#changes-made-for-you). To stop these changes on your deals, see [Approvals](approvals.md).
+A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Waiting for your word** on **Home**, to accept or undo; see [Your day](your-day.md#waiting-for-your-word). To stop these changes on your deals, see [Approvals](approvals.md).
 
 ## Reading the numbers
 
-The deals board in Margince loads 100 deals at a time. But the totals at the top
-of each column count every matching deal, the ones not loaded yet too. Each
-column header carries the stage name, its win probability, how many deals are in
-it, the stage total, and under that the weighted total.
+Each stage column of the deals board loads 25 deals at a time. Click **Load more** under a column's cards to see more in that column only. Each column header carries the stage name, its win probability and how many deals are in it. Under that are the stage total and the weighted total, in the short form the cards use. A bar under the two figures shows how large the stage is next to the largest stage on the board. Its dark part is the weighted share.
 
-The totals count every deal you may see, which are the deals the board shows as
-cards. They are held back when a tag filter is on ("Loaded deals only. No total
-while a tag filter is on."). They are also held back when the owner filter names
-someone whose numbers you may not measure ("Loaded deals only. This owner’s
-totals are outside what you may measure."). You may measure yourself, the
-members of teams you lead, and anyone if your access covers the whole company.
+A stage with no total shows no bar, and the bar has no dark part when the weighted total is unknown. No stage shows a bar when the totals on the board are in more than one currency. When the totals have a rate date, a last line gives the date of the exchange rates used. It also says how many deals have no price, when some have none. Point at the stage total, or move to it with Tab, to see both totals in full, down to the smallest unit of the currency. A weighted total that is unknown shows there as a line, not an amount.
+
+The totals at the top of each column count every matching deal, the ones not loaded yet too. While the totals are still loading, or if they fail to load, a column shows the count of its loaded cards instead. A column that is still loading shows no count. If a column fails to load, it shows its own error and **Retry**, and the other columns stay as they are. If a later page fails, the cards already loaded stay, an error shows, and **Load more** tries that page again. The **Table** view loads one list.
+
+The totals count every deal you may see, which are the deals the board shows as cards. They are held back when the board includes archived deals. They are also held back when you narrow the board by stage, tag, search, team or unassigned deals. A range such as close date or value holds them back too. A tag filter, for example, shows "Loaded deals only. No total while a tag filter is on."
+
+They are held back too when the owner filter names someone whose numbers you may not measure ("Loaded deals only. Only an administrator can let you measure this owner’s totals."). You may measure yourself, the members of teams you lead, and anyone if your access covers the whole company. Where totals are held back, the count at the top of the board covers only the loaded cards and says so.
 
 Every deal report has an **Explain this number** control that shows the rows the
 number was built from. If a number looks wrong, open it.
 
-The deal reports are **Open deals by stage**, **Forecast categories**, **Open
+The deal reports are **Open deals by stage**, **Forecast by probability**, **Open
 deals per company**, and the sales and time-in-stage reports in **Performance**. They
 live under **Analytics**; see [Analytics and forecasting](analytics.md).
 
@@ -382,14 +379,15 @@ Archiving a deal is different from closing it. A closed deal is a finished
 part of your business; an archived deal has left your lists.
 
 To archive a deal, open it and choose **More actions** → **Archive deal**, or
-tick several on the list and use **Archive**. Archived deals leave every list and
-report. **Show archived** lets you see one, read-only. To bring one back, open
-it with **Show archived**, find the archive entry in its history and press
-**Undo**. A closed or archived deal has no box to tick for acting on many at
-once. You cannot merge two deals.
+tick several on the list and use **Archive**. A Team lead, Management, Ops or
+Admin may archive a deal, and so may its owner if they created it or were given it.
+Archived deals leave every list and report. **Show archived** lets you see one,
+read-only. To bring one back (Team lead, Management, Ops or Admin), open it with
+**Show archived**, find the archive entry in its history and press **Undo**. A
+closed or archived deal has no box to tick for acting on many at once.
 
 ### Can I merge two duplicate deals?
-No. Margince has no merge for deals: merging covers contacts and companies only. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
+No. Margince has no merge for deals: merging covers contacts, companies, and leads from a duplicate pair in the Worklist. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
 
 ## Partners on a deal
 

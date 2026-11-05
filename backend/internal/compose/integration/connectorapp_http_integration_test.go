@@ -24,7 +24,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // setupConnectorAppHTTP boots the api composition WITH a vault, which is what
@@ -254,43 +256,37 @@ func TestGoogleAppOverHTTPWithoutAVaultIsUnavailableNotUnimplemented(t *testing.
 	})
 }
 
-// setupGoogleAppWithEnvApp composes a vault AND an environment-supplied Google
-// app, which is what registers the Google connectors — the shape in which a
-// STORED app can actually be used, and so the only one where its precedence
-// over the environment is observable.
-func setupGoogleAppWithEnvApp(t *testing.T) *apptest.AppEnv {
+// setupGoogleAppWithEnvApp composes a vault and an environment-supplied Google
+// app, which registers the Google connectors. In that shape the environment's
+// precedence over a stored app is observable. It returns the vault, so a test
+// can record a stored app the way the store does.
+func setupGoogleAppWithEnvApp(t *testing.T, opts ...compose.Option) (*apptest.AppEnv, keyvault.Vault) {
 	t.Helper()
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		t.Fatalf("generating a test root key: %v", err)
-	}
-	vault, err := keyvault.New(keyvault.Config{RootKey: key, Pool: apptest.EarlyPool(t)})
-	if err != nil {
-		t.Fatalf("building the local vault: %v", err)
-	}
-	e := apptest.SetupAppWithOptions(t,
-		compose.WithKeyvault(vault),
-		compose.WithGmailCapture(compose.GmailConfig{
-			ClientID:      "env-client.apps.googleusercontent.com",
-			ClientSecret:  "GOCSPX-from-the-environment",
-			StateKey:      "0123456789abcdef0123456789abcdef",
-			PublicBaseURL: "https://app.example",
-		}, compose.CaptureConfig{}),
-	)
-	e.BootstrapWorkspace(t)
-	return e
+	return apptest.SetupGoogleConnect(t, "env-client.apps.googleusercontent.com", "GOCSPX-from-the-environment", opts...)
 }
 
-// The whole point of storing an app: once one is set in Settings, it is the app
-// the consent flow uses — the environment's is no longer what a contact is sent
-// to Google with. Asserted on the authorize URL, because the client id in it is
-// the only place the choice becomes visible from outside.
+// storedAppCtx records and reads a stored app as the system, on the
+// installation's workspace. The app is stored before the environment's
+// arrives, which no request of this composition can do.
+func storedAppCtx(t *testing.T, e *apptest.AppEnv) context.Context {
+	t.Helper()
+	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
+	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "test-stored-app")
+}
+
+// An app the environment supplies is the one the consent flow uses, over an app
+// stored before. It locks the stored one: a write or a removal is refused, and
+// the stored app is left as it was.
 //
-// Both providers. Gmail and Calendar authorize SEPARATELY through one app, and
-// they build their consent pair in two different functions — so a stored app
-// reaching one and not the other is a live failure mode, not a hypothetical.
-func TestAStoredGoogleAppOutranksTheEnvironmentForBothProviders(t *testing.T) {
-	e := setupGoogleAppWithEnvApp(t)
+// Both providers. Gmail and Calendar authorize separately through one app, and
+// build their consent pair in two functions. So the rule could reach one and
+// not the other.
+func TestAConnectorAppFromEnvBeatsTheStoredOne(t *testing.T) {
+	e, vault := setupGoogleAppWithEnvApp(t)
+	stored := capture.NewConnectorAppStore(compose.NewSettingsStore(e.Pool), vault, nil)
+	if err := stored.Set(storedAppCtx(t, e), capture.AppProviderGoogle, httpClientID, httpSecret, ""); err != nil {
+		t.Fatalf("recording a stored app: %v", err)
+	}
 
 	authorizeClientID := func(t *testing.T, provider string) string {
 		t.Helper()
@@ -307,37 +303,49 @@ func TestAStoredGoogleAppOutranksTheEnvironmentForBothProviders(t *testing.T) {
 		}
 		return u.Query().Get("client_id")
 	}
-
-	// Before: the environment's app, which is what makes the assertion after
-	// storing mean something rather than passing on a constant.
 	for _, provider := range []string{"gmail", "gcal"} {
 		if got := authorizeClientID(t, provider); got != "env-client.apps.googleusercontent.com" {
-			t.Fatalf("%s consent uses client_id %q before an app is stored, want the environment's", provider, got)
+			t.Errorf("%s consent uses client_id %q, want the environment's over the stored one", provider, got)
 		}
+	}
+
+	var app crmcontracts.ConnectorApp
+	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
+		app.ClientId != "env-client.apps.googleusercontent.com" || app.Source != crmcontracts.ConnectorAppSourceEnvironment {
+		t.Fatalf("GET the app → %d %+v, want the environment's app in use", status, app)
+	}
+	if lock, ok := appLock(app, capture.GoogleAppKey); !ok || lock.Origin.Source != crmcontracts.SettingOriginSourceEnv {
+		t.Errorf("locks = %+v, want %s locked by the environment", app.Locks, capture.GoogleAppKey)
 	}
 
 	secret := httpSecret
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
-		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("PUT the app → %d, want 204", status)
+		crmcontracts.ConnectorAppInput{ClientId: "another.apps.googleusercontent.com", ClientSecret: &secret}, nil, nil); status != http.StatusConflict {
+		t.Errorf("PUT over the environment's app → %d, want 409", status)
 	}
+	// Locked before the value is judged: an id Google never issues is still a 409.
+	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
+		crmcontracts.ConnectorAppInput{ClientId: "not-a-client-id", ClientSecret: &secret}, nil, nil); status != http.StatusConflict {
+		t.Errorf("an invalid PUT over the environment's app → %d, want 409", status)
+	}
+	if status := e.Call(t, "DELETE", "/v1/installation/oauth-apps/google", nil, nil, nil); status != http.StatusConflict {
+		t.Errorf("DELETE under the environment's app → %d, want 409", status)
+	}
+	kept, err := stored.Read(storedAppCtx(t, e), capture.AppProviderGoogle)
+	if err != nil || !kept.Configured || kept.ClientID != httpClientID {
+		t.Errorf("the stored app reads %+v %v, want it left as it was", kept, err)
+	}
+}
 
-	// After: the stored one, with no restart — the resolution is per request.
-	for _, provider := range []string{"gmail", "gcal"} {
-		if got := authorizeClientID(t, provider); got != httpClientID {
-			t.Errorf("%s consent uses client_id %q after an app was stored, want the stored one — an app set in Settings that never reaches Google is the whole feature not working", provider, got)
-		}
-	}
-
-	// And removing it falls back rather than breaking: the environment still has
-	// an app, and an installation that clears its own must not lose the flow.
-	if status := e.Call(t, "DELETE", "/v1/installation/oauth-apps/google", nil, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("DELETE the app → %d, want 204", status)
-	}
-	for _, provider := range []string{"gmail", "gcal"} {
-		if got := authorizeClientID(t, provider); got != "env-client.apps.googleusercontent.com" {
-			t.Errorf("%s consent uses client_id %q after the stored app was removed, want the environment's back", provider, got)
-		}
+// The Microsoft app takes the same lock from its own environment pair.
+func TestAMicrosoftAppFromEnvLocksTheStoredOne(t *testing.T) {
+	e, _ := setupGoogleAppWithEnvApp(t, compose.WithGraphCapture(compose.GraphConfig{
+		ClientID: "00000000-0000-0000-0000-00000000e0e0", ClientSecret: "from-the-environment",
+	}))
+	secret := httpSecret
+	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/microsoft",
+		crmcontracts.ConnectorAppInput{ClientId: "00000000-0000-0000-0000-000000000001", ClientSecret: &secret}, nil, nil); status != http.StatusConflict {
+		t.Errorf("PUT over the environment's Microsoft app → %d, want 409", status)
 	}
 }
 
@@ -466,7 +474,7 @@ func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 // looks like from here, and it exercises the real unseal failing for the real
 // reason.
 func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.T) {
-	e := setupGoogleAppWithEnvApp(t)
+	e, _ := apptest.SetupGoogleConnect(t, "", "")
 	secret := httpSecret
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
 		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
@@ -649,4 +657,39 @@ func TestAnUnknownVendorIsNotFoundRatherThanDefaulted(t *testing.T) {
 			t.Errorf("a write to an unknown vendor landed under %s", vendor)
 		}
 	}
+}
+
+// A client id the environment sets without its secret composes no app. So it
+// locks nothing, and the stored app stays the admin's to write and remove.
+func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
+	e, _ := apptest.SetupGoogleConnect(t, "env-only.apps.googleusercontent.com", "")
+	secret := httpSecret
+	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
+		crmcontracts.ConnectorAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("PUT beside a half environment app → %d, want 204", status)
+	}
+	var app crmcontracts.ConnectorApp
+	if status := e.Call(t, "GET", "/v1/installation/oauth-apps/google", nil, nil, &app); status != http.StatusOK ||
+		app.ClientId != httpClientID || app.Source != crmcontracts.ConnectorAppSourceStored {
+		t.Fatalf("GET → %d %+v, want the stored app in use", status, app)
+	}
+	if _, ok := appLock(app, capture.GoogleAppKey); ok {
+		t.Errorf("locks = %+v, want the stored app unlocked", app.Locks)
+	}
+	if status := e.Call(t, "DELETE", "/v1/installation/oauth-apps/google", nil, nil, nil); status != http.StatusNoContent {
+		t.Errorf("DELETE beside a half environment app → %d, want 204", status)
+	}
+}
+
+// appLock is the lock a connector app read reports on key.
+func appLock(app crmcontracts.ConnectorApp, key string) (crmcontracts.SettingLock, bool) {
+	if app.Locks == nil {
+		return crmcontracts.SettingLock{}, false
+	}
+	for _, lock := range *app.Locks {
+		if lock.Key == key {
+			return lock, true
+		}
+	}
+	return crmcontracts.SettingLock{}, false
 }

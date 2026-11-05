@@ -1,0 +1,430 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
+import { api } from "../../api/client";
+import { Button, Card, EmptyState, Skeleton } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
+import { Heading } from "../../design-system/heading";
+import { SaveBar } from "../../design-system/savebar";
+import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import {
+  type Draft,
+  dirtyKeys,
+  initialDraft,
+  labelOf,
+  type PurposeView,
+  rowIsOn,
+  subjectMayGrant,
+  toChoices,
+} from "../../lib/preferences.logic";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { PublicPage } from "../privacy/publicpage";
+import { PreferenceRow } from "./preferencerow";
+import { type ChoiceOutcome, PendingConfirmations } from "./preferencespending";
+import "./preferences.css";
+
+// The public, anonymous email preference center (G-6, B-E11.32): the page a
+// recipient lands on from an unsubscribe/manage-preferences link. The token
+// in the URL is the whole capability — no session, no workspace header (the
+// api client's request middleware already carves out /v1/public/* for this).
+// An unknown and a revoked token both read as absent (404): this surface
+// must never become an oracle for whether an address is known.
+
+// A purpose the workspace's catalog doesn't carry a bespoke sentence for
+// falls back to prefs.wordingGeneric — a workspace can define arbitrary
+// purposes, so this map is deliberately not exhaustive.
+const WORDING_KEYS: Record<string, MessageKey> = {
+  business_correspondence: "prefs.wording.business_correspondence",
+  marketing_email: "prefs.wording.marketing_email",
+  transactional: "prefs.wording.transactional",
+  events: "prefs.wording.events",
+};
+
+export function PreferenceCenterScreen({
+  token,
+}: Readonly<{ token?: string }>) {
+  const t = useT();
+  if (!token) {
+    return (
+      <PublicPage>
+        <EmptyState>{t("prefs.invalidLink")}</EmptyState>
+      </PublicPage>
+    );
+  }
+  return <PreferenceCenterBody token={token} />;
+}
+
+// Marks a 404 so the render branch can show the "link is no longer valid"
+// copy without distinguishing an unknown token from a revoked one — either
+// way the honest response is identical (never a consent-state oracle).
+export class LinkInvalidError extends Error {}
+// Marks a 429 (the public edge rate-limits per-IP and per-token) so the
+// render branch gives an honest retry message instead of a raw failure.
+export class RateLimitedError extends Error {}
+
+// Every mutation against this public edge classifies its failure the same
+// way: 404 means the token no longer resolves, 429 means the rate limit
+// tripped, anything else is the server's own explanation verbatim. Shared so
+// the load GET and the one-click unsubscribe POST (both reachable by an
+// unauthenticated caller hammering the same per-token limit) read identically
+// instead of one going silent.
+export function explainPublicError(
+  error: unknown,
+  t: ReturnType<typeof useT>,
+): string {
+  if (error instanceof RateLimitedError) {
+    return t("prefs.rateLimited");
+  }
+  if (error instanceof LinkInvalidError) {
+    return t("prefs.invalidLink");
+  }
+  return problemMessageOf(error, t);
+}
+
+function PreferenceCenterBody({ token }: Readonly<{ token: string }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const queryKey = ["preference-center", token];
+
+  const center = useQuery({
+    queryKey,
+    retry: false,
+    queryFn: async () => {
+      const { data, error, response } = await api.GET(
+        "/public/preferences/{token}",
+        { params: { path: { token } } },
+      );
+      if (error) {
+        if (response.status === 404) {
+          throw new LinkInvalidError();
+        }
+        if (response.status === 429) {
+          throw new RateLimitedError();
+        }
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  const purposes: PurposeView[] = center.data?.purposes ?? [];
+  // Whether this subject may take a grant at all — see subjectMayGrant.
+  const mayGrant = subjectMayGrant(purposes);
+
+  // The wording rendered at each toggle is the wording submitted for it: one
+  // function, read both for display and for the save payload.
+  const wordingOf = useCallback(
+    (purpose: PurposeView) => {
+      const wordingKey = WORDING_KEYS[purpose.key];
+      return wordingKey
+        ? t(wordingKey)
+        : t("prefs.wordingGeneric", { label: labelOf(t, purpose) });
+    },
+    [t],
+  );
+
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [partialSave, setPartialSave] = useState(false);
+  // The purposes whose subscribe is waiting on a link the subject has still to
+  // click, from the save that asked for them. Held as names rather than a
+  // count: somebody who ticked two boxes needs to know which two are pending,
+  // and the page cannot derive it from the purpose rows because nothing about
+  // them changed — that is the whole point of the outcome.
+  // What the server said about the choices in the last save that did not
+  // simply take effect. Every one of them is a different sentence to the
+  // subject, and none of them is an error — see PendingConfirmations.
+  const [outcomes, setOutcomes] = useState<ChoiceOutcome[]>([]);
+  // The one-click unsubscribe's own reply (G-7): the exact keys it just
+  // withdrew, authoritative straight from the server — never re-derived by
+  // guessing which purposes must have been granted before the call.
+  const [lastUnsubscribed, setLastUnsubscribed] = useState<string[] | null>(
+    null,
+  );
+  // Undo only stages a re-grant into the draft; it never writes on its own,
+  // so this just switches the banner's copy from "here's undo" to "you're
+  // about to re-subscribe — save to confirm".
+  const [undoStaged, setUndoStaged] = useState(false);
+
+  // Seeds (and re-seeds) the draft from the server's latest body — on first
+  // load, after a successful save, and after the refetch a partial-save
+  // recovery triggers. Never from the optimistic draft that prompted a save.
+  useEffect(() => {
+    if (center.data) {
+      setDraft(initialDraft(center.data.purposes));
+    }
+  }, [center.data]);
+
+  // The draft arrives as the mutation's variable rather than through this
+  // closure. react-query re-arms a mutation's options in a passive effect, so a
+  // click landing between the commit that renders Save and that effect runs the
+  // previous render's function — where the draft was still null. The guard that
+  // used to stand here could only ever fire in that window, and what it
+  // reported was false: the subject's choices were on the screen.
+  const save = useMutation({
+    mutationFn: async (choices: Draft) => {
+      return unwrap(
+        await api.PUT("/public/preferences/{token}", {
+          params: { path: { token } },
+          body: {
+            choices: toChoices(purposes, choices, wordingOf),
+          },
+        }),
+      );
+    },
+    onSuccess: (data) => {
+      // The server's latest body is authoritative — never the draft that
+      // prompted the save.
+      queryClient.setQueryData(queryKey, data);
+      setPartialSave(false);
+      // A SUBSCRIBE THAT NEEDS A ROUND TRIP IS NOT A FAILURE, and it is not a
+      // plain success either. The purpose rows come back unchanged — nothing is
+      // granted until the link is clicked — so a page that said nothing here
+      // would show the subject their tick vanishing with no explanation.
+      //
+      // It rides the `refused` list because that is the list the server uses
+      // for every outcome a choice did not simply take, and reading it as
+      // "these failed" is what this branch exists to prevent.
+      // ALWAYS REPLACED, never merged. A save that returns no pending outcome
+      // has none: leaving an earlier "check your email" on screen would tell
+      // the subject a link is coming for a choice they have since changed.
+      setOutcomes(data?.refused ?? []);
+      // A granular save supersedes any pending one-click notice — the
+      // subject just recorded their own explicit choice.
+      setLastUnsubscribed(null);
+      setUndoStaged(false);
+    },
+    onError: () => {
+      // UpdatePreferences loops choices in separate transactions
+      // (handlers_public.go), so a mid-list failure leaves earlier choices
+      // committed — re-read rather than let the local draft masquerade as
+      // what actually applied.
+      setPartialSave(true);
+      // A failed save says nothing about the last one's outcomes, and a
+      // "check your email" beside "something went wrong part-way" is two
+      // contradictory claims about the same press.
+      setOutcomes([]);
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
+  // RFC 8058: POST-only, no login, no `purpose` — every non-locked, granted
+  // purpose is withdrawn in one call. Idempotent on the server, so a replay
+  // shrinks `unsubscribed` toward `[]`; the banner is keyed off that array's
+  // length, never off a count carried over from an earlier call.
+  const unsubscribeAll = useMutation({
+    mutationFn: async () => {
+      const { data, error, response } = await api.POST(
+        "/public/preferences/{token}/unsubscribe",
+        { params: { path: { token } } },
+      );
+      if (error) {
+        if (response.status === 404) {
+          throw new LinkInvalidError();
+        }
+        if (response.status === 429) {
+          throw new RateLimitedError();
+        }
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      setLastUnsubscribed(data.unsubscribed);
+      // The subject just stopped everything. A standing "check your email to
+      // confirm" would be telling them to finish subscribing to something they
+      // have this moment asked to be rid of.
+      setOutcomes([]);
+      setUndoStaged(false);
+      if (data.unsubscribed.length === 0) {
+        return;
+      }
+      // The withdrawal already committed server-side — this echoes that
+      // fact straight from the response into the cache (never a fresh GET
+      // racing an unrelated stale read), so the draft re-seeds to "off"
+      // without a round trip, and dirty-checking sees the true baseline.
+      const withdrawnKeys = new Set(data.unsubscribed);
+      queryClient.setQueryData<{ purposes: PurposeView[] }>(
+        queryKey,
+        (old) =>
+          old && {
+            ...old,
+            purposes: old.purposes.map((purpose) =>
+              withdrawnKeys.has(purpose.key)
+                ? {
+                    ...purpose,
+                    state: "withdrawn" as const,
+                    // `choice` too, and not only `state`: the row is drawn
+                    // from the choice, so echoing the raw state alone left
+                    // a just-unsubscribed row still showing as on.
+                    choice: "opted_out" as const,
+                  }
+                : purpose,
+            ),
+          },
+      );
+    },
+  });
+
+  // Re-subscribing is an explicit opt-in, never a silent re-grant: this only
+  // stages `draft` back to subscribed for the keys just withdrawn — the
+  // existing save bar performs the actual write when the subject presses
+  // Save.
+  function undoUnsubscribe() {
+    if (!lastUnsubscribed) {
+      return;
+    }
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            ...Object.fromEntries(lastUnsubscribed.map((key) => [key, true])),
+          }
+        : prev,
+    );
+    setUndoStaged(true);
+  }
+
+  if (center.isPending) {
+    return (
+      <PublicPage>
+        <Skeleton width="60%" />
+        <Skeleton width="90%" />
+        <Skeleton width="75%" />
+      </PublicPage>
+    );
+  }
+
+  if (center.isError) {
+    return (
+      <PublicPage>
+        <EmptyState>{explainPublicError(center.error, t)}</EmptyState>
+      </PublicPage>
+    );
+  }
+
+  if (!draft) {
+    return (
+      <PublicPage>
+        <Skeleton width="60%" />
+      </PublicPage>
+    );
+  }
+
+  const dirty = dirtyKeys(purposes, draft);
+  // Every write against this token is serialized through one flag: the PUT
+  // is non-atomic (handlers_public.go loops choices in separate
+  // transactions), so a second write firing while the first is still in
+  // flight — or while the post-save refetch this file's onError triggers is
+  // still reconciling the cache — could interleave with it or land against
+  // a draft the first response is about to reseed out from under. Freezing
+  // every control here is cheaper and more honest than trying to merge two
+  // in-flight edits.
+  const writePending =
+    save.isPending || unsubscribeAll.isPending || center.isFetching;
+
+  return (
+    <PublicPage>
+      {/* A standalone public page, not app chrome — SectionHeader's fixed
+            narrow title column is built for a card header sharing a row with
+            a button, and wraps this page's longer headline badly. The
+            headline is this page's primary voice, so it stacks full-width
+            above the subtitle instead, at its own (larger) size. */}
+      <div className="pref-header">
+        <Heading size="xlarge" className="t-display">
+          {t("prefs.title")}
+        </Heading>
+        <p className="t-sub">{t("prefs.sub")}</p>
+      </div>
+      <ul className="pref-list">
+        {purposes.map((purpose) => (
+          <PreferenceRow
+            key={purpose.key}
+            purpose={purpose}
+            on={rowIsOn(purpose, draft)}
+            wording={wordingOf(purpose)}
+            t={t}
+            disabled={writePending}
+            mayGrant={mayGrant}
+            onToggle={() =>
+              setDraft((prev) =>
+                prev ? { ...prev, [purpose.key]: !prev[purpose.key] } : prev,
+              )
+            }
+          />
+        ))}
+      </ul>
+
+      <Card as="div" inset className="pref-unsub">
+        <p className="t-caption">{t("prefs.unsubscribeAllHint")}</p>
+        <Button disabled={writePending} onClick={() => unsubscribeAll.mutate()}>
+          {t("prefs.unsubscribeAll")}
+        </Button>
+        {unsubscribeAll.isError && (
+          <ErrorLine>{explainPublicError(unsubscribeAll.error, t)}</ErrorLine>
+        )}
+      </Card>
+
+      {lastUnsubscribed !== null && (
+        <Card as="div" inset className="pref-unsub-banner">
+          <p>
+            {lastUnsubscribed.length > 0
+              ? t("prefs.oneClickDone")
+              : t("prefs.oneClickAlreadyOff")}
+          </p>
+          {lastUnsubscribed.length > 0 &&
+            (undoStaged ? (
+              <p>{t("prefs.undoExplicit")}</p>
+            ) : (
+              <Button disabled={writePending} onClick={undoUnsubscribe}>
+                {t("prefs.undo")}
+              </Button>
+            ))}
+        </Card>
+      )}
+
+      {partialSave && (
+        <Card as="div" inset className="pref-partial-banner">
+          <p>{t("prefs.partialSave")}</p>
+        </Card>
+      )}
+
+      <PendingConfirmations outcomes={outcomes} purposes={purposes} />
+
+      {dirty.length > 0 && (
+        <SaveBar label={t("prefs.notSaved")}>
+          <p className="pref-not-saved">{t("prefs.notSaved")}</p>
+          <p className="t-caption">
+            {t("prefs.savePending", {
+              changes: dirty
+                .map(
+                  (key) =>
+                    purposes.find((purpose) => purpose.key === key)?.label ??
+                    key,
+                )
+                .join(", "),
+            })}
+          </p>
+          <p className="t-caption">{t("prefs.saveProof")}</p>
+          <div className="card-actions">
+            <Button
+              disabled={writePending}
+              onClick={() => {
+                setDraft(initialDraft(purposes));
+                setPartialSave(false);
+              }}
+            >
+              {t("prefs.discard")}
+            </Button>
+            <Button
+              variant="primary"
+              disabled={writePending}
+              onClick={() => draft && save.mutate(draft)}
+            >
+              {t("prefs.save")}
+            </Button>
+          </div>
+        </SaveBar>
+      )}
+    </PublicPage>
+  );
+}

@@ -23,10 +23,12 @@ package compose
 // front of a rep that the transcript never asked.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -34,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -42,14 +45,14 @@ import (
 // hands it to the engine: one string per line, numbered from 1 by the prompt.
 type transcriptProposeFixture []string
 
-// transcriptProposeExpectation is one next step the scenario says the
-// transcript states, named by the line it is stated on.
-//
-// Only the line is asserted. The summary and the owner are prose the model
-// writes, and a scenario that demanded particular words would grade phrasing
-// rather than reading — the rubric is where phrasing is judged.
+// transcriptProposeExpectation identifies the cited line and verified promiser.
 type transcriptProposeExpectation struct {
-	Line int `json:"line"`
+	Recipients []string           `json:"recipients,omitempty"`
+	Meaning    *commitmentMeaning `json:"meaning,omitempty"`
+	Optional   bool               `json:"optional,omitempty"`
+	Promiser   string             `json:"promiser,omitempty"`
+	Line       int                `json:"line"`
+	DueDate    string             `json:"due_date"`
 }
 
 // transcriptProposeCases serves the one site that reads next steps out of a
@@ -74,9 +77,21 @@ func (transcriptProposeCases) CertifiedScope() string { return aitasks.ScopeFull
 //
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
 func (transcriptProposeCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
-	var lines transcriptProposeFixture
-	if err := json.Unmarshal(fixture, &lines); err != nil {
-		return nil, fmt.Errorf("transcript_propose/next_steps: the fixture is not the shape this site takes: %w", err)
+	var input struct {
+		Lines        []string              `json:"lines"`
+		Participants []certCommitmentParty `json:"participants"`
+	}
+	if bytes.HasPrefix(bytes.TrimSpace(fixture), []byte("[")) {
+		if err := json.Unmarshal(fixture, &input.Lines); err != nil {
+			return nil, fmt.Errorf("transcript_propose/next_steps: invalid fixture: %w", err)
+		}
+	} else if err := json.Unmarshal(fixture, &input); err != nil {
+		return nil, fmt.Errorf("transcript_propose/next_steps: invalid fixture: %w", err)
+	}
+	lines := input.Lines
+	parties, references, err := prepareCommitmentParties(input.Participants, map[string]ids.UUID{})
+	if err != nil {
+		return nil, err
 	}
 	if err := refuseUnreadableTranscript(lines); err != nil {
 		return nil, err
@@ -89,7 +104,22 @@ func (transcriptProposeCases) Prepare(fixture, expected json.RawMessage) (aitask
 	if err := refuseUnreachableSteps(want, len(lines)); err != nil {
 		return nil, err
 	}
-	return &transcriptProposeCase{lines: lines, expected: want}, nil
+	for i := range want {
+		if err := validateExpectedMeaning(want[i].Optional, want[i].Meaning, want[i].DueDate, lines[want[i].Line-1]); err != nil {
+			return nil, err
+		}
+		if err := validateExpectedRecipients(want[i].Recipients, references); err != nil {
+			return nil, err
+		}
+		if want[i].Promiser == "" {
+			continue
+		}
+		_, found := references[want[i].Promiser]
+		if !found {
+			return nil, fmt.Errorf("expected promiser %q is not a verified participant", want[i].Promiser)
+		}
+	}
+	return &transcriptProposeCase{lines: lines, parties: parties, expected: want, promiserKeys: certPromiserKeys(references)}, nil
 }
 
 // refuseUnreadableTranscript names a transcript the read could never have been
@@ -134,20 +164,14 @@ func refuseUnreachableSteps(want []transcriptProposeExpectation, lineCount int) 
 	return nil
 }
 
-// transcriptProposeCase is one transcript ready to be read, closed over the
-// lines that were asked about and the next steps the scenario expects.
-// certTranscriptMeetingDay is the day every graded transcript is read as having
-// happened on.
-//
-// PINNED for the reason the language is: a prompt carrying today's date would
-// make every morning's request a different one, and a score is only comparable
-// against a fixed request. No corpus scenario states a deadline yet, so nothing
-// grades what this resolves to — it is here so the request stays still.
+// A fixed meeting day makes relative deadline grades comparable across runs.
 const certTranscriptMeetingDay = "2026-03-04"
 
 type transcriptProposeCase struct {
-	lines    []string
-	expected []transcriptProposeExpectation
+	promiserKeys map[string]string
+	parties      []commitmentParty
+	lines        []string
+	expected     []transcriptProposeExpectation
 }
 
 // Run issues the one request this site sends, bare: production wraps the same
@@ -164,7 +188,7 @@ func (c *transcriptProposeCase) Run(ctx context.Context, completer aitasks.Compl
 	// whose prompt carried today's date would grade a different request every
 	// morning, and any deadline a corpus case states relative to the meeting
 	// would resolve to a different day each run.
-	req := transcriptRequest(c.lines, certTranscriptMeetingDay, string(textlang.English))
+	req := transcriptRequest(c.lines, certTranscriptMeetingDay, string(textlang.English), c.parties)
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {
@@ -191,7 +215,7 @@ func (c *transcriptProposeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Detail: fmt.Sprintf("unparseable model output: %v", err),
 		}
 	}
-	if msg := validateTranscriptPayload(payload, len(c.lines)); msg != "" {
+	if msg := validateTranscriptPayload(payload, c.lines, c.parties); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
@@ -209,6 +233,9 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 	}
 	var confidences []float64
 	for _, step := range payload.proposals() {
+		if step.Meaning.withheldOutcome() != "" {
+			continue
+		}
 		confidences = append(confidences, float64(step.Confidence))
 	}
 	return spanOf(confidences)
@@ -224,17 +251,33 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 // commitment. Only line numbers are named in the detail — the transcript's own
 // words are a speaker's, and they have no business being echoed into a record.
 func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []string {
-	wanted := make(map[int]bool, len(c.expected))
+	wanted := make(map[string]string, len(c.expected))
 	for _, step := range c.expected {
-		wanted[step.Line] = true
+		if step.Optional {
+			continue
+		}
+		wanted[fmt.Sprintf("%d:%s", step.Line, step.Promiser)] = step.DueDate
 	}
-	answered := map[int]bool{}
+	answered := map[string]bool{}
 	var out []string
 	for _, step := range payload.proposals() {
+		for _, expected := range c.expected {
+			if slices.Contains(step.SourceLines, expected.Line) && c.promiserKeys[step.PromiserRef] == expected.Promiser && !expectedRecipientsMatch(expected.Recipients, step.RecipientRefs, c.promiserKeys) {
+				out = append(out, "the recipients do not match the quoted promise")
+			}
+			if expected.Meaning != nil && slices.Contains(step.SourceLines, expected.Line) &&
+				!expectedMeaningMatches(expected.Meaning, step.Meaning) {
+				out = append(out, "the commitment meaning does not match the source")
+			}
+		}
+		if step.Meaning.withheldOutcome() != "" {
+			continue
+		}
 		matched := false
 		for _, line := range step.SourceLines {
-			if wanted[line] {
-				answered[line] = true
+			key := fmt.Sprintf("%d:%s", line, c.promiserKeys[step.PromiserRef])
+			if due, exists := wanted[key]; exists && step.DueDate == due {
+				answered[key] = true
 				matched = true
 			}
 		}
@@ -246,7 +289,7 @@ func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []strin
 	for line := range wanted {
 		if !answered[line] {
 			out = append(out, fmt.Sprintf(
-				"the transcript states a next step on line %d and the reply does not propose it", line))
+				"the transcript states a next step for %s and the reply does not propose it", line))
 		}
 	}
 	// Map iteration is unordered, and a detail line that reshuffles between

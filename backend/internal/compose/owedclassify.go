@@ -28,12 +28,14 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/owedverdict"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -107,11 +109,16 @@ func NewOwedClassifier(pool *pgxpool.Pool, brain completer, now func() time.Time
 	return &OwedClassifier{
 		pool: pool,
 		store: activities.NewStore(db).WithOwnDomains(
-			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+			ownDomainReader{store: capture.NewOwnDomainStore(db)}).WithRecordZone(installationZoneTx),
 		brain: brain,
 		log:   log,
 		now:   now,
 	}
+}
+
+// installationZoneTx is the zone the installation's calendar days end in.
+func installationZoneTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
+	return identity.ZoneAppliedTx(ctx, tx)
 }
 
 // owedCandidate is one backlog row as the prompt sees it.
@@ -226,20 +233,47 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 // judgeBatch judges one batch with ONE model call and commits each verdict.
 //
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
-// on its own — which escalates the routing ladder by being its own structured
-// call — and one still below it afterwards is left unjudged rather than guessed.
+// on its own, as a different request from its batch, so the model answers it
+// afresh. One still below the floor afterwards is left unjudged rather than guessed.
 // A batch the models decline is asked message by message, so the one message
 // they will not judge is recorded declined and the rest of the batch proceeds.
+type owedPredictionSink struct {
+	assessed func(owedCandidate)
+	accept   func(context.Context, owedCandidate, owedResult) (bool, error)
+	decline  func(context.Context, owedCandidate, error) error
+}
+
 func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
+	return c.predictBatch(ctx, batch, calls, owedPredictionSink{
+		accept: func(ctx context.Context, msg owedCandidate, result owedResult) (bool, error) {
+			return c.store.SetOwedVerdict(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt)
+		},
+		decline: func(ctx context.Context, msg owedCandidate, cause error) error {
+			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
+			if err != nil {
+				return err
+			}
+			c.log.WarnContext(ctx, "owed classify: the models declined one message, which stays unjudged", "activity_id", msg.ID, "recorded", recorded, "err", cause)
+			return nil
+		},
+	})
+}
+
+func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate, calls *sweepCalls, sink owedPredictionSink) (int, error) {
 	if !calls.take() {
 		return 0, nil
 	}
 	verdicts, err := c.ask(ctx, batch)
 	if declinedByTheModels(err) {
-		return c.judgeEach(ctx, batch, readAt, calls)
+		return c.predictEach(ctx, batch, calls, sink)
 	}
 	if err != nil {
 		return 0, err
+	}
+	if sink.assessed != nil {
+		for _, msg := range batch {
+			sink.assessed(msg)
+		}
 	}
 	judged := 0
 	var retry []owedCandidate
@@ -256,7 +290,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			retry = append(retry, msg)
 			continue
 		}
-		applied, err := c.store.SetOwedVerdict(ctx, msg.ID, v.Verdict, owedverdict.Ruleset, readAt)
+		applied, err := sink.accept(ctx, msg, v)
 		if err != nil {
 			return judged, err
 		}
@@ -264,15 +298,15 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			judged++
 		}
 	}
-	solo, err := c.judgeEach(ctx, retry, readAt, calls)
+	solo, err := c.predictEach(ctx, retry, calls, sink)
 	return judged + solo, err
 }
 
-// judgeEach asks about each message in its own call and commits a verdict
+// predictEach asks about each message in its own call and commits a verdict
 // above the floor. A message every rung declines is that message's outcome: it
 // is recorded declined, which takes it out of both populations for this pass
 // and every later one, and the next message is asked.
-func (c *OwedClassifier) judgeEach(ctx context.Context, msgs []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
+func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, calls *sweepCalls, sink owedPredictionSink) (int, error) {
 	judged := 0
 	for _, msg := range msgs {
 		if !calls.take() {
@@ -280,21 +314,21 @@ func (c *OwedClassifier) judgeEach(ctx context.Context, msgs []owedCandidate, re
 		}
 		solo, err := c.ask(ctx, []owedCandidate{msg})
 		if declinedByTheModels(err) {
-			recorded, markErr := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
-			if markErr != nil {
-				return judged, markErr
+			if err := sink.decline(ctx, msg, err); err != nil {
+				return judged, err
 			}
-			c.log.WarnContext(ctx, "owed classify: the models declined one message, which stays unjudged",
-				"activity_id", msg.ID, "recorded", recorded, "err", err)
 			continue
 		}
 		if err != nil {
 			return judged, err
 		}
+		if sink.assessed != nil {
+			sink.assessed(msg)
+		}
 		if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
 			continue
 		}
-		applied, err := c.store.SetOwedVerdict(ctx, msg.ID, solo[0].Verdict, owedverdict.Ruleset, readAt)
+		applied, err := sink.accept(ctx, msg, solo[0])
 		if err != nil {
 			return judged, err
 		}

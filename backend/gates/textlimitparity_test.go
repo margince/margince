@@ -37,22 +37,38 @@ type textLimit struct {
 func schemaPath(parts ...string) []string { return parts }
 
 var textLimits = []textLimit{
-	{"internal/compose/bulkvalidate.go", "maxBulkTaskSubject",
-		schemaPath("components", "schemas", "BulkTask", "properties", "subject")},
-	{"internal/compose/bulkvalidate.go", "maxBulkNote",
-		schemaPath("components", "schemas", "BulkChangeExecuteRequest", "properties", "note")},
-	{"internal/compose/bulkvalidate.go", "maxBulkNote",
-		schemaPath("components", "schemas", "BulkChangePreviewRequest", "properties", "note")},
-	{"internal/modules/activities/maildraft.go", "maxDraftSubject",
-		schemaPath("components", "schemas", "MailDraftInput", "properties", "subject")},
-	{"internal/modules/activities/maildraft.go", "maxDraftAddress",
-		schemaPath("components", "schemas", "MailDraftInput", "properties", "to", "items")},
-	{"internal/modules/activities/maildraft.go", "maxDraftAddress",
-		schemaPath("components", "schemas", "MailDraftInput", "properties", "cc", "items")},
-	{"internal/modules/activities/maildraft.go", "maxDraftAddress",
-		schemaPath("components", "schemas", "MailDraftInput", "properties", "bcc", "items")},
-	{"internal/modules/collections/memberwrite.go", "maxMemberNote",
-		schemaPath("components", "schemas", "ListMemberChangeRequest", "properties", "note")},
+	{
+		"internal/compose/bulkvalidate.go", "maxBulkTaskSubject",
+		schemaPath("components", "schemas", "BulkTask", "properties", "subject"),
+	},
+	{
+		"internal/compose/bulkvalidate.go", "maxBulkNote",
+		schemaPath("components", "schemas", "BulkChangeExecuteRequest", "properties", "note"),
+	},
+	{
+		"internal/compose/bulkvalidate.go", "maxBulkNote",
+		schemaPath("components", "schemas", "BulkChangePreviewRequest", "properties", "note"),
+	},
+	{
+		"internal/modules/activities/maildraft.go", "maxDraftSubject",
+		schemaPath("components", "schemas", "MailDraftInput", "properties", "subject"),
+	},
+	{
+		"internal/modules/activities/maildraft.go", "maxDraftAddress",
+		schemaPath("components", "schemas", "MailDraftInput", "properties", "to", "items"),
+	},
+	{
+		"internal/modules/activities/maildraft.go", "maxDraftAddress",
+		schemaPath("components", "schemas", "MailDraftInput", "properties", "cc", "items"),
+	},
+	{
+		"internal/modules/activities/maildraft.go", "maxDraftAddress",
+		schemaPath("components", "schemas", "MailDraftInput", "properties", "bcc", "items"),
+	},
+	{
+		"internal/modules/collections/memberwrite.go", "maxMemberNote",
+		schemaPath("components", "schemas", "ListMemberChangeRequest", "properties", "note"),
+	},
 	{"internal/modules/knowledge/corpustext.go", "maxAskQuestion", corpusBody("post", "/knowledge/corpora/{id}/ask", "question")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("post", "/knowledge/corpora", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("post", "/knowledge/corpora", "topic_statement")},

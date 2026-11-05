@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,6 +32,17 @@ func (e *dedupeEnv) ensureInput(ctx context.Context, t *testing.T, email, displa
 			INSERT INTO activity (id, kind, subject, direction, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', 'hi', 'inbound', 'gmail', $2, 'gmail:seed', 'connector:gmail')`,
 			activityID, activityID.String())
+		if err != nil {
+			return err
+		}
+		// The envelope real inbound mail carries: the sender as From, and the
+		// rep, by their login address, as its one direct To recipient. A domain
+		// question is asked of that recipient (openQuestionForReaderSQL).
+		_, err = tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, role, address, user_id, address_domain_folded)
+			SELECT $1::uuid, 'from', $2::text, NULL::uuid, $4::text
+			UNION ALL SELECT $1::uuid, 'to', lower(u.email), u.id, u.email_domain_folded FROM app_user u WHERE u.id = $3`,
+			activityID, email, e.rep, owndomain.StoredOfAddress(email))
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -269,10 +281,10 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 		t.Fatal(err)
 	}
 
-	res, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+	res, err := e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), []SignatureField{
 		{Name: "title", Value: "AI CTO", Evidence: "AI CTO", Confidence: 0.9},
 		{Name: "", Value: "   ", Evidence: ""}, // a blank value is dropped before any write
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("ApplySignatureFields: %v", err)
 	}
@@ -308,9 +320,9 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 	}); err != nil {
 		t.Fatal(err)
 	}
-	res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), []SignatureField{
 		{Name: "phone", Value: "+49 30 1234567", Evidence: "+49 30 1234567", Confidence: 0.8},
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("phone apply: %v", err)
 	}
@@ -336,9 +348,9 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 
 	// A statement OLDER than the one on the record changes nothing: mail is
 	// re-delivered, and a replay must not walk a value backwards.
-	res, err = e.store.ApplySignatureFields(ctx, contactID, e.agedSignatureSource(ctx, t), []SignatureField{
+	res, err = e.store.ApplySignatureFields(ctx, contactID, e.agedSignatureSource(ctx, t, contactID), []SignatureField{
 		{Name: "title", Value: "Stale Title", Evidence: "Stale Title", Confidence: 0.9},
-	})
+	}, true)
 	if err != nil {
 		t.Fatalf("aged apply: %v", err)
 	}
@@ -354,7 +366,7 @@ func TestApplySignatureFieldsLetsTheNewerStatementWinAndKeepsWhatItReplaced(t *t
 		t.Fatalf("title = %q after an older statement, want the newer one to stand", title)
 	}
 
-	if res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t), nil); err != nil || res.Applied != 0 || res.Skipped != 0 {
+	if res, err = e.store.ApplySignatureFields(ctx, contactID, e.openSignatureSource(ctx, t, contactID), nil, true); err != nil || res.Applied != 0 || res.Skipped != 0 {
 		t.Fatalf("empty apply = %+v (err %v), want a zero no-op", res, err)
 	}
 }

@@ -73,12 +73,17 @@ func TestOmittedNamesCarriesTheSectionsTheReaderCouldNotSee(t *testing.T) {
 
 // Empty means the thing never happened, which the prose surfaces state honestly
 // — "we have never written to them" rather than a zero date reading as year one.
+// A day entry is its date, never the noon it is stored at.
 func TestStampAnswersEmptyForSomethingThatNeverHappened(t *testing.T) {
-	if got := contactcontext.Stamp(nil); got != "" {
-		t.Errorf("Stamp(nil) = %q, want empty", got)
+	if got := contactcontext.StampOf(nil, nil); got != "" {
+		t.Errorf("StampOf(nil) = %q, want empty", got)
 	}
-	at := time.Date(2026, 8, 12, 9, 0, 0, 0, time.UTC)
-	if got := contactcontext.Stamp(&at); got != "2026-08-12T09:00:00Z" {
-		t.Errorf("Stamp = %q", got)
+	at := time.Date(2026, 8, 12, 12, 0, 0, 0, time.UTC)
+	if got := contactcontext.StampOf(&at, nil); got != "2026-08-12T12:00:00Z" {
+		t.Errorf("an instant stamps %q", got)
+	}
+	day := crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	if got := contactcontext.StampOf(&at, &day); got != "2026-08-12" {
+		t.Errorf("a day entry stamps %q, want its date", got)
 	}
 }

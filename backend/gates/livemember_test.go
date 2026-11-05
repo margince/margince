@@ -57,6 +57,9 @@ const (
 	// is the one way this census must not break — it would read a smaller tree,
 	// report PASS, and leave no failing assertion to notice.
 	activatableMemberHelper = "ActivatableMemberSQL"
+	// liveHumanHelper is LiveMemberSQL narrowed to human seats, registered for
+	// the same reason.
+	liveHumanHelper = "LiveHumanSQL"
 	// liveMemberOwner holds the one literal spelling. identity's livemember.go
 	// delegates to it and passes its alias through. That is the single call the
 	// literal-alias test must not judge.
@@ -84,7 +87,9 @@ const (
 var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 	"internal/modules/identity/roster.go":                                      "listUsersAllQuery is the ADMIN roster and says so: every non-archived member REGARDLESS of status, because a deactivated member has to be visible to reactivate",
 	"internal/modules/identity/escalation.go":                                  "the escalation ceiling LOCKS the target row rather than asking whether they may sign in. A deactivated member is exactly who a caller reactivates, and an admin whose account is deactivated is still an admin a delegated holder must not reach — so requiring liveness here would skip the guard on the targets that need it most. archived_at alone, because an archived row is genuinely gone",
+	"internal/modules/identity/invitemail.go":                                  "the invitation mail asks whether a seat is still INVITED, the set an invitation link belongs to: status invited, a human, not archived. An active member is exactly who must not get the mail, so the liveness pair is the wrong set here",
 	"internal/modules/identity/reset.go":                                       "OperatorResetPassword is the operator CLI's lockout path, never exposed over HTTP; it must reach an account whose status is not active, which is what administrator lockout means. Login itself calls the helper (lockout.go)",
+	"internal/modules/capture/memberaddresses.go":                              "the members-only hold asks whether an address is the company's own, not whether its holder may act. A departed colleague's login is still a company address, so mail on it stays internal and held; an archived row is gone. The hold only narrows an audience, so keeping the departed seat errs toward privacy",
 	"internal/compose/integration/agentaccess/oauth_grant_integration_test.go": "the fixture deactivates every seat that CAN still act, to prove revocation binds mid-session; the archived half would narrow nothing, because every seat in it was created by the harness moments earlier and none is archived",
 })
 
@@ -103,6 +108,10 @@ var deliberatelyNotLiveness = gatekit.Waive(map[string]string{
 // with what, so it is issue margince/margince#2596 rather than a change made
 // here on a guess — and it stays listed so it reads as open rather than settled.
 var namesTheSeatRatherThanOffersIt = gatekit.Waive(map[string]string{
+	"internal/modules/identity/former.go":           "import lineage follows removed and archived identities but returns only a live survivor; former members deliberately need not be active",
+	"internal/modules/approvals/redeem.go":          "pins the administrator editor revision for an invited or deactivated member; it is a named approval subject, not an assignment or sign-in destination",
+	"internal/modules/identity/memberedit.go":       "the editor addresses active, invited and deactivated accounts; removed and archived accounts are excluded",
+	"internal/platform/auth/consolidatedmember.go":  "follows the retained identity of an old writer through retired accounts to their survivor, including deactivated import accounts",
 	"internal/modules/capture/sentbycolleague.go":   "names the seat who wrote a mail another seat holds a copy of; most colleagues are invited and never sign in, and a departed one's reply was still the workspace's answer, while an archived row is gone",
 	"internal/modules/consent/noticeacquisition.go": "names the seat that recorded the acquisition a disclosure duty rests on; a deactivated colleague still labels what they recorded, and an archived row is gone, as identity's SeatNames answers",
 	"internal/modules/dealrooms/preview.go":         "renders a steward's name and address on a room that already exists; a departed colleague's name is still the right label on what they did",
@@ -157,7 +166,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 			qualifier: importAliasOf(file, identityPath),
 			other:     importAliasOf(file, workforcePath),
 			inside:    file.Name != nil && (file.Name.Name == "identity" || file.Name.Name == "workforce"),
-			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true},
+			names:     map[string]bool{liveMemberHelper: true, activatableMemberHelper: true, liveHumanHelper: true},
 		}
 		for _, decl := range file.Decls {
 			for _, sql := range appUserStatements(decl, scope) {

@@ -43,10 +43,10 @@ func TestASystemMintedTaskDoesNotCountAsTheNextStep(t *testing.T) {
 		}
 	}
 
-	if got := deriveMoment(readerCtx(), now, page("system:time-scan")); got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page("system:time-scan")); got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
 		t.Errorf("rule = %q: a system reminder was read as an agreed next step", got.Rule)
 	}
-	if got := deriveMoment(readerCtx(), now, page("human:"+ids.NewV7().String())); got.Rule == crmcontracts.ContactMomentRuleMissingNextStep {
+	if got := momentCopyFor("en").deriveMoment(readerCtx(), now, page("human:"+ids.NewV7().String())); got.Rule == crmcontracts.ContactMomentRuleMissingNextStep {
 		t.Error("a task a colleague filed was not counted as the next step")
 	}
 }
@@ -57,12 +57,12 @@ func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
 		role *string
 		want string
 	}{
-		{"an influencer", new("influencer"), "The deal is open and nothing is scheduled with them. They're the recorded influencer on it."},
-		{"an economic buyer", new("economic_buyer"), "The deal is open and nothing is scheduled with them. They're the recorded economic buyer on it."},
+		{"an influencer", new("influencer"), "The deal is open and no meeting with them is recorded. Their role is the recorded influencer."},
+		{"an economic buyer", new("economic_buyer"), "The deal is open and no meeting with them is recorded. Their role is the recorded economic buyer."},
 		// A stakeholder edge may carry no role at all, and a sentence naming
 		// one anyway would invent the fact the rung exists to report.
-		{"a seat with no role recorded", nil, "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
-		{"a seat whose role is blank", new("  "), "The deal is open and nothing is scheduled with them. They're a stakeholder on it."},
+		{"a seat with no role recorded", nil, "The deal is open and no meeting with them is recorded. Their role is a stakeholder."},
+		{"a seat whose role is blank", new("  "), "The deal is open and no meeting with them is recorded. Their role is a stakeholder."},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			page := &crmcontracts.Contact360{
@@ -71,7 +71,7 @@ func TestTheNextStepRungNamesTheRecordedSeat(t *testing.T) {
 					Role: tc.role,
 				},
 			}
-			got := deriveMoment(readerCtx(), now, page)
+			got := momentCopyFor("en").deriveMoment(readerCtx(), now, page)
 			if got.Rule != crmcontracts.ContactMomentRuleMissingNextStep {
 				t.Fatalf("rule = %q, want missing_next_step", got.Rule)
 			}

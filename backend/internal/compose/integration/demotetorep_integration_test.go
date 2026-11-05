@@ -14,28 +14,19 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// demoteToRep flips THIS SESSION'S seat from admin to rep via the owner
-// connection, so a scenario can prove that an admin-only endpoint refuses the
-// seat that may only read.
-//
-// The seat is read from the app (`GET /v1/me`), not picked out of app_user.
-// The lookup here used to be `WHERE is_agent = false ORDER BY created_at LIMIT
-// 1` under a comment claiming it demoted the bootstrap admin, and the two agree
-// only while the installation holds exactly one contact. Rows inserted in one
-// transaction share now(), so a second contact makes the pick arbitrary — and an
-// arbitrary pick fails in the worst direction available: it demotes a seat the
-// session is not using, the session stays admin, and the caller's assertion
-// that an admin-only endpoint answers 403 gets a 200. That is the shape of the
-// flake #1180 recorded, and it is the shape any caller seeding a colleague
-// would meet deterministically.
-//
-// The demotion is then READ BACK, because a helper whose failure mode is "the
-// caller's permission assertion silently inverts" must not be able to fail
-// quietly. A caller that gets past this line is signed in as a rep.
-//
-// Irreversible for the rest of this env — the assignment is replaced rather
-// than stacked — so callers run it last in their scenario.
+// demoteToRep flips this session's seat from admin to rep, so a scenario can
+// prove that an admin-only endpoint refuses it. The seat is the one /me names,
+// and the demotion is read back: a demotion that missed would turn the caller's
+// 403 into a 200. Callers run it last; the assignment is replaced.
 func demoteToRep(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	assignSessionRole(t, e, roleRep)
+	assertSignedInAsRep(t, e)
+}
+
+// assignSessionRole replaces this session's role with the role keyed roleKey,
+// through the owner connection.
+func assignSessionRole(t *testing.T, e *apptest.AppEnv, roleKey string) {
 	t.Helper()
 	ctx := context.Background()
 	tx, err := e.Owner.Begin(ctx)
@@ -45,46 +36,22 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 	//craft:ignore swallowed-errors error-path safety net only — the Commit below is asserted, after which this rollback is a designed no-op
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var repRoleID string
-	userID := sessionUserID(t, e)
-	if err := tx.QueryRow(ctx,
-		`SELECT id FROM role WHERE key = 'rep'`).Scan(&repRoleID); err != nil {
-		t.Fatalf("rep role lookup: %v", err)
+	var roleID string
+	userID := apptest.SessionUserID(t, e)
+	if err := tx.QueryRow(ctx, `SELECT id FROM role WHERE key = $1`, roleKey).Scan(&roleID); err != nil {
+		t.Fatalf("role %s lookup: %v", roleKey, err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM role_assignment WHERE user_id = $1`, userID); err != nil {
 		t.Fatalf("clear role assignment: %v", err)
 	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
-		repRoleID, userID); err != nil {
-		t.Fatalf("assign rep role: %v", err)
+		roleID, userID); err != nil {
+		t.Fatalf("assign role %s: %v", roleKey, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatalf("commit: %v", err)
 	}
-	assertSignedInAsRep(t, e)
-}
-
-// sessionUserID is who this session is signed in AS, answered by the app.
-//
-// Read through /me rather than resolved from the table, for the reason
-// AGENTS.md's review-loop rule 6 gives: a fixture that derives production's
-// answer itself is free to derive a different one, and here "different" means
-// demoting somebody the session has never used.
-func sessionUserID(t *testing.T, e *apptest.AppEnv) string {
-	t.Helper()
-	var me struct {
-		User struct {
-			ID string `json:"id"`
-		} `json:"user"`
-	}
-	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
-		t.Fatalf("reading the signed-in seat → %d", status)
-	}
-	if me.User.ID == "" {
-		t.Fatal("/me answered no user id — there is no seat to demote, and demoting an arbitrary one would leave this session an admin")
-	}
-	return me.User.ID
 }
 
 // assertSignedInAsRep proves the demotion reached the seat making the requests.

@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The composed read behind the canonical email viewer.
@@ -43,7 +45,7 @@ const (
 	roleFrom = "from"
 	roleTo   = "to"
 	roleCc   = "cc"
-	roleBcc  = "bcc"
+	roleBcc  = connector.ParticipantRoleBCC
 )
 
 // GetEmailPresentation composes one email for reading.
@@ -53,13 +55,13 @@ func (s *Store) GetEmailPresentation(ctx context.Context, id ids.ActivityID, thr
 	}
 	var out crmcontracts.EmailPresentation
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readEmailPresentation(ctx, tx, id, threadCursor)
+		out, err = readEmailPresentation(ctx, tx, id, threadCursor, s.now())
 		return err
 	})
 	return out, err
 }
 
-func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string) (crmcontracts.EmailPresentation, error) {
+func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string, asOf time.Time) (crmcontracts.EmailPresentation, error) {
 	// The same discover gate and per-row audience test every activity read
 	// carries: a caller who may know the row exists reads it, and the audience
 	// decides whether its content comes along.
@@ -77,11 +79,12 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 
 	withheld := activity.ContentState != nil && *activity.ContentState == crmcontracts.ActivityContentStateWithheld
 	out := crmcontracts.EmailPresentation{
-		Id:         activity.Id,
-		Lifecycle:  crmcontracts.EmailPresentationLifecycleDelivered,
-		OccurredAt: activity.OccurredAt,
-		ThreadKey:  activity.ThreadKey,
-		Body:       activity.Body,
+		Id:                activity.Id,
+		Lifecycle:         crmcontracts.EmailPresentationLifecycleDelivered,
+		OccurredAt:        activity.OccurredAt,
+		OccurredPrecision: activity.OccurredPrecision,
+		ThreadKey:         activity.ThreadKey,
+		Body:              activity.Body,
 	}
 	if activity.Version != nil {
 		out.Version = *activity.Version
@@ -92,6 +95,10 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 
 	if withheld {
 		return withheldPresentation(out, activity), nil
+	}
+	out.BodyCompleteness = activity.BodyCompleteness
+	if activity.Language != nil {
+		out.Language = new(crmcontracts.EmailPresentationLanguage(*activity.Language))
 	}
 
 	parties, err := readEmailParties(ctx, tx, id)
@@ -135,7 +142,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
-	if err := withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
+	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -175,12 +182,13 @@ func availableSummary(
 	status crmcontracts.EmailAccessStatus,
 ) crmcontracts.EmailSummary {
 	summary := crmcontracts.EmailSummary{
-		ActivityId:      activity.Id,
-		OccurredAt:      activity.OccurredAt,
-		DisplayStatus:   status,
-		AttachmentCount: attachments,
-		Move:            crmcontracts.EmailSummaryMoveNone,
-		Subject:         activity.Subject,
+		ActivityId:        activity.Id,
+		OccurredAt:        activity.OccurredAt,
+		OccurredPrecision: activity.OccurredPrecision,
+		DisplayStatus:     status,
+		AttachmentCount:   attachments,
+		Move:              crmcontracts.EmailSummaryMoveNone,
+		Subject:           activity.Subject,
 	}
 	if activity.Version != nil {
 		summary.Version = *activity.Version
@@ -221,7 +229,8 @@ func callerIsSenderSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool
 		        WHERE ci.activity_id = $1 AND ci.user_id = $2
 		       UNION ALL
 		       SELECT 1 FROM activity a
-		        WHERE a.id = $1 AND a.captured_by LIKE '%:' || $2::text)`,
+		        WHERE a.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
+                 AND a.captured_by LIKE '%:' || $2::text)`,
 		id.UUID, actor.UserID).Scan(&sender); err != nil {
 		return false, fmt.Errorf("activities: reading whether the caller sent this message: %w", err)
 	}
@@ -236,6 +245,7 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld
 		  FROM attachment at
 		 WHERE at.entity_type = 'activity' AND at.entity_id = $1 AND at.archived_at IS NULL
+		   AND `+arrivedWithMessage("at")+`
 		 ORDER BY at.created_at, at.id`, id.UUID)
 	if err != nil {
 		return nil, err
@@ -260,11 +270,12 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 // happened and that it happened, with the words removed.
 func withheldSummary(activity crmcontracts.Activity) crmcontracts.EmailSummary {
 	summary := crmcontracts.EmailSummary{
-		ActivityId:      activity.Id,
-		OccurredAt:      activity.OccurredAt,
-		DisplayStatus:   crmcontracts.EmailAccessStatusWithheld,
-		AttachmentCount: 0,
-		Move:            crmcontracts.EmailSummaryMoveNone,
+		ActivityId:        activity.Id,
+		OccurredAt:        activity.OccurredAt,
+		OccurredPrecision: activity.OccurredPrecision,
+		DisplayStatus:     crmcontracts.EmailAccessStatusWithheld,
+		AttachmentCount:   0,
+		Move:              crmcontracts.EmailSummaryMoveNone,
 	}
 	if activity.Version != nil {
 		summary.Version = *activity.Version

@@ -38,8 +38,12 @@ import { vi } from "vitest";
  * and the two then disagree, which shows up as an interaction that silently does
  * nothing. Pair it with `vi.useRealTimers()` in `afterEach`.
  */
-export function steppedClock() {
-  vi.useFakeTimers();
+export function steppedClock(
+  options: Readonly<{
+    toFake?: NonNullable<Parameters<typeof vi.useFakeTimers>[0]>["toFake"];
+  }> = {},
+) {
+  vi.useFakeTimers(options.toFake ? { toFake: options.toFake } : undefined);
   Object.assign(globalThis, {
     jest: {
       advanceTimersByTime: (ms: number) => {

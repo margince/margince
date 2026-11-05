@@ -1,0 +1,142 @@
+/* The buying committee: our team beside their team, each a list of rows led
+   by a mark, and the legend under both. The sides stack once the card is too
+   narrow to hold two readable columns. */
+
+/* The container the sides measure, so they stack by the card's width rather
+   than the window's. */
+.dc-committee {
+  container-type: inline-size;
+}
+
+.dc-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-5);
+  padding-block: var(--space-3) var(--space-2);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+
+@container (max-width: 30rem) {
+  .dc-sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.dc-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.dc-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dc-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.dc-seat-open {
+  all: unset;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
+.dc-seat-open:focus-visible {
+  outline: var(--focus-ring);
+}
+
+/* The text wraps rather than clipping: a role, an engagement and a date are
+   three facts, and a cut one is a fact the reader never gets. */
+.dc-row-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.dc-row-name {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
+.dc-seat-open:hover .dc-row-name {
+  color: var(--accentText);
+}
+
+.dc-row-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.dc-row-gap .dc-row-name {
+  color: var(--warningText);
+}
+
+/* The mark sits on the name's line. */
+.dc-dot {
+  corner-shape: round;
+  flex: 0 0 auto;
+  inline-size: 12px;
+  block-size: 12px;
+  margin-block-start: var(--space-1);
+  border-radius: var(--r-full);
+  box-sizing: border-box;
+}
+
+/* Our side is a square, so it never reads as one more state of a buyer seat. */
+.dc-dot-ours {
+  border-radius: calc(var(--r-xs) / 2);
+  background: var(--textPrimary);
+}
+
+.dc-dot-engaged {
+  background: var(--success);
+}
+
+.dc-dot-quiet {
+  background: var(--bgInset);
+  border: 2px solid var(--borderStrong);
+}
+
+.dc-dot-gap {
+  border: 1.5px dashed var(--warning);
+  background: var(--warningBg);
+}
+
+.dc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0 0 var(--space-2);
+  list-style: none;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.dc-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dc-legend .dc-dot {
+  margin-block-start: 0;
+}

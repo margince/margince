@@ -9,6 +9,7 @@ package compose
 // per-setting validation, the base-currency freeze and the audit-only write.
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 )
 
 type installationSettingsHandlers struct {
@@ -39,6 +41,10 @@ type installationSettingsHandlers struct {
 	// environment — is still listed: the app card on the same screen is where
 	// it is made to work, and the login screen withholds it until then.
 	configuredProviders []identity.OIDCProviderConfig
+	// signInScreen is what the login screen draws right now, the identity
+	// module's own answer, set by the option that mounts the providers. Nil on
+	// a deployment that composed none.
+	signInScreen func(context.Context) []identity.OIDCProviderConfig
 	// maxUploadBytes is the deployment's attachment ceiling (OPS-CFG-12),
 	// published so an upload surface enforces the number THIS installation
 	// applies rather than one compiled into the client.
@@ -65,10 +71,10 @@ func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWri
 
 // GetAuthenticationPolicy answers the sign-in half on its own grant.
 //
-// The values are identical to the `sign_in_providers` field of the aggregate;
-// what differs is who may read them. Every role reads the installation's name,
-// timezone and currency, and who may sign in is not that — so it answers to
-// `authentication_policy`, which the store checks before it reads the entry.
+// Apart from `sign_in_screen`, the values are identical to the aggregate's
+// `sign_in_providers`; what differs is who may read them. Every role reads the
+// installation's name, timezone and currency, but not who may sign in.
+// So this answers to `authentication_policy`, which the store checks first.
 func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
@@ -99,7 +105,21 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 		RequireSso:       policy.RequireSSO,
 		RequireMfa:       policy.RequireMFA,
 		OidcGroupRoleMap: groupRoleMap,
+		SignInScreen:     h.signInScreenKeys(r.Context()),
 	})
+}
+
+// signInScreenKeys rides the policy read and not the aggregate. Resolving it
+// reads stored sign-in clients, which a rep reading the currency must not cause. Empty, never null, when nothing is drawn.
+func (h installationSettingsHandlers) signInScreenKeys(ctx context.Context) []string {
+	keys := make([]string, 0)
+	if h.signInScreen == nil {
+		return keys
+	}
+	for _, p := range h.signInScreen(ctx) {
+		keys = append(keys, p.Key)
+	}
+	return keys
 }
 
 func (h installationSettingsHandlers) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
@@ -123,16 +143,12 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		BaseCurrency: req.BaseCurrency,
 		// The entry refuses a code no compiled-in pack answers; the store runs
 		// the floor carry in the same transaction.
-		Country: req.Country,
+		Country:      req.Country,
+		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo, IndividualPerformance: req.IndividualPerformance, ForecastSelfCorrecting: req.ForecastSelfCorrecting,
+		ForecastLikelyThreshold: req.ForecastLikelyThreshold,
 	}
-	if req.DateFormat != nil {
-		value := string(*req.DateFormat)
-		patch.DateFormat = &value
-	}
-	if req.TimeFormat != nil {
-		value := string(*req.TimeFormat)
-		patch.TimeFormat = &value
-	}
+	patch.DateFormat = enumText(req.DateFormat)
+	patch.TimeFormat = enumText(req.TimeFormat)
 	if req.BaseLanguage != nil {
 		// The generated enum refuses an unknown value at the edge, so a code
 		// that reaches here is one the contract admits. The entry validates it
@@ -162,10 +178,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// quoting the value. Converted to a plain string because the patch carries
 	// what was ASKED for, and the generated enum type would claim it had already
 	// been checked against the vocabulary the projection enforces.
-	if req.ForecastForwardMeasure != nil {
-		measure := string(*req.ForecastForwardMeasure)
-		patch.ForecastForwardMeasure = &measure
-	}
+	patch.ForecastForwardMeasure = enumText(req.ForecastForwardMeasure)
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
 	// answer is the intersection — so refusing it would be refusing a request
@@ -181,6 +194,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// refusal names the setting and quotes the group or role it refused —
 	// the same division of labour as the fiscal month above.
 	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
+	// Each switch checks agent_client per field (settings.SetRawTx), so the
+	// installation patch gate alone does not let ops turn a method back on.
+	patch.DynamicClientRegistration = req.DynamicClientRegistration
+	patch.MetadataDocumentClients = req.MetadataDocumentClients
 	// Each entry's validator holds its range and names the field it refuses.
 	patch.Operations = identity.OperationPatch{
 		AgentRunnerIntervalSeconds:       req.AgentRunnerIntervalSeconds,
@@ -221,8 +238,8 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // arrives from composition rather than from the settings table — the same way
 // base_currency_locked is derived rather than kept.
 //
-// The lock reason is omitted rather than sent empty when the currency is still
-// changeable: an empty string would render as a reason that says nothing.
+// The lock reason and its facts are sent only when the lock has prose. An empty
+// reason, or one off the contract's enum, tells a client nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
 		Name:                 s.Name,
@@ -235,18 +252,39 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 			s.ForecastForwardMeasure),
 		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
+		CallWhatsapp:               s.CallWhatsApp,
+		CallTelegram:               s.CallTelegram,
+		CallZalo:                   s.CallZalo,
+		IndividualPerformance:      s.IndividualPerformance,
+		ForecastSelfCorrecting:     s.ForecastSelfCorrecting,
+		ForecastLikelyThreshold:    s.ForecastLikelyThreshold,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
 		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
+		Locks:                      loadedLocks(identity.Settings()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
 	out.DateFormat = &dateFormat
 	out.TimeFormat = &timeFormat
-	if s.BaseCurrencyLockedReason != "" {
-		reason := s.BaseCurrencyLockedReason
+	if reason := s.BaseCurrencyLock.Prose(); s.BaseCurrencyLocked && reason != "" {
 		out.BaseCurrencyLockedReason = &reason
+		out.BaseCurrencyLock = toBaseCurrencyLock(s.BaseCurrencyLock)
+	}
+	return out
+}
+
+// toBaseCurrencyLock sends the facts the prose reason was worded from. An
+// absent base stays absent, not empty, so a client words that case without one.
+func toBaseCurrencyLock(lock currencylock.Lock) *crmcontracts.BaseCurrencyLock {
+	out := &crmcontracts.BaseCurrencyLock{
+		Reason: crmcontracts.BaseCurrencyLockReason(lock.Reason),
+		Count:  lock.Count,
+	}
+	if lock.BaseCurrency != "" {
+		base := lock.BaseCurrency
+		out.BaseCurrency = &base
 	}
 	return out
 }
@@ -290,4 +328,12 @@ func (h installationSettingsHandlers) clock() time.Time {
 		return h.now()
 	}
 	return time.Now()
+}
+
+func enumText[T ~string](value *T) *string {
+	if value == nil {
+		return nil
+	}
+	text := string(*value)
+	return &text
 }

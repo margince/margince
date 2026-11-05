@@ -27,7 +27,8 @@ import (
 //     dispatcher is ticked (the schedules in wireJobs); the workspace worker is
 //     enqueued by it and never scheduled.
 //   - Installation-wide, with no workspace fan-out — agent-task retention,
-//     approval expiry, intro expiry, approval auto-apply. One row does the whole
+//     approval expiry, intro expiry, approval auto-apply, the past-activity
+//     clock refold. One row does the whole
 //     installation, so there is no child kind to enqueue.
 //
 // It also pulls in the AI-activity and brief-generate groups. Those are their
@@ -36,8 +37,12 @@ import (
 // — not because they are gated differently: the gating is the same nothing, and
 // that is why they belong here rather than behind a condition of their own.
 func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig) {
+	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool))
+	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now})
-	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{pool: pool, corrector: NewCloseDateCorrector(pool, log)})
+	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
+		pool: pool, corrector: NewCloseDateCorrector(pool, log), closer: newSilentDealCloser(pool, log),
+	})
 	addDeclaredWorker[FollowUpReconcileArgs](reg, &followUpReconcileWorker{pool: pool, reconciler: NewFollowUpReconciler(pool, log)})
 	assuranceSweep := &assuranceSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
@@ -49,6 +54,8 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	// second is the point: a check somebody pressed and a check the calendar
 	// fired must not be able to differ in what they do.
 	addDeclaredWorker[AssuranceRunArgs](reg, &assuranceRunWorker{sweep: assuranceSweep})
+	addDeclaredWorker[AssuranceDealRescanArgs](reg, &assuranceDealRescanWorker{sweep: assuranceSweep})
+	addDeclaredWorker[AssuranceReviewDeliveryArgs](reg, &assuranceReviewDeliveryWorker{sweep: assuranceSweep})
 	addDeclaredWorker[ForecastSnapshotSweepArgs](reg, &forecastSnapshotSweepWorker{
 		pool: pool, now: func() time.Time { return time.Now().UTC() }, log: log,
 	})
@@ -61,6 +68,7 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[AgentTaskRetentionArgs](reg, &agentTaskRetentionWorker{
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})
+	addDeclaredWorker[ApprovalNoticeReconcileArgs](reg, newApprovalNoticeReconcileWorker(pool))
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
@@ -70,10 +78,15 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	addDeclaredWorker[ApprovalAutoApplyArgs](reg, &approvalAutoApplyWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[PastActivityClockRefoldArgs](reg, &pastActivityClockWorker{
+		pool: pool, identity: identity.NewService(pool), log: log,
+	})
 	addAIActivitySweepJobs(reg, pool, log)
 	addDeclaredWorker[MailDraftRetentionArgs](reg, &mailDraftRetentionWorker{
 		drafts: activities.NewStore(InstallationDB(pool)), identity: identity.NewService(pool), log: log,
 	})
+	addDeclaredWorker[RequestProofExpiryArgs](reg, newRequestProofExpiryWorker(pool, time.Now, log))
 	addDeclaredWorker[WaitingHorizonRefreshArgs](reg, newWaitingHorizonRefreshWorker(pool, log))
+	addDeclaredWorker[EvidenceAuthorshipArgs](reg, newEvidenceAuthorshipWorker(pool, log))
 	addBriefGenerateJobs(reg, pool, log, briefMail)
 }

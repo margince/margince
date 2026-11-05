@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // priorMeetingCap bounds how far back the section looks. Two is the reader's
@@ -36,7 +37,7 @@ const priorMeetingCap = 2
 type priorMeeting struct {
 	ID       ids.UUID
 	Subject  string
-	StartsAt time.Time
+	StartsAt Occurred
 }
 
 // readPriorMeetings finds the most recent meetings before this one that shared
@@ -73,7 +74,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 	// Earlier than this meeting AND already past. Constraining on the current
 	// meeting alone would let a brief for a meeting three weeks out say "you
 	// met" about one happening next Tuesday — a room that has not met yet.
-	startsPos := arg(room.StartsAt)
+	startsPos := arg(room.Opens)
 	nowPos := arg(now)
 	attendeePos := arg(attendees)
 	// CONTENT, not discover. This section prints an earlier meeting's SUBJECT,
@@ -104,7 +105,8 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 			arg(project.UUID))
 	}
 
-	rows, err := tx.Query(ctx, fmt.Sprintf(priorMeetingsQuery, scope, within, roomPos, startsPos, nowPos, attendeePos, priorMeetingCap), args...)
+	rows, err := tx.Query(ctx, fmt.Sprintf(priorMeetingsQuery, scope, within, roomPos, occurredday.BeforeSQL("m", fmt.Sprintf("$%d", startsPos)),
+		occurredday.MeetingTookPlaceSQL("m", fmt.Sprintf("$%d", nowPos)), attendeePos, priorMeetingCap), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read the earlier meetings: %w", err)
 	}
@@ -114,7 +116,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 	for rows.Next() {
 		var prior priorMeeting
 		var subject *string
-		if err := rows.Scan(&prior.ID, &subject, &prior.StartsAt); err != nil {
+		if err := rows.Scan(&prior.ID, &subject, &prior.StartsAt.At, &prior.StartsAt.DateOnly); err != nil {
 			return nil, fmt.Errorf("read an earlier meeting: %w", err)
 		}
 		prior.Subject = deref(subject)
@@ -129,12 +131,16 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 // priorMeetingsQuery reads the newest meetings before this one sharing a contact
 // with it. DISTINCT because a meeting with three of the same attendees is one
 // meeting, not three.
+//
+// A meeting has been held once it took place, so a day entry dated today is not
+// yet (occurredday.MeetingTookPlaceSQL).
 const priorMeetingsQuery = `
-	SELECT DISTINCT m.id, m.subject, m.occurred_at
+	SELECT DISTINCT m.id, m.subject, m.occurred_at, m.occurred_precision = 'day'
 	FROM activity m
 	JOIN activity_participant mp ON mp.activity_id = m.id
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL
-	  AND m.id <> $%[3]d AND m.occurred_at < $%[4]d AND m.occurred_at <= $%[5]d
+	  AND m.id <> $%[3]d AND %[5]s
+	  AND %[4]s
 	  AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
 	  AND mp.contact_id = ANY($%[6]d)
 	  AND %[1]s

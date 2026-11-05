@@ -65,7 +65,7 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	amount := strings.TrimSpace(fields[dealTargetAmount])
 	currency := strings.ToUpper(strings.TrimSpace(fields[dealTargetCurrency]))
 	if currency != "" {
-		if !values.ValidCurrency(currency) {
+		if !values.AssignableCurrency(currency) {
 			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
 				migration.Why(migration.ReasonCurrencyNotACode, "value", currency))
 		}
@@ -82,6 +82,10 @@ func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem
 	if !ok {
 		return problemOf(dealTargetAmount, fields[dealTargetAmount],
 			migration.Why(migration.ReasonNotAnAmount, "value", amount, "currency", currency))
+	}
+	if minor < 0 {
+		return problemOf(dealTargetAmount, fields[dealTargetAmount],
+			migration.Why(migration.ReasonAmountNegative, "value", amount))
 	}
 	typed[dealTargetAmount] = minor
 	return nil

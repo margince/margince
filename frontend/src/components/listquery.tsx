@@ -136,6 +136,7 @@ export function useListQuery<Row>({
   initialFilters,
   screenDials = NO_SCREEN_DIALS,
   paramScope,
+  enabled,
 }: Readonly<{
   key: string;
   fetchPage: (
@@ -175,6 +176,8 @@ export function useListQuery<Row>({
    * address alone only makes the link contacts paste uglier. See `scoped`.
    */
   paramScope?: string;
+  /** Whether the list may be asked for this query; it is not, while false. */
+  enabled?: (query: ListQuery) => boolean;
 }>) {
   const [params, setParams] = useUrlParams();
   const opening = useMemo<ListQuery>(
@@ -288,6 +291,7 @@ export function useListQuery<Row>({
 
   const infinite = useInfiniteQuery({
     queryKey: [key, query],
+    enabled: enabled?.(query) ?? true,
     queryFn: ({ pageParam }) => fetchPage(query, pageParam),
     initialPageParam: FIRST_PAGE,
     getNextPageParam: (last) =>

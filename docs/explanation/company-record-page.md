@@ -1,10 +1,15 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/compose/company360 backend/internal/compose/companybrief backend/internal/compose/companyscan backend/internal/compose/jobs_accountscan.go backend/internal/modules/contacts/companylogo.go backend/internal/modules/contacts/companyroster.go backend/internal/modules/contacts/company_counts.go backend/internal/modules/contacts/contact_list.go frontend/src/features/companies frontend/src/features/records/record360 backend/api/crm.yaml -->
 # The company record page: one gated read, text per viewer, named gaps
 
 The account page a rep opens on a company. It shows who works there, what is open, what moved, and what
 to do next. A written brief covers all of it. It is the largest composite surface in the product. Nearly
 all of it is put together in `internal/compose`. That is gated section reads inside one transaction
 (listed below), plus two groups that work across modules and own view state of their own.
+
+The contact count, company contact tab and company filter share the current roster.
+It includes a current second job and counts each contact once, within the reader's contact and link access.
+A primary employer stays a separate choice on the contact.
 
 ## The shape
 
@@ -24,7 +29,7 @@ More than one endpoint serves one screen. Which one owns which part:
    NAMED in sections_omitted     per-group grants   assembly (…/brief too,
                                                     deprecated, no UI)
              │
- POST …/view-ack             advance the visit baseline (explicit, human-only)
+ POST …/view-ack             advance the visit baseline (explicit)
  POST …/suggestions/dismiss  per-user, "not this, not now" — a rule's row or a scan's
  POST …/scan                 ensure the reader's account scan is current (human-only)
  GET  …/scan                 the scan as it stands: state, merged advice, the read's foot
@@ -52,7 +57,14 @@ disagreeing:
 
 `contacts` · `strength` · `deals` · `projects` · `activities` · `last_touch` ·
 `state_strip` · `health` · `next_steps` · `next_meeting` · `tags` ·
-`list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions`
+`list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions` ·
+`commitments`
+
+`commitments` fills `open_commitments`: the promises read out of conversations that are still open,
+ours and theirs, in the order the other owed-work lists use. A promise we made names nobody, because
+nothing on file says who owns it. Claims carry no project, so a project-narrowed page lists them for the
+whole account. The moment card reads our side from the same read. The company brief and the "what is
+open" answer take these rows as their `open_commitments`, together with the tasks' `assignee_name`.
 
 They run in a fixed order, so two reads of the same account give the same `sections_omitted` list. Any
 error that is not a permission refusal fails the whole read. A section that failed for a real reason must
@@ -75,7 +87,7 @@ Two more rules keep the read correct by the way it is built:
 ## The work in flight, and the account brief behind it
 
 The lead card of the overview is **the account's work in flight**
-(`frontend/src/screens/companywork.tsx`): one line per open deal, and one per live project. Each line
+(`frontend/src/features/companies/companywork.tsx`): one line per open deal, and one per live project. Each line
 holds at most one reason it needs a look: an overdue task, or a promise they made to us that is still
 open.
 
@@ -135,9 +147,8 @@ nonce fence. That data is quoted between delimiter strings that are made new eac
 part of the prompt. The site read prompts use the same rule. This text is from outside the workspace, and
 must never be read as an order. The model runtime behind it is in [ai-runtime.md](ai-runtime.md).
 
-Both the brief and Ask are **human only** (`x-agent-access: human-only`, `security: [{ cookieAuth: [] }]`,
-and `auth.RequireHuman` at the service). A brief is a reading help for a human. An agent that reads records
-through a passport has the records themselves.
+An agent acting for its user reaches both, through `read_details` (`company_brief`) and
+`run_research` (`ask_about_company`, which needs the `enrich` scope). They run these same handlers, so an agent and a user get one answer.
 
 ## Ask
 
@@ -181,8 +192,8 @@ read** (`reason`: "the rule that fired, in the words the rep reads. Never a scor
 
 - It also holds the `evidence` records it fired on. Where the server can name one, it holds an `action`
   that opens a governed surface filled in from that evidence.
-- `draft_reply` opens the composer on the message with no answer, and `open_deal` opens the stalled
-  deal. `add_task` writes the step the server prepared, through the same `POST /tasks` that the task
+- `draft_reply` opens the composer on the message with no answer. It drafts once the saved draft is read and the body is empty.
+  `open_deal` opens the stalled deal. `add_task` writes the step the server prepared, through the same `POST /tasks` that the task
   form uses.
 - A rule that cannot name an action holds `null`, and the card gives advice with no button. A control
   that does nothing makes the reader stop pressing them.
@@ -227,18 +238,14 @@ long list sees dismissed advice come back.
 
 ## What needs you, and the one answer it gives
 
-The needs list has three sources: the moment leads it, the suggestions follow, and the moves made by hand
-come last. The reader takes the top of it as the verdict. The moment fires on **owed promises only**; all
-else comes through the suggestions, or the scan's findings. Two rules stop the list disagreeing with
-itself, each held where it sees what the other cannot:
+The moment fires on **owed promises only**, and leads the page in the Next bar above the needs list,
+so the list never repeats it. The list has two sources: the suggestions (or the scan's findings) first,
+then the moves made by hand. One rule stops the page disagreeing with itself:
 
 - **The quiet card claims only what it read.** It says *"Nothing is owed to this account"*, never
   "nothing needs you today". The second would be a claim about work it did not look at, in the payload
   that holds the rows that say the opposite. Every client reads it, the tool surface too, so the bound sits
   on the server.
-- **A quiet card is no row beside others** (`momentIsARow`). Only the client can apply this, because the
-  scan's findings come on their own read. The row goes only where the list holds something, and what it
-  holds *is* the answer.
 
 The 360 is also a **live read**: every 60 seconds while the tab has focus. A page read once when it
 opens goes stale without any sign, and a stale "what needs you" looks like a current one. It is a poll on
@@ -323,8 +330,8 @@ written to yet. That is every account on the day it is added.
 above them (the moving indigo tile, and lines of the answer still being drawn). It polls every three
 seconds until the row settles.
 
-Then the merged list replaces the own rows of the 360. The foot says who wrote them, and how many
-exchanges and deals were read. It says that the account has moved since (where it has), or why the model
+Then the merged list replaces the own rows of the 360. The foot says who wrote them, how many
+exchanges were read over how many days (`read.window_days`), and how many open deals. It says that the account has moved since (where it has), or why the model
 did not write them.
 
 ## The state strip and health
@@ -380,10 +387,9 @@ done ahead of time look like a visit. The upsert only moves forward (`GREATEST(s
 ack of a slow tab can never move a newer one back. Two tabs on the same account end on the later visit,
 and do not fight to move the baseline back.
 
-It is **human only**, and that gate is required, not a second layer of guard. An agent principal holds
-the granting human's id as its `UserID` (that is how row scope works for passports). So "resolve the
-acting user" would write a baseline that marks an account as *seen* by a human who never opened it. That
-would use up their unread marker for them.
+It opens to a user or the agent on their passport. An agent principal holds its user's id as its
+`UserID`. So this marks the account as *seen* by that user and uses up their unread marker. Reading the
+record never does. So `change_attention` tells the agent to ask first.
 
 **The client waits before it sends.** `useAcknowledgeCompanyView` waits `VIEW_ACK_DWELL_MS` (5 seconds)
 with the account open before firing, and leaving cancels the timer. Opening a record and going right back
@@ -434,9 +440,9 @@ slot.
 
 ### The installation's second mark
 
-The record above shows one picture. The installation's own company shows two, because the sidebar draws
-it at two sizes. The wide lockup fits an open panel. A **square icon** serves the `56px` rail, where a
-wordmark scaled into a `32px` box is a row of lines nobody can read.
+The record above shows one picture. The installation's own company stores two. The sidebar head draws
+only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is
 read back as `CompanyProfile.logo_icon_url`, and served from `GET /companies/{id}/logo/icon` under the
@@ -464,8 +470,9 @@ The badge chain runs first. The lane runs under one deadline, and a slow lockup 
 company its square mark.
 
 When no lockup resolves, the badge fills the wide slot, and the icon slot stays empty. When the lockup is
-itself square, or the best mark of the chain is not, no badge is stored either. The rail, when closed, falls
-back to the wide mark on its own, so a second copy would be bytes stored for nothing.
+itself square, or the best mark of the chain is not, no badge is stored either. When the icon slot is empty,
+the sidebar head measures the wide mark and draws it if it is square. A second copy would be bytes stored
+for nothing.
 
 Both marks wait on the dossier (`site_read.logo_object_key`, `site_read.logo_icon_object_key`). The
 confirm binds each to its slot on the record, slot by slot, under the rule that a human's choice wins.
@@ -473,8 +480,8 @@ Enrich reads of every other company keep resolving the one mark, with a square p
 into a record card's round avatar would be the row of lines nobody can read that the badge exists to
 avoid. `worker siteread` reports both slots, and every candidate each one tried.
 
-The two slots are chosen and cleared separately in settings. The rail, when closed, falls back to the
-wide mark when there is no icon.
+The two slots are chosen and cleared separately in settings. With no icon and no square wide mark, the
+sidebar head draws the company's monogram.
 
 ## The connections card
 
@@ -509,7 +516,8 @@ Graph details beyond the card (the strength model, the warm intro resolver, our 
 ## View state is not record fact
 
 Three tables behind this page live in a `compose` subpackage each, and all three are written **without an audit
-row or outbox event**. This is the ruling for saved views, gated by `backend/gates/tableownership_test.go`:
+row or outbox event**. This is the ruling for saved views. The waivers in `backend/gates/moduleaudits_test.go` hold the missing
+audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 
 | Table | Owner | What it is |
 |---|---|---|
@@ -546,7 +554,7 @@ long run. See [composition-layer.md](composition-layer.md).
 | The account scan: row, rail carrier, the rule for `ensure`, merge | `backend/internal/compose/companyscan/{store,service}.go` |
 | The account scan's job, and its wiring into both roles | `backend/internal/compose/jobs_accountscan.go` |
 | The visit baseline (`user_record_view`) | `backend/internal/compose/company360/viewbaseline.go` |
-| The account card, the row every record page draws it as, and the moment vocabulary they read it with | `backend/internal/compose/company360/moment.go`, `frontend/src/screens/record360/today.tsx`, `frontend/src/screens/record360/moment.ts` |
+| The account card, the row every record page draws it as, and the moment vocabulary they read it with | `backend/internal/compose/company360/moment.go`, `frontend/src/features/records/record360/today.tsx`, `frontend/src/features/records/record360/moment.ts` |
 | The live record poll, and which reads it knows | `frontend/src/app/queryclient.ts`, `frontend/src/lib/activitykeys.ts` |
 | The connections graph | `backend/internal/compose/company360/{graph,graphreads,graphplace,graphourside}.go` |
 | HTTP transport | `backend/internal/compose/company360/handlers.go` |
@@ -559,11 +567,11 @@ long run. See [composition-layer.md](composition-layer.md).
 | Logo streaming handler | `backend/internal/modules/contacts/handlers_company.go` |
 | Contract | `backend/api/crm.yaml`: `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | The ruling on who owns which table | `backend/gates/tableownership_test.go` |
-| The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |
-| The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/screens/accountscan.tsx`, `companytoday.tsx` |
-| Data layer + cards in the right rail | `frontend/src/screens/company360.tsx`, `company360.css` |
+| The screen | `frontend/src/features/companies/companies.tsx` (`CompanyScreen`) |
+| The scan on the page: `ensure` on open, poll, the pending row | `frontend/src/features/companies/accountscan.tsx`, `companytoday.tsx` |
+| Data layer + cards in the right rail | `frontend/src/features/companies/company360.tsx`, `company360.css` |
 | The connections view to compare | `frontend/src/features/contacts/coverageexplorer.tsx` on the Contacts tab, with `companygraph.ts` as its read |
-| Header actions (new deal, tag, list) | `frontend/src/screens/companyactions.tsx` |
+| Header actions (new deal, tag, list) | `frontend/src/features/companies/companyactions.tsx` |
 
 ## Where to go next
 

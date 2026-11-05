@@ -37,7 +37,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/cliflags"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -62,9 +62,8 @@ type aiTaskRetrieveFlags struct {
 	logFormat string
 }
 
-func aiTaskRetrieveFlagSet() (*flag.FlagSet, *aiTaskRetrieveFlags, *cliflags.Env) {
+func aiTaskRetrieveFlagSet() (*flag.FlagSet, *aiTaskRetrieveFlags, *laneSettings, error) {
 	cfg := &aiTaskRetrieveFlags{}
-	env := &cliflags.Env{}
 	fs := flag.NewFlagSet("worker aitask "+verbRetrieve, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {}
@@ -78,23 +77,26 @@ func aiTaskRetrieveFlagSet() (*flag.FlagSet, *aiTaskRetrieveFlags, *cliflags.Env
 		cfg.floor = &f
 		return err
 	})
-	env.String(fs, &cfg.workDir, "work-dir", "MARGINCE_AITASK_DIR", workDirDefault,
-		"gitignored directory the captured fixture and the vector cache live in")
 	fs.StringVar(&cfg.outPath, "out", "", "write the fixture here instead of the work directory")
-	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
-	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
-	return fs, cfg, env
+	shared, err := addLaneSettings(fs, ps.AITaskDir, ps.LogLevel, ps.LogFormat)
+	return fs, cfg, shared, err
 }
 
 func parseAITaskRetrieveFlags(args []string) (aiTaskRetrieveFlags, error) {
-	fs, parsed, env := aiTaskRetrieveFlagSet()
-	if err := fs.Parse(args); err != nil {
+	fs, parsed, shared, err := aiTaskRetrieveFlagSet()
+	if err != nil {
 		return aiTaskRetrieveFlags{}, err
 	}
-	if err := env.Apply(fs, config.FromOS); err != nil {
+	if err := fs.Parse(args); err != nil {
+		return aiTaskRetrieveFlags{}, config.FlagFault(fs, err)
+	}
+	loaded, err := shared.load()
+	if err != nil {
 		return aiTaskRetrieveFlags{}, err
 	}
 	cfg := *parsed
+	cfg.workDir = config.Val(loaded, ps.AITaskDir)
+	cfg.logLevel, cfg.logFormat = config.Val(loaded, ps.LogLevel), config.Val(loaded, ps.LogFormat)
 	if rest := fs.Args(); len(rest) > 0 {
 		return aiTaskRetrieveFlags{}, fmt.Errorf(
 			"aitask retrieve takes no positional arguments, got %q — a question belongs in --question, quoted",

@@ -1,8 +1,7 @@
 {
   "scenario": "case1_log_it",
   "criteria": [
-    8,
-    14
+    8
   ],
   "passed": 2,
   "runs": 2,
@@ -13,12 +12,12 @@
   "search": "semantic",
   "self_judged": true,
   "usage": {
-    "input_tokens": 32,
-    "output_tokens": 6105,
-    "cache_creation_input_tokens": 79393,
-    "cache_read_input_tokens": 826732,
+    "input_tokens": 38,
+    "output_tokens": 7151,
+    "cache_creation_input_tokens": 43002,
+    "cache_read_input_tokens": 1559972,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.4614
+    "cost_usd": 0.3996
   }
 }

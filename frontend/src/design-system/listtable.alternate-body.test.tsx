@@ -22,7 +22,7 @@ describe("ListTable alternate body paging ownership", () => {
           ]}
           rowKey={(row) => row.id}
           unit="rows"
-          search={{ value: "", onChange: () => undefined }}
+          search={{ value: "", answered: "", onChange: () => undefined }}
           body={<div>Complete board</div>}
           bodyOwnsPaging
           hasMore
@@ -50,7 +50,7 @@ describe("ListTable alternate body paging ownership", () => {
           ]}
           rowKey={(row) => row.id}
           unit="rows"
-          search={{ value: "", onChange: () => undefined }}
+          search={{ value: "", answered: "", onChange: () => undefined }}
           hasMore
         />
       </LocaleProvider>,

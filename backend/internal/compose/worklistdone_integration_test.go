@@ -87,7 +87,7 @@ func TestADealAtRiskMarkedDoneLeavesTheReadersDayOnly(t *testing.T) {
 	}
 
 	// The row draws the deal page's move, so "Not now" there takes it off here.
-	cards := newDealStatusService(e.Pool)
+	cards := newDealStatusService(e.Pool, func() time.Time { return at })
 	card, err := cards.ReadFacts(rep, ids.From[ids.DealKind](e.booked))
 	if err != nil || card.Next == nil || card.Next.Fingerprint == nil {
 		t.Fatalf("the deal card names no move to set aside (%v), so this proves nothing", err)

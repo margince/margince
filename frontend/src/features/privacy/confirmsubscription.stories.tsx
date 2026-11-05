@@ -6,19 +6,16 @@ import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import {
-  explainPublicError,
-  RateLimitedError,
-} from "../../screens/preferences";
-import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { explainPublicError, RateLimitedError } from "../settings/preferences";
 import {
   SubscriptionConfirm,
   SubscriptionConfirmBody,
 } from "./confirmsubscription";
-import "../../screens/preferences.css";
+import "../settings/preferences.css";
 import "./confirm.css";
 
 // The confirm link's other answer: one named subscription and nothing else.

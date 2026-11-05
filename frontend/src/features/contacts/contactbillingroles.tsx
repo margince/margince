@@ -2,18 +2,9 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { billingRoleLabel } from "../../lib/recordlabels";
 
 export type BillingCompany = components["schemas"]["BillingCompany"];
-
-const ROLE_LABEL: Record<
-  components["schemas"]["BillingContactRole"],
-  MessageKey
-> = {
-  recipient: "billing.role.recipient",
-  approver: "billing.role.approver",
-  accounts_payable: "billing.role.accountsPayable",
-};
 
 // Whose invoices this contact handles.
 //
@@ -41,7 +32,7 @@ export function ContactBillingRoles({
             <li className="billing-row" key={c.relationship_id}>
               <div className="billing-who">
                 <span>{c.company_name}</span>
-                <Badge>{t(ROLE_LABEL[c.role])}</Badge>
+                <Badge>{billingRoleLabel(c.role, t)}</Badge>
               </div>
             </li>
           ))}

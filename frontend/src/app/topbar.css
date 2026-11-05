@@ -22,6 +22,8 @@
   container-type: inline-size;
   align-items: center;
   gap: var(--space-3);
+  /* The gap between the bar's glyphs, which a thumb's targets split (below). */
+  --topbarGlyphGap: var(--space-2);
   flex: none;
   /* One number for the strip's height, read by the sidebar too: the head that
      carries the logomark is sized against it so the first destination's row
@@ -38,9 +40,8 @@
      overlay (50), which may both cover the strip. */
   position: relative;
   z-index: 20;
-  background: var(--pane);
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--paneEdge);
+  border-bottom: 1px solid var(--groundEdge);
 }
 /* Where you are, beside the control that widens the room you are in. */
 .topbar-lead {
@@ -62,7 +63,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: var(--topbarGlyphGap);
   min-width: 0;
 }
 
@@ -88,7 +89,7 @@
   cursor: e-resize;
 }
 .topbar-toggle:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .topbar-toggle:focus-visible {
@@ -120,7 +121,7 @@
   font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
-  border: 1px solid var(--paneEdge);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
   background: var(--pane);
   text-align: left;
@@ -171,21 +172,15 @@
 }
 
 /* Focus rings in this strip take `--accent`, the THEMED state colour, not
-   `--accentBrand`: the brand token stays emerald in both themes by design and
-   falls to 3.0:1 against the strip in the dark one. */
+   `--accentBrand`: the brand token keeps one value in both themes and falls
+   to 2.0:1 against the strip in the dark one. */
 
-/* The account menu drops from the STRIP, not from the trigger: anchored to the
-   32px avatar it began 9px above the strip's own rule and covered it. The offset
-   is the trigger's centring inside the bar plus the gap under the rule, so it
-   holds at any bar height and at the larger touch control size. */
-.topbar .accountmenu {
-  top: calc(
-    100% +
-    (var(--topbarH) - var(--controlHeight)) /
-    2 +
-    var(--space-2) +
-    1px
-  );
+/* The bar's glyph buttons answer as one: the bare button's square fill under
+   the pointer and while the panel it opens is open. */
+.topbar .iconbtn[aria-expanded="true"],
+.topbar .btn.btn-bare[aria-expanded="true"] {
+  background: var(--groundHover);
+  color: var(--textPrimary);
 }
 
 /* Below this width a centred field and the trail beside it are competing for
@@ -198,7 +193,7 @@
     /* One gap for the whole strip: the three glyphs at the end sit the same
        distance apart as the collapse control and the trail at the start, so the
        row reads as one rhythm rather than two. */
-    gap: var(--space-2);
+    gap: var(--topbarGlyphGap);
   }
   .topbar-lead {
     flex: 1;
@@ -217,6 +212,7 @@
      left one of three icons in a box. */
   .topbar-search {
     width: var(--controlHeight);
+    min-block-size: var(--controlHeight);
     justify-content: center;
     padding: 0;
     border-color: transparent;
@@ -227,8 +223,16 @@
   }
   .topbar-search:hover {
     border-color: transparent;
-    background: var(--bgHover);
+    background: var(--groundHover);
     color: var(--textPrimary);
+  }
+  /* The press and the ring of the bare buttons beside it (base.css). */
+  .topbar-search:active {
+    background: var(--bgInset);
+    transform: translateY(1px);
+  }
+  .topbar-search:focus-visible {
+    outline-offset: 2px;
   }
   .topbar-searchlabel,
   .topbar-keys {
@@ -236,6 +240,12 @@
   }
   .topbar-trail {
     order: 2;
+  }
+}
+@media (max-width: 1100px) and (prefers-reduced-motion: reduce) {
+  .topbar-search:active {
+    transform: none;
+    filter: brightness(0.96);
   }
 }
 
@@ -253,28 +263,161 @@
    way: where they are, how to search, and who they are. */
 @media (max-width: 700px) {
   .topbar {
-    gap: var(--space-2);
+    --topbarGlyphGap: var(--space-1);
   }
   .topbar-toggle {
     display: none;
   }
 }
 
-/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
-   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
-   shared control height must not be capped by this floor. Declared under
-   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
-   still a mouse — the floor is about what a thumb can hit, not about how much
-   room there is. */
+/* The company's mark in the trail's place at phone width (topbar.tsx). The
+   lead grows, so the controls after it stay at the end of the bar. */
+.topbar-home {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--r-control);
+}
+.topbar-home .ws-chip {
+  width: var(--controlHeight);
+  height: var(--controlHeight);
+}
+.topbar-home:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* A thumb gets 44px-tall targets (WCAG 2.5.8 AA asks 24px). Under
+   `pointer: coarse`, not a width, because a narrow desktop window is a mouse. */
 @media (pointer: coarse) {
-  /* The trail's triggers by STRUCTURE, not by name: they are icon-sized by
-     default and one of them wears no class at all, so a list here would be a
-     list somebody has to remember to extend. Grandchildren only — an open
-     menu's own rows are not the strip's targets.
-     The `.topbar` prefix outranks the two-class bare button. */
-  .topbar-search,
-  .topbar .topbar-trail > button,
-  .topbar .topbar-trail > * > button {
-    min-height: max(var(--controlHeight), 44px);
+  .topbar {
+    --topbarTarget: max(var(--controlHeight), 44px);
+    --topbarTargetInset: calc((var(--topbarTarget) - var(--controlHeight)) / 2);
+    /* Sideways a target takes half the gap, so neighbours touch and never
+       overlap: a tap on a drawn square always reaches that square's button. */
+    --topbarReach: calc(var(--topbarGlyphGap) / 2);
   }
+  /* The eye keeps the 32px square: every state's fill is clipped to the content
+     box, and the negative margins keep the bar's layout and gaps as drawn. */
+  .topbar-trail .iconbtn,
+  .topbar-trail .btn.btn-bare {
+    position: relative;
+    inline-size: calc(var(--controlHeight) + 2 * var(--topbarReach));
+    max-inline-size: none;
+    block-size: var(--topbarTarget);
+    margin: calc(-1 * var(--topbarTargetInset)) calc(-1 * var(--topbarReach));
+    padding: var(--topbarTargetInset) var(--topbarReach);
+    background-clip: content-box;
+    border-radius:
+      calc(var(--r-sm) + var(--topbarReach)) /
+      calc(var(--r-sm) + var(--topbarTargetInset));
+  }
+  /* Each state paints with the `background` shorthand, which resets the clip. */
+  .topbar .topbar-trail .iconbtn:is(:hover, :active),
+  .topbar .topbar-trail .btn.btn-bare:is(:hover, :active),
+  .topbar .topbar-trail .iconbtn[aria-expanded="true"],
+  .topbar .topbar-trail .btn.btn-bare[aria-expanded="true"] {
+    background-clip: content-box;
+  }
+  /* An outline follows the box, which is wider than tall, so the ring is drawn
+     on a layer the size of the square. */
+  .topbar-trail .iconbtn:focus-visible,
+  .topbar-trail .btn.btn-bare:focus-visible {
+    outline: none;
+  }
+  .topbar-trail .iconbtn:focus-visible::after,
+  .topbar-trail .btn.btn-bare:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: var(--topbarTargetInset) var(--topbarReach);
+    border-radius: var(--r-sm);
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+    pointer-events: none;
+  }
+  /* A worded trigger keeps its edge and fill, so a layer round it takes the
+     taps: the same 44px down and half the gap across, past its 1px border. */
+  .topbar-trail .setup-reminder {
+    position: relative;
+  }
+  .topbar-trail .setup-reminder::before {
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--topbarTargetInset) - 1px)
+      calc(-1 * var(--topbarReach) - 1px);
+  }
+  /* A count is placed against its button, which now stands round the square. */
+  .topbar-trail :is(.notifbell-count, .outbox-count) {
+    translate: calc(-1 * var(--topbarReach)) var(--topbarTargetInset);
+  }
+  /* The field takes the floor as its own height. */
+  .topbar .topbar-search {
+    min-block-size: max(var(--inputHeight), var(--topbarTarget));
+  }
+  .topbar-home {
+    min-block-size: var(--topbarTarget);
+    min-inline-size: var(--topbarTarget);
+  }
+  /* The bar's start meets the gutter with what a reader sees, the chip, while
+     its target reaches past it. */
+  .topbar-home {
+    margin-inline-start: calc(-1 * var(--topbarTargetInset));
+  }
+  .icon-action ~ .topbar-home {
+    margin-inline-start: 0;
+  }
+  /* A 44px box leaves 3px either side in the bar, so the ring is drawn inside
+     the box rather than over the bar's rule. */
+  .topbar-home:focus-visible {
+    outline-offset: -2px;
+  }
+}
+/* Drawn as a glyph, the search takes the glyphs' target and square. */
+@media (pointer: coarse) and (max-width: 1100px) {
+  .topbar .topbar-search {
+    position: relative;
+    inline-size: calc(var(--controlHeight) + 2 * var(--topbarReach));
+    min-block-size: var(--topbarTarget);
+    margin: calc(-1 * var(--topbarTargetInset)) calc(-1 * var(--topbarReach));
+    padding: var(--topbarTargetInset) var(--topbarReach);
+    border-width: 0;
+    background-clip: content-box;
+    border-radius:
+      calc(var(--r-sm) + var(--topbarReach)) /
+      calc(var(--r-sm) + var(--topbarTargetInset));
+  }
+  .topbar .topbar-search:is(:hover, :active) {
+    background-clip: content-box;
+  }
+  .topbar .topbar-search:focus-visible {
+    outline: none;
+  }
+  .topbar .topbar-search:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: var(--topbarTargetInset) var(--topbarReach);
+    border-radius: var(--r-sm);
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+    pointer-events: none;
+  }
+}
+
+/* The setup reminder: a ghost Button whose count Badge carries the progress. */
+.setup-reminder {
+  white-space: nowrap;
+  min-width: 0;
+}
+/* The words give way, never the count. The strip squeezes this chip before the
+   bell and the account chip, and German asks about a third more room for the
+   same sentence, so something has to yield at 1440px that does not at 1280.
+   The count is the whole point of the chip; the words repeat what the panel
+   says when it opens. */
+.setup-reminder-word {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.setup-reminder .badge {
+  flex: 0 0 auto;
 }

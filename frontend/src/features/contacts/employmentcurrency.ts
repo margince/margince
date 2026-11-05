@@ -1,4 +1,5 @@
 import type { components } from "../../api/schema";
+import { isoDay } from "../../format/calendarday";
 
 type Employment = components["schemas"]["Contact360Employment"];
 
@@ -28,9 +29,7 @@ type Employment = components["schemas"]["Contact360Employment"];
 // from the deployment; nothing here can close that, and the flag is only ever
 // used for DISPLAY on this side — the server decides what it stores.
 export function today(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return isoDay(new Date());
 }
 
 // stillHeld: the job has not ended yet. A last day that has ARRIVED is a

@@ -25,7 +25,7 @@ import (
 // than nil-deref if ever invoked; the vault is required for any standing
 // connection. A key that is set but malformed already failed the boot, never a
 // silent fallback to something weaker.
-func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer) ([]compose.Option, error) {
+func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, settings *config.Config, stdout io.Writer) ([]compose.Option, error) {
 	// Bound BEFORE the unconfigured return, and with whatever the boot
 	// resolved: the extension tier's per-call Runtime needs the POOL for its
 	// workspace-pinned transactions whether or not a custodian exists, and a
@@ -39,7 +39,7 @@ func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer)
 	}
 	_, _ = fmt.Fprintln(stdout, "api connector-credential vault enabled (keyvault configured)")
 	opts := []compose.Option{compose.WithKeyvault(vault)}
-	provider, err := providerOption(pool, vault, stdout)
+	provider, err := providerOption(pool, vault, settings, stdout)
 	if err != nil {
 		return nil, err
 	}
@@ -54,8 +54,8 @@ func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer)
 // The inserter is insert-only, which is what the api role holds: QueueRun
 // commits its submit job in the run row's transaction and the worker role
 // executes it.
-func providerOption(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer) ([]compose.Option, error) {
-	registry, configured, err := compose.ProviderRegistryFromEnv(time.Now, config.FromOS)
+func providerOption(pool *pgxpool.Pool, vault keyvault.Vault, settings *config.Config, stdout io.Writer) ([]compose.Option, error) {
+	registry, configured, err := compose.ProviderRegistryFor(time.Now, settings)
 	if err != nil {
 		return nil, fmt.Errorf("api: %w", err)
 	}

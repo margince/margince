@@ -11,10 +11,12 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,4 +37,12 @@ func (f financeBillingContacts) BillingContactsFor(
 		return nil, err
 	}
 	return company360.BillingContactPayload(rows), nil
+}
+
+// newFinanceHandlers builds the invoicing transport over the two edges it cannot
+// reach for itself: the installation's base currency, and who receives an invoice.
+// The company page's billing section reads the same contacts, so the two panels agree.
+func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
+	return finance.NewHandlers(InstallationDB(pool), FinanceRates()).
+		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
 }

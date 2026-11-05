@@ -6,8 +6,11 @@ package identity
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // GetMyBriefDelivery answers what the caller has chosen to receive.
@@ -42,8 +45,19 @@ func (h Handlers) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
 // away at the last step.
 func deliveryToWire(d Delivery) crmcontracts.BriefDelivery {
 	out := crmcontracts.BriefDelivery{
-		QuietDayNotice:    d.QuietDay,
-		DeliveryHourLocal: d.HourLocal,
+		QuietDayNotice:      d.QuietDay,
+		RoutineDeliveryTime: d.RoutineTime,
+		DeliveryHourLocal:   d.HourLocal,
+		WeeklyDeliveryDay:   d.WeeklyDay,
+		CombineRoutineEmail: d.CombineRoutine,
+	}
+	if d.Scope != nil {
+		scope := crmcontracts.BriefDeliveryRoutineMailScope(*d.Scope)
+		out.RoutineMailScope = &scope
+	}
+	if d.TeamID != nil {
+		team := openapi_types.UUID(*d.TeamID)
+		out.RoutineMailTeamId = &team
 	}
 	if d.MorningBrief != nil {
 		choice := crmcontracts.BriefDeliveryMorningBriefDelivery(*d.MorningBrief)
@@ -62,7 +76,15 @@ func deliveryToWire(d Delivery) crmcontracts.BriefDelivery {
 // type is all pointers, so "not sent" and "sent as empty" are already distinct
 // before this is reached.
 func deliveryFromWire(body crmcontracts.BriefDelivery) Delivery {
-	out := Delivery{QuietDay: body.QuietDayNotice, HourLocal: body.DeliveryHourLocal}
+	out := Delivery{RoutineTime: body.RoutineDeliveryTime, QuietDay: body.QuietDayNotice, HourLocal: body.DeliveryHourLocal, WeeklyDay: body.WeeklyDeliveryDay, CombineRoutine: body.CombineRoutineEmail}
+	if body.RoutineMailScope != nil {
+		scope := string(*body.RoutineMailScope)
+		out.Scope = &scope
+	}
+	if body.RoutineMailTeamId != nil {
+		team := ids.UUID(*body.RoutineMailTeamId)
+		out.TeamID = &team
+	}
 	if body.MorningBriefDelivery != nil {
 		choice := string(*body.MorningBriefDelivery)
 		out.MorningBrief = &choice

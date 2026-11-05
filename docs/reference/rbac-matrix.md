@@ -60,6 +60,7 @@ changes none.
 | Object | `admin` | `management` | `manager` | `rep` | `read_only` | `ops` |
 |---|---|---|---|---|---|---|
 | `activity` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
+| `agent_client` | CRUD | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_budget` | -RU- | -R-- | ---- | ---- | ---- | -RU- |
 | `ai_diagnostics` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `ai_model_rate` | CRU- | ---- | ---- | ---- | ---- | CRU- |
@@ -71,7 +72,7 @@ changes none.
 | `capture_trace` | -R-- | -R-- | -R-- | ---- | ---- | -R-- |
 | `channel_connection` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `commission` | CRUD | CRUD | CRUD | -R-- | -R-- | CRUD |
-| `communication_exception` | CRUD | ---- | ---- | ---- | ---- | ---- |
+| `communication_exception` | CRUD | CR-- | CR-- | CR-- | ---- | ---- |
 | `company` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `computed_field` | -R-- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `consent_config` | CRUD | -R-- | ---- | ---- | ---- | CRUD |
@@ -79,6 +80,7 @@ changes none.
 | `contract` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `custom_field` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `data_coverage` | -R-- | ---- | ---- | ---- | ---- | -R-- |
+| `data_task` | -RU- | ---- | ---- | ---- | ---- | -RU- |
 | `deal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `deal_room` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `embedding_reindex` | -RU- | ---- | ---- | ---- | ---- | -RU- |
@@ -94,6 +96,7 @@ changes none.
 | `knowledge_corpus` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `knowledge_document` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
 | `lead` | CRUD | CRUD | CRUD | CRUD | -R-- | CRUD |
+| `legal_entity` | CRUD | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `legal_review` | -RU- | ---- | ---- | ---- | ---- | ---- |
 | `license` | -R-- | ---- | ---- | ---- | ---- | -R-- |
 | `list` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
@@ -113,12 +116,14 @@ changes none.
 | `reporting_framework` | -RU- | -R-- | -R-- | -R-- | -R-- | -R-- |
 | `retention_policy` | CRUD | ---- | ---- | ---- | ---- | CRUD |
 | `role_admin` | CRUD | ---- | ---- | ---- | ---- | -R-- |
+| `sales_initiative` | CRUD | CRUD | CRUD | -R-- | -R-- | -R-- |
 | `sales_target` | CRU- | CRU- | CRU- | -R-- | -R-- | -R-- |
 | `saved_view` | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
 | `seat_usage` | -R-- | -R-- | ---- | ---- | ---- | -R-- |
 | `signal` | CRUD | CRUD | CRUD | CRU- | -R-- | CRUD |
 | `system_reset` | ---D | ---- | ---- | ---- | ---- | ---- |
 | `tag` | CRUD | -R-- | -R-- | -R-- | -R-- | CRUD |
+| `tax_rate` | CR-- | ---- | ---- | ---- | ---- | CR-- |
 | `team_admin` | CRU- | ---- | ---- | ---- | ---- | ---- |
 | `team_lead` | CR-- | CR-- | CR-- | ---- | ---- | ---- |
 | `team_oversight` | -R-- | -R-- | ---- | ---- | ---- | ---- |

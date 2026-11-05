@@ -74,7 +74,7 @@ func TestEveryOperationPatchFieldWritesItsOwnSetting(t *testing.T) {
 	}
 	written := map[string]string{}
 	for _, write := range writes {
-		written[write.entry.Key()] = string(write.raw)
+		written[write.key] = string(write.raw)
 	}
 	patchType := reflect.TypeFor[OperationPatch]()
 	if len(written) != patchType.NumField() {
@@ -95,7 +95,7 @@ func TestAnEmptyOperationPatchWritesNothing(t *testing.T) {
 	}
 	for _, write := range writes {
 		if write.raw != nil {
-			t.Errorf("%s encoded %s from an absent field", write.entry.Key(), write.raw)
+			t.Errorf("%s encoded %s from an absent field", write.key, write.raw)
 		}
 	}
 }

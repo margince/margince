@@ -50,8 +50,13 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	if !strings.Contains(dsn, "pool_min_conns") {
 		cfg.MinConns = 2
 	}
-	if !strings.Contains(dsn, "pool_max_conn_lifetime") {
-		cfg.MaxConnLifetime = 30 * time.Minute
+	// A backend keeps its plan memory until the connection closes. Jitter
+	// spreads the closes; its name contains the lifetime's, so it is cut first.
+	if !strings.Contains(strings.ReplaceAll(dsn, "pool_max_conn_lifetime_jitter", ""), "pool_max_conn_lifetime") {
+		cfg.MaxConnLifetime = 10 * time.Minute
+	}
+	if !strings.Contains(dsn, "pool_max_conn_lifetime_jitter") {
+		cfg.MaxConnLifetimeJitter = 2 * time.Minute
 	}
 	if !strings.Contains(dsn, "pool_max_conn_idle_time") {
 		cfg.MaxConnIdleTime = 5 * time.Minute
@@ -82,12 +87,41 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	// which is the tighter ceiling the caller-written predicates ask for.
 	setDurationParam(cfg, dsn, "statement_timeout", StatementCeiling)
 	setDurationParam(cfg, dsn, "idle_in_transaction_session_timeout", IdleTransactionCeiling)
-	// Typed entity ids ride uuid/uuid[] on every connection.
+	// Typed entity ids ride uuid/uuid[] on every connection, and every
+	// timestamptz reads back in UTC.
+	setSessionUTC(cfg)
+	// Inert until a caller binds a StatementMeter to the context. The worklist
+	// binds one to split each stage's time into pgx calls, pool waits and the rest.
+	tracer := statementTracer{now: time.Now}
+	if censusDir != "" {
+		census, err := processCensus(censusDir)
+		if err != nil {
+			return nil, err
+		}
+		tracer.census = census
+	}
+	cfg.ConnConfig.Tracer = tracer
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
+		RegisterUTCTimes(conn)
 		return nil
 	}
 	return cfg, nil
+}
+
+// setSessionUTC reads dates in SQL in the zone Go scans instants in, so a
+// date_trunc or a ::date agrees with Go. A DSN cannot move it, as the two would split.
+// Postgres reads the parameter name in any case, so every spelling goes.
+func setSessionUTC(cfg *pgxpool.Config) {
+	if cfg.ConnConfig.RuntimeParams == nil {
+		cfg.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	for name := range cfg.ConnConfig.RuntimeParams {
+		if strings.EqualFold(name, "timezone") {
+			delete(cfg.ConnConfig.RuntimeParams, name)
+		}
+	}
+	cfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
 }
 
 // setRuntimeParam fills in a Postgres runtime parameter the DSN left unset.

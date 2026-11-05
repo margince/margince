@@ -99,14 +99,14 @@ func TestADemotionRefusesWhenAColleagueWorkedOnTheCreatedContact(t *testing.T) {
 		t.Fatal(err)
 	}
 	leadID := ids.UUID(lead.Id)
-	contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "inbound_reply"})
+	contact, _, err := e.Contacts.PromoteLead(machineCtx(e), ids.From[ids.LeadKind](leadID), contacts.PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	promote := auditRowOf(t, e, latestAuditRowID(t, e, entityTypeLead, leadID, actionPromote))
 	taggedAndListed(t, e, "contact", ids.UUID(contact.Id))
 
-	_, err = e.Contacts.DemoteLead(e.Admin(), ids.From[ids.LeadKind](leadID), demoteReason,
+	_, err = e.Contacts.DemoteLead(e.Admin(), ids.From[ids.LeadKind](leadID), "Reverse the promotion",
 		contacts.NotWorkedOnByAColleagueSince(promote.OccurredAt, promote.ID))
 	if _, ok := errors.AsType[*contacts.HumanTouchedError](err); !ok {
 		t.Errorf("the demotion answered %v, want a refusal naming the colleague's work", err)

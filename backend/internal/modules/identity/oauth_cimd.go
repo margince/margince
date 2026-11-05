@@ -162,16 +162,21 @@ func (s *Service) resolveCIMDClient(ctx context.Context, clientID string) error 
 
 // cimdCacheIsFresh reports whether the stored document is still believable.
 //
-// A DISABLED or soft-deleted client reads as "fresh" so nothing is refetched
-// for it: the authorize lookup that follows applies the same liveness predicate
-// every other client gets and refuses it there. Refetching would let a client an
-// admin switched off keep this server making outbound requests on its behalf.
+// A disabled client reads as "fresh" so nothing is refetched for it. The
+// authorize lookup that follows refuses it by the liveness predicate. A
+// refetch would let a client an admin switched off keep this server making
+// outbound requests on its behalf.
+//
+// A client that is only deleted reads as stale, so its next sign-in fetches the
+// document again and the upsert brings the row back. Delete ends connections;
+// it is not a ban on the vendor's URL, which is what Disable is for. The fetch
+// is no new exposure: an unknown URL is fetched on every sign-in anyway.
 func (s *Service) cimdCacheIsFresh(ctx context.Context, clientID string) (bool, error) {
 	var fresh bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT (metadata_expires_at IS NOT NULL AND metadata_expires_at > now())
-			       OR disabled_at IS NOT NULL OR deleted_at IS NOT NULL
+			SELECT disabled_at IS NOT NULL
+			       OR (deleted_at IS NULL AND metadata_expires_at IS NOT NULL AND metadata_expires_at > now())
 			  FROM oauth_client WHERE client_id = $1`, clientID).Scan(&fresh)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -204,8 +209,9 @@ func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl ti
 			ON CONFLICT (client_id) DO UPDATE SET
 			  client_name         = EXCLUDED.client_name,
 			  redirect_uris       = EXCLUDED.redirect_uris,
-			  metadata_expires_at = now() + $4::interval
-			WHERE oauth_client.created_via = 'cimd'`,
+			  metadata_expires_at = now() + $4::interval,
+			  deleted_at          = NULL
+			WHERE oauth_client.created_via = 'cimd' AND oauth_client.disabled_at IS NULL`,
 			doc.ClientID, doc.ClientName, doc.RedirectURIs, ttl.String())
 		if err != nil {
 			return fmt.Errorf("identity: recording a client's metadata document: %w", err)

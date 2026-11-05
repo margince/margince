@@ -13,9 +13,14 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -23,6 +28,19 @@ import (
 // the write uses. A second list here drifted from linkTargets and silently
 // dropped two kinds: an activity could be linked to a lead or a project and
 // then be unfindable by filtering on the very link that was just written.
+// appendEntityLinkClauses narrows the read to one record's activities, when
+// the input names one.
+func appendEntityLinkClauses(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.EntityType == nil || in.EntityID == nil {
+		return where, nil
+	}
+	entityWhere, err := entityLinkFilter(in, arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, entityWhere...), nil
+}
+
 func entityLinkFilter(in ListActivitiesInput, arg func(any) int) (where []string, err error) {
 	column := linkColumn(*in.EntityType)
 	if column == "" {
@@ -78,7 +96,8 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	// further away is a gate that census cannot see — and a reader it cannot
 	// see reads as one that excludes no held row.
 	gate := auth.ActivityDiscoverClause
-	if filtersOnContent(in) {
+	contentGated := filtersOnContent(in)
+	if contentGated {
 		// A filter over the subject, the body or the thread key is a READ of
 		// them: a withheld row that matched would tell the caller what it says
 		// through has_more and the page boundary. Such a list is content-gated,
@@ -92,20 +111,38 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if scope != "" {
 		where = append(where, scope)
 	}
-	content, err = auth.ActivityAudienceArm(ctx, "a", arg)
+	// The content gate holds the audience arm, so every row it lets through
+	// has its content available. A second copy would only cost planning.
+	content = sqlTrue
+	if !contentGated {
+		if content, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, "", nil, nil, err
+		}
+	}
+	reminders, err := dueRemindersArm(ctx, in, scope != "", arg)
 	if err != nil {
 		return nil, "", nil, nil, err
 	}
-	where = append(where, timelineNarrowings(in, arg)...)
-	if in.EntityType != nil && in.EntityID != nil {
-		entityWhere, entityErr := entityLinkFilter(in, arg)
-		if entityErr != nil {
-			return nil, "", nil, nil, entityErr
-		}
-		where = append(where, entityWhere...)
+	where = append(where, timelineNarrowings(in, reminders, arg)...)
+	if where, err = appendOutsidePartyClause(in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
+	if where, err = appendEntityLinkClauses(in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
+	if in.LinkedToDeals != nil {
+		where = append(where, sprintf(
+			"EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id AND on_deal.deal_id = ANY ($%d::uuid[]))",
+			arg(in.LinkedToDeals)))
 	}
 	if in.WithinProjectID != nil {
 		where = append(where, ActivityWithinProject(arg(*in.WithinProjectID)))
+	}
+	if in.WrittenByHuman {
+		where = append(where, relstrength.WrittenByHumanSQL("a"))
+	}
+	if in.ConversationAsOf != nil {
+		where = append(where, relstrength.HappenedByNowSQL("a", fmt.Sprintf("$%d", arg(*in.ConversationAsOf))))
 	}
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
@@ -116,7 +153,15 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if where, err = appendCustomerMeetingClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}
+	if where, err = appendAwaitingOutcomeClause(ctx, in, arg, where); err != nil {
+		return nil, "", nil, nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
+	custom, err := storekit.CustomFilterClauses(in.Columns.cols, in.CustomFilters, arg)
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+	where = append(where, custom...)
 	where = append(where, worklistClauses(in, readerOrNobody(ctx), arg)...)
 	keyset, err := timelineKeyset(in, sorted, arg)
 	if err != nil {
@@ -135,16 +180,35 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 // Together rather than inline, because each is one clause with no bearing on
 // the next: the builder above composes the row scope, the record narrowing and
 // the page, and reading it should not mean reading past nine of these first.
-func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
+func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) int) []string {
 	var where []string
+	if in.RemindersDue {
+		where = append(where, reminders)
+	}
 	if !in.IncludeArchived {
 		where = append(where, activityLive)
 	}
+	if in.SourceActivityID != nil {
+		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
+	}
 	if in.Kind != nil {
-		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
+		where = append(where, kindPredicate(*in.Kind, arg))
+	}
+	if in.CallOutcome != nil {
+		// A marker, like the kind: it stays out of filtersOnContent.
+		where = append(where, sprintf("a.call_outcome = $%d", arg(*in.CallOutcome)))
 	}
 	if in.ChannelProvider != nil {
 		where = append(where, sprintf("a.channel_provider = $%d", arg(*in.ChannelProvider)))
+	}
+	if in.SourceSystem != nil {
+		where = append(where, sprintf("a.source_system = $%d", arg(*in.SourceSystem)))
+	}
+	if in.AnswersThem {
+		where = append(where, answersThemSQL)
+	}
+	if in.onlyID != nil {
+		where = append(where, sprintf("a.id = $%d", arg(*in.onlyID)))
 	}
 	if clause := ownQueueClause(in.OwnQueueOf, arg); clause != "" {
 		where = append(where, clause)
@@ -152,19 +216,48 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if in.UnassignedQueue {
 		where = append(where, unassignedQueueClause())
 	}
+	if in.TeamQueueOf != nil {
+		where = append(where, teamQueueClause(in.TeamQueueOf, arg))
+	}
 	if clause := onMeetingOfClause(in.OnMeetingOf, arg); clause != "" {
 		where = append(where, clause)
 	}
 	if in.MeetingHost != nil {
-		where = append(where, sprintf("a.kind = 'meeting' AND a.host_user_id = $%d", arg(*in.MeetingHost)))
+		where = append(where, "a.kind = 'meeting' AND "+storekit.MeetingResponsibilitySQL("a", sprintf("$%d", arg(*in.MeetingHost))))
 	}
 	if in.UnhostedMeetings {
-		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
+		where = append(where, "a.kind = 'meeting' AND "+storekit.UnclaimedMeetingSQL("a"))
 	}
-	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
+	if clause := openTaskAssigneeClause(in.AssigneeID, in.AsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
-	return append(where, openTaskWindowClauses(in, arg)...)
+	return append(where, openTaskWindowClauses(in, reminders, arg)...)
+}
+
+// dueRemindersArm is the caller's due reminders as one clause, or empty when
+// the read asks for none. The widening arm must not read past the content gate.
+//
+// gated says whether the outer statement already scopes alias a. A content gate
+// there covers the arm whole. A discover gate leaves only its audience half to
+// add, since the content gate is discover and audience. Repeating the full gate
+// doubled the statement Postgres plans.
+func dueRemindersArm(ctx context.Context, in ListActivitiesInput, gated bool, arg func(any) int) (string, error) {
+	if !in.RemindersDue && !in.OrRemindersDue && !in.ExceptRemindersDue {
+		return "", nil
+	}
+	reminders := dueReminderClause("a", sprintf("$%d", arg(ReminderReader(ctx))), reminderClockOf(in), arg)
+	if !in.OrRemindersDue || (gated && filtersOnContent(in)) {
+		return reminders, nil
+	}
+	gate := auth.ActivityContentClause
+	if gated {
+		gate = auth.ActivityAudienceArm
+	}
+	readable, err := gate(ctx, "a", arg)
+	if err != nil || readable == "" {
+		return reminders, err
+	}
+	return "(" + reminders + " AND " + readable + ")", nil
 }
 
 // timelineKeyset continues a page, or answers empty for a first one.
@@ -178,7 +271,7 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 	if in.Cursor == nil || *in.Cursor == "" {
 		return "", nil
 	}
-	if in.RequestReviewAsOf != nil {
+	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		return "", errRequestReviewWithCursor
 	}
 	return sorted.KeysetClause(*in.Cursor, arg)
@@ -193,8 +286,20 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 // shrink that set further.
 func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	var where []string
+	if in.InteractionsAsOf != nil {
+		where = append(where, relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(*in.InteractionsAsOf))))
+	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
+	}
+	if in.SentBy != nil {
+		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity_participant sent
+		          WHERE sent.activity_id = a.id AND sent.role = 'from' AND sent.contact_id = $%d)`, arg(*in.SentBy)))
+	}
+	if in.ConversationOf != nil {
+		where = append(where, sprintf(`EXISTS (SELECT 1 FROM activity conversation_anchor
+		          WHERE conversation_anchor.id = $%d AND %s)`,
+			arg(*in.ConversationOf), SameCorrespondenceSQL("a", "conversation_anchor", sprintf("$%d::text", arg(in.conversationDomain)), deliveredToSQL(in.ConversationDeliveredTo, arg))))
 	}
 	if in.Query != nil && *in.Query != "" {
 		// subject + body are the two human-readable columns a human would
@@ -203,22 +308,36 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")
 		where = append(where, sprintf("(a.subject ILIKE $%d ESCAPE '\\' OR a.body ILIKE $%d ESCAPE '\\')", pos, pos))
 	}
-	if in.OccurredAfter != nil {
-		where = append(where, sprintf("a.occurred_at >= $%d", arg(*in.OccurredAfter)))
-	}
-	if in.OccurredBefore != nil {
-		where = append(where, sprintf("a.occurred_at < $%d", arg(*in.OccurredBefore)))
-	}
-	if in.AwaitingOutcome {
-		// NULL counts as awaiting: a captured calendar event carries no status,
-		// and excluding it would empty this question on a connected calendar.
-		where = append(where, "(a.meeting_status IS NULL OR a.meeting_status = 'booked')")
+	where = append(where, occurredWindowClauses(in, arg)...)
+	if in.OpenStatusOnly {
+		where = append(where, OpenMeetingStatusSQL)
 	}
 	return where
 }
 
+// occurredWindowClauses bounds the time a row happened at, a day entry by its
+// date (occurredday.WithinSQL). With DayDates set, an instant keeps the window
+// and a day entry is held to those dates.
+func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
+	var window []string
+	if in.OccurredAfter != nil {
+		window = append(window, occurredday.FromSQL("a", sprintf("$%d", arg(*in.OccurredAfter))))
+	}
+	if in.OccurredBefore != nil {
+		window = append(window, occurredday.BeforeSQL("a", sprintf("$%d", arg(*in.OccurredBefore))))
+	}
+	if in.DayDates == nil {
+		return window
+	}
+	instant := strings.Join(append([]string{"a.occurred_precision = 'instant'"}, window...), " AND ")
+	day := occurredday.DatesSQL("a", sprintf("$%d", arg(in.DayDates.From)), sprintf("$%d", arg(in.DayDates.Before)))
+	return []string{"((" + instant + ") OR " + day + ")"}
+}
+
 // filtersOnContent reports whether the list narrows on fields a withheld row
 // does not disclose.
+//
+// A custom-field filter belongs here because its values are content too.
 //
 // waiting_reply belongs here for the reason waiting.go's own gate comment
 // states: who wrote last and that nobody replied are both derived from
@@ -227,5 +346,15 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil ||
+		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
+}
+
+// kindPredicate spells a known kind as a literal, so a generic plan keeps the
+// partial indexes keyed on kind. Any other value stays bound.
+func kindPredicate(kind string, arg func(any) int) string {
+	if known := crmcontracts.ActivityKind(kind); known.Valid() {
+		return "a.kind = '" + string(known) + "'"
+	}
+	return sprintf("a.kind = $%d", arg(kind))
 }

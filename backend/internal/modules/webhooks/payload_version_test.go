@@ -830,3 +830,13 @@ func TestLeadDisqualifyReasonChangedWireSnapshot(t *testing.T) {
 	}
 	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
 }
+
+func TestUserUpdatedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventUserUpdated{UserId: identitySnapshotUserID, By: identitySnapshotActorID}
+	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
+}
+
+func TestSignalUpdatedWireSnapshot(t *testing.T) {
+	sample := crmcontracts.PublicEventSignalUpdated{SignalId: identitySnapshotUserID, OwnerId: identitySnapshotActorID}
+	assertWireSnapshot(t, sample.EventType(), events.VersionOf(sample.EventType()), sample)
+}

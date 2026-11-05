@@ -82,7 +82,8 @@ type MeterFill =
       // and "danger" for a reading the caller has decided is bad news at this
       // value, whichever end that is — a coverage bar that has run low, an
       // overdue bar that has run high.
-      tone?: "warning" | "danger";
+      // "ai" draws what the machine learned in the indigo of its work.
+      tone?: "warning" | "danger" | "ai";
       // The gradient's second colour (`--warning`) reads as a warning creeping
       // in at the high end, which is wrong for a reading with no low-is-bad
       // meaning. `flat` keeps the accent solid instead of fading toward it.
@@ -128,7 +129,7 @@ function meterClass({
   restTone,
   part,
 }: Readonly<{
-  tone?: "warning" | "danger";
+  tone?: "warning" | "danger" | "ai";
   flat?: boolean;
   dense?: boolean;
   restTone?: "accent";
@@ -384,8 +385,8 @@ export function SegmentBar({
   label: string;
 }>) {
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is whichever is larger, the parts or the mark: a call beyond what
-  // the parts reach leaves recessed track between them, which is the gap.
+  // The scale is the larger of the parts and the mark. A mark beyond the parts
+  // leaves recessed track between them, and that track is the gap.
   const scale = Math.max(total, marker?.value ?? 0);
   return (
     <div className="segbar">

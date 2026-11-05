@@ -252,7 +252,7 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// addressed to somebody, rather than replacing the addressee — and
 	// loosening this in Go while the contract still refuses it would make the
 	// two disagree about what a valid send is.
-	if len(toRecipients(in.Recipients, in.Cc, in.Bcc)) == 0 {
+	if len(ToRecipients(in.Recipients, in.Cc, in.Bcc)) == 0 {
 		return "", &NoRecipientsError{}
 	}
 	// The composition guards report a deployment defect, and a caller who may
@@ -331,12 +331,9 @@ func (s *Store) messageIDDomain() string {
 	return parsed.Hostname()
 }
 
-// toRecipients returns the To: addresses: the merged consent list with the
-// Cc addresses taken out. SendEmailInput.Recipients is the merged superset
-// (consent is owed to every addressee), so rendering it as To: would copy
-// every cc'd contact twice. Addresses are matched case- and space-
-// insensitively, the way a mail server treats them.
-func toRecipients(recipients, cc, bcc []string) []string {
+// ToRecipients removes copy recipients from the consent superset so blind
+// copies cannot leak into the visible To header or its review preview.
+func ToRecipients(recipients, cc, bcc []string) []string {
 	if len(cc) == 0 && len(bcc) == 0 {
 		return recipients
 	}

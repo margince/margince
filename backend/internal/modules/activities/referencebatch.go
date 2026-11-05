@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -77,10 +78,10 @@ func ReferencesByID(
 	// apart under an edit, and the row's `content_state` would then disagree
 	// with whether its own subject was blanked.
 	sql := fmt.Sprintf(`
-		SELECT id, kind, occurred_at, readable,
+		SELECT id, kind, occurred_at, occurred_precision, readable,
 		       CASE WHEN readable THEN subject ELSE NULL END
 		  FROM (
-		    SELECT a.id, a.kind, a.occurred_at, a.subject, (%s) AS readable
+		    SELECT a.id, a.kind, a.occurred_at, a.occurred_precision, a.subject, (%s) AS readable
 		      FROM activity a
 		     WHERE %s
 		  ) admitted`, content, strings.Join(where, " AND "))
@@ -95,7 +96,7 @@ func ReferencesByID(
 		var id ids.UUID
 		var readable bool
 		var ref crmcontracts.ActivityReference
-		if err := rows.Scan(&id, &ref.Kind, &ref.OccurredAt, &readable, &ref.Subject); err != nil {
+		if err := rows.Scan(&id, &ref.Kind, &ref.OccurredAt, &ref.OccurredPrecision, &readable, &ref.Subject); err != nil {
 			return nil, fmt.Errorf("activities: scanning an activity reference: %w", err)
 		}
 		ref.ActivityId = openapi_types.UUID(id)
@@ -116,7 +117,9 @@ func ReferencesByID(
 	// Rows must be closed first: this runs a second statement on the same
 	// transaction.
 	rows.Close()
-	if err := attachEmailSummaries(ctx, tx, out); err != nil {
+	// A reference names its activity for a score's receipt; no reading clock
+	// reaches it, so its move is judged now, as it always was.
+	if err := attachEmailSummaries(ctx, tx, out, time.Now()); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -129,7 +132,7 @@ func ReferencesByID(
 // the statement on ids that can only come back absent — the same filtering the
 // waiting lane does before its own call.
 func attachEmailSummaries(
-	ctx context.Context, tx pgx.Tx, refs map[ids.UUID]crmcontracts.ActivityReference,
+	ctx context.Context, tx pgx.Tx, refs map[ids.UUID]crmcontracts.ActivityReference, asOf time.Time,
 ) error {
 	var emails []ids.UUID
 	for id, ref := range refs {
@@ -140,7 +143,7 @@ func attachEmailSummaries(
 	if len(emails) == 0 {
 		return nil
 	}
-	summaries, err := EmailSummariesByIDBatch(ctx, tx, emails)
+	summaries, err := EmailSummariesByIDBatch(ctx, tx, emails, asOf)
 	if err != nil {
 		return err
 	}

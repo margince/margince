@@ -38,7 +38,7 @@ var seatWriters = []seatWriter{
 	}},
 }
 
-func seatActor(userAdmin principal.ObjectGrant) Identity {
+func seatWithGrant(userAdmin principal.ObjectGrant) Identity {
 	return Identity{
 		UserID: ids.New[ids.UserKind](), SeatType: string(principal.SeatFull),
 		Permissions: principal.Permissions{
@@ -50,7 +50,7 @@ func seatActor(userAdmin principal.ObjectGrant) Identity {
 
 func TestNoSeatIsAddedBeforeTheInstallationDescribesItself(t *testing.T) {
 	svc := &Service{installationDescribed: func(context.Context) (bool, error) { return false, nil }}
-	admin := seatActor(principal.ObjectGrant{Create: true, Read: true})
+	admin := seatWithGrant(principal.ObjectGrant{Create: true, Read: true})
 	for _, w := range seatWriters {
 		if err := w.add(svc, admin); !errors.Is(err, errCompanyNotDescribed) {
 			t.Errorf("%s before the company is described = %v, want errCompanyNotDescribed", w.name, err)
@@ -66,7 +66,7 @@ func TestACallerWhoMayNotAddSeatsIsRefusedBeforeTheCompanyIsAsked(t *testing.T) 
 			asked = true
 			return described, nil
 		}}
-		rep := seatActor(principal.ObjectGrant{Read: true})
+		rep := seatWithGrant(principal.ObjectGrant{Read: true})
 		for _, w := range seatWriters {
 			if err := w.add(svc, rep); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Errorf("%s by a rep (described=%v) = %v, want ErrPermissionDenied", w.name, described, err)

@@ -10,83 +10,14 @@ package integration
 // the tool over MCP with the same input.
 
 import (
-	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/assurance"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// adminContext binds the installation's workspace and an admin seat, for the
-// product writers a background job calls and no route does.
-func adminContext(t *testing.T, e *apptest.AppEnv) context.Context {
-	t.Helper()
-	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	user := ids.NewV7()
-	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), wsID), ids.NewV7())
-	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, Permissions: AdminPerms,
-	})
-}
-
-// finishInputCheck records one completed nightly input check, through the
-// store's three writers in the order the checker uses them.
-func finishInputCheck(t *testing.T, e *apptest.AppEnv) {
-	t.Helper()
-	ctx := adminContext(t, e)
-	store := assurance.NewStore(compose.InstallationDB(e.DB().Pool()))
-	asOf := time.Now().UTC()
-	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		run, err := store.StartRun(ctx, tx, asOf, nil)
-		if err != nil {
-			return err
-		}
-		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
-			Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &asOf,
-		}); err != nil {
-			return err
-		}
-		if err := store.RecordCoverage(ctx, tx, run, assurance.SourceCoverage{
-			Source: "offers", State: assurance.CoverageUnavailable,
-		}); err != nil {
-			return err
-		}
-		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, "ready")
-	}); err != nil {
-		t.Fatalf("recording a finished input check: %v", err)
-	}
-}
-
-// freezeAt takes one workspace-wide forecast snapshot of the quarter holding
-// `at` and answers its id.
-func freezeAt(t *testing.T, e *apptest.AppEnv, at time.Time) string {
-	t.Helper()
-	store := forecasting.NewStore(compose.InstallationDB(e.DB().Pool()))
-	var id ids.UUID
-	ctx := adminContext(t, e)
-	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
-		period, base, err := compose.ForecastPeriodAt(ctx, tx, forecasting.PeriodQuarter, at)
-		if err != nil {
-			return err
-		}
-		id, err = store.TakeSnapshot(ctx, tx, forecasting.NewSnapshot{
-			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
-			Trigger: forecasting.TriggerRecheck, BaseCurrency: base, TakenAt: at,
-		})
-		return err
-	}); err != nil {
-		t.Fatalf("freezing a forecast: %v", err)
-	}
-	return id.String()
-}
 
 // The forecast, its snapshots, its movement and its input checks read the same
 // on their routes and on the tools.
@@ -94,10 +25,10 @@ func TestForecastRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "forecast-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	openDeal(t, d.e, stages, "Forecast door deal")
-	opening := freezeAt(t, d.e, time.Date(2036, 2, 1, 9, 0, 0, 0, time.UTC))
-	closing := freezeAt(t, d.e, time.Date(2036, 2, 10, 9, 0, 0, 0, time.UTC))
+	opening := apptest.FreezeAt(t, d.e, AdminPerms, time.Date(2036, 2, 1, 9, 0, 0, 0, time.UTC))
+	closing := apptest.FreezeAt(t, d.e, AdminPerms, time.Date(2036, 2, 10, 9, 0, 0, 0, time.UTC))
 
-	finishInputCheck(t, d.e)
+	apptest.FinishInputCheck(t, d.e, AdminPerms)
 
 	// The route adds the landing and writes instants in the installation's zone.
 	// The figures, the period and the snapshots listed must agree.
@@ -123,6 +54,28 @@ func TestForecastRoutesAnswerAsTheirTools(t *testing.T) {
 		d.rest(t, "GET", "/v1/analytics/coverage", nil), d.tool(t, "data_coverage", map[string]any{}))
 	if coverage.RunID != check.RunID || len(coverage.Sources) != 2 {
 		t.Errorf("data coverage reads %+v, want the same run %s and its 2 sources", coverage, check.RunID)
+	}
+}
+
+// Before the first nightly input check, every door says no check has run yet.
+// A bare not-found reads as a check the caller may not see, which is a
+// different and false claim about the sources.
+func TestNoInputCheckYetIsSaidAlikeOnEveryDoor(t *testing.T) {
+	d := newTwoDoors(t, "no-input-check-doors", "read")
+	for _, c := range []struct{ path, tool string }{
+		{"/v1/forecast/assurance", "forecast_input_checks"},
+		{"/v1/analytics/coverage", "data_coverage"},
+	} {
+		var answer json.RawMessage
+		if status := d.e.Call(t, "GET", c.path, nil, d.bearer, &answer); status != http.StatusNotFound {
+			t.Fatalf("%s answered %d %s, want 404 before any check ran", c.path, status, answer)
+		}
+		if code := problemCode(t, answer); code != "no_input_check_yet" {
+			t.Errorf("%s refused with %q, want no_input_check_yet", c.path, code)
+		}
+		if refusal := d.toolRefused(t, c.tool, map[string]any{}); !namesCode(refusal, "no_input_check_yet") {
+			t.Errorf("%s refused with %s, not the route's no_input_check_yet", c.tool, refusal)
+		}
 	}
 }
 
@@ -161,7 +114,6 @@ type sharedForecast struct {
 	ScopeKind    string `json:"scope_kind"`
 	WonMinor     int64  `json:"won_minor"`
 	EvidenceMin  int64  `json:"evidence_minor"`
-	BestCase     int64  `json:"best_case_minor"`
 	OpenMinor    int64  `json:"open_minor"`
 	WeightedMin  int64  `json:"weighted_minor"`
 	EligibleN    int    `json:"eligible_count"`
@@ -276,11 +228,18 @@ type sharedEvaluation struct {
 // The calendar's free time reads the same on GET /availability and
 // check_availability.
 func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
-	d := newTwoDoors(t, "availability-read-doors", "read")
-	from, to := "2036-03-03T08:00:00Z", "2036-03-03T18:00:00Z"
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bea Booked"})
+	d := newTwoDoorsWith(t, "availability-read-doors", []compose.Option{(&apptest.BookingCalendar{}).Option()}, "read")
+	apptest.EnableBooking(t, d.e)
+	booked := apptest.NextBookableMorning(t)
+	day := booked.Truncate(24 * time.Hour)
+	from, to := day.Add(8*time.Hour).Format(time.RFC3339), day.Add(18*time.Hour).Format(time.RFC3339)
+	bookedFrom, bookedTo := booked.Format(time.RFC3339), booked.Add(time.Hour).Format(time.RFC3339)
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Bea Booked",
+		"emails": []AnyMap{{"email": "bea@buyer.example", "email_type": "work", "is_primary": true}},
+	})
 	if status := d.e.Call(t, "POST", "/v1/bookings", AnyMap{
-		"start": "2036-03-03T10:00:00Z", "end": "2036-03-03T11:00:00Z", "subject": "Door booking",
+		"start": bookedFrom, "end": bookedTo, "subject": "Door booking",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	}, nil, nil); status != 201 {
 		t.Fatalf("booking the hour → %d", status)
@@ -295,7 +254,7 @@ func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
 		t.Fatalf("a working day with one booked hour offers no slot: %+v", got)
 	}
 	for _, slot := range got.Slots {
-		if slot.Start >= "2036-03-03T10:00:00Z" && slot.Start < "2036-03-03T11:00:00Z" {
+		if slot.Start >= bookedFrom && slot.Start < bookedTo {
 			t.Errorf("slot %+v overlaps the booked hour", slot)
 		}
 	}

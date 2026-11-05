@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
@@ -23,9 +24,16 @@ func reportingHistoryCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	}
 	var b reportingBindings
 	object, alias, from, owner, missing := string(recordTypeDeal), "t", "deal t", colOwnerID, ""
+	reason := reportingCoverageWords.LegacyHistory
 	switch metric {
 	case reportingQualifiedPipelineCreated:
 		missing = "EXISTS(SELECT 1 FROM deal_stage_history h WHERE h.deal_id=t.id AND h.changed_at>=" + b.add(reportingEarliest(frame)) + " AND h.changed_at<" + b.add(frame.EvaluatedAt) + " AND (h.owner_id_at_change IS NULL OR h.pipeline_id_at_change IS NULL))"
+	case reportingStageConversion:
+		// Up to the evaluation instant, not the window's end: an entry's
+		// outcome is its next move before the cutoff, wherever that falls.
+		start, _ := cohortWindow(frame)
+		missing = "EXISTS(SELECT 1 FROM deal_stage_history h WHERE h.deal_id=t.id AND h.changed_at>=" + b.add(start) + " AND h.changed_at<" + b.add(frame.EvaluatedAt) + " AND (h.semantic_at_change IS NULL OR h.pipeline_id_at_change IS NULL OR h.provenance IS NULL))"
+		reason = reportingCoverageWords.LegacyStageMoves
 	case reportingAcceptedOpportunities:
 		object, alias, from, owner = reportingCreditObject, "t", "sdr_handoff t", "t.submitted_by"
 		missing = "EXISTS(SELECT 1 FROM sdr_handoff_event h WHERE h.handoff_id=t.id AND h.to_status='accepted' AND h.occurred_at>=" + b.add(reportingEarliest(frame)) + " AND h.occurred_at<" + b.add(frame.EvaluatedAt) + " AND (h.submitter_id_at_change IS NULL OR h.deal_id_at_change IS NULL))"
@@ -50,7 +58,7 @@ func reportingHistoryCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	}
 	if incomplete {
 		withheld := coverage.Withheld
-		coverage = reportingGap(reportingPartial, "Some source history predates reliable attribution. Only known contributions are shown; this period is not a complete comparison baseline.")
+		coverage = reportingGap(reportingPartial, reporting.ExplanationCopy(frame).Say(reason))
 		coverage.Withheld = withheld
 	}
 	return coverage, nil
@@ -109,7 +117,7 @@ func qualificationCoverage(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		}
 		if known == nil || reportingEarliest(frame).Before(*known) {
 			coverage.Status = reportingPartial
-			reason := "Qualification tracking began after part of this period. Only transitions recorded under a configured stage framework are included."
+			reason := reporting.ExplanationCopy(frame).Say(reportingCoverageWords.QualificationHistory)
 			coverage.Reason = &reason
 			return coverage, true, nil
 		}

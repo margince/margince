@@ -272,6 +272,16 @@ expect_actions "a red all-stories render files its issue" \
 expect_actions "a green all-stories render closes it" \
 	"close 40" "$(printf '40\t%s\n' "$STORIES_TITLE")" STORIES_RESULT=success
 
+RECORDS_TITLE="the weekly records pull request could not be opened"
+expect_actions "records/a failed render files its issue" \
+	"create $RECORDS_TITLE" "" RECORDS_RESULT=failure RECORDS_PR_RESULT=skipped
+expect_actions "records/a failed proposal files its issue" \
+	"create $RECORDS_TITLE" "" RECORDS_RESULT=success RECORDS_PR_RESULT=failure
+expect_actions "records/an opened pull request closes it" \
+	"close 41" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=success
+expect_actions "records/nothing recorded neither files nor closes" \
+	"" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=skipped
+
 # --- retraction where ONE job result feeds TWO titles ---------------------------
 #
 # Three lanes split their result into "could not run" and "the thing it measures

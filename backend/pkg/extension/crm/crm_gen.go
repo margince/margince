@@ -4,8 +4,61 @@
 package crm
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 )
+
+// Defines values for ActivityAutomaticKind.
+const (
+	Bulk          ActivityAutomaticKind = "bulk"
+	Calendar      ActivityAutomaticKind = "calendar"
+	Product       ActivityAutomaticKind = "product"
+	SendingSystem ActivityAutomaticKind = "sending_system"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
+func (e ActivityAutomaticKind) Valid() bool {
+	switch e {
+	case Bulk:
+		return true
+	case Calendar:
+		return true
+	case Product:
+		return true
+	case SendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityCallOutcome.
+const (
+	ActivityCallOutcomeCallBackLater ActivityCallOutcome = "put_through"
+	ActivityCallOutcomeNone          ActivityCallOutcome = "reached"
+	ActivityCallOutcomeNotReached    ActivityCallOutcome = "voicemail"
+	ActivityCallOutcomeReached       ActivityCallOutcome = "not_reached"
+	ActivityCallOutcomeVoicemail     ActivityCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the ActivityCallOutcome enum.
+func (e ActivityCallOutcome) Valid() bool {
+	switch e {
+	case ActivityCallOutcomeCallBackLater:
+		return true
+	case ActivityCallOutcomeNone:
+		return true
+	case ActivityCallOutcomeNotReached:
+		return true
+	case ActivityCallOutcomeReached:
+		return true
+	case ActivityCallOutcomeVoicemail:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for ActivityCaptureLabel.
 const (
@@ -169,21 +222,108 @@ func (e ActivityMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for ActivityMessageMove.
+const (
+	ActivityMessageMoveNeedsReply     ActivityMessageMove = "needs_reply"
+	ActivityMessageMoveNone           ActivityMessageMove = "none"
+	ActivityMessageMoveWaitingForThem ActivityMessageMove = "waiting_for_them"
+)
+
+// Valid indicates whether the value is a known member of the ActivityMessageMove enum.
+func (e ActivityMessageMove) Valid() bool {
+	switch e {
+	case ActivityMessageMoveNeedsReply:
+		return true
+	case ActivityMessageMoveNone:
+		return true
+	case ActivityMessageMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAudience.
 const (
-	Participants ActivityAudience = "participants"
-	Selected     ActivityAudience = "selected"
-	Workspace    ActivityAudience = "workspace"
+	ActivityAudienceParticipants ActivityAudience = "participants"
+	ActivityAudienceSelected     ActivityAudience = "selected"
+	ActivityAudienceWorkspace    ActivityAudience = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the ActivityAudience enum.
 func (e ActivityAudience) Valid() bool {
 	switch e {
-	case Participants:
+	case ActivityAudienceParticipants:
 		return true
-	case Selected:
+	case ActivityAudienceSelected:
 		return true
-	case Workspace:
+	case ActivityAudienceWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityAuthorKind.
+const (
+	ActivityAuthorKindColleague     ActivityAuthorKind = "colleague"
+	ActivityAuthorKindContactRecord ActivityAuthorKind = "contact_record"
+	ActivityAuthorKindMachine       ActivityAuthorKind = "machine"
+	ActivityAuthorKindUnresolved    ActivityAuthorKind = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAuthorKind enum.
+func (e ActivityAuthorKind) Valid() bool {
+	switch e {
+	case ActivityAuthorKindColleague:
+		return true
+	case ActivityAuthorKindContactRecord:
+		return true
+	case ActivityAuthorKindMachine:
+		return true
+	case ActivityAuthorKindUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityEmailTargetEntityType.
+const (
+	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
+	ActivityEmailTargetEntityTypeContact ActivityEmailTargetEntityType = "contact"
+	ActivityEmailTargetEntityTypeLead    ActivityEmailTargetEntityType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the ActivityEmailTargetEntityType enum.
+func (e ActivityEmailTargetEntityType) Valid() bool {
+	switch e {
+	case ActivityEmailTargetEntityTypeCompany:
+		return true
+	case ActivityEmailTargetEntityTypeContact:
+		return true
+	case ActivityEmailTargetEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityEmailTargetRefusal.
+const (
+	Archived   ActivityEmailTargetRefusal = "archived"
+	LeadClosed ActivityEmailTargetRefusal = "lead_closed"
+	NoAddress  ActivityEmailTargetRefusal = "no_address"
+)
+
+// Valid indicates whether the value is a known member of the ActivityEmailTargetRefusal enum.
+func (e ActivityEmailTargetRefusal) Valid() bool {
+	switch e {
+	case Archived:
+		return true
+	case LeadClosed:
+		return true
+	case NoAddress:
 		return true
 	default:
 		return false
@@ -211,6 +351,378 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReferenceContentState.
+const (
+	ActivityReferenceContentStateAvailable ActivityReferenceContentState = "available"
+	ActivityReferenceContentStateWithheld  ActivityReferenceContentState = "withheld"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReferenceContentState enum.
+func (e ActivityReferenceContentState) Valid() bool {
+	switch e {
+	case ActivityReferenceContentStateAvailable:
+		return true
+	case ActivityReferenceContentStateWithheld:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityReferenceKind.
+const (
+	Call    ActivityReferenceKind = "call"
+	Email   ActivityReferenceKind = "email"
+	Meeting ActivityReferenceKind = "meeting"
+	Message ActivityReferenceKind = "message"
+	Note    ActivityReferenceKind = "note"
+	Task    ActivityReferenceKind = "task"
+)
+
+// Valid indicates whether the value is a known member of the ActivityReferenceKind enum.
+func (e ActivityReferenceKind) Valid() bool {
+	switch e {
+	case Call:
+		return true
+	case Email:
+		return true
+	case Meeting:
+		return true
+	case Message:
+		return true
+	case Note:
+		return true
+	case Task:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityVoiceContactRole.
+const (
+	ActivityVoiceContactRoleAddressee ActivityVoiceContactRole = "addressee"
+	ActivityVoiceContactRoleAttendee  ActivityVoiceContactRole = "attendee"
+	ActivityVoiceContactRoleAuthor    ActivityVoiceContactRole = "author"
+	ActivityVoiceContactRoleCc        ActivityVoiceContactRole = "cc"
+	ActivityVoiceContactRoleOrganizer ActivityVoiceContactRole = "organizer"
+	ActivityVoiceContactRoleOther     ActivityVoiceContactRole = "other"
+)
+
+// Valid indicates whether the value is a known member of the ActivityVoiceContactRole enum.
+func (e ActivityVoiceContactRole) Valid() bool {
+	switch e {
+	case ActivityVoiceContactRoleAddressee:
+		return true
+	case ActivityVoiceContactRoleAttendee:
+		return true
+	case ActivityVoiceContactRoleAuthor:
+		return true
+	case ActivityVoiceContactRoleCc:
+		return true
+	case ActivityVoiceContactRoleOrganizer:
+		return true
+	case ActivityVoiceContactRoleOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyCompleteness.
+const (
+	Complete     BodyCompleteness = "complete"
+	Forwarded    BodyCompleteness = "forwarded"
+	Partial      BodyCompleteness = "partial"
+	Unassessed   BodyCompleteness = "unassessed"
+	Unreadable   BodyCompleteness = "unreadable"
+	Unverifiable BodyCompleteness = "unverifiable"
+)
+
+// Valid indicates whether the value is a known member of the BodyCompleteness enum.
+func (e BodyCompleteness) Valid() bool {
+	switch e {
+	case Complete:
+		return true
+	case Forwarded:
+		return true
+	case Partial:
+		return true
+	case Unassessed:
+		return true
+	case Unreadable:
+		return true
+	case Unverifiable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyIndustry.
+const (
+	AerospaceDefense          CompanyIndustry = "aerospace_defense"
+	Agriculture               CompanyIndustry = "agriculture"
+	Automotive                CompanyIndustry = "automotive"
+	ChemicalsMaterials        CompanyIndustry = "chemicals_materials"
+	Construction              CompanyIndustry = "construction"
+	ConsumerGoodsRetail       CompanyIndustry = "consumer_goods_retail"
+	Education                 CompanyIndustry = "education"
+	EnergyUtilities           CompanyIndustry = "energy_utilities"
+	EntertainmentMedia        CompanyIndustry = "entertainment_media"
+	FinancialServices         CompanyIndustry = "financial_services"
+	FoodBeverage              CompanyIndustry = "food_beverage"
+	GovernmentPublicSector    CompanyIndustry = "government_public_sector"
+	Healthcare                CompanyIndustry = "healthcare"
+	HospitalityTourism        CompanyIndustry = "hospitality_tourism"
+	Insurance                 CompanyIndustry = "insurance"
+	ItServices                CompanyIndustry = "it_services"
+	LegalProfessionalServices CompanyIndustry = "legal_professional_services"
+	LogisticsTransport        CompanyIndustry = "logistics_transport"
+	Manufacturing             CompanyIndustry = "manufacturing"
+	MarketingAdvertising      CompanyIndustry = "marketing_advertising"
+	MiningMetals              CompanyIndustry = "mining_metals"
+	Nonprofit                 CompanyIndustry = "nonprofit"
+	PharmaBiotech             CompanyIndustry = "pharma_biotech"
+	RealEstate                CompanyIndustry = "real_estate"
+	Software                  CompanyIndustry = "software"
+	Telecommunications        CompanyIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the CompanyIndustry enum.
+func (e CompanyIndustry) Valid() bool {
+	switch e {
+	case AerospaceDefense:
+		return true
+	case Agriculture:
+		return true
+	case Automotive:
+		return true
+	case ChemicalsMaterials:
+		return true
+	case Construction:
+		return true
+	case ConsumerGoodsRetail:
+		return true
+	case Education:
+		return true
+	case EnergyUtilities:
+		return true
+	case EntertainmentMedia:
+		return true
+	case FinancialServices:
+		return true
+	case FoodBeverage:
+		return true
+	case GovernmentPublicSector:
+		return true
+	case Healthcare:
+		return true
+	case HospitalityTourism:
+		return true
+	case Insurance:
+		return true
+	case ItServices:
+		return true
+	case LegalProfessionalServices:
+		return true
+	case LogisticsTransport:
+		return true
+	case Manufacturing:
+		return true
+	case MarketingAdvertising:
+		return true
+	case MiningMetals:
+		return true
+	case Nonprofit:
+		return true
+	case PharmaBiotech:
+		return true
+	case RealEstate:
+		return true
+	case Software:
+		return true
+	case Telecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyLifecycle.
+const (
+	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
+	CompanyLifecycleDisqualified   CompanyLifecycle = "disqualified"
+	CompanyLifecycleFormerCustomer CompanyLifecycle = "former_customer"
+	CompanyLifecycleLive           CompanyLifecycle = "live"
+	CompanyLifecycleOnboarding     CompanyLifecycle = "onboarding"
+	CompanyLifecycleOpportunity    CompanyLifecycle = "opportunity"
+	CompanyLifecycleProspect       CompanyLifecycle = "prospect"
+	CompanyLifecycleTarget         CompanyLifecycle = "target"
+	CompanyLifecycleUnknown        CompanyLifecycle = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the CompanyLifecycle enum.
+func (e CompanyLifecycle) Valid() bool {
+	switch e {
+	case CompanyLifecycleCustomer:
+		return true
+	case CompanyLifecycleDisqualified:
+		return true
+	case CompanyLifecycleFormerCustomer:
+		return true
+	case CompanyLifecycleLive:
+		return true
+	case CompanyLifecycleOnboarding:
+		return true
+	case CompanyLifecycleOpportunity:
+		return true
+	case CompanyLifecycleProspect:
+		return true
+	case CompanyLifecycleTarget:
+		return true
+	case CompanyLifecycleUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyRelationshipTypes.
+const (
+	CompanyRelationshipTypesCompetitor       CompanyRelationshipTypes = "competitor"
+	CompanyRelationshipTypesCustomer         CompanyRelationshipTypes = "customer"
+	CompanyRelationshipTypesInvestor         CompanyRelationshipTypes = "investor"
+	CompanyRelationshipTypesOther            CompanyRelationshipTypes = "other"
+	CompanyRelationshipTypesPartner          CompanyRelationshipTypes = "partner"
+	CompanyRelationshipTypesPortfolioCompany CompanyRelationshipTypes = "portfolio_company"
+	CompanyRelationshipTypesSupplier         CompanyRelationshipTypes = "supplier"
+)
+
+// Valid indicates whether the value is a known member of the CompanyRelationshipTypes enum.
+func (e CompanyRelationshipTypes) Valid() bool {
+	switch e {
+	case CompanyRelationshipTypesCompetitor:
+		return true
+	case CompanyRelationshipTypesCustomer:
+		return true
+	case CompanyRelationshipTypesInvestor:
+		return true
+	case CompanyRelationshipTypesOther:
+		return true
+	case CompanyRelationshipTypesPartner:
+		return true
+	case CompanyRelationshipTypesPortfolioCompany:
+		return true
+	case CompanyRelationshipTypesSupplier:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanySizeBand.
+const (
+	N10015000 CompanySizeBand = "1001-5000"
+	N110      CompanySizeBand = "1-10"
+	N1150     CompanySizeBand = "11-50"
+	N201500   CompanySizeBand = "201-500"
+	N5000     CompanySizeBand = "5000+"
+	N5011000  CompanySizeBand = "501-1000"
+	N51200    CompanySizeBand = "51-200"
+)
+
+// Valid indicates whether the value is a known member of the CompanySizeBand enum.
+func (e CompanySizeBand) Valid() bool {
+	switch e {
+	case N10015000:
+		return true
+	case N110:
+		return true
+	case N1150:
+		return true
+	case N201500:
+		return true
+	case N5000:
+		return true
+	case N5011000:
+		return true
+	case N51200:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyVisibility.
+const (
+	CompanyVisibilityOwner     CompanyVisibility = "owner"
+	CompanyVisibilityWorkspace CompanyVisibility = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the CompanyVisibility enum.
+func (e CompanyVisibility) Valid() bool {
+	switch e {
+	case CompanyVisibilityOwner:
+		return true
+	case CompanyVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ComputedFieldKind.
+const (
+	Count          ComputedFieldKind = "count"
+	CurrencyMinor  ComputedFieldKind = "currency_minor"
+	DurationMonths ComputedFieldKind = "duration_months"
+	Percent        ComputedFieldKind = "percent"
+)
+
+// Valid indicates whether the value is a known member of the ComputedFieldKind enum.
+func (e ComputedFieldKind) Valid() bool {
+	switch e {
+	case Count:
+		return true
+	case CurrencyMinor:
+		return true
+	case DurationMonths:
+		return true
+	case Percent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateActivityRequestCallOutcome.
+const (
+	CreateCallOutcomeCallBackLater CreateActivityRequestCallOutcome = "put_through"
+	CreateCallOutcomeNone          CreateActivityRequestCallOutcome = "reached"
+	CreateCallOutcomeNotReached    CreateActivityRequestCallOutcome = "voicemail"
+	CreateCallOutcomeReached       CreateActivityRequestCallOutcome = "not_reached"
+	CreateCallOutcomeVoicemail     CreateActivityRequestCallOutcome = "call_back_later"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityRequestCallOutcome enum.
+func (e CreateActivityRequestCallOutcome) Valid() bool {
+	switch e {
+	case CreateCallOutcomeCallBackLater:
+		return true
+	case CreateCallOutcomeNone:
+		return true
+	case CreateCallOutcomeNotReached:
+		return true
+	case CreateCallOutcomeReached:
+		return true
+	case CreateCallOutcomeVoicemail:
 		return true
 	default:
 		return false
@@ -316,27 +828,201 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for DealCommercialMotion.
+const (
+	DealCommercialMotionCrossSell        DealCommercialMotion = "cross_sell"
+	DealCommercialMotionExistingBusiness DealCommercialMotion = "existing_business"
+	DealCommercialMotionExpansion        DealCommercialMotion = "expansion"
+	DealCommercialMotionNewBusiness      DealCommercialMotion = "new_business"
+	DealCommercialMotionRenewal          DealCommercialMotion = "renewal"
+	DealCommercialMotionUpsell           DealCommercialMotion = "upsell"
+)
+
+// Valid indicates whether the value is a known member of the DealCommercialMotion enum.
+func (e DealCommercialMotion) Valid() bool {
+	switch e {
+	case DealCommercialMotionCrossSell:
+		return true
+	case DealCommercialMotionExistingBusiness:
+		return true
+	case DealCommercialMotionExpansion:
+		return true
+	case DealCommercialMotionNewBusiness:
+		return true
+	case DealCommercialMotionRenewal:
+		return true
+	case DealCommercialMotionUpsell:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLostReasonBasis.
+const (
+	Mapped   DealLostReasonBasis = "mapped"
+	Recorded DealLostReasonBasis = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the DealLostReasonBasis enum.
+func (e DealLostReasonBasis) Valid() bool {
+	switch e {
+	case Mapped:
+		return true
+	case Recorded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealPartnerAttribution.
+const (
+	Influenced DealPartnerAttribution = "influenced"
+	Sourced    DealPartnerAttribution = "sourced"
+)
+
+// Valid indicates whether the value is a known member of the DealPartnerAttribution enum.
+func (e DealPartnerAttribution) Valid() bool {
+	switch e {
+	case Influenced:
+		return true
+	case Sourced:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealPriority.
+const (
+	High   DealPriority = "high"
+	Low    DealPriority = "low"
+	Medium DealPriority = "medium"
+)
+
+// Valid indicates whether the value is a known member of the DealPriority enum.
+func (e DealPriority) Valid() bool {
+	switch e {
+	case High:
+		return true
+	case Low:
+		return true
+	case Medium:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealStatus.
+const (
+	DealStatusLost DealStatus = "lost"
+	DealStatusOpen DealStatus = "open"
+	DealStatusWon  DealStatus = "won"
+)
+
+// Valid indicates whether the value is a known member of the DealStatus enum.
+func (e DealStatus) Valid() bool {
+	switch e {
+	case DealStatusLost:
+		return true
+	case DealStatusOpen:
+		return true
+	case DealStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealWinProbabilitySource.
+const (
+	DealWinProbabilitySourceHuman    DealWinProbabilitySource = "human"
+	DealWinProbabilitySourceMargince DealWinProbabilitySource = "margince"
+	DealWinProbabilitySourceStage    DealWinProbabilitySource = "stage"
+)
+
+// Valid indicates whether the value is a known member of the DealWinProbabilitySource enum.
+func (e DealWinProbabilitySource) Valid() bool {
+	switch e {
+	case DealWinProbabilitySourceHuman:
+		return true
+	case DealWinProbabilitySourceMargince:
+		return true
+	case DealWinProbabilitySourceStage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealWonWithoutContractReason.
+const (
+	Imported       DealWonWithoutContractReason = "imported"
+	Other          DealWonWithoutContractReason = "other"
+	PurchaseOrder  DealWonWithoutContractReason = "purchase_order"
+	RenewalByEmail DealWonWithoutContractReason = "renewal_by_email"
+	Verbal         DealWonWithoutContractReason = "verbal"
+)
+
+// Valid indicates whether the value is a known member of the DealWonWithoutContractReason enum.
+func (e DealWonWithoutContractReason) Valid() bool {
+	switch e {
+	case Imported:
+		return true
+	case Other:
+		return true
+	case PurchaseOrder:
+		return true
+	case RenewalByEmail:
+		return true
+	case Verbal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLastEmailDirection.
+const (
+	DealLastEmailDirectionInbound  DealLastEmailDirection = "inbound"
+	DealLastEmailDirectionOutbound DealLastEmailDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the DealLastEmailDirection enum.
+func (e DealLastEmailDirection) Valid() bool {
+	switch e {
+	case DealLastEmailDirectionInbound:
+		return true
+	case DealLastEmailDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessStatus.
 const (
-	EmailAccessStatusParticipants EmailAccessStatus = "participants"
-	EmailAccessStatusSelected     EmailAccessStatus = "selected"
-	EmailAccessStatusTeam         EmailAccessStatus = "team"
-	EmailAccessStatusWithheld     EmailAccessStatus = "withheld"
-	EmailAccessStatusWorkspace    EmailAccessStatus = "workspace"
+	Participants EmailAccessStatus = "participants"
+	Selected     EmailAccessStatus = "selected"
+	Team         EmailAccessStatus = "team"
+	Withheld     EmailAccessStatus = "withheld"
+	Workspace    EmailAccessStatus = "workspace"
 )
 
 // Valid indicates whether the value is a known member of the EmailAccessStatus enum.
 func (e EmailAccessStatus) Valid() bool {
 	switch e {
-	case EmailAccessStatusParticipants:
+	case Participants:
 		return true
-	case EmailAccessStatusSelected:
+	case Selected:
 		return true
-	case EmailAccessStatusTeam:
+	case Team:
 		return true
-	case EmailAccessStatusWithheld:
+	case Withheld:
 		return true
-	case EmailAccessStatusWorkspace:
+	case Workspace:
 		return true
 	default:
 		return false
@@ -369,16 +1055,16 @@ func (e EmailDeliveryState) Valid() bool {
 
 // Defines values for EmailSummaryDirection.
 const (
-	Inbound  EmailSummaryDirection = "inbound"
-	Outbound EmailSummaryDirection = "outbound"
+	EmailSummaryDirectionInbound  EmailSummaryDirection = "inbound"
+	EmailSummaryDirectionOutbound EmailSummaryDirection = "outbound"
 )
 
 // Valid indicates whether the value is a known member of the EmailSummaryDirection enum.
 func (e EmailSummaryDirection) Valid() bool {
 	switch e {
-	case Inbound:
+	case EmailSummaryDirectionInbound:
 		return true
-	case Outbound:
+	case EmailSummaryDirectionOutbound:
 		return true
 	default:
 		return false
@@ -387,19 +1073,562 @@ func (e EmailSummaryDirection) Valid() bool {
 
 // Defines values for EmailSummaryMove.
 const (
-	NeedsReply     EmailSummaryMove = "needs_reply"
-	None           EmailSummaryMove = "none"
-	WaitingForThem EmailSummaryMove = "waiting_for_them"
+	EmailSummaryMoveNeedsReply     EmailSummaryMove = "needs_reply"
+	EmailSummaryMoveNone           EmailSummaryMove = "none"
+	EmailSummaryMoveWaitingForThem EmailSummaryMove = "waiting_for_them"
 )
 
 // Valid indicates whether the value is a known member of the EmailSummaryMove enum.
 func (e EmailSummaryMove) Valid() bool {
 	switch e {
-	case NeedsReply:
+	case EmailSummaryMoveNeedsReply:
+		return true
+	case EmailSummaryMoveNone:
+		return true
+	case EmailSummaryMoveWaitingForThem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MeetingResponse.
+const (
+	Accepted    MeetingResponse = "accepted"
+	Declined    MeetingResponse = "declined"
+	NeedsAction MeetingResponse = "needs_action"
+	Tentative   MeetingResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the MeetingResponse enum.
+func (e MeetingResponse) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Declined:
+		return true
+	case NeedsAction:
+		return true
+	case Tentative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OccurredPrecision.
+const (
+	OccurredPrecisionDay     OccurredPrecision = "day"
+	OccurredPrecisionInstant OccurredPrecision = "instant"
+)
+
+// Valid indicates whether the value is a known member of the OccurredPrecision enum.
+func (e OccurredPrecision) Valid() bool {
+	switch e {
+	case OccurredPrecisionDay:
+		return true
+	case OccurredPrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerActivationBasis.
+const (
+	CustomerWon          PartnerActivationBasis = "customer_won"
+	LeadAccepted         PartnerActivationBasis = "lead_accepted"
+	RecordedBeforeLadder PartnerActivationBasis = "recorded_before_ladder"
+)
+
+// Valid indicates whether the value is a known member of the PartnerActivationBasis enum.
+func (e PartnerActivationBasis) Valid() bool {
+	switch e {
+	case CustomerWon:
+		return true
+	case LeadAccepted:
+		return true
+	case RecordedBeforeLadder:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerCertStatus.
+const (
+	Applied   PartnerCertStatus = "applied"
+	Certified PartnerCertStatus = "certified"
+	Suspended PartnerCertStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the PartnerCertStatus enum.
+func (e PartnerCertStatus) Valid() bool {
+	switch e {
+	case Applied:
+		return true
+	case Certified:
+		return true
+	case Suspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerMarginTier.
+const (
+	Tier115 PartnerMarginTier = "tier1_15"
+	Tier220 PartnerMarginTier = "tier2_20"
+	Tier325 PartnerMarginTier = "tier3_25"
+)
+
+// Valid indicates whether the value is a known member of the PartnerMarginTier enum.
+func (e PartnerMarginTier) Valid() bool {
+	switch e {
+	case Tier115:
+		return true
+	case Tier220:
+		return true
+	case Tier325:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerPartnerRole.
+const (
+	PartnerPartnerRoleConsulting PartnerPartnerRole = "consulting"
+	PartnerPartnerRoleHosting    PartnerPartnerRole = "hosting"
+	PartnerPartnerRoleStrategic  PartnerPartnerRole = "strategic"
+)
+
+// Valid indicates whether the value is a known member of the PartnerPartnerRole enum.
+func (e PartnerPartnerRole) Valid() bool {
+	switch e {
+	case PartnerPartnerRoleConsulting:
+		return true
+	case PartnerPartnerRoleHosting:
+		return true
+	case PartnerPartnerRoleStrategic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerKind.
+const (
+	PartnerKindConsulting PartnerKind = "consulting"
+	PartnerKindHosting    PartnerKind = "hosting"
+	PartnerKindReferral   PartnerKind = "referral"
+	PartnerKindStrategic  PartnerKind = "strategic"
+)
+
+// Valid indicates whether the value is a known member of the PartnerKind enum.
+func (e PartnerKind) Valid() bool {
+	switch e {
+	case PartnerKindConsulting:
+		return true
+	case PartnerKindHosting:
+		return true
+	case PartnerKindReferral:
+		return true
+	case PartnerKindStrategic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PartnerStageMeaning.
+const (
+	Active    PartnerStageMeaning = "active"
+	Candidate PartnerStageMeaning = "candidate"
+	Dormant   PartnerStageMeaning = "dormant"
+	Ended     PartnerStageMeaning = "ended"
+	Ready     PartnerStageMeaning = "ready"
+	Signed    PartnerStageMeaning = "signed"
+)
+
+// Valid indicates whether the value is a known member of the PartnerStageMeaning enum.
+func (e PartnerStageMeaning) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Candidate:
+		return true
+	case Dormant:
+		return true
+	case Ended:
+		return true
+	case Ready:
+		return true
+	case Signed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrincipalAttributionActorType.
+const (
+	PrincipalAttributionActorTypeAgent     PrincipalAttributionActorType = "agent"
+	PrincipalAttributionActorTypeBuyer     PrincipalAttributionActorType = "buyer"
+	PrincipalAttributionActorTypeConnector PrincipalAttributionActorType = "connector"
+	PrincipalAttributionActorTypeHuman     PrincipalAttributionActorType = "human"
+	PrincipalAttributionActorTypeSystem    PrincipalAttributionActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
+func (e PrincipalAttributionActorType) Valid() bool {
+	switch e {
+	case PrincipalAttributionActorTypeAgent:
+		return true
+	case PrincipalAttributionActorTypeBuyer:
+		return true
+	case PrincipalAttributionActorTypeConnector:
+		return true
+	case PrincipalAttributionActorTypeHuman:
+		return true
+	case PrincipalAttributionActorTypeSystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RelationshipStrengthBucket.
+const (
+	Moderate RelationshipStrengthBucket = "moderate"
+	None     RelationshipStrengthBucket = "none"
+	Strong   RelationshipStrengthBucket = "strong"
+	Weak     RelationshipStrengthBucket = "weak"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipStrengthBucket enum.
+func (e RelationshipStrengthBucket) Valid() bool {
+	switch e {
+	case Moderate:
 		return true
 	case None:
 		return true
-	case WaitingForThem:
+	case Strong:
+		return true
+	case Weak:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RowTagColor.
+const (
+	Amber  RowTagColor = "amber"
+	Lime   RowTagColor = "lime"
+	Orange RowTagColor = "orange"
+	Rose   RowTagColor = "rose"
+	Sky    RowTagColor = "sky"
+	Slate  RowTagColor = "slate"
+	Teal   RowTagColor = "teal"
+	Violet RowTagColor = "violet"
+)
+
+// Valid indicates whether the value is a known member of the RowTagColor enum.
+func (e RowTagColor) Valid() bool {
+	switch e {
+	case Amber:
+		return true
+	case Lime:
+		return true
+	case Orange:
+		return true
+	case Rose:
+		return true
+	case Sky:
+		return true
+	case Slate:
+		return true
+	case Teal:
+		return true
+	case Violet:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEntityType.
+const (
+	SignalEntityTypeCompany SignalEntityType = "company"
+	SignalEntityTypeContact SignalEntityType = "contact"
+	SignalEntityTypeDeal    SignalEntityType = "deal"
+	SignalEntityTypeProject SignalEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the SignalEntityType enum.
+func (e SignalEntityType) Valid() bool {
+	switch e {
+	case SignalEntityTypeCompany:
+		return true
+	case SignalEntityTypeContact:
+		return true
+	case SignalEntityTypeDeal:
+		return true
+	case SignalEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalKind.
+const (
+	SignalKindBuyingIntent     SignalKind = "buying_intent"
+	SignalKindChampionLeft     SignalKind = "champion_left"
+	SignalKindCommitmentMade   SignalKind = "commitment_made"
+	SignalKindContractEnded    SignalKind = "contract_ended"
+	SignalKindExpansion        SignalKind = "expansion"
+	SignalKindFunding          SignalKind = "funding"
+	SignalKindGhostedThread    SignalKind = "ghosted_thread"
+	SignalKindLeadershipChange SignalKind = "leadership_change"
+	SignalKindNewOpportunity   SignalKind = "new_opportunity"
+	SignalKindOther            SignalKind = "other"
+	SignalKindProductLaunch    SignalKind = "product_launch"
+	SignalKindProjectGoneQuiet SignalKind = "project_gone_quiet"
+	SignalKindReengagement     SignalKind = "reengagement"
+	SignalKindRisk             SignalKind = "risk"
+	SignalKindStalledDeal      SignalKind = "stalled_deal"
+	SignalKindTechnicalChange  SignalKind = "technical_change"
+)
+
+// Valid indicates whether the value is a known member of the SignalKind enum.
+func (e SignalKind) Valid() bool {
+	switch e {
+	case SignalKindBuyingIntent:
+		return true
+	case SignalKindChampionLeft:
+		return true
+	case SignalKindCommitmentMade:
+		return true
+	case SignalKindContractEnded:
+		return true
+	case SignalKindExpansion:
+		return true
+	case SignalKindFunding:
+		return true
+	case SignalKindGhostedThread:
+		return true
+	case SignalKindLeadershipChange:
+		return true
+	case SignalKindNewOpportunity:
+		return true
+	case SignalKindOther:
+		return true
+	case SignalKindProductLaunch:
+		return true
+	case SignalKindProjectGoneQuiet:
+		return true
+	case SignalKindReengagement:
+		return true
+	case SignalKindRisk:
+		return true
+	case SignalKindStalledDeal:
+		return true
+	case SignalKindTechnicalChange:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalResolutionState.
+const (
+	SignalResolutionStateDropped       SignalResolutionState = "dropped"
+	SignalResolutionStateLowConfidence SignalResolutionState = "low_confidence"
+	SignalResolutionStateResolved      SignalResolutionState = "resolved"
+	SignalResolutionStateUnresolved    SignalResolutionState = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the SignalResolutionState enum.
+func (e SignalResolutionState) Valid() bool {
+	switch e {
+	case SignalResolutionStateDropped:
+		return true
+	case SignalResolutionStateLowConfidence:
+		return true
+	case SignalResolutionStateResolved:
+		return true
+	case SignalResolutionStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalSeverity.
+const (
+	Info   SignalSeverity = "info"
+	Urgent SignalSeverity = "urgent"
+	Warn   SignalSeverity = "warn"
+)
+
+// Valid indicates whether the value is a known member of the SignalSeverity enum.
+func (e SignalSeverity) Valid() bool {
+	switch e {
+	case Info:
+		return true
+	case Urgent:
+		return true
+	case Warn:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalSourceChannel.
+const (
+	DealRoomEngagement SignalSourceChannel = "deal_room_engagement"
+	Derived            SignalSourceChannel = "derived"
+	Inbound            SignalSourceChannel = "inbound"
+	Social             SignalSourceChannel = "social"
+	Web                SignalSourceChannel = "web"
+)
+
+// Valid indicates whether the value is a known member of the SignalSourceChannel enum.
+func (e SignalSourceChannel) Valid() bool {
+	switch e {
+	case DealRoomEngagement:
+		return true
+	case Derived:
+		return true
+	case Inbound:
+		return true
+	case Social:
+		return true
+	case Web:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalStatus.
+const (
+	SignalStatusAcknowledged SignalStatus = "acknowledged"
+	SignalStatusDismissed    SignalStatus = "dismissed"
+	SignalStatusOpen         SignalStatus = "open"
+	SignalStatusResolved     SignalStatus = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the SignalStatus enum.
+func (e SignalStatus) Valid() bool {
+	switch e {
+	case SignalStatusAcknowledged:
+		return true
+	case SignalStatusDismissed:
+		return true
+	case SignalStatusOpen:
+		return true
+	case SignalStatusResolved:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceCommercialRole.
+const (
+	SignalEvidenceCommercialRoleBuyer    SignalEvidenceCommercialRole = "buyer"
+	SignalEvidenceCommercialRolePartner  SignalEvidenceCommercialRole = "partner"
+	SignalEvidenceCommercialRoleProvider SignalEvidenceCommercialRole = "provider"
+	SignalEvidenceCommercialRoleSupplier SignalEvidenceCommercialRole = "supplier"
+	SignalEvidenceCommercialRoleUnknown  SignalEvidenceCommercialRole = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceCommercialRole enum.
+func (e SignalEvidenceCommercialRole) Valid() bool {
+	switch e {
+	case SignalEvidenceCommercialRoleBuyer:
+		return true
+	case SignalEvidenceCommercialRolePartner:
+		return true
+	case SignalEvidenceCommercialRoleProvider:
+		return true
+	case SignalEvidenceCommercialRoleSupplier:
+		return true
+	case SignalEvidenceCommercialRoleUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceLifecycleScope.
+const (
+	SignalEvidenceLifecycleScopeCompany    SignalEvidenceLifecycleScope = "company"
+	SignalEvidenceLifecycleScopeUnknown    SignalEvidenceLifecycleScope = "unknown"
+	SignalEvidenceLifecycleScopeWorkstream SignalEvidenceLifecycleScope = "workstream"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceLifecycleScope enum.
+func (e SignalEvidenceLifecycleScope) Valid() bool {
+	switch e {
+	case SignalEvidenceLifecycleScopeCompany:
+		return true
+	case SignalEvidenceLifecycleScopeUnknown:
+		return true
+	case SignalEvidenceLifecycleScopeWorkstream:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalEvidenceSourceType.
+const (
+	SignalEvidenceSourceTypeActivity     SignalEvidenceSourceType = "activity"
+	SignalEvidenceSourceTypeContract     SignalEvidenceSourceType = "contract"
+	SignalEvidenceSourceTypeDeal         SignalEvidenceSourceType = "deal"
+	SignalEvidenceSourceTypePage         SignalEvidenceSourceType = "page"
+	SignalEvidenceSourceTypeRelationship SignalEvidenceSourceType = "relationship"
+	SignalEvidenceSourceTypeSignal       SignalEvidenceSourceType = "signal"
+)
+
+// Valid indicates whether the value is a known member of the SignalEvidenceSourceType enum.
+func (e SignalEvidenceSourceType) Valid() bool {
+	switch e {
+	case SignalEvidenceSourceTypeActivity:
+		return true
+	case SignalEvidenceSourceTypeContract:
+		return true
+	case SignalEvidenceSourceTypeDeal:
+		return true
+	case SignalEvidenceSourceTypePage:
+		return true
+	case SignalEvidenceSourceTypeRelationship:
+		return true
+	case SignalEvidenceSourceTypeSignal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SignalResolutionOutcome.
+const (
+	Dismissed SignalResolutionOutcome = "dismissed"
+	Resolved  SignalResolutionOutcome = "resolved"
+)
+
+// Valid indicates whether the value is a known member of the SignalResolutionOutcome enum.
+func (e SignalResolutionOutcome) Valid() bool {
+	switch e {
+	case Dismissed:
+		return true
+	case Resolved:
 		return true
 	default:
 		return false
@@ -415,26 +1644,49 @@ func (e EmailSummaryMove) Valid() bool {
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
 // when `kind=message` (ADR-0107).
+// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+// `withheld`.
 type Activity struct {
+	// Archivable Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a hand-logged note or task the caller wrote (under their own stamp or through an agent acting for them). Captured correspondence and a colleague's note need the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
 	// AssigneeId Task only.
 	AssigneeId *string `json:"assignee_id,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity.
+	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
+
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
-	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
 	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
-	Body   *string       `json:"body,omitempty"`
+
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
+
+	// AwaitingOutcome Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false.
+	AwaitingOutcome *bool   `json:"awaiting_outcome,omitempty"`
+	Body            *string `json:"body,omitempty"`
+
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
+
+	// CalendarManaged Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false.
+	CalendarManaged *bool `json:"calendar_managed,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *ActivityCallOutcome `json:"call_outcome,omitempty"`
 
 	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
@@ -450,9 +1702,23 @@ type Activity struct {
 	// ColleagueIds The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
 	ColleagueIds *[]string `json:"colleague_ids,omitempty"`
 
-	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+	// CommitmentAdmissions Decisions about promises read from this source, included on list and detail reads when its content is visible.
+	CommitmentAdmissions *[]CommitmentAdmission `json:"commitment_admissions,omitempty"`
+
+	// ContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 	ContentState *ActivityContentState `json:"content_state,omitempty"`
-	CreatedAt    time.Time             `json:"created_at"`
+
+	// ControllerSend Present only on a mail sent through the installation's own relay. Absent on every other row.
+	ControllerSend *ControllerSend `json:"controller_send,omitempty"`
+	CreatedAt      time.Time       `json:"created_at"`
+
+	// CreatedBy Who recorded the activity, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
 
 	// Direction inbound/outbound for email/call; null for note/task.
 	Direction *ActivityDirection `json:"direction,omitempty"`
@@ -461,11 +1727,23 @@ type Activity struct {
 	// DueAt Task only.
 	DueAt *time.Time `json:"due_at,omitempty"`
 
+	// DueHasTime Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
 	// DurationSeconds Meeting/call only.
 	DurationSeconds *int `json:"duration_seconds,omitempty"`
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// EmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
+	EmailTarget *ActivityEmailTarget `json:"email_target,omitempty"`
+
+	// Guests Meeting only: the guests who are not a colleague seat and whose contact is not among the `links` you see. That covers a guest who is not a contact yet, and one past the link ceiling or filed under a contact you may not read. `contact_id` is set only for a contact you may read. A colleague is in `colleague_ids`. Filled wherever one activity is answered whole; a list leaves it out. Withheld with the content, like `colleague_ids`.
+	Guests *[]MeetingGuest `json:"guests,omitempty"`
+
+	// GuestsLeftOut Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`.
+	GuestsLeftOut *int `json:"guests_left_out,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
 	HostUserId *string `json:"host_user_id,omitempty"`
@@ -481,24 +1759,37 @@ type Activity struct {
 	IsDone *bool        `json:"is_done,omitempty"`
 	Kind   ActivityKind `json:"kind"`
 
-	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+	// Language What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (contact + deal).
+	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
-	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
-	OccurredAt    time.Time               `json:"occurred_at"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
+	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
 
-	// RemindAt Task only. Reminder-fire time; the B-E16.6 scan reads tasks whose reminder is due, not-done, and un-archived.
+	// MessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+	// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+	// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+	// word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+	// a message owed our answer is `none`, as for mail.
+	MessageMove *ActivityMessageMove `json:"message_move,omitempty"`
+	OccurredAt  time.Time            `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, so a client draws the date without a time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// OffersEmail Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for.
+	OffersEmail bool                    `json:"offers_email"`
+	Raw         *map[string]interface{} `json:"raw,omitempty"`
+
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 	Source   string     `json:"source"`
 
-	// SourceActivityId The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceId Provider message/event id; part of the idempotency key.
@@ -517,12 +1808,28 @@ type Activity struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
+
+	// Voice Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`.
+	Voice *ActivityVoice `json:"voice,omitempty"`
+
+	// WebForm What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`.
+	WebForm *WebFormSubmission `json:"web_form,omitempty"`
+
+	// Writable Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+type ActivityAutomaticKind string
+
+// ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type ActivityCallOutcome string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
 
-// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+// ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
 type ActivityContentState string
 
 // ActivityDirection inbound/outbound for email/call; null for note/task.
@@ -534,7 +1841,7 @@ type ActivityInvitationStatus string
 // ActivityKind defines model for Activity.Kind.
 type ActivityKind string
 
-// ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+// ActivityLanguage What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
@@ -542,8 +1849,56 @@ type ActivityLanguage string
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
 
+// ActivityMessageMove Present exactly when `kind=message` and the reader may read it. Whose move the chat
+// message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
+// still owed our answer, `waiting_for_them` on one a seat sent that is still the last
+// word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+// a message owed our answer is `none`, as for mail.
+type ActivityMessageMove string
+
 // ActivityAudience Who may read an activity's content — see Activity.audience.
 type ActivityAudience string
+
+// ActivityAuthor One author, named by the record that identifies them.
+type ActivityAuthor struct {
+	Address     *string `json:"address,omitempty"`
+	ContactId   *string `json:"contact_id,omitempty"`
+	DisplayName *string `json:"display_name,omitempty"`
+
+	// IsReader The author is the signed-in caller.
+	IsReader bool `json:"is_reader"`
+
+	// Kind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	Kind   ActivityAuthorKind `json:"kind"`
+	UserId *string            `json:"user_id,omitempty"`
+}
+
+// ActivityAuthorKind `colleague` is a seat in this workspace, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+type ActivityAuthorKind string
+
+// ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
+type ActivityEmailTarget struct {
+	EntityId   string                        `json:"entity_id"`
+	EntityType ActivityEmailTargetEntityType `json:"entity_type"`
+
+	// Refusal Why no email goes to the target: `archived` for an archived contact, `no_address` for a contact or lead with no address an email may use, and `lead_closed` for a lead that was promoted or disqualified.
+	Refusal *ActivityEmailTargetRefusal `json:"refusal,omitempty"`
+}
+
+// ActivityEmailTargetEntityType defines model for ActivityEmailTarget.EntityType.
+type ActivityEmailTargetEntityType string
+
+// ActivityEmailTargetRefusal Why no email goes to the target: `archived` for an archived contact, `no_address` for a contact or lead with no address an email may use, and `lead_closed` for a lead that was promoted or disqualified.
+type ActivityEmailTargetRefusal string
+
+// ActivityFollowUpTask defines model for ActivityFollowUpTask.
+type ActivityFollowUpTask struct {
+	AssigneeId *string    `json:"assignee_id,omitempty"`
+	Body       *string    `json:"body,omitempty"`
+	DueAt      *time.Time `json:"due_at,omitempty"`
+	DueHasTime *bool      `json:"due_has_time,omitempty"`
+	Subject    string     `json:"subject"`
+}
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
@@ -556,13 +1911,332 @@ type ActivityLink struct {
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
 
-// CreateActivityRequest defines model for CreateActivityRequest.
+// ActivityReference One activity a derived number was computed from, named well enough to be
+// recognised and opened.
+//
+// A count of receipts is not a receipt. "12 activities" is a claim a reader
+// cannot check: they cannot tell whether it counts the exchange they
+// remember, and they cannot open any of it. This is the same list with
+// each row named — a subject, a date, and the canonical email row where
+// the activity is an email this reader may receive a summary of.
+//
+// A row this reader may know exists but not read carries
+// `content_state: withheld` and no subject: the same word and the same
+// rule the activity's own access block uses. The count it came from stays
+// the id array's length either way, so a withheld row narrows what can be
+// SHOWN and never what is claimed.
+type ActivityReference struct {
+	ActivityId string `json:"activity_id"`
+
+	// ContentState Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
+	ContentState ActivityReferenceContentState `json:"content_state"`
+
+	// EmailSummary The canonical email row, present exactly when this activity is an email this reader may receive a summary of. A client renders it the way every other surface renders a cited message, and opens the same drawer.
+	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
+
+	// Kind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
+	Kind       ActivityReferenceKind `json:"kind"`
+	OccurredAt time.Time             `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Subject The activity's own subject line. Null when it has none, and when the content is not this reader's — the two are told apart by `content_state`, never by this field being empty.
+	Subject *string `json:"subject,omitempty"`
+}
+
+// ActivityReferenceContentState Whether this reader may read what the activity says. The same vocabulary `ActivityAccess.content_state` uses, because it is the same question about the same row.
+type ActivityReferenceContentState string
+
+// ActivityReferenceKind What KIND of activity it is, so a client dispatches on it: an email opens the drawer, a task opens the task detail, anything else opens the activity itself.
+type ActivityReferenceKind string
+
+// ActivityVoice Who wrote an activity, read from what is recorded on it, and the part the
+// page's contact had in it. Every surface that names a speaker reads this
+// rather than guessing from `direction`: a mail that came in was not
+// necessarily written by the contact whose page shows it.
+type ActivityVoice struct {
+	// Author Who wrote it: the `from` party of a message, the organizer of a meeting, the seat or imported author of a note, call or task. Null when nothing recorded names an author, which a reader shows as no author rather than a guess.
+	Author *ActivityAuthor `json:"author,omitempty"`
+
+	// ContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+	ContactRole *ActivityVoiceContactRole `json:"contact_role,omitempty"`
+}
+
+// ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
+type ActivityVoiceContactRole string
+
+// Address Structured postal address.
+type Address struct {
+	City *string `json:"city,omitempty"`
+
+	// Country ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.
+	Country              *string                `json:"country,omitempty"`
+	Line1                *string                `json:"line1,omitempty"`
+	Line2                *string                `json:"line2,omitempty"`
+	PostalCode           *string                `json:"postal_code,omitempty"`
+	Region               *string                `json:"region,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// AddressCountryMismatch The stored address country does not fit the postal code and city. A background check asks the geocoder for the postal code and city alone, reads the countries of up to five places they name, and flags the stored country only when it is none of them. The stored country is never changed. Editing the postal code, city or country clears the result until the next check, and a result older than 180 days is checked again.
+type AddressCountryMismatch struct {
+	// ResolvedCountry ISO-3166 alpha-2 code of the best-ranked country the postal code and city resolve to.
+	ResolvedCountry string `json:"resolved_country"`
+}
+
+// BodyCompleteness How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+// part was not read in full (it broke while decoding, or it ran past the size limit), so
+// the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+// lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+// text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+// stored before this was recorded and not yet checked against its stored original.
+// `unverifiable`: a mail stored before this was recorded whose original is gone or no longer
+// decodes, so its text can never be checked. Automatic work (promises, requests and their
+// settlement, and the events read from a conversation) is read only from a `complete` mail
+// body.
+type BodyCompleteness string
+
+// CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+type CommitmentAdmission struct {
+	CurrentWork bool      `json:"current_work"`
+	EvaluatedAt time.Time `json:"evaluated_at"`
+	EvidenceIds []string  `json:"evidence_ids"`
+	Locator     string    `json:"locator"`
+
+	// Meaning The source-supported state and deadline precision of a possible promise.
+	Meaning *CommitmentMeaning `json:"meaning,omitempty"`
+	Outcome string             `json:"outcome"`
+
+	// RenewedAt The renewing message's source time when the decision was recorded.
+	RenewedAt *time.Time `json:"renewed_at,omitempty"`
+
+	// RenewedBy The later message that explicitly renewed this promise.
+	RenewedBy   *string `json:"renewed_by,omitempty"`
+	RuleVersion string  `json:"rule_version"`
+	SourceQuote string  `json:"source_quote"`
+	Summary     string  `json:"summary"`
+}
+
+// CommitmentMeaning The source-supported state and deadline precision of a possible promise.
+type CommitmentMeaning struct {
+	// Condition The unmet condition in the source's own words, otherwise empty.
+	Condition string `json:"condition"`
+
+	// DeadlinePrecision Day, range, or none. A range does not name a due date.
+	DeadlinePrecision string `json:"deadline_precision"`
+
+	// DeadlineQuote The source's deadline words, empty when no deadline was stated.
+	DeadlineQuote string `json:"deadline_quote"`
+
+	// State Whether the promise is open, completed, conditional, optional, a request, or unclear.
+	State string `json:"state"`
+}
+
+// Company A company. Mirrors the `company` table.
+type Company struct {
+	// Address Structured postal address.
+	Address *Address `json:"address,omitempty"`
+
+	// AddressCountryMismatch Present only when the stored address country is none of the countries the postal code and city resolve to. Absent when one of them matches, when the address has not been checked yet, or when it carries no postal code, city or assigned country code.
+	AddressCountryMismatch *AddressCountryMismatch `json:"address_country_mismatch,omitempty"`
+	ArchivedAt             *time.Time              `json:"archived_at,omitempty"`
+
+	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
+	AssessAgainstEntityId *string `json:"assess_against_entity_id,omitempty"`
+
+	// Author Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
+
+	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// ComputedFields S-E15.8c formula-field display rows (RD-AC-6/RD-AC-7/RD-AC-N-1). Populated on
+	// `getCompany` only; the key is absent entirely (not an empty array) when the
+	// viewer's role lacks computed_field:read visibility (STATE-4).
+	ComputedFields *[]ComputedField `json:"computed_fields,omitempty"`
+
+	// ContactCount How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+	ContactCount *int      `json:"contact_count,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+
+	// CreatedBy Who created the company, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+
+	// Description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
+	Description *string          `json:"description,omitempty"`
+	DisplayName string           `json:"display_name"`
+	Domains     *[]CompanyDomain `json:"domains,omitempty"`
+
+	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
+	Email *string `json:"email,omitempty"`
+	Id    string  `json:"id"`
+
+	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
+	ImportedFrom *string `json:"imported_from,omitempty"`
+
+	// Industry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+	Industry *CompanyIndustry `json:"industry,omitempty"`
+
+	// IsAnchor True only for this installation's own company.
+	// It is one ordinary company, reachable by id everywhere, but the surfaces that answer
+	// *which companies are we selling to* exclude it unless `include_anchor` is set, and it
+	// cannot be archived or merged. A caller that offers company actions should tell it apart.
+	IsAnchor *bool `json:"is_anchor,omitempty"`
+
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool   `json:"legal_hold,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// Lifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
+	Lifecycle *CompanyLifecycle `json:"lifecycle,omitempty"`
+
+	// LinkedinUrl Canonical LinkedIn company URL. A validated column rather than a governed custom field, because it bears identity semantics — matching, dedupe, enrichment — a custom field cannot express. Unique among live rows.
+	LinkedinUrl *string `json:"linkedin_url,omitempty"`
+
+	// LogoUrl Where to fetch the company's logo image (A55) — the `getCompanyLogo`
+	// path for this record, cookie-authenticated and same-origin. A revision query changes
+	// with the stored image so a replacement cannot remain hidden behind an older cached
+	// response. The key is ABSENT entirely (not null) when no logo is stored, which is the
+	// common case and never an error: a client renders the deterministic monogram then,
+	// so it never shows a broken image or an empty slot.
+	// The stored object key is deliberately not exposed; it names a bucket path, and a
+	// client's business is the endpoint that streams the bytes.
+	LogoUrl      *string `json:"logo_url,omitempty"`
+	MergedIntoId *string `json:"merged_into_id,omitempty"`
+
+	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
+	OpenDealCount *int    `json:"open_deal_count,omitempty"`
+	OwnerId       *string `json:"owner_id,omitempty"`
+
+	// ParentCompanyId Single-level hierarchy FK; no cycles.
+	ParentCompanyId *string `json:"parent_company_id,omitempty"`
+
+	// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
+	// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+	// second half out of the retired `classification`). Company identity is never duplicated.
+	// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
+	// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
+	// forward-compatible.
+	Partner *Partner `json:"partner,omitempty"`
+
+	// Phone The company's main number, in E.164 form (for example +49301234567). It is never a contact's own number.
+	Phone *string                 `json:"phone,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
+
+	// RelationshipTypes WHAT THE COMPANY IS to us (PO-DDL-4b, ADR-0079). Multi-valued, because a company is legitimately several things at once — the partner program is built on companies that are simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND has a `partner` row; removing the type while that row lives is refused (422).
+	RelationshipTypes *[]CompanyRelationshipTypes `json:"relationship_types,omitempty"`
+	SizeBand          *CompanySizeBand            `json:"size_band,omitempty"`
+	Source            string                      `json:"source"`
+
+	// Strength Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions.
+	Strength  *RelationshipStrength `json:"strength,omitempty"`
+	Tags      *[]RowTag             `json:"tags,omitempty"`
+	UpdatedAt time.Time             `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+	Visibility *CompanyVisibility `json:"visibility,omitempty"`
+
+	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
+	WebsiteUrl *string `json:"website_url,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+type CompanyIndustry string
+
+// CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
+type CompanyLifecycle string
+
+// CompanyRelationshipTypes defines model for Company.RelationshipTypes.
+type CompanyRelationshipTypes string
+
+// CompanySizeBand defines model for Company.SizeBand.
+type CompanySizeBand string
+
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the workspace through a sender verdict, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+type CompanyVisibility string
+
+// CompanyDomain defines model for CompanyDomain.
+type CompanyDomain struct {
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
+	CapturedBy *string    `json:"captured_by,omitempty"`
+	CompanyId  *string    `json:"company_id,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+
+	// Domain Lowercased, no scheme, no www.
+	Domain    string     `json:"domain"`
+	Id        string     `json:"id"`
+	IsPrimary bool       `json:"is_primary"`
+	Source    string     `json:"source"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// ComputedField S-E15.8c formula-field display row (RD-AC-6/RD-AC-7/RD-AC-N-1) — a read-only,
+// database-computed value, never a runtime-authored expression. `computable: false` +
+// `reason` is the honest floor for a field with no backend data model yet — the row is
+// still returned, never omitted or fabricated.
+type ComputedField struct {
+	Computable   bool     `json:"computable"`
+	Dependencies []string `json:"dependencies"`
+
+	// FormulaSql The literal GENERATED-column/view SQL definition; empty string when computable=false.
+	FormulaSql string            `json:"formula_sql"`
+	Key        string            `json:"key"`
+	Kind       ComputedFieldKind `json:"kind"`
+	Label      string            `json:"label"`
+
+	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+	Reason *string `json:"reason,omitempty"`
+
+	// Value Present (and non-null) only when kind is count/duration_months/percent and computable=true.
+	Value *float32 `json:"value,omitempty"`
+
+	// ValueMinor Present (and non-null) only when kind=currency_minor and computable=true.
+	ValueMinor *int64 `json:"value_minor,omitempty"`
+}
+
+// ComputedFieldKind defines model for ComputedField.Kind.
+type ComputedFieldKind string
+
+// ControllerSend Present on a mail sent through the installation's own relay rather than through a
+// member's mailbox. Its presence is the lane.
+type ControllerSend struct {
+	// FromAddress The From address the mail left from, or was staged with while it waits. Null when the relay names none.
+	FromAddress *string `json:"from_address"`
+}
+
+// CreateActivityRequest The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
 	AssigneeId *string `json:"assignee_id,omitempty"`
 
 	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]string `json:"attendee_user_ids,omitempty"`
 	Body            *string   `json:"body,omitempty"`
+
+	// CallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+	CallOutcome *CreateActivityRequestCallOutcome `json:"call_outcome,omitempty"`
 
 	// ChannelProvider Which transport carried this message. REQUIRED when `kind=message` and MUST be
 	// null otherwise; violating either direction returns
@@ -571,7 +2245,11 @@ type CreateActivityRequest struct {
 	ChannelProvider *ProviderRef                    `json:"channel_provider,omitempty"`
 	Direction       *CreateActivityRequestDirection `json:"direction,omitempty"`
 	DueAt           *time.Time                      `json:"due_at,omitempty"`
-	DurationSeconds *int                            `json:"duration_seconds,omitempty"`
+
+	// DueHasTime Task only. True: `due_at` is a time of day; `remind_at` defaults to it.
+	DueHasTime      *bool                 `json:"due_has_time,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
 	// Not nullable: omitting it is how you say nothing, and the server answers that with the caller. A meeting nobody here hosted is a state imports reach, not one a human logging their own day can assert.
@@ -587,10 +2265,15 @@ type CreateActivityRequest struct {
 		EntityId   string                               `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
+
+	// MeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	// OccurredPrecision `day` when only the date is known: the date `occurred_at` names in its own offset is stored at noon UTC of that date, and its date is the UTC date. Omitted means `instant`. `day` without `occurred_at` is refused with 422.
+	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
+
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
 		Cc   *[]string `json:"cc,omitempty"`
 		From *string   `json:"from,omitempty"`
@@ -600,7 +2283,10 @@ type CreateActivityRequest struct {
 	// Raw Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text.
 	Raw *map[string]interface{} `json:"raw,omitempty"`
 
-	// RemindAt Task only.
+	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
+
+	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
@@ -609,6 +2295,9 @@ type CreateActivityRequest struct {
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
 	Source       string  `json:"source"`
+
+	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+	SourceActivityId *string `json:"source_activity_id,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *string `json:"source_author_id,omitempty"`
@@ -620,8 +2309,12 @@ type CreateActivityRequest struct {
 	Subject          *string `json:"subject,omitempty"`
 
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
-	ThreadKey *string `json:"thread_key,omitempty"`
+	ThreadKey            *string                `json:"thread_key,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CreateActivityRequestCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+type CreateActivityRequestCallOutcome string
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
 type CreateActivityRequestDirection string
@@ -632,8 +2325,180 @@ type CreateActivityRequestKind string
 // CreateActivityRequestLinksEntityType defines model for CreateActivityRequest.Links.EntityType.
 type CreateActivityRequestLinksEntityType string
 
-// CreateActivityRequestMeetingStatus defines model for CreateActivityRequest.MeetingStatus.
+// CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
+
+// Deal A deal. Mirrors the `deal` table.
+type Deal struct {
+	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
+	AcquisitionSource *string `json:"acquisition_source,omitempty"`
+	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+	Archivable *bool      `json:"archivable,omitempty"`
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// ArrSourceOfferId The accepted offer `expected_arr_minor` came from, or null where a human set the figure. While it is set the recurring figure is the offer's to state: an ordinary edit that would change or clear it is refused, and accepting another offer replaces both together.
+	ArrSourceOfferId *string `json:"arr_source_offer_id,omitempty"`
+
+	// Author Who created this deal in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a deal somebody entered here has no author but the one `captured_by` already names.
+	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
+	Author *SourceAuthor `json:"author,omitempty"`
+
+	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
+	CapturedBy *string `json:"captured_by,omitempty"`
+
+	// CloseDateProvisional True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.
+	CloseDateProvisional *bool      `json:"close_date_provisional,omitempty"`
+	ClosedAt             *time.Time `json:"closed_at,omitempty"`
+
+	// ClosingOccurrenceId Which CLOSING this deal is currently on, as the id of the stage-history row that made it. Null while the deal is open, and null on a closed deal whose history does not record the move that closed it — an imported row, typically, where manufacturing an occurrence would invite a review of a closing nobody can point at. Reopening and re-closing yields a new one: the old closing stays in history and stays readable, it simply stops being the one this deal is on.
+	ClosingOccurrenceId *string `json:"closing_occurrence_id,omitempty"`
+
+	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+	CommercialMotion *DealCommercialMotion `json:"commercial_motion,omitempty"`
+
+	// CompanyId Primary company; never a raw lead. Null when the caller may not read that company, in which case `masked_fields` names it.
+	CompanyId *string   `json:"company_id,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// CreatedBy Who created the deal, from its earliest create audit row, read the way
+	// `Contact360.created_by` is: for an agent, the colleague it worked for and the
+	// tool it was typed through, each when the row records it, which `captured_by`
+	// cannot say. Absent when no create row is known; a reader says "unknown" for an
+	// absent value and never "System". Served only to a human session, never to an
+	// agent, and never with `passport_id`.
+	CreatedBy *PrincipalAttribution `json:"created_by,omitempty"`
+	Currency  *string               `json:"currency,omitempty"`
+
+	// Description The human-authored statement of what the customer needs, what is in scope and what outcome is intended. Distinct from the GENERATED deal briefing: this is what a colleague wrote, and no assembler may overwrite it. It is supplied to the status/advice assembler as evidence, never as an instruction to follow.
+	Description *string `json:"description,omitempty"`
+
+	// ExpectedArrMinor Expected annual recurring revenue in minor units of `currency`. Null means the deal carries no recurring component, which is not the same as zero. `currency` is present exactly when `amount_minor` or `expected_arr_minor` is.
+	ExpectedArrMinor *int64 `json:"expected_arr_minor,omitempty"`
+
+	// ExpectedCloseDate An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
+	ExpectedCloseDate *string `json:"expected_close_date,omitempty"`
+	FxRateDate        *string `json:"fx_rate_date,omitempty"`
+
+	// FxRateToBase Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.
+	FxRateToBase *string `json:"fx_rate_to_base,omitempty"`
+	Id           string  `json:"id"`
+
+	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
+	ImportedFrom *string `json:"imported_from,omitempty"`
+
+	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	LastEmail *DealLastEmail `json:"last_email,omitempty"`
+
+	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
+	LegalHold *bool `json:"legal_hold,omitempty"`
+
+	// LostReason The free note on a lost deal. A lost deal has this, a `lost_reason_code`, or both.
+	LostReason *string `json:"lost_reason,omitempty"`
+
+	// LostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+	LostReasonBasis *DealLostReasonBasis `json:"lost_reason_basis,omitempty"`
+
+	// LostReasonCode The key from `/loss-reasons` this loss counts under. Set at the close, or later by an administrator's reviewed mapping of the note. Null on a deal that is not lost, and on a lost deal with only a note nobody has mapped yet.
+	LostReasonCode *string `json:"lost_reason_code,omitempty"`
+
+	// MaskedFields The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+	Name         string    `json:"name"`
+	OwnerId      *string   `json:"owner_id,omitempty"`
+
+	// PartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
+	PartnerAttribution *DealPartnerAttribution `json:"partner_attribution,omitempty"`
+
+	// PartnerCompanyId Deal registration/attribution to a partner company. The company must have a live `partner` row — naming one that does not is refused 422 (`not_a_partner`), because commission prices from the margin tier on that row, and an attribution without one could never earn anything. Null when the caller may not read that company, in which case `masked_fields` names it.
+	PartnerCompanyId *string `json:"partner_company_id,omitempty"`
+
+	// PipelineId The deal's pipeline. A zero/placeholder UUID here is forbidden (dangling FK).
+	PipelineId *string `json:"pipeline_id"`
+
+	// Priority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+	Priority *DealPriority `json:"priority,omitempty"`
+
+	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
+	ProjectId *string                 `json:"project_id,omitempty"`
+	Raw       *map[string]interface{} `json:"raw,omitempty"`
+	Source    string                  `json:"source"`
+
+	// StageId The deal's current stage; must belong to pipeline_id.
+	StageId *string `json:"stage_id"`
+
+	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+	StageWinProbability *int `json:"stage_win_probability,omitempty"`
+
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	Stalled   *bool      `json:"stalled,omitempty"`
+	Status    DealStatus `json:"status"`
+	Tags      *[]RowTag  `json:"tags,omitempty"`
+	UpdatedAt time.Time  `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+
+	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
+	WaitUntil *string `json:"wait_until,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	WinProbability *int `json:"win_probability,omitempty"`
+
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
+
+	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
+	WonWithoutContractDetail *string `json:"won_without_contract_detail,omitempty"`
+
+	// WonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
+	WonWithoutContractReason *DealWonWithoutContractReason `json:"won_without_contract_reason,omitempty"`
+
+	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
+	Writable             *bool                  `json:"writable,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// DealCommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
+type DealCommercialMotion string
+
+// DealLostReasonBasis How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. Null when there is no code.
+type DealLostReasonBasis string
+
+// DealPartnerAttribution What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). Travels with the partner — naming a partner defaults it to `sourced`. Commission accrues on `sourced` only.
+type DealPartnerAttribution string
+
+// DealPriority Human importance, set by a colleague and never derived. Deliberately independent of amount, score, stage and the computed urgency a worklist reads: those already exist, and a field that merely restates them would be a second answer to a question the product answers. Null is "nobody has said", not "medium" — new deals are born null and closing one preserves what it held.
+type DealPriority string
+
+// DealStatus defines model for Deal.Status.
+type DealStatus string
+
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+type DealWinProbabilitySource string
+
+// DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
+type DealWonWithoutContractReason string
+
+// DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+type DealLastEmail struct {
+	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+	Direction  *DealLastEmailDirection `json:"direction"`
+	OccurredAt time.Time               `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+}
+
+// DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+type DealLastEmailDirection string
 
 // EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
 // badge can print.
@@ -755,10 +2620,19 @@ type EmailSummary struct {
 	// would branch on and never reach.
 	DisplayStatus EmailAccessStatus `json:"display_status"`
 
-	// Move Whose move it is, derived from what this reader can see of the thread. `none` when
+	// Move Whose move it is, derived from what this reader can see of the thread.
+	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+	// that is still the last word with them. A calendar invitation, update, cancellation
+	// or answer is `none` unless someone confirmed it asks us something. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
+	// A message older than the waiting horizon that nobody kept is `none` too: it is
+	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+	// The message stays on the timeline; `none` does not mean it was answered.
 	Move       EmailSummaryMove `json:"move"`
 	OccurredAt time.Time        `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
@@ -778,9 +2652,181 @@ type EmailSummary struct {
 // EmailSummaryDirection defines model for EmailSummary.Direction.
 type EmailSummaryDirection string
 
-// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread. `none` when
+// EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
+// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
+// that is still the last word with them. A calendar invitation, update, cancellation
+// or answer is `none` unless someone confirmed it asks us something. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
+// A message older than the waiting horizon that nobody kept is `none` too: it is
+// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+// The message stays on the timeline; `none` does not mean it was answered.
 type EmailSummaryMove string
+
+// MeetingAttendeeResponse The answer one colleague or linked contact on a meeting gave its invitation. Exactly one of `user_id` and `contact_id` is set.
+type MeetingAttendeeResponse struct {
+	// ContactId The contact, one of the contact `links` you see.
+	ContactId *string `json:"contact_id,omitempty"`
+
+	// Response A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+	Response MeetingResponse `json:"response"`
+
+	// UserId The colleague, one of `colleague_ids` or the host.
+	UserId *string `json:"user_id,omitempty"`
+}
+
+// MeetingGuest One guest on a meeting who is not a colleague seat.
+type MeetingGuest struct {
+	// Address The address the invitation named them by. Absent when no row holds one.
+	Address *string `json:"address,omitempty"`
+
+	// ContactId The contact this guest is. Present only when you may read that contact.
+	ContactId *string `json:"contact_id,omitempty"`
+
+	// DisplayName The contact's name when you may read the contact, else the name the invitation gave, else empty.
+	DisplayName string `json:"display_name"`
+
+	// Response What the guest answered the invitation. Absent when no calendar stated an answer.
+	Response *MeetingResponse `json:"response,omitempty"`
+}
+
+// MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
+type MeetingResponse string
+
+// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+type OccurredPrecision string
+
+// Partner First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
+// has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
+// second half out of the retired `classification`). Company identity is never duplicated.
+// ADR-0053 adds the relationship-in-flight layer: lifecycle stage, relationship health,
+// partner fit, next step, and served segments. Behavior is Fast-follow, but the V1 schema is
+// forward-compatible.
+type Partner struct {
+	// ActivatedAt When the partner was activated. Null for a partner activated before the stage list existed, whose date nobody recorded.
+	ActivatedAt *time.Time `json:"activated_at,omitempty"`
+
+	// ActivatedBy Who accepted the lead or recorded the win that activated the partner.
+	ActivatedBy *string `json:"activated_by,omitempty"`
+
+	// ActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+	ActivationBasis *PartnerActivationBasis `json:"activation_basis,omitempty"`
+
+	// ActivationDealId The won deal that activated the partner.
+	ActivationDealId *string `json:"activation_deal_id,omitempty"`
+
+	// ActivationLeadId The accepted lead that activated the partner.
+	ActivationLeadId *string           `json:"activation_lead_id,omitempty"`
+	ArchivedAt       *time.Time        `json:"archived_at,omitempty"`
+	CertStatus       PartnerCertStatus `json:"cert_status"`
+
+	// CompanyId The company this partner record extends (PK = FK).
+	CompanyId string    `json:"company_id"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
+	GateMetrics   *map[string]interface{} `json:"gate_metrics,omitempty"`
+	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
+
+	// MarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
+	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
+
+	// MaskedFields The fields of THIS row the caller's role withholds (a field mask — e.g. `margin_tier` for a seat that reads partners but not their commercial terms). A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld.
+	MaskedFields  *[]string `json:"masked_fields,omitempty"`
+	NextStep      *string   `json:"next_step,omitempty"`
+	NextStepDueAt *string   `json:"next_step_due_at,omitempty"`
+
+	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
+	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
+
+	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
+	PartnerFitScore *int `json:"partner_fit_score,omitempty"`
+
+	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
+	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty"`
+
+	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
+	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
+
+	// PartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
+
+	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
+	RelationshipHealth *string `json:"relationship_health,omitempty"`
+
+	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
+	RelationshipStage *string   `json:"relationship_stage,omitempty"`
+	ServedSegments    *[]string `json:"served_segments,omitempty"`
+
+	// StageLabel The label `/partner-stages` gives `relationship_stage`.
+	StageLabel *string `json:"stage_label,omitempty"`
+
+	// StageLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+	StageLabelKey *ShippedLabelKey `json:"stage_label_key,omitempty"`
+
+	// StageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+	// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+	// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+	// active and went quiet. `ended`: the partnership is over or never fit.
+	StageMeaning *PartnerStageMeaning `json:"stage_meaning,omitempty"`
+	UpdatedAt    time.Time            `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+}
+
+// PartnerActivationBasis What activated the partner; a partner stands on a stage meaning `active` only once this is set. `recorded_before_ladder` marks a partner that already stood on an active or dormant stage when the stage list was introduced.
+type PartnerActivationBasis string
+
+// PartnerCertStatus defines model for Partner.CertStatus.
+type PartnerCertStatus string
+
+// PartnerMarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
+type PartnerMarginTier string
+
+// PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
+type PartnerPartnerRole string
+
+// PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
+type PartnerKind string
+
+// PartnerStageMeaning The built-in meaning a partner stage carries. Code and filters read the meaning, never the
+// stage's key or label. `candidate`: no contract yet. `signed`: the contract is signed.
+// `ready`: enabled to work with us. `active`: activated and working with us. `dormant`: was
+// active and went quiet. `ended`: the partnership is over or never fit.
+type PartnerStageMeaning string
+
+// PrincipalAttribution Who a recorded change is attributed to, read from the audit row the change
+// wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+// renders them with the same helper.
+type PrincipalAttribution struct {
+	ActorId string `json:"actor_id"`
+
+	// ActorName Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves.
+	ActorName *string                       `json:"actor_name,omitempty"`
+	ActorType PrincipalAttributionActorType `json:"actor_type"`
+
+	// AgentClient The NAME of the tool a delegated change was typed through — "Claude",
+	// "Cursor" — resolved from the OAuth client behind the row's passport.
+	// Null when the passport was minted by hand in Settings, when the client
+	// row is gone, and for every write that was not delegated.
+	AgentClient *string `json:"agent_client,omitempty"`
+
+	// OnBehalfOf Granting human's user id for agent actions.
+	OnBehalfOf *string `json:"on_behalf_of,omitempty"`
+
+	// OnBehalfOfName Resolved display name for on_behalf_of.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
+
+	// PassportId The Agent Seat Passport the change was made under; null for a write that was not delegated.
+	PassportId *string `json:"passport_id,omitempty"`
+}
+
+// PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
+type PrincipalAttributionActorType string
 
 // ProviderRef A reference to a messaging transport registered in THIS installation
 // (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
@@ -790,11 +2836,231 @@ type EmailSummaryMove string
 // states the invariant; `GET /v1/channel-providers` resolves the live set.
 type ProviderRef = string
 
+// RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
+type RecommendationReceipt struct {
+	BasisFingerprint string `json:"basis_fingerprint"`
+
+	// CheckedAt Evaluation instant identifying this observation.
+	CheckedAt     time.Time `json:"checked_at"`
+	DealId        string    `json:"deal_id"`
+	PolicyVersion string    `json:"policy_version"`
+	Rule          string    `json:"rule"`
+}
+
+// RelationshipStrength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
+// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
+// interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
+// `contributing_activity_ids` are the receipts, so the UI can show its inputs — no mystery number.
+type RelationshipStrength struct {
+	// Bucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
+	Bucket RelationshipStrengthBucket `json:"bucket"`
+
+	// ComputedAt When this value was last recomputed (fixed-clock reproducible).
+	ComputedAt *time.Time `json:"computed_at,omitempty"`
+
+	// ContributingActivities The same receipts, named. In the order they were counted, and omitting an id this reader cannot discover at all — so the list can be SHORTER than `contributing_activity_ids`, which stays the count. A number that shrank to what one reader may open would tell two readers different things about one score.
+	ContributingActivities *[]ActivityReference `json:"contributing_activities,omitempty"`
+
+	// ContributingActivityIds The activities the score was computed from (the receipts behind the number).
+	ContributingActivityIds *[]string `json:"contributing_activity_ids,omitempty"`
+
+	// Factors The 0..1 sub-scores the composite was built from (the explanation).
+	Factors struct {
+		Direction   float32 `json:"direction"`
+		Frequency   float32 `json:"frequency"`
+		Recency     float32 `json:"recency"`
+		Reciprocity float32 `json:"reciprocity"`
+	} `json:"factors"`
+
+	// Inbound90d Count of qualifying inbound interactions in the trailing 90-day window.
+	Inbound90d *int `json:"inbound_90d,omitempty"`
+
+	// LastEngaged The newest interaction the contact took part in: a message they sent, or a meeting or call that took place. Recency counts from it, so our own unanswered send does not move it. Null when the contact never took part.
+	LastEngaged *time.Time `json:"last_engaged,omitempty"`
+
+	// LastInteraction Timestamp of the most recent qualifying interaction; null when there are none.
+	LastInteraction *time.Time `json:"last_interaction,omitempty"`
+
+	// Outbound90d Count of qualifying outbound interactions in the trailing 90-day window.
+	Outbound90d *int `json:"outbound_90d,omitempty"`
+
+	// Score 0..100 composite.
+	Score int `json:"score"`
+}
+
+// RelationshipStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
+type RelationshipStrengthBucket string
+
+// RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
+// assignment — who applied it, when — comes from the record's own tags read, because a
+// page of fifty rows does not need fifty assignments to draw a chip.
+type RowTag struct {
+	Color *RowTagColor `json:"color,omitempty"`
+	Name  string       `json:"name"`
+	TagId string       `json:"tag_id"`
+}
+
+// RowTagColor defines model for RowTag.Color.
+type RowTagColor string
+
 // RowVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 // Echoed back as the `version` field on every mutable entity. To make a write conditional,
 // send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 // (ErrVersionSkew) so the client re-reads before retrying.
 type RowVersion = int64
+
+// ShippedLabelKey The catalog key a screen renders a built-in value from, in the reader's language. Set only on a value still worded as the product shipped it; null once an administrator relabels it, so their own words show instead of `label`'s translation. `label` keeps the English text for every reader that has no catalog, such as an export or an agent.
+type ShippedLabelKey = string
+
+// Signal A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
+// company-level and consent-gated by construction — the only mandatory attribution is
+// to a company (`resolved_company_id` after resolution); `resolved_contact_id` is optional
+// and set only under a recorded consent grant (P12). Unattributable signals are
+// `dropped`, never retained as a contact-level dossier.
+type Signal struct {
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
+	CapturedBy *string   `json:"captured_by,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	DetectedAt time.Time `json:"detected_at"`
+	EntityId   *string   `json:"entity_id,omitempty"`
+
+	// EntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
+	EntityType *SignalEntityType `json:"entity_type,omitempty"`
+
+	// Evidence Per-claim evidence; a claim without evidence is omitted.
+	Evidence []SignalEvidence `json:"evidence"`
+	Id       string           `json:"id"`
+
+	// Kind The first six are what a human files by hand. The rest are what the producers
+	// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
+	// out of a settled conversation by the `signal_extract` site, each citing the message
+	// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
+	// interaction is ours, nobody answered it, and the account is one worth chasing;
+	// `project_gone_quiet` is the same kind of comparison on a project — it is being
+	// pursued or delivered and nothing has been filed against it for 30 days (the
+	// `projects-gone-quiet` report's own rule). Its subject is the project
+	// (`entity_type: project`), attributed to the project's company.
+	Kind SignalKind `json:"kind"`
+
+	// RawRef Pointer to the raw source payload the resolver works from: an email address/handle, a domain, a URL, or a company mention.
+	RawRef *string `json:"raw_ref,omitempty"`
+
+	// Resolution How a human resolved this signal, and who. Null while `status` is
+	// `open` or `acknowledged` — only a human outcome appends one.
+	//
+	// The latest, not the history: a signal reopened and resolved again
+	// says how it stands now. Every append is kept, and an audit reader
+	// is where the earlier ones belong.
+	Resolution           *SignalResolution `json:"resolution,omitempty"`
+	ResolutionConfidence *float32          `json:"resolution_confidence,omitempty"`
+
+	// ResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
+	ResolutionState SignalResolutionState `json:"resolution_state"`
+
+	// ResolvedCompanyId The company the raw signal resolved to (the only required attribution level).
+	ResolvedCompanyId *string `json:"resolved_company_id,omitempty"`
+
+	// ResolvedContactId Optional contact resolution, set only under a recorded consent grant and never inferred.
+	ResolvedContactId *string        `json:"resolved_contact_id,omitempty"`
+	Severity          SignalSeverity `json:"severity"`
+	Source            string         `json:"source"`
+
+	// SourceChannel Where the raw signal came from.
+	SourceChannel SignalSourceChannel `json:"source_channel"`
+	Status        SignalStatus        `json:"status"`
+
+	// Summary The signal's one sentence. A sentence the server words itself (`technical_change`,
+	// `ghosted_thread`, `project_gone_quiet`) is in the reader's chosen display language, else
+	// the installation's base language. Every other summary, and a summary stored without its
+	// parts, reads as it was written.
+	Summary   string    `json:"summary"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty"`
+}
+
+// SignalEntityType The subject record the signal is about; null until a raw signal resolves (both entity fields set together).
+type SignalEntityType string
+
+// SignalKind The first six are what a human files by hand. The rest are what the producers
+// raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
+// out of a settled conversation by the `signal_extract` site, each citing the message
+// it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
+// interaction is ours, nobody answered it, and the account is one worth chasing;
+// `project_gone_quiet` is the same kind of comparison on a project — it is being
+// pursued or delivered and nothing has been filed against it for 30 days (the
+// `projects-gone-quiet` report's own rule). Its subject is the project
+// (`entity_type: project`), attributed to the project's company.
+type SignalKind string
+
+// SignalResolutionState The raw→entity match outcome: an ambiguous match is `low_confidence` (surfaced, never silently asserted); an unattributable one is `dropped`.
+type SignalResolutionState string
+
+// SignalSeverity defines model for Signal.Severity.
+type SignalSeverity string
+
+// SignalSourceChannel Where the raw signal came from.
+type SignalSourceChannel string
+
+// SignalStatus defines model for Signal.Status.
+type SignalStatus string
+
+// SignalEvidence defines model for SignalEvidence.
+type SignalEvidence struct {
+	// BuyerContactId The buyer identified among the cited source’s verified participants.
+	BuyerContactId *string `json:"buyer_contact_id,omitempty"`
+
+	// CommercialRole The commercial role supported by the cited source, independent of recipient order.
+	CommercialRole *SignalEvidenceCommercialRole `json:"commercial_role,omitempty"`
+
+	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
+	Snippet        string                        `json:"snippet"`
+	SourceId       *string                       `json:"source_id,omitempty"`
+
+	// SourceQuote A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+	SourceQuote *SourceQuoteProof         `json:"source_quote,omitempty"`
+	SourceType  *SignalEvidenceSourceType `json:"source_type,omitempty"`
+
+	// Workstream The engagement named in the cited words, when present. Never inferred from the company name.
+	Workstream *string `json:"workstream,omitempty"`
+}
+
+// SignalEvidenceCommercialRole The commercial role supported by the cited source, independent of recipient order.
+type SignalEvidenceCommercialRole string
+
+// SignalEvidenceLifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+type SignalEvidenceLifecycleScope string
+
+// SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
+type SignalEvidenceSourceType string
+
+// SignalResolution A human's answer on one signal. `outcome` is the status they set,
+// `note` is what they wrote, `resolved_by` is who they are.
+//
+// Written on every human resolution since the table existed and read
+// nowhere until this projection: the note explaining WHY a signal was
+// dismissed was recorded and then invisible to the next reader of it.
+type SignalResolution struct {
+	// Note What they wrote about it, if anything.
+	Note *string `json:"note,omitempty"`
+
+	// Outcome The status the human set.
+	Outcome    SignalResolutionOutcome `json:"outcome"`
+	ResolvedAt time.Time               `json:"resolved_at"`
+
+	// ResolvedBy The colleague who answered; null once their account is deleted.
+	ResolvedBy *string `json:"resolved_by,omitempty"`
+}
+
+// SignalResolutionOutcome The status the human set.
+type SignalResolutionOutcome string
 
 // SourceAuthor Who wrote a record in the system it was imported from, when that is not
 // whoever recorded it here.
@@ -820,4 +3086,3101 @@ type SourceAuthor struct {
 	// Via Which system the record came from (`hubspot`), so a surface can say where the attribution comes from rather than presenting it as something typed here. Null when the origin was not recorded.
 	// An import writes its rows inside a reserved `mirror:` namespace, which is machinery for the replay key and is never what a reader should see. The prefix is stripped here: a row stored as `mirror:hubspot` reads `hubspot`.
 	Via *string `json:"via,omitempty"`
+}
+
+// SourceQuoteProof A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+type SourceQuoteProof struct {
+	// Cut How the source message was cut before it was hashed, so a proof verifies against the same text. Absent on a proof stored before cuts were named.
+	Cut    *int   `json:"cut,omitempty"`
+	End    int    `json:"end"`
+	Sha256 string `json:"sha256"`
+	Start  int    `json:"start"`
+}
+
+// WebFormConsent The consent box the form showed. Absent when the form shows none.
+type WebFormConsent struct {
+	// FormId The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
+	FormId *string `json:"form_id,omitempty"`
+
+	// FormName The form's name when it was sent. Absent on an older record.
+	FormName *string `json:"form_name,omitempty"`
+
+	// PageUrl The page the form was sent from, as `page_url` keeps it. Absent when the form sent none.
+	PageUrl *string `json:"page_url,omitempty"`
+
+	// PolicyVersion The privacy policy version the form named, when it named one.
+	PolicyVersion *string `json:"policy_version,omitempty"`
+	Ticked        bool    `json:"ticked"`
+
+	// Wording The words the box showed, as the admin wrote them when the form was sent.
+	Wording string `json:"wording"`
+}
+
+// WebFormSubmission One website form submission as the visitor sent it. Every value is the visitor's own
+// text and nothing Margince checked, except `consent`, which is the form's own record of
+// its consent box.
+type WebFormSubmission struct {
+	// Campaign The `utm_` parameters the page carried.
+	Campaign []WebFormValue `json:"campaign"`
+	Company  *string        `json:"company,omitempty"`
+
+	// Consent The consent box the form showed. Absent when the form shows none.
+	Consent *WebFormConsent `json:"consent,omitempty"`
+
+	// Email The address the lead was matched or created by.
+	Email string `json:"email"`
+
+	// Extra The form's other fields, in the order they were sent, under the names the form gave them.
+	Extra    []WebFormValue `json:"extra"`
+	FullName *string        `json:"full_name,omitempty"`
+
+	// Message The free text the visitor wrote.
+	Message *string `json:"message,omitempty"`
+
+	// PageUrl The page the form was sent from.
+	PageUrl *string `json:"page_url,omitempty"`
+
+	// Phone As typed; it may lack the country prefix a lead's phone needs.
+	Phone    *string `json:"phone,omitempty"`
+	Referrer *string `json:"referrer,omitempty"`
+	Title    *string `json:"title,omitempty"`
+}
+
+// WebFormValue defines model for WebFormValue.
+type WebFormValue struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Getter for additional properties for Activity. Returns the specified
+// element and whether it was found
+func (a Activity) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Activity
+func (a *Activity) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Activity to handle AdditionalProperties
+func (a *Activity) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
+	if raw, found := object["archived_at"]; found {
+		err = json.Unmarshal(raw, &a.ArchivedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'archived_at': %w", err)
+		}
+		delete(object, "archived_at")
+	}
+
+	if raw, found := object["assignee_id"]; found {
+		err = json.Unmarshal(raw, &a.AssigneeId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assignee_id': %w", err)
+		}
+		delete(object, "assignee_id")
+	}
+
+	if raw, found := object["attendee_responses"]; found {
+		err = json.Unmarshal(raw, &a.AttendeeResponses)
+		if err != nil {
+			return fmt.Errorf("error reading 'attendee_responses': %w", err)
+		}
+		delete(object, "attendee_responses")
+	}
+
+	if raw, found := object["audience"]; found {
+		err = json.Unmarshal(raw, &a.Audience)
+		if err != nil {
+			return fmt.Errorf("error reading 'audience': %w", err)
+		}
+		delete(object, "audience")
+	}
+
+	if raw, found := object["audience_reason"]; found {
+		err = json.Unmarshal(raw, &a.AudienceReason)
+		if err != nil {
+			return fmt.Errorf("error reading 'audience_reason': %w", err)
+		}
+		delete(object, "audience_reason")
+	}
+
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
+	if raw, found := object["automatic_kind"]; found {
+		err = json.Unmarshal(raw, &a.AutomaticKind)
+		if err != nil {
+			return fmt.Errorf("error reading 'automatic_kind': %w", err)
+		}
+		delete(object, "automatic_kind")
+	}
+
+	if raw, found := object["awaiting_outcome"]; found {
+		err = json.Unmarshal(raw, &a.AwaitingOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'awaiting_outcome': %w", err)
+		}
+		delete(object, "awaiting_outcome")
+	}
+
+	if raw, found := object["body"]; found {
+		err = json.Unmarshal(raw, &a.Body)
+		if err != nil {
+			return fmt.Errorf("error reading 'body': %w", err)
+		}
+		delete(object, "body")
+	}
+
+	if raw, found := object["body_completeness"]; found {
+		err = json.Unmarshal(raw, &a.BodyCompleteness)
+		if err != nil {
+			return fmt.Errorf("error reading 'body_completeness': %w", err)
+		}
+		delete(object, "body_completeness")
+	}
+
+	if raw, found := object["bulk_mail_attested"]; found {
+		err = json.Unmarshal(raw, &a.BulkMailAttested)
+		if err != nil {
+			return fmt.Errorf("error reading 'bulk_mail_attested': %w", err)
+		}
+		delete(object, "bulk_mail_attested")
+	}
+
+	if raw, found := object["calendar_managed"]; found {
+		err = json.Unmarshal(raw, &a.CalendarManaged)
+		if err != nil {
+			return fmt.Errorf("error reading 'calendar_managed': %w", err)
+		}
+		delete(object, "calendar_managed")
+	}
+
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
+	if raw, found := object["capture_label"]; found {
+		err = json.Unmarshal(raw, &a.CaptureLabel)
+		if err != nil {
+			return fmt.Errorf("error reading 'capture_label': %w", err)
+		}
+		delete(object, "capture_label")
+	}
+
+	if raw, found := object["captured_by"]; found {
+		err = json.Unmarshal(raw, &a.CapturedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'captured_by': %w", err)
+		}
+		delete(object, "captured_by")
+	}
+
+	if raw, found := object["channel_provider"]; found {
+		err = json.Unmarshal(raw, &a.ChannelProvider)
+		if err != nil {
+			return fmt.Errorf("error reading 'channel_provider': %w", err)
+		}
+		delete(object, "channel_provider")
+	}
+
+	if raw, found := object["colleague_ids"]; found {
+		err = json.Unmarshal(raw, &a.ColleagueIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'colleague_ids': %w", err)
+		}
+		delete(object, "colleague_ids")
+	}
+
+	if raw, found := object["commitment_admissions"]; found {
+		err = json.Unmarshal(raw, &a.CommitmentAdmissions)
+		if err != nil {
+			return fmt.Errorf("error reading 'commitment_admissions': %w", err)
+		}
+		delete(object, "commitment_admissions")
+	}
+
+	if raw, found := object["content_state"]; found {
+		err = json.Unmarshal(raw, &a.ContentState)
+		if err != nil {
+			return fmt.Errorf("error reading 'content_state': %w", err)
+		}
+		delete(object, "content_state")
+	}
+
+	if raw, found := object["controller_send"]; found {
+		err = json.Unmarshal(raw, &a.ControllerSend)
+		if err != nil {
+			return fmt.Errorf("error reading 'controller_send': %w", err)
+		}
+		delete(object, "controller_send")
+	}
+
+	if raw, found := object["created_at"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_at': %w", err)
+		}
+		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
+	if raw, found := object["direction"]; found {
+		err = json.Unmarshal(raw, &a.Direction)
+		if err != nil {
+			return fmt.Errorf("error reading 'direction': %w", err)
+		}
+		delete(object, "direction")
+	}
+
+	if raw, found := object["done_at"]; found {
+		err = json.Unmarshal(raw, &a.DoneAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'done_at': %w", err)
+		}
+		delete(object, "done_at")
+	}
+
+	if raw, found := object["due_at"]; found {
+		err = json.Unmarshal(raw, &a.DueAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_at': %w", err)
+		}
+		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
+	if raw, found := object["duration_seconds"]; found {
+		err = json.Unmarshal(raw, &a.DurationSeconds)
+		if err != nil {
+			return fmt.Errorf("error reading 'duration_seconds': %w", err)
+		}
+		delete(object, "duration_seconds")
+	}
+
+	if raw, found := object["email_summary"]; found {
+		err = json.Unmarshal(raw, &a.EmailSummary)
+		if err != nil {
+			return fmt.Errorf("error reading 'email_summary': %w", err)
+		}
+		delete(object, "email_summary")
+	}
+
+	if raw, found := object["email_target"]; found {
+		err = json.Unmarshal(raw, &a.EmailTarget)
+		if err != nil {
+			return fmt.Errorf("error reading 'email_target': %w", err)
+		}
+		delete(object, "email_target")
+	}
+
+	if raw, found := object["guests"]; found {
+		err = json.Unmarshal(raw, &a.Guests)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests': %w", err)
+		}
+		delete(object, "guests")
+	}
+
+	if raw, found := object["guests_left_out"]; found {
+		err = json.Unmarshal(raw, &a.GuestsLeftOut)
+		if err != nil {
+			return fmt.Errorf("error reading 'guests_left_out': %w", err)
+		}
+		delete(object, "guests_left_out")
+	}
+
+	if raw, found := object["host_user_id"]; found {
+		err = json.Unmarshal(raw, &a.HostUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'host_user_id': %w", err)
+		}
+		delete(object, "host_user_id")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["imported_from"]; found {
+		err = json.Unmarshal(raw, &a.ImportedFrom)
+		if err != nil {
+			return fmt.Errorf("error reading 'imported_from': %w", err)
+		}
+		delete(object, "imported_from")
+	}
+
+	if raw, found := object["invitation_status"]; found {
+		err = json.Unmarshal(raw, &a.InvitationStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'invitation_status': %w", err)
+		}
+		delete(object, "invitation_status")
+	}
+
+	if raw, found := object["is_done"]; found {
+		err = json.Unmarshal(raw, &a.IsDone)
+		if err != nil {
+			return fmt.Errorf("error reading 'is_done': %w", err)
+		}
+		delete(object, "is_done")
+	}
+
+	if raw, found := object["kind"]; found {
+		err = json.Unmarshal(raw, &a.Kind)
+		if err != nil {
+			return fmt.Errorf("error reading 'kind': %w", err)
+		}
+		delete(object, "kind")
+	}
+
+	if raw, found := object["language"]; found {
+		err = json.Unmarshal(raw, &a.Language)
+		if err != nil {
+			return fmt.Errorf("error reading 'language': %w", err)
+		}
+		delete(object, "language")
+	}
+
+	if raw, found := object["links"]; found {
+		err = json.Unmarshal(raw, &a.Links)
+		if err != nil {
+			return fmt.Errorf("error reading 'links': %w", err)
+		}
+		delete(object, "links")
+	}
+
+	if raw, found := object["meeting_status"]; found {
+		err = json.Unmarshal(raw, &a.MeetingStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_status': %w", err)
+		}
+		delete(object, "meeting_status")
+	}
+
+	if raw, found := object["message_move"]; found {
+		err = json.Unmarshal(raw, &a.MessageMove)
+		if err != nil {
+			return fmt.Errorf("error reading 'message_move': %w", err)
+		}
+		delete(object, "message_move")
+	}
+
+	if raw, found := object["occurred_at"]; found {
+		err = json.Unmarshal(raw, &a.OccurredAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_at': %w", err)
+		}
+		delete(object, "occurred_at")
+	}
+
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
+	if raw, found := object["offers_email"]; found {
+		err = json.Unmarshal(raw, &a.OffersEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'offers_email': %w", err)
+		}
+		delete(object, "offers_email")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["remind_at"]; found {
+		err = json.Unmarshal(raw, &a.RemindAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_at': %w", err)
+		}
+		delete(object, "remind_at")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["source_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_activity_id': %w", err)
+		}
+		delete(object, "source_activity_id")
+	}
+
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
+	if raw, found := object["subject"]; found {
+		err = json.Unmarshal(raw, &a.Subject)
+		if err != nil {
+			return fmt.Errorf("error reading 'subject': %w", err)
+		}
+		delete(object, "subject")
+	}
+
+	if raw, found := object["thread_key"]; found {
+		err = json.Unmarshal(raw, &a.ThreadKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_key': %w", err)
+		}
+		delete(object, "thread_key")
+	}
+
+	if raw, found := object["updated_at"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updated_at': %w", err)
+		}
+		delete(object, "updated_at")
+	}
+
+	if raw, found := object["version"]; found {
+		err = json.Unmarshal(raw, &a.Version)
+		if err != nil {
+			return fmt.Errorf("error reading 'version': %w", err)
+		}
+		delete(object, "version")
+	}
+
+	if raw, found := object["voice"]; found {
+		err = json.Unmarshal(raw, &a.Voice)
+		if err != nil {
+			return fmt.Errorf("error reading 'voice': %w", err)
+		}
+		delete(object, "voice")
+	}
+
+	if raw, found := object["web_form"]; found {
+		err = json.Unmarshal(raw, &a.WebForm)
+		if err != nil {
+			return fmt.Errorf("error reading 'web_form': %w", err)
+		}
+		delete(object, "web_form")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Activity to handle AdditionalProperties
+func (a Activity) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
+	if a.ArchivedAt != nil {
+		object["archived_at"], err = json.Marshal(a.ArchivedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AssigneeId != nil {
+		object["assignee_id"], err = json.Marshal(a.AssigneeId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assignee_id': %w", err)
+		}
+	}
+
+	if a.AttendeeResponses != nil {
+		object["attendee_responses"], err = json.Marshal(a.AttendeeResponses)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attendee_responses': %w", err)
+		}
+	}
+
+	if a.Audience != nil {
+		object["audience"], err = json.Marshal(a.Audience)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'audience': %w", err)
+		}
+	}
+
+	if a.AudienceReason != nil {
+		object["audience_reason"], err = json.Marshal(a.AudienceReason)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'audience_reason': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	if a.AutomaticKind != nil {
+		object["automatic_kind"], err = json.Marshal(a.AutomaticKind)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'automatic_kind': %w", err)
+		}
+	}
+
+	if a.AwaitingOutcome != nil {
+		object["awaiting_outcome"], err = json.Marshal(a.AwaitingOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'awaiting_outcome': %w", err)
+		}
+	}
+
+	if a.Body != nil {
+		object["body"], err = json.Marshal(a.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.BodyCompleteness != nil {
+		object["body_completeness"], err = json.Marshal(a.BodyCompleteness)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body_completeness': %w", err)
+		}
+	}
+
+	if a.BulkMailAttested != nil {
+		object["bulk_mail_attested"], err = json.Marshal(a.BulkMailAttested)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'bulk_mail_attested': %w", err)
+		}
+	}
+
+	if a.CalendarManaged != nil {
+		object["calendar_managed"], err = json.Marshal(a.CalendarManaged)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'calendar_managed': %w", err)
+		}
+	}
+
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.CaptureLabel != nil {
+		object["capture_label"], err = json.Marshal(a.CaptureLabel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'capture_label': %w", err)
+		}
+	}
+
+	object["captured_by"], err = json.Marshal(a.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.ChannelProvider != nil {
+		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.ColleagueIds != nil {
+		object["colleague_ids"], err = json.Marshal(a.ColleagueIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'colleague_ids': %w", err)
+		}
+	}
+
+	if a.CommitmentAdmissions != nil {
+		object["commitment_admissions"], err = json.Marshal(a.CommitmentAdmissions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commitment_admissions': %w", err)
+		}
+	}
+
+	if a.ContentState != nil {
+		object["content_state"], err = json.Marshal(a.ContentState)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'content_state': %w", err)
+		}
+	}
+
+	if a.ControllerSend != nil {
+		object["controller_send"], err = json.Marshal(a.ControllerSend)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'controller_send': %w", err)
+		}
+	}
+
+	object["created_at"], err = json.Marshal(a.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
+	if a.Direction != nil {
+		object["direction"], err = json.Marshal(a.Direction)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'direction': %w", err)
+		}
+	}
+
+	if a.DoneAt != nil {
+		object["done_at"], err = json.Marshal(a.DoneAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'done_at': %w", err)
+		}
+	}
+
+	if a.DueAt != nil {
+		object["due_at"], err = json.Marshal(a.DueAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
+		}
+	}
+
+	if a.DurationSeconds != nil {
+		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'duration_seconds': %w", err)
+		}
+	}
+
+	if a.EmailSummary != nil {
+		object["email_summary"], err = json.Marshal(a.EmailSummary)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email_summary': %w", err)
+		}
+	}
+
+	if a.EmailTarget != nil {
+		object["email_target"], err = json.Marshal(a.EmailTarget)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email_target': %w", err)
+		}
+	}
+
+	if a.Guests != nil {
+		object["guests"], err = json.Marshal(a.Guests)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests': %w", err)
+		}
+	}
+
+	if a.GuestsLeftOut != nil {
+		object["guests_left_out"], err = json.Marshal(a.GuestsLeftOut)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'guests_left_out': %w", err)
+		}
+	}
+
+	if a.HostUserId != nil {
+		object["host_user_id"], err = json.Marshal(a.HostUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'host_user_id': %w", err)
+		}
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImportedFrom != nil {
+		object["imported_from"], err = json.Marshal(a.ImportedFrom)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'imported_from': %w", err)
+		}
+	}
+
+	if a.InvitationStatus != nil {
+		object["invitation_status"], err = json.Marshal(a.InvitationStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'invitation_status': %w", err)
+		}
+	}
+
+	if a.IsDone != nil {
+		object["is_done"], err = json.Marshal(a.IsDone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'is_done': %w", err)
+		}
+	}
+
+	object["kind"], err = json.Marshal(a.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'kind': %w", err)
+	}
+
+	if a.Language != nil {
+		object["language"], err = json.Marshal(a.Language)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'language': %w", err)
+		}
+	}
+
+	if a.Links != nil {
+		object["links"], err = json.Marshal(a.Links)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'links': %w", err)
+		}
+	}
+
+	if a.MeetingStatus != nil {
+		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	if a.MessageMove != nil {
+		object["message_move"], err = json.Marshal(a.MessageMove)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'message_move': %w", err)
+		}
+	}
+
+	object["occurred_at"], err = json.Marshal(a.OccurredAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+	}
+
+	object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
+	}
+
+	object["offers_email"], err = json.Marshal(a.OffersEmail)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'offers_email': %w", err)
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.RemindAt != nil {
+		object["remind_at"], err = json.Marshal(a.RemindAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceActivityId != nil {
+		object["source_activity_id"], err = json.Marshal(a.SourceActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_activity_id': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
+	}
+
+	if a.Subject != nil {
+		object["subject"], err = json.Marshal(a.Subject)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.ThreadKey != nil {
+		object["thread_key"], err = json.Marshal(a.ThreadKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_key': %w", err)
+		}
+	}
+
+	object["updated_at"], err = json.Marshal(a.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
+	}
+
+	if a.Version != nil {
+		object["version"], err = json.Marshal(a.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Voice != nil {
+		object["voice"], err = json.Marshal(a.Voice)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'voice': %w", err)
+		}
+	}
+
+	if a.WebForm != nil {
+		object["web_form"], err = json.Marshal(a.WebForm)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'web_form': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for Address. Returns the specified
+// element and whether it was found
+func (a Address) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Address
+func (a *Address) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Address to handle AdditionalProperties
+func (a *Address) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["city"]; found {
+		err = json.Unmarshal(raw, &a.City)
+		if err != nil {
+			return fmt.Errorf("error reading 'city': %w", err)
+		}
+		delete(object, "city")
+	}
+
+	if raw, found := object["country"]; found {
+		err = json.Unmarshal(raw, &a.Country)
+		if err != nil {
+			return fmt.Errorf("error reading 'country': %w", err)
+		}
+		delete(object, "country")
+	}
+
+	if raw, found := object["line1"]; found {
+		err = json.Unmarshal(raw, &a.Line1)
+		if err != nil {
+			return fmt.Errorf("error reading 'line1': %w", err)
+		}
+		delete(object, "line1")
+	}
+
+	if raw, found := object["line2"]; found {
+		err = json.Unmarshal(raw, &a.Line2)
+		if err != nil {
+			return fmt.Errorf("error reading 'line2': %w", err)
+		}
+		delete(object, "line2")
+	}
+
+	if raw, found := object["postal_code"]; found {
+		err = json.Unmarshal(raw, &a.PostalCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'postal_code': %w", err)
+		}
+		delete(object, "postal_code")
+	}
+
+	if raw, found := object["region"]; found {
+		err = json.Unmarshal(raw, &a.Region)
+		if err != nil {
+			return fmt.Errorf("error reading 'region': %w", err)
+		}
+		delete(object, "region")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Address to handle AdditionalProperties
+func (a Address) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.City != nil {
+		object["city"], err = json.Marshal(a.City)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'city': %w", err)
+		}
+	}
+
+	if a.Country != nil {
+		object["country"], err = json.Marshal(a.Country)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'country': %w", err)
+		}
+	}
+
+	if a.Line1 != nil {
+		object["line1"], err = json.Marshal(a.Line1)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'line1': %w", err)
+		}
+	}
+
+	if a.Line2 != nil {
+		object["line2"], err = json.Marshal(a.Line2)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'line2': %w", err)
+		}
+	}
+
+	if a.PostalCode != nil {
+		object["postal_code"], err = json.Marshal(a.PostalCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'postal_code': %w", err)
+		}
+	}
+
+	if a.Region != nil {
+		object["region"], err = json.Marshal(a.Region)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'region': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for Company. Returns the specified
+// element and whether it was found
+func (a Company) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Company
+func (a *Company) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Company to handle AdditionalProperties
+func (a *Company) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["address"]; found {
+		err = json.Unmarshal(raw, &a.Address)
+		if err != nil {
+			return fmt.Errorf("error reading 'address': %w", err)
+		}
+		delete(object, "address")
+	}
+
+	if raw, found := object["address_country_mismatch"]; found {
+		err = json.Unmarshal(raw, &a.AddressCountryMismatch)
+		if err != nil {
+			return fmt.Errorf("error reading 'address_country_mismatch': %w", err)
+		}
+		delete(object, "address_country_mismatch")
+	}
+
+	if raw, found := object["archived_at"]; found {
+		err = json.Unmarshal(raw, &a.ArchivedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'archived_at': %w", err)
+		}
+		delete(object, "archived_at")
+	}
+
+	if raw, found := object["assess_against_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.AssessAgainstEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assess_against_entity_id': %w", err)
+		}
+		delete(object, "assess_against_entity_id")
+	}
+
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
+	if raw, found := object["captured_by"]; found {
+		err = json.Unmarshal(raw, &a.CapturedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'captured_by': %w", err)
+		}
+		delete(object, "captured_by")
+	}
+
+	if raw, found := object["computed_fields"]; found {
+		err = json.Unmarshal(raw, &a.ComputedFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'computed_fields': %w", err)
+		}
+		delete(object, "computed_fields")
+	}
+
+	if raw, found := object["contact_count"]; found {
+		err = json.Unmarshal(raw, &a.ContactCount)
+		if err != nil {
+			return fmt.Errorf("error reading 'contact_count': %w", err)
+		}
+		delete(object, "contact_count")
+	}
+
+	if raw, found := object["created_at"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_at': %w", err)
+		}
+		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
+	}
+
+	if raw, found := object["display_name"]; found {
+		err = json.Unmarshal(raw, &a.DisplayName)
+		if err != nil {
+			return fmt.Errorf("error reading 'display_name': %w", err)
+		}
+		delete(object, "display_name")
+	}
+
+	if raw, found := object["domains"]; found {
+		err = json.Unmarshal(raw, &a.Domains)
+		if err != nil {
+			return fmt.Errorf("error reading 'domains': %w", err)
+		}
+		delete(object, "domains")
+	}
+
+	if raw, found := object["email"]; found {
+		err = json.Unmarshal(raw, &a.Email)
+		if err != nil {
+			return fmt.Errorf("error reading 'email': %w", err)
+		}
+		delete(object, "email")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["imported_from"]; found {
+		err = json.Unmarshal(raw, &a.ImportedFrom)
+		if err != nil {
+			return fmt.Errorf("error reading 'imported_from': %w", err)
+		}
+		delete(object, "imported_from")
+	}
+
+	if raw, found := object["industry"]; found {
+		err = json.Unmarshal(raw, &a.Industry)
+		if err != nil {
+			return fmt.Errorf("error reading 'industry': %w", err)
+		}
+		delete(object, "industry")
+	}
+
+	if raw, found := object["is_anchor"]; found {
+		err = json.Unmarshal(raw, &a.IsAnchor)
+		if err != nil {
+			return fmt.Errorf("error reading 'is_anchor': %w", err)
+		}
+		delete(object, "is_anchor")
+	}
+
+	if raw, found := object["last_activity_at"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_at': %w", err)
+		}
+		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
+	if raw, found := object["legal_name"]; found {
+		err = json.Unmarshal(raw, &a.LegalName)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_name': %w", err)
+		}
+		delete(object, "legal_name")
+	}
+
+	if raw, found := object["lifecycle"]; found {
+		err = json.Unmarshal(raw, &a.Lifecycle)
+		if err != nil {
+			return fmt.Errorf("error reading 'lifecycle': %w", err)
+		}
+		delete(object, "lifecycle")
+	}
+
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
+	if raw, found := object["logo_url"]; found {
+		err = json.Unmarshal(raw, &a.LogoUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'logo_url': %w", err)
+		}
+		delete(object, "logo_url")
+	}
+
+	if raw, found := object["merged_into_id"]; found {
+		err = json.Unmarshal(raw, &a.MergedIntoId)
+		if err != nil {
+			return fmt.Errorf("error reading 'merged_into_id': %w", err)
+		}
+		delete(object, "merged_into_id")
+	}
+
+	if raw, found := object["open_deal_count"]; found {
+		err = json.Unmarshal(raw, &a.OpenDealCount)
+		if err != nil {
+			return fmt.Errorf("error reading 'open_deal_count': %w", err)
+		}
+		delete(object, "open_deal_count")
+	}
+
+	if raw, found := object["owner_id"]; found {
+		err = json.Unmarshal(raw, &a.OwnerId)
+		if err != nil {
+			return fmt.Errorf("error reading 'owner_id': %w", err)
+		}
+		delete(object, "owner_id")
+	}
+
+	if raw, found := object["parent_company_id"]; found {
+		err = json.Unmarshal(raw, &a.ParentCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'parent_company_id': %w", err)
+		}
+		delete(object, "parent_company_id")
+	}
+
+	if raw, found := object["partner"]; found {
+		err = json.Unmarshal(raw, &a.Partner)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner': %w", err)
+		}
+		delete(object, "partner")
+	}
+
+	if raw, found := object["phone"]; found {
+		err = json.Unmarshal(raw, &a.Phone)
+		if err != nil {
+			return fmt.Errorf("error reading 'phone': %w", err)
+		}
+		delete(object, "phone")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["relationship_types"]; found {
+		err = json.Unmarshal(raw, &a.RelationshipTypes)
+		if err != nil {
+			return fmt.Errorf("error reading 'relationship_types': %w", err)
+		}
+		delete(object, "relationship_types")
+	}
+
+	if raw, found := object["size_band"]; found {
+		err = json.Unmarshal(raw, &a.SizeBand)
+		if err != nil {
+			return fmt.Errorf("error reading 'size_band': %w", err)
+		}
+		delete(object, "size_band")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["strength"]; found {
+		err = json.Unmarshal(raw, &a.Strength)
+		if err != nil {
+			return fmt.Errorf("error reading 'strength': %w", err)
+		}
+		delete(object, "strength")
+	}
+
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
+	if raw, found := object["updated_at"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updated_at': %w", err)
+		}
+		delete(object, "updated_at")
+	}
+
+	if raw, found := object["version"]; found {
+		err = json.Unmarshal(raw, &a.Version)
+		if err != nil {
+			return fmt.Errorf("error reading 'version': %w", err)
+		}
+		delete(object, "version")
+	}
+
+	if raw, found := object["visibility"]; found {
+		err = json.Unmarshal(raw, &a.Visibility)
+		if err != nil {
+			return fmt.Errorf("error reading 'visibility': %w", err)
+		}
+		delete(object, "visibility")
+	}
+
+	if raw, found := object["website_url"]; found {
+		err = json.Unmarshal(raw, &a.WebsiteUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'website_url': %w", err)
+		}
+		delete(object, "website_url")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Company to handle AdditionalProperties
+func (a Company) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Address != nil {
+		object["address"], err = json.Marshal(a.Address)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.AddressCountryMismatch != nil {
+		object["address_country_mismatch"], err = json.Marshal(a.AddressCountryMismatch)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'address_country_mismatch': %w", err)
+		}
+	}
+
+	if a.ArchivedAt != nil {
+		object["archived_at"], err = json.Marshal(a.ArchivedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AssessAgainstEntityId != nil {
+		object["assess_against_entity_id"], err = json.Marshal(a.AssessAgainstEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assess_against_entity_id': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	object["captured_by"], err = json.Marshal(a.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.ComputedFields != nil {
+		object["computed_fields"], err = json.Marshal(a.ComputedFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'computed_fields': %w", err)
+		}
+	}
+
+	if a.ContactCount != nil {
+		object["contact_count"], err = json.Marshal(a.ContactCount)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'contact_count': %w", err)
+		}
+	}
+
+	object["created_at"], err = json.Marshal(a.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	object["display_name"], err = json.Marshal(a.DisplayName)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'display_name': %w", err)
+	}
+
+	if a.Domains != nil {
+		object["domains"], err = json.Marshal(a.Domains)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'domains': %w", err)
+		}
+	}
+
+	if a.Email != nil {
+		object["email"], err = json.Marshal(a.Email)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'email': %w", err)
+		}
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImportedFrom != nil {
+		object["imported_from"], err = json.Marshal(a.ImportedFrom)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'imported_from': %w", err)
+		}
+	}
+
+	if a.Industry != nil {
+		object["industry"], err = json.Marshal(a.Industry)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'industry': %w", err)
+		}
+	}
+
+	if a.IsAnchor != nil {
+		object["is_anchor"], err = json.Marshal(a.IsAnchor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'is_anchor': %w", err)
+		}
+	}
+
+	if a.LastActivityAt != nil {
+		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LegalName != nil {
+		object["legal_name"], err = json.Marshal(a.LegalName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_name': %w", err)
+		}
+	}
+
+	if a.Lifecycle != nil {
+		object["lifecycle"], err = json.Marshal(a.Lifecycle)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lifecycle': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
+		}
+	}
+
+	if a.LogoUrl != nil {
+		object["logo_url"], err = json.Marshal(a.LogoUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'logo_url': %w", err)
+		}
+	}
+
+	if a.MergedIntoId != nil {
+		object["merged_into_id"], err = json.Marshal(a.MergedIntoId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'merged_into_id': %w", err)
+		}
+	}
+
+	if a.OpenDealCount != nil {
+		object["open_deal_count"], err = json.Marshal(a.OpenDealCount)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'open_deal_count': %w", err)
+		}
+	}
+
+	if a.OwnerId != nil {
+		object["owner_id"], err = json.Marshal(a.OwnerId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.ParentCompanyId != nil {
+		object["parent_company_id"], err = json.Marshal(a.ParentCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'parent_company_id': %w", err)
+		}
+	}
+
+	if a.Partner != nil {
+		object["partner"], err = json.Marshal(a.Partner)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner': %w", err)
+		}
+	}
+
+	if a.Phone != nil {
+		object["phone"], err = json.Marshal(a.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'phone': %w", err)
+		}
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.RelationshipTypes != nil {
+		object["relationship_types"], err = json.Marshal(a.RelationshipTypes)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'relationship_types': %w", err)
+		}
+	}
+
+	if a.SizeBand != nil {
+		object["size_band"], err = json.Marshal(a.SizeBand)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'size_band': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.Strength != nil {
+		object["strength"], err = json.Marshal(a.Strength)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'strength': %w", err)
+		}
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
+	}
+
+	object["updated_at"], err = json.Marshal(a.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
+	}
+
+	if a.Version != nil {
+		object["version"], err = json.Marshal(a.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.Visibility != nil {
+		object["visibility"], err = json.Marshal(a.Visibility)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'visibility': %w", err)
+		}
+	}
+
+	if a.WebsiteUrl != nil {
+		object["website_url"], err = json.Marshal(a.WebsiteUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'website_url': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for CreateActivityRequest. Returns the specified
+// element and whether it was found
+func (a CreateActivityRequest) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for CreateActivityRequest
+func (a *CreateActivityRequest) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for CreateActivityRequest to handle AdditionalProperties
+func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["assignee_id"]; found {
+		err = json.Unmarshal(raw, &a.AssigneeId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assignee_id': %w", err)
+		}
+		delete(object, "assignee_id")
+	}
+
+	if raw, found := object["attendee_user_ids"]; found {
+		err = json.Unmarshal(raw, &a.AttendeeUserIds)
+		if err != nil {
+			return fmt.Errorf("error reading 'attendee_user_ids': %w", err)
+		}
+		delete(object, "attendee_user_ids")
+	}
+
+	if raw, found := object["body"]; found {
+		err = json.Unmarshal(raw, &a.Body)
+		if err != nil {
+			return fmt.Errorf("error reading 'body': %w", err)
+		}
+		delete(object, "body")
+	}
+
+	if raw, found := object["call_outcome"]; found {
+		err = json.Unmarshal(raw, &a.CallOutcome)
+		if err != nil {
+			return fmt.Errorf("error reading 'call_outcome': %w", err)
+		}
+		delete(object, "call_outcome")
+	}
+
+	if raw, found := object["channel_provider"]; found {
+		err = json.Unmarshal(raw, &a.ChannelProvider)
+		if err != nil {
+			return fmt.Errorf("error reading 'channel_provider': %w", err)
+		}
+		delete(object, "channel_provider")
+	}
+
+	if raw, found := object["direction"]; found {
+		err = json.Unmarshal(raw, &a.Direction)
+		if err != nil {
+			return fmt.Errorf("error reading 'direction': %w", err)
+		}
+		delete(object, "direction")
+	}
+
+	if raw, found := object["due_at"]; found {
+		err = json.Unmarshal(raw, &a.DueAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_at': %w", err)
+		}
+		delete(object, "due_at")
+	}
+
+	if raw, found := object["due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.DueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'due_has_time': %w", err)
+		}
+		delete(object, "due_has_time")
+	}
+
+	if raw, found := object["duration_seconds"]; found {
+		err = json.Unmarshal(raw, &a.DurationSeconds)
+		if err != nil {
+			return fmt.Errorf("error reading 'duration_seconds': %w", err)
+		}
+		delete(object, "duration_seconds")
+	}
+
+	if raw, found := object["follow_up_task"]; found {
+		err = json.Unmarshal(raw, &a.FollowUpTask)
+		if err != nil {
+			return fmt.Errorf("error reading 'follow_up_task': %w", err)
+		}
+		delete(object, "follow_up_task")
+	}
+
+	if raw, found := object["host_user_id"]; found {
+		err = json.Unmarshal(raw, &a.HostUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'host_user_id': %w", err)
+		}
+		delete(object, "host_user_id")
+	}
+
+	if raw, found := object["ical_instance"]; found {
+		err = json.Unmarshal(raw, &a.IcalInstance)
+		if err != nil {
+			return fmt.Errorf("error reading 'ical_instance': %w", err)
+		}
+		delete(object, "ical_instance")
+	}
+
+	if raw, found := object["ical_uid"]; found {
+		err = json.Unmarshal(raw, &a.IcalUid)
+		if err != nil {
+			return fmt.Errorf("error reading 'ical_uid': %w", err)
+		}
+		delete(object, "ical_uid")
+	}
+
+	if raw, found := object["kind"]; found {
+		err = json.Unmarshal(raw, &a.Kind)
+		if err != nil {
+			return fmt.Errorf("error reading 'kind': %w", err)
+		}
+		delete(object, "kind")
+	}
+
+	if raw, found := object["links"]; found {
+		err = json.Unmarshal(raw, &a.Links)
+		if err != nil {
+			return fmt.Errorf("error reading 'links': %w", err)
+		}
+		delete(object, "links")
+	}
+
+	if raw, found := object["meeting_status"]; found {
+		err = json.Unmarshal(raw, &a.MeetingStatus)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_status': %w", err)
+		}
+		delete(object, "meeting_status")
+	}
+
+	if raw, found := object["occurred_at"]; found {
+		err = json.Unmarshal(raw, &a.OccurredAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_at': %w", err)
+		}
+		delete(object, "occurred_at")
+	}
+
+	if raw, found := object["occurred_precision"]; found {
+		err = json.Unmarshal(raw, &a.OccurredPrecision)
+		if err != nil {
+			return fmt.Errorf("error reading 'occurred_precision': %w", err)
+		}
+		delete(object, "occurred_precision")
+	}
+
+	if raw, found := object["participants"]; found {
+		err = json.Unmarshal(raw, &a.Participants)
+		if err != nil {
+			return fmt.Errorf("error reading 'participants': %w", err)
+		}
+		delete(object, "participants")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["recommendation"]; found {
+		err = json.Unmarshal(raw, &a.Recommendation)
+		if err != nil {
+			return fmt.Errorf("error reading 'recommendation': %w", err)
+		}
+		delete(object, "recommendation")
+	}
+
+	if raw, found := object["remind_at"]; found {
+		err = json.Unmarshal(raw, &a.RemindAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'remind_at': %w", err)
+		}
+		delete(object, "remind_at")
+	}
+
+	if raw, found := object["request_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.RequestActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'request_activity_id': %w", err)
+		}
+		delete(object, "request_activity_id")
+	}
+
+	if raw, found := object["rfc_message_id"]; found {
+		err = json.Unmarshal(raw, &a.RfcMessageId)
+		if err != nil {
+			return fmt.Errorf("error reading 'rfc_message_id': %w", err)
+		}
+		delete(object, "rfc_message_id")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["source_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_activity_id': %w", err)
+		}
+		delete(object, "source_activity_id")
+	}
+
+	if raw, found := object["source_author_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_id': %w", err)
+		}
+		delete(object, "source_author_id")
+	}
+
+	if raw, found := object["source_author_name"]; found {
+		err = json.Unmarshal(raw, &a.SourceAuthorName)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_author_name': %w", err)
+		}
+		delete(object, "source_author_name")
+	}
+
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
+	if raw, found := object["source_system"]; found {
+		err = json.Unmarshal(raw, &a.SourceSystem)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_system': %w", err)
+		}
+		delete(object, "source_system")
+	}
+
+	if raw, found := object["subject"]; found {
+		err = json.Unmarshal(raw, &a.Subject)
+		if err != nil {
+			return fmt.Errorf("error reading 'subject': %w", err)
+		}
+		delete(object, "subject")
+	}
+
+	if raw, found := object["thread_key"]; found {
+		err = json.Unmarshal(raw, &a.ThreadKey)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_key': %w", err)
+		}
+		delete(object, "thread_key")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for CreateActivityRequest to handle AdditionalProperties
+func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AssigneeId != nil {
+		object["assignee_id"], err = json.Marshal(a.AssigneeId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assignee_id': %w", err)
+		}
+	}
+
+	if a.AttendeeUserIds != nil {
+		object["attendee_user_ids"], err = json.Marshal(a.AttendeeUserIds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'attendee_user_ids': %w", err)
+		}
+	}
+
+	if a.Body != nil {
+		object["body"], err = json.Marshal(a.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.CallOutcome != nil {
+		object["call_outcome"], err = json.Marshal(a.CallOutcome)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'call_outcome': %w", err)
+		}
+	}
+
+	if a.ChannelProvider != nil {
+		object["channel_provider"], err = json.Marshal(a.ChannelProvider)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'channel_provider': %w", err)
+		}
+	}
+
+	if a.Direction != nil {
+		object["direction"], err = json.Marshal(a.Direction)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'direction': %w", err)
+		}
+	}
+
+	if a.DueAt != nil {
+		object["due_at"], err = json.Marshal(a.DueAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_at': %w", err)
+		}
+	}
+
+	if a.DueHasTime != nil {
+		object["due_has_time"], err = json.Marshal(a.DueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'due_has_time': %w", err)
+		}
+	}
+
+	if a.DurationSeconds != nil {
+		object["duration_seconds"], err = json.Marshal(a.DurationSeconds)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'duration_seconds': %w", err)
+		}
+	}
+
+	if a.FollowUpTask != nil {
+		object["follow_up_task"], err = json.Marshal(a.FollowUpTask)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'follow_up_task': %w", err)
+		}
+	}
+
+	if a.HostUserId != nil {
+		object["host_user_id"], err = json.Marshal(a.HostUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'host_user_id': %w", err)
+		}
+	}
+
+	if a.IcalInstance != nil {
+		object["ical_instance"], err = json.Marshal(a.IcalInstance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ical_instance': %w", err)
+		}
+	}
+
+	if a.IcalUid != nil {
+		object["ical_uid"], err = json.Marshal(a.IcalUid)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ical_uid': %w", err)
+		}
+	}
+
+	object["kind"], err = json.Marshal(a.Kind)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'kind': %w", err)
+	}
+
+	if a.Links != nil {
+		object["links"], err = json.Marshal(a.Links)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'links': %w", err)
+		}
+	}
+
+	if a.MeetingStatus != nil {
+		object["meeting_status"], err = json.Marshal(a.MeetingStatus)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_status': %w", err)
+		}
+	}
+
+	if a.OccurredAt != nil {
+		object["occurred_at"], err = json.Marshal(a.OccurredAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_at': %w", err)
+		}
+	}
+
+	if a.OccurredPrecision != nil {
+		object["occurred_precision"], err = json.Marshal(a.OccurredPrecision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'occurred_precision': %w", err)
+		}
+	}
+
+	if a.Participants != nil {
+		object["participants"], err = json.Marshal(a.Participants)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'participants': %w", err)
+		}
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.Recommendation != nil {
+		object["recommendation"], err = json.Marshal(a.Recommendation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'recommendation': %w", err)
+		}
+	}
+
+	if a.RemindAt != nil {
+		object["remind_at"], err = json.Marshal(a.RemindAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'remind_at': %w", err)
+		}
+	}
+
+	if a.RequestActivityId != nil {
+		object["request_activity_id"], err = json.Marshal(a.RequestActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'request_activity_id': %w", err)
+		}
+	}
+
+	if a.RfcMessageId != nil {
+		object["rfc_message_id"], err = json.Marshal(a.RfcMessageId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'rfc_message_id': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	if a.SourceActivityId != nil {
+		object["source_activity_id"], err = json.Marshal(a.SourceActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_activity_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorId != nil {
+		object["source_author_id"], err = json.Marshal(a.SourceAuthorId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_id': %w", err)
+		}
+	}
+
+	if a.SourceAuthorName != nil {
+		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
+		}
+	}
+
+	if a.SourceSystem != nil {
+		object["source_system"], err = json.Marshal(a.SourceSystem)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_system': %w", err)
+		}
+	}
+
+	if a.Subject != nil {
+		object["subject"], err = json.Marshal(a.Subject)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.ThreadKey != nil {
+		object["thread_key"], err = json.Marshal(a.ThreadKey)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_key': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for Deal. Returns the specified
+// element and whether it was found
+func (a Deal) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Deal
+func (a *Deal) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Deal to handle AdditionalProperties
+func (a *Deal) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
+	if raw, found := object["amount_minor"]; found {
+		err = json.Unmarshal(raw, &a.AmountMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'amount_minor': %w", err)
+		}
+		delete(object, "amount_minor")
+	}
+
+	if raw, found := object["archivable"]; found {
+		err = json.Unmarshal(raw, &a.Archivable)
+		if err != nil {
+			return fmt.Errorf("error reading 'archivable': %w", err)
+		}
+		delete(object, "archivable")
+	}
+
+	if raw, found := object["archived_at"]; found {
+		err = json.Unmarshal(raw, &a.ArchivedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'archived_at': %w", err)
+		}
+		delete(object, "archived_at")
+	}
+
+	if raw, found := object["arr_source_offer_id"]; found {
+		err = json.Unmarshal(raw, &a.ArrSourceOfferId)
+		if err != nil {
+			return fmt.Errorf("error reading 'arr_source_offer_id': %w", err)
+		}
+		delete(object, "arr_source_offer_id")
+	}
+
+	if raw, found := object["author"]; found {
+		err = json.Unmarshal(raw, &a.Author)
+		if err != nil {
+			return fmt.Errorf("error reading 'author': %w", err)
+		}
+		delete(object, "author")
+	}
+
+	if raw, found := object["captured_by"]; found {
+		err = json.Unmarshal(raw, &a.CapturedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'captured_by': %w", err)
+		}
+		delete(object, "captured_by")
+	}
+
+	if raw, found := object["close_date_provisional"]; found {
+		err = json.Unmarshal(raw, &a.CloseDateProvisional)
+		if err != nil {
+			return fmt.Errorf("error reading 'close_date_provisional': %w", err)
+		}
+		delete(object, "close_date_provisional")
+	}
+
+	if raw, found := object["closed_at"]; found {
+		err = json.Unmarshal(raw, &a.ClosedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'closed_at': %w", err)
+		}
+		delete(object, "closed_at")
+	}
+
+	if raw, found := object["closing_occurrence_id"]; found {
+		err = json.Unmarshal(raw, &a.ClosingOccurrenceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'closing_occurrence_id': %w", err)
+		}
+		delete(object, "closing_occurrence_id")
+	}
+
+	if raw, found := object["commercial_motion"]; found {
+		err = json.Unmarshal(raw, &a.CommercialMotion)
+		if err != nil {
+			return fmt.Errorf("error reading 'commercial_motion': %w", err)
+		}
+		delete(object, "commercial_motion")
+	}
+
+	if raw, found := object["company_id"]; found {
+		err = json.Unmarshal(raw, &a.CompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'company_id': %w", err)
+		}
+		delete(object, "company_id")
+	}
+
+	if raw, found := object["created_at"]; found {
+		err = json.Unmarshal(raw, &a.CreatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_at': %w", err)
+		}
+		delete(object, "created_at")
+	}
+
+	if raw, found := object["created_by"]; found {
+		err = json.Unmarshal(raw, &a.CreatedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'created_by': %w", err)
+		}
+		delete(object, "created_by")
+	}
+
+	if raw, found := object["currency"]; found {
+		err = json.Unmarshal(raw, &a.Currency)
+		if err != nil {
+			return fmt.Errorf("error reading 'currency': %w", err)
+		}
+		delete(object, "currency")
+	}
+
+	if raw, found := object["description"]; found {
+		err = json.Unmarshal(raw, &a.Description)
+		if err != nil {
+			return fmt.Errorf("error reading 'description': %w", err)
+		}
+		delete(object, "description")
+	}
+
+	if raw, found := object["expected_arr_minor"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedArrMinor)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_arr_minor': %w", err)
+		}
+		delete(object, "expected_arr_minor")
+	}
+
+	if raw, found := object["expected_close_date"]; found {
+		err = json.Unmarshal(raw, &a.ExpectedCloseDate)
+		if err != nil {
+			return fmt.Errorf("error reading 'expected_close_date': %w", err)
+		}
+		delete(object, "expected_close_date")
+	}
+
+	if raw, found := object["fx_rate_date"]; found {
+		err = json.Unmarshal(raw, &a.FxRateDate)
+		if err != nil {
+			return fmt.Errorf("error reading 'fx_rate_date': %w", err)
+		}
+		delete(object, "fx_rate_date")
+	}
+
+	if raw, found := object["fx_rate_to_base"]; found {
+		err = json.Unmarshal(raw, &a.FxRateToBase)
+		if err != nil {
+			return fmt.Errorf("error reading 'fx_rate_to_base': %w", err)
+		}
+		delete(object, "fx_rate_to_base")
+	}
+
+	if raw, found := object["id"]; found {
+		err = json.Unmarshal(raw, &a.Id)
+		if err != nil {
+			return fmt.Errorf("error reading 'id': %w", err)
+		}
+		delete(object, "id")
+	}
+
+	if raw, found := object["imported_from"]; found {
+		err = json.Unmarshal(raw, &a.ImportedFrom)
+		if err != nil {
+			return fmt.Errorf("error reading 'imported_from': %w", err)
+		}
+		delete(object, "imported_from")
+	}
+
+	if raw, found := object["last_activity_at"]; found {
+		err = json.Unmarshal(raw, &a.LastActivityAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_activity_at': %w", err)
+		}
+		delete(object, "last_activity_at")
+	}
+
+	if raw, found := object["last_email"]; found {
+		err = json.Unmarshal(raw, &a.LastEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_email': %w", err)
+		}
+		delete(object, "last_email")
+	}
+
+	if raw, found := object["legal_hold"]; found {
+		err = json.Unmarshal(raw, &a.LegalHold)
+		if err != nil {
+			return fmt.Errorf("error reading 'legal_hold': %w", err)
+		}
+		delete(object, "legal_hold")
+	}
+
+	if raw, found := object["lost_reason"]; found {
+		err = json.Unmarshal(raw, &a.LostReason)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason': %w", err)
+		}
+		delete(object, "lost_reason")
+	}
+
+	if raw, found := object["lost_reason_basis"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonBasis)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_basis': %w", err)
+		}
+		delete(object, "lost_reason_basis")
+	}
+
+	if raw, found := object["lost_reason_code"]; found {
+		err = json.Unmarshal(raw, &a.LostReasonCode)
+		if err != nil {
+			return fmt.Errorf("error reading 'lost_reason_code': %w", err)
+		}
+		delete(object, "lost_reason_code")
+	}
+
+	if raw, found := object["masked_fields"]; found {
+		err = json.Unmarshal(raw, &a.MaskedFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'masked_fields': %w", err)
+		}
+		delete(object, "masked_fields")
+	}
+
+	if raw, found := object["name"]; found {
+		err = json.Unmarshal(raw, &a.Name)
+		if err != nil {
+			return fmt.Errorf("error reading 'name': %w", err)
+		}
+		delete(object, "name")
+	}
+
+	if raw, found := object["owner_id"]; found {
+		err = json.Unmarshal(raw, &a.OwnerId)
+		if err != nil {
+			return fmt.Errorf("error reading 'owner_id': %w", err)
+		}
+		delete(object, "owner_id")
+	}
+
+	if raw, found := object["partner_attribution"]; found {
+		err = json.Unmarshal(raw, &a.PartnerAttribution)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_attribution': %w", err)
+		}
+		delete(object, "partner_attribution")
+	}
+
+	if raw, found := object["partner_company_id"]; found {
+		err = json.Unmarshal(raw, &a.PartnerCompanyId)
+		if err != nil {
+			return fmt.Errorf("error reading 'partner_company_id': %w", err)
+		}
+		delete(object, "partner_company_id")
+	}
+
+	if raw, found := object["pipeline_id"]; found {
+		err = json.Unmarshal(raw, &a.PipelineId)
+		if err != nil {
+			return fmt.Errorf("error reading 'pipeline_id': %w", err)
+		}
+		delete(object, "pipeline_id")
+	}
+
+	if raw, found := object["priority"]; found {
+		err = json.Unmarshal(raw, &a.Priority)
+		if err != nil {
+			return fmt.Errorf("error reading 'priority': %w", err)
+		}
+		delete(object, "priority")
+	}
+
+	if raw, found := object["project_id"]; found {
+		err = json.Unmarshal(raw, &a.ProjectId)
+		if err != nil {
+			return fmt.Errorf("error reading 'project_id': %w", err)
+		}
+		delete(object, "project_id")
+	}
+
+	if raw, found := object["raw"]; found {
+		err = json.Unmarshal(raw, &a.Raw)
+		if err != nil {
+			return fmt.Errorf("error reading 'raw': %w", err)
+		}
+		delete(object, "raw")
+	}
+
+	if raw, found := object["source"]; found {
+		err = json.Unmarshal(raw, &a.Source)
+		if err != nil {
+			return fmt.Errorf("error reading 'source': %w", err)
+		}
+		delete(object, "source")
+	}
+
+	if raw, found := object["stage_id"]; found {
+		err = json.Unmarshal(raw, &a.StageId)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_id': %w", err)
+		}
+		delete(object, "stage_id")
+	}
+
+	if raw, found := object["stage_win_probability"]; found {
+		err = json.Unmarshal(raw, &a.StageWinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'stage_win_probability': %w", err)
+		}
+		delete(object, "stage_win_probability")
+	}
+
+	if raw, found := object["stalled"]; found {
+		err = json.Unmarshal(raw, &a.Stalled)
+		if err != nil {
+			return fmt.Errorf("error reading 'stalled': %w", err)
+		}
+		delete(object, "stalled")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["tags"]; found {
+		err = json.Unmarshal(raw, &a.Tags)
+		if err != nil {
+			return fmt.Errorf("error reading 'tags': %w", err)
+		}
+		delete(object, "tags")
+	}
+
+	if raw, found := object["updated_at"]; found {
+		err = json.Unmarshal(raw, &a.UpdatedAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'updated_at': %w", err)
+		}
+		delete(object, "updated_at")
+	}
+
+	if raw, found := object["version"]; found {
+		err = json.Unmarshal(raw, &a.Version)
+		if err != nil {
+			return fmt.Errorf("error reading 'version': %w", err)
+		}
+		delete(object, "version")
+	}
+
+	if raw, found := object["wait_until"]; found {
+		err = json.Unmarshal(raw, &a.WaitUntil)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_until': %w", err)
+		}
+		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_probability"]; found {
+		err = json.Unmarshal(raw, &a.WinProbability)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability': %w", err)
+		}
+		delete(object, "win_probability")
+	}
+
+	if raw, found := object["win_probability_source"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySource)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_source': %w", err)
+		}
+		delete(object, "win_probability_source")
+	}
+
+	if raw, found := object["won_without_contract_detail"]; found {
+		err = json.Unmarshal(raw, &a.WonWithoutContractDetail)
+		if err != nil {
+			return fmt.Errorf("error reading 'won_without_contract_detail': %w", err)
+		}
+		delete(object, "won_without_contract_detail")
+	}
+
+	if raw, found := object["won_without_contract_reason"]; found {
+		err = json.Unmarshal(raw, &a.WonWithoutContractReason)
+		if err != nil {
+			return fmt.Errorf("error reading 'won_without_contract_reason': %w", err)
+		}
+		delete(object, "won_without_contract_reason")
+	}
+
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Deal to handle AdditionalProperties
+func (a Deal) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AmountMinor != nil {
+		object["amount_minor"], err = json.Marshal(a.AmountMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'amount_minor': %w", err)
+		}
+	}
+
+	if a.Archivable != nil {
+		object["archivable"], err = json.Marshal(a.Archivable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archivable': %w", err)
+		}
+	}
+
+	if a.ArchivedAt != nil {
+		object["archived_at"], err = json.Marshal(a.ArchivedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.ArrSourceOfferId != nil {
+		object["arr_source_offer_id"], err = json.Marshal(a.ArrSourceOfferId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'arr_source_offer_id': %w", err)
+		}
+	}
+
+	if a.Author != nil {
+		object["author"], err = json.Marshal(a.Author)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	object["captured_by"], err = json.Marshal(a.CapturedBy)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'captured_by': %w", err)
+	}
+
+	if a.CloseDateProvisional != nil {
+		object["close_date_provisional"], err = json.Marshal(a.CloseDateProvisional)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'close_date_provisional': %w", err)
+		}
+	}
+
+	if a.ClosedAt != nil {
+		object["closed_at"], err = json.Marshal(a.ClosedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'closed_at': %w", err)
+		}
+	}
+
+	if a.ClosingOccurrenceId != nil {
+		object["closing_occurrence_id"], err = json.Marshal(a.ClosingOccurrenceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'closing_occurrence_id': %w", err)
+		}
+	}
+
+	if a.CommercialMotion != nil {
+		object["commercial_motion"], err = json.Marshal(a.CommercialMotion)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'commercial_motion': %w", err)
+		}
+	}
+
+	if a.CompanyId != nil {
+		object["company_id"], err = json.Marshal(a.CompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'company_id': %w", err)
+		}
+	}
+
+	object["created_at"], err = json.Marshal(a.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'created_at': %w", err)
+	}
+
+	if a.CreatedBy != nil {
+		object["created_by"], err = json.Marshal(a.CreatedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'created_by': %w", err)
+		}
+	}
+
+	if a.Currency != nil {
+		object["currency"], err = json.Marshal(a.Currency)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'currency': %w", err)
+		}
+	}
+
+	if a.Description != nil {
+		object["description"], err = json.Marshal(a.Description)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'description': %w", err)
+		}
+	}
+
+	if a.ExpectedArrMinor != nil {
+		object["expected_arr_minor"], err = json.Marshal(a.ExpectedArrMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_arr_minor': %w", err)
+		}
+	}
+
+	if a.ExpectedCloseDate != nil {
+		object["expected_close_date"], err = json.Marshal(a.ExpectedCloseDate)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'expected_close_date': %w", err)
+		}
+	}
+
+	if a.FxRateDate != nil {
+		object["fx_rate_date"], err = json.Marshal(a.FxRateDate)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'fx_rate_date': %w", err)
+		}
+	}
+
+	if a.FxRateToBase != nil {
+		object["fx_rate_to_base"], err = json.Marshal(a.FxRateToBase)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'fx_rate_to_base': %w", err)
+		}
+	}
+
+	object["id"], err = json.Marshal(a.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImportedFrom != nil {
+		object["imported_from"], err = json.Marshal(a.ImportedFrom)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'imported_from': %w", err)
+		}
+	}
+
+	if a.LastActivityAt != nil {
+		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastEmail != nil {
+		object["last_email"], err = json.Marshal(a.LastEmail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
+		}
+	}
+
+	if a.LegalHold != nil {
+		object["legal_hold"], err = json.Marshal(a.LegalHold)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LostReason != nil {
+		object["lost_reason"], err = json.Marshal(a.LostReason)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason': %w", err)
+		}
+	}
+
+	if a.LostReasonBasis != nil {
+		object["lost_reason_basis"], err = json.Marshal(a.LostReasonBasis)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_basis': %w", err)
+		}
+	}
+
+	if a.LostReasonCode != nil {
+		object["lost_reason_code"], err = json.Marshal(a.LostReasonCode)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'lost_reason_code': %w", err)
+		}
+	}
+
+	if a.MaskedFields != nil {
+		object["masked_fields"], err = json.Marshal(a.MaskedFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'masked_fields': %w", err)
+		}
+	}
+
+	object["name"], err = json.Marshal(a.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'name': %w", err)
+	}
+
+	if a.OwnerId != nil {
+		object["owner_id"], err = json.Marshal(a.OwnerId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'owner_id': %w", err)
+		}
+	}
+
+	if a.PartnerAttribution != nil {
+		object["partner_attribution"], err = json.Marshal(a.PartnerAttribution)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_attribution': %w", err)
+		}
+	}
+
+	if a.PartnerCompanyId != nil {
+		object["partner_company_id"], err = json.Marshal(a.PartnerCompanyId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'partner_company_id': %w", err)
+		}
+	}
+
+	object["pipeline_id"], err = json.Marshal(a.PipelineId)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'pipeline_id': %w", err)
+	}
+
+	if a.Priority != nil {
+		object["priority"], err = json.Marshal(a.Priority)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'priority': %w", err)
+		}
+	}
+
+	if a.ProjectId != nil {
+		object["project_id"], err = json.Marshal(a.ProjectId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.Raw != nil {
+		object["raw"], err = json.Marshal(a.Raw)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	object["source"], err = json.Marshal(a.Source)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'source': %w", err)
+	}
+
+	object["stage_id"], err = json.Marshal(a.StageId)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'stage_id': %w", err)
+	}
+
+	if a.StageWinProbability != nil {
+		object["stage_win_probability"], err = json.Marshal(a.StageWinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stage_win_probability': %w", err)
+		}
+	}
+
+	if a.Stalled != nil {
+		object["stalled"], err = json.Marshal(a.Stalled)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'stalled': %w", err)
+		}
+	}
+
+	object["status"], err = json.Marshal(a.Status)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	if a.Tags != nil {
+		object["tags"], err = json.Marshal(a.Tags)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tags': %w", err)
+		}
+	}
+
+	object["updated_at"], err = json.Marshal(a.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'updated_at': %w", err)
+	}
+
+	if a.Version != nil {
+		object["version"], err = json.Marshal(a.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitUntil != nil {
+		object["wait_until"], err = json.Marshal(a.WaitUntil)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinProbability != nil {
+		object["win_probability"], err = json.Marshal(a.WinProbability)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySource != nil {
+		object["win_probability_source"], err = json.Marshal(a.WinProbabilitySource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_source': %w", err)
+		}
+	}
+
+	if a.WonWithoutContractDetail != nil {
+		object["won_without_contract_detail"], err = json.Marshal(a.WonWithoutContractDetail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'won_without_contract_detail': %w", err)
+		}
+	}
+
+	if a.WonWithoutContractReason != nil {
+		object["won_without_contract_reason"], err = json.Marshal(a.WonWithoutContractReason)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'won_without_contract_reason': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
 }

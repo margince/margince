@@ -26,6 +26,7 @@ fixture:
     - label: scheduling
       days_ago: 1
       direction: inbound
+      author: { kind: contact_record, name: Anna Weber, role: author }
       subject: "Re: renewal call"
       preview: >
         Thursday at ten works for me, I have put it in. Sending a calendar
@@ -34,6 +35,7 @@ fixture:
     - label: processor_question
       days_ago: 6
       direction: inbound
+      author: { kind: contact_record, name: Anna Weber, role: author }
       subject: "Sub-processor list before we sign"
       preview: >
         Before legal signs anything we need your current sub-processor list,
@@ -43,6 +45,7 @@ fixture:
     - label: holiday_note
       days_ago: 40
       direction: outbound
+      author: { kind: colleague, reader: true, role: addressee }
       subject: "Out of office next week"
       preview: >
         I am away until Monday, my colleague Jens is covering anything urgent.

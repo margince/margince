@@ -152,3 +152,24 @@ func TestOnboardingStateAcceptsEveryStepTheContractNames(t *testing.T) {
 		state = next
 	}
 }
+
+// The state is replaced whole, so source_mode is always sent: null before a
+// choice is made, and never left out, which would read the same.
+func TestOnboardingStateRefusesABodyWithoutASourceMode(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	body := onboardingStateBody(0, "read")
+	delete(body, "source_mode")
+	var problem AnyMap
+	if status := e.Call(t, http.MethodPut, "/v1/onboarding/state", body,
+		onboardingHeaders("onboarding-no-mode"), &problem); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a body without source_mode = %d %+v, want 422", status, problem)
+	}
+
+	body["source_mode"] = nil
+	if status := e.Call(t, http.MethodPut, "/v1/onboarding/state", body,
+		onboardingHeaders("onboarding-null-mode"), nil); status != http.StatusOK {
+		t.Fatalf("a body with source_mode null = %d, want 200", status)
+	}
+}

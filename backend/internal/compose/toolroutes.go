@@ -43,6 +43,16 @@ func (s Server) PrepForMeeting(w http.ResponseWriter, r *http.Request, params cr
 	serveTool(w, r, s.toolRegistry.Invoke, "prep_for_meeting", params)
 }
 
+// ConfirmMeetingReady serves confirm_meeting_ready.
+func (s Server) ConfirmMeetingReady(w http.ResponseWriter, r *http.Request, params crmcontracts.ConfirmMeetingReadyParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "confirm_meeting_ready", reservedArgs{params.IdempotencyKey, params.XApprovalToken})
+}
+
+// UndoMeetingReady serves undo_meeting_ready.
+func (s Server) UndoMeetingReady(w http.ResponseWriter, r *http.Request, params crmcontracts.UndoMeetingReadyParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "undo_meeting_ready", reservedArgs{params.IdempotencyKey, params.XApprovalToken})
+}
+
 // PrepareProjectHandoff serves prepare_handoff.
 func (s Server) PrepareProjectHandoff(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	serveTool(w, r, s.toolRegistry.Invoke, "prepare_handoff", struct {
@@ -93,6 +103,14 @@ func (s Server) QualifyLead(w http.ResponseWriter, r *http.Request, id crmcontra
 		pathArgument{"lead_id", id.String()})
 }
 
+// SetUpPartner serves set_up_partner, on the company the path names. The body
+// passes through as the tool's arguments, so a margin_tier in it meets the
+// tool's own refusal.
+func (s Server) SetUpPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.SetUpPartnerParams) {
+	serveToolCommand(w, r, s.toolRegistry.Invoke, "set_up_partner", reservedArgs{params.IdempotencyKey, params.XApprovalToken},
+		pathArgument{refColCompany, id.String()})
+}
+
 // QueryWorkspace serves query_workspace.
 func (s Server) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 	serveToolBody(w, r, s.toolRegistry.Invoke, "query_workspace")
@@ -116,6 +134,14 @@ func (s Server) DescribeAnalyticsVocabulary(w http.ResponseWriter, r *http.Reque
 // DescribeRecordFields serves describe_record_fields.
 func (s Server) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 	serveTool(w, r, s.toolRegistry.Invoke, "describe_record_fields", noArguments{})
+}
+
+// DescribeRouterActions serves describe_router_actions.
+func (s Server) DescribeRouterActions(w http.ResponseWriter, r *http.Request, params crmcontracts.DescribeRouterActionsParams) {
+	serveTool(w, r, s.toolRegistry.Invoke, "describe_router_actions", struct {
+		Router string `json:"router"`
+		Action string `json:"action,omitempty"`
+	}{params.Router, actionOf(params.Action)})
 }
 
 // DescribeListFilters serves describe_list_filters.
@@ -261,4 +287,11 @@ func writeToolPayload(w http.ResponseWriter, r *http.Request, sealed json.RawMes
 	w.WriteHeader(http.StatusOK)
 	//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report a write failure to the client anymore
 	_, _ = w.Write(payload)
+}
+
+func actionOf(named *string) string {
+	if named == nil {
+		return ""
+	}
+	return *named
 }

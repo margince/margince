@@ -78,3 +78,42 @@ describe("what a team day did not read", () => {
     expect(container.innerHTML).toBe("");
   });
 });
+
+describe("a source read to its bound", () => {
+  it("still keeps the day from reading as clear, and adds no notice of its own", () => {
+    const day = aDay();
+    day.reach = [
+      { source: "task", considered: 12, shown: 12, more_available: true },
+    ];
+    const { container } = draw(day);
+    expect(dayPartlyRead(day)).toBe(true);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("counts an older response's bounded category without source reach", () => {
+    const day = aDay();
+    Reflect.deleteProperty(day, "reach");
+    day.counts = [
+      { category: "tasks", considered: 12, shown: 12, more_available: true },
+    ];
+    expect(dayPartlyRead(day)).toBe(true);
+  });
+
+  it("leaves full plan coverage as a quiet caption, not a warning", () => {
+    const day = aDay({
+      members: [
+        { ...ana, read: true },
+        { ...ben, read: true },
+      ],
+      truncated: false,
+    });
+    day.reach = [
+      { source: "task", considered: 2, shown: 2, more_available: true },
+    ];
+    draw(day);
+    expect(
+      screen.getByText("Weekly plans read for all 2 teammates."),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["worklist.partialTitle"])).toBeNull();
+  });
+});

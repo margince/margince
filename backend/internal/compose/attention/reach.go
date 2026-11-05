@@ -172,13 +172,15 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 		return "customer_waiting"
 	case sourceLeadResponse:
 		return categoryLeads
-	case sourceAtRisk, "brief_item":
+	case sourceAtRisk, sourceDealAdvice, "brief_item", sourceDealReview:
 		return "deals_at_risk"
 	case sourceMeeting, sourceMeetingOutcome, sourceCalendar, sourceNextMeeting:
 		return "meetings"
 	case sourceTask, sourceWeeklyCommitment, "conversation_claim":
 		return "tasks"
-	case "approval", sourceDuplicate, sourceDealSuggestion, sourceTagSuggestion, "introduction_request":
+	case sourceDecay:
+		return categoryRelationships
+	case "approval", sourceDuplicate, sourceContactCase, sourceDealSuggestion, sourceTagSuggestion, "introduction_request":
 		// An introduction ask is a colleague waiting on this reader to decide,
 		// which classifyIntroduction files under decisions at levelBlocking.
 		// It reached the default and was reported as `system` — so a truncated

@@ -24,12 +24,28 @@ func TestSizeBandFromEmployeeRangeMapsOnlyUnambiguousPhrasings(t *testing.T) {
 		{"7", "1-10", true},
 		{"1,200 employees", "1001-5000", true},
 		{"1.200 Mitarbeitende", "1001-5000", true},
-		// A floor with no ceiling fits only the open top band.
+		// An open-ended count lands in the band holding its lower bound.
 		{"6000+", "5000+", true},
-		{"200+", "", false},
-		{"50+ employees", "", false},
-		// A range spanning two bands is nobody's clean answer.
-		{"50-200", "", false},
+		// The open band's own spelling names it with any thousands separator.
+		{"5.000+", "5000+", true},
+		{"5,000+ employees", "5000+", true},
+		{"5000+ Mitarbeiter", "5000+", true},
+		{"1.000+ Mitarbeiter", "501-1000", true},
+		{"140+", "51-200", true},
+		{"140+ employees", "51-200", true},
+		{"500+", "201-500", true},
+		{"200+", "51-200", true},
+		{"50+ employees", "11-50", true},
+		// A floor names one number.
+		{"50-200+", "", false},
+		// A range that starts on a band's ceiling is the round-number
+		// spelling of the band above it.
+		{"50-200", "51-200", true},
+		{"10-50", "11-50", true},
+		{"200 to 500", "201-500", true},
+		{"1000-5000 Mitarbeiter", "1001-5000", true},
+		// A range spanning two bands otherwise is nobody's clean answer.
+		{"45-200", "", false},
 		{"10 to 500", "", false},
 		// An inverted range is a parse artifact, not a statement.
 		{"200 to 50", "", false},
@@ -44,12 +60,11 @@ func TestSizeBandFromEmployeeRangeMapsOnlyUnambiguousPhrasings(t *testing.T) {
 		{"", "", false},
 		// Three numbers state no single range.
 		{"between 10, 50 and 200", "", false},
-		// A comparison states a bound, not a placeable range.
-		{">500 employees", "", false},
-		{"over 500", "", false},
+		// A ceiling could be any band below it.
 		{"up to 50", "", false},
-		{"mehr als 1000", "", false},
-		{"über 200 Mitarbeiter", "", false},
+		{"unter 50 Mitarbeiter", "", false},
+		{"less than 10", "", false},
+		{"<200", "", false},
 		// Magnitude shorthand in any spelling refuses.
 		{"2m employees", "", false},
 		{"10-k", "", false},
@@ -75,12 +90,9 @@ func TestSizeBandFromEmployeeRangeMapsOnlyUnambiguousPhrasings(t *testing.T) {
 	}
 }
 
-// TestAFloorAboveTheTopBandIsPlaceable — a comparison states a bound the
-// mapping usually cannot place, and "over 500" really is 501 or 50,000. But a
-// floor already above the open top band's boundary has only one answer, and
-// refusing it dropped adesso.de's homepage headcount ("Über 11500
-// Mitarbeitende") between the fact and the column.
-func TestAFloorAboveTheTopBandIsPlaceable(t *testing.T) {
+// A worded floor places the company as "500+" does: in the band of its
+// lower bound. "over" starts one above the number, "at least" on it.
+func TestAWordedFloorLandsInTheBandOfItsLowerBound(t *testing.T) {
 	for _, tc := range []struct {
 		text string
 		band string
@@ -89,11 +101,23 @@ func TestAFloorAboveTheTopBandIsPlaceable(t *testing.T) {
 		{"Über 11500 Mitarbeitende", "5000+", true},
 		{"over 8000 employees", "5000+", true},
 		{"more than 5000 employees", "5000+", true},
-		// Still refused: the floor sits inside the banded range, so the
-		// company could be in any band above it.
-		{"over 500 employees", "", false},
-		{"mehr als 200 Mitarbeiter", "", false},
+		{"over 500 employees", "501-1000", true},
+		{">500 employees", "501-1000", true},
+		{"mehr als 200 Mitarbeiter", "201-500", true},
+		{"mehr als 1000", "1001-5000", true},
+		{"at least 500 employees", "201-500", true},
+		{"mindestens 50 Mitarbeiter", "11-50", true},
+		{"≥ 11", "11-50", true},
+		{">=500", "201-500", true},
+		{">= 500 employees", "201-500", true},
 		{"up to 50 employees", "", false},
+		// A negated floor is a ceiling, never the floor it negates.
+		{"no more than 500", "", false},
+		{"not over 500 employees", "", false},
+		{"nicht mehr als 500 Mitarbeiter", "", false},
+		{"höchstens 500", "", false},
+		{"at most 500", "", false},
+		{"over 50 to 200", "", false},
 	} {
 		band, ok := sizeBandFromEmployeeRange(tc.text)
 		if ok != tc.ok || band != tc.band {

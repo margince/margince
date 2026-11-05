@@ -58,6 +58,10 @@ type subjectClaim struct {
 // namesItsSubject: the site cites a record, and the witness is where it is
 // named.
 var namesItsSubject = map[string]subjectClaim{
+	"internal/compose/readerrendering/service.go:Render": {
+		"internal/compose/readerrendering/service.go",
+		"the activity whose subject and body are the request",
+	},
 	"internal/compose/transcriptpropose.go:ask": {
 		"internal/compose/transcriptproposerun.go",
 		"the meeting whose transcript IS the request — the case this citation was built for",
@@ -66,7 +70,7 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/replydraftvoice.go",
 		"the message being answered, named once so the critic retry cites what the first draft did",
 	},
-	"internal/compose/captureenrich.go:enrichOne": {
+	"internal/compose/captureenrich.go:readSignature": {
 		"internal/compose/captureenrich.go",
 		"the contact whose signature block is being read",
 	},
@@ -78,13 +82,14 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/documentextractrun.go",
 		"the record the document hangs on — a contract or an invoice is the largest copy of somebody's words this product sends",
 	},
-	"internal/compose/signalextract.go:ask": {
+	"internal/compose/signalextract.go:askReading": {
 		"internal/compose/signalextract.go",
 		"the account the conversation is with; the messages are several and the account is one",
 	},
 	"internal/compose/companybrief/write.go:writeWithModel":             {"internal/compose/companybrief/service.go", "the company the brief describes"},
 	"internal/compose/companybrief/ask.go:answerWithModel":              {"internal/compose/companybrief/service.go", "the company the question is about"},
 	"internal/compose/contactbrief/write.go:writeWithModel":             {"internal/compose/contactbrief/service.go", "the contact the brief is written for"},
+	"internal/compose/roombrief/write.go:writeWithModel":                {"internal/compose/roombrief/service.go", "the Deal Room the brief is written for"},
 	"internal/compose/companydossier/write.go:writeWithModel":           {"internal/compose/companydossier/service.go", "the company the dossier describes"},
 	"internal/compose/companydossier/growthfitwrite.go:assessWithModel": {"internal/compose/companydossier/service.go", "the same company, assessed"},
 	"internal/compose/meetingbrief/model.go:writeWithModel":             {"internal/compose/meetingbrief/service.go", "the meeting the brief prepares"},
@@ -146,6 +151,8 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/briefs/briefl2.go:askModel":               "the call ranks a queue against each other; it is about the ordering rather than about any one item in it",
 	"internal/compose/corpusask.go:askCorpusLane":               "passages retrieved from across the workspace's documents, which is several records by construction",
 	"internal/compose/fxrefresh.go:extract":                     "a published exchange-rate page. No record, and no personal data to erase",
+	"internal/compose/salesassessmentservice.go:write":          "a report's measured figures over a population, which is many records by construction, and no_payload keeps the call out of capture",
+	"internal/compose/reportsetupservice.go:ProposeSetup":       "a description the reader typed and the catalog they may choose from; no record is read, so there is none to cite",
 	"internal/compose/filterproposal.go:ProposeFilter":          "a sentence the reader typed and the workspace's filter vocabulary; no record is read, so there is none to cite",
 	"internal/compose/sitereaddebug.go:CompleteValidated":       "a recording WRAPPER rather than a site: it forwards the caller's context unchanged, so whatever subject the caller named travels through it",
 	"internal/compose/sitereaddebug.go:debugTriage":             "the operator debug lane, run against a URL before any record is chosen",

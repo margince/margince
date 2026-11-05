@@ -56,7 +56,7 @@ func (seamRecord) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (data
 func (seamRecord) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return datasource.Record{
 		Ref:       ref,
-		Fields:    json.RawMessage(`{"name":"Acme"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}, nil
@@ -248,7 +248,7 @@ func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
 			}
 			return mcp.TierAutoExecute, false
 		}))
-	agents.RegisterCoreTools(reg, mirroredRecord{}, nil, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, mirroredRecord{}, nil, nil, nil, nil, nil)
 
 	_, err := reg.Invoke(anArchivingAgent(), "archive_record",
 		json.RawMessage(`{"record_type":"contact","id":"`+ids.NewV7().String()+`"}`))
@@ -297,11 +297,15 @@ func (confirmFirstFileTool) Handle(context.Context, json.RawMessage) (json.RawMe
 }
 
 // A file that would have to wait for an approval is refused, not staged, on
-// both doors, and with one status and code on both.
+// both doors, and with one status and code on both. Only automatic work (an
+// agent with no passport) still waits.
 func TestAFileThatMustWaitIsRefusedAlikeOnEitherDoor(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, auth.NewGate(fullSeat{}))
 	registry.Register(confirmFirstFileTool{})
-	_, viaTool := registry.Invoke(agentHolding(t.Context(), principal.ScopeWrite), "confirm_first_file", json.RawMessage(`{}`))
+	automatic := agentHolding(t.Context(), principal.ScopeWrite)
+	actor, _ := principal.Actor(automatic)
+	actor.PassportID = ids.UUID{}
+	_, viaTool := registry.Invoke(principal.WithActor(automatic, actor), "confirm_first_file", json.RawMessage(`{}`))
 	_, viaREST := uploadAttachmentCommand(agentPolicy{}, restCommandDeps{}, nil, nil)
 	for door, err := range map[string]error{"the tool door": viaTool, "the REST gate": viaREST} {
 		if !errors.Is(err, agents.ErrFileCannotWait) {
@@ -320,4 +324,12 @@ func TestAFileThatMustWaitIsRefusedAlikeOnEitherDoor(t *testing.T) {
 			t.Errorf("%s answered %d %q, want 403 approval_required", door, recorder.Code, problem.Code)
 		}
 	}
+}
+
+func (p seamRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
+func (p hiddenRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
 }

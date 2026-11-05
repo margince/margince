@@ -7,10 +7,10 @@ package contacts
 
 // One colleague's open domain questions, over a real Postgres.
 //
-// The read is small and its WHERE carries the whole feature: a question belongs
-// to the mailbox owner it was opened for, and it leaves that owner's queue when
-// they answer it — including when the answer was "not for me", which is recorded
-// as a capture exclusion rather than as a verdict about what the domain IS.
+// The read is small and its `WHERE` carries the whole feature. A question
+// belongs to its decider, the sole direct recipient of current mail they may
+// read. It leaves their queue when they answer it. "Not for me" counts too; it
+// is recorded as a capture exclusion, not a verdict about the domain.
 //
 // That last part is why these tests exist over a database rather than as a unit
 // test with a fake. The answer and the question live in two tables, and nothing
@@ -19,6 +19,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -62,20 +63,17 @@ func (e *dedupeEnv) openQuestionDomains(ctx context.Context, t *testing.T) []str
 	return out
 }
 
-// TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt is the lane's premise.
-//
-// The disposition records the mailbox owner at the moment the question opens,
-// and this read is the only thing that turns that column into somebody's
-// backlog. Without it the fourteen questions a real import produced sat on an
-// admin screen addressed to nobody.
-func TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt(t *testing.T) {
+// TestAnOpenQuestionReachesItsDirectRecipient is the lane's premise:
+// the rep the mail was addressed to is asked. Without this read an open
+// question sits on an admin screen addressed to nobody.
+func TestAnOpenQuestionReachesItsDirectRecipient(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "anna@unjudged.test", "Anna Example", "unjudged.test")
 	// The crawl found nothing that named a company, which is what leaves the
 	// question open with a reason rather than merely queued for a retry.
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "unjudged.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "unjudged.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -86,6 +84,23 @@ func TestAnOpenQuestionReachesTheOwnerWhoseMailRaisedIt(t *testing.T) {
 	if reason := e.reasonFor(ctx, t, "unjudged.test"); reason == "" {
 		t.Error("the question carries no reason; a row that cannot say why it is open " +
 			"asks the reader to decide with nothing to decide from")
+	}
+}
+
+// TestASubdomainSenderAsksTheQuestionOfItsDomain holds the subdomain half of
+// the sender match. The read finds a sender's mail by its reversed host in an
+// index range. A host one label deeper than the domain falls in that range.
+func TestASubdomainSenderAsksTheQuestionOfItsDomain(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "carla@mail.deeper.test", "Carla Example", "deeper.test")
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return markDispositionUnevidenced(ctx, tx, "deeper.test", "the site named nobody", false)
+	}); err != nil {
+		t.Fatalf("withholding the verdict: %v", err)
+	}
+	if open := e.openQuestionDomains(ctx, t); !contains(open, "deeper.test") {
+		t.Fatalf("the owner's backlog = %v, want deeper.test asked of the subdomain sender's recipient", open)
 	}
 }
 
@@ -116,7 +131,7 @@ func TestDiscardingADomainTakesItsQuestionOffTheQueue(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "bob@noise.test", "Bob Example", "noise.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "noise.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "noise.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -147,7 +162,7 @@ func TestAColleaguesDiscardLeavesYourOwnQuestionStanding(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "dana@shared.test", "Dana Example", "shared.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "shared.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "shared.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -172,7 +187,7 @@ func TestAWorkspaceExclusionAnswersItForEveryone(t *testing.T) {
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "erin@policy.test", "Erin Example", "policy.test")
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return markDispositionUnevidenced(ctx, tx, "policy.test", "the site named nobody")
+		return markDispositionUnevidenced(ctx, tx, "policy.test", "the site named nobody", false)
 	}); err != nil {
 		t.Fatalf("withholding the verdict: %v", err)
 	}
@@ -205,5 +220,94 @@ func TestACallerWithNoHumanBehindItIsRefusedRatherThanServedNothing(t *testing.T
 	if _, err := e.store.OpenDomainQuestionsForOwner(connector); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a connector reading open questions answered %v, want ErrPermissionDenied so "+
 			"the lane can name itself withheld rather than reporting an empty backlog", err)
+	}
+}
+
+func TestDomainQuestionsContinueBeyondTheAttentionWindow(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for i := range 3 {
+		domain := fmt.Sprintf("domain-%d.test", i)
+		e.openTriageFirst(ctx, t, "sales@"+domain, "Sales", domain)
+		if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: domain}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	first, page, err := e.store.DomainQuestionsForOwner(ctx, "", 2, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 2 || !page.HasMore || page.NextCursor == "" {
+		t.Fatalf("first page: rows=%d page=%+v", len(first), page)
+	}
+	if _, err := e.store.ReopenWithheldDomain(ctx, first[0].Domain); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, ResolveDomainTriageInput{Domain: first[0].Domain}); err != nil {
+		t.Fatal(err)
+	}
+	second, final, err := e.store.DomainQuestionsForOwner(ctx, page.NextCursor, 2, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second) != 1 || final.HasMore {
+		t.Fatalf("second page: rows=%d page=%+v", len(second), final)
+	}
+	for _, old := range first {
+		if old.Domain == second[0].Domain {
+			t.Fatal("continuation repeated a domain")
+		}
+	}
+}
+
+// A domain question is asked of the mail's sole direct recipient, not of every
+// seat whose mailbox held mail from the domain. Both mails here are addressed
+// to the rep. The second sat in the other rep's mailbox, which earns that seat
+// no question.
+func TestADomainQuestionIsAskedOfItsRecipientNotOfEveryMailboxThatHeldIt(t *testing.T) {
+	e := setupDedupe(t)
+	first, second := e.as(), e.asOther()
+	e.openTriageFirst(first, t, "first@shared-question.test", "First Sender", "shared-question.test")
+	input := e.ensureInput(second, t, "second@shared-question.test", "Second Sender", "shared-question.test")
+	input.OwnerID = e.otherRep
+	if _, err := e.store.EnsureCounterparty(second, input); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(first, ResolveDomainTriageInput{Domain: "shared-question.test"}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.openQuestionDomains(first, t); !contains(got, "shared-question.test") {
+		t.Fatalf("the recipient's questions = %v, want shared-question.test", got)
+	}
+	if got := e.openQuestionDomains(second, t); contains(got, "shared-question.test") {
+		t.Fatalf("the other mailbox's reader was asked too: %v", got)
+	}
+	e.excludeDomain(first, t, "user", "shared-question.test", &e.rep)
+	if got := e.openQuestionDomains(first, t); contains(got, "shared-question.test") {
+		t.Fatalf("excluded question remains: %v", got)
+	}
+}
+
+func TestRepeatedUnreadableEvidenceKeepsTheQuestionStable(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "hello@uncertain.test", "Sender", "uncertain.test")
+	input := ResolveDomainTriageInput{Domain: "uncertain.test", Evidence: "No company evidence"}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, input); err != nil {
+		t.Fatal(err)
+	}
+	before, err := e.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.store.ResolveUnreadableDomainTriage(ctx, input); err != nil {
+		t.Fatal(err)
+	}
+	after, err := e.store.OpenDomainQuestionsForOwner(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(before) != 1 || len(after) != 1 || !after[0].AskedAt.Equal(before[0].AskedAt) {
+		t.Fatalf("replay moved question: before=%+v after=%+v", before, after)
 	}
 }

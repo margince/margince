@@ -12,6 +12,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -25,7 +28,8 @@ import (
 // receiving server must have authenticated it (fromAuthenticated), since a
 // sender types From. The row is still not attested: no provider filed it as
 // sent. It names the colleague in SentByColleague, which no correspondence
-// gate reads.
+// gate reads. The stamp also lets that colleague open this one copy
+// (auth.activityAttendanceArm).
 //
 // The counterparty is the ladder's stand-in, picked among the recipients only.
 // rec.Addresses also lists every From address, so a co-author beside the
@@ -35,17 +39,19 @@ func (s *Sink) asSentByColleagueTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, ActivityFields, error) {
 	cp := rec.Counterparty
-	if fields.Kind != kindEmail || fields.HasCalendarPart || cp.Direction != connector.DirectionInbound ||
-		!fromAuthenticated(rec, cp.Email) {
+	if fields.Kind != kindEmail {
 		return rec, fields, nil
 	}
-	colleague, err := colleagueTx(ctx, tx, cp.Email)
+	colleague, err := colleagueSenderTx(ctx, tx, rec)
 	if err != nil || colleague.IsZero() {
 		return rec, fields, err
 	}
-	self, err := ownerIdentitiesTx(ctx, tx)
-	if err != nil {
-		return rec, fields, err
+	// An invitation a colleague organised stays received mail: whom they
+	// invited is not whom they wrote to, so no stand-in counterparty is picked.
+	if fields.HasCalendarPart {
+		fields.InvitationFromSeat = colleague
+		rec.Fields = fields
+		return rec, fields, nil
 	}
 	from := foldAddress(cp.Email)
 	recipients := rec
@@ -55,7 +61,11 @@ func (s *Sink) asSentByColleagueTx(
 			recipients.Addresses = append(recipients.Addresses, p.Email)
 		}
 	}
-	stand, err := s.standInSubject(ctx, tx, recipients, self, connector.DirectionOutbound)
+	us, err := workspacePartiesTx(ctx, tx, recipients.Addresses...)
+	if err != nil {
+		return rec, fields, err
+	}
+	stand, err := s.standInSubject(ctx, tx, recipients, us, connector.DirectionOutbound)
 	if err != nil || stand.Email == "" {
 		return rec, fields, err
 	}
@@ -71,15 +81,35 @@ func (s *Sink) asSentByColleagueTx(
 	return rec, fields, nil
 }
 
+// colleagueSenderTx is the seat that sent a received message, or zero. Its
+// From must be that seat's exact login at an own trusted domain (colleagueTx),
+// and the receiving server must have authenticated it (fromAuthenticated).
+func colleagueSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.UUID, error) {
+	cp := rec.Counterparty
+	if cp.Direction != connector.DirectionInbound || !SenderAuthenticated(rec, cp.Email) {
+		return ids.Nil, nil
+	}
+	return colleagueTx(ctx, tx, cp.Email)
+}
+
 // colleagueTx is the seat, other than the acting one, whose login address is
 // address; zero when there is none. Invited and deactivated seats count. Most
 // colleagues are invited and never sign in. A departed one's mail was still
 // the workspace's mail. An archived seat does not count.
+//
+// The address must be at one of the workspace's own trusted domains. A seat can
+// be invited at any address, and the stamp lets that seat open the copy. A seat
+// at a customer's domain must never be read as the sender of its mail.
 func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, error) {
+	own, err := TrustedOwnDomainsTx(ctx, tx)
+	if err != nil || !own.Covers(address) {
+		return ids.Nil, err
+	}
 	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM app_user
-		 WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`, foldAddress(address), seat).Scan(&colleague)
+	err = tx.QueryRow(ctx, `SELECT u.id FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND u.archived_at IS NULL`,
+		foldAddress(address), seat, owndomain.OfAddress(address)).Scan(&colleague)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}
@@ -93,12 +123,20 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 // colleague's mail is from the colleague. The seat whose mailbox held the copy
 // received it, and that participant row lets the seat read it.
 func stampMessageEnds(
-	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, rec connector.NormalizedRecord,
 ) error {
-	if fields.SentByColleague.IsZero() {
-		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty)
+	counterparty := rec.Counterparty
+	us, err := workspacePartiesTx(ctx, tx, append([]string{counterparty.Email}, rec.Addresses...)...)
+	if err != nil {
+		return err
 	}
-	if err := stampCaptureParticipants(ctx, tx, id, fields.SentByColleague, fields.Kind, fields.Direction, counterparty); err != nil {
+	if err := stampOwnMailRecipient(ctx, tx, id, fields); err != nil {
+		return err
+	}
+	if fields.SentByColleague.IsZero() {
+		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty, us)
+	}
+	if err := stampCaptureParticipants(ctx, tx, id, fields.SentByColleague, fields.Kind, fields.Direction, counterparty, us); err != nil {
 		return err
 	}
 	if seat.IsZero() {
@@ -110,19 +148,92 @@ func stampMessageEnds(
 	return nil
 }
 
-// fromAuthenticated reports that Gmail's receiving server passed DMARC for the
-// domain of from. Gmail writes its result, under the authserv-id
-// mx.google.com, above every header the sender submitted, so the topmost one
-// is Gmail's own. The trust comes from that position; nothing here verifies a
-// signature on the header. Other
-// transports answer false: Microsoft writes no server name, and an IMAP
-// server is whatever the seat chose.
-func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
+// SenderAuthenticated trusts Gmail's topmost authentication result for the From domain.
+// Other transports cannot establish that the receiving server wrote their header.
+func SenderAuthenticated(rec connector.NormalizedRecord, from string) bool {
 	auth := rec.SenderAuthentication
-	domain := domainOfAddress(from)
+	domain := owndomain.OfAddress(from)
 	return rec.CapturedBy == "connector:"+providerGmail && auth.Server == gmailAuthServer &&
 		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
 }
 
+// inboundSenderAuthenticated is the activity's inbound_sender_authenticated
+// stamp: an inbound message whose From the receiving server authenticated.
+func inboundSenderAuthenticated(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return fields.Direction == connector.DirectionInbound && SenderAuthenticated(rec, rec.Counterparty.Email)
+}
+
+// senderIsMachine is the activity's sender_is_machine stamp: an inbound mail
+// whose sender is a sending system. On inbound mail the counterparty is the
+// From address; an outbound mail's sender is the mailbox owner.
+func senderIsMachine(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return mailidentity.InboundFromSendingSystem(fields.Kind, fields.Direction, rec.Counterparty.Email)
+}
+
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
 const gmailAuthServer = "mx.google.com"
+
+// insertCounterpartyParticipant stamps the other end of a message. On mail the
+// owner's provider attested as sent, the owner typed that address. So the
+// colleague whose exact login it is gets bound, as StampFurtherParticipants
+// binds a Cc on such a mail. They may then read their copy even when a
+// members_only hold keeps the workspace out. No other seat address is recorded.
+// The attendance arm reads only rows with a user_id.
+func insertCounterpartyParticipant(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role, kind string,
+	counterparty connector.Counterparty, address, channelUserID string, owner ids.UUID, us workspaceParties,
+) error {
+	var bound *ids.UUID
+	if kind == kindEmail && counterparty.SentByOwner() && address != "" {
+		seat, err := recipientColleagueTx(ctx, tx, address, owner)
+		if err != nil {
+			return err
+		}
+		if !seat.IsZero() {
+			bound = &seat
+		}
+	}
+	if bound == nil && address != "" && us.Covers(address) {
+		address = ""
+		if channelUserID == "" {
+			return nil
+		}
+	}
+	return insertParticipant(ctx, tx, activityID, role, bound, nil, address, channelUserID)
+}
+
+// recipientColleagueTx is the seat, other than the owner, whose login is
+// address or whose connected mailbox it is; zero when there is none. A mailbox
+// counts only when the provider attested it and no other seat did. An archived
+// seat does not count.
+func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
+	var seat ids.UUID
+	err := tx.QueryRow(ctx, `SELECT u.id FROM app_user u
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND u.archived_at IS NULL`,
+		address, owner, owndomain.OfAddress(address)).Scan(&seat)
+	if err == nil {
+		return seat, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, fmt.Errorf("capture: reading whether a recipient is a colleague: %w", err)
+	}
+	proved, err := UnambiguouslyProvedAddressesTx(ctx, tx)
+	if err != nil {
+		return ids.Nil, err
+	}
+	folded := foldAddress(bareAddress(address))
+	for _, p := range proved {
+		if p.Address != folded || p.Seat == owner {
+			continue
+		}
+		err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE id = $1 AND archived_at IS NULL`, p.Seat).Scan(&seat)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ids.Nil, nil
+		}
+		if err != nil {
+			return ids.Nil, fmt.Errorf("capture: reading whether a mailbox holder is a colleague: %w", err)
+		}
+		return seat, nil
+	}
+	return ids.Nil, nil
+}

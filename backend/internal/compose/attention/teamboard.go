@@ -26,6 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -166,9 +167,6 @@ func (s *Service) UnboundBoardSources() []string {
 	if s.atRisk == nil {
 		unbound = append(unbound, "at_risk")
 	}
-	if s.promiseLoad == nil {
-		unbound = append(unbound, "promises_due")
-	}
 	return unbound
 }
 
@@ -177,9 +175,11 @@ func (s *Service) UnboundBoardSources() []string {
 // time either changed — a manager reads eleven, the rep opens their day and
 // sees nine, and nothing says which is right.
 func (s *Service) addWaiting(
-	ctx context.Context, load *teamCounts, _ []TeamMember, asOf time.Time,
+	ctx context.Context, load *teamCounts, roster []TeamMember, asOf time.Time,
 ) error {
-	waiting, cut, err := s.waiting.Unanswered(ctx, asOf)
+	// Narrowed to the team, as the team worklist narrows it. The scan bound is
+	// then spent on the board's own rows, not on other seats' newer waits.
+	waiting, cut, err := s.waiting.Unanswered(ctx, asOf, WaitingFor{Team: true, Seats: teamSeats(roster, nil)})
 	if err != nil {
 		return err
 	}
@@ -187,9 +187,18 @@ func (s *Service) addWaiting(
 		if customer.AsksNothing || customer.ActionUnconfirmed {
 			continue
 		}
-		row := load.counts[customer.OwnerID]
-		row.Waiting++
-		load.counts[customer.OwnerID] = row
+		owners := customer.DirectRecipients
+		if customer.EmailSummary == nil {
+			owners = []ids.UUID{customer.OwnerID}
+		}
+		if len(owners) == 0 {
+			owners = []ids.UUID{ids.Nil}
+		}
+		for _, owner := range owners {
+			row := load.counts[owner]
+			row.Waiting++
+			load.counts[owner] = row
+		}
 	}
 	// The lane's OWN answer, as the at-risk source's is, and for the same
 	// reason: this lane filters after it scans. The seam drops machine senders
@@ -218,9 +227,13 @@ func (s *Service) addOverdue(
 }
 
 func (s *Service) addAtRisk(
-	ctx context.Context, load *teamCounts, _ []TeamMember, _ time.Time,
+	ctx context.Context, load *teamCounts, roster []TeamMember, _ time.Time,
 ) error {
-	risky, cut, err := s.atRisk.Quiet(ctx)
+	owners := &storekit.OwnerSet{Unassigned: true}
+	for _, member := range roster {
+		owners.IDs = append(owners.IDs, member.UserID)
+	}
+	risky, cut, err := s.atRisk.Quiet(ctx, owners)
 	if err != nil {
 		return err
 	}
@@ -246,18 +259,8 @@ func (s *Service) addAtRisk(
 	return nil
 }
 
-func (s *Service) addPromisesDue(
-	ctx context.Context, load *teamCounts, roster []TeamMember, asOf time.Time,
-) error {
-	owners := make([]ids.UUID, 0, len(roster))
-	for _, member := range roster {
-		owners = append(owners, member.UserID)
-	}
-	// Due by the SAME instant the rest of the board is read at, so every column
-	// describes one moment. A promise lane bounded by end-of-day while the
-	// others read now would put a row in one column and not the next for no
-	// reason a lead could see.
-	due, err := s.promiseLoad.DuePerOwner(ctx, owners, asOf)
+func (s *Service) addPromisesDue(ctx context.Context, load *teamCounts, _ []TeamMember, asOf time.Time) error {
+	due, err := s.overdueLoad.CommitmentsDuePerAssignee(ctx, asOf)
 	if err != nil {
 		return err
 	}

@@ -39,8 +39,8 @@ import (
 // transcriptBody is already in ADR-0058's canonical form, which is what the
 // write path stores: the commitment is on line 3.
 const transcriptBody = "Dana: Thanks for walking us through the rollout plan.\n" +
-	"Priya: Any concerns from the security side?\n" +
-	"Priya: I'll send the revised pricing over by Friday.\n" +
+	"Priya Raman: Any concerns from the security side?\n" +
+	"Priya Raman: I'll send the revised pricing over by Friday.\n" +
 	"Dana: Perfect, we'll review it then."
 
 // transcriptPerms is a rep who may create activities, read the timeline and
@@ -73,11 +73,14 @@ func (b cannedBrain) Complete(context.Context, model.Request) (model.Response, e
 }
 
 // groundedReply cites line 3, which is where the commitment actually is.
-func groundedReply(t *testing.T, line int, confidence float64) string {
+// groundedReply is one grounded proposal made by the colleague at promiser, a
+// meeting participant, so the promise has somebody to be put to.
+func groundedReply(t *testing.T, line int, confidence float64, promiser ids.UUID) string {
 	t.Helper()
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": "Send the revised pricing", "owner": "Priya",
+		"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + promiser.String(),
 		"source_lines": []int{line}, "confidence": confidence,
+		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -97,16 +100,24 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	t.Helper()
 	e := &transcriptEnv{Env: integration.Setup(t), owner: integration.OwnerConn(t)}
 	e.ctx = e.As(e.Rep1, []ids.UUID{e.Team1}, transcriptPerms)
-	e.svc = approvals.NewService(e.DB())
+	e.svc = NewApprovalsService(e.DB())
 	e.svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(e.svc, e.Activities, e.Contacts))
-	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.Activities))
+	e.svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(e.DB(), e.Activities))
+	e.svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
 
+	// The colleague who logs the meeting is the one the readings name as
+	// promiser. A distinct name, because two parties sharing one name make the
+	// promiser ambiguous.
+	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET display_name = 'Priya' WHERE id = $1`, e.Rep1); err != nil {
+		t.Fatalf("naming the attending colleague: %v", err)
+	}
 	subject := "Rollout call"
 	sourceSystem := "transcript"
 	body := transcriptBody
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body,
-		SourceSystem: &sourceSystem, Source: "manual",
+		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
+		SourceSystem:    &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the transcript: %v", err)
@@ -118,12 +129,17 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 // read drives one whole reading the way the worker does.
 func (e *transcriptEnv) read(t *testing.T, brain completer) activities.TranscriptRead {
 	t.Helper()
+	return e.readAt(t, brain, time.Now)
+}
+
+func (e *transcriptEnv) readAt(t *testing.T, brain completer, now func() time.Time) activities.TranscriptRead {
+	t.Helper()
 	started, _, err := e.Activities.StartTranscriptReadQueued(e.ctx, e.activity, "human:"+e.Rep1.String(), nil)
 	if err != nil {
 		t.Fatalf("starting the reading: %v", err)
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
 	// The worker's own principal, as production binds it: the reader acting
 	// for the rep who asked. A test reading as the rep would pass gates the
 	// worker never faces and fail ones it always passes.
@@ -148,7 +164,7 @@ func TestATranscriptReadingStagesACitedProposalAndWritesNothingYet(t *testing.T)
 	e := setupTranscript(t)
 	before := e.taskCount(t)
 
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 
 	if read.Status != activities.TranscriptReadDone {
 		t.Fatalf("the reading must finish done, got %s (%v)", read.Status, read.StatusDetail)
@@ -211,7 +227,7 @@ func storedEvidence(t *testing.T, raw json.RawMessage) []struct {
 
 func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 	e := setupTranscript(t)
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
 	before := e.taskCount(t)
 
@@ -232,7 +248,7 @@ func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 	}
 	// Reading the meeting again finds the promise already a task. It used to
 	// stage it afresh, and a second approval wrote a second task.
-	if again := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)}); len(again.ProposalIDs) != 0 {
+	if again := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)}); len(again.ProposalIDs) != 0 {
 		t.Errorf("a promise that is already a task was proposed again (%d proposals)", len(again.ProposalIDs))
 	}
 	if after := e.taskCount(t); after != before+1 {
@@ -277,7 +293,7 @@ func TestATaskNobodyReadOutOfAMeetingNamesNone(t *testing.T) {
 func TestRejectingATranscriptProposalCreatesNothing(t *testing.T) {
 	rejectReason := "not a commitment"
 	e := setupTranscript(t)
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	before := e.taskCount(t)
 
 	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), false, &rejectReason); err != nil {
@@ -309,8 +325,9 @@ func TestATranscriptStatingNothingProducesNoProposalAndSaysSo(t *testing.T) {
 func TestAReadingThatCitesLinesAcrossAGapStillStagesItsProposal(t *testing.T) {
 	e := setupTranscript(t)
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": "Send the revised pricing", "owner": "Priya",
+		"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + e.Rep1.String(),
 		"source_lines": []int{3, 4, 1}, "confidence": 0.9,
+		"commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -336,7 +353,7 @@ func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
 
 	// Line 99 of a four-line transcript: the citation cannot be checked, so
 	// the whole reading is refused rather than staged with a false pointer.
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 99, 0.95)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 99, 0.95, e.Rep1)})
 
 	if read.Status != activities.TranscriptReadFailed {
 		t.Fatalf("an ungroundable reading must fail the read, got %s", read.Status)
@@ -352,7 +369,7 @@ func TestAReadingThatCitesALineThatDoesNotExistStagesNothing(t *testing.T) {
 func TestAnUnsureReadingIsDroppedRatherThanPutInFrontOfAHuman(t *testing.T) {
 	e := setupTranscript(t)
 
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, transcriptConfidenceFloor-0.2)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, transcriptConfidenceFloor-0.2, e.Rep1)})
 
 	if read.Status != activities.TranscriptReadDone {
 		t.Fatalf("a below-floor reading is well-formed, so the read completes; got %s", read.Status)
@@ -540,7 +557,7 @@ func TestTheLatestReadingIsFindableAfterTheTabThatStartedItIsGone(t *testing.T) 
 		t.Fatalf("a transcript nobody has read must answer not-found — the honest difference between never tried and tried and got nothing; got %v", err)
 	}
 
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	latest, err := e.Activities.LatestTranscriptRead(e.ctx, e.activity)
 	if err != nil {
 		t.Fatalf("finding the latest reading: %v", err)
@@ -587,11 +604,16 @@ func TestARepWhoMayNotAddToTheTimelineCannotStartAReading(t *testing.T) {
 }
 
 // datedReply is groundedReply with the deadline the transcript stated.
-func datedReply(t *testing.T, line int, due string) string {
+func datedReply(t *testing.T, line int, due string, promiser ids.UUID) string {
 	t.Helper()
+	meaning := &commitmentMeaning{State: "open", DeadlinePrecision: "none"}
+	if due != "" {
+		meaning.DeadlinePrecision, meaning.DeadlineQuote = "day", "Friday"
+	}
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": "Send the revised pricing", "owner": "Priya",
+		"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + promiser.String(),
 		"due_date": due, "source_lines": []int{line}, "confidence": 0.9,
+		"commitment": meaning,
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -617,7 +639,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 	// the same answer anyway.
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
 		WHERE key = 'installation.timezone'`)
-	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "2026-09-08")})
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "2026-09-08", e.Rep1)})
 	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
 	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
 		t.Fatalf("approving the proposal: %v", err)
@@ -654,7 +676,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 // to that either.
 func TestAnUndatedNextStepCarriesNoDeadline(t *testing.T) {
 	e := setupTranscript(t)
-	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "")})
+	read := e.read(t, cannedBrain{reply: datedReply(t, 3, "", e.Rep1)})
 	approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
 	if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
 		t.Fatalf("approving the proposal: %v", err)
@@ -692,7 +714,7 @@ func TestADeadlineOnADaylightSavingBoundaryStaysOnItsOwnDay(t *testing.T) {
 			e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb
 				WHERE key = 'installation.timezone'`)
 
-			read := e.read(t, cannedBrain{reply: datedReply(t, 3, c.day)})
+			read := e.read(t, cannedBrain{reply: datedReply(t, 3, c.day, e.Rep1)})
 			approvalID := ids.From[ids.ApprovalKind](read.ProposalIDs[0])
 			if _, err := e.svc.Decide(e.ctx, approvalID, true, nil); err != nil {
 				t.Fatalf("approving the proposal: %v", err)
@@ -720,7 +742,7 @@ func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T
 	// three humans the display name "Rep", which is the ambiguous case below.
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
 	if len(read.ProposalIDs) != 0 {
 		t.Fatalf("a confident promise by a named colleague was put to a human (%d proposals)", len(read.ProposalIDs))
 	}
@@ -738,7 +760,7 @@ func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
 	e := setupTranscript(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.75)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.75)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want the unsure promise proposed, got %d proposals", len(read.ProposalIDs))
 	}
@@ -756,30 +778,14 @@ func TestAnUnsurePromiseIsProposedToTheColleagueWhoMadeIt(t *testing.T) {
 	}
 }
 
-// A name that could be two colleagues names NEITHER, so the promise is proposed
-// and accepting it makes it the accepter's. A promise given to the wrong
-// colleague is worse than one the reader takes on and can hand over: the wrong
-// colleague does not do it, and the right one never learns it was theirs.
-func TestAnAmbiguousOwnerIsProposedAndTheAccepterHoldsIt(t *testing.T) {
+// A name that could be two colleagues names neither of them. Nobody is asked,
+// and the finding stays on the meeting. Given to the wrong colleague, the
+// promise is not done, and the right one never learns it was theirs.
+func TestAnAmbiguousOwnerAsksNobody(t *testing.T) {
 	e := setupTranscript(t)
 	// The harness's three humans all display as "Rep".
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Rep", 0.9)})
-	if len(read.ProposalIDs) != 1 {
-		t.Fatalf("a promise nobody could be named for must be proposed, got %d proposals", len(read.ProposalIDs))
-	}
-	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
-		t.Fatalf("approving the proposal: %v", err)
-	}
-	assignee := e.wsString(t, `SELECT coalesce(assignee_id::text, '') FROM activity
-		WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
-	if assignee != e.Rep1.String() {
-		t.Errorf("the accepted task went to %q, want the rep who accepted it", assignee)
-	}
-	body := e.wsString(t, `SELECT body FROM activity WHERE kind = 'task'
-		ORDER BY created_at DESC LIMIT 1`)
-	if !strings.Contains(body, "Rep") {
-		t.Error("the task must still name who promised, so the holder can hand it on")
-	}
+	e.assertNobodyAsked(t, read)
 }
 
 // A promise the CUSTOMER made is filed on them and watched. It is never a task
@@ -790,9 +796,9 @@ func TestACustomersPromiseIsWatchedAndNeverATask(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the customer: %v", err)
 	}
-	integration.LinkActivity(t, e.owner, e.activity.UUID, "contact", ids.UUID(contact.Id))
+	e.linkTranscriptContact(t, ids.UUID(contact.Id))
 
-	read := e.read(t, cannedBrain{reply: ownedReply(t, "Frédéric de Gombert", 0.9)})
+	read := e.read(t, cannedBrain{reply: attributedReply(t, "Frédéric de Gombert", "contact:"+contact.Id.String(), 0.9)})
 	if len(read.ProposalIDs) != 0 || e.taskCount(t) != 0 {
 		t.Fatalf("the customer's promise became %d proposal(s) and %d task(s); it must become neither",
 			len(read.ProposalIDs), e.taskCount(t))
@@ -810,10 +816,15 @@ func TestACustomersPromiseIsWatchedAndNeverATask(t *testing.T) {
 // Line 3 is where this suite's transcript states the promise, so every case
 // cites it and the line is not a parameter.
 func ownedReply(t *testing.T, owner string, confidence float64) string {
+	return attributedReply(t, owner, "", confidence)
+}
+
+func attributedReply(t *testing.T, owner, promiser string, confidence float64) string {
 	t.Helper()
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": "Send the revised pricing", "owner": owner,
+		"summary": "Send the revised pricing", "owner": owner, "promiser_ref": promiser,
 		"due_date": "", "source_lines": []int{3}, "confidence": confidence,
+		"commitment": &commitmentMeaning{State: "open", DeadlinePrecision: "none"},
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -833,16 +844,19 @@ func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 
 	// "Priya" narrows the roster to exactly her, and still must not resolve.
 	read := e.read(t, cannedBrain{reply: ownedReply(t, "Priya", 0.9)})
-	if len(read.ProposalIDs) != 1 {
-		t.Fatalf("a first name must leave the promise to a human, got %d proposals", len(read.ProposalIDs))
+	e.assertNobodyAsked(t, read)
+}
+
+// assertNobodyAsked holds a reading whose promiser could not be named to the
+// rule: no task, no request, and the finding recorded once on its source.
+func (e *transcriptEnv) assertNobodyAsked(t *testing.T, read activities.TranscriptRead) {
+	t.Helper()
+	if len(read.ProposalIDs) != 0 || e.taskCount(t) != 0 {
+		t.Errorf("a promise nobody could be named for became %d proposal(s) and %d task(s); want neither",
+			len(read.ProposalIDs), e.taskCount(t))
 	}
-	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
-		t.Fatalf("approving the proposal: %v", err)
-	}
-	given := e.WsCount(t, `SELECT count(*) FROM activity
-		WHERE kind = 'task' AND assignee_id = $1`, e.Rep2)
-	if given != 0 {
-		t.Errorf("%d task(s) went to the one colleague a first name happens to match", given)
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission WHERE NOT current_work`); n != 1 {
+		t.Errorf("the promise is recorded %d time(s) on the meeting, want once", n)
 	}
 }
 
@@ -861,7 +875,7 @@ func TestAReadingThatProposesNothingOverAnErasedTranscriptIsNotARetry(t *testing
 	// A reply with nothing above the floor, and the erasure landing while it is
 	// out — so the run has neither proposals to stage nor a record to close.
 	brain := erasingBrain{
-		reply: groundedReply(t, 3, 0.1),
+		reply: groundedReply(t, 3, 0.1, e.Rep1),
 		erase: func() {
 			if _, err := e.owner.Exec(t.Context(),
 				`DELETE FROM transcript_read WHERE activity_id = $1`, e.activity); err != nil {
@@ -912,7 +926,7 @@ func TestAReadingWhoseTranscriptWasErasedMidCallStagesNothing(t *testing.T) {
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	brain := erasingBrain{
-		reply: groundedReply(t, 3, 0.9),
+		reply: groundedReply(t, 3, 0.9, e.Rep1),
 		erase: func() {
 			// What the erasure does to this activity: the reading deleted, the
 			// body nulled, the row archived.

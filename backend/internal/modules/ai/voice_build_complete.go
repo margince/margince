@@ -17,15 +17,18 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // VoiceBuildOutcome is the evaluated result CompleteBuild persists.
 type VoiceBuildOutcome struct {
+	Language       textlang.Lang
 	Artifact       VoiceArtifact
 	Evaluation     map[string]any
 	SampleDrafts   []map[string]any
@@ -33,7 +36,7 @@ type VoiceBuildOutcome struct {
 	Classification string
 	Action         string // auto_activated | review_required
 	StatusCode     string // empty, or quality_regression when the candidate underperformed
-	ReviewReasons  []string
+	Reasons        []crmcontracts.VoiceReviewReason
 	ModelProvider  string
 	ModelName      string
 	// PredecessorWords is the previous version's corpus size; the change
@@ -143,18 +146,17 @@ func demoteStaleOutcome(outcome VoiceBuildOutcome, build VoiceBuild, profile Voi
 	}
 	if currentHash != build.SourceHash {
 		outcome.Action = voiceCandidateReviewRequired
-		outcome.ReviewReasons = append(outcome.ReviewReasons,
-			"the corpus changed while this build was running; review before activating")
+		outcome.appendReviewReason(VoiceReasonCorpusChanged, voiceCompletionWords.CorpusChanged.In(outcome.Language))
 	}
 	if profile.ProfileVersion != outcome.EvaluatedPredecessor {
 		outcome.Action = voiceCandidateReviewRequired
-		outcome.ReviewReasons = append(outcome.ReviewReasons,
-			"the active version changed while this build was evaluating; review before activating")
+		outcome.appendReviewReason(VoiceReasonActiveChanged, voiceCompletionWords.ActiveChanged.In(outcome.Language))
 	}
 	return outcome
 }
 
 func (s *VoiceStore) persistBuildVersion(ctx context.Context, tx pgx.Tx, build VoiceBuild, profile VoiceProfile, outcome VoiceBuildOutcome, actorID string, now time.Time) (VoiceProfileVersion, error) {
+	reviewReasons := outcome.recordReviewReasons()
 	var nextVersion int
 	var status string
 	var activatedAt *time.Time
@@ -180,14 +182,11 @@ func (s *VoiceStore) persistBuildVersion(ctx context.Context, tx pgx.Tx, build V
 		"sample_drafts": outcome.SampleDrafts,
 		"guidance":      outcome.Guidance,
 	}
-	storedStats := outcome.CorpusStats
-	if storedStats.SampleCount == 0 {
-		storedStats = outcome.Artifact.Stats
-	}
-	statsJSON, err := json.Marshal(storedStats)
+	statsJSON, err := outcome.statsJSON()
 	if err != nil {
-		return VoiceProfileVersion{}, fmt.Errorf("voice build stats encode: %w", err)
+		return VoiceProfileVersion{}, err
 	}
+
 	version, err := insertVoiceVersion(ctx, tx, voiceVersionRow{
 		profileID:               build.ProfileID,
 		profileVersion:          nextVersion,
@@ -204,7 +203,7 @@ func (s *VoiceStore) persistBuildVersion(ctx context.Context, tx pgx.Tx, build V
 		builderVersion:          fmt.Sprintf("voicebuilder/%d", VoiceBuilderVersion),
 		activationPolicyVersion: "2",
 		evaluation:              storekit.JSONArg(outcome.Evaluation),
-		reviewReasons:           outcome.ReviewReasons,
+		reviewReasons:           reviewReasons,
 		activatedAt:             activatedAt,
 		source:                  voiceVersionSourceBuild,
 		capturedBy:              actorID,
@@ -345,4 +344,16 @@ func (s *VoiceStore) DueDeferredBuilds(ctx context.Context) ([]VoiceBuildRef, er
 		}
 	}
 	return due, errs
+}
+
+func (outcome VoiceBuildOutcome) statsJSON() ([]byte, error) {
+	stats := outcome.CorpusStats
+	if stats.SampleCount == 0 {
+		stats = outcome.Artifact.Stats
+	}
+	encoded, err := json.Marshal(stats)
+	if err != nil {
+		return nil, fmt.Errorf("voice build stats encode: %w", err)
+	}
+	return encoded, nil
 }

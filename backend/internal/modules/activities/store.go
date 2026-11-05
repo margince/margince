@@ -24,9 +24,10 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
-	calendar        SchedulingCalendar
-	schedulingBrand SchedulingBrand
-	meetingVault    keyvault.Vault
+	taskRecommendation TaskRecommendation
+	calendar           SchedulingCalendar
+	schedulingBrand    SchedulingBrand
+	meetingVault       keyvault.Vault
 
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db *database.DB
@@ -34,6 +35,11 @@ type Store struct {
 	// queue. Nil in a deployment that has not wired it, and then no sender is
 	// excluded for being one of ours (WithOwnDomains).
 	ownDomains OwnDomains
+	// consumerMail names the consumer mail domains, which never widen a
+	// correspondence to a company domain (WithConsumerMail).
+	consumerMail ConsumerMailReader
+	// recordZone says which date is today and which day an instant falls on (WithRecordZone).
+	recordZone RecordZone
 	// transcriptEnqueue starts the reading of a transcript the moment it
 	// lands, in the same transaction that stores it. Nil in a deployment with
 	// no transcript brain wired, and then a transcript is simply stored —
@@ -98,6 +104,9 @@ type Store struct {
 	// (WithRecipientDirectory wires it). A reply never consults it — its
 	// addressees come from the captured conversation it answers.
 	recipients RecipientDirectory
+	// recipientFiler makes a contact for a typed address no record holds.
+	// Nil files nothing, and recipients then refuses the address.
+	recipientFiler RecipientFiler
 	// heldNotifier puts a stopped scheduled message in the rep's approval
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier
@@ -114,6 +123,25 @@ type Store struct {
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
+	// catalog answers the activity custom fields; nil reads and writes core
+	// columns only (WithFieldCatalog).
+	catalog FieldCatalog
+	// leadQualifyTasks commits the owner follow-up with a lead's booking.
+	leadQualifyTasks LeadQualifyTasks
+	// invitationAttention tells a host, in the parking transaction, that their
+	// invitations wait for them.
+	invitationAttention InvitationAttention
+}
+
+// LeadQualifyTasks writes the follow-up for a booking filed on a lead.
+type LeadQualifyTasks interface {
+	FileLeadBookingTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
+}
+
+// WithLeadQualifyTasks wires the booking follow-up writer.
+func (s *Store) WithLeadQualifyTasks(tasks LeadQualifyTasks) *Store {
+	s.leadQualifyTasks = tasks
+	return s
 }
 
 // NewStore opens this module's store on a handle already bound to the
@@ -187,8 +215,8 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 // txRetryingLockCycles is tx for a write that files under shared records and
 // has no effect outside its transaction, so a deadlock victim is run again.
-func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
-	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
+func (s *Store) txRetryingLockCycles(ctx context.Context, isolation pgx.TxIsoLevel, fn func(pgx.Tx) error) error {
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.TxIsolated(ctx, isolation, fn) })
 }
 
 // sprintf keeps SQL assembly lines readable; arguments are always

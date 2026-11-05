@@ -53,7 +53,7 @@ func accountMomentOf(
 	tasks []crmcontracts.Company360NextStep, claims []contacts.CompanyCommitment,
 ) crmcontracts.ContactMoment {
 	rows, filed := stepsOf(tasks...)
-	return accountMoment(momentNow, rows, filed, claims)
+	return momentCopyFor("en").accountMoment(momentNow, rows, filed, claims)
 }
 
 // tasksOf is the account's open tasks, as the read hands them over.
@@ -151,8 +151,8 @@ func TestTheQuietAccountCardClaimsOnlyThePromisesItRead(t *testing.T) {
 // claim key, so a key naming only the rung would let putting the first away
 // silence the second.
 func TestTwoAccountPromisesDismissApart(t *testing.T) {
-	first := accountClaimCard(momentNow, commitment("Send the NDA", -2, "Carol Wagner"), true)
-	second := accountClaimCard(momentNow, commitment("Send the quote", -2, "Carol Wagner"), true)
+	first := momentCopyFor("en").accountClaimCard(momentNow, commitment("Send the NDA", -2, "Carol Wagner"), true)
+	second := momentCopyFor("en").accountClaimCard(momentNow, commitment("Send the quote", -2, "Carol Wagner"), true)
 	if first.ClaimKey == second.ClaimKey {
 		t.Errorf("both carry claim key %q; dismissing one would silence the other", first.ClaimKey)
 	}
@@ -163,7 +163,7 @@ func TestTwoAccountPromisesDismissApart(t *testing.T) {
 // promise.
 func TestAPromiseWithNoNameableContactStillShows(t *testing.T) {
 	anonymous := commitment("Send the report", -1, "")
-	got := accountClaimCard(momentNow, anonymous, true)
+	got := momentCopyFor("en").accountClaimCard(momentNow, anonymous, true)
 	if got.Headline != "You owe them: Send the report" {
 		t.Errorf("headline = %q, want the promise without a name", got.Headline)
 	}
@@ -172,7 +172,7 @@ func TestAPromiseWithNoNameableContactStillShows(t *testing.T) {
 // An account task filed against no record offers no button rather than one
 // that would land the reader nowhere.
 func TestATaskLinkedToNothingOffersNoDestination(t *testing.T) {
-	got := accountTaskCard(momentNow, task("Renew the certificate", -1), true)
+	got := momentCopyFor("en").accountTaskCard(momentNow, task("Renew the certificate", -1), true)
 	if got.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("action state = %q, want blocked when there is no record to open",
 			got.RecommendedAction.State)
@@ -189,7 +189,7 @@ func TestATaskLinkedToAContactRoutesThere(t *testing.T) {
 	step := task("Send the plan", -1)
 	step.LinkedContactId = &contact
 
-	got := accountTaskCard(momentNow, step, true)
+	got := momentCopyFor("en").accountTaskCard(momentNow, step, true)
 
 	if got.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Fatalf("action state = %q, want available", got.RecommendedAction.State)

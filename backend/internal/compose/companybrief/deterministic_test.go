@@ -9,6 +9,9 @@ package companybrief
 import (
 	"strings"
 	"testing"
+	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func briefLines(sentences []Sentence) string {
@@ -140,6 +143,22 @@ func TestDeterministicLastTouchSurvivesAMissingSubject(t *testing.T) {
 	}
 	if strings.Contains(without, `""`) {
 		t.Errorf("a subjectless activity rendered an empty quote: %q", without)
+	}
+}
+
+// A last contact known only by its date is told as that date, never dropped
+// and never as the noon it is stored at.
+func TestALastContactOnADayIsToldByItsDate(t *testing.T) {
+	var in Input
+	foldLastContact(crmcontracts.Company360{LastContact: &crmcontracts.Company360LastContact{
+		Kind: crmcontracts.Company360LastContactKindCall, At: time.Date(2026, 7, 10, 12, 0, 0, 0, time.UTC),
+		OccurredPrecision: crmcontracts.OccurredPrecisionOccurredPrecisionDay,
+	}}, &in)
+	if in.LastContact == nil || in.LastContact.At != "2026-07-10" {
+		t.Fatalf("the last contact folds as %+v, want 2026-07-10", in.LastContact)
+	}
+	if line := lastTouchLine(*in.LastContact, companyPhrasesFor("en")); !strings.Contains(line, "10") {
+		t.Errorf("the day's date was dropped from %q", line)
 	}
 }
 

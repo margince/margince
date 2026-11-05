@@ -14,7 +14,7 @@ import (
 )
 
 func TestAllowanceDefaultsAndBounds(t *testing.T) {
-	raw, err := BudgetSettings.DefaultJSON()
+	raw, err := storedRow(t, BudgetKey).DefaultJSON()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestAllowanceDefaultsAndBounds(t *testing.T) {
 	if err := json.Unmarshal(raw, &config); err != nil {
 		t.Fatal(err)
 	}
-	if config.TokensPerFullUser != int64(DefaultMonthlyTokens) || !BudgetSettings.SurvivesDataReset() {
+	if config.TokensPerFullUser != int64(DefaultMonthlyTokens) || !storedRow(t, BudgetKey).SurvivesDataReset() {
 		t.Fatal("default or reset policy drifted")
 	}
 	for _, users := range []int64{0, 1, 4} {
@@ -140,7 +140,7 @@ func TestAllowanceSnapshotIsUTCAndDoesNotHideOverspend(t *testing.T) {
 }
 
 func TestAllowanceGatesBeforeReadingOrReturningAConflict(t *testing.T) {
-	store := NewAdminStore(nil, nil, nil, nil)
+	store := NewAdminStore(nil, nil, nil, nil, nil)
 	ctx := principal.WithActor(t.Context(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:test", SeatType: principal.SeatFull})
 	if _, err := store.ReadBudget(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("read: %v", err)

@@ -26,6 +26,7 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 	suggested := ids.NewV7()
 	activity := ids.NewV7()
 	decided := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
+	reason := "she ran the migration we are pitching"
 	r := &Request{
 		ID:               ids.NewV7(),
 		ContactID:        ids.NewV7(),
@@ -33,7 +34,8 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 		IntroducerUser:   ids.NewV7(),
 		RouteType:        "through_contact",
 		ThroughContactID: &through,
-		InternalReason:   "she ran the migration we are pitching",
+		InternalReason:   &reason,
+		Origin:           OriginAsked,
 		ValueForTarget:   "a shorter path to the same answer",
 		ForwardableNote:  "Hallo Dana, darf ich vorstellen",
 		NoteGeneratedBy:  "model",
@@ -51,8 +53,8 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 
 	// The three pieces of copy are three different messages. Collapsing any two
 	// would put the internal case for the ask in front of the contact.
-	if got.InternalReason != r.InternalReason {
-		t.Errorf("internal_reason went out as %q", got.InternalReason)
+	if got.InternalReason == nil || *got.InternalReason != reason {
+		t.Errorf("internal_reason went out as %v", got.InternalReason)
 	}
 	if got.ValueForTarget == nil || *got.ValueForTarget != r.ValueForTarget {
 		t.Errorf("value_for_target went out as %v", got.ValueForTarget)
@@ -82,9 +84,10 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 // An absent value and an empty one are different answers. A note nobody wrote
 // must not go out as an empty string a client renders as an empty plate.
 func TestUnsetCopyIsAbsentRatherThanEmpty(t *testing.T) {
+	reason := "worth asking"
 	got := wire(&Request{
 		RouteType:      "direct",
-		InternalReason: "worth asking",
+		InternalReason: &reason,
 		Status:         StatusRequested,
 	})
 	if got.ValueForTarget != nil {
@@ -103,9 +106,10 @@ func TestUnsetCopyIsAbsentRatherThanEmpty(t *testing.T) {
 // permission as a handshake that happened.
 func TestANameDroppedAskCarriesNoIntroducedAt(t *testing.T) {
 	at := time.Date(2026, 9, 1, 10, 0, 0, 0, time.UTC)
+	reason := "worth asking"
 	got := wire(&Request{
 		RouteType:      "direct",
-		InternalReason: "worth asking",
+		InternalReason: &reason,
 		Status:         StatusNameDropped,
 		NameDroppedAt:  &at,
 	})
@@ -192,3 +196,24 @@ func TestARouteNamesItsIntermediaryOrIsDirect(t *testing.T) {
 }
 
 var testClock = time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
+// A recorded introduction has no reason and no deadline, and says how it was
+// made. Going out as an empty reason would read as a colleague typing nothing.
+func TestTheWireLeavesAskFieldsNullOnARecordedIntroduction(t *testing.T) {
+	channel := "in_person"
+	introduced := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
+	got := wire(&Request{
+		ID: ids.NewV7(), Origin: OriginRecorded, RecordedChannel: &channel,
+		Status: StatusIntroduced, IntroducedAt: &introduced, RouteType: "direct",
+	})
+
+	if got.Origin != crmcontracts.IntroOriginIntroOriginRecorded {
+		t.Errorf("origin went out as %q", got.Origin)
+	}
+	if got.InternalReason != nil || got.DueAt != nil {
+		t.Errorf("a recorded row went out with reason %v and due %v", got.InternalReason, got.DueAt)
+	}
+	if got.RecordedChannel == nil || *got.RecordedChannel != crmcontracts.IntroRecordedChannelIntroRecordedChannelInPerson {
+		t.Errorf("recorded_channel went out as %v", got.RecordedChannel)
+	}
+}

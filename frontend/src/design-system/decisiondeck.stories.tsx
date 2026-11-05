@@ -58,6 +58,10 @@ const CARD_LABELS: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: {
+    field: (name) => name,
+    more: (count) => `${count} more not shown`,
+  },
   showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",
@@ -78,6 +82,8 @@ const LABELS: DecisionDeckLabels = {
   skipped: (count) => (count === 1 ? "1 skipped" : `${count} skipped`),
   commit: "Commit",
   commitNothingToSend: "Clear skipped",
+  acceptanceChanged:
+    "Some approvals changed and need another look. Their acceptances were not sent.",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) =>

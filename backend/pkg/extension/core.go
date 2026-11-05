@@ -47,19 +47,31 @@ import (
 //     — a system principal passes every check ever written — a tick's Core call
 //     answers ErrForbidden. A tick may still write the unit's OWN tables, which
 //     is what a tick is for.
-//   - CUSTOM FIELDS. A record's custom-field values need the field catalog, and
-//     reading the catalog takes a second database connection — inside a
-//     transaction the unit already holds, that is a deadlock shape rather than
-//     a slow path. A write carrying them is refused with ErrInvalid, never
-//     accepted-and-dropped.
+//   - CUSTOM FIELDS ON A WRITE. A write's custom-field values need the field
+//     catalog checked against them, which no write verb does yet. A write carrying
+//     them is refused with ErrInvalid, never accepted-and-dropped. A read has no
+//     such gap: it reads the catalog on the transaction the unit holds, so the
+//     values come back on the record and a query may filter on them.
 type Core interface {
-	// Activities returns the timeline door: a unit files what happened.
+	// Activities returns the timeline door: a unit files what happened and reads it.
 	Activities() ActivityRepo
+	// Deals, Companies, Signals and CustomFields are read doors; see coreread.go.
+	Deals() DealRepo
+	Companies() CompanyRepo
+	Signals() SignalRepo
+	CustomFields() CustomFieldRepo
+	// Notices returns the door for telling a member about a record; see notices.go.
+	Notices() NoticeRepo
 }
 
-// ActivityRepo writes the shared timeline — the record every other one hangs
-// its history off.
+// ActivityRepo reads and writes the shared timeline, the record every other
+// one hangs its history off.
 type ActivityRepo interface {
+	// Get answers ErrInvalid for an id that is not a UUID, and ErrNotFound for an
+	// activity that is missing, archived or outside the caller's scope.
+	Get(ctx context.Context, id string) (crm.Activity, error)
+	List(ctx context.Context, q ActivityQuery) (Page[crm.Activity], error)
+
 	// Create logs one activity against the subjects its links name, and returns
 	// it as the product's own read shape.
 	//
@@ -83,6 +95,10 @@ var (
 	// ErrForbidden is the caller's own RBAC refusing the write — or a job tick,
 	// which has no caller to check.
 	ErrForbidden = errors.New("extension: the caller may not do that")
+
+	// ErrRateLimited is a unit that has read more than its share this minute. It
+	// is a refusal to wait out, not a fault: the same call succeeds later.
+	ErrRateLimited = errors.New("extension: this unit has made too many reads this minute")
 
 	// ErrConflict is a record that changed under the write.
 	ErrConflict = errors.New("extension: the record changed under this write")

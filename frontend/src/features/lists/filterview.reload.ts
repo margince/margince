@@ -4,8 +4,8 @@
 import type { QueryObserverResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { problemCodeOf } from "../../lib/problem";
+import { openableTree, type SavedView } from "../../lib/savedviews.queries";
 import type { Node } from "../../lib/segmentpredicate";
-import { openableTree, type SavedView } from "./savedviews.queries";
 
 export type Reread = () => Promise<QueryObserverResult<SavedView>>;
 

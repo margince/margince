@@ -5,13 +5,14 @@
 
 package integration
 
-// The fx_rate editor suite: strict append-forward writes (today or later,
-// same-day correction, immutable past), the admin/ops read+write gate, and
-// cross-tenant RLS isolation on the deals-owned fx_rate price sheet.
+// The fx_rate editor suite. Writes are append-forward: today or later, a
+// same-day correction, and history extended only before the earliest rate.
+// It also covers the admin/ops read+write gate and cross-tenant isolation.
 
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -37,7 +38,7 @@ var fxTestNow = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 
 func TestFxRateAppendForward(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	today := fxTestNow.Truncate(24 * time.Hour)
 
@@ -79,7 +80,7 @@ func TestFxRateAppendForward(t *testing.T) {
 
 func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	today := fxTestNow.Truncate(24 * time.Hour)
 
@@ -89,12 +90,66 @@ func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 			t.Fatalf("expected FxRateValidationError, got %v", err)
 		}
 	}
+	if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9", EffectiveDate: today.AddDate(0, 0, -5)}); err != nil {
+		t.Fatalf("seed USD: %v", err)
+	}
 	_, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9", EffectiveDate: today.AddDate(0, 0, -1)})
-	assertInvalid(t, err) // past
+	assertInvalid(t, err) // past, and after the earliest rate
 	_, err = e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "EUR", Rate: "1", EffectiveDate: today})
 	assertInvalid(t, err) // from == base
 	_, err = e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0", EffectiveDate: today})
 	assertInvalid(t, err) // not > 0
+}
+
+// A past date extends the history only backwards. Before the currency's
+// earliest rate it prices days that had none. Anywhere later it would change a
+// rate some day was already priced at.
+func TestFxRateHistoryExtendsOnlyBeforeTheEarliestRate(t *testing.T) {
+	e := Setup(t)
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
+	ctx := e.Admin()
+	today := fxTestNow.Truncate(24 * time.Hour)
+	setOn := func(rate string, day time.Time) error {
+		_, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "JPY", Rate: rate, EffectiveDate: day})
+		return err
+	}
+	refused := func(t *testing.T, what string, err error) {
+		t.Helper()
+		invalid, ok := errors.AsType[*deals.FxRateValidationError](err)
+		if !ok || invalid.Code != "fx_rate_past" {
+			t.Errorf("%s = %v, want the fx_rate_past refusal", what, err)
+		}
+	}
+
+	if err := setOn("0.0063", today.AddDate(0, 0, -10)); err != nil {
+		t.Fatalf("a first rate for a currency, dated in the past: %v", err)
+	}
+	if err := setOn("0.0062", today.AddDate(0, -1, 0)); err != nil {
+		t.Fatalf("a rate before the earliest one: %v", err)
+	}
+	refused(t, "a past date between two stored rates", setOn("0.0070", today.AddDate(0, 0, -20)))
+	refused(t, "a past date after the latest rate", setOn("0.0070", today.AddDate(0, 0, -1)))
+	refused(t, "the earliest rate's own day", setOn("0.0070", today.AddDate(0, -1, 0)))
+	if err := setOn("0.0060", today.AddDate(0, -2, 0)); err != nil {
+		t.Fatalf("a rate before the new earliest one: %v", err)
+	}
+
+	hist, err := e.Deals.FxRateHistory(ctx, "JPY")
+	if err != nil {
+		t.Fatalf("history: %v", err)
+	}
+	var got []string
+	for _, row := range hist {
+		got = append(got, row.RateDate.Format(time.DateOnly)+"="+row.Rate)
+	}
+	want := []string{
+		today.AddDate(0, 0, -10).Format(time.DateOnly) + "=0.0063000000",
+		today.AddDate(0, -1, 0).Format(time.DateOnly) + "=0.0062000000",
+		today.AddDate(0, -2, 0).Format(time.DateOnly) + "=0.0060000000",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("history = %v, want %v (the refused writes changed nothing)", got, want)
+	}
 }
 
 func TestFxRateWriteDeniedForNonAdmin(t *testing.T) {
@@ -116,7 +171,7 @@ func TestFxRateReadDeniedForNonAdmin(t *testing.T) {
 
 func TestFxRateWritesAuditRow(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9", EffectiveDate: fxTestNow}); err != nil {
 		t.Fatalf("set: %v", err)
 	}
@@ -150,7 +205,7 @@ func fxRatePerms(g principal.ObjectGrant) principal.Permissions {
 // 403 sentinel, and a refused write leaves the sheet untouched.
 func TestFxRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	today := fxTestNow.Truncate(24 * time.Hour)
 	setOn := func(ctx context.Context, rate string, day time.Time) error {
 		_, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{
@@ -201,7 +256,7 @@ func TestFxRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 // create grant the insert used.
 func TestFxRateOverwriteAuditsAsUpdate(t *testing.T) {
 	e := Setup(t)
-	e.Deals.WithClock(func() time.Time { return fxTestNow })
+	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
 	for _, rate := range []string{"0.9", "0.95"} {
 		if _, err := e.Deals.SetFxRate(ctx, deals.SetFxRateInput{

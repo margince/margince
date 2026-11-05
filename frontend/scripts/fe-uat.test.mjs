@@ -1,9 +1,14 @@
 // The render gate's (fe-uat.mjs) rules, asked of the rules themselves: the gate
 // is a script that talks to git and a browser as it loads.
 
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
 import {
+  changesSince,
   needsStory,
   scopeFor,
   storiesInScope,
@@ -390,4 +395,44 @@ describe("renewingBroken", () => {
     ]);
     expect(lanes.reduce((sum, lane) => sum + lane.renewals, 0)).toBe(1);
   });
+});
+
+it("includes committed, staged, unstaged and new stories before commit", () => {
+  const dir = mkdtempSync(join(tmpdir(), "approval-uat-scope-"));
+  const git = (args) =>
+    execFileSync("git", args.split(" "), { cwd: dir, encoding: "utf8" }).trim();
+  const write = (name, text) => writeFileSync(join(dir, name), text);
+  try {
+    git("init --quiet");
+    git("config user.name Fixture");
+    git("config user.email fixture@example.test");
+    for (const name of [
+      "committed.tsx",
+      "staged.tsx",
+      "unstaged.tsx",
+      "removed.tsx",
+    ])
+      write(name, "before");
+    write(".gitignore", "ignored.tsx\n");
+    git("add .");
+    git("-c core.hooksPath=/dev/null commit --quiet -m fixture");
+    const base = git("rev-parse HEAD");
+    write("committed.tsx", "committed change");
+    git("add committed.tsx");
+    git("-c core.hooksPath=/dev/null commit --quiet -m changed");
+    write("staged.tsx", "staged change");
+    git("add staged.tsx");
+    write("unstaged.tsx", "working change");
+    write("new.stories.tsx", "new story");
+    write("ignored.tsx", "build output");
+    rmSync(join(dir, "removed.tsx"));
+    expect(changesSince(git, base).sort()).toEqual([
+      "committed.tsx",
+      "new.stories.tsx",
+      "staged.tsx",
+      "unstaged.tsx",
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

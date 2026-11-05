@@ -3,12 +3,6 @@
 
 package capture
 
-// Standing-connection management for the persisted connectors (the OAuth
-// mail connectors, e.g. gmail): the per-user list behind listConnectors, the
-// revoke behind disconnectConnector, and the fleet-wide due-poll the
-// background sync job drives. The grant + one-sync mechanics live in
-// registry.go; this file is only the connection-lifecycle reads/writes.
-
 import (
 	"context"
 	"errors"
@@ -84,6 +78,23 @@ func (r *Registry) GrantedScopesFor(ctx context.Context, userID ids.UserID, prov
 	return granted, nil
 }
 
+// ReconnectedSince reports whether the user's live connection to provider was
+// granted again after since. A grant restamps connected_at; a token refresh
+// does not, so only the human's own reconnect counts.
+func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, provider string, since time.Time) (bool, error) {
+	var connected time.Time
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT connected_at FROM capture_connection`+sendableConnection, userID, provider).Scan(&connected)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: reading when the connection was granted: %w", err)
+	}
+	return connected.After(since), nil
+}
+
 // SenderFor resolves the transmitting connection for one user and provider:
 // the connector's EmailSender seam, its unsealed credential, and the scopes
 // the PROVIDER says the grant holds. It is the send path's entry point, which
@@ -132,85 +143,26 @@ func (r *Registry) SenderFor(ctx context.Context, userID ids.UserID, provider st
 	return sender, auth, granted, nil
 }
 
-// ConnectionView is one row of the caller's standing capture connections,
-// for the list surface (listConnectors). It carries only status + cursor +
-// the watch deadline — never the credential, which lives in the vault behind
-// credential_ref.
-type ConnectionView struct {
-	ID             ids.UUID
-	Provider       string
-	Status         string     // connected | disconnected | error | reauth_required (capture_connection.status)
-	Cursor         []byte     // the incremental-sync watermark (jsonb bytes), or nil
-	WatchExpiresAt *time.Time // push/delta subscription renewal deadline, or nil
-
-	// ProviderScopes is what the PROVIDER granted, in the provider's own
-	// vocabulary — the fact the contract's CaptureConnection.scopes names, and
-	// the one a human can act on. Nil for a connection whose connector cannot
-	// report it, or one made before the grant was recorded: absence, not an
-	// empty grant. The internal permission scopes stay in the row's own
-	// `scopes` column and are not a list-surface concern.
-	ProviderScopes []string
-
-	// AccountLabel is the display-only mailbox address the connector reported
-	// at connect time (AccountLabeler), or nil when the connector implements
-	// no such seam or could not read one from the bundle. Never routed or
-	// authorized on.
-	AccountLabel *string
-
-	// MailPosture is what this mailbox asks of the mail it brings in
-	// (shared | classified | held). Never empty for a live connection: the
-	// column is NOT NULL with a default, so a row that predates the caller's
-	// binary still answers.
-	MailPosture string
-
-	// ContextTag is the word every record this connection creates is filed
-	// under, or nil when the operator chose none.
-	ContextTag *ContextTag
-
-	// Sync health from the CAP-DDL-5 sidecar; all nil before the first sync
-	// (a connection with no sidecar row is simply due immediately).
-	LastSyncedAt   *time.Time
-	LastErrorClass *string
-	NextSyncDueAt  *time.Time
-
-	// FailingSince is when the CURRENT failure streak began, nil while the
-	// connection is healthy. It answers the question the class cannot: a
-	// provider that has been unreachable for an hour and one that missed its
-	// last tick carry the same class, and a sync that postpones itself is never
-	// late by any age reading, so without this the two read identically on a
-	// fleet screen. Set on the first failure after a success and left alone
-	// until one clears it, so the duration a reader takes off it is the
-	// outage's rather than the newest attempt's.
-	FailingSince *time.Time
-
-	// Backfill is the newest CAP-DDL-4 run, nil when never started —
-	// the list surface's per-connection summary (contract state "none").
-	Backfill *BackfillRun
-
-	// SignatureEnrichEnabled is this mailbox's own answer to the nightly
-	// signature pass, nil to follow the tenant default. Nil is a third state
-	// rather than a missing value: a mailbox that never chose moves with the
-	// default, and one that did keeps its answer whatever the default becomes.
-	SignatureEnrichEnabled *bool
-
-	CanBackfill bool // supportsBackfill, asked of this provider's connector
+// Connections lists the caller's own mailbox connections, for a user or their
+// agent. It carries status and cursors, never the credential.
+func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
+	return r.connectionViews(ctx, true)
 }
 
-// Connections lists the CALLING human's own standing connections in the
-// current workspace (the query's own workspace predicate scopes the read to
-// the workspace; user_id scopes it to this human — capture is per-user, RC-8).
-func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
+func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([]ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return nil, fmt.Errorf("capture: only a human lists their connections: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return nil, fmt.Errorf("capture: only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
 	}
 	var out []ConnectionView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
 			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
+			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
-			       s.last_synced_at, s.last_error_class, s.next_sync_at, s.failing_since
+			       s.last_synced_at, s.last_success_at, s.last_error_class, s.next_sync_at, s.failing_since,
+ c.connected_at, c.silence_dismissed_since, s.last_delivery_at
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 			-- The word's own row, so the connection reports the name the
@@ -230,17 +182,23 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 			var tagID *ids.UUID
 			var tagName *string
 			var tagArchived *bool
+			var baseline historyBaselineColumns
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
+				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
-				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince); err != nil {
+				&v.LastSyncedAt, &v.LastSuccessAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
+			v.HistoryBaseline = baseline.baseline()
 			out = append(out, v)
 		}
 		if err := rows.Err(); err != nil {
 			return err
+		}
+		if !includeBackfill {
+			return nil
 		}
 		// A user holds at most a handful of connections, so the per-row
 		// latest-run read stays a bounded loop, not an N-problem.
@@ -256,6 +214,10 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing connections: %w", err)
+	}
+	now := r.now()
+	for i := range out {
+		classifyConnection(&out[i], now)
 	}
 	return out, nil
 }
@@ -275,8 +237,8 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 // (keyvault contract), so the retry is safe.
 func (r *Registry) Disconnect(ctx context.Context, name string) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return fmt.Errorf("capture: only a human disconnects a connector: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return fmt.Errorf("capture: only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
@@ -355,17 +317,18 @@ func (r *Registry) Disconnect(ctx context.Context, name string) error {
 //   - fully done (disconnected, ref NULL): matches neither arm → ErrNoRows →
 //     idempotent no-op.
 //
-// A credential_ref-only predicate misses the legacy case entirely:
-// credential_ref IS NULL there even though a live secret sits in auth, so the
-// row would never match and disconnect would be a silent no-op that leaves the
-// row connected and the credential intact.
+// A credential_ref-only predicate misses the legacy case, whose secret sits in
+// auth: disconnect would leave that row connected and the credential intact.
 //
-// The row is read FOR UPDATE before the flip so the audit before-image is the
-// status the human is actually withdrawing from, and so a concurrent reconnect
-// serializes behind this transaction rather than racing it.
+// The row is read FOR UPDATE so the audit before-image is the status being
+// withdrawn from, and a concurrent reconnect serializes behind this one. The
+// seat-address claim lock on its label comes first, as for a connect.
 func (r *Registry) withdrawConnection(ctx context.Context, userID ids.UUID, name string) (*string, error) {
 	var ref *string
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := lockConnectionClaimsTx(ctx, tx, userID, name, nil); err != nil {
+			return err
+		}
 		var connID ids.UUID
 		var priorStatus string
 		var priorLabel *string

@@ -237,8 +237,8 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	e := integration.Setup(t)
 	// Two due candidates, so a pass that kept walking after a deferral asks
 	// twice and a stop asks once.
-	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nFlaky Contact\nCOO\n+49 30 1111111")
-	seedEnrichContact(t, e, "flakier@acme.example", "Thanks,\nFlakier Contact\nCFO\n+49 30 2222222")
+	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nBob Contact\nCOO\n+49 30 1111111")
+	seedEnrichContact(t, e, "flakier@acme.example", "Thanks,\nBob Contact\nCFO\n+49 30 2222222")
 
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
@@ -757,14 +757,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
-		[]contacts.SignatureField{{
-			Name: "title", Value: "PARTNER MANAGER DACH",
-			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
-			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
-		}}); err != nil {
-		t.Fatalf("seeding the wrong field through the real applier: %v", err)
-	}
+	applyAsTheOlderPassDid(t, e, contact, activity)
 
 	enricher := NewCaptureEnricher(e.Pool, &signatureScriptBrain{}, slog.New(slog.DiscardHandler))
 	if _, err := enricher.RunWorkspace(ctx); err != nil {
@@ -828,14 +821,7 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
-		[]contacts.SignatureField{{
-			Name: "title", Value: "PARTNER MANAGER DACH",
-			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
-			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
-		}}); err != nil {
-		t.Fatalf("seeding the wrong field: %v", err)
-	}
+	applyAsTheOlderPassDid(t, e, contact, activity)
 
 	// A human sees the wrong title and types the right one. UpdateContact writes
 	// the COLUMN and leaves the sidecar row alone, so the row still says the
@@ -889,14 +875,7 @@ func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
-		[]contacts.SignatureField{{
-			Name: "title", Value: "PARTNER MANAGER DACH",
-			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
-			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
-		}}); err != nil {
-		t.Fatalf("seeding the wrong field through the real applier: %v", err)
-	}
+	applyAsTheOlderPassDid(t, e, contact, activity)
 	// Two rows the same pass wrote in name only: one names the same message in
 	// a spelling the writer never produces, one is not a uuid at all.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -939,4 +918,22 @@ func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
 	if len(left) != 2 || left[0] != "linkedin" || left[1] != "role" {
 		t.Errorf("fields left = %v, want [linkedin role]: a ref the text match could not reach was taken", left)
 	}
+}
+
+// applyAsTheOlderPassDid lands a title off mail somebody else sent, as the pass
+// did before it asked who sent the mail. The applier refuses such mail now, so
+// the contact is named a sender for the write and the row is removed after it.
+func applyAsTheOlderPassDid(t *testing.T, e *integration.Env, contact, activity ids.UUID) {
+	t.Helper()
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'from')`, activity, contact)
+	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{{
+			Name: "title", Value: "PARTNER MANAGER DACH",
+			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
+			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
+		}}, true); err != nil {
+		t.Fatalf("seeding the wrong field through the real applier: %v", err)
+	}
+	e.WsExec(t, `DELETE FROM activity_participant
+		WHERE activity_id = $1 AND contact_id = $2 AND role = 'from' AND address IS NULL`, activity, contact)
 }

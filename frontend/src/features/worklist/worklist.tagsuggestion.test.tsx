@@ -27,6 +27,7 @@ const CONTACT = "01a0e9f1-0000-7000-8000-0000000000c1";
 const COMPANY = "01a0e9f1-0000-7000-8000-0000000000a1";
 
 const row: WorklistItem = {
+  occurred_precision: "instant",
   id: SUGGESTION,
   source: "tag_suggestion",
   category: "decisions",

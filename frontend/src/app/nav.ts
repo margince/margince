@@ -9,10 +9,10 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { opensAFocusedFiltersPage } from "../features/lists/filtersaddress";
 import type { MessageKey } from "../i18n/en";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { EXTENSION_SCREEN } from "../lib/extensions";
+import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import {

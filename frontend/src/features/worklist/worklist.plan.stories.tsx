@@ -26,6 +26,7 @@ export const DueCommitment: StoryObj = {
             owner=""
             onReview={() => {}}
             item={{
+              occurred_precision: "instant",
               id: "commitment-1",
               source: "weekly_commitment",
               category: "tasks",

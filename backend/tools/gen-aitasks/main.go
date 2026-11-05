@@ -118,6 +118,9 @@ type companyContextDef struct {
 	Scopes      []string `yaml:"scopes"`
 	TokenBudget int      `yaml:"token_budget"`
 	Conditional bool     `yaml:"conditional"`
+	// OfferingSelectable lets the caller name which legal entity's offering
+	// the context describes; every other task reads the main offering.
+	OfferingSelectable bool `yaml:"offering_selectable"`
 }
 
 // UnmarshalYAML accepts the scalar `none` alongside a policy mapping: most
@@ -135,11 +138,14 @@ func (p *companyContextDef) UnmarshalYAML(node *yaml.Node) error {
 		Scopes      []string `yaml:"scopes"`
 		TokenBudget int      `yaml:"token_budget"`
 		Conditional bool     `yaml:"conditional"`
+
+		OfferingSelectable bool `yaml:"offering_selectable"`
 	}
 	if err := decodeMapping(node, &raw); err != nil {
 		return fmt.Errorf("company_context: %w", err)
 	}
 	p.Scopes, p.TokenBudget, p.Conditional = raw.Scopes, raw.TokenBudget, raw.Conditional
+	p.OfferingSelectable = raw.OfferingSelectable
 	return nil
 }
 
@@ -162,9 +168,9 @@ func (p *companyContextDef) validate(task string) error {
 	if len(p.Scopes) == 0 {
 		// `none` means none: a budget or a condition attached to a policy that
 		// selects nothing reads as a scope list someone deleted, not a decision.
-		if p.TokenBudget != 0 || p.Conditional {
-			return fmt.Errorf("task %q: company_context selects no scopes but carries token_budget %d and conditional %t",
-				task, p.TokenBudget, p.Conditional)
+		if p.TokenBudget != 0 || p.Conditional || p.OfferingSelectable {
+			return fmt.Errorf("task %q: company_context selects no scopes but carries token_budget %d, conditional %t and offering_selectable %t",
+				task, p.TokenBudget, p.Conditional, p.OfferingSelectable)
 		}
 		return nil
 	}

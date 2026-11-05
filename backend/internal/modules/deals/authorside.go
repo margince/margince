@@ -14,7 +14,12 @@ package deals
 // context and no transaction, so every case it must answer can be written as a
 // table — which is what makes the seller-authored case testable at all.
 
-import "strings"
+import (
+	"slices"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/owndomain"
+)
 
 // AuthorSide is the Go spelling of deal_stage_evidence.author_side.
 type AuthorSide string
@@ -80,8 +85,14 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 		// author. It is not attributable to a contact, so it settles nothing.
 		return AuthorUnknown
 	}
-	if author.UserID != "" || addressIsOurs(author.Address, ownDomains) {
+	if author.UserID != "" {
 		return AuthorSeller
+	}
+	switch domainSideOf(author.Address, ownDomains) {
+	case ownDomain:
+		return AuthorSeller
+	case ownSubdomain:
+		return AuthorUnknown
 	}
 	// An identified author who is neither a seat nor on one of our domains is
 	// the counterparty, direction or no direction.
@@ -121,24 +132,35 @@ func authorOf(participants []Participant) (Participant, bool) {
 	return Participant{}, false
 }
 
-// addressIsOurs reports whether an address sits on a domain this installation
-// writes from.
+// domainSide is which side an address's domain puts its writer on.
+type domainSide int
+
+const (
+	outsideDomain domainSide = iota
+	ownDomain
+	ownSubdomain
+)
+
+// domainSideOf places an address by its domain, with both sides folded by
+// owndomain.Fold. Only an own domain itself proves the writer is ours.
 //
-// Compared on the domain alone, case-folded. A sub-domain is NOT ours unless
-// it is listed: treating mail.example.com as example.com would let anybody who
-// can register a look-alike host author seller-side evidence.
-func addressIsOurs(address string, ownDomains []string) bool {
-	at := strings.LastIndex(address, "@")
-	if at < 0 || at == len(address)-1 {
-		return false
+// Capture covers subdomains, but authorship settles a contract milestone. A
+// workspace may own example.com and delegate customer.example.com to a
+// customer, and a subsidiary may write from an own subdomain. Neither side is
+// proven, so a subdomain that owndomain.Set.Covers accepts but nobody listed
+// is ownSubdomain: it settles nothing as seller and nothing as buyer.
+func domainSideOf(address string, ownDomains []string) domainSide {
+	domain := owndomain.OfAddress(address)
+	own := owndomain.New(ownDomains)
+	switch {
+	case domain == "":
+		return outsideDomain
+	case slices.Contains(own.Domains(), domain):
+		return ownDomain
+	case own.CoversDomain(domain):
+		return ownSubdomain
 	}
-	domain := strings.ToLower(address[at+1:])
-	for _, own := range ownDomains {
-		if domain == strings.ToLower(strings.TrimSpace(own)) {
-			return true
-		}
-	}
-	return false
+	return outsideDomain
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body
@@ -157,31 +179,42 @@ const (
 )
 
 // CountsAsBuyerParticipant reports whether one participant is evidence that
-// somebody from the OTHER side was on the activity.
+// somebody from the OTHER side was on the activity. seatDomains are the folded
+// domains of our seats on it (SeatDomains).
 //
-// The test is a real outside address, not the absence of a seat. Three rows
-// carry no user_id and none of them shows an outside attendee:
-//
-//   - a colleague logged through the manual path, written as a contact link
-//     with no address at all;
-//   - one of our own contacts writing from an address on a domain we own;
-//   - a row naming nobody, which identifies no side.
-//
-// Counting the absence of a seat as "the buyer was there" is what would let an
-// internal meeting settle a criterion about the buyer turning up. The
-// conservative direction is the safe one here: an outside attendee we cannot
-// place leaves the criterion unmet, which a human can fix, while a phantom one
-// advances a deal on a meeting nobody outside attended.
-func CountsAsBuyerParticipant(p Participant, ownDomains []string) bool {
+// The test is a real outside address by owndomain.Parties.IsOutsideAttendee,
+// the rule capture used to keep the meeting. The absence of a seat proves
+// nothing: a colleague logged by hand is a contact link with no user_id.
+func CountsAsBuyerParticipant(p Participant, parties owndomain.Parties, seatDomains []string) bool {
 	if p.UserID != "" {
 		return false
 	}
-	if p.Address == "" {
-		// A contact-linked row with no address may be a colleague; a row naming
-		// nobody at all is not an attendee either way.
-		return false
+	return parties.IsOutsideAttendee(p.Address, seatDomains)
+}
+
+// BuyerParticipantCount counts the participants CountsAsBuyerParticipant
+// accepts, against the seats on the same activity.
+func BuyerParticipantCount(participants []Participant, parties owndomain.Parties) int {
+	seats := SeatDomains(participants)
+	n := 0
+	for _, p := range participants {
+		if CountsAsBuyerParticipant(p, parties, seats) {
+			n++
+		}
 	}
-	return !addressIsOurs(p.Address, ownDomains)
+	return n
+}
+
+// SeatDomains are the folded domains of the seats on an activity, which
+// CountsAsBuyerParticipant reads.
+func SeatDomains(participants []Participant) []string {
+	var out []string
+	for _, p := range participants {
+		if d := owndomain.OfAddress(p.Address); p.UserID != "" && d != "" && !slices.Contains(out, d) {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 // MeetingProof is what a meeting offers as evidence that it happened.
@@ -265,4 +298,25 @@ func SettlesBuyerMilestone(kind CriterionKind, side AuthorSide) bool {
 		return true
 	}
 	return side == AuthorBuyer
+}
+
+// allCriterionKinds lists the criterion kinds. ParseCriterionKind admits these
+// and no other, and SettlingEvidenceSQL reads its buyer kinds from them.
+var allCriterionKinds = []CriterionKind{
+	CriterionBuyerConfirmed, CriterionEventHeld, CriterionDocumentSigned,
+	CriterionRoleIdentified, CriterionTermsAccepted, CriterionCustom, CriterionLegalReviewed,
+}
+
+// SettlingEvidenceSQL is SettlesBuyerMilestone as a condition over a criterion
+// alias and an evidence alias, for a reader that counts settled criteria in
+// SQL. It is built from BuyerMilestone, so the two cannot name different kinds.
+func SettlingEvidenceSQL(criterion, evidence string) string {
+	var buyerKinds []string
+	for _, kind := range allCriterionKinds {
+		if kind.BuyerMilestone() {
+			buyerKinds = append(buyerKinds, "'"+string(kind)+"'")
+		}
+	}
+	return "(" + criterion + ".kind NOT IN (" + strings.Join(buyerKinds, ", ") + ") OR " +
+		evidence + ".author_side = '" + string(AuthorBuyer) + "')"
 }

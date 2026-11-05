@@ -46,6 +46,12 @@ type routeMeta struct {
 	baseURL string
 }
 
+// sameRoute reports whether two bound rungs reach one known API, so the
+// identical request would arrive at the same place. The router stops retrying a
+// rejected request on it. The ladder warning names ladders that collapse on
+// it, so the two agree on what a second rung is.
+func sameRoute(a, b routeMeta) bool { return a.provider != "" && a == b }
+
 // Router is the tiered routing engine (B-EP06.4): tasks name tiers,
 // tiers resolve to bound Clients, the budget guardrail bends the route
 // before the call, and every call lands in the meter. This is the one
@@ -276,8 +282,8 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// economy route. The stale entry stays put — TTL ages it out, and the
 	// band may relax within its lifetime. A cache-off Router (§ cert lane,
 	// scripted repeat-call tests) never consults it: every call must reach
-	// the model.
-	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && hit && tierOnLadder(ladder, tier) {
+	// the model. So does a call that asked for a fresh answer (WithFreshAnswer).
+	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && !FreshAnswerAsked(ctx) && hit && tierOnLadder(ladder, tier) {
 		resp, info, err = r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
 		info.cacheKey = key
 		return resp, info, err

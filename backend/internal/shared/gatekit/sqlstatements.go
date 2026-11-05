@@ -53,6 +53,15 @@ func SQLStatementsIn(t testing.TB, path, source string) []string {
 // SQLStatementsOf is SQLStatementsIn over a subtree already parsed — the shape
 // a census wants when it is walking declarations rather than whole files.
 func SQLStatementsOf(node ast.Node) []string {
+	return sqlStatements(node, nil)
+}
+
+// SQLStatementsWithConstants resolves shared projections without splitting their statements.
+func SQLStatementsWithConstants(node ast.Node, constants map[string]string) []string {
+	return sqlStatements(node, constants)
+}
+
+func sqlStatements(node ast.Node, constants map[string]string) []string {
 	var out []string
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch typed := n.(type) {
@@ -60,7 +69,11 @@ func SQLStatementsOf(node ast.Node) []string {
 			if typed.Op != token.ADD {
 				return true
 			}
-			if joined, ok := ConcatenatedString(typed); ok {
+			joined, ok := ConcatenatedString(typed)
+			if constants != nil {
+				joined, ok = StringExpr(typed, constants, FoldTotal)
+			}
+			if ok {
 				out = append(out, joined)
 				// The literal parts are this statement, already read. The parts
 				// that are NOT literals are still walked: `"x " + fmt.Sprintf(
@@ -68,9 +81,13 @@ func SQLStatementsOf(node ast.Node) []string {
 				// the whole Sprintf subtree with it — a statement the
 				// per-literal readers this replaced could all see.
 				for _, opaque := range opaqueOperands(typed) {
-					out = append(out, SQLStatementsOf(opaque)...)
+					out = append(out, sqlStatements(opaque, constants)...)
 				}
 				return false
+			}
+		case *ast.Ident:
+			if text, known := constants[typed.Name]; known {
+				out = append(out, text)
 			}
 		case *ast.BasicLit:
 			if text, isString := LiteralText(typed); isString {

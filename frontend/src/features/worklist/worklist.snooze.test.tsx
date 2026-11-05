@@ -9,10 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { rowMenuName } from "../../testing/worklist.testkit";
 import { SNOOZE_DAYS, SNOOZE_SPANS } from "./worklist.dispositions";
 import type { WorklistItem } from "./worklist.queries";
 import { RowActs } from "./worklist.rowverbs";
-import { rowMenuName } from "./worklist.testkit";
 
 // How long a row is put down for.
 //
@@ -30,6 +30,7 @@ const TITLE = "Anna Weber is waiting";
 
 function row(): WorklistItem {
   return {
+    occurred_precision: "instant",
     id: "01a05500-0000-7000-8000-0000000000a1",
     source: "customer_waiting",
     category: "customer_waiting",

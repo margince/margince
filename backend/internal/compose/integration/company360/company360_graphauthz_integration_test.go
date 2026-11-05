@@ -264,11 +264,16 @@ func TestCompanyGraphSignalRouteNamesTheWarmRoomsContact(t *testing.T) {
 	employ(t, e, cold, company, "cfo")
 	employ(t, e, warm, company, "cto")
 	// Only the warm contact has qualifying interactions inside the §4 window,
-	// so the ranking has one honest answer rather than a tie.
+	// so the ranking has one answer rather than a tie. Their inbound
+	// mail names them as its sender, as capture does: recency counts from the
+	// contact's own part.
 	for _, direction := range []string{"inbound", "outbound"} {
 		activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', '`+direction+`', 'manual', 'human:x')`)
 		integration.LinkActivity(t, owner, activity, "contact", warm)
+		if direction == "inbound" {
+			integration.LinkActivitySender(t, owner, activity, warm)
+		}
 	}
 	signal := seedOpenSignal(t, owner, company)
 

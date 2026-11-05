@@ -227,3 +227,122 @@ func TestTheMeetingPlanCaseIssuesTheRequestProductionIssues(t *testing.T) {
 		t.Error("the request carries no secret stripper; production's does")
 	}
 }
+
+// A contact on two deals: a lost one with most of the mail, and the open one
+// this meeting is about.
+const twoDealPlanFixture = `{
+	"subject": "Discovery call",
+	"company": "Asia Flight Services",
+	"attendee": "Rainer Vogt",
+	"deal": "Deal B",
+	"other_deals": [{"label":"deal_a","name":"Deal A","state":"lost"}],
+	"messages": [
+		{"label":"a_scope","days_ago":90,"direction":"inbound","subject":"Fleet telematics scope","deal":"deal_a",
+		 "body":"We want fleet telematics on every aircraft tug by spring."},
+		{"label":"a_pricing","days_ago":80,"direction":"inbound","subject":"Telematics pricing","deal":"deal_a",
+		 "body":"The fleet telematics price is above our budget."},
+		{"label":"a_decision","days_ago":70,"direction":"inbound","subject":"Telematics decision","deal":"deal_a",
+		 "body":"We will not go ahead with fleet telematics this year."},
+		{"label":"b_kickoff","days_ago":5,"direction":"inbound","subject":"Hangar booking","deal":"this",
+		 "body":"Can your hangar booking module replace our spreadsheets?"}
+	]
+}`
+
+const twoDealPlanExpectation = `{"cites_label":"b_kickoff","names_token":"hangar booking",
+	"objective_cites_any":["b_kickoff","this"],"objective_avoids":"telematics"}`
+
+func runTwoDealPlanCase(t *testing.T, answer func(prompt string) string) aitasks.Outcome {
+	t.Helper()
+	prepared, err := meetingPlanCases{}.Prepare(
+		json.RawMessage(twoDealPlanFixture), json.RawMessage(twoDealPlanExpectation))
+	if err != nil {
+		t.Fatalf("preparing the case: %v", err)
+	}
+	trace, err := prepared.Run(context.Background(), &meetingPlanStub{answer: answer})
+	if err != nil {
+		t.Fatalf("running the case: %v", err)
+	}
+	return prepared.Evaluate(trace)
+}
+
+// twoDealPlan is a plan whose objective rests on one message and says one
+// thing, with a question on the open deal's message.
+func twoDealPlan(t *testing.T, prompt, objectiveSubject, objective string) string {
+	t.Helper()
+	cited := idFor(t, prompt, objectiveSubject)
+	kickoff := idFor(t, prompt, "Hangar booking")
+	return `{"objective":{"text":"` + objective + `","evidence":[{"entity_type":"activity","entity_id":"` + cited + `"}]},
+		"questions":[{"ask":"Which spreadsheets would hangar booking replace first?","why":"They asked.",
+			"listen_for":"Who owns them.","evidence":[{"entity_type":"activity","entity_id":"` + kickoff + `"}]}]}`
+}
+
+func TestTheMeetingPlanCaseAcceptsAnObjectiveOnTheMeetingsDeal(t *testing.T) {
+	got := runTwoDealPlanCase(t, func(prompt string) string {
+		return twoDealPlan(t, prompt, "Hangar booking", "Agree which spreadsheets hangar booking replaces first.")
+	})
+	if got.Result != aitasks.OutcomeAccepted {
+		t.Errorf("outcome = %q (%s), want accepted", got.Result, got.Detail)
+	}
+}
+
+func TestTheMeetingPlanCaseNamesAnObjectiveAboutTheLostDeal(t *testing.T) {
+	got := runTwoDealPlanCase(t, func(prompt string) string {
+		return twoDealPlan(t, prompt, "Telematics decision", "Win back the fleet telematics rollout.")
+	})
+	if got.Result != aitasks.OutcomeWrongAnswer {
+		t.Errorf("outcome = %q (%s), want wrong_answer for an objective about the lost deal", got.Result, got.Detail)
+	}
+	if !strings.Contains(got.Detail, "telematics") {
+		t.Errorf("detail = %q, want it to name the avoided topic", got.Detail)
+	}
+}
+
+// The prompt the case sends tags every message with its deal.
+func TestTheTwoDealCaseShowsTheModelWhichDealEachMessageIsOn(t *testing.T) {
+	runTwoDealPlanCase(t, func(prompt string) string {
+		if strings.Count(prompt, `"on_this_deal":`) != 4 || strings.Count(prompt, `"state":"lost"`) != 3 {
+			t.Errorf("the prompt does not tag all four messages with their deal: %s", prompt)
+		}
+		return "{}"
+	})
+}
+
+func TestTheMeetingPlanCaseRefusesADealScenarioThatMeasuresNothing(t *testing.T) {
+	for _, tc := range []struct{ name, fixture, expected, wants string }{
+		{
+			name: "the avoided topic is on this meeting's own deal",
+			fixture: strings.Replace(twoDealPlanFixture,
+				"Can your hangar booking module", "After telematics, can your hangar booking module", 1),
+			expected: twoDealPlanExpectation,
+			wants:    "a message on this meeting's own deal",
+		},
+		{
+			name:     "the avoided topic is in no message",
+			fixture:  twoDealPlanFixture,
+			expected: strings.Replace(twoDealPlanExpectation, `"telematics"`, `"catering"`, 1),
+			wants:    "in no other deal's message",
+		},
+		{
+			name:     "a message filed under a deal the fixture lacks",
+			fixture:  strings.Replace(twoDealPlanFixture, `"deal":"deal_a",`, `"deal":"deal_c",`, 1),
+			expected: twoDealPlanExpectation,
+			wants:    "names no deal the fixture supplies",
+		},
+		{
+			name:     "an objective citation naming nothing",
+			fixture:  twoDealPlanFixture,
+			expected: strings.Replace(twoDealPlanExpectation, `"this"]`, `"absent"]`, 1),
+			wants:    "names no message or deal",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := meetingPlanCases{}.Prepare(json.RawMessage(tc.fixture), json.RawMessage(tc.expected))
+			if err == nil {
+				t.Fatal("the case accepted a deal scenario that could measure nothing")
+			}
+			if !strings.Contains(err.Error(), tc.wants) {
+				t.Errorf("refusal = %q, want it to name %q", err, tc.wants)
+			}
+		})
+	}
+}

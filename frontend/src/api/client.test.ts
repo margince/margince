@@ -1,8 +1,9 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { problemCode } from "../lib/problem";
 import {
   api,
   CACHE_ANSWER_GRACE_MS,
@@ -137,10 +138,8 @@ describe("a gateway that gave up on the app behind it", () => {
     });
 
     expect(response.status).toBe(502);
-    expect(error).toMatchObject({
-      code: "gateway_unavailable",
-      status: 502,
-    });
+    expect(problemCode(error)).toBe("gateway_unavailable");
+    expect(error).toMatchObject({ status: 502 });
   });
 
   // A gateway status the app DID answer keeps its own body: the server's
@@ -151,7 +150,10 @@ describe("a gateway that gave up on the app behind it", () => {
       vi.fn(
         async () =>
           new Response(
-            JSON.stringify({ code: "maintenance_mode", detail: "upgrading" }),
+            JSON.stringify({
+              code: "service_unavailable",
+              detail: "upgrading",
+            }),
             {
               status: 503,
               headers: { "Content-Type": "application/problem+json" },
@@ -164,7 +166,7 @@ describe("a gateway that gave up on the app behind it", () => {
       params: { path: { id: "01a0-4cd2" } },
     });
 
-    expect(error).toMatchObject({ code: "maintenance_mode" });
+    expect(error).toMatchObject({ code: "service_unavailable" });
   });
 
   // An ordinary refusal is untouched.
@@ -396,4 +398,38 @@ describe("the api client's model-call count", () => {
 
     expect(seen).toEqual([0]);
   });
+});
+
+it("shows model work when Analytics interpretation outlives a cached answer", async () => {
+  vi.useFakeTimers();
+  let settle: ((reply: Response) => void) | undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          settle = resolve;
+        }),
+    ),
+  );
+  const pending = api.POST("/analytics/assessment", {
+    body: {
+      selection: {
+        scope: { kind: "workspace" },
+        period: "this_quarter",
+        target_basis: "fiscal_quarter",
+        close_window: "all_open",
+        metrics: [],
+        blocks: [],
+      },
+    },
+  });
+  await vi.advanceTimersByTimeAsync(CACHE_ANSWER_GRACE_MS + 1);
+  expect(modelCallsInFlight()).toBe(1);
+  if (!settle) throw new Error("assessment request did not open");
+  settle(
+    new Response("{}", { headers: { "Content-Type": "application/json" } }),
+  );
+  await pending;
+  expect(modelCallsInFlight()).toBe(0);
 });

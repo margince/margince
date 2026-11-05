@@ -9,7 +9,7 @@
 // NEVER REACHABLE ON A REAL DEPLOYMENT. Registration (compose's
 // NewCaptureRegistry), send authority (compose's mailAppConfigured), and the
 // connect endpoint (compose/connectors_testmailbox.go) are each conditioned
-// on deployconfig.Operations.AllowTestMailbox, which defaults to false.
+// on operations.allow_test_mailbox, which defaults to false.
 //
 // Its addresses are quarantined to RFC 2606 reserved domains
 // (example.com/.net/.org, .test/.example/.invalid/.localhost) — SendEmail

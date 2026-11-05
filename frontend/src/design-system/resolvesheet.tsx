@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
-import { DateInput, type ISODate, isISODate } from "./dateinput";
+import { DateInput, type ISODate } from "./dateinput";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { ErrorLine } from "./errorline";
+import { refuseUnreadableField } from "./formvalidity";
 import { Heading } from "./heading";
 
 // Answering a finding from the nightly input check.
@@ -23,14 +24,26 @@ import { Heading } from "./heading";
 // its own labels would give the same answer three names.
 export function ResolveSheet({
   open,
+  context,
   labels,
   onSubmit,
   onClose,
   pending,
   error,
   returnFocusTo,
+  outcomeFields,
+  canSubmit,
+  asksExpiry,
 }: Readonly<{
   open: boolean;
+  // What is being answered, shown above the choices. The sheet covers the list
+  // that opened it, so without this the reader answers blind.
+  context?: ReactNode;
+  outcomeFields?: (outcome: ResolveOutcome | "") => ReactNode;
+  canSubmit?: (outcome: ResolveOutcome) => boolean;
+  // Whether a hiding answer offers an end date. An answer that closes the
+  // record for good has nothing to end.
+  asksExpiry?: (outcome: ResolveOutcome) => boolean;
   labels: ResolveSheetLabels;
   onSubmit: (answer: ResolveAnswer) => void;
   onClose: () => void;
@@ -50,13 +63,16 @@ export function ResolveSheet({
   const titleID = useId();
 
   const needsReason = suppresses(outcome);
+  const needsExpiry =
+    needsReason && outcome !== "" && (asksExpiry?.(outcome) ?? true);
   const needsRemind = outcome === "remind_later";
   // Nothing chosen is not an answer. Submitting with no outcome would post a
   // body the server refuses, and the reader would read the refusal as a bug.
   const complete =
     outcome !== "" &&
     (!needsReason || reason.trim() !== "") &&
-    (!needsRemind || remindAt !== "");
+    (!needsRemind || remindAt !== "") &&
+    (canSubmit?.(outcome) ?? true);
 
   return (
     <Modal
@@ -73,12 +89,15 @@ export function ResolveSheet({
       </DrawerHead>
       <DrawerBody>
         <div className="form-stack">
+          {context}
           <ChoiceList
             legend={labels.outcomeLegend}
             value={outcome}
             choices={labels.outcomes}
             onChange={setOutcome}
           />
+
+          {outcomeFields?.(outcome)}
 
           {/* A hidden finding owes the next reader the reason it is not flagged. */}
           {needsReason && (
@@ -100,7 +119,7 @@ export function ResolveSheet({
                 <DateInput
                   {...control}
                   value={remindAt}
-                  onChange={(event) => setRemindAt(asDate(event.target.value))}
+                  onChange={(event) => setRemindAt(event.target.value)}
                 />
               )}
             </Field>
@@ -108,13 +127,13 @@ export function ResolveSheet({
 
           {/* Past the server's ceiling the date is refused, not shortened, so the
               hint states the limit. */}
-          {needsReason && (
+          {needsExpiry && (
             <Field label={labels.expiresAt} hint={labels.expiresHelp}>
               {(control) => (
                 <DateInput
                   {...control}
                   value={expiresAt}
-                  onChange={(event) => setExpiresAt(asDate(event.target.value))}
+                  onChange={(event) => setExpiresAt(event.target.value)}
                 />
               )}
             </Field>
@@ -128,8 +147,8 @@ export function ResolveSheet({
         <Button
           variant="primary"
           disabled={!complete || pending}
-          onClick={() => {
-            if (outcome === "") {
+          onClick={(event) => {
+            if (outcome === "" || refuseUnreadableField(event.currentTarget)) {
               return;
             }
             // Only the fields this outcome takes. Sending an expiry with a
@@ -139,7 +158,7 @@ export function ResolveSheet({
               reason: needsReason ? reason.trim() : undefined,
               remindAt: needsRemind ? remindAt : undefined,
               expiresAt:
-                needsReason && expiresAt !== "" ? expiresAt : undefined,
+                needsExpiry && expiresAt !== "" ? expiresAt : undefined,
             });
           }}
         >
@@ -148,15 +167,6 @@ export function ResolveSheet({
       </DrawerFoot>
     </Modal>
   );
-}
-
-// asDate narrows what the element reported.
-//
-// The input only ever reports YYYY-MM-DD or the empty string, and dateinput
-// ships the predicate for exactly this — asserting the type instead would claim
-// what a check can establish.
-function asDate(raw: string): ISODate | "" {
-  return isISODate(raw) ? raw : "";
 }
 
 // The two answers that take a finding off every screen. They are the reason

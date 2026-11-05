@@ -35,7 +35,7 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 var relationshipTypeField = storekit.Field{
 	Expr:    "rt.relationship_type",
 	Type:    storekit.FieldPicklist,
-	Options: relationshipTypeValues,
+	Options: relationshipTypeValues, ReadsLink: true,
 	Link: "EXISTS (SELECT 1 FROM company_relationship_type rt" +
 		" WHERE rt.company_id = t.id AND rt.archived_at IS NULL AND %s)",
 }
@@ -71,8 +71,9 @@ var relationshipTypeField = storekit.Field{
 // unconditionally, so the leaf answers over live accounts. That is consistent
 // with every other leaf on this engine, which is the property worth keeping.
 var domainField = storekit.Field{
-	Expr: "od.domain",
-	Type: storekit.FieldDomain,
+	Expr:      "od.domain",
+	Type:      storekit.FieldDomain,
+	ReadsLink: true,
 	Link: "EXISTS (SELECT 1 FROM company_domain od" +
 		" WHERE od.company_id = t.id AND od.archived_at IS NULL AND %s)",
 }
@@ -121,28 +122,31 @@ func technicalFactLink(field string) string {
 // as the multi-valued leaves, because the fact lives in the fact table either
 // way.
 var mailProviderField = storekit.Field{
-	Expr:    technicalFactValue,
-	Type:    storekit.FieldPicklist,
-	Options: mailProviderValues,
-	Link:    technicalFactLink("mail_provider"),
+	Expr:      technicalFactValue,
+	Type:      storekit.FieldPicklist,
+	Options:   mailProviderValues,
+	Link:      technicalFactLink("mail_provider"),
+	ReadsLink: true,
 }
 
 // hostingProviderField selects accounts hosted with one named provider.
 var hostingProviderField = storekit.Field{
-	Expr:    technicalFactValue,
-	Type:    storekit.FieldPicklist,
-	Options: hostingProviderValues,
-	Link:    technicalFactLink("hosting_provider"),
+	Expr:      technicalFactValue,
+	Type:      storekit.FieldPicklist,
+	Options:   hostingProviderValues,
+	Link:      technicalFactLink("hosting_provider"),
+	ReadsLink: true,
 }
 
 // operatedServiceField selects accounts that demonstrably operate one named
 // service — MULTI-VALUED, and the leaf that answers "every account with a
 // webshop".
 var operatedServiceField = storekit.Field{
-	Expr:    technicalFactValue,
-	Type:    storekit.FieldPicklist,
-	Options: operatedServiceValues,
-	Link:    technicalFactLink("operated_service"),
+	Expr:      technicalFactValue,
+	Type:      storekit.FieldPicklist,
+	Options:   operatedServiceValues,
+	Link:      technicalFactLink("operated_service"),
+	ReadsLink: true,
 }
 
 // technologyField selects accounts running one named technology.
@@ -154,5 +158,5 @@ var operatedServiceField = storekit.Field{
 var technologyField = storekit.Field{
 	Expr: technicalFactValue,
 	Type: storekit.FieldText,
-	Link: technicalFactLink("technology"),
+	Link: technicalFactLink("technology"), ReadsLink: true,
 }

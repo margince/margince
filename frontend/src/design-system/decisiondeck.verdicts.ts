@@ -4,6 +4,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { type DecisionApproval, decisionLapsed } from "./decisioncard";
 import type {
+  DecisionDeckChips,
   DecisionDeckItem,
   DeckVerdict,
   StagedDecision,
@@ -38,21 +39,29 @@ export function dragVerdict(dx: number, dy: number): DeckVerdict | null {
 }
 
 /**
+ * Every key the deck's surface claims, as `KeyboardEvent.key` values. The
+ * handler below and the app's shortcuts dialog both read these, so a key cannot
+ * be bound without being listed.
+ */
+export const DECK_VERDICT_KEYS = [
+  { key: "ArrowRight", verdict: "accept" },
+  { key: "ArrowLeft", verdict: "reject" },
+  { key: "ArrowUp", verdict: "edit" },
+  { key: "ArrowDown", verdict: "skip" },
+] as const satisfies readonly Readonly<{ key: string; verdict: DeckVerdict }>[];
+
+/** Matched without case, so Caps Lock does not take the undo away. */
+export const DECK_UNSTAGE_KEY = "u";
+
+export const DECK_COMMIT_KEY = "Enter";
+
+/**
  * The verdict a key means, or null for a key this deck does not claim. Exported
  * so the keyboard and the pointer are provably the same vocabulary rather than
  * two lists that happen to agree today.
  */
 export function keyVerdict(key: string): DeckVerdict | null {
-  if (key === "ArrowRight") {
-    return "accept";
-  }
-  if (key === "ArrowLeft") {
-    return "reject";
-  }
-  if (key === "ArrowUp") {
-    return "edit";
-  }
-  return key === "ArrowDown" ? "skip" : null;
+  return DECK_VERDICT_KEYS.find((bound) => bound.key === key)?.verdict ?? null;
 }
 
 /**
@@ -100,6 +109,7 @@ export function itemLapsed(item: DecisionDeckItem, now: number): boolean {
  * chip could truthfully report either way.
  */
 export type DecisionSharedFacts = Readonly<{
+  memberCount?: number;
   kind?: string;
   proposedBy?: string;
   confidence?: number;
@@ -117,6 +127,7 @@ export type DecisionSharedFacts = Readonly<{
 export function sharedFacts(item: DecisionDeckItem): DecisionSharedFacts {
   const members = item.kind === "single" ? [item.approval] : item.members;
   return {
+    memberCount: members.length,
     kind: agreed(members, (member) => member.kind),
     proposedBy: agreed(members, (member) => member.proposed_by),
     confidence: agreed(members, (member) => member.confidence),
@@ -176,12 +187,12 @@ export function deckKeyHandler({
       onStage(live, verdict);
       return;
     }
-    if (event.key === "u" || event.key === "U") {
+    if (event.key.toLowerCase() === DECK_UNSTAGE_KEY) {
       event.preventDefault();
       onUnstage();
       return;
     }
-    if (event.key === "Enter") {
+    if (event.key === DECK_COMMIT_KEY) {
       event.preventDefault();
       onCommit();
     }
@@ -200,4 +211,18 @@ export function deckKeyHandler({
  */
 export function verdictSends(entry: StagedDecision): boolean {
   return entry.verdict === "accept" || entry.verdict === "reject";
+}
+
+export function itemAcceptable(
+  item: DecisionDeckItem,
+  now: number,
+  chips?: (
+    approval: DecisionApproval,
+    shared: DecisionSharedFacts,
+  ) => DecisionDeckChips,
+): boolean {
+  if (itemLapsed(item, now)) return false;
+  const members = item.kind === "single" ? [item.approval] : item.members;
+  const shared = sharedFacts(item);
+  return members.every((member) => chips?.(member, shared).canAccept !== false);
 }

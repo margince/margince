@@ -194,41 +194,6 @@ func TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames(t *testing.T) {
 	}
 }
 
-// holdUnderTheStatutoryFloor places the message under a retention obligation,
-// the whole shape production writes it.
-//
-// The evidence row first, because activity_refuse_restricted_mutation refuses a
-// hold with nothing recording what qualified it. archived_at with it, because
-// the activity_restricted_is_archived CHECK makes held-but-live a state the
-// table cannot hold — which is why both production writers (privacy.PinToFloor
-// and the erasure's restrict arm) archive as they hold.
-//
-// Seeded rather than driven through PinToFloor because that path wants a
-// controller principal and a stated reason, and what this test varies is whether
-// the take-over respects the hold — not how the hold was decided.
-func holdUnderTheStatutoryFloor(t *testing.T, e *integration.Env, activity ids.UUID) {
-	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_retention_evidence
-			       (activity_id, basis, qualified_at, decided_by_name, reason)
-			VALUES ($1, 'controller_pin', now(), 'Datenschutz', 'supplier correspondence')`,
-			activity); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(), `
-			UPDATE activity
-			   SET restricted_at = now(), archived_at = now(),
-			       restricted_reason = 'commercial_correspondence',
-			       restricted_until = now() + interval '10 years',
-			       retention_class = 'commercial_correspondence', retention_class_at = now()
-			 WHERE id = $1`, activity)
-		return err
-	}); err != nil {
-		t.Fatalf("placing the message under a statutory hold: %v", err)
-	}
-}
-
 // A message under a STATUTORY HOLD is not taken over, and the sync advances
 // past it.
 //
@@ -276,7 +241,7 @@ func TestAMessageUnderAStatutoryHoldIsNotTakenOver(t *testing.T) {
 	held := scalar[ids.UUID](t, e, `
 		SELECT activity_id FROM activity_identity
 		 WHERE identity_kind = 'mail' AND identity_key = $1`, messageID)
-	holdUnderTheStatutoryFloor(t, e, held)
+	integration.HoldUnderStatutoryFloor(t, e, held)
 	// The version AFTER the hold is written, because placing the hold is itself
 	// an UPDATE and bumps it. What this pins is that nothing touched the row
 	// between the hold and the end of the test.

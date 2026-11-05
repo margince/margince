@@ -117,12 +117,11 @@ func (s *Store) Connect(ctx context.Context, in ConnectInput) (Connection, error
 		if err != nil {
 			return err
 		}
-		out = conns[in.Provider]
 		// The price list rides every connection a caller sees, including the
 		// one they just made: the card that appears on connecting is exactly
 		// where somebody learns what the automatic half costs them.
-		out.Catalog = catalogOf(desc)
-		return nil
+		out, err = s.presentAfterWrite(ctx, tx, conns[in.Provider], desc)
+		return err
 	})
 	if err != nil {
 		// The row did not commit, so the sealed secret has nothing pointing
@@ -149,7 +148,7 @@ func (s *Store) Connect(ctx context.Context, in ConnectInput) (Connection, error
 // and destroys the key. Data already retrieved stays until retention, erasure
 // or the separate delete-data action: disconnecting is not deleting.
 func (s *Store) Disconnect(ctx context.Context, name string) error {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionDelete); err != nil {

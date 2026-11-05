@@ -6,6 +6,7 @@ package reporting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -61,11 +62,28 @@ func (s *Service) executeClaim(ctx context.Context, claim executionClaim) error 
 		if err != nil {
 			return err
 		}
+		recorded, err := s.revisionMetricVersions(human, tx, ids.UUID(report.Id), run.Execution.ReportRevision)
+		if err != nil {
+			return err
+		}
+		if err := withdrawChangedDefinitions(&evaluation, recorded); err != nil {
+			return err
+		}
+		if err := requireEveryMetricCalculated(evaluation.Result); err != nil {
+			return err
+		}
 		if !evaluation.Result.Context.Interval.StartAt.Equal(run.Interval.StartAt) || !evaluation.Result.Context.Interval.EndAt.Equal(run.Interval.EndAt) {
 			return invalid("reporting cutoff precedes the requested capture interval")
 		}
+		questions, err := s.captureQuestions(human, tx, ids.UUID(report.Id), run.Execution.ReportRevision, selection)
+		if err != nil {
+			return err
+		}
 		edition := crmcontracts.ReportingEdition{Id: openapi_types.UUID(ids.NewV7()), ReportId: report.Id, ReportRevision: run.Execution.ReportRevision, Name: report.Name, CapturedAt: evaluation.Result.Context.EvaluatedAt, IntendedDueAt: run.Execution.IntendedDueAt, Evaluation: evaluation.Result}
 		if err := s.writeEdition(human, tx, claim, report, edition, evaluation.Facts); err != nil {
+			return err
+		}
+		if err := writeEditionQuestions(human, tx, edition.Id, questions); err != nil {
 			return err
 		}
 		return s.completeClaim(human, tx, claim, edition)
@@ -90,7 +108,8 @@ func (s *Service) publicationGuard(ctx context.Context, tx pgx.Tx, claim executi
 	if err := s.canEditReport(ctx, tx, report); err != nil {
 		return run, report, err
 	}
-	err = tx.QueryRow(ctx, "SELECT interval_start,interval_end,schedule_id,schedule_version FROM report_execution WHERE id="+b.add(claim.ID)+" AND status='running' AND fence="+b.add(claim.Fence)+" AND lease_until>"+b.add(s.now()), b.values...).Scan(&run.Interval.StartAt, &run.Interval.EndAt, &run.ScheduleID, &run.ScheduleVersion)
+	query := "SELECT interval_start,interval_end,schedule_id,schedule_version FROM report_execution WHERE id=" + b.add(claim.ID) + " AND status='running' AND fence=" + b.add(claim.Fence) + " AND lease_until>" + b.add(s.now())
+	err = tx.QueryRow(ctx, query, b.values...).Scan(&run.Interval.StartAt, &run.Interval.EndAt, &run.ScheduleID, &run.ScheduleVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return run, report, errPublicationLeaseLost
 	}
@@ -101,7 +120,8 @@ func (s *Service) publicationGuard(ctx context.Context, tx pgx.Tx, claim executi
 		b = bindings{}
 		var enabled bool
 		var version int64
-		err = tx.QueryRow(ctx, "SELECT enabled,version FROM report_schedule WHERE id="+b.add(*run.ScheduleID)+" FOR UPDATE", b.values...).Scan(&enabled, &version)
+		statement := "SELECT enabled,version FROM report_schedule WHERE id=" + b.add(*run.ScheduleID) + " FOR UPDATE"
+		err = tx.QueryRow(ctx, statement, b.values...).Scan(&enabled, &version)
 		if err != nil {
 			return run, report, err
 		}
@@ -146,7 +166,8 @@ func (s *Service) completeClaim(ctx context.Context, tx pgx.Tx, claim executionC
 		}
 	}
 	var b bindings
-	command, err := tx.Exec(ctx, "UPDATE report_execution SET status="+b.add(status)+",edition_id="+b.add(edition.Id)+",lease_until=NULL,reason=NULL WHERE id="+b.add(claim.ID)+" AND status='running' AND fence="+b.add(claim.Fence)+" AND lease_until>"+b.add(s.now()), b.values...)
+	query := "UPDATE report_execution SET status=" + b.add(status) + ",edition_id=" + b.add(edition.Id) + ",lease_until=NULL,reason=NULL WHERE id=" + b.add(claim.ID) + " AND status='running' AND fence=" + b.add(claim.Fence) + " AND lease_until>" + b.add(s.now())
+	command, err := tx.Exec(ctx, query, b.values...)
 	if err != nil {
 		return err
 	}
@@ -161,15 +182,15 @@ func (s *Service) completeClaim(ctx context.Context, tx pgx.Tx, claim executionC
 
 func (s *Service) failClaim(ctx context.Context, claim executionClaim, cause error) error {
 	status := "failed"
-	reason := "Report generation failed. Retry the run."
+	words := statusWords.Failed
 	var retry *time.Time
 	switch {
 	case errors.Is(cause, apperrors.ErrPermissionDenied), errors.Is(cause, apperrors.ErrNotFound):
 		status = reportingSuspended
-		reason = "The accountable owner can no longer generate this report. Review their access and schedule."
+		words = statusWords.Access
 	case errors.Is(cause, apperrors.ErrConflict):
 		status = "skipped"
-		reason = "The report or schedule changed before publication."
+		words = statusWords.Changed
 	case claim.Attempt-claim.RetryBase < 3:
 		status = reportingPending
 		delay := 5 * time.Minute
@@ -180,12 +201,14 @@ func (s *Service) failClaim(ctx context.Context, claim executionClaim, cause err
 		retry = &at
 	}
 	return s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		reason := s.statusCopy(ctx, tx).Say(words)
 		before, err := executionState(ctx, tx, claim.ID)
 		if err != nil {
 			return err
 		}
 		var b bindings
-		command, err := tx.Exec(ctx, "UPDATE report_execution SET status="+b.add(status)+",reason="+b.add(reason)+",retry_at="+b.add(retry)+",lease_until=NULL WHERE id="+b.add(claim.ID)+" AND status='running' AND fence="+b.add(claim.Fence), b.values...)
+		query := "UPDATE report_execution SET status=" + b.add(status) + ",reason=" + b.add(reason) + ",retry_at=" + b.add(retry) + ",lease_until=NULL WHERE id=" + b.add(claim.ID) + " AND status='running' AND fence=" + b.add(claim.Fence)
+		command, err := tx.Exec(ctx, query, b.values...)
 		if err != nil {
 			return err
 		}
@@ -197,4 +220,16 @@ func (s *Service) failClaim(ctx context.Context, claim executionClaim, cause err
 		}
 		return s.recordScheduleResult(ctx, tx, claim, status, reason)
 	})
+}
+
+// requireEveryMetricCalculated refuses to publish an edition with a metric the
+// database failed to calculate. The run retries instead: an edition is kept,
+// and a passing failure captured in it would outlast the failure.
+func requireEveryMetricCalculated(evaluation crmcontracts.ReportingEvaluation) error {
+	for _, metric := range evaluation.Metrics {
+		if metric.Coverage.Status == crmcontracts.ReportingStatusFailed {
+			return fmt.Errorf("reporting: metric %s could not be calculated, so no edition is published", metric.Id)
+		}
+	}
+	return nil
 }

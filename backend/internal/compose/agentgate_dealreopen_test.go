@@ -209,10 +209,10 @@ func TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot(t *testing.
 		records: versionedDeal{stageID: stage, version: 3},
 	}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
 	// Nil dependencies are enough: resolving a tier reads the arguments and
 	// invokes no handler.
-	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil, nil)
 
 	pol, described := agentPolicies["POST /v1/activities/{id}/relink"]
 	if !described {
@@ -272,12 +272,12 @@ func TestEveryDynamicTierRouteHasACommandThatAnswersItsTier(t *testing.T) {
 		records: versionedDeal{stageID: stage, version: 3},
 	}
 	reg := agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
-	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil, nil)
+	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
 	// relink_activity is a lifecycle tool, and it is dynamic — the walk below
 	// derives the routes to check from the policy table, so a registry missing
 	// this set would report the route as unresolvable rather than skip it.
 	// Nil dependencies are enough: resolving a tier invokes no handler.
-	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil)
+	agents.RegisterLifecycleTools(reg, deps.records, nil, nil, nil, nil, nil)
 
 	checked := 0
 	for route, pol := range agentPolicies {

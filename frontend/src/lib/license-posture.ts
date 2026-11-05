@@ -7,9 +7,9 @@ import { throwProblem } from "./problem";
 // The installation's licence, and the one thing the chrome does with it.
 //
 // Here rather than in either place it grew. The entitlement query lived in
-// screens/license.tsx and the posture that sits on it in the agent rail's reads
-// module — so the shell's own banner reached a settings screen through the
-// rail, and neither file was the home of a read three surfaces share.
+// features/settings/license.tsx, and the posture on it in the agent rail's reads
+// module. So the shell's own banner reached a settings screen through the rail.
+// Neither file was the home of a read three surfaces share.
 //
 // ONE query key for all three, which is the point: the banner, the rail's pill
 // and the settings card can never disagree about how many seats are in use, and

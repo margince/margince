@@ -136,6 +136,20 @@ func TestTheEvidenceQueryRefusesADraftContract(t *testing.T) {
 	}
 }
 
+// The read is the advance's question without its lock. A reader that locked
+// would hold up an archive, and one that reworded the question would drift.
+func TestTheReadAsksTheAdvancesQuestionWithoutItsLock(t *testing.T) {
+	if !strings.Contains(readEvidenceQuery, signedAgreementFrom) || !strings.Contains(evidenceQuery, signedAgreementFrom) {
+		t.Error("the read and the advance do not share one question")
+	}
+	if strings.Contains(readEvidenceQuery, "FOR SHARE") {
+		t.Error("the read takes a lock it has no need of")
+	}
+	if !strings.Contains(evidenceQuery, "FOR SHARE") {
+		t.Error("the advance no longer locks the evidence it found")
+	}
+}
+
 // The contract's maxLength on this field is a promise the SCHEMA makes and the
 // generated server does not keep: it validates no string length, and the column
 // is plain `text` whose only CHECK is the "other needs a detail" rule. So a

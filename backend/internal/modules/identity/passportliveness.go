@@ -55,6 +55,11 @@ const agentLivenessPredicate = `
 const (
 	agentByHashPredicate = `p.token_hash = $1`
 	agentByIDPredicate   = `p.id = $1`
+
+	agentOfHumanByIDPredicate        = `p.id = $1 AND p.on_behalf_of = $2`
+	agentNewestOnConnectionPredicate = `p.oauth_grant_id = $1 AND p.on_behalf_of = $2
+		  AND p.id = (SELECT newest.id FROM passport newest WHERE newest.oauth_grant_id = $1
+		              ORDER BY newest.created_at DESC, newest.id DESC LIMIT 1)`
 )
 
 // agentAuthQuery assembles the agent-authentication statement around one

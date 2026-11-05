@@ -1,19 +1,30 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useId, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { RedirectUriGroup } from "../../components/oauth-redirects";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { RedirectUriGroup } from "./oauth-redirects";
+import {
+  APP_LIST_KEY,
+  appKey,
+  useOAuthApp,
+  useRemoveOAuthApp,
+  useSetOAuthApp,
+  type Vendor,
+  vendorCopy,
+} from "../../lib/oauth-app";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 
 /**
- * A connector OAuth app a mailbox connection is made through — Google's, or
- * Microsoft's.
+ * An OAuth app this installation holds: Google's or Microsoft's, which mailbox
+ * connections and sign-in go through, or one an extension unit declares.
  *
  * ONE card, rendered once per vendor. The two ask for the same three things and
  * differ only in the words around them, so a second component would be a second
@@ -26,117 +37,123 @@ import { RedirectUriGroup } from "./oauth-redirects";
  * against the vendor's console.
  */
 
-export type Vendor = "google" | "microsoft";
+/**
+ * Which app a card is about: a core vendor by its key, or a unit's app by its
+ * provider and its title.
+ */
+export type OAuthAppIdentity =
+  | Readonly<{ provider: Vendor; title?: undefined }>
+  | Readonly<{ provider: string; title: string }>;
 
-// vendorCopy is each vendor's own wording, as literal message keys.
-//
-// A record of literals rather than a template built from the provider name: the
-// translator's key type is a closed union, so a computed key types as a plain
-// string and a missing translation would reach a reader as a raw key instead of
-// failing the build.
-export const vendorCopy = {
-  google: {
-    title: "oauthApp.google.title",
-    sub: "oauthApp.google.sub",
-    absent: "oauthApp.google.absent",
-    redirectSub: "oauthApp.google.redirectSub",
-    clientIdPlaceholder: "oauthApp.google.clientIdPlaceholder",
-    removeConfirmTitle: "oauthApp.google.removeConfirmTitle",
-    removeConfirmBody: "oauthApp.google.removeConfirmBody",
-  },
-  microsoft: {
-    title: "oauthApp.microsoft.title",
-    sub: "oauthApp.microsoft.sub",
-    absent: "oauthApp.microsoft.absent",
-    redirectSub: "oauthApp.microsoft.redirectSub",
-    clientIdPlaceholder: "oauthApp.microsoft.clientIdPlaceholder",
-    removeConfirmTitle: "oauthApp.microsoft.removeConfirmTitle",
-    removeConfirmBody: "oauthApp.microsoft.removeConfirmBody",
-  },
-} as const;
+type CardCopy = Readonly<{
+  title: string;
+  sub: string;
+  absent: string;
+  redirectSub: string;
+  clientIdPlaceholder?: string;
+  removeConfirmTitle: string;
+  removeConfirmBody: string;
+}>;
 
-// The query key carries the vendor, so storing one app does not blank the
-// other's card — one key for both would make every write invalidate a view it
-// says nothing about.
-function appQueryKey(provider: Vendor) {
-  return ["installation-oauth-app", provider];
+// A unit's app is worded around its title, since the core knows nothing else
+// about the vendor.
+function cardCopy(app: OAuthAppIdentity, t: ReturnType<typeof useT>): CardCopy {
+  if (app.title === undefined) {
+    const copy = vendorCopy[app.provider];
+    return {
+      title: t(copy.title),
+      sub: t(copy.sub),
+      absent: t(copy.absent),
+      redirectSub: t(copy.redirectSub),
+      clientIdPlaceholder: t(copy.clientIdPlaceholder),
+      removeConfirmTitle: t(copy.removeConfirmTitle),
+      removeConfirmBody: t(copy.removeConfirmBody),
+    };
+  }
+  const title = { title: app.title };
+  return {
+    title: app.title,
+    sub: t("oauthApp.unit.sub", title),
+    absent: t("oauthApp.unit.absent", title),
+    redirectSub: t("oauthApp.unit.redirectSub"),
+    removeConfirmTitle: t("oauthApp.unit.removeConfirmTitle", title),
+    removeConfirmBody: t("oauthApp.unit.removeConfirmBody", title),
+  };
 }
 
-export function useOAuthApp(provider: Vendor) {
-  return useQuery({
-    queryKey: appQueryKey(provider),
+// The deployment's app is the one every connect uses, so it locks this form: a
+// stored app would be saved and never read. `lockReasonId` is set only while the
+// reason is drawn.
+function useAppLock(
+  loaded:
+    | { locks?: Parameters<typeof lockFor>[0]; configured: boolean }
+    | undefined,
+  lockKey: string | undefined,
+) {
+  const t = useT();
+  const lockId = useId();
+  // A unit's app has no deployment setting, so no lock names it.
+  const lock = lockFor(loaded?.locks, lockKey ?? "", t);
+  return {
+    lock,
+    lockId,
+    lockReasonId: lock.disabled ? lockId : undefined,
+    stored: loaded?.configured === true && !lock.disabled,
+  };
+}
+
+/**
+ * A card per OAuth app the composed extension units declare, in the list's
+ * order. Nothing renders on an installation whose units declare none, nor
+ * while the list loads, since most have none to wait for.
+ */
+export function UnitOAuthAppCards() {
+  const t = useT();
+  const apps = useQuery({
+    queryKey: APP_LIST_KEY,
     queryFn: async () => {
       const { data, error, response } = await api.GET(
-        "/installation/oauth-apps/{provider}",
-        { params: { path: { provider } } },
+        "/installation/oauth-apps",
       );
       if (error || !response.ok) {
         throwProblem(error);
       }
-      return data;
+      return data.data;
     },
   });
+  if (apps.isError) {
+    const title = t("oauthApp.unit.listTitle");
+    return (
+      <Panel title={title}>
+        <PanelBody>
+          <QueryStates query={apps} pendingLabel={title}>
+            {null}
+          </QueryStates>
+        </PanelBody>
+      </Panel>
+    );
+  }
+  return (
+    <>
+      {(apps.data ?? []).map((app) =>
+        app.title === undefined ? null : (
+          <OAuthAppCard
+            key={app.provider}
+            provider={app.provider}
+            title={app.title}
+          />
+        ),
+      )}
+    </>
+  );
 }
 
-export function useSetOAuthApp(provider: Vendor) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // Collected the moment nothing observes it, because what this mutation's
-    // `variables` hold is a credential rather than a form field. The caller
-    // resets it once settled for the same reason.
-    gcTime: 0,
-    mutationFn: async (vars: {
-      clientId: string;
-      clientSecret: string;
-      tenant: string;
-    }) => {
-      unwrap(
-        await api.PUT("/installation/oauth-apps/{provider}", {
-          params: { path: { provider } },
-          body: {
-            client_id: vars.clientId,
-            client_secret: vars.clientSecret,
-            // Omitted rather than sent empty: the server refuses a tenant on a
-            // vendor that has no directories, and an empty string is a value.
-            ...(vars.tenant === "" ? {} : { tenant: vars.tenant }),
-          },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      // All three: the card's own view, the setup report (which names this
-      // step as outstanding whether or not it blocks anything), and the
-      // connector roster, whose per-provider availability is decided by
-      // whether this app exists.
-      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
-      await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
-      await queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
-  });
-}
-
-function useRemoveOAuthApp(provider: Vendor) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async () => {
-      unwrap(
-        await api.DELETE("/installation/oauth-apps/{provider}", {
-          params: { path: { provider } },
-        }),
-      );
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: appQueryKey(provider) });
-      await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
-    },
-  });
-}
-
-export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
+export function OAuthAppCard(app: OAuthAppIdentity) {
+  const { provider } = app;
   const t = useT();
-  const copy = vendorCopy[provider];
+  const copy = cardCopy(app, t);
   const canManage = useCanWrite("capture_settings", "update");
-  const app = useOAuthApp(provider);
+  const appQuery = useOAuthApp(provider);
   const save = useSetOAuthApp(provider);
   const remove = useRemoveOAuthApp(provider);
   const [clientId, setClientId] = useState("");
@@ -161,13 +178,18 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
   const failure = save.error ?? remove.error;
   // A failed refetch keeps the old data while the gate above offers Retry.
-  const loaded = app.isError ? undefined : app.data;
+  const loaded = appQuery.isError ? undefined : appQuery.data;
+  const { lock, lockId, lockReasonId, stored } = useAppLock(
+    loaded,
+    app.title === undefined ? appKey[app.provider] : undefined,
+  );
+  const replaceHint = stored ? t("oauthApp.replaceHint") : undefined;
 
   return (
-    <Panel title={t(copy.title)}>
+    <Panel title={copy.title}>
       <PanelBody>
-        <PanelIntro>{t(copy.sub)}</PanelIntro>
-        <QueryGate query={app} pendingLabel={t(copy.title)}>
+        <PanelIntro>{copy.sub}</PanelIntro>
+        <QueryGate query={appQuery} pendingLabel={copy.title}>
           {(status) => (
             <>
               {failure && (
@@ -179,19 +201,12 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                   {problemMessageOf(failure, t)}
                 </Callout>
               )}
-              {/* Three states, because there are three answers. `configured`
-                  alone could not tell "nothing anywhere" from "the deployment
-                  supplies one", and the card said the former in both — telling
-                  an operator mail could not be connected on installations
-                  where it demonstrably could. */}
+              {/* `configured` is true for the deployment's app too; its lock,
+                  under the fields, says where that one is set. */}
               <p className="t-body">
-                {status.source === "stored" &&
-                  t("oauthApp.configured", { clientId: status.client_id })}
-                {status.source === "environment" &&
-                  t("oauthApp.fromEnvironment", {
-                    clientId: status.client_id,
-                  })}
-                {status.source === "none" && t(copy.absent)}
+                {status.configured
+                  ? t("oauthApp.configured", { clientId: status.client_id })
+                  : copy.absent}
               </p>
               {/* Whatever the app's source: a directory pin is a fact about
                   who can sign in, and an operator debugging a refused login
@@ -209,27 +224,29 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
       {loaded && (
         <PanelBody>
           <RedirectUriGroup
-            open={loaded.source === "none"}
+            open={!loaded.configured}
             uris={loaded.redirect_uris}
-            sub={t(copy.redirectSub)}
+            sub={copy.redirectSub}
           />
           <div className="form-stack">
-            <Field
-              label={t("oauthApp.clientId")}
-              hint={
-                loaded.source === "stored"
-                  ? t("oauthApp.replaceHint")
-                  : undefined
-              }
-            >
+            {lock.disabled && (
+              <p id={lockId} className="t-caption">
+                {lock.reason}
+              </p>
+            )}
+            <Field label={t("oauthApp.clientId")} hint={replaceHint}>
               {(control) => (
                 <TextInput
                   {...control}
+                  aria-describedby={describedByIds(
+                    control["aria-describedby"],
+                    lockReasonId,
+                  )}
                   ref={clientIdRef}
                   value={clientId}
                   autoComplete="off"
-                  disabled={!canManage || busy}
-                  placeholder={t(copy.clientIdPlaceholder)}
+                  disabled={!canManage || busy || lock.disabled}
+                  placeholder={copy.clientIdPlaceholder}
                   onChange={(e) => setClientId(e.target.value)}
                 />
               )}
@@ -238,10 +255,14 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
               {(control) => (
                 <TextInput
                   {...control}
+                  aria-describedby={describedByIds(
+                    control["aria-describedby"],
+                    lockReasonId,
+                  )}
                   type="password"
                   autoComplete="off"
                   value={clientSecret}
-                  disabled={!canManage || busy}
+                  disabled={!canManage || busy || lock.disabled}
                   onChange={(e) => setClientSecret(e.target.value)}
                 />
               )}
@@ -254,63 +275,69 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                 {(control) => (
                   <TextInput
                     {...control}
+                    aria-describedby={describedByIds(
+                      control["aria-describedby"],
+                      lockReasonId,
+                    )}
                     // The stored directory until somebody edits it, so a
                     // rotation carries the pinning forward. Widening an app
                     // to every company then takes emptying the field.
                     value={tenant ?? loaded.tenant ?? ""}
                     autoComplete="off"
-                    disabled={!canManage || busy}
+                    disabled={!canManage || busy || lock.disabled}
                     placeholder={t("oauthApp.tenantPlaceholder")}
                     onChange={(e) => setTenant(e.target.value)}
                   />
                 )}
               </Field>
             )}
-            <div className="form-actions">
-              <Button
-                variant="primary"
-                pending={save.isPending}
-                disabled={!canManage || remove.isPending || !ready}
-                onClick={() => {
-                  remove.reset();
-                  save.mutate(
-                    {
-                      clientId: clientId.trim(),
-                      clientSecret: clientSecret.trim(),
-                      tenant: (tenant ?? loaded.tenant ?? "").trim(),
-                    },
-                    {
-                      onSuccess: () => {
-                        // The field is the only copy this app holds, and it
-                        // has done its job.
-                        setClientSecret("");
-                        setClientId("");
-                        setTenant(undefined);
-                        save.reset();
-                      },
-                    },
-                  );
-                }}
-              >
-                {loaded.source === "stored"
-                  ? t("oauthApp.replace")
-                  : t("oauthApp.store")}
-              </Button>
-              {loaded.source === "stored" && (
+            {/* A locked app refuses every value, its own included, so no
+                verb is offered at all. */}
+            {!lock.disabled && (
+              <div className="form-actions">
                 <Button
-                  variant="danger"
-                  pending={remove.isPending}
-                  disabled={!canManage || save.isPending}
-                  onClick={() => setConfirming(true)}
+                  variant="primary"
+                  pending={save.isPending}
+                  disabled={!canManage || remove.isPending || !ready}
+                  onClick={() => {
+                    remove.reset();
+                    save.mutate(
+                      {
+                        clientId: clientId.trim(),
+                        clientSecret: clientSecret.trim(),
+                        tenant: (tenant ?? loaded.tenant ?? "").trim(),
+                      },
+                      {
+                        onSuccess: () => {
+                          // The field is the only copy this app holds, and it
+                          // has done its job.
+                          setClientSecret("");
+                          setClientId("");
+                          setTenant(undefined);
+                          save.reset();
+                        },
+                      },
+                    );
+                  }}
                 >
-                  {t("oauthApp.remove")}
+                  {stored ? t("oauthApp.replace") : t("oauthApp.store")}
                 </Button>
-              )}
-            </div>
+                {stored && (
+                  <Button
+                    variant="danger"
+                    pending={remove.isPending}
+                    disabled={!canManage || save.isPending}
+                    onClick={() => setConfirming(true)}
+                  >
+                    {t("oauthApp.remove")}
+                  </Button>
+                )}
+              </div>
+            )}
             <ConfirmModal
               open={confirming}
               onClose={() => setConfirming(false)}
-              title={t(copy.removeConfirmTitle)}
+              title={copy.removeConfirmTitle}
               confirmLabel={t("oauthApp.remove")}
               confirmVariant="danger"
               pending={remove.isPending}
@@ -332,7 +359,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                 });
               }}
             >
-              {t(copy.removeConfirmBody)}
+              {copy.removeConfirmBody}
             </ConfirmModal>
           </div>
         </PanelBody>

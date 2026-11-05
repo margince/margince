@@ -379,7 +379,7 @@ func TestADealPastItsCloseDateOutranksAQuieterOne(t *testing.T) {
 func TestTheOvernightBriefingReachesTheQueue(t *testing.T) {
 	day := crmcontracts.Attention{
 		AsOf:        rankInstant,
-		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item")},
+		ThisMorning: []crmcontracts.AttentionItem{item("brief-1", "brief_item", withCurrentIntervention())},
 	}
 
 	rows := classifyDay(day, rankInstant, dayMoney{})
@@ -616,8 +616,7 @@ func TestEveryWaitingRowMayStateItsSubject(t *testing.T) {
 }
 
 // Under `mine`, a thread about a colleague's deal is that colleague's to
-// answer. A message filed under nothing stays: an unowned customer writing in
-// is everybody's, and dropping it would leave nobody looking at it.
+// answer. Unowned messages remain reachable through the unassigned scope.
 func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
 	reader := ids.MustParse("01a05500-0000-7000-8000-000000000001")
 	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000ff")
@@ -640,8 +639,22 @@ func TestAColleaguesWaitingCustomerLeavesTheReadersOwnQueue(t *testing.T) {
 			t.Fatal("a thread about a colleague's deal reached a queue scoped to the reader")
 		}
 	}
-	if len(out.Queue) == 0 {
-		t.Fatal("the unfiled message was dropped too, leaving nobody looking at it")
+	if len(out.Queue) != 0 {
+		t.Fatal("unassigned work appeared in the personal queue")
+	}
+	unassignedPage := (&Service{}).worklistFrom(ctx, day, scopeUnassigned, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
+	if len(unassignedPage.Queue) != 0 {
+		t.Fatal("unresolved ownership was presented as known unassigned work")
+	}
+	all := (&Service{}).worklistFrom(ctx, day, scopeAll, "", 25, waitingRead{rows: waiting, read: true}, worklistCursor{}, nil)
+	found := false
+	for _, row := range all.Queue {
+		if row.Id == "01a05500-0000-7000-8000-0000000000a2" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("work with unresolved ownership disappeared from the team view")
 	}
 }
 

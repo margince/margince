@@ -8,8 +8,8 @@ package agents
 // door: this one starts a conversation and names the records it belongs to,
 // where they answer one that already exists.
 //
-// 🟡, scope `send`, governed identically to the reply and with no new
-// authority: an agent stages, a human's own action IS the approval (ADR-0055).
+// Tier auto_execute, scope `send`, governed as the reply is, with no new
+// authority. A passport with send runs it, and a tier floor stages it instead.
 // Everything after the origin — the consent gate, deliverability, identity
 // minting, the single-transaction staging of activity + delivery + job — is the
 // reply path's, reached through the same store method the HTTP transport calls.
@@ -42,6 +42,7 @@ type SendCompanyEmailArgs struct {
 func (t sendCompanyEmailTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "send_company_email", Title: "Start an email conversation from a record", Version: toolVersionV1,
+		AskUserFirst:  true,
 		Description:   sendCompanyEmailCopy.render(),
 		Instead:       sendCompanyEmailCopy.Instead,
 		RequiredScope: principal.ScopeSend, Tier: mcp.TierAutoExecute, Egress: true, Unlisted: true,
@@ -103,7 +104,7 @@ func readAccountSendArgs(in json.RawMessage) (SendCompanyEmailArgs, []RecordLink
 	if err := requireAccountSendLinks(args.Links); err != nil {
 		return SendCompanyEmailArgs{}, nil, err
 	}
-	links, err := uniqueRecordLinks(args.Links)
+	links, err := UniqueRecordLinks(args.Links)
 	if err != nil {
 		return SendCompanyEmailArgs{}, nil, err
 	}

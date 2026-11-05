@@ -61,9 +61,9 @@ func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 	}
 }
 
-// The timeline is listed by name, as GET /activities lists it, and never swept.
-// search_records sweeps every type when none is named, so it does not offer it.
-func TestTheTimelineIsListedButNeverSwept(t *testing.T) {
+// Both record tools offer the timeline by name, as GET /activities and
+// GET /v1/search do.
+func TestListRecordsAndSearchRecordsBothOfferTheTimelineByName(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
 	list, listed := registry.Spec("list_records")
 	search, searched := registry.Spec("search_records")
@@ -73,8 +73,8 @@ func TestTheTimelineIsListedButNeverSwept(t *testing.T) {
 	if !strings.Contains(string(list.InputSchema), `"activity"`) {
 		t.Errorf("list_records does not offer activity, so a passport cannot list the timeline it lists on REST:\n%s", list.InputSchema)
 	}
-	if strings.Contains(string(search.InputSchema), `"activity"`) {
-		t.Errorf("search_records offers activity in its record_type enum:\n%s", search.InputSchema)
+	if !strings.Contains(string(search.InputSchema), `"activity"`) {
+		t.Errorf("search_records does not offer activity by name, as GET /v1/search does:\n%s", search.InputSchema)
 	}
 }
 

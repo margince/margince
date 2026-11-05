@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider, useT } from "../i18n";
 import { withEmailOpener } from "../lib/openemail";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { activityTimeline } from "./activitytimeline";
 import { LoadMoreButton } from "./querystates";
 import {
@@ -47,7 +47,14 @@ const CAPTURED = {
 function activity(
   row: Pick<Activity, "id" | "subject" | "occurred_at"> & Partial<Activity>,
 ): Activity {
-  return { kind: "email", is_done: false, ...CAPTURED, ...row };
+  return {
+    occurred_precision: "instant",
+    offers_email: false,
+    kind: "email",
+    is_done: false,
+    ...CAPTURED,
+    ...row,
+  };
 }
 
 const NEWEST = activity({
@@ -158,9 +165,9 @@ function mount(firstPage?: ActivityPage, client = newQueryClient()) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={INSTALLATION_ZONE}>
+        <ViewerZoneProvider zone={INSTALLATION_ZONE}>
           <Harness firstPage={firstPage} />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -192,9 +199,9 @@ function mountIds(client: QueryClient, firstPage?: ActivityPage) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <RecordZoneProvider zone={INSTALLATION_ZONE}>
+        <ViewerZoneProvider zone={INSTALLATION_ZONE}>
           <IdsHarness firstPage={firstPage} />
-        </RecordZoneProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -264,9 +271,9 @@ describe("a record timeline you can work in", () => {
         initialProps: { enabled: true },
         wrapper: ({ children }) => (
           <QueryClientProvider client={client}>
-            <RecordZoneProvider zone={INSTALLATION_ZONE}>
+            <ViewerZoneProvider zone={INSTALLATION_ZONE}>
               {children}
-            </RecordZoneProvider>
+            </ViewerZoneProvider>
           </QueryClientProvider>
         ),
       },
@@ -385,6 +392,7 @@ describe("a record timeline you can work in", () => {
 
     await user.type(screen.getByLabelText("From"), "2026-03-03");
     await user.type(screen.getByLabelText("To"), "2026-03-05");
+    await user.tab();
     await waitFor(() =>
       expect(feed.last().searchParams.get("occurred_before")).not.toBeNull(),
     );
@@ -437,6 +445,7 @@ describe("a record timeline you can work in", () => {
             email_summary: {
               activity_id: "a-1",
               occurred_at: "2026-08-12T09:00:00Z",
+              occurred_precision: "instant",
               version: 1,
               subject: "Pricing for 40 seats",
               preview: "What would this cost for 40 seats?",
@@ -455,9 +464,9 @@ describe("a record timeline you can work in", () => {
     render(
       <QueryClientProvider client={newQueryClient()}>
         <LocaleProvider initial="en">
-          <RecordZoneProvider zone={INSTALLATION_ZONE}>
+          <ViewerZoneProvider zone={INSTALLATION_ZONE}>
             <LeadHarness onOpen={(id) => opened.push(id)} />
-          </RecordZoneProvider>
+          </ViewerZoneProvider>
         </LocaleProvider>
       </QueryClientProvider>,
     );
@@ -499,6 +508,7 @@ describe("a record timeline you can work in", () => {
         email_summary: {
           activity_id: id,
           occurred_at: `2026-08-1${index}T09:00:00Z`,
+          occurred_precision: "instant",
           version: 1,
           subject: "Cutover plan",
           preview: "Are we still moving on the 14th?",

@@ -76,7 +76,14 @@ var carriesASecondEdgeKind = gatekit.Waive(map[string]string{
 const (
 	employmentHelper = "IsCurrentSQL"
 	primaryHelper    = "CurrentPrimarySQL"
-	employmentIssue  = "eight statements in five sibling modules are ratified separately: a module may not import contacts (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
+	// slotHelper answers the other question. IsCurrentSQL asks whether the job
+	// is still theirs today, as a date comparison, because somebody serving
+	// notice still works there.
+	//
+	// LiveSlotSQL asks whether uq_rel_employment already holds a row, which is
+	// `ended_at IS NULL`. A writer checking before it writes needs that one.
+	slotHelper      = "LiveSlotSQL"
+	employmentIssue = "eight statements in five sibling modules are ratified separately: a module may not import contacts (ADR-0054 §3), so the predicate has to move tier before they can adopt it; see issue 2360"
 )
 
 // employmentKind matches a statement that has scoped itself to employments.
@@ -130,7 +137,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		scope := helperScope{
 			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/shared/kernel/employment"),
 			inside:    file.Name != nil && file.Name.Name == "employment",
-			names:     map[string]bool{employmentHelper: true, primaryHelper: true},
+			names:     map[string]bool{employmentHelper: true, primaryHelper: true, slotHelper: true},
 		}
 		for _, decl := range file.Decls {
 			if plantedProbe(path, decl) {
@@ -161,7 +168,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		"notice still works there, and reading the column's presence as \"gone\" takes them off their "+
 		"employer's contact list the day their notice is filed — with no way back, because ended_at "+
 		"cannot be cleared through the API. Call the helper. (%s)",
-		strings.Join(findings, "\n  "), employmentHelper, employmentIssue)
+		strings.Join(findings, "\n  "), employmentHelper+" (or "+slotHelper+" for the write slot)", employmentIssue)
 }
 
 // employmentStatements returns the SQL statements in a declaration that have
@@ -242,6 +249,20 @@ type employmentProbe struct {
 //
 //gate:probe
 var employmentProbes = []employmentProbe{
+	// The write slot is a second question with a second helper. A writer that
+	// spells it by hand is still an offender, and one reaching LiveSlotSQL is
+	// not.
+	//
+	// Without both cases the gate either sends slot writers to the date
+	// comparison, or stops seeing them.
+	{"the write slot, spelled by hand", true, "", `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NULL AND r.archived_at IS NULL` + "`" + `
+}`},
+	{"the write slot, through its own helper", false, "", `
+func read() string {
+	return ` + "`" + `SELECT 1 FROM relationship r WHERE ` + "`" + ` + employment.LiveSlotSQL("r")
+}`},
 	{"the bare form that shipped, one literal", true, "", `
 func read() string {
 	return ` + "`" + `SELECT 1 FROM relationship r WHERE r.kind = 'employment' AND r.ended_at IS NULL` + "`" + `
@@ -318,7 +339,7 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 	for _, tc := range employmentProbes {
 		t.Run(tc.name, func(t *testing.T) {
 			head := "package probe\n"
-			names := map[string]bool{employmentHelper: true, primaryHelper: true}
+			names := map[string]bool{employmentHelper: true, primaryHelper: true, slotHelper: true}
 			scope := helperScope{qualifier: "contacts", names: names}
 			switch tc.mode {
 			case "contacts":

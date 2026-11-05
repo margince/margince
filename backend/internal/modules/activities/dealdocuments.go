@@ -42,27 +42,13 @@ type DealDocumentFilters struct {
 	Limit         *int
 }
 
-// inlineImageCeiling is the size under which an image part of a captured
-// message is taken for a signature logo or an icon and left out of the Files
-// area. Capture does not mark inline parts, so the rule is the honest proxy:
-// a contract scan is never this small, and a logo is never larger.
-const inlineImageCeiling = 65536
-
 // fieldDealID names the deal in a hide's audit image.
 const fieldDealID = "deal_id"
 
-// dealDocumentMembership says which attachments a deal's Files area holds,
-// before any caller-bound visibility: the deal's own uploads, and the files of
-// an activity linked to the deal, minus inline mail images. `$deal` is the
-// placeholder the caller bound the deal id to.
+// dealDocumentMembership is the deal's Files area before caller-bound
+// visibility. `deal` is the placeholder the caller bound the deal id to.
 func dealDocumentMembership(deal int) string {
-	return fmt.Sprintf(`at.archived_at IS NULL AND NOT at.bytes_withheld AND (
-		(at.entity_type = '%s' AND at.entity_id = $%d)
-		OR (at.entity_type = '%s' AND EXISTS (
-			SELECT 1 FROM activity_link l
-			 WHERE l.activity_id = at.entity_id AND l.entity_type = '%s' AND l.deal_id = $%d)
-			AND NOT (at.content_type LIKE 'image/%%' AND COALESCE(at.byte_size, 0) < %d)))`,
-		linkEntityDeal, deal, linkEntityActivity, linkEntityDeal, deal, inlineImageCeiling)
+	return documentMembership(holderDeal, deal)
 }
 
 // ListDealDocuments returns the deal's Files area, newest first. The caller
@@ -81,7 +67,7 @@ func (s *Store) ListDealDocuments(
 		page storekit.Page
 	)
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, linkEntityDeal, dealID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, linkEntityDeal, dealID); err != nil {
 			return err
 		}
 		var args []any
@@ -109,7 +95,7 @@ func (s *Store) ListDealDocuments(
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT %s,
 			       EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = $%d AND h.attachment_id = at.id) AS hidden,
-			       a.id, a.kind, a.subject, a.occurred_at, a.counterparty_email
+			       a.id, a.kind, a.subject, a.occurred_at, a.occurred_precision, a.counterparty_email
 			  FROM attachment at
 			  LEFT JOIN activity a ON at.entity_type = '%s' AND a.id = at.entity_id AND a.archived_at IS NULL
 			 WHERE %s
@@ -139,7 +125,7 @@ func (s *Store) ListDealDocuments(
 			}
 			page = storekit.Page{HasMore: true, NextCursor: next}
 		}
-		return nil
+		return withDealMailOrigins(ctx, tx, out)
 	})
 	if out == nil {
 		out = []crmcontracts.DealDocument{}
@@ -160,19 +146,21 @@ func scanDealDocument(rows pgx.Rows) (crmcontracts.DealDocument, error) {
 		kind         *string
 		subject      *string
 		occurredAt   *time.Time
+		precision    *string
 		counterparty *string
 	)
-	dest := append(cols.targets(), &hidden, &activityID, &kind, &subject, &occurredAt, &counterparty)
+	dest := append(cols.targets(), &hidden, &activityID, &kind, &subject, &occurredAt, &precision, &counterparty)
 	if err := rows.Scan(dest...); err != nil {
 		return crmcontracts.DealDocument{}, fmt.Errorf("activities: scanning a deal document: %w", err)
 	}
 	doc := crmcontracts.DealDocument{Attachment: cols.attachment(), Hidden: hidden}
-	if activityID != nil && kind != nil && occurredAt != nil {
+	if activityID != nil && kind != nil && occurredAt != nil && precision != nil {
 		doc.Origin = &crmcontracts.DealDocumentOrigin{
-			ActivityId: openapi_types.UUID(*activityID),
-			Kind:       *kind,
-			OccurredAt: *occurredAt,
-			Subject:    subject,
+			ActivityId:        openapi_types.UUID(*activityID),
+			Kind:              *kind,
+			OccurredAt:        *occurredAt,
+			OccurredPrecision: crmcontracts.OccurredPrecision(*precision),
+			Subject:           subject,
 		}
 		if counterparty != nil {
 			email := openapi_types.Email(*counterparty)
@@ -180,6 +168,22 @@ func scanDealDocument(rows pgx.Rows) (crmcontracts.DealDocument, error) {
 		}
 	}
 	return doc, nil
+}
+
+// withDealMailOrigins names the mail on each deal file's own row, as the
+// contact and company lists do.
+func withDealMailOrigins(ctx context.Context, tx pgx.Tx, docs []crmcontracts.DealDocument) error {
+	files := make([]crmcontracts.Attachment, len(docs))
+	for i, doc := range docs {
+		files[i] = doc.Attachment
+	}
+	if err := withMailOrigins(ctx, tx, files); err != nil {
+		return err
+	}
+	for i := range docs {
+		docs[i].Attachment = files[i]
+	}
+	return nil
 }
 
 // HideDealDocument takes a file off this deal's Files area. The caller needs
@@ -253,9 +257,10 @@ func ensureInDealDocuments(ctx context.Context, tx pgx.Tx, dealID, attachmentID 
 		return err
 	}
 	var found bool
-	err = tx.QueryRow(ctx, fmt.Sprintf(
+	query := fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM attachment at WHERE at.id = $%d AND %s AND %s)`,
-		arg(attachmentID), dealDocumentMembership(deal), visible), args...).Scan(&found)
+		arg(attachmentID), dealDocumentMembership(deal), visible)
+	err = tx.QueryRow(ctx, query, args...).Scan(&found)
 	if err != nil {
 		return fmt.Errorf("activities: checking a deal document: %w", err)
 	}

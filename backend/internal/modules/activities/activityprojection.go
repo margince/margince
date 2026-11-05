@@ -24,8 +24,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -40,6 +42,9 @@ type activityScan struct {
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
+	// dueHasTime is answered on a task only; the column is false on every
+	// other kind and means nothing there.
+	dueHasTime bool
 	// sourceActivityID is the activity this one was derived from — the meeting
 	// whose transcript proposed a task. Scanned as a typed id and mapped to the
 	// contract's openapi UUID, like the two above.
@@ -49,8 +54,13 @@ type activityScan struct {
 	// must not fail a read.
 	language *string
 	kind     string
+	// occurredPrecision is scanned as text and typed in record().
+	occurredPrecision string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, invitationStatus, threadKey, captureLabel *string
+	// callOutcome is a marker like the meeting status: how a call ended is a
+	// fact about it, not something anyone said, so a withheld row keeps it.
+	callOutcome *string
 	// audienceReason says why a derived audience is what it is. It travels with
 	// the content, not with the markers: "held because personnel" describes
 	// what the message is about.
@@ -68,8 +78,17 @@ type activityScan struct {
 	// passed, exactly like the subject and body.
 	raw              map[string]any
 	bulkMailAttested bool
-	version          int64
-	audience         string
+	bodyCompleteness string
+	// The seat the row's own columns name as its writer (writerSeatSQL), and
+	// its name. Read here, so the author projection costs no query of its own.
+	writerSeat                      *ids.UUID
+	writerSeatName, writerSeatEmail *string
+	// Who sent the row, as relstrength.Evidence reads it into automatic_kind.
+	origin          string
+	calendarMethod  *string
+	senderIsMachine bool
+	version         int64
+	audience        string
 	// contentAvailable is the caller's audience test, evaluated per row: it
 	// decides whether the content columns above reach the caller at all.
 	contentAvailable bool
@@ -97,16 +116,19 @@ var activityProjection = []activityColumn{
 	{"a.subject", func(s *activityScan) any { return &s.a.Subject }},
 	{"a.body", func(s *activityScan) any { return &s.a.Body }},
 	{"a.occurred_at", func(s *activityScan) any { return &s.a.OccurredAt }},
+	{"a.occurred_precision", func(s *activityScan) any { return &s.occurredPrecision }},
 	{"a.direction", func(s *activityScan) any { return &s.direction }},
-	{"a.due_at", func(s *activityScan) any { return &s.a.DueAt }},
+	{storekit.TaskDueSQL("a"), func(s *activityScan) any { return &s.a.DueAt }},
+	{"a.due_has_time", func(s *activityScan) any { return &s.dueHasTime }},
 	{"a.remind_at", func(s *activityScan) any { return &s.a.RemindAt }},
 	{"a.assignee_id", func(s *activityScan) any { return &s.assigneeID }},
 	{"a.is_done", func(s *activityScan) any { return &s.a.IsDone }},
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
 	{"a.duration_seconds", func(s *activityScan) any { return &s.a.DurationSeconds }},
 	{"a.meeting_status", func(s *activityScan) any { return &s.meetingStatus }},
+	{"a.call_outcome", func(s *activityScan) any { return &s.callOutcome }},
 	{"(SELECT status FROM meeting_invitation WHERE activity_id=a.id AND status<>'erased')", func(s *activityScan) any { return &s.invitationStatus }},
-	{"a.host_user_id", func(s *activityScan) any { return &s.hostUserID }},
+	{storekit.KnownMeetingHostSQL("a"), func(s *activityScan) any { return &s.hostUserID }},
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
@@ -115,17 +137,11 @@ var activityProjection = []activityColumn{
 	{"a.captured_by", func(s *activityScan) any { return &s.a.CapturedBy }},
 	{"a.source_author_id", func(s *activityScan) any { return &s.sourceAuthorID }},
 	{"a.source_author_name", func(s *activityScan) any { return &s.sourceAuthorName }},
-	// The author's CURRENT display name: sourceAuthorSeatNameSQL, below the table.
-	// Three readers compose their own `FROM activity a WHERE …` around this
-	// projection, so a join would have to be added to each of them and to the
-	// next one somebody writes — which is precisely how the contact360 timeline
-	// came to be missing a column for a whole slice, twice. A column that
-	// carries its own source needs nothing of its callers.
-	//
-	// NO liveness filter, deliberately. Who wrote something in August is a fact
-	// about August: a colleague who has since left was still its author, and
-	// readEmailParties already refuses the same filter for the same reason.
+	// The author's current display name: see sourceAuthorSeatNameSQL below.
 	{sourceAuthorSeatNameSQL, func(s *activityScan) any { return &s.sourceAuthorSeatName }},
+	{writerSeatSQL, func(s *activityScan) any { return &s.writerSeat }},
+	{writerSeatNameSQL, func(s *activityScan) any { return &s.writerSeatName }},
+	{writerSeatEmailSQL, func(s *activityScan) any { return &s.writerSeatEmail }},
 	{"a.version", func(s *activityScan) any { return &s.version }},
 	{"a.created_at", func(s *activityScan) any { return &s.a.CreatedAt }},
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
@@ -133,33 +149,33 @@ var activityProjection = []activityColumn{
 	{"a.thread_key", func(s *activityScan) any { return &s.threadKey }},
 	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
+	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
+	{"a.origin", func(s *activityScan) any { return &s.origin }},
+	{"a.calendar_method", func(s *activityScan) any { return &s.calendarMethod }},
+	{"a.sender_is_machine", func(s *activityScan) any { return &s.senderIsMachine }},
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
 	{"", func(s *activityScan) any { return &s.contentAvailable }},
 }
 
-// sourceAuthorSeatNameSQL resolves the author's current display name, and it is
-// a SUBSELECT rather than a join.
+// sourceAuthorSeatNameSQL resolves the author's current display name as a
+// subselect rather than a join.
 //
 // Three readers compose their own `FROM activity a WHERE …` around this
-// projection, so a join would have to be added to each of them and to the next
-// one somebody writes — which is precisely how the contact360 timeline came to
-// be missing a column for a whole slice, twice. A column that carries its own
-// source needs nothing of its callers.
+// projection. A join would have to be added to each of them and to the next one.
+// The contact360 timeline lost a column twice that way. A column that carries its
+// own source needs nothing of its callers.
 //
-// NO liveness filter, deliberately. Who wrote something in August is a fact
-// about August: a colleague who has since left was still its author, and
-// readEmailParties already refuses the same filter for the same reason.
+// No liveness filter. Who wrote something in August is a fact about August. A
+// colleague who has since left was still its author. readEmailParties refuses the
+// same filter for the same reason.
 //
-// ALIASED, and the alias is load-bearing even though no activity reader needs
-// it today. An unaliased subselect takes its output name from the column inside
-// it, so this arrives as `display_name`; a select list that also draws a column
-// of that name then has two of them, and `ORDER BY "display_name"` fails with
-// SQLSTATE 42702. The record stores' copies of this helper shipped unaliased
-// and took the accounts list down for exactly that reason. No activity
-// projection draws a `display_name` today — this is aliased so the next one
-// does not rediscover it.
+// The alias matters even though no activity reader needs it today. An unaliased
+// subselect takes its output name from the inner column, so it arrives as
+// `display_name`. A select list that also draws a column of that name then has
+// two, and `ORDER BY "display_name"` fails with SQLSTATE 42702. The record stores'
+// unaliased copies of this helper broke the accounts list that way.
 const sourceAuthorSeatNameSQL = `(SELECT u.display_name FROM app_user u ` +
 	`WHERE u.id = a.source_author_id) AS source_author_seat_name`
 
@@ -245,6 +261,9 @@ func (s *activityScan) record() crmcontracts.Activity {
 
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
+	if s.kind == string(crmcontracts.ActivityKindTask) {
+		a.DueHasTime = new(s.dueHasTime)
+	}
 	// The meeting a task was read out of. A marker, not content: which record
 	// produced this one is a fact like its date, and opening it is a separate
 	// read under the caller's own scope.
@@ -266,6 +285,14 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable {
 		a.ImportedFrom = provenance.ImportedFrom(s.a.SourceSystem)
 		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
+		a.Voice = writerSeatVoice(s.writerSeat, s.writerSeatName, s.writerSeatEmail)
+	}
+	// Said of a mail's body, so it goes where the body goes. A withheld reader
+	// does not get it, nor does a row whose body an erasure removed, nor any
+	// row that is not mail.
+	if s.contentAvailable && a.Body != nil && s.kind == string(crmcontracts.ActivityKindEmail) {
+		completeness := crmcontracts.BodyCompleteness(s.bodyCompleteness)
+		a.BodyCompleteness = &completeness
 	}
 	if s.language != nil && s.contentAvailable {
 		lang := crmcontracts.ActivityLanguage(*s.language)
@@ -277,8 +304,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable && s.raw != nil {
 		raw := s.raw
 		a.Raw = &raw
+		a.WebForm = webFormSubmissionOf(a.SourceSystem, raw)
 	}
 	a.Kind = crmcontracts.ActivityKind(s.kind)
+	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)
 	a.ChannelProvider = s.channelProvider
 	if s.direction != nil {
 		d := crmcontracts.ActivityDirection(*s.direction)
@@ -292,6 +321,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 		m := crmcontracts.ActivityMeetingStatus(*s.meetingStatus)
 		a.MeetingStatus = &m
 	}
+	if s.callOutcome != nil {
+		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
+		a.CallOutcome = &outcome
+	}
 	a.ThreadKey = threadKey
 	a.AudienceReason = audienceReason
 	if captureLabel != nil {
@@ -300,6 +333,15 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
+	// The calendar method, the sender stamp and the bulk stamp describe what a
+	// message is, so they travel with its content. The origin is the product's
+	// own fact.
+	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
+	if s.contentAvailable {
+		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+		evidence.BulkMail = s.bulkMailAttested
+	}
+	a.AutomaticKind = automaticKindToWire(evidence)
 	version := s.version
 	a.Version = &version
 	// What a canonical email row draws, composed here so every reader of an
@@ -309,6 +351,17 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// need joins this scan does not have, and the detail read fills them in.
 	a.EmailSummary = RowEmailSummary(a)
 	return a
+}
+
+// automaticKindToWire renders what sent a row no human wrote, nil when a
+// human wrote it.
+func automaticKindToWire(row relstrength.Evidence) *crmcontracts.ActivityAutomaticKind {
+	kind := row.Automatic()
+	if kind == "" {
+		return nil
+	}
+	wire := crmcontracts.ActivityAutomaticKind(kind)
+	return &wire
 }
 
 // RowEmailSummary is the email row's fields, for the kind that has them.
@@ -330,10 +383,11 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 	}
 	withheld := a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
 	summary := crmcontracts.EmailSummary{
-		ActivityId:    a.Id,
-		OccurredAt:    a.OccurredAt,
-		DisplayStatus: crmcontracts.EmailAccessStatusWithheld,
-		Move:          crmcontracts.EmailSummaryMoveNone,
+		ActivityId:        a.Id,
+		OccurredAt:        a.OccurredAt,
+		OccurredPrecision: a.OccurredPrecision,
+		DisplayStatus:     crmcontracts.EmailAccessStatusWithheld,
+		Move:              crmcontracts.EmailSummaryMoveNone,
 	}
 	if a.Version != nil {
 		summary.Version = *a.Version

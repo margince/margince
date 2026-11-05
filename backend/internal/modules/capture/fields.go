@@ -30,9 +30,12 @@ type ActivityFields struct {
 	// provider that is not also a kind exists.
 	ChannelProvider string
 
-	Subject         string
-	Body            string
-	OccurredAt      time.Time
+	Subject    string
+	Body       string
+	OccurredAt time.Time
+	// DateOnly says OccurredAt is a date's anchor rather than a moment: an
+	// all-day calendar event states a date and no time.
+	DateOnly        bool
 	DurationSeconds *int
 	Direction       string // connector.DirectionInbound | DirectionOutbound | "" (not directional)
 
@@ -46,10 +49,64 @@ type ActivityFields struct {
 	// CalendarMethod is that part's RFC 5546 METHOD, or "" when none is known.
 	// REPLY, COUNTER and DECLINECOUNTER answer an invitation rather than ask.
 	CalendarMethod string
+	// BodyCompleteness says how much of a mail's text the parser decoded. Zero
+	// for anything not parsed from a mail, which is stored as complete.
+	BodyCompleteness BodyCompleteness
+	// CredentialsMasked says masking changed this record's subject or body. Only
+	// then may equal text fail to prove one message (replaymaskedproof.go).
+	CredentialsMasked bool
+	// AgendaFingerprint is a meeting invite's own description, fingerprinted as
+	// the calendar sent it. Empty for anything that is not a calendar meeting.
+	AgendaFingerprint string
 
 	// SentByColleague is the live seat who wrote a mail this mailbox holds a
 	// copy of (asSentByColleagueTx); zero for every other record.
 	SentByColleague ids.UUID
+	// InvitationFromSeat is the seat who sent an invitation this mailbox
+	// received (asSentByColleagueTx), stored as activity.invitation_sender. It
+	// names an author only: no participant row, so it grants no reading.
+	InvitationFromSeat ids.UUID
+
+	// Envelope is what the mail parser read about addressing and links; nil
+	// for anything not parsed from a mail, and for list mail.
+	ProviderPrivate bool
+	Envelope        *MailEnvelope
+
+	// MeetingDocuments are the notes and transcripts the provider attached to a
+	// meeting (meetingmap.NotesDocuments); empty for anything else.
+	MeetingDocuments []MeetingDocument
+
+	// judged is what the sink concluded from Envelope. Unexported so no
+	// connector can state the conclusion for it.
+	judged envelopeFacts
+}
+
+// MailEnvelope is what one mail's headers and body say, before any judgement.
+type MailEnvelope struct {
+	// DirectRecipients preserves To separately from copied readers.
+	DirectRecipients []string
+	// OpenRecipients holds the To and Cc addresses, the mailbox owner's included.
+	// Empty for a mail sent to undisclosed recipients.
+	OpenRecipients []string
+	// RecipientsUnreadable says a To or Cc header would not parse, so
+	// OpenRecipients may miss the reader's own address.
+	RecipientsUnreadable bool
+	// LinkHosts are the hosts the body's web links lead to, with a known
+	// redirect wrapper already unwrapped.
+	LinkHosts []string
+	// Links are the web addresses behind LinkHosts, in first-seen order, with
+	// the text a reader sees on each. They come from the same walk as LinkHosts.
+	Links []MailLink
+	// LinksTruncated says the parser stopped before it read every link, so
+	// LinkHosts may miss one.
+	LinksTruncated bool
+}
+
+// MailLink is one web address a mail body links to and the text shown on it,
+// empty for an address written out in plain text.
+type MailLink struct {
+	URL  string
+	Text string
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
@@ -60,6 +117,12 @@ type LeadFields struct {
 	Email       string
 	CompanyName string
 	Title       string
+	// Origin is where the prospect came from, a lead_origin key, and empty for a
+	// connector that carries none. The table's foreign key refuses an unknown
+	// key, so the sink needs no catalog of its own. OriginDetail is the
+	// connector's own wording beside it.
+	Origin       string
+	OriginDetail string
 	// Unowned declines ownership on the granting human's behalf, for a capture
 	// that is a RECORD rather than an assignment.
 	//
@@ -84,4 +147,31 @@ func StorableDuration(seconds *int) *int {
 		return nil
 	}
 	return seconds
+}
+
+// BodyCompleteness is how much of a mail's text the parser could decode.
+type BodyCompleteness string
+
+// The stored values of activity.body_completeness.
+const (
+	BodyComplete BodyCompleteness = "complete"
+	// BodyPartial is a mail with a text part that was not read in full. The
+	// part broke while decoding, or it was cut at the per-part limit.
+	BodyPartial BodyCompleteness = "partial"
+	// BodyUnreadable is a mail whose Body holds only the From/To lines.
+	BodyUnreadable BodyCompleteness = "unreadable"
+	// BodyForwarded is a mail that said nothing of its own, whose Body is the
+	// text of the original it forwarded. Those are not its sender's words.
+	BodyForwarded BodyCompleteness = "forwarded"
+	// BodyUnverifiable is a captured mail stored before completeness was
+	// recorded, whose original is gone or no longer decodes. Nothing is left
+	// to check its text against.
+	BodyUnverifiable BodyCompleteness = "unverifiable"
+)
+
+func (c BodyCompleteness) stored() BodyCompleteness {
+	if c == "" {
+		return BodyComplete
+	}
+	return c
 }

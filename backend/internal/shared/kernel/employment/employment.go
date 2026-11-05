@@ -30,6 +30,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 var employmentEndColumn = regexp.MustCompile(`^(?:[A-Za-z_][A-Za-z_0-9]*\.)?ended_at$`)
@@ -61,6 +63,15 @@ func IsCurrentSQL(date string, asserted ...string) string {
 	}
 	end := sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
 	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
+}
+
+// CurrentMembershipSQL is a live employment edge that still belongs to its contact.
+func CurrentMembershipSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return prefix + "kind = 'employment' AND " + prefix + "archived_at IS NULL AND " + IsCurrentSQL(prefix+"ended_at")
 }
 
 // CurrentPrimarySQL is what a READER of `is_current_primary` means:
@@ -146,6 +157,15 @@ func CurrentPrimarySlotSQL(alias string) string {
 // UTC midnight too (storekit.AsDate).
 func InPlaceAtSQL(alias, at string) string {
 	return sqlf("coalesce(%[1]s.started_at::timestamp AT TIME ZONE 'UTC', %[1]s.first_observed_at, %[2]s) <= %[2]s", alias, at)
+}
+
+// InPlaceForSQL is InPlaceAtSQL for the activity under alias activity, read by
+// its precision. A day entry is in place from the edge's start date, or once its
+// date begins after capture first saw the edge (occurredday.FromSQL).
+func InPlaceForSQL(alias, activity string) string {
+	return sqlf(`(CASE WHEN %[1]s.started_at IS NOT NULL THEN %[2]s
+		WHEN %[1]s.first_observed_at IS NOT NULL THEN %[3]s ELSE true END)`,
+		alias, occurredday.DatedFromSQL(activity, alias+".started_at"), occurredday.FromSQL(activity, alias+".first_observed_at"))
 }
 
 // sqlf renders a SQL fragment. Named rather than calling fmt.Sprintf inline,

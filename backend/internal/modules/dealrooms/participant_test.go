@@ -10,9 +10,13 @@ package dealrooms
 // and where a credential sits in the URL that carries it.
 
 import (
+	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -132,4 +136,25 @@ func TestAnInviteRefusesAnUnboundedName(t *testing.T) {
 	if field, _, _ := fault.FieldFault(); field != "full_name" {
 		t.Errorf("the refusal must name full_name, got %q", field)
 	}
+}
+
+func TestAttributionFailureDoesNotDiscardABuyersAccessLink(t *testing.T) {
+	relay := &invitationMailCapture{}
+	handler := Handlers{}.WithInviteMailer(relay).WithInviteLinkBase("https://example.test").WithInviteContext(func(context.Context) (string, string, error) {
+		return "", "", errors.New("company settings unavailable")
+	})
+	invitation := IssuedInvitation{RoomTitle: "Northstar proposal", Credential: "fictional", ExpiresAt: time.Date(2026, 11, 15, 12, 37, 0, 0, time.UTC), Participant: crmcontracts.DealRoomParticipant{Email: openapi_types.Email("buyer@example.test")}}
+	if err := handler.sendInvite(httptest.NewRequest(http.MethodPost, "/", nil), invitation); err != nil {
+		t.Fatal(err)
+	}
+	if relay.to != "buyer@example.test" || !strings.Contains(relay.body, "https://example.test/#/room?c=fictional") || !strings.Contains(relay.subject, "Northstar proposal") {
+		t.Fatal("optional attribution prevented a useful access message")
+	}
+}
+
+type invitationMailCapture struct{ to, subject, body string }
+
+func (m *invitationMailCapture) Send(_ context.Context, to, subject, body string) error {
+	m.to, m.subject, m.body = to, subject, body
+	return nil
 }

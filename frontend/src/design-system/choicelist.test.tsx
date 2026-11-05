@@ -4,6 +4,7 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChoiceList } from "./choicelist";
 
@@ -117,6 +118,40 @@ describe("ChoiceList", () => {
     expect(option).toBeTruthy();
   });
 
+  it("describes every answer by the detail, so it is heard while choosing", () => {
+    render(
+      <ChoiceList
+        legend="What happens to the 2 open tasks?"
+        detail={<p>Send the contract</p>}
+        value="only_chosen"
+        choices={CHOICES}
+        onChange={() => {}}
+      />,
+    );
+
+    for (const radio of screen.getAllByRole("radio")) {
+      const describedBy = radio.getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(describedBy)?.textContent).toBe(
+        "Send the contract",
+      );
+    }
+  });
+
+  it("leaves the answers undescribed without a detail", () => {
+    render(
+      <ChoiceList
+        legend="Which conversations go into the CRM?"
+        value="only_chosen"
+        choices={CHOICES}
+        onChange={() => {}}
+      />,
+    );
+
+    for (const radio of screen.getAllByRole("radio")) {
+      expect(radio.hasAttribute("aria-describedby")).toBe(false);
+    }
+  });
+
   it("refuses every answer when the group is disabled", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -198,5 +233,170 @@ describe("ChoiceList", () => {
     expect(
       screen.getAllByRole("radio").filter((r) => r.matches(":checked")),
     ).toHaveLength(2);
+  });
+});
+
+const SERVICES = [
+  { value: "mail" as const, label: "Mail" },
+  { value: "calendar" as const, label: "Calendar" },
+];
+
+function Services({
+  initial,
+  onChange,
+}: Readonly<{
+  initial: ("mail" | "calendar")[];
+  onChange: (next: ("mail" | "calendar")[]) => void;
+}>) {
+  const [value, setValue] = useState(initial);
+  return (
+    <ChoiceList
+      legend="What to connect"
+      multiple
+      layout="cards"
+      value={value}
+      choices={SERVICES}
+      onChange={(next) => {
+        setValue(next);
+        onChange(next);
+      }}
+    />
+  );
+}
+
+describe("ChoiceList groups", () => {
+  const GROUPED = [
+    { value: "site" as const, label: "Your website", group: "No developer" },
+    { value: "server" as const, label: "Website server", group: "Developers" },
+    { value: "hook" as const, label: "Webhook", group: "Developers" },
+  ];
+
+  it("names each run of one group and keeps every radio in the one question", () => {
+    render(
+      <ChoiceList
+        legend="Where is your form?"
+        layout="cards"
+        value="site"
+        choices={GROUPED}
+        onChange={() => {}}
+      />,
+    );
+
+    const question = screen.getByRole("group", { name: "Where is your form?" });
+    const developers = screen.getByRole("group", { name: "Developers" });
+    expect(
+      screen.getAllByRole("radio").every((r) => question.contains(r)),
+    ).toBe(true);
+    expect(developers.querySelectorAll("input[type=radio]")).toHaveLength(2);
+    const names = new Set(
+      screen.getAllByRole("radio").map((r) => r.getAttribute("name")),
+    );
+    expect(names.size).toBe(1);
+  });
+});
+
+describe("ChoiceList tiles", () => {
+  it("keeps a real radio under each tile, so a press on the tile answers", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceList
+        legend="Where is your form?"
+        layout="tiles"
+        value="site"
+        choices={[
+          {
+            value: "site" as const,
+            label: "Your website",
+            description: "Posts",
+          },
+          { value: "hook" as const, label: "Webhook", description: "Signed" },
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByText("Webhook"));
+    expect(onChange).toHaveBeenLastCalledWith("hook");
+    // The tick is drawn, never read: the radio's own checked state says it.
+    expect(
+      screen.getByRole("radio", { name: /Your website/ }).matches(":checked"),
+    ).toBe(true);
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+});
+
+describe("ChoiceList multiple", () => {
+  it("describes every checkbox by the detail too", () => {
+    const connected: ("mail" | "calendar")[] = ["mail"];
+    render(
+      <ChoiceList
+        legend="What to connect"
+        detail={<p>Two accounts are waiting</p>}
+        multiple
+        value={connected}
+        choices={SERVICES}
+        onChange={() => {}}
+      />,
+    );
+
+    for (const box of screen.getAllByRole("checkbox")) {
+      const describedBy = box.getAttribute("aria-describedby") ?? "";
+      expect(document.getElementById(describedBy)?.textContent).toBe(
+        "Two accounts are waiting",
+      );
+    }
+  });
+
+  it("draws checkboxes in one group named by the legend", () => {
+    render(<Services initial={["mail"]} onChange={() => {}} />);
+
+    const group = screen.getByRole("group", { name: "What to connect" });
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    const boxes = screen.getAllByRole("checkbox");
+    expect(boxes).toHaveLength(2);
+    expect(boxes.every((box) => box.closest("fieldset") === group)).toBe(true);
+    expect(boxes.map((box) => box.matches(":checked"))).toEqual([true, false]);
+  });
+
+  it("reports the picks in choice order, not press order", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Services initial={[]} onChange={onChange} />);
+
+    await user.click(screen.getByRole("checkbox", { name: "Calendar" }));
+    await user.click(screen.getByRole("checkbox", { name: "Mail" }));
+    expect(onChange).toHaveBeenLastCalledWith(["mail", "calendar"]);
+
+    await user.click(screen.getByRole("checkbox", { name: "Calendar" }));
+    expect(onChange).toHaveBeenLastCalledWith(["mail"]);
+  });
+
+  it("refuses a disabled answer and reads its reason with it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceList
+        legend="What to connect"
+        multiple
+        value={["mail"]}
+        choices={[
+          SERVICES[0],
+          {
+            ...SERVICES[1],
+            disabled: true,
+            description: "IMAP has no calendar.",
+          },
+        ]}
+        onChange={onChange}
+      />,
+    );
+
+    const calendar = screen.getByRole("checkbox", {
+      name: /Calendar.*IMAP has no calendar\./,
+    });
+    expect(calendar.hasAttribute("disabled")).toBe(true);
+    await user.click(calendar);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

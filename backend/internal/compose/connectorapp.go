@@ -48,7 +48,7 @@ func writeConnectorAppFailure(w http.ResponseWriter, r *http.Request, err error)
 // exchange, so the flow itself stays provider-agnostic.
 type oauthApp struct {
 	authCodeURL  func(state, redirectURI string) string
-	authenticate func(ctx context.Context, code, redirectURI string) (connector.Auth, error)
+	authenticate func(ctx context.Context, consent *consentCode) (connector.Auth, error)
 }
 
 // providerWired reports whether this deployment serves a provider's OAuth flow
@@ -127,22 +127,16 @@ func (h connectorHandlers) connectorDescriptor(name string) connector.Descriptor
 	return connector.Descriptor{}
 }
 
-// storedApp resolves the installation's STORED app for one vendor.
-//
-// `stored` false means fall back to whatever the environment composed at boot:
-// what an admin set through Settings outranks the environment, because the
-// environment is how the pair ARRIVES and the stored app is where it lives.
-//
-// A resolution error is RETURNED, never turned into a fallback. A sealed secret
-// that will not open means the vault's root key changed under the installation;
-// quietly connecting with an older environment copy would hide that behind a
-// flow that half works, and reporting it as "not configured" would send an
-// operator to set up an app they already have.
-func storedApp(ctx context.Context, resolve appResolver) (capture.ConnectorApp, bool, error) {
-	if resolve == nil {
-		return capture.ConnectorApp{}, false, nil
+// consentClient is the client one consent flow runs on, by resolveApp's rule.
+// The environment's client comes first. The stored app is read only where this
+// deployment can run the flow for it. The zero client is neither.
+func consentClient[T comparable](
+	ctx context.Context, env T, resolve appResolver, canRun bool, build func(capture.ConnectorApp) T,
+) (T, error) {
+	if !canRun {
+		resolve = nil
 	}
-	return resolve(ctx)
+	return resolveApp(ctx, resolve, env, build, nil)
 }
 
 // connectResult is the closed vocabulary ListConnectors reports per provider
@@ -162,6 +156,9 @@ const (
 	connectAppUnusable connectResult = "app_unusable"
 	// connectUnsupported: this deployment does not serve the provider at all.
 	connectUnsupported connectResult = "unsupported"
+	// connectRoleCannotCapture: the caller's role or seat cannot record what
+	// capture writes, whichever provider they pick.
+	connectRoleCannotCapture connectResult = "role_cannot_capture"
 )
 
 // connectAvailability is what connectability reports for one provider.
@@ -186,6 +183,9 @@ type connectAvailability struct {
 // rather than each carrying its own copy of the decision, so a refusal a
 // click gives can never surprise a screen that just reported readiness.
 func (h connectorHandlers) connectability(ctx context.Context, provider string) connectAvailability {
+	if callerCaptureRefusal(ctx) != nil {
+		return connectAvailability{reason: connectRoleCannotCapture}
+	}
 	if provider == providerIMAP {
 		// IMAP never needs an OAuth app: its credentials are per-connection,
 		// vault-sealed, so the registry alone decides.
@@ -265,7 +265,7 @@ func (h connectorHandlers) oauthApp(ctx context.Context, provider string) (oauth
 }
 
 // gmailApp builds the Gmail consent/exchange pair from the app this installation
-// uses — the stored one where it can run the flow, the environment's otherwise.
+// uses: the environment's where it composed one, the stored one otherwise.
 func (h connectorHandlers) gmailApp(ctx context.Context) (oauthApp, bool, error) {
 	// Nothing to resolve when neither source can serve this provider: no
 	// env-composed client, and a stored app this installation cannot run the
@@ -274,27 +274,26 @@ func (h connectorHandlers) gmailApp(ctx context.Context) (oauthApp, bool, error)
 	if h.oauth == nil && !h.canRunConsent(providerGmail) {
 		return oauthApp{}, false, nil
 	}
-	app, stored, err := storedApp(ctx, h.googleCredentials)
+	oauth, err := consentClient(ctx, h.oauth, h.googleCredentials, h.canRunConsent(providerGmail),
+		func(app capture.ConnectorApp) gmail.OAuth {
+			return gmail.NewOAuth(gmail.OAuthConfig{
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
+			})
+		})
 	if err != nil {
 		return oauthApp{}, false, err
-	}
-	oauth := h.oauth
-	if stored && h.canRunConsent(providerGmail) {
-		oauth = gmail.NewOAuth(gmail.OAuthConfig{
-			ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
-		})
 	}
 	if oauth == nil {
 		return oauthApp{}, false, nil
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := gmail.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := gmail.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}
-			return gmail.New(oauth, h.gmailAPI).Authenticate(ctx, req)
+			return gmail.New(consent.googleAuthorizer(oauth), h.gmailAPI).Authenticate(ctx, req)
 		},
 	}, true, nil
 }
@@ -316,32 +315,31 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 	if h.gcalOAuth == nil && !h.canRunConsent(providerGcal) {
 		return oauthApp{}, false, nil
 	}
-	app, stored, err := storedApp(ctx, h.googleCredentials)
+	oauth, err := consentClient(ctx, h.gcalOAuth, h.googleCredentials, h.canRunConsent(providerGcal),
+		func(app capture.ConnectorApp) gcal.OAuth {
+			return gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+		})
 	if err != nil {
 		return oauthApp{}, false, err
-	}
-	oauth := h.gcalOAuth
-	if stored && h.canRunConsent(providerGcal) {
-		oauth = gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
 	}
 	if oauth == nil {
 		return oauthApp{}, false, nil
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := gcal.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := gcal.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}
-			return gcal.New(oauth, h.gcalAPI).Authenticate(ctx, req)
+			return gcal.New(consent.googleAuthorizer(oauth), h.gcalAPI).Authenticate(ctx, req)
 		},
 	}, true, nil
 }
 
-// graphApp is the Microsoft MAIL half of the installation's Entra registration —
-// the stored app where it can run the flow, the environment's otherwise, exactly
-// as the Google pair resolves.
+// graphApp is the Microsoft mail half of the installation's Entra registration.
+// It takes the environment's app where it composed one, the stored one
+// otherwise, as the Google pair does.
 func (h connectorHandlers) graphApp(ctx context.Context) (oauthApp, bool, error) {
 	// Nothing to resolve when neither source can serve this provider. Checked
 	// BEFORE the credential read so the refusal costs no settings round-trip and
@@ -349,24 +347,23 @@ func (h connectorHandlers) graphApp(ctx context.Context) (oauthApp, bool, error)
 	if h.graphOAuth == nil && !h.canRunConsent(providerGraph) {
 		return oauthApp{}, false, nil
 	}
-	app, stored, err := storedApp(ctx, h.microsoftCredentials)
+	oauth, err := consentClient(ctx, h.graphOAuth, h.microsoftCredentials, h.canRunConsent(providerGraph),
+		func(app capture.ConnectorApp) graph.OAuth {
+			return graph.NewOAuth(graph.OAuthConfig{
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef,
+				Tenant: app.Tenant, Scopes: graphScopes,
+			})
+		})
 	if err != nil {
 		return oauthApp{}, false, err
-	}
-	oauth := h.graphOAuth
-	if stored && h.canRunConsent(providerGraph) {
-		oauth = graph.NewOAuth(graph.OAuthConfig{
-			ClientID: app.ClientID, ClientSecret: app.ClientSecretRef,
-			Tenant: app.Tenant, Scopes: graphScopes,
-		})
 	}
 	if oauth == nil {
 		return oauthApp{}, false, nil
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := graph.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := graph.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}
@@ -382,23 +379,22 @@ func (h connectorHandlers) graphCalApp(ctx context.Context) (oauthApp, bool, err
 	if h.graphCalOAuth == nil && !h.canRunConsent(providerGraphCal) {
 		return oauthApp{}, false, nil
 	}
-	app, stored, err := storedApp(ctx, h.microsoftCredentials)
+	oauth, err := consentClient(ctx, h.graphCalOAuth, h.microsoftCredentials, h.canRunConsent(providerGraphCal),
+		func(app capture.ConnectorApp) graphcal.OAuth {
+			return graphcal.NewOAuth(graphcal.OAuthConfig{
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Tenant: app.Tenant,
+			})
+		})
 	if err != nil {
 		return oauthApp{}, false, err
-	}
-	oauth := h.graphCalOAuth
-	if stored && h.canRunConsent(providerGraphCal) {
-		oauth = graphcal.NewOAuth(graphcal.OAuthConfig{
-			ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Tenant: app.Tenant,
-		})
 	}
 	if oauth == nil {
 		return oauthApp{}, false, nil
 	}
 	return oauthApp{
 		authCodeURL: oauth.AuthCodeURL,
-		authenticate: func(ctx context.Context, code, redirectURI string) (connector.Auth, error) {
-			req, err := graphcal.AuthRequestFrom(code, redirectURI)
+		authenticate: func(ctx context.Context, consent *consentCode) (connector.Auth, error) {
+			req, err := graphcal.AuthRequestFrom(consent.code, consent.redirectURI)
 			if err != nil {
 				return nil, err
 			}

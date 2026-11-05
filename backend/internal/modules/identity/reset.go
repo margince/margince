@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -39,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -106,24 +106,9 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		if done != nil {
 			defer done()
 		}
-		// This goroutine OUTLIVES the request, so the chassis's recovery
-		// middleware — which wraps the handler — cannot see a panic in here, and an
-		// unrecovered panic in any goroutine takes the whole process down. The
-		// endpoint is unauthenticated, which is what makes that unacceptable rather
-		// than merely untidy: it would be a one-request denial of service for
-		// anybody who could reach a panicking path. Nothing below panics today; the
-		// point is that a future edit here must not be able to.
-		defer func() {
-			if panicked := recover(); panicked != nil {
-				// The stack, not just the panic value: this runs off the
-				// request goroutine, so there is no request log, trace, or
-				// stack frame anywhere else an operator could use to find the
-				// failing call site. Never returned to a client — this
-				// handler already left with its 202 before this goroutine
-				// started.
-				slog.Error("password-reset send panicked", "panic", panicked, "stack", string(debug.Stack()))
-			}
-		}()
+		// Unauthenticated endpoint: a panic here would be a one-request denial of
+		// service for anybody who can reach it.
+		defer recoverDetached("password-reset send")
 		rawToken, err := h.svc.CreatePasswordReset(workCtx, email.String())
 		if err != nil {
 			slog.Error("password-reset token mint failed", "err", err)
@@ -133,11 +118,9 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		link := passwordLink(h.passwordLinkBaseURL, rawToken)
-		words := h.mailCopy(workCtx)
-		body := words.ResetIntro + "\n\n" +
-			words.ResetAction + "\n\n  " + link + "\n\n" +
-			words.ResetIgnore
-		if err := h.resetMailer.Send(workCtx, email.String(), words.ResetSubject, body); err != nil {
+		words := h.mailCopy(workCtx, email.String())
+		body := words.AccountMessage(false, "", "", link)
+		if err := mailer.SendProduct(workCtx, h.resetMailer, email.String(), words.ResetSubject, body); err != nil {
 			slog.Error("password-reset email failed", "err", err)
 		}
 	}()

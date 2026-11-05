@@ -12,7 +12,12 @@ package deals
 // fixing one would have left the other proposing follow-ups for deals that
 // visibly had one.
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+)
 
 // OpenNextStepSQL renders the predicate "this deal has a next step planned",
 // true when either is on its timeline:
@@ -23,12 +28,14 @@ import "fmt"
 //     meeting has a next step; telling them they do not is the same defect as
 //     telling them tomorrow's meeting already happened.
 //
-// The end test is written as a direct comparison rather than as `NOT
-// MeetingIsOverSQL(...)`. Negating that expression looks equivalent and is not:
-// it contains an `IN` over a nullable column, so an unmarked meeting made it
-// NULL, `NOT NULL` is NULL, and every such row silently failed the filter.
+// The end test is a direct comparison, not `NOT storekit.MeetingIsOverSQL(...)`.
+// Negating that expression looks equivalent and is not. It holds an `IN` over
+// a nullable column, so an unmarked meeting made it NULL. `NOT NULL` is NULL,
+// and every such row silently failed the filter.
 //
-// A meeting on the calendar IS a next step, which is the half that was missing.
+// A meeting on the calendar is a next step when somebody here takes part in
+// it (storekit.MeetingResponsibilitySQL). A colleague's meeting counts for the
+// account. An imported row no seat hosts or attends is history, not a plan.
 // A deal whose only forward commitment is Thursday's review reads as planned to
 // the rep looking at it, and a sweep that asked only about tasks proposed a
 // follow-up for exactly that deal.
@@ -37,40 +44,21 @@ import "fmt"
 // callers pass `d.id` and `l.deal_id`) and asOf is the placeholder holding the
 // sweep's clock. Both are compile-time literals at every call site: nothing
 // off a request body is ever formatted in here.
-func OpenNextStepSQL(dealExpr, asOf string) string {
+func OpenNextStepSQL(dealExpr, asOf, currentTask string) string {
 	return fmt.Sprintf(`(
 		EXISTS (
 			SELECT 1 FROM activity t
 			JOIN activity_link tl ON tl.activity_id = t.id AND tl.deal_id = %[1]s
-			WHERE t.kind = 'task' AND t.is_done = false AND t.archived_at IS NULL
+			WHERE t.kind = 'task' AND t.is_done = false AND t.archived_at IS NULL AND %[4]s
 		)
 		OR EXISTS (
 			SELECT 1 FROM activity m
 			JOIN activity_link ml ON ml.activity_id = m.id AND ml.deal_id = %[1]s
 			WHERE m.kind = 'meeting' AND m.archived_at IS NULL
-			  AND %[3]s
-			  AND %[2]s < m.occurred_at
-			         + make_interval(secs => coalesce(m.duration_seconds, 0))
+			  AND %[3]s AND NOT %[5]s
+			  AND %[2]s < %[6]s
 		)
-	)`, dealExpr, asOf, meetingStillStandingSQL("m"))
-}
-
-// MeetingIsOverSQL renders "this meeting is finished", the reading the waiting
-// queue and the brief's snooze-lift already share: over means ENDED — start
-// plus duration, not start — and a meeting that will never happen counts as
-// over.
-//
-// A third spelling of a rule that already lives in `activities` is a cost, and
-// the layering is why it is paid: a module never imports a sibling, so `deals`
-// cannot reach activities' copy. backend/gates/meetingoverspelling_test.go is
-// what keeps the two honest — it derives the clause from the activities owner
-// and fails when either side drifts, in both directions.
-func MeetingIsOverSQL(alias, asOf string) string {
-	return fmt.Sprintf(`(%[1]s.archived_at IS NOT NULL
-		OR %[1]s.meeting_status IN ('canceled', 'no_show')
-		OR %[1]s.occurred_at
-		   + make_interval(secs => coalesce(%[1]s.duration_seconds, 0)) <= %[2]s)`,
-		alias, asOf)
+	)`, dealExpr, asOf, meetingStillStandingSQL("m"), currentTask, storekit.UnclaimedMeetingSQL("m"), occurredday.EndSQL("m"))
 }
 
 // meetingStillStandingSQL asks whether a meeting is still expected to happen:

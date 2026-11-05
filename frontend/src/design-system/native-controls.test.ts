@@ -27,6 +27,10 @@
 // children to a control that no longer takes them. Catching only `<select>`
 // would call that tree clean.
 //
+// A native date or time field is the same hole: Chrome draws its face and picker
+// in the browser's language, not the reader's. The replacements are `DateInput`,
+// `TimeInput` and `MonthInput`.
+//
 // ## Why this is a parser and not a scanner
 //
 // This replaces frontend/scripts/check-native-controls.sh, which was thirty
@@ -59,10 +63,26 @@
 // parser drops for free, and that is where select.tsx and its neighbours cite
 // the thing they exist to remove.
 
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
+import {
+  deriveDateHosts,
+  literalsOf,
+  namesHost,
+  publishedFrom,
+  renderedName,
+  typeInObject,
+  typeValues,
+} from "../../scripts/lib/input-type";
 import {
   extensionFrontendFiles,
   extensionPackageLayers,
@@ -103,6 +123,49 @@ const nativeControls = new Set(["select", "option", "optgroup"]);
 // with its reason instead.
 const prefilter = new RegExp(`${[...nativeControls].join("|")}|\\\\`);
 
+// The tags whose `type` reaches a native input as written, derived from the
+// design system and every module the extension surface publishes from.
+const designSystemDir = join(srcDir, "design-system");
+// InlineTextControl sends a date to DateInput, so no date reaches its TextInput.
+const notHosts = new Set(["InlineTextControl"]);
+// Each spreads FieldControl or SettingControlProps: an id and aria wiring, no type.
+const clearedSpreads = ["NameDialog", "NumberSetting", "ResolveSheet"];
+const dateHosts = deriveDateHosts(
+  [
+    ...filesUnder(designSystemDir).filter(
+      (file) => !/\.(test|stories)\.tsx?$/.test(file),
+    ),
+    ...publishedFrom(join(srcDir, "surface", "design-system.ts")),
+  ],
+  notHosts,
+);
+// The input types the browser draws in its own language.
+const clockTypes = ["date", "time", "datetime-local", "month", "week"];
+const clockTypeOf = (values: string[]) =>
+  values
+    .map((value) => value.toLowerCase())
+    .find((value) => clockTypes.includes(value));
+const clockAlternation = clockTypes.join("|");
+const elementFactories = new Set(["createElement", "jsx", "jsxs", "jsxDEV"]);
+
+// Sound for the same reason as `prefilter`: a hit spells `type`, and its value
+// opens with a quote, backtick, `=` or space, or goes through a backslash escape.
+const dateValueStart = new RegExp(`[\\s"'\`=](?:${clockAlternation})`, "i");
+const worthParsing = (text: string) =>
+  prefilter.test(text) || (text.includes("type") && dateValueStart.test(text));
+
+// Each native element as a string scan reads it, built once rather than per
+// string node.
+const tagInString = [...nativeControls].map(
+  (tag) => [tag, new RegExp(`<${tag}([^a-zA-Z0-9._:-]|$)`, "g")] as const,
+);
+
+// `<input … type="date">`, or any other clock type, built in a string.
+const dateMarkup = new RegExp(
+  `<input(?![a-zA-Z0-9._:-])[^>]*\\stype\\s*=\\s*(?:"(${clockAlternation})"|'(${clockAlternation})'|(${clockAlternation})(?![\\w-]))`,
+  "gi",
+);
+
 // Tests and stories are scanned too: a test that drives a native control is a
 // test of the wrong control, and a story catalogues what we ship. Which files
 // those are is ../../scripts/lib/source-tree.ts's answer, shared with the
@@ -136,7 +199,7 @@ function findNativeControls(path: string, text: string): string[] {
   // character reaches cooked text only by appearing raw or by coming from an
   // escape, and every escape begins with a backslash — so a file with neither a
   // name nor a backslash cannot spell one, and skipping it costs no coverage.
-  if (!prefilter.test(text)) return [];
+  if (!worthParsing(text)) return [];
   const source = parseSource(path, text);
   const found: string[] = [];
   // Anything not already TSX is read a SECOND time as TSX, and the findings
@@ -183,6 +246,32 @@ function findNativeControls(path: string, text: string): string[] {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = intrinsic(node.tagName);
       if (tag) found.push(`${at(node)}: <${tag}>`);
+      const clock = clockTypeOf(typeValues(node.attributes));
+      if (clock && namesHost(dateHosts, node.tagName)) {
+        found.push(
+          `${at(node)}: <${renderedName(node.tagName)} type="${clock}">`,
+        );
+      }
+    }
+    // The same elements built without JSX: `createElement("input", props)`.
+    if (
+      ts.isCallExpression(node) &&
+      elementFactories.has(renderedName(node.expression) ?? "")
+    ) {
+      const [tag, props] = node.arguments;
+      const names = tag ? literalsOf(tag) : [];
+      for (const name of names.filter((name) => nativeControls.has(name))) {
+        found.push(`${at(node)}: <${name}>`);
+      }
+      const host = names.includes("input")
+        ? "input"
+        : tag && namesHost(dateHosts, tag)
+          ? renderedName(tag)
+          : undefined;
+      const clock = props ? clockTypeOf(typeInObject(props)) : undefined;
+      if (host && clock) {
+        found.push(`${at(node)}: <${host} type="${clock}">`);
+      }
     }
     // A string's CONTENT is scanned, for the reason in the header: markup built
     // in a template literal is markup that ships, and the AST cannot know
@@ -212,20 +301,29 @@ function findNativeControls(path: string, text: string): string[] {
       // newlines in its cooked form that do not exist in the file, and counting
       // those would report a line the reader cannot find.
       const cooked = node.text;
-      const spansLines = /\n/.test(node.getText(source));
-      const start = source.getLineAndCharacterOfPosition(
-        node.getStart(source),
-      ).line;
-      for (const tag of nativeControls) {
-        // EVERY occurrence, not the first: a template rendering the same tag
-        // twice on different lines used to report one line and drop the rest.
-        for (const m of cooked.matchAll(
-          new RegExp(`<${tag}([^a-zA-Z0-9._:-]|$)`, "g"),
-        )) {
-          const ahead = spansLines
-            ? (cooked.slice(0, m.index).match(/\n/g) ?? []).length
-            : 0;
-          found.push(`${start + ahead + 1}: <${tag}> inside a string`);
+      // Both scans below open on a `<`, so a string without one holds no hit.
+      // Most strings are copy or contract text, and skip the line arithmetic.
+      if (cooked.includes("<")) {
+        const spansLines = /\n/.test(node.getText(source));
+        const start = source.getLineAndCharacterOfPosition(
+          node.getStart(source),
+        ).line;
+        const lineAt = (index: number) =>
+          start +
+          1 +
+          (spansLines ? (cooked.slice(0, index).match(/\n/g) ?? []).length : 0);
+        for (const [tag, inString] of tagInString) {
+          // Every occurrence, not the first: a tag a template renders twice
+          // reports both of its lines.
+          for (const m of cooked.matchAll(inString)) {
+            found.push(`${lineAt(m.index)}: <${tag}> inside a string`);
+          }
+        }
+        for (const m of cooked.matchAll(dateMarkup)) {
+          const clock = (m[1] ?? m[2] ?? m[3] ?? "").toLowerCase();
+          found.push(
+            `${lineAt(m.index)}: <input type="${clock}"> inside a string`,
+          );
         }
       }
     }
@@ -239,44 +337,56 @@ function findNativeControls(path: string, text: string): string[] {
   return [...new Set(found)];
 }
 
-describe("no product surface renders a browser-drawn dropdown", () => {
-  // A generous timeout, stated rather than defaulted: this walks and parses the
-  // whole tree, which is not a unit test's shape of work. The pre-filter above
-  // is what keeps it near a second, and the timeout is the floor under a slower
-  // runner — CI took 21s before the filter and timed out at 13s.
-  it("finds no native select, option or optgroup outside design-system/select.tsx", {
-    timeout: 60_000,
-  }, () => {
-    const files = [
-      ...filesUnder(srcDir),
-      ...extensionFrontendFiles(extensionsDir),
-    ].filter((f) => f !== probeFile);
+describe("no product surface renders a browser-drawn dropdown, date or time field", () => {
+  // The census reads and parses the whole tree, so its cost grows with the
+  // tree. A declaration file emits no code, so it cannot render a control and
+  // is not read. The generated contract types are a tenth of the scan's nodes.
+  const census = [
+    ...filesUnder(srcDir),
+    ...extensionFrontendFiles(extensionsDir),
+  ].filter((f) => f !== probeFile && !f.endsWith(".d.ts"));
 
+  it("reads the whole tree, the extension layers included", () => {
     // An empty scan means the gate is pointed at the wrong tree. A census that
     // judged nothing certifies nothing, and this one is fail-closed by design.
-    expect(files.length).toBeGreaterThan(100);
+    expect(census.length).toBeGreaterThan(100);
     // And the extension half specifically. The count floor cannot notice its
     // loss — the layers contribute a handful of files against a floor of 100 —
     // so removing them from the census was a mutant that SURVIVED. A census
     // whose floor only the large half can satisfy cannot see the small half
     // disappear.
     expect(
-      files.some((f) => f.startsWith(`${extensionsDir}/`)),
+      census.some((f) => f.startsWith(`${extensionsDir}/`)),
       "the census covered frontend/src but no extension frontend layer",
     ).toBe(true);
-
-    const violations = files.flatMap((file) =>
-      findNativeControls(file, readFileSync(file, "utf8")).map(
-        (hit) => `${relative(frontendRoot, file)}:${hit}`,
-      ),
-    );
-
-    expect(
-      violations,
-      "Use Select from src/design-system/select.tsx; see src/design-system/README.md. " +
-        "In tests, drive it with pickOption from src/design-system/select-testing.ts.",
-    ).toEqual([]);
   });
+
+  // The scan is split into slices, each a test with its own time limit. One
+  // test over the whole tree ran out its 60s on a CI runner, and the tree only
+  // grows. A file keeps its slice from run to run, so a finding names a stable
+  // test. Together the slices read every file in the census.
+  const slices = 4;
+  it.each(Array.from({ length: slices }, (_, slice) => slice))(
+    "finds no native select, option, optgroup, date or time field (slice %i)",
+    { timeout: 60_000 },
+    (slice) => {
+      const violations = census
+        .filter((_, index) => index % slices === slice)
+        .flatMap((file) =>
+          findNativeControls(file, readFileSync(file, "utf8")).map(
+            (hit) => `${relative(frontendRoot, file)}:${hit}`,
+          ),
+        );
+
+      expect(
+        violations,
+        "Use Select from src/design-system/select.tsx; see src/design-system/README.md. " +
+          "In tests, drive it with pickOption from src/design-system/select-testing.ts. " +
+          "A date field is DateInput from src/design-system/dateinput.tsx, which a unit imports from @margince/frontend/design-system. " +
+          "A time field is TimeInput (timeinput.tsx) and a month field MonthInput (monthinput.tsx).",
+      ).toEqual([]);
+    },
+  );
 
   it("walks every extension frontend layer, at any depth", () => {
     // The walk had NO test, and three separate mutants to it survived: dropping
@@ -300,6 +410,14 @@ describe("no product surface renders a browser-drawn dropdown", () => {
       ).toBe(true);
     }
   });
+
+  for (const replacement of ["dateinput", "timeinput", "monthinput"]) {
+    it(`holds ${replacement}.tsx to the same rule as everything else`, () => {
+      const path = join(srcDir, "design-system", `${replacement}.tsx`);
+      expect(existsSync(path)).toBe(true);
+      expect(findNativeControls(path, readFileSync(path, "utf8"))).toEqual([]);
+    });
+  }
 
   it("holds select.tsx to the same rule as everything else", () => {
     // The file this gate points contacts AT is scanned like any other, and it
@@ -524,6 +642,207 @@ describe("the native-control detector sees what it claims to", () => {
       src: "export const a = 1;",
       file: "probe.ts",
     },
+    {
+      name: "a native date input",
+      fires: true,
+      src: 'const a = <input type="date" />;',
+      expect: ['1: <input type="date">'],
+    },
+    {
+      name: "a TextInput of type date",
+      fires: true,
+      src: 'const a = <TextInput type="date" value={v} />;',
+      expect: ['1: <TextInput type="date">'],
+    },
+    {
+      name: "a SearchField of type date, which passes its type on",
+      fires: true,
+      src: 'const a = <SearchField type="date" />;',
+      expect: ['1: <SearchField type="date">'],
+    },
+    {
+      name: "a TextInput reached through a namespace",
+      fires: true,
+      src: 'const a = <ds.TextInput type="date" />;',
+    },
+    {
+      name: "a renamed import of TextInput",
+      fires: true,
+      src: 'import { TextInput as Box } from "@margince/frontend/design-system";\nconst a = <Box type="date" />;',
+      expect: ['2: <Box type="date">'],
+    },
+    {
+      name: "a date type held in a const",
+      fires: true,
+      src: 'const DAY = "date";\nconst a = <input type={DAY} />;',
+      expect: ['2: <input type="date">'],
+    },
+    {
+      name: "a date type spread from a const object",
+      fires: true,
+      src: 'const day = { type: "date" } as const;\nconst a = <input {...day} />;',
+    },
+    {
+      name: "a date input built with createElement",
+      fires: true,
+      src: 'const a = createElement("input", { type: "date" });',
+      expect: ['1: <input type="date">'],
+    },
+    {
+      name: "a TextInput built with React.createElement",
+      fires: true,
+      src: 'const a = React.createElement(TextInput, { type: DAY });\nconst DAY = "date";',
+    },
+    {
+      name: "a date input built by the JSX runtime",
+      fires: true,
+      src: 'const a = jsxs("input", { ...{ type: "date" } });',
+    },
+    {
+      name: "a native select built with createElement",
+      fires: true,
+      src: 'const a = createElement("select", null);',
+      expect: ["1: <select>"],
+    },
+    {
+      name: "a spread the gate cannot resolve, which it does not judge",
+      fires: false,
+      src: "const field = useField();\nconst a = <input {...field} />;",
+    },
+    {
+      name: "a const holding another type",
+      fires: false,
+      src: 'const KIND = "text";\nconst a = <input type={KIND} />;',
+    },
+    {
+      name: "an input of another type built with createElement",
+      fires: false,
+      src: 'const a = createElement("input", { type: "text" });',
+    },
+    {
+      name: "DateInput of type date, which renders a text box",
+      fires: false,
+      src: 'const a = <DateInput type="date" />;',
+    },
+    {
+      name: "a date type in braces",
+      fires: true,
+      src: 'const a = <input type={"date"} />;',
+    },
+    {
+      name: "a date type as a template literal",
+      fires: true,
+      src: "const a = <input type={`date`} />;",
+    },
+    {
+      name: "a date type from a ternary",
+      fires: true,
+      src: 'const a = <TextInput type={day ? "date" : "text"} />;',
+    },
+    {
+      name: "a date type as a fallback",
+      fires: true,
+      src: 'const a = <input type={(kind ?? "date") as string} />;',
+    },
+    {
+      name: "a date type in capitals, which the browser reads the same",
+      fires: true,
+      src: 'const a = <input type="DATE" />;',
+    },
+    {
+      name: "a date type spread from an object literal",
+      fires: true,
+      src: 'const a = <input {...{ type: "date" }} />;',
+    },
+    {
+      name: "a date type escaped in a string",
+      fires: true,
+      src: 'const a = <input type={"d\\u0061te"} />;',
+    },
+    {
+      name: "a date type on the line after the tag",
+      fires: true,
+      src: 'const a = (\n  <input\n    type="date"\n  />\n);',
+      expect: ['2: <input type="date">'],
+    },
+    {
+      name: "a date input built in a string",
+      fires: true,
+      src: 'const html = \'<input name="d" type="date">\';',
+      expect: ['1: <input type="date"> inside a string'],
+    },
+    {
+      name: "a date input in JSX in a .ts file",
+      fires: true,
+      src: 'export const a = <input type="date" />;',
+      file: "probe.ts",
+      expect: ['1: <input type="date">'],
+    },
+    {
+      name: "a text input",
+      fires: false,
+      src: 'const a = <input type="text" />;',
+    },
+    {
+      name: "a type held in a name",
+      fires: false,
+      src: "const a = <TextInput type={kind} />;",
+    },
+    {
+      name: "a comparison with date, which is not the value",
+      fires: false,
+      src: 'const a = <input type={kind === "date" ? "text" : "search"} />;',
+    },
+    {
+      name: "a native date and time input",
+      fires: true,
+      src: 'const a = <input type="datetime-local" />;',
+      expect: ['1: <input type="datetime-local">'],
+    },
+    {
+      name: "a TextInput of type time",
+      fires: true,
+      src: 'const a = <TextInput type="time" value={v} />;',
+      expect: ['1: <TextInput type="time">'],
+    },
+    {
+      name: "a native month input",
+      fires: true,
+      src: 'const a = <input type="month" />;',
+      expect: ['1: <input type="month">'],
+    },
+    {
+      name: "a time type spread from a const object",
+      fires: true,
+      src: 'const clock = { type: "time" } as const;\nconst a = <input {...clock} />;',
+      expect: ['2: <input type="time">'],
+    },
+    {
+      name: "a type that only starts like a clock type",
+      fires: false,
+      src: 'const a = <input type="timeline" />;',
+    },
+    {
+      name: "a date attribute that is not the type",
+      fires: false,
+      src: 'const a = <input data-type="date" />;',
+    },
+    {
+      name: "InlineText of type date, which renders DateInput",
+      fires: false,
+      src: 'const a = <InlineText type="date" />;',
+    },
+    {
+      name: "a field model naming a date type",
+      fires: false,
+      src: 'const field = { key: "close", type: "date" };',
+    },
+    {
+      name: "a date and time input built in a string",
+      fires: true,
+      src: "const html = '<input type=\"datetime-local\">';",
+      expect: ['1: <input type="datetime-local"> inside a string'],
+    },
   ];
 
   for (const tc of cases) {
@@ -558,6 +877,87 @@ describe("the native-control detector sees what it claims to", () => {
         `<${tag}> is in the rule, but the census would never parse a file that only mentions it`,
       ).not.toEqual([]);
     }
+    for (const host of ["input", ...dateHosts.names]) {
+      for (const spelling of ['"date"', '{"date"}', "{`date`}"]) {
+        expect(
+          findNativeControls(
+            "probe.tsx",
+            `const a = <${host} type=${spelling} />;`,
+          ),
+          `<${host} type=${spelling}> is in the rule, but the census would never find it`,
+        ).not.toEqual([]);
+      }
+    }
+  });
+
+  // One host per path a `type` prop takes: whole props, a rest spread, a
+  // forwarded `props.type`, a host inside a host, a private host inside one.
+  it("derives its date hosts from the design system", () => {
+    for (const host of [
+      "TextInput",
+      "SearchField",
+      "ComboBox",
+      "MoneyInput",
+      "Checkbox",
+    ]) {
+      expect(dateHosts.names, `${host} passes its type on`).toContain(host);
+    }
+    // A literal `type` after the spread wins, so DateInput is a text box.
+    expect(dateHosts.names).not.toContain("DateInput");
+    expect(dateHosts.names).not.toContain("InlineText");
+    expect(
+      [...dateHosts.exempted],
+      "a name in notHosts that the derivation no longer finds as a host",
+    ).toEqual([...notHosts]);
+    expect(
+      [...dateHosts.opaque].sort(),
+      "a component spreads a value of unknown shape onto an input: make the spread resolvable, or clear it in clearedSpreads with its reason",
+    ).toEqual(clearedSpreads);
+  });
+
+  const probes = mkdtempSync(join(tmpdir(), "date-host-"));
+  afterAll(() => rmSync(probes, { recursive: true, force: true }));
+
+  it.each([
+    [
+      "a rest spread before its type",
+      "({ type, ...rest }) => <input {...rest} type={type} />",
+      true,
+    ],
+    [
+      "a rest spread after its type",
+      "({ type, ...rest }) => <input type={type} {...rest} />",
+      true,
+    ],
+    [
+      "a local object holding its type",
+      "(p) => { const extra = { type: p.type }; return <input {...extra} />; }",
+      true,
+    ],
+    [
+      "a let holding its type",
+      "({ type }) => { let held = type; return <input type={held} />; }",
+      true,
+    ],
+    [
+      "a const holding its type",
+      "({ type }) => { const held = type; return <input type={held} />; }",
+      true,
+    ],
+    [
+      "a local object with a type of its own",
+      '({ type }) => { const extra = { type: "text" }; return <input {...extra} />; }',
+      false,
+    ],
+    [
+      "a let holding a type of its own",
+      '({ type }) => { let held = "text"; return <input type={held} />; }',
+      false,
+    ],
+  ])("finds a host through %s", (_shape, component, host) => {
+    const file = join(mkdtempSync(join(probes, "case-")), "probe.tsx");
+    writeFileSync(file, `export const Probe = ${component};\n`);
+    expect(deriveDateHosts([file], new Set()).names.has("Probe")).toBe(host);
   });
 
   // The line between what is derived and what is hand-written, which is the
@@ -578,5 +978,8 @@ describe("the native-control detector sees what it claims to", () => {
     // Without this, "derived" would be satisfied by a pre-filter matching
     // everything.
     expect(prefilter.test("const a = <div />;")).toBe(false);
+    expect(
+      worthParsing('const a = <input type="text" onBlur={update} />;'),
+    ).toBe(false);
   });
 });

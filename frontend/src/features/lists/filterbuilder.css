@@ -24,9 +24,8 @@
   margin: 0;
   min-inline-size: 0;
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  background: var(--bgWell);
 }
 
 .filter-group-head {
@@ -35,10 +34,6 @@
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
-}
-
-.filter-group-title {
-  font-weight: var(--fontWeightMedium);
 }
 
 .filter-group-children {
@@ -159,4 +154,20 @@
 
 .filter-money-unit {
   color: var(--textSecondary);
+}
+
+.filter-radius-value {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  flex: 1 1 12rem;
+}
+
+.filter-radius-value > .input {
+  flex: 1 1 6rem;
+  min-width: 5rem;
 }

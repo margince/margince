@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // MergeContact serves POST /contacts/{id}/merge — merge this contact (A, the path id)
@@ -67,6 +69,10 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 		CustomFilters:   httperr.CustomFieldFilters(r),
 		TagIDs:          uuidArgs(params.TagId),
 	}
+	if params.RelationshipMark != nil {
+		mark := string(*params.RelationshipMark)
+		in.RelationshipMark = &mark
+	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))
@@ -76,6 +82,7 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
 	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
 	in.Unassigned = params.Unassigned
+	in.SharedWithMe = params.SharedWithMe
 	in.CompanyID = idArg[ids.CompanyKind](params.CompanyId)
 	if params.ListId != nil {
 		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId, contactEntity); err != nil {
@@ -101,7 +108,7 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request, _ crmcon
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
-	mapInput := contactCreateInput
+	mapInput := ContactCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = contactCreateInputFromImporter
 	}
@@ -196,7 +203,7 @@ func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, r
 		return
 	}
 	for i := range results {
-		if results[i].Outcome != VCardNeedsReview {
+		if !results[i].Outcome.AwaitsApproval() {
 			continue
 		}
 		if err := h.stageVCardReview(ctx, entries[results[i].Index], results[i].ContactID); err != nil {
@@ -223,6 +230,30 @@ func toContractVCardResults(results []VCardResult) []crmcontracts.VCardImportRes
 			reason := result.Reason
 			item.Reason = &reason
 		}
+		if result.LeadID != nil {
+			lead := openapi_types.UUID(result.LeadID.UUID)
+			item.LeadId = &lead
+		}
+		if len(result.Fields) > 0 {
+			fields := toContractVCardFields(result.Fields)
+			item.Fields = &fields
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+func toContractVCardFields(fields []VCardField) []crmcontracts.VCardImportField {
+	out := make([]crmcontracts.VCardImportField, 0, len(fields))
+	for _, f := range fields {
+		item := crmcontracts.VCardImportField{
+			Field:  crmcontracts.VCardImportFieldField(f.Field),
+			Action: crmcontracts.VCardImportFieldAction(f.Action),
+		}
+		if f.Value != "" {
+			value := f.Value
+			item.Value = &value
+		}
 		out = append(out, item)
 	}
 	return out
@@ -238,20 +269,23 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 		return
 	}
 	in := QuickCaptureInput{
-		FullName:    req.FullName,
-		Title:       req.Title,
-		CompanyID:   idArg[ids.CompanyKind](req.CompanyId),
-		CompanyName: req.CompanyName,
-		Role:        req.Role,
-		ProfileURL:  req.ProfileUrl,
-		Phone:       req.Phone,
+		FullName:       req.FullName,
+		Title:          req.Title,
+		CompanyID:      idArg[ids.CompanyKind](req.CompanyId),
+		CompanyName:    req.CompanyName,
+		Role:           req.Role,
+		ProfileURL:     req.ProfileUrl,
+		Phone:          req.Phone,
+		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
+	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {
+		// This request names its one address `email`, not `emails`.
+		httperr.Write(w, r, httperr.Validation("email", refused.Code, refused.Message))
+		return
+	}
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -353,12 +387,70 @@ func (h Handlers) DismissRelationshipNudge(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.DismissRelationshipNudge(
-		r.Context(), pathID[ids.ContactKind](id), req.Days); err != nil {
+	span := nudgeSpanOf(req.Days, req.Permanent)
+	if err := h.store.DismissRelationshipNudges(
+		r.Context(), []ids.ContactID{pathID[ids.ContactKind](id)}, span); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// RetractAcquisitionRequest serves POST /contacts/{id}/acquisition-request/retract.
+// Wire-only; the store owns the rules.
+func (h Handlers) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := h.store.RetractAcquisitionRequest(r.Context(), pathID[ids.ContactKind](id)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DismissRelationshipNudges sets every listed contact aside for the calling
+// reader, all or none: the Worklist band's "Dismiss all".
+func (h Handlers) DismissRelationshipNudges(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.DismissRelationshipNudgesRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	contactIDs := make([]ids.ContactID, 0, len(req.ContactIds))
+	for _, id := range req.ContactIds {
+		contactIDs = append(contactIDs, ids.From[ids.ContactKind](ids.UUID(id)))
+	}
+	if err := h.store.DismissRelationshipNudges(
+		r.Context(), contactIDs, nudgeSpanOf(req.Days, req.Permanent)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// nudgeSpanOf reads the wire's two optional fields; an absent days is zero,
+// which the store refuses unless the stop is permanent.
+func nudgeSpanOf(days *int, permanent *bool) NudgeSpan {
+	span := NudgeSpan{Permanent: permanent != nil && *permanent}
+	if days != nil {
+		span.Days = *days
+	}
+	return span
+}
+
+// GetRelationshipNudge answers the calling reader's own choice for the contact.
+func (h Handlers) GetRelationshipNudge(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	state, err := h.store.RelationshipNudgeState(r.Context(), pathID[ids.ContactKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out := crmcontracts.RelationshipNudgeState{State: crmcontracts.RelationshipNudgeStateStateFollowing}
+	switch {
+	case state.Stopped:
+		out.State = crmcontracts.RelationshipNudgeStateStateStopped
+	case state.Until != nil:
+		out.State = crmcontracts.RelationshipNudgeStateStateSetAside
+		out.DismissedUntil = state.Until
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // RestoreRelationshipNudge puts a set-aside contact back on the reader's lane.

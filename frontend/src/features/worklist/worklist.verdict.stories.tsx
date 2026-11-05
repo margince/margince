@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { StoryProviders } from "../../testing/story-utils";
 import { VerdictLine } from "./worklist.verdict";
 // The line is drawn INSIDE a queue row, and everything about its measure — the
@@ -31,7 +31,7 @@ function Lines({
           <VerdictLine
             key={verdict.line}
             verdict={verdict}
-            zone={viewerZone()}
+            zone={browserZone()}
           />
         ))}
       </div>
@@ -47,10 +47,7 @@ export default meta;
 
 type Story = StoryObj;
 
-// The four standings together, which is the only way to judge them: `cold`
-// takes no tone on purpose, and whether that reads as a statement of fact
-// rather than as a fourth instruction can only be seen beside the three that
-// do carry one.
+// Earlier assessments share a neutral tone while retaining their written dates.
 export const FourStandings: Story = {
   render: () => (
     <Lines
@@ -75,7 +72,7 @@ export const FourStandings: Story = {
         },
         {
           standing: "cold",
-          line: "No reply since the March site visit.",
+          line: "No later reply was recorded after the March site visit.",
           source: "deal_status",
           as_of: "2026-08-12T06:12:00Z",
         },
@@ -97,4 +94,9 @@ export const BriefFinding: Story = {
       ]}
     />
   ),
+};
+
+export const FourStandingsDark: Story = {
+  ...FourStandings,
+  globals: { theme: "dark" },
 };

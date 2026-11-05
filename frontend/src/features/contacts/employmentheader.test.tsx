@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { mount, view } from "./contactpage.testkit";
+import { mount, view } from "../../testing/contactpage.testkit";
 
 afterEach(cleanup);
 it("does not label a former or unknown company as the contact's current employer", async () => {
@@ -76,7 +76,7 @@ it("keeps unknown roles and additional current jobs on the Employers panel", asy
     </StoryProviders>,
   );
   const uncertain = (await screen.findByText("Uncertain Employer")).closest(
-    ".pe-employment",
+    ".company-card",
   );
   expect(await screen.findByText("Second Employer")).toBeTruthy();
   expect(uncertain).not.toBeNull();

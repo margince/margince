@@ -5,6 +5,7 @@ package deals
 
 import (
 	"net/http"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -29,6 +30,14 @@ func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
 		out = append(out, ids.UUID(v))
 	}
 	return out
+}
+
+// dayArg widens an optional contract date to the store's calendar day.
+func dayArg(day *openapi_types.Date) *time.Time {
+	if day == nil {
+		return nil
+	}
+	return &day.Time
 }
 
 func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealsParams) {
@@ -65,10 +74,6 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		s := string(*params.Status)
 		in.Status = &s
 	}
-	if params.ForecastCategory != nil {
-		category := string(*params.ForecastCategory)
-		in.ForecastCategory = &category
-	}
 	if params.CommercialMotion != nil {
 		motion := string(*params.CommercialMotion)
 		in.CommercialMotion = &motion
@@ -78,11 +83,20 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		in.Priority = &priority
 	}
 	in.AcquisitionSource = params.AcquisitionSource
+	in.RangeFilters = RangeFilters{
+		CloseFrom: dayArg(params.CloseFrom), CloseTo: dayArg(params.CloseTo),
+		ValueMin: params.ValueMin, ValueMax: params.ValueMax,
+		WinProbabilityMin: params.WinProbabilityMin, WinProbabilityMax: params.WinProbabilityMax,
+		Currency: params.Currency, Country: params.Country,
+	}
+	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
 	if params.ListId != nil {
-		if in.Membership, err = h.memberFilter(r.Context(), *params.ListId); err != nil {
-			writeStoreErr(w, r, err)
-			return
-		}
+		member := ids.UUID(*params.ListId)
+		in.MemberOf = &member
+	}
+	if err := narrowToList(r.Context(), &in, h.listMembers); err != nil {
+		writeStoreErr(w, r, err)
+		return
 	}
 
 	deals, page, err := h.store.ListDeals(r.Context(), in)
@@ -101,7 +115,7 @@ func (h Handlers) CreateDeal(w http.ResponseWriter, r *http.Request, _ crmcontra
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
-	mapInput := dealCreateInput
+	mapInput := DealCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = dealCreateInputFromImporter
 	}
@@ -171,7 +185,32 @@ func (h Handlers) AdvanceDeal(w http.ResponseWriter, r *http.Request, id crmcont
 		writeStoreErr(w, r, err)
 		return
 	}
-	deal, err := h.store.AdvanceDeal(r.Context(), pathID[ids.DealKind](id), in)
+	advanced, err := h.store.AdvanceDeal(r.Context(), pathID[ids.DealKind](id), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	wire, err := advanced.Wire()
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
+}
+
+// CorrectDealCloseDay moves a closed deal's close day. The store refuses an
+// agent; the contract's human-only mark refuses it at the gate first.
+func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CorrectDealCloseDayParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.CorrectDealCloseDayRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	deal, err := h.store.CorrectCloseDay(r.Context(), pathID[ids.DealKind](id),
+		CorrectCloseDayInput{ClosedOn: req.ClosedOn.Time, IfVersion: ifVersion})
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

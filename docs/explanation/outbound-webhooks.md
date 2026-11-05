@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/modules/webhooks backend/internal/compose/webhooks.go backend/internal/compose/jobs_webhookretry.go backend/api/public-events.yaml frontend/src/features/settings/webhooks.tsx -->
 # Outbound webhooks: the governed outbound surface and delivery engine
 
 `internal/modules/webhooks` is the outbound integration surface **built into** Margince. A workspace
@@ -471,10 +472,10 @@ Delivery is a background capability, gated on the installation signing key:
   again a delivery that is already checked, and never fans out.
 
 The time between runs of the retry dispatcher is the **Webhook retries (seconds)** setting on
-Settings → `System health` (default 30 seconds). Each run adds one `webhook_retry_workspace` job per
-live workspace. It times the fan-out across all workspaces, not the wait of one delivery. The
+Settings → `System health` (default 30 seconds). Each run adds one `webhook_retry` job, a single pass
+over every due retry of the installation (`backend/internal/compose/jobs_webhookretry.go`). The
 schedule per delivery is the doubling wait above; this setting only decides how soon a wait that has
-run out is noticed. Archived workspaces are skipped, since nobody waits for a delivery parked there.
+run out is noticed.
 See [reference/configuration.md](../reference/configuration.md) for the full table of flags and
 settings.
 
@@ -516,7 +517,7 @@ installation secret. It answers a mapped 503 that names the missing capability.
 ## 9. The Settings → Integrations UI
 
 The whole config surface, and the surface for looking at deliveries, can be reached from the web
-app, not only by `curl`. Settings → **Integrations** (`frontend/src/screens/webhooks.tsx`) shows
+app, not only by `curl`. Settings → **Integrations** (`frontend/src/features/settings/webhooks.tsx`) shows
 `WebhooksCard`. It makes every REST call that the config surface (§1) and the delivery surface (§4)
 offer:
 
@@ -600,7 +601,7 @@ but no buttons that change data.
 | The code that generates the payloads | `backend/tools/gen-payloads/` → `internal/contracts/publicevents_gen.go` |
 | The typed emit seam (compile-time payload↔event binding) | `internal/platform/database/storekit/storekit.go` (`EmitEvent`, `EmitEventForEntity`) |
 | The whole-catalog fitness gate (full cover, nothing left over, versions, delivery can resolve) | `backend/gates/publicevents_test.go` |
-| The Settings → Integrations UI (§9) | `frontend/src/screens/webhooks.tsx` |
+| The Settings → Integrations UI (§9) | `frontend/src/features/settings/webhooks.tsx` |
 | The generated frontend event type copy | `frontend/src/api/public-events.ts` |
 
 ## Where to go next

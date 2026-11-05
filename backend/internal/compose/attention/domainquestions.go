@@ -12,6 +12,11 @@ package attention
 import (
 	"context"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // DomainQuestions is the reader's OWN undecided domains: the triage found
@@ -19,8 +24,11 @@ import (
 // a record. The seam takes no owner argument because the read binds to the
 // acting human, which is what lets a row claim its reader as owner without a
 // second field saying so.
+const DomainQuestionLimit = contacts.DomainQuestionLimit
+
 type DomainQuestions interface {
 	OpenDomainQuestions(ctx context.Context) ([]DomainQuestion, error)
+	OwnsDomainQuestion(ctx context.Context, domain string) (bool, error)
 }
 
 // DomainQuestion is one domain waiting on a human answer.
@@ -29,7 +37,45 @@ type DomainQuestion struct {
 	Domain string
 	// Why the machine stopped, as prose rather than the stored token, so this
 	// lane and the capture-rules screen say one thing.
-	Reason string
-	// When the question was last opened or re-opened; orders and dates the row.
-	AskedAt time.Time
+	Reason     string
+	ReasonCode string
+	// The first question date stays stable across retries and pagination.
+	AskedAt    time.Time
+	EvidenceAt *time.Time
+	// The site triage's own sentence on a vendor question.
+	Note    string
+	Context contacts.DomainQuestionContext
+}
+
+// DomainQuestionContextWire maps a question's context to the contract. The
+// worklist row and the review list both call it.
+func DomainQuestionContextWire(in contacts.DomainQuestionContext) *crmcontracts.DomainQuestionContext {
+	out := &crmcontracts.DomainQuestionContext{
+		Contacts:           make([]crmcontracts.DomainQuestionContact, 0, len(in.Contacts)),
+		ContactCount:       in.ContactCount,
+		HiddenSenders:      in.HiddenSenders,
+		LinkedContactCount: in.LinkedContactCount,
+	}
+	for _, contact := range in.Contacts {
+		out.Contacts = append(out.Contacts, crmcontracts.DomainQuestionContact{Id: openapi_types.UUID(contact.ID.UUID), Name: contact.Name})
+	}
+	if in.OriginID != nil {
+		origin := openapi_types.UUID(*in.OriginID)
+		out.OriginActivityId = &origin
+	}
+	if in.SenderAddress != "" {
+		out.SenderAddress = &in.SenderAddress
+	}
+	if in.SiteRead != "" {
+		read := crmcontracts.DomainQuestionContextSiteRead(in.SiteRead)
+		out.SiteRead = &read
+	}
+	if in.Suggestion != nil {
+		out.SuggestedCompany = &crmcontracts.DomainQuestionSuggestion{
+			Id:    openapi_types.UUID(in.Suggestion.CompanyID.UUID),
+			Name:  in.Suggestion.Name,
+			Basis: crmcontracts.DomainQuestionSuggestionBasis(in.Suggestion.Basis),
+		}
+	}
+	return out
 }

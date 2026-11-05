@@ -58,7 +58,7 @@ func draftIntro(as context.Context, t *testing.T, e *integration.Env, company, c
 	svc := company360Service(e)
 	draft, err := svc.IntroRequestDraft(as, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			ContactID: ids.From[ids.ContactKind](contact),
+			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	return draft.Body, err

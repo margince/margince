@@ -9,15 +9,16 @@ package dealstatus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestOpeningWithTwoDifferentContactsIsSetAsideApart(t *testing.T) {
-	alice := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	alice := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "champion", Name: "Alice Brandt", ContactID: ids.NewV7()},
 	}}
-	bob := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	bob := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "champion", Name: "Bob Kranz", ContactID: ids.NewV7()},
 	}}
 	a, b := decideMove(alice), decideMove(bob)
@@ -33,7 +34,7 @@ func TestOpeningWithTwoDifferentContactsIsSetAsideApart(t *testing.T) {
 }
 
 func TestARewrittenReasonKeepsTheMovesFingerprint(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "champion", Name: "Alice Brandt", ContactID: ids.NewV7()},
 	}}
 	mv := decideMove(f)

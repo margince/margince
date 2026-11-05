@@ -12,22 +12,22 @@ import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import { useCreateList, useListsAvailable } from "../../lib/lists.queries";
-import { problemMessageOf } from "../../lib/problem";
-import type { Route } from "../../lib/router";
-import { encode, type Node } from "../../lib/segmentpredicate";
 import {
   type ObjectTab,
   RESOURCE_OF,
   UNIT_LABEL,
   VIEW_OF,
-} from "./filtersaddress";
+} from "../../lib/filtersaddress";
+import { useCreateList, useListsAvailable } from "../../lib/lists.queries";
+import { problemMessageOf } from "../../lib/problem";
+import type { Route } from "../../lib/router";
+import { filterStateFrom, useSaveView } from "../../lib/savedviews.queries";
+import { encode, type Node } from "../../lib/segmentpredicate";
 import {
   DEFAULT_AUDIENCE,
   type ListAudience,
   ListAudienceFields,
 } from "./listsharing";
-import { filterStateFrom, useSaveView } from "./savedviews.queries";
 
 export type SavedKind = "view" | "list";
 
