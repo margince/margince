@@ -192,7 +192,7 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/companies":                     {object: tableCompany, table: tableCompany, idPath: "id"},
 	"PATCH /v1/companies/{id}":               {object: tableCompany, table: tableCompany, idPath: "id"},
 	"POST /v1/companies/{id}/merge":          {object: tableCompany, table: tableCompany, idPath: "id"},
-	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"},
+	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"POST /v1/companies/{id}/link-contacts": {
 		object: tableCompany, table: tableCompany, pathParam: "id",
 		companions: []companionRef{
@@ -231,7 +231,7 @@ var replayableOperations = map[string]replayTarget{
 		companions: []companionRef{{table: tableDeal, idPath: dealIDField}},
 	},
 	"POST /v1/deal-suggestions/{id}/dismiss": {object: tableDeal, moduleProbe: probeDealSuggestion, idPath: "id"},
-	"POST /v1/contracts":                     {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"},
+	"POST /v1/contracts":                     {object: probeContract, moduleProbe: probeContract, idPath: "id", rowNote: "a contract carries no owner column; visibility is inherited from its deal or company, so the contracts store owns the probe"}, //nolint:goconst // the replay gates read this map's keys as string literals
 	"POST /v1/deal-rooms":                    {object: probeDealRoom, moduleProbe: probeDealRoom, idPath: "id", rowNote: "a Deal Room carries no owner column; its visibility is its parent deal's, so the dealrooms store owns the probe"},
 	"POST /v1/projects":                      {object: tableProject, table: tableProject, idPath: "id"},
 	"PATCH /v1/projects/{id}":                {object: tableProject, table: tableProject, idPath: "id"},

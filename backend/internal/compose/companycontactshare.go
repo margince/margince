@@ -39,11 +39,12 @@ func (h companyContactShareHandlers) ShareCompanyContacts(w http.ResponseWriter,
 	httperr.WriteJSON(w, http.StatusOK, result)
 }
 
+// ShareCompanyContacts grants a subject access to the contacts of a company.
 func ShareCompanyContacts(ctx context.Context, db *database.DB, grants *identity.Service, companyID ids.CompanyID, req crmcontracts.ShareCompanyContactsRequest) (crmcontracts.ShareCompanyContactsResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, database.StatementCeiling)
 	defer cancel()
 	in := identity.CreateGrantInput{
-		RecordType: "contact", SubjectType: string(req.SubjectType),
+		RecordType: string(recordTypeContact), SubjectType: string(req.SubjectType),
 		SubjectID: ids.UUID(req.SubjectId), Access: string(req.Access), Reason: req.Reason, ExpiresAt: req.ExpiresAt,
 	}
 	out := crmcontracts.ShareCompanyContactsResult{}

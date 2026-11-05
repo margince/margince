@@ -62,10 +62,10 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 		return nil, err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = sqlTrue
 	}
 	if writable == "" {
-		writable = "TRUE"
+		writable = sqlTrue
 	}
 	query := storekit.SQLf(`
  WITH requested AS (SELECT * FROM unnest($%d::uuid[], $%d::uuid[]) AS r(deal_id, change_id)),

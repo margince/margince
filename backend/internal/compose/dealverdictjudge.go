@@ -188,7 +188,7 @@ func (p dealVerdictPass) applyAs(
 			if err := p.recordOnTimeline(ctx, tx, c, read, applied); err != nil {
 				return err
 			}
-			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL("d")+` FROM deal d WHERE d.id = $1`, c.deal).
+			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
 		AsOwner: ownersAgentTx(p.users, c.owner, marginceActorID),

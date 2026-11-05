@@ -58,7 +58,7 @@ func RunReasonCodes() []string {
 // sentence. A failure stored before Apply carries a stage prefix
 // ("planning the effect: ..."), so the sentence is matched at its end.
 func runReasonCode(outcome string, reason *string) string {
-	if outcome == "blocked" {
+	if outcome == runBlocked {
 		return RunReasonBlocked
 	}
 	if reason != nil {

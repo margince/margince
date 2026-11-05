@@ -29,7 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-func (v *dealVerdictEnv) teamChanges(t *testing.T, ctx context.Context) crmcontracts.TeamMarginceChanges {
+func (v *dealVerdictEnv) teamChanges(ctx context.Context, t *testing.T) crmcontracts.TeamMarginceChanges {
 	t.Helper()
 	w := httptest.NewRecorder()
 	newMarginceChangeHandlers(v.Pool).GetTeamMarginceChanges(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(ctx),
@@ -87,7 +87,7 @@ func TestTheTeamListShowsEveryDealTheNightlyCheckSkipsForWantOfALiveOwner(t *tes
 	if v.lane.calls != 0 {
 		t.Fatalf("model calls = %d, want none: no deal has a live owner the check could act for", v.lane.calls)
 	}
-	report := v.teamChanges(t, v.colleague())
+	report := v.teamChanges(v.colleague(), t)
 	got := map[ids.UUID]crmcontracts.TeamMarginceOwnerlessDeal{}
 	for _, d := range report.Ownerless {
 		got[ids.UUID(d.DealId)] = d

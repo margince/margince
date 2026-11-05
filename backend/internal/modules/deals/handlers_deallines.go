@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// GetDealLines answers the deal's lines and the figures they derive.
 func (h Handlers) GetDealLines(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	out, err := h.store.GetDealLines(r.Context(), pathID[ids.DealKind](id))
 	if err != nil {
@@ -25,6 +26,7 @@ func (h Handlers) GetDealLines(w http.ResponseWriter, r *http.Request, id crmcon
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// AddDealLine adds a line to the deal at the revision the caller read.
 func (h Handlers) AddDealLine(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	raw, err := io.ReadAll(io.LimitReader(r.Body, maxOfferBody))
 	if err != nil {
@@ -44,6 +46,7 @@ func (h Handlers) AddDealLine(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// UpdateDealLine edits one line at the revision the caller read.
 func (h Handlers) UpdateDealLine(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, lineID openapi_types.UUID) {
 	raw, err := io.ReadAll(io.LimitReader(r.Body, maxOfferBody))
 	if err != nil {
@@ -63,6 +66,7 @@ func (h Handlers) UpdateDealLine(w http.ResponseWriter, r *http.Request, id crmc
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// RemoveDealLine removes one line at the revision the caller read.
 func (h Handlers) RemoveDealLine(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, lineID openapi_types.UUID, params crmcontracts.RemoveDealLineParams) {
 	out, err := h.store.RemoveDealLine(r.Context(), pathID[ids.DealKind](id), ids.UUID(lineID), params.ExpectedRevision)
 	if err != nil {
@@ -72,6 +76,7 @@ func (h Handlers) RemoveDealLine(w http.ResponseWriter, r *http.Request, id crmc
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// UseDealEstimate returns the deal to a typed estimate.
 func (h Handlers) UseDealEstimate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.DealRevisionRequest
 	if !httperr.Decode(w, r, &req) {
@@ -85,6 +90,7 @@ func (h Handlers) UseDealEstimate(w http.ResponseWriter, r *http.Request, id crm
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// RefreshOfferFromDeal replaces a draft offer's lines with the deal's.
 func (h Handlers) RefreshOfferFromDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.RefreshOfferFromDealParams) {
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
 	if !ok {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -47,7 +48,8 @@ const (
 
 // verdictSourceKinds maps each activity kind a verdict reads to its source.
 var verdictSourceKinds = map[string]string{
-	"email": verdictSourceMail, "meeting": verdictSourceMeetings, "call": verdictSourceCalls, "note": verdictSourceNotes,
+	string(crmcontracts.ActivityKindEmail): verdictSourceMail, string(crmcontracts.ActivityKindMeeting): verdictSourceMeetings,
+	string(crmcontracts.ActivityKindCall): verdictSourceCalls, string(crmcontracts.ActivityKindNote): verdictSourceNotes,
 }
 
 // verdictRecord is one verdict as stored.

@@ -223,14 +223,14 @@ func TestAQuoteIsReadWithEitherSeparator(t *testing.T) {
 		"50,000 USD": 5_000_000, "50.000 USD": 5_000_000, "50 000 USD": 5_000_000, "USD 49,999.50": 4_999_950,
 		"49.999,50 USD": 4_999_950, "50k USD": 5_000_000, "1.5k USD": 150_000, "$50,000": 5_000_000,
 	} {
-		got, currency, ok := quotedPrice(quote)
+		got, currency, ok := QuotedPrice(quote)
 		if !ok || got != want || currency != "USD" {
-			t.Errorf("quotedPrice(%q) = %d %s %v, want %d USD", quote, got, currency, ok, want)
+			t.Errorf("QuotedPrice(%q) = %d %s %v, want %d USD", quote, got, currency, ok, want)
 		}
 	}
 	for _, quote := range []string{"50,000", "50,000 USD or 60,000 EUR", "about fifty thousand USD"} {
-		if _, _, ok := quotedPrice(quote); ok {
-			t.Errorf("quotedPrice(%q) read a price; want none", quote)
+		if _, _, ok := QuotedPrice(quote); ok {
+			t.Errorf("QuotedPrice(%q) read a price; want none", quote)
 		}
 	}
 }
@@ -250,9 +250,9 @@ func TestAQuoteWithSeveralNumbersNamesThePriceByItsCurrency(t *testing.T) {
 		{"€ 60.000 für 12 Monate", 6_000_000, "EUR"},
 		{"3 years at 60k USD", 6_000_000, "USD"},
 	} {
-		minor, currency, ok := quotedPrice(tc.quote)
+		minor, currency, ok := QuotedPrice(tc.quote)
 		if !ok || minor != tc.minor || currency != tc.currency {
-			t.Errorf("quotedPrice(%q) = %d %s %v, want %d %s", tc.quote, minor, currency, ok, tc.minor, tc.currency)
+			t.Errorf("QuotedPrice(%q) = %d %s %v, want %d %s", tc.quote, minor, currency, ok, tc.minor, tc.currency)
 		}
 	}
 	for _, quote := range []string{
@@ -269,8 +269,8 @@ func TestAQuoteWithSeveralNumbersNamesThePriceByItsCurrency(t *testing.T) {
 		"the old budget was 50k; now 60,000 USD",
 		"60,000 USD now, 45.000 last year",
 	} {
-		if minor, currency, ok := quotedPrice(quote); ok {
-			t.Errorf("quotedPrice(%q) = %d %s; want none", quote, minor, currency)
+		if minor, currency, ok := QuotedPrice(quote); ok {
+			t.Errorf("QuotedPrice(%q) = %d %s; want none", quote, minor, currency)
 		}
 	}
 }

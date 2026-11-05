@@ -61,6 +61,27 @@ func newLoggedDealWorld(t *testing.T, count int) *loggedDealWorld {
 	return w
 }
 
+// requireFilingAsksForADeal logs in and wants the refusal an ambiguous filing
+// answers with.
+func (w *loggedDealWorld) requireFilingAsksForADeal(t *testing.T, in activities.LogActivityInput) {
+	t.Helper()
+	_, _, err := w.store.LogActivity(w.Admin(), in)
+	if err == nil {
+		t.Fatal("an ambiguous filing did not ask for a deal or none")
+	}
+	fault, ok := errors.AsType[*httperr.DetailedError](err)
+	if !ok {
+		t.Fatalf("wanted a filing validation error: %v", err)
+	}
+	if len(fault.Fields) != 1 {
+		t.Fatalf("field faults = %+v", fault.Fields)
+	}
+	field, code := fault.Fields[0].Field, fault.Fields[0].Code
+	if field != "deal_filing" || code != "choose_deal" {
+		t.Fatalf("fault = %s/%s", field, code)
+	}
+}
+
 func (w *loggedDealWorld) call(at time.Time) activities.LogActivityInput {
 	return activities.LogActivityInput{
 		Kind: "call", Body: new("Discussed the renewal"), CallOutcome: new("reached"), OccurredAt: &at,
@@ -114,21 +135,7 @@ func TestLoggedDealFilingDistinguishesNoDealARequiredChoiceAndExplicitNone(t *te
 			in := w.call(time.Date(2026, 1, 10, 9, 0, 0, 0, time.UTC))
 			in.DealFiling = &ref
 			if count > 1 {
-				if _, _, err := w.store.LogActivity(w.Admin(), in); err == nil {
-					t.Fatal("an ambiguous filing did not ask for a deal or none")
-				} else {
-					fault, ok := errors.AsType[*httperr.DetailedError](err)
-					if !ok {
-						t.Fatalf("wanted a filing validation error: %v", err)
-					}
-					if len(fault.Fields) != 1 {
-						t.Fatalf("field faults = %+v", fault.Fields)
-					}
-					field, code := fault.Fields[0].Field, fault.Fields[0].Code
-					if field != "deal_filing" || code != "choose_deal" {
-						t.Fatalf("fault = %s/%s", field, code)
-					}
-				}
+				w.requireFilingAsksForADeal(t, in)
 				ref.Skip = new(true)
 			}
 			logged, _, err := w.store.LogActivity(w.Admin(), in)

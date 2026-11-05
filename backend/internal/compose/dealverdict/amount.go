@@ -18,7 +18,7 @@ func decideAmount(in Input, state State, action Action, rates Rates, change *dea
 	if !quoteFound(in, action.Cited, action.QuotedWords) {
 		return DroppedQuoteNotFound, nil
 	}
-	quotedMinor, currency, ok := quotedPrice(action.QuotedWords)
+	quotedMinor, currency, ok := QuotedPrice(action.QuotedWords)
 	if !ok || currency != action.Currency || !nearQuote(action.Amount, quotedMinor, currency) {
 		return DroppedAmountMismatch, nil
 	}

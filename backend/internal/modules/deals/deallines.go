@@ -138,7 +138,7 @@ func (s *Store) AddDealLine(ctx context.Context, dealID ids.DealID, in AddDealLi
 			return &EstimatePresentError{}
 		}
 		if len(open.Lines) >= maxDealLines {
-			return &FigureError{Field: "line_items", Rule: fmt.Sprintf("holds at most %d lines on one deal", maxDealLines)}
+			return &FigureError{Field: lineItemsField, Rule: fmt.Sprintf("holds at most %d lines on one deal", maxDealLines)}
 		}
 		currency, err := lineCurrency(open, in.Currency)
 		if err != nil {
@@ -237,7 +237,7 @@ func (s *Store) UseDealEstimate(ctx context.Context, dealID ids.DealID, expected
 			return err
 		}
 		if len(open.Lines) > 0 {
-			return &LineOwnedValueError{Field: "line_items"}
+			return &LineOwnedValueError{Field: lineItemsField}
 		}
 		if open.Head.Mode == modeLines {
 			if err := s.leaveLinesMode(ctx, tx, open); err != nil {

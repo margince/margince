@@ -352,7 +352,7 @@ func (e *WorkflowEngine) recordFailedBeforeApply(ctx context.Context, h workflow
 	if err != nil {
 		return errors.Join(cause, err)
 	}
-	if _, claimErr := e.claimRun(ctx, h, ev, emptyPlan, "failed", payload); claimErr != nil {
+	if _, claimErr := e.claimRun(ctx, h, ev, emptyPlan, runStatusFailed, payload); claimErr != nil {
 		return errors.Join(cause, claimErr)
 	}
 	return cause
@@ -387,7 +387,7 @@ func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handle
 	if err != nil {
 		return err
 	}
-	_, err = e.claimRun(ctx, h, ev, emptyPlan, "skipped", detail)
+	_, err = e.claimRun(ctx, h, ev, emptyPlan, runSkipped, detail)
 	return err
 }
 
