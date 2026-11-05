@@ -221,9 +221,17 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 	if err != nil {
 		return row{}, err
 	}
+	if by == decidedBySystem {
+		if ctx, p, err = actUnderPolicyNow(ctx, tx, a); err != nil {
+			return row{}, err
+		}
+	}
 	visible, err := decidable(ctx, tx, p, a)
 	if err != nil {
 		return row{}, err
+	}
+	if !visible && by == decidedBySystem {
+		return row{}, ErrPolicyWithdrawn
 	}
 	if !visible {
 		return row{}, apperrors.ErrNotFound
@@ -348,18 +356,16 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 //
 // What differs is only what the receipt claims: decided_by_system marks the row
 // so the day's "Done for you" lane can say nobody was asked. The authority is
-// NOT the system principal — the caller binds an agent principal carrying the
-// owner's own grants, seat and row scope, so an automatic apply is bounded by
-// exactly what that rep could have done by hand. compose/autoapply.go builds
-// it, and refuses to apply at all when the owner cannot be resolved or is no
-// longer live.
+// NOT the system principal: actAs binds an agent carrying the owner's own
+// grants, seat and row scope, so an automatic apply is bounded by exactly what
+// that rep could have done by hand. compose/autoapply.go builds it.
 //
-// The caller checks the mode. This does not read the policy itself because the
-// decision to apply is made where the owner is resolved: reading it again here
-// would be a second answer to whether this may run, from the place with less
-// context about whose policy was consulted.
-func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID) (row, error) {
-	return s.recordDecision(ctx, id, true, nil, nil, decidedBySystem)
+// The decision and the effect's redemption each bind actAs again in their own
+// transaction and ask the owner's mode there. An owner who left, lost the
+// record or turned the kind off before either commits answers
+// ErrPolicyWithdrawn, and that stage writes nothing.
+func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID, actAs PolicyActor) (row, error) {
+	return s.recordDecision(withPolicyActor(ctx, id, actAs), id, true, nil, nil, decidedBySystem)
 }
 
 // statusAfter is the state a decision leaves the approval in, which is what the

@@ -317,11 +317,14 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		if DealStatus(status) != DealOpen {
 			return nil
 		}
-		stillMine, err := c.ownerStillConsents(ctx, cand.ownerID, owner)
+		// Asked of the owner the lock holds, with their grants and switch as
+		// they stand now: a handover, suspension, lost role or switch turned
+		// off since the member page was read stops this write.
+		actor, mayWrite, err := c.ownerAllows(ctx, tx, owner)
 		if err != nil {
 			return err
 		}
-		if !stillMine {
+		if !mayWrite {
 			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
 		}
 		// The kill switch, read here rather than once per pass: an operator who
@@ -349,7 +352,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		maps.Copy(auditEvidence, extra)
 		changedFields := map[string]any{CloseDateCorrectionKind: correction}
 		maps.Copy(changedFields, extra)
-		if _, err := commitCorrection(ctx, tx, lock, correctionWrite{
+		if _, err := commitCorrection(actor, tx, lock, correctionWrite{
 			deal: cand.id, correction: correction, patch: patch, auditEvidence: auditEvidence,
 			changedFields: changedFields, evidence: evidence, runID: &runID,
 		}); err != nil {
@@ -372,37 +375,26 @@ func dateString(t *time.Time) *string {
 	return &s
 }
 
-// ownerStillConsents re-asks the policy when a deal has changed hands since the
-// member page read it.
+// ownerAllows binds who a correction on a deal writes as, and reports whether
+// it may write. An owned deal is written by the owner's agent, with the
+// owner's grants and close-date switch as they stand in tx. An owner who left,
+// lost the deal grant or switched corrections off answers false.
 //
-// The page and the write are separate transactions, and the row lock is taken
-// between them — the same window the status re-check beside it exists for. A
-// deal handed over inside that window belongs to a rep whose answer was never
-// sought, and if they had switched corrections off, or sat on veto, the sweep
-// would be writing for the one contact who declined.
-//
-// Asked only when the owner actually moved, so the ordinary deal costs no
-// second query and no second authority resolution.
-func (c *CloseDateCorrector) ownerStillConsents(ctx context.Context, before, now *ids.UUID) (bool, error) {
-	if sameOwner(before, now) {
-		return true, nil
+// An unowned deal has nobody to ask and nobody to leave alone, so the sweep
+// writes it as itself. A date nobody maintains is the one that goes stale.
+func (c *CloseDateCorrector) ownerAllows(ctx context.Context, tx pgx.Tx, owner *ids.UUID) (context.Context, bool, error) {
+	if owner == nil {
+		return ctx, true, nil
 	}
-	var owner ids.UUID
-	if now != nil {
-		owner = *now
+	actor, held, err := actAsOwnerNow(ctx, tx, c.policy.ActForOwner(*owner), requireDealUpdate)
+	if err != nil || !held {
+		return nil, false, err
 	}
-	return c.policy.CorrectsWithoutAsking(ctx, owner)
-}
-
-// sameOwner reports whether a deal is still held by the contact the candidate
-// page named. Both sides are nullable — owner_id is ON DELETE SET NULL — and
-// two unowned deals are the same owner, which is what lets the re-ask below
-// stay off the ordinary path.
-func sameOwner(before, now *ids.UUID) bool {
-	if before == nil || now == nil {
-		return before == nil && now == nil
+	allowed, err := c.policy.CorrectsWithoutAsking(actor, tx, *owner)
+	if err != nil || !allowed {
+		return nil, false, err
 	}
-	return *before == *now
+	return actor, true, nil
 }
 
 // WithBaseLanguage resolves the language before recording a shared correction.

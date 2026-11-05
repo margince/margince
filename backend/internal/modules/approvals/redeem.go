@@ -121,6 +121,9 @@ func (s *Service) redeemRow(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, t
 	if err := s.validateRedemptionTarget(ctx, tx, a); err != nil {
 		return row{}, err
 	}
+	if err := stillUnderPolicy(ctx, tx, a); err != nil {
+		return row{}, err
+	}
 
 	tag, err := tx.Exec(ctx,
 		`UPDATE approval SET consumed_at = now() WHERE id = $1 AND consumed_at IS NULL`, id)

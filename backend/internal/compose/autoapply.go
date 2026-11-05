@@ -78,19 +78,29 @@ type autoApplier struct {
 // left: EffectiveAuthority answers ErrNotFound for an archived or suspended
 // member, and this treats that as "do not apply".
 func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool, error) {
-	target, err := a.proposalToApply(ctx, approvalID)
-	if err != nil {
+	decision, ownerCtx, ok, err := a.decide(ctx, approvalID)
+	if err != nil || !ok {
 		return false, err
 	}
-	if target.kind == "" {
-		return false, nil
-	}
-	if !approvals.AutoApplyKinds[target.kind] {
-		return false, nil
+	return a.applyAs(ownerCtx, decision)
+}
+
+// autoApplyDecision is one proposal an owner's policy says to apply.
+type autoApplyDecision struct {
+	approval ids.ApprovalID
+	target   proposalTarget
+	owner    ids.UUID
+}
+
+// decide reads whether a proposal applies, and binds its owner's agent.
+func (a autoApplier) decide(ctx context.Context, approvalID ids.ApprovalID) (autoApplyDecision, context.Context, bool, error) {
+	target, err := a.proposalToApply(ctx, approvalID)
+	if err != nil || target.kind == "" || !approvals.AutoApplyKinds[target.kind] {
+		return autoApplyDecision{}, nil, false, err
 	}
 	owner, err := a.ownerOf(ctx, target.entityType, target.entityID)
 	if err != nil || owner.IsZero() {
-		return false, err
+		return autoApplyDecision{}, nil, false, err
 	}
 	ownerCtx, err := a.asOwnersAgent(ctx, owner)
 	if err != nil {
@@ -98,21 +108,52 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 		// not a failure of the caller that offered the proposal. The row keeps
 		// waiting for a contact, which is the safe direction.
 		if errors.Is(err, apperrors.ErrNotFound) {
-			return false, nil
+			return autoApplyDecision{}, nil, false, nil
 		}
-		return false, err
+		return autoApplyDecision{}, nil, false, err
 	}
 	// Read the policy AS the owner, not before becoming them: the policy read
 	// takes its subject from the acting principal, so asking first would ask
 	// about whoever the sweep happened to be running as.
 	mode, err := a.svc.AutoApplyMode(ownerCtx, target.kind)
 	if err != nil || mode != approvals.ModeAuto {
-		return false, err
+		return autoApplyDecision{}, nil, false, err
 	}
-	if _, err := a.svc.ApplyUnderPolicy(ownerCtx, approvalID); err != nil {
+	return autoApplyDecision{approval: approvalID, target: target, owner: owner}, ownerCtx, true, nil
+}
+
+// applyAs applies a decided proposal as the owner's agent bound before. The
+// owner may leave, lose the record or turn the kind off in between, so the
+// decision and the effect bind them again (ownerNow).
+func (a autoApplier) applyAs(ownerCtx context.Context, decision autoApplyDecision) (bool, error) {
+	_, err := a.svc.ApplyUnderPolicy(ownerCtx, decision.approval, a.ownerNow(decision))
+	if errors.Is(err, approvals.ErrPolicyWithdrawn) {
+		return false, nil
+	}
+	if err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// ownerNow binds the owner's agent as of the caller's transaction. A record
+// that changed hands, or an owner who is no longer live, answers false.
+func (a autoApplier) ownerNow(decision autoApplyDecision) approvals.PolicyActor {
+	bind := ownersAgentTx(a.users, decision.owner, autoApplyActorID)
+	return func(ctx context.Context, tx pgx.Tx) (context.Context, bool, error) {
+		owner, err := ownerOfTx(ctx, tx, decision.target.entityType, decision.target.entityID)
+		if err != nil || owner != decision.owner {
+			return nil, false, err
+		}
+		actor, err := bind(ctx, tx)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, false, nil
+		}
+		if err != nil {
+			return nil, false, err
+		}
+		return actor, true, nil
+	}
 }
 
 // proposalTarget is the proposal's kind and what it points at.
@@ -158,18 +199,27 @@ func (a autoApplier) proposalToApply(ctx context.Context, approvalID ids.Approva
 // automatically. That is the reading consistent with never applying under an
 // authority nobody currently holds.
 func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID ids.UUID) (ids.UUID, error) {
+	var owner ids.UUID
+	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
+		var err error
+		owner, err = ownerOfTx(ctx, tx, entityType, entityID)
+		return err
+	})
+	return owner, err
+}
+
+// ownerOfTx is ownerOf read in the caller's transaction.
+func ownerOfTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (ids.UUID, error) {
 	table, ok := ownedTables[entityType]
 	if !ok {
 		return ids.Nil, nil
 	}
 	var owner *ids.UUID
-	err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		// The table name is a value from ownedTables, a compile-time literal
-		// chosen by a key that had to match — never text off the approval row.
-		return tx.QueryRow(ctx,
-			`SELECT owner_id FROM `+table+` WHERE id = $1 AND archived_at IS NULL`,
-			entityID).Scan(&owner)
-	})
+	// The table name is a value from ownedTables, a compile-time literal
+	// chosen by a key that had to match — never text off the approval row.
+	err := tx.QueryRow(ctx,
+		`SELECT owner_id FROM `+table+` WHERE id = $1 AND archived_at IS NULL`,
+		entityID).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}
