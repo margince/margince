@@ -71,9 +71,10 @@ jobs:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      # Both passes, each into its own cache directory, as backend-lint runs them.
+      # Both passes, one after the other, each into its own cache directory: two
+      # cold passes at once exhaust the runner's memory.
       - name: Lint the pushed tree (make lint)
-        run: make -j2 lint
+        run: make lint
       - name: Save the golangci-lint analysis cache
         id: save
         if: ${{ !cancelled() }}
