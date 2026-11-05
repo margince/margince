@@ -230,7 +230,7 @@ type sharedEvaluation struct {
 func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
 	d := newTwoDoorsWith(t, "availability-read-doors", []compose.Option{(&apptest.BookingCalendar{}).Option()}, "read")
 	apptest.EnableBooking(t, d.e)
-	booked := apptest.NextBookableMorning()
+	booked := apptest.NextBookableMorning(t)
 	day := booked.Truncate(24 * time.Hour)
 	from, to := day.Add(8*time.Hour).Format(time.RFC3339), day.Add(18*time.Hour).Format(time.RFC3339)
 	bookedFrom, bookedTo := booked.Format(time.RFC3339), booked.Add(time.Hour).Format(time.RFC3339)

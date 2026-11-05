@@ -30,7 +30,7 @@ func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
 		t.Fatalf("pausing the page → %d", status)
 	}
 	unknown := strings.Repeat("x", len(paused))
-	slot := apptest.NextBookableMorning()
+	slot := apptest.NextBookableMorning(t)
 	window := "/availability?from=" + slot.Format(time.RFC3339) + "&to=" + slot.Add(8*time.Hour).Format(time.RFC3339)
 	complete := `{"start":"` + slot.Format(time.RFC3339) + `","end":"` + slot.Add(30*time.Minute).Format(time.RFC3339) +
 		`","booker":{"name":"Guest","email":"guest@example.test"},"consent":{"policy_version":"v1","wording":"ok"}}`

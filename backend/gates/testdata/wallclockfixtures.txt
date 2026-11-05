@@ -58,6 +58,7 @@ internal/compose/connectors_graph_test.go 2
 internal/compose/connectors_seatcapture_test.go 1
 internal/compose/connectors_test.go 3
 internal/compose/connectors_wiring_test.go 1
+internal/compose/controllerpayloadsweep_integration.go 1
 internal/compose/correctionrevert_integration_test.go 2
 internal/compose/datatask_machinesender_integration_test.go 1
 internal/compose/dealscout_integration_test.go 1
@@ -163,6 +164,7 @@ internal/compose/integration/jobfanout/agentscheduler_integration_test.go 1
 internal/compose/integration/jobfanout/runner_integration_test.go 2
 internal/compose/integration/jobfanout/runnerreap_integration_test.go 1
 internal/compose/integration/jobhealth_http_e2e_integration_test.go 4
+internal/compose/integration/jobtest/jobtest.go 2
 internal/compose/integration/jurisdictionfloor_integration_test.go 1
 internal/compose/integration/leadrouting_integration_test.go 2
 internal/compose/integration/leadscore_integration_test.go 3
@@ -182,6 +184,7 @@ internal/compose/integration/no_activity_reminder_workqueue_integration_test.go 
 internal/compose/integration/noticelanguage_integration_test.go 1
 internal/compose/integration/noticesubjectwrote_integration_test.go 1
 internal/compose/integration/perf_tier_bench_test.go 1
+internal/compose/integration/perfrecord.go 1
 internal/compose/integration/pinstageevidence_integration_test.go 1
 internal/compose/integration/project360_integration_test.go 7
 internal/compose/integration/project360dealmask_integration_test.go 1

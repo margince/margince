@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -35,7 +36,7 @@ func CreateDealClosingThisWeek(t *testing.T, e *AppEnv, stages SeededStages, nam
 	}
 	if status := e.Call(t, "POST", "/v1/deals", dealCreate{
 		Name: name, PipelineID: stages.PipelineID, StageID: stages.Open,
-		ExpectedCloseDate: time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02"),
+		ExpectedCloseDate: clocktest.Now(t).UTC().AddDate(0, 0, 3).Format("2006-01-02"),
 		Source:            provenance.RecordSourceManual,
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create deal %q status = %d", name, status)
@@ -104,7 +105,7 @@ func SeedScoutedNamed(t *testing.T, e *AppEnv, companyName, contactName string) 
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create employment = %d", status)
 	}
-	now := time.Now()
+	now := clocktest.Now(t)
 	if status := e.Call(t, "POST", "/v1/activities", map[string]any{
 		"kind": "email", "subject": "Platform request", "direction": "inbound",
 		"body":        "We need a platform migration. Please send a proposal; I will send our requirements.",

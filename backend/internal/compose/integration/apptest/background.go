@@ -41,7 +41,7 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 	t.Helper()
 	admin := AdminContext(t, e, perms)
 	store := assurance.NewStore(compose.InstallationDB(e.DB().Pool()))
-	asOf := time.Now().UTC()
+	asOf := clocktest.Now(t).UTC()
 	if err := store.InTx(admin, func(ctx context.Context, tx pgx.Tx) error {
 		run, err := store.StartRun(ctx, tx, asOf, nil)
 		if err != nil {
