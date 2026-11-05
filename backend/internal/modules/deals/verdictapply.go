@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // The corrections a verdict records. The amount and probability names are
@@ -164,40 +165,51 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 			result.dropAsMoved()
 			return nil
 		}
-		var applied []VerdictChange
-		// Asked of the deal as locked, before a stage move resets its
-		// probability: that reset is ours, not a colleague's edit.
-		heldStill := make([]bool, len(in.Changes))
-		for i, change := range in.Changes {
-			_, heldStill[i] = verdictColumns(change.Correction, in.Seen, current)
-		}
-		for _, i := range stageMoveFirst(in.Changes) {
-			change := in.Changes[i]
-			var outcome string
-			switch {
-			case !heldStill[i]:
-				outcome = VerdictDroppedStale
-			case change.Correction == VerdictStageMoveCorrection:
-				outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
-			default:
-				now := in
-				now.Seen = current
-				outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
-			}
-			if err != nil {
-				return err
-			}
-			outcomes[i] = outcome
-			if outcome == VerdictApplied {
-				applied = append(applied, change)
-			}
-		}
-		if len(applied) == 0 {
-			return nil
+		applied, err := s.applyVerdictChanges(ctx, tx, lock, in, current, active, outcomes)
+		if err != nil || len(applied) == 0 {
+			return err
 		}
 		return in.Record(ctx, tx, applied)
 	})
 	return result, err
+}
+
+// applyVerdictChanges writes each change on the locked deal, the stage move
+// first, sets its outcome and answers the changes that applied.
+func (s *Store) applyVerdictChanges(
+	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in VerdictInput, current VerdictValues,
+	active []fieldcatalog.Column, outcomes []string,
+) ([]VerdictChange, error) {
+	var applied []VerdictChange
+	// Asked of the deal as locked, before a stage move resets its
+	// probability: that reset is ours, not a colleague's edit.
+	heldStill := make([]bool, len(in.Changes))
+	for i, change := range in.Changes {
+		_, heldStill[i] = verdictColumns(change.Correction, in.Seen, current)
+	}
+	for _, i := range stageMoveFirst(in.Changes) {
+		change := in.Changes[i]
+		var outcome string
+		var err error
+		switch {
+		case !heldStill[i]:
+			outcome = VerdictDroppedStale
+		case change.Correction == VerdictStageMoveCorrection:
+			outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
+		default:
+			now := in
+			now.Seen = current
+			outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
+		}
+		if err != nil {
+			return nil, err
+		}
+		outcomes[i] = outcome
+		if outcome == VerdictApplied {
+			applied = append(applied, change)
+		}
+	}
+	return applied, nil
 }
 
 // dropAsMoved drops every change because what the verdict rested on moved
@@ -296,11 +308,10 @@ func applyVerdictChange(
 			return "", err
 		}
 	}
-	_, err = commitCorrection(ctx, tx, lock, correctionWrite{
+	if err := commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
 		changedFields: map[string]any{CorrectionKindEvidenceKey: change.Correction},
-	})
-	if err != nil {
+	}); err != nil {
 		return "", err
 	}
 	return VerdictApplied, nil
