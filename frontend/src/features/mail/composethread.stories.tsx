@@ -134,8 +134,9 @@ export const DraftedBesideThread: StoryObj = {
     const send = dialog
       .getByRole("button", { name: "Send" })
       .getBoundingClientRect();
+    // The AI band carries its verbs on a row of their own below the notice.
     await expect(body.height).toBeGreaterThanOrEqual(
-      window.innerHeight <= 512 ? 60 : 280,
+      window.innerHeight <= 512 ? 60 : 256,
     );
     await expect(body.top).toBeGreaterThanOrEqual(0);
     const toolbar = dialog

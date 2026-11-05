@@ -1366,6 +1366,8 @@ export const en = {
   "reporting.industry": "Industry",
   "reporting.allIndustries": "All industries",
   "reporting.valueBasis": "Value basis",
+  "reporting.filtersMore": "Filters",
+  "reporting.filtersActive": "Filters · {active}",
   "reporting.basis.all": "All value",
   "reporting.basis.software": "Software only",
   "reporting.basis.implementation": "Implementation only",
@@ -3343,6 +3345,14 @@ export const en = {
   "list.headActions": "More actions",
   "list.search": "Search",
   "list.showArchived": "Show archived",
+  "list.viewToggleOn": "On",
+  "list.viewToggleOff": "Off",
+  "list.viewMenu": "View",
+  "list.viewMenuBack": "back to view options",
+  "list.viewMenuChanged": "changed",
+  "list.viewMenuFilters_one": "{count} filter",
+  "list.viewMenuFilters_other": "{count} filters",
+  "list.viewMenuNone": "None",
   "list.loadMore": "Load more",
   "scrollSentinel.loading": "Loading more…",
   "scrollSentinel.failed": "Could not load more.",
@@ -3364,15 +3374,14 @@ export const en = {
   "table.rowsPerPage": "Rows per page",
   "table.perPage": "{count} per page",
   "table.sortedBy": "sorted by {column}",
-  "table.shownColumns": "Shown columns",
-  "table.display": "Display",
-  "table.density": "Density",
   "table.compact": "Compact",
+  "table.filters": "Filters",
+  "table.columns": "Columns",
+  "table.columnsShown": "{shown} of {total}",
+  "table.sortValue": "{column}, {direction}",
   "table.columnHandle": "Move {name}, {position} of {total}",
   "table.columnMoved": "{name} moved to {position} of {total}",
   "table.sort": "Sort",
-  "table.sortNamed": "Sort: {column}",
-  "table.sortMenu": "Sort by",
   "table.sortDefault": "Default order",
   "table.sortAscending": "ascending",
   "table.sortDescending": "descending",
@@ -3382,6 +3391,7 @@ export const en = {
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
   "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
+  "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
@@ -3390,9 +3400,7 @@ export const en = {
   "unit.partners": "partners",
   "unit.products": "products",
   "unit.offerTemplates": "offer templates",
-  "table.filter": "Filter",
   "table.filterSearch": "Search attributes",
-  "table.addFilter": "Add filter",
   "table.filterIs": "is",
   "table.filterCondition": "Condition",
   "table.filterMore": "More actions for the {filter} filter",
@@ -3402,7 +3410,7 @@ export const en = {
   "table.filterSearching": "Searching…",
   "table.filterSearchFailed": "Search failed. Retry.",
   "table.filterNoMatches": "No matches.",
-  "table.filterBack": "Back to all filters",
+  "table.filterBack": "back to all filters",
 
   "contacts.name": "Name",
   "contacts.email": "Email",
@@ -3427,6 +3435,7 @@ export const en = {
   // lands beside the list's own tools, and "this section did not load" under a
   // toolbar says nothing about WHICH section.
   "views.rail": "Saved views",
+  "views.loadFailed": "Saved views did not load.",
   "views.manage": "Manage views",
   "views.none": "No saved views",
   "views.rename": "Rename",
@@ -6122,6 +6131,8 @@ export const en = {
   "deal.correctCloseDayConfirm": "Save close day",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal in {pipeline}",
+  "deals.countInPipeline_other": "{count} deals in {pipeline}",
   "deals.filterStalled": "Stalled only",
   // Both reasons say "loaded only" rather than naming the sum alone: with no
   // server aggregate the column's figure is the cards LOADED, and the board
@@ -7385,7 +7396,21 @@ export const en = {
   "compose.savedDraftGoneBody":
     "It was sent or deleted there. Saving keeps the text on screen as a new draft.",
   "compose.savedDraftFailed":
-    "The draft was not saved. Save again, or close again to discard the text.",
+    "The draft was not saved. Retry, or close again to discard the text.",
+  "compose.savedDraftAutosaveFailed":
+    "Saving the draft did not finish. It tries again when you keep writing or come back online.",
+  "compose.savedDraftAutosaveRefused":
+    "The draft was not saved. Retry, or keep writing to try again.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} file could not be restored.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} files could not be restored.",
+  "compose.sendWaitsForAddress":
+    "Correct or remove the text that is not an email address.",
+  "compose.notAnAddress_one":
+    "Not an email address: {parts}. Correct it or remove it.",
+  "compose.notAnAddress_other":
+    "Not email addresses: {parts}. Correct them or remove them.",
   "compose.savedDraftLoad": "Load saved version",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":
@@ -8004,6 +8029,7 @@ export const en = {
   "analytics.deliveryCoversAll":
     "These numbers cover every project you can read.",
   "analytics.attention": "Needs your attention",
+  "analytics.board.rail": "Outlook and next steps",
   "analytics.attentionNoOwner": "No owner",
   "analytics.attentionOutOfDate": "out of date, changed since the check",
   "analytics.attentionAtStake": "{amount} at stake",
@@ -12640,7 +12666,9 @@ export const en = {
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
   "auto.pausedReason.passportRevoked":
-    "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it to keep it running with no agent behind it.",
+    "The agent that set this rule up no longer has live access because its passport expired or was revoked, or its connection ended. Resume it to keep running without an agent.",
+  "auto.setByYourAgent": "By your agent",
+  "auto.setByAnAgent": "By an agent",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12687,7 +12715,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
-  "auto.pausedShort.passportRevoked": "Paused · agent’s passport revoked",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s access ended",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -14586,6 +14614,7 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.likely": "Won + Likely deals",
@@ -14600,6 +14629,7 @@ export const en = {
   "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
+  "forecast.model.short": "Central 80% of outcomes",
   "forecast.model.month": "Modelled month finish",
   "forecast.model.week": "Modelled week finish",
   "forecast.model.value": "{low} to {high}",
@@ -15153,6 +15183,7 @@ export const en = {
   "account.timezoneLabel": "Time zone",
   "account.timezoneHelp":
     "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "account.timezoneSetByAgent": "By your agent",
   "workingHours.zoneIs": "Your hours are read in {zone}.",
   "workingHours.changeZone": "Change time zone",
   "account.languageCard": "Language and time zone",
@@ -17172,7 +17203,14 @@ export const en = {
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link URL (leave empty to remove the link)",
+  "richtext.linkAdd": "Add link",
+  "richtext.linkEdit": "Edit link",
+  "richtext.linkAddress": "Web or email address",
+  "richtext.linkPlaceholder": "example.com or name@example.com",
+  "richtext.linkApply": "Apply",
+  "richtext.linkRemove": "Remove link",
+  "richtext.linkRefused":
+    "This is not a web or email address. Enter one such as example.com or name@example.com.",
   "contact.composer.intentAgenda": "propose an agenda for the upcoming meeting",
   "contact.composer.intentReply": "reply to their last message",
   "contact.composer.intentCommitment": "deliver on a commitment",
@@ -18802,7 +18840,7 @@ export const en = {
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "The agent that set this rule up had its passport revoked, so the rule is paused. Resume it to keep it running with no agent behind it.",
+    "The agent that set this rule up no longer has live access, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",
@@ -20348,6 +20386,15 @@ export const en = {
   "analytics.hero.shortfall": "Projected shortfall {amount}",
   "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
+  "analytics.hero.ofTarget": "of {target} target",
+  "analytics.hero.short": "{amount} short of target",
+  "analytics.hero.over": "{amount} over target",
+  "analytics.trajectory.label": "Sales won through the period",
+  "analytics.trajectory.today": "Today · {date}",
+  "analytics.trajectory.through": "Through {date}",
+  "analytics.trajectory.target": "Target {amount}",
+  "analytics.trajectory.projection": "{amount} projected",
+  "analytics.trajectory.range": "Modelled finish",
   "analytics.overview.more": "More",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
@@ -20356,6 +20403,7 @@ export const en = {
   "analytics.outlook.team": "Team prospecting outlook",
   "analytics.outlook.prospecting": "Prospecting outlook",
   "analytics.outlook.records": "View supporting records",
+  "analytics.outlook.more": "Read the full outlook",
   "analytics.assessment.refresh": "Refresh assessment",
   "analytics.assessment.retry": "Retry",
   "analytics.assessment.evidenceTitle": "What the assessment rests on",

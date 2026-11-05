@@ -45,8 +45,8 @@
 # cache is both the stale-path source above and a file two sessions write at
 # once. Each checkout gets its own directory, keyed by its absolute path, under
 # ~/.cache/golangci-lint/ — INSIDE golangci's default Linux cache root
-# deliberately, because the "Cache the golangci-lint analysis cache" steps in
-# ci.yml and cache-warm.yml save and restore exactly that directory, and a partition outside it would
+# deliberately, because ci.yml restores and cache-warm.yml saves exactly that
+# directory, and a partition outside it would
 # silently turn every CI lint cold. The cost is one cold analysis per new
 # worktree; the detector below stays armed for a caller who points
 # GOLANGCI_LINT_CACHE somewhere shared anyway. Clearing a stale cache remains

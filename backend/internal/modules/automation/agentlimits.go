@@ -43,9 +43,9 @@ func refuseAgentRuleChange(ctx context.Context, before Automation, in UpdateAuto
 	if !isAgent {
 		return nil
 	}
-	if in.OwnerID != nil && in.OwnerID.UUID != actor.UserID {
+	if in.OwnerID != nil && (before.OwnerID == nil || *in.OwnerID != *before.OwnerID) {
 		return agentRuleLimit("agent_hands_on_no_rule",
-			"an agent does not hand a rule to a colleague, because it runs with its owner's authority; ask the user to do it in the app")
+			"an agent does not change who owns a rule, because it runs with its owner's authority; ask the user to do it in the app")
 	}
 	entry, known := CatalogEntryByKey(before.Key)
 	if !known {

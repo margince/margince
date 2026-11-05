@@ -219,7 +219,7 @@ export function HandoffCohort({
                   })}
                 </p>
                 {cohort.rounds > 0 && (
-                  <StatStrip label={title}>
+                  <StatStrip label={title} density="plate">
                     {(
                       [
                         ["accepted", cohort.accepted],

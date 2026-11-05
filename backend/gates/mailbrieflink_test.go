@@ -179,3 +179,22 @@ func screensOffered(t *testing.T, source string) []string {
 	}
 	return out
 }
+
+// The Home dials a mailed row opens, against the frontend constants that read
+// them. A renamed dial opens Home with nothing focused, and nothing fails.
+func TestEveryMailedHomeDialIsOneTheAppReads(t *testing.T) {
+	t.Parallel()
+	back := readFiscalSource(t, backendMailLink)
+	front := readFiscalSource(t, "../frontend/src/lib/taskreminders.ts") +
+		readFiscalSource(t, "../frontend/src/features/brief/brief.focuslink.ts")
+	dials := regexp.MustCompile(`Home(\w+)Param\s*=\s*"([^"]*)"`).FindAllStringSubmatch(back, -1)
+	if len(dials) < 2 {
+		t.Fatalf("%s declares %d Home*Param dial(s); this gate can no longer see its subject", backendMailLink, len(dials))
+	}
+	for _, dial := range dials {
+		constant := strings.ToUpper(dial[1]) + "_PARAM"
+		if !regexp.MustCompile(`export const ` + constant + ` = "` + regexp.QuoteMeta(dial[2]) + `"`).MatchString(front) {
+			t.Errorf("mail opens Home with %s=…, and the frontend has no %s reading it", dial[2], constant)
+		}
+	}
+}

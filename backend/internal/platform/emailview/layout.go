@@ -78,7 +78,7 @@ func renderBlock(block Block, placeholder string, primary bool) string {
 }
 
 // itemRow is one record in a panel: its monogram, title, plain lines, toned
-// lines as badges, and the verb as its link.
+// lines as badges, and the verb as its link. A linked title opens it too.
 func itemRow(item Item, target, label string, first bool) string {
 	var meta, badges []string
 	for _, line := range item.Lines {
@@ -100,7 +100,11 @@ func itemRow(item Item, target, label string, first bool) string {
 	} else if verb != "" {
 		meta = append(meta, html.EscapeString(verb))
 	}
-	text := `<div` + look{ink: textPrimary}.attrs("font:"+body.medium()) + `>` + html.EscapeString(item.Title) + `</div>`
+	title := html.EscapeString(item.Title)
+	if target != "" {
+		title = `<a href="` + html.EscapeString(target) + `"` + look{ink: textPrimary}.attrs("text-decoration:none") + `>` + title + `</a>`
+	}
+	text := `<div` + look{ink: textPrimary}.attrs("font:"+body.medium()) + `>` + title + `</div>`
 	if len(meta) > 0 {
 		text += `<div` + look{ink: textSecondary}.attrs("margin-top:2px;font:"+bodySmall.font()) + `>` + strings.Join(meta, " · ") + `</div>`
 	}

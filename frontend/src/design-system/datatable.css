@@ -50,8 +50,7 @@
   user-select: none;
 }
 .table.is-sorting > tbody > tr,
-.table.is-sorting > tbody > tr.rowlink,
-.table.is-sorting .sortable-handle {
+.table.is-sorting > tbody > tr.rowlink {
   cursor: grabbing;
 }
 /* The carried row wears the tint a chosen row wears. `:hover` outranks the

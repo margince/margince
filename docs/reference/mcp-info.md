@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 13 |
-| Tool catalog | 219.4 KB |
+| Tool catalog | 221.9 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 57484 |
+| Approx. wire tokens | 58120 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 46.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 52.4 KB | 23% | Yes, every step |
-| Input schemas | 108.5 KB | 49% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.1 KB | 23% | Yes, every step |
+| Input schemas | 110.4 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **160.9 KB** | **73%** | **the recurring cost** |
+| **Description + input schema** | **163.4 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -67,22 +67,22 @@ descriptions and input schemas are what each step pays for.
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 693 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1886 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1893 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 811 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
-| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 638 |
+| [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 559 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
-| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 502 |
+| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 472 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1296 |
-| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1724 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1906 |
+| [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1703 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1896 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 805 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 795 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
@@ -94,21 +94,21 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1878 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 929 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2031 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 952 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 307 |
 | [`read_record`](#read_record) | Read a record | yes |  | 324 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2501 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2557 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1008 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2402 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2602 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 613 |
-| [`run_research`](#run_research) | Run AI work for your user |  |  | 676 |
+| [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 409 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1473 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1680 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -583,9 +583,9 @@ that survives, and change_state with action=disqualify to close out a lead going
 lead's own transition records the reason where archiving would not. By default the record is
 archived when this call answers; where an installation has raised this verb to confirm first, the
 answer is a staged approval and you must not report the record as archived until the retry that
-carries their approval has answered. (Runs immediately; it cannot be undone, so tell the user what
-the call will change and get their yes before calling, unless they asked for this call themselves;
-requires passport scope "write".)
+carries their approval has answered. (Runs immediately; the user's yes is needed for it, so tell
+them what the call will change and get it before calling, unless they asked for this call
+themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -759,9 +759,9 @@ to undo_preview, show the user the answer, and call undo after they agree; a cha
 and records changed since are left alone. Ask in words even when the host also shows a form.
 update_record and archive_record change one record. Above 10 records, execute and undo need the
 confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the
-change by it. (Runs immediately; it cannot be undone, so tell the user what the call will change and
-get their yes before calling, unless they asked for this call themselves; requires passport scope
-"write".)
+change by it. (Runs immediately; the user's yes is needed for it, so tell them what the call will
+change and get it before calling, unless they asked for this call themselves; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1208,9 +1208,9 @@ changes its own user's role or teams, never acts on a member who is an admin, ne
 colleague's work to its own user and never changes a member's email; those are refused. Role
 definitions and declaring or retiring a service member are done in the app. Use send_outbound to
 invite a member or send their sign-in link again, update_record to change a record's owner field
-directly, and read_workspace topic colleagues to find a member's id. (Runs immediately; the actions
-change_role, create_former_member, deactivate_member, end_assignment, hand_over_work, remove_member,
-remove_team_member cannot be undone, so tell the user what the call will change and get their yes
+directly, and read_workspace topic colleagues to find a member's id. (Runs immediately; the user's
+yes is needed for the actions change_role, create_former_member, deactivate_member, end_assignment,
+hand_over_work, remove_member, remove_team_member, so tell them what the call will change and get it
 before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
@@ -1307,8 +1307,8 @@ bring_back, cancel_send, check_new_send, check_send, discard_draft, hide_documen
 preview_sign_off, read_document_fields, read_transcript, ready, request_document_access,
 reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience,
 show_document, task, unready; decided per call from its arguments for relink, relink_many; the
-action archive_document cannot be undone, so tell the user what the call will change and get their
-yes before calling, unless they asked for this call themselves; requires passport scope "write".)
+user's yes is needed for the action archive_document, so tell them what the call will change and get
+it before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1564,6 +1564,10 @@ yes before calling, unless they asked for this call themselves; requires passpor
     },
     "scope": {
       "description": "bring_back only",
+      "enum": [
+        "mine",
+        "thread"
+      ],
       "type": "string"
     },
     "source_activity_id": {
@@ -1609,10 +1613,9 @@ signal, and mark a list, company or contact as seen, which spends the user's own
 so ask first. Each action changes what the user sees next; only accepting a suggestion changes the
 record it is about, because it runs what the suggestion proposes, as the app's Accept does. Use
 update_record or change_record_parts to change a record yourself, and change_activities to log or
-plan work. (Runs immediately; the actions acknowledge_company_view, acknowledge_contact_view,
-archive_signal, visit_list cannot be undone, so tell the user what the call will change and get
-their yes before calling, unless they asked for this call themselves; requires passport scope
-"write".)
+plan work. (Runs immediately; the user's yes is needed for the actions acknowledge_company_view,
+acknowledge_contact_view, archive_signal, visit_list, so tell them what the call will change and get
+it before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1648,7 +1651,6 @@ their yes before calling, unless they asked for this call themselves; requires p
         "mark_notice_read",
         "mark_rows_done",
         "pin_row",
-        "raise_notice",
         "reopen_rows",
         "resolve_signal",
         "restore_company_suggestion",
@@ -1700,7 +1702,7 @@ their yes before calling, unless they asked for this call themselves; requires p
       "type": "string"
     },
     "request_body": {
-      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "row_id": {
@@ -1741,12 +1743,13 @@ stays in the app. Ask the user first where the action is marked so: a vCard writ
 and says the contact handed the card over. Use read_workspace topics capture_senders, held_threads,
 counterparty_holds and corpora to read first, run_research start_backfill to bring in old mail,
 run_research ask_corpus to ask a corpus, preview_import and commit_import to start an import, and
-change_tags to tag a record. (Runs immediately; the actions add_consumer_mail_domain,
-add_workspace_email_domain, archive_corpus, disconnect_channel, disconnect_mailbox, import_vcards,
-lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, remove_workspace_email_domain,
-set_blocked_domain, set_mail_posture, share_counterparty_hold_history, undo_import_run,
-withdraw_owner_identity cannot be undone, so tell the user what the call will change and get their
-yes before calling, unless they asked for this call themselves; requires passport scope "write".)
+change_tags to tag a record. (Runs immediately; the user's yes is needed for the actions
+add_consumer_mail_domain, add_workspace_email_domain, archive_corpus, disconnect_channel,
+disconnect_mailbox, import_vcards, lift_counterparty_hold, lift_exclusion,
+remove_consumer_mail_domain, remove_workspace_email_domain, set_blocked_domain, set_mail_posture,
+share_counterparty_hold_history, undo_import_run, withdraw_owner_identity, so tell them what the
+call will change and get it before calling, unless they asked for this call themselves; requires
+passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1862,12 +1865,13 @@ change and retention policy are done in the app. Use send_outbound double_opt_in
 details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or
 contact_stops to check a contact before you record, read_workspace topics data_subject_requests,
 notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace
-topic record_history for one record's trail. (Runs immediately; the actions allow_contact,
-confirm_notice_source, lift_suppression, record_communication_context, record_consent,
-record_qualifying_event, retract_acquisition_request, retract_qualifying_event, revoke_override,
-update_data_subject_request cannot be undone, so tell the user what the call will change and get
-their yes before calling, unless they asked for this call themselves; requires passport scope
-"write".)
+topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the
+actions allow_contact, confirm_notice_source, lift_suppression, open_data_subject_request,
+pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent,
+record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
+retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell
+them what the call will change and get it before calling, unless they asked for this call
+themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2240,10 +2244,10 @@ with source agent, never chosen. What the product sends them and where, what the
 voice, replacing or putting back a sample they filed or left out, and removing samples for good are
 done in the app. Use change_settings for what every colleague shares, read_workspace topics
 my_working_hours and my_brief_delivery to read their settings, and run_research to build the voice.
-(Runs immediately; the actions apply_voice_version, archive_voice_profile, reject_voice_version,
-rollback_voice_version, save_display_name, save_greeting_name, save_timezone, save_working_hours
-cannot be undone, so tell the user what the call will change and get their yes before calling,
-unless they asked for this call themselves; requires passport scope "write".)
+(Runs immediately; the user's yes is needed for the actions apply_voice_version,
+archive_voice_profile, reject_voice_version, rollback_voice_version, save_display_name,
+save_greeting_name, save_timezone, save_working_hours, so tell them what the call will change and
+get it before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2311,13 +2315,15 @@ unless they asked for this call themselves; requires passport scope "write".)
 **Work offers, contracts and deal rooms**
 
 ```text
-Work the commercial paper around a deal: send, accept, reject, render or regenerate an offer;
-record, change, renew, cancel or archive a contract; and run a deal room's documents, access and
-expiry. Sending an offer fixes its version and its exchange rate from then on. Inviting a buyer into
-a deal room sends mail, so it is send_outbound's deal_room_invite. Use change_record_parts to change
-an offer's line items, and change_state to move the deal itself. (Runs immediately; the actions
-archive_contract, archive_room, cancel_contract, reject_offer, send_offer cannot be undone, so tell
-the user what the call will change and get their yes before calling, unless they asked for this call
+Work the commercial paper around a deal: send, accept, reject or render an offer; record, change,
+renew, cancel or archive a contract; and run a deal room's documents, access and expiry. Sending an
+offer fixes its version and its exchange rate from then on. What a buyer reads in a deal room
+reaches them at once, so inviting them or resending their invitation, writing to them, adding,
+changing or removing a document, editing the room's words, setting its expiry and resuming it are
+send_outbound's. Use change_record_parts to change an offer's line items, change_state to move the
+deal itself, and run_research to regenerate an offer. (Runs immediately; the user's yes is needed
+for the actions archive_contract, archive_room, cancel_contract, reject_offer, send_offer, so tell
+them what the call will change and get it before calling, unless they asked for this call
 themselves; requires passport scope "write".)
 ```
 
@@ -2330,38 +2336,27 @@ themselves; requires passport scope "write".)
       "description": "Which act to run; read_workspace topic actions lists each action's body",
       "enum": [
         "accept_offer",
-        "add_room_document",
         "archive_contract",
         "archive_room",
         "cancel_contract",
         "close_room",
         "pause_room",
         "record_contract",
-        "regenerate_offer",
         "reject_offer",
-        "remove_room_document",
         "render_offer",
         "renew_contract",
         "resolve_room_thread",
-        "resume_room",
         "revoke_room_participant",
         "send_offer",
         "set_contract_status",
         "set_deal_products",
-        "set_room_expiry",
         "update_contract",
-        "update_room",
-        "update_room_document",
         "update_room_participant"
       ],
       "type": "string"
     },
-    "documentId": {
-      "description": "remove_room_document, update_room_document only",
-      "type": "string"
-    },
     "id": {
-      "description": "accept_offer, add_room_document, archive_contract, archive_room, cancel_contract, close_room, pause_room, regenerate_offer, reject_offer, remove_room_document, render_offer, renew_contract, resolve_room_thread, resume_room, revoke_room_participant, send_offer, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_room, update_room_document, update_room_participant only",
+      "description": "accept_offer, archive_contract, archive_room, cancel_contract, close_room, pause_room, reject_offer, render_offer, renew_contract, resolve_room_thread, revoke_room_participant, send_offer, set_contract_status, set_deal_products, update_contract, update_room_participant only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2370,7 +2365,7 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "if_version": {
-      "description": "accept_offer, archive_room, cancel_contract, reject_offer, remove_room_document, renew_contract, send_offer, set_contract_status, set_room_expiry, update_contract, update_room, update_room_document only: The version the caller read; the write is refused as skew if the record moved since",
+      "description": "accept_offer, archive_room, cancel_contract, reject_offer, renew_contract, send_offer, set_contract_status, update_contract only: The version the caller read; the write is refused as skew if the record moved since",
       "type": "integer"
     },
     "participantId": {
@@ -2378,7 +2373,7 @@ themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "add_room_document, cancel_contract, record_contract, reject_offer, renew_contract, set_contract_status, set_deal_products, set_room_expiry, update_contract, update_room, update_room_document, update_room_participant only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "cancel_contract, record_contract, reject_offer, renew_contract, set_contract_status, set_deal_products, update_contract, update_room_participant only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "threadId": {
@@ -2671,8 +2666,6 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
         "check_vat",
         "complete_intro_request",
         "decide_intro_request",
-        "draft_intro_note",
-        "draft_intro_request",
         "link_contacts",
         "record_introduction",
         "record_promise",
@@ -2689,7 +2682,7 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
       "type": "string"
     },
     "id": {
-      "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, draft_intro_note, draft_intro_request, link_contacts, record_introduction, record_promise, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
+      "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, link_contacts, record_introduction, record_promise, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2698,7 +2691,7 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
       "type": "string"
     },
     "request_body": {
-      "description": "apply_employment_import, backfill_employment_import, cancel_intro_request, complete_intro_request, decide_intro_request, draft_intro_note, draft_intro_request, link_contacts, record_introduction, record_promise, request_intro, save_research, settle_promise only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "apply_employment_import, backfill_employment_import, cancel_intro_request, complete_intro_request, decide_intro_request, link_contacts, record_introduction, record_promise, request_intro, save_research, settle_promise only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "value_key": {
@@ -2731,10 +2724,10 @@ launch_initiative and close_lost_input_check change what colleagues see: ask the
 read_reports to read reports and their metric catalog, run_research for the sales review's
 assessment or a report set up from a description, and change_state move_deal to move a deal. Keep
 the report id and draft_revision to preview the draft with read_reports. (Runs immediately; the
-actions archive_report, close_lost_input_check, discard_draft, launch_initiative, publish_draft,
-publish_framework, restore_revision cannot be undone, so tell the user what the call will change and
-get their yes before calling, unless they asked for this call themselves; requires passport scope
-"write".)
+user's yes is needed for the actions archive_report, close_lost_input_check, discard_draft,
+launch_initiative, publish_draft, publish_framework, restore_revision, so tell them what the call
+will change and get it before calling, unless they asked for this call themselves; requires passport
+scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3018,14 +3011,14 @@ Which model runs, the plan's budget, stage-move trust, what closes a deal, a sta
 order while a transition is trusted, a seeded automation, a rule's owner, a form's secret, origins
 and consent, retention and permanent deletes are done in the app. Use change_my_settings for the
 user's own name, language, time zone, hours or voice, change_state to move one lead or deal, and
-update_record to change one record. (Runs immediately; the actions activate_home_repair,
-apply_legacy_loss_reasons, archive_automation, archive_exit_criterion, archive_legal_entity,
-archive_pipeline, archive_saved_view, archive_stage, archive_web_form, control_data_task,
-create_custom_field, disconnect_finance_source, disconnect_provider, link_finance_customer,
-record_tax_rate, reorder_stages, retire_custom_field, set_ai_model_rate, set_fx_rate,
-update_automation, update_custom_field_options, update_exit_criterion, update_web_form,
-upsert_partner cannot be undone, so tell the user what the call will change and get their yes before
-calling, unless they asked for this call themselves; requires passport scope "write".)
+update_record to change one record. (Runs immediately; the user's yes is needed for the actions
+activate_home_repair, apply_legacy_loss_reasons, archive_automation, archive_exit_criterion,
+archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form,
+control_data_task, create_custom_field, disconnect_finance_source, disconnect_provider,
+link_finance_customer, record_tax_rate, reorder_stages, retire_custom_field, set_ai_model_rate,
+set_fx_rate, update_automation, update_custom_field_options, update_exit_criterion, update_web_form,
+upsert_partner, so tell them what the call will change and get it before calling, unless they asked
+for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3045,8 +3038,6 @@ calling, unless they asked for this call themselves; requires passport scope "wr
         "archive_saved_view",
         "archive_stage",
         "archive_web_form",
-        "ask_company_setup",
-        "ask_site_read",
         "confirm_site_read",
         "control_data_task",
         "create_acquisition_source",
@@ -3159,11 +3150,11 @@ calling, unless they asked for this call themselves; requires passport scope "wr
       "type": "string"
     },
     "readId": {
-      "description": "ask_site_read, confirm_site_read only",
+      "description": "confirm_site_read only",
       "type": "string"
     },
     "request_body": {
-      "description": "activate_home_repair, apply_legacy_loss_reasons, ask_company_setup, ask_site_read, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "activate_home_repair, apply_legacy_loss_reasons, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "text_hash": {
@@ -3207,12 +3198,12 @@ its website. A promotion answers with the new contact's id. A staged answer's ap
 the retry carries; do not report the change until the retry has answered. (Governance: runs
 immediately for accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health,
 decide_commission, decide_legal_review, demote, disqualify, link_lead_company, move_project,
-promote, propose_deal_roles, publish_contact, qualify, record_project_health, reopen_lead,
-request_legal_review, revert_stage, review_outcome, set_lead_signal, transfer_projects,
-withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per
-call from its arguments for move_deal; the actions decide_commission, disqualify, revert_stage,
-transfer_projects cannot be undone, so tell the user what the call will change and get their yes
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+promote, publish_contact, qualify, record_project_health, reopen_lead, request_legal_review,
+revert_stage, review_outcome, set_lead_signal, transfer_projects, withdraw_legal_review; a human
+approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for
+move_deal; the user's yes is needed for the actions decide_commission, disqualify, revert_stage,
+transfer_projects, so tell them what the call will change and get it before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3235,7 +3226,6 @@ before calling, unless they asked for this call themselves; requires passport sc
         "move_deal",
         "move_project",
         "promote",
-        "propose_deal_roles",
         "publish_contact",
         "qualify",
         "record_project_health",
@@ -3317,7 +3307,7 @@ before calling, unless they asked for this call themselves; requires passport sc
       "type": "string"
     },
     "id": {
-      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, propose_deal_roles, publish_contact, record_project_health, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal, withdraw_legal_review only",
+      "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, publish_contact, record_project_health, reopen_lead, request_legal_review, revert_stage, review_outcome, set_lead_signal, withdraw_legal_review only",
       "type": "string"
     },
     "idempotency_key": {
@@ -3482,9 +3472,9 @@ a taken name is a conflict, even a retired one, which restore brings back. creat
 tag grants an ordinary seat lacks. update sends no version, so read the tag right before editing; it
 changes what a word is called, never what carries it. Removing a tag that is not there succeeds.
 archive retires a word for every record; the records keep it. (Governance: runs immediately for
-apply, archive, create, remove, restore, update; a human approves first for merge; the action
-archive cannot be undone, so tell the user what the call will change and get their yes before
-calling, unless they asked for this call themselves; requires passport scope "write".)
+apply, archive, create, remove, restore, update; a human approves first for merge; the user's yes is
+needed for the action archive, so tell them what the call will change and get it before calling,
+unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3781,9 +3771,9 @@ to get a file in is not a review of it: unless the asker says they have already 
 rows, show the counts and the mapping and wait for their go-ahead. Use read_import for the report
 first: numbers nobody read are not a check. The write goes on after this answers. Read read_import's
 report until its state is complete or failed, then report what landed: the counts and the mapping
-the run used, each column by the field it went to. (Runs immediately; it cannot be undone, so tell
-the user what the call will change and get their yes before calling, unless they asked for this call
-themselves; requires passport scope "write".)
+the run used, each column by the field it went to. (Runs immediately; the user's yes is needed for
+it, so tell them what the call will change and get it before calling, unless they asked for this
+call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3999,9 +3989,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "product",
         "offer_template",
         "offer",
-        "deal_room",
-        "deal_room_thread",
-        "deal_room_comment"
+        "deal_room"
       ],
       "type": "string"
     }
@@ -4301,9 +4289,9 @@ theirs to release in the CRM. An item already answered, or lapsed, is reported a
 is written; each bundle member is answered and reported on its own, and a bundle holding none of
 theirs reads as not found. read_approval when they have not seen what it holds; list_approvals is
 where both ids come from. If the proposal is your OWN refused call, approving does not perform it
-— re-issue that same call with approval_id set. (Runs immediately; the actions bundle, one cannot
-be undone, so tell the user what the call will change and get their yes before calling, unless they
-asked for this call themselves; requires passport scope "write".)
+— re-issue that same call with approval_id set. (Runs immediately; the user's yes is needed for
+the actions bundle, one, so tell them what the call will change and get it before calling, unless
+they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -8396,7 +8384,6 @@ needs the user now, and read_record for a record's own fields.
         "tag_suggestion",
         "team_board",
         "team_exceptions",
-        "team_weekly_review",
         "teammate_weekly_plan",
         "voice_source_preview",
         "weekly_plan",
@@ -8407,22 +8394,40 @@ needs the user now, and read_record for a record's own fields.
     },
     "actor_type": {
       "description": "field_history only",
+      "enum": [
+        "human",
+        "agent",
+        "system",
+        "connector",
+        "buyer"
+      ],
       "type": "string"
     },
     "anchor_id": {
       "description": "mail_draft only",
+      "format": "uuid",
       "type": "string"
     },
     "anchor_type": {
       "description": "mail_draft only",
+      "enum": [
+        "activity",
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project"
+      ],
       "type": "string"
     },
     "company_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "contact_id": {
       "description": "meeting_proposals only",
+      "format": "uuid",
       "type": "string"
     },
     "create_company": {
@@ -8459,10 +8464,19 @@ needs the user now, and read_record for a record's own fields.
     },
     "entity_id": {
       "description": "field_history only",
+      "format": "uuid",
       "type": "string"
     },
     "entity_type": {
       "description": "field_history only",
+      "enum": [
+        "contact",
+        "company",
+        "deal",
+        "lead",
+        "project",
+        "activity"
+      ],
       "type": "string"
     },
     "field": {
@@ -8471,6 +8485,7 @@ needs the user now, and read_record for a record's own fields.
     },
     "from": {
       "description": "meeting_availability only",
+      "format": "date-time",
       "type": "string"
     },
     "history": {
@@ -8487,10 +8502,20 @@ needs the user now, and read_record for a record's own fields.
     },
     "lang": {
       "description": "import_problems only",
+      "enum": [
+        "en",
+        "de",
+        "vi"
+      ],
       "type": "string"
     },
     "language": {
       "description": "controller_mail_preview only",
+      "enum": [
+        "de",
+        "en",
+        "vi"
+      ],
       "type": "string"
     },
     "limit": {
@@ -8503,14 +8528,17 @@ needs the user now, and read_record for a record's own fields.
     },
     "owner_team_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "pipeline_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "project_id": {
       "description": "company_brief only",
+      "format": "uuid",
       "type": "string"
     },
     "provider": {
@@ -8539,26 +8567,48 @@ needs the user now, and read_record for a record's own fields.
     },
     "since": {
       "description": "magic, magic_line_records only",
+      "format": "date-time",
       "type": "string"
     },
     "stage_id": {
       "description": "deal_suggestions only",
+      "format": "uuid",
       "type": "string"
     },
     "state": {
       "description": "job_health_history only",
+      "enum": [
+        "retryable",
+        "discarded",
+        "cancelled"
+      ],
       "type": "string"
     },
     "status": {
       "description": "company_contracts, legal_reviews, scheduled_sends only",
+      "enum": [
+        "active",
+        "cancelled",
+        "decided",
+        "draft",
+        "expired",
+        "held",
+        "open",
+        "released",
+        "scheduled",
+        "sent",
+        "superseded"
+      ],
       "type": "string"
     },
     "team": {
-      "description": "team_board, team_weekly_review only",
+      "description": "team_board only",
+      "format": "uuid",
       "type": "string"
     },
     "to": {
       "description": "meeting_availability only",
+      "format": "date-time",
       "type": "string"
     },
     "token": {
@@ -8574,7 +8624,8 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "week": {
-      "description": "latest_weekly_review, team_weekly_review only",
+      "description": "latest_weekly_review only",
+      "format": "date",
       "type": "string"
     }
   },
@@ -8610,8 +8661,9 @@ clean pipeline; input_sources tells them apart, and needs a coverage grant selle
 read_reports and find_records with engine query also produce numbers, and neither is the forecast.
 For a board-pack section, use read_analytics: query with save, then compose. To make a call, answer
 an input exception or share a reading, use change_reports. Quote `as_of`, `timezone` and
-`base_currency` with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000
-in EUR is EUR 31,000.
+`base_currency` with the number. A `_display` sits beside a `_minor` figure wherever its object
+names the unit: `base_currency`, or `current_call`'s own `currency`. Quote the `_display`, never the
+`_minor` integer.
 ```
 
 Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible to `model`.
@@ -10004,6 +10056,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "deal_id": {
       "description": "sales_decisions only",
+      "format": "uuid",
       "type": "string"
     },
     "entity": {
@@ -10035,7 +10088,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "array"
     },
     "id": {
-      "description": "question_card_answer, question_card_records, reader_preview, report_revisions, sales_initiative, sales_initiative_members, standard only",
+      "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
       "type": "string"
     },
     "kind": {
@@ -10048,7 +10101,6 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "evidence",
         "question_card_answer",
         "question_card_records",
-        "reader_preview",
         "report_revisions",
         "report_run",
         "report_run_cell_records",
@@ -10088,6 +10140,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "period": {
       "description": "sdr_team only",
+      "enum": [
+        "this_week",
+        "last_week",
+        "this_month",
+        "last_month"
+      ],
       "type": "string"
     },
     "query": {
@@ -10097,6 +10155,10 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "record_type": {
       "description": "sales_initiative_members only",
+      "enum": [
+        "lead",
+        "deal"
+      ],
       "type": "string"
     },
     "reference": {
@@ -10146,16 +10208,12 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
       "type": "object"
     },
     "revision": {
-      "description": "question_card_answer, question_card_records, reader_preview, standard only; at least 1 for standard.",
+      "description": "question_card_answer, question_card_records, standard only; at least 1 for standard.",
       "type": "integer"
     },
     "right_id": {
       "description": "standard only",
       "format": "uuid",
-      "type": "string"
-    },
-    "role": {
-      "description": "reader_preview only",
       "type": "string"
     },
     "run_id": {
@@ -10184,10 +10242,17 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "scope_id": {
       "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+      "format": "uuid",
       "type": "string"
     },
     "scope_kind": {
       "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+      "enum": [
+        "managed_teams",
+        "owner",
+        "team",
+        "workspace"
+      ],
       "type": "string"
     },
     "selection": {
@@ -10372,22 +10437,40 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
     },
     "state": {
       "description": "sdr_handoffs only",
+      "enum": [
+        "waiting",
+        "returned"
+      ],
       "type": "string"
     },
     "status": {
       "description": "sales_decisions, sales_initiatives only",
+      "enum": [
+        "done",
+        "draft",
+        "ended",
+        "live",
+        "open"
+      ],
       "type": "string"
     },
     "view": {
       "description": "company_coverage only",
+      "enum": [
+        "single_threaded",
+        "untouched",
+        "silent"
+      ],
       "type": "string"
     },
     "window_end": {
       "description": "sdr_meetings only",
+      "format": "date-time",
       "type": "string"
     },
     "window_start": {
       "description": "sdr_meetings only",
+      "format": "date-time",
       "type": "string"
     }
   },
@@ -10912,6 +10995,7 @@ cf_<slug>.
     },
     "batch_id": {
       "description": "audit_log only",
+      "format": "uuid",
       "type": "string"
     },
     "buildId": {
@@ -10920,6 +11004,7 @@ cf_<slug>.
     },
     "contact_id": {
       "description": "confirm_submissions only",
+      "format": "uuid",
       "type": "string"
     },
     "country": {
@@ -10940,6 +11025,7 @@ cf_<slug>.
     },
     "entity_id": {
       "description": "audit_log only",
+      "format": "uuid",
       "type": "string"
     },
     "entity_type": {
@@ -10948,6 +11034,22 @@ cf_<slug>.
     },
     "filter": {
       "description": "worklist only",
+      "enum": [
+        "all",
+        "urgent",
+        "customer_waiting",
+        "leads",
+        "prospecting",
+        "deals_at_risk",
+        "meetings",
+        "tasks",
+        "decisions",
+        "relationships",
+        "system",
+        "except_decisions",
+        "changed_since_brief",
+        "upcoming"
+      ],
       "type": "string"
     },
     "from": {
@@ -10956,6 +11058,14 @@ cf_<slug>.
     },
     "group": {
       "description": "ai_call_stats only",
+      "enum": [
+        "provider",
+        "model",
+        "served_model",
+        "served_provider",
+        "tier",
+        "task"
+      ],
       "type": "string"
     },
     "id": {
@@ -10976,6 +11086,11 @@ cf_<slug>.
     },
     "kind": {
       "description": "data_subject_request_deadline only",
+      "enum": [
+        "access",
+        "rectify",
+        "erasure"
+      ],
       "type": "string"
     },
     "kinds": {
@@ -10991,6 +11106,11 @@ cf_<slug>.
     },
     "locale": {
       "description": "onboarding_company_proposal only",
+      "enum": [
+        "en",
+        "de",
+        "vi"
+      ],
       "type": "string"
     },
     "location": {
@@ -11020,10 +11140,21 @@ cf_<slug>.
     },
     "outcome": {
       "description": "ai_calls, automation_runs only",
+      "enum": [
+        "answered",
+        "blocked",
+        "declined",
+        "failed",
+        "fallback",
+        "fired",
+        "queued_for_approval",
+        "skipped"
+      ],
       "type": "string"
     },
     "owner": {
       "description": "worklist only",
+      "format": "uuid",
       "type": "string"
     },
     "provider": {
@@ -11040,10 +11171,15 @@ cf_<slug>.
     },
     "received_at": {
       "description": "data_subject_request_deadline only",
+      "format": "date-time",
       "type": "string"
     },
     "relationships": {
       "description": "worklist only",
+      "enum": [
+        "include",
+        "omit"
+      ],
       "type": "string"
     },
     "resolved": {
@@ -11052,6 +11188,15 @@ cf_<slug>.
     },
     "resource": {
       "description": "saved_views only",
+      "enum": [
+        "contacts",
+        "companies",
+        "deals",
+        "activities",
+        "leads",
+        "partners",
+        "projects"
+      ],
       "type": "string"
     },
     "router": {
@@ -11080,6 +11225,12 @@ cf_<slug>.
     },
     "scope": {
       "description": "worklist only",
+      "enum": [
+        "mine",
+        "unassigned",
+        "team",
+        "all"
+      ],
       "type": "string"
     },
     "scopes": {
@@ -11108,6 +11259,12 @@ cf_<slug>.
     },
     "status": {
       "description": "data_subject_requests only",
+      "enum": [
+        "open",
+        "in_progress",
+        "fulfilled",
+        "rejected"
+      ],
       "type": "string"
     },
     "task": {
@@ -11257,10 +11414,22 @@ cf_<slug>.
     },
     "view": {
       "description": "import_runs, worklist only",
+      "enum": [
+        "decisions",
+        "drafts",
+        "history",
+        "system",
+        "today"
+      ],
       "type": "string"
     },
     "window": {
       "description": "ai_call_stats, ai_task_flow only",
+      "enum": [
+        "24h",
+        "30d",
+        "7d"
+      ],
       "type": "string"
     }
   },
@@ -11288,7 +11457,7 @@ writes nothing. A merge archives the source and redirects it to the target; it c
 merging the other way round, and by default nothing holds it. A merged pair cannot be reopened. Use
 archive_record when the extra record has nothing worth keeping. target_id is the record that
 survives and source_id the one merged away — read both records before choosing. (Runs immediately;
-the action merge cannot be undone, so tell the user what the call will change and get their yes
+the user's yes is needed for the action merge, so tell them what the call will change and get it
 before calling, unless they asked for this call themselves; requires passport scope "write".)
 ```
 
@@ -11382,7 +11551,8 @@ before calling, unless they asked for this call themselves; requires passport sc
 ```text
 Run AI work for the user: ask about a company, refresh a company's brief, dossier, growth fit or
 scan or a contact's brief, research a contact, make today's morning brief, ask a knowledge corpus,
-write the sales review's assessment, propose a report or filter from a description, read a photo of
+write the sales review's assessment, propose a report or filter from a description, draft an
+introduction, regenerate an offer, propose a deal's roles, talk through a site read, read a photo of
 business cards into proposals, build the user's voice, preview the Home repair, buy a contact's
 details from the data provider, rebuild the search index, or bring in old mail. Each call spends AI
 budget, and research asks an outside provider, so the passport needs the enrich scope. Read the
@@ -11390,9 +11560,9 @@ panel first through read_details; run this only when it is out of date. Ask the 
 buying a contact's details, and before rebuilding the search index for the whole workspace. Buying
 needs a daily limit and a healthy connection, skips a contact already looked up, and buys a priced
 detail only when you name its category. Use read_details to read a panel, and enrich to fill a
-company's fields from its website. (Runs immediately; the actions enrich_contact_from_provider,
-start_backfill, start_search_reindex cannot be undone, so tell the user what the call will change
-and get their yes before calling, unless they asked for this call themselves; requires passport
+company's fields from its website. (Runs immediately; the user's yes is needed for the actions
+enrich_contact_from_provider, start_backfill, start_search_reindex, so tell them what the call will
+change and get it before calling, unless they asked for this call themselves; requires passport
 scope "enrich".)
 ```
 
@@ -11406,11 +11576,15 @@ scope "enrich".)
       "enum": [
         "ask_about_company",
         "ask_corpus",
+        "ask_site_read",
         "assess_sales_review",
         "build_voice_profile",
+        "draft_intro_note",
+        "draft_intro_request",
         "enrich_contact_from_provider",
         "generate_brief",
         "preview_home_repair",
+        "propose_deal_roles",
         "propose_filter",
         "propose_report_setup",
         "read_card_photo",
@@ -11419,6 +11593,7 @@ scope "enrich".)
         "refresh_dossier",
         "refresh_growth_fit",
         "refresh_scan",
+        "regenerate_offer",
         "research_contact",
         "start_backfill",
         "start_search_reindex"
@@ -11438,7 +11613,7 @@ scope "enrich".)
       "type": "string"
     },
     "id": {
-      "description": "ask_about_company, ask_corpus, build_voice_profile, enrich_contact_from_provider, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, research_contact only",
+      "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
       "type": "string"
     },
     "idempotency_key": {
@@ -11448,14 +11623,19 @@ scope "enrich".)
     },
     "project_id": {
       "description": "refresh_company_brief only",
+      "format": "uuid",
       "type": "string"
     },
     "provider": {
       "description": "start_backfill only",
       "type": "string"
     },
+    "readId": {
+      "description": "ask_site_read only",
+      "type": "string"
+    },
     "request_body": {
-      "description": "ask_about_company, ask_corpus, assess_sales_review, build_voice_profile, enrich_contact_from_provider, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "ask_about_company, ask_corpus, ask_site_read, assess_sales_review, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     }
   },
@@ -11579,26 +11759,28 @@ Put a message on the wire to a real recipient, exactly as given; it composes not
 mail answering a thread recorded here, by activity_id. email_new: a first mail starting a new
 conversation, filed on `links` naming the records it is about. chat_reply: an answer on a captured
 chat conversation, by activity_id, on the channel it came from. The other actions act for the app:
-deal_room_invite and deal_room_resend mail a buyer their room link, meeting_proposal makes an
-expiring scheduling link and mails nothing, change_invitation changes an invitation already sent,
-invite_member adds a member and mails their sign-in link where the installation can send mail,
-signature_template and my_signature set the sign-off every later mail carries, and double_opt_in,
-privacy_notice and details_confirmation mail a contact a link about their data: ask the user first.
-direct_send sends a message the engine refused and held: show the user the review's warning, call
-only once they have seen it and said yes, and give their reason. It names them as the one who took
-it on and you as the agent, and the refusal stays on record. Every recipient must have granted the
-consent purpose the call names. A sent message cannot be recalled, and by default nothing holds it:
-where an installation has raised a send to confirm first, the answer is a staged approval instead.
-chat_reply cannot start a conversation or choose a channel. Use draft_outbound first when the
-message does not exist yet, and change_activities with action=log to record that something was said
-rather than say it. Send the subject, body and activity_id or links the draft produced, and keep the
-staged approval id: the approval binds that exact message, so changed text needs a new one.
-email_new answers with the new conversation's activity_id. (Runs immediately; the actions
-change_invitation, chat_reply, deal_room_invite, deal_room_resend, details_confirmation,
-direct_send, double_opt_in, email_new, email_reply, invite_member, meeting_proposal, my_signature,
-privacy_notice, resend_member_invite, signature_template cannot be undone, so tell the user what the
-call will change and get their yes before calling, unless they asked for this call themselves;
-requires passport scope "send".)
+deal_room_invite and deal_room_resend mail a buyer their room link, the room actions change what a
+buyer reads at once, meeting_proposal makes an expiring scheduling link and mails nothing,
+change_invitation changes an invitation already sent, invite_member adds a member and mails their
+sign-in link where the installation can send mail, signature_template and my_signature set the
+sign-off every later mail carries, and double_opt_in, privacy_notice and details_confirmation mail a
+contact a link about their data: ask the user first. direct_send sends a message the engine refused
+and held: show the user the review's warning, call only once they have seen it and said yes, and
+give their reason. It names them as the one who took it on and you as the agent, and the refusal
+stays on record. Every recipient must have granted the consent purpose the call names. A sent
+message cannot be recalled, and by default nothing holds it: where an installation has raised a send
+to confirm first, the answer is a staged approval instead. chat_reply cannot start a conversation or
+choose a channel. Use draft_outbound first when the message does not exist yet, and
+change_activities with action=log to record that something was said rather than say it. Send the
+subject, body and activity_id or links the draft produced, and keep the staged approval id: the
+approval binds that exact message, so changed text needs a new one. email_new answers with the new
+conversation's activity_id. (Runs immediately; the user's yes is needed for the actions
+add_room_document, change_invitation, chat_reply, deal_room_invite, deal_room_resend,
+details_confirmation, direct_send, double_opt_in, email_new, email_reply, invite_member,
+meeting_proposal, my_signature, open_room_thread, privacy_notice, remove_room_document,
+reply_room_thread, resend_member_invite, resume_room, set_room_expiry, signature_template,
+update_room, update_room_document, so tell them what the call will change and get it before calling,
+unless they asked for this call themselves; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -11619,6 +11801,7 @@ requires passport scope "send".)
     "as": {
       "description": "email_reply answers a recorded mail thread, email_new starts one filed on links, chat_reply answers a captured chat",
       "enum": [
+        "add_room_document",
         "change_invitation",
         "chat_reply",
         "deal_room_invite",
@@ -11631,9 +11814,16 @@ requires passport scope "send".)
         "invite_member",
         "meeting_proposal",
         "my_signature",
+        "open_room_thread",
         "privacy_notice",
+        "remove_room_document",
+        "reply_room_thread",
         "resend_member_invite",
-        "signature_template"
+        "resume_room",
+        "set_room_expiry",
+        "signature_template",
+        "update_room",
+        "update_room_document"
       ],
       "type": "string"
     },
@@ -11669,6 +11859,10 @@ requires passport scope "send".)
       "description": "chat_reply, email_new, email_reply only: Legacy purpose key, optional. communication_context is what the engine decides on; this is read only where the context leaves the question open. Naming neither is allowed and the server resolves what it can from the thread, but a message it cannot place is refused rather than guessed at",
       "type": "string"
     },
+    "documentId": {
+      "description": "remove_room_document, update_room_document only",
+      "type": "string"
+    },
     "evidence": {
       "additionalProperties": false,
       "description": "chat_reply, email_new, email_reply only: The record that bears out the category: required for invoice_or_payment and contract_notice, which cannot be allowed without one",
@@ -11689,13 +11883,17 @@ requires passport scope "send".)
       "type": "object"
     },
     "id": {
-      "description": "change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, privacy_notice, resend_member_invite only",
+      "description": "add_room_document, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
       "type": "string"
     },
     "idempotency_key": {
       "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
+    },
+    "if_version": {
+      "description": "remove_room_document, set_room_expiry, update_room, update_room_document only: The version the caller read; the write is refused as skew if the record moved since",
+      "type": "integer"
     },
     "links": {
       "description": "email_new only: The records this conversation is filed under; at least one. The send is refused without it.",
@@ -11741,7 +11939,7 @@ requires passport scope "send".)
       "type": "string"
     },
     "request_body": {
-      "description": "change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, meeting_proposal, my_signature, privacy_notice, signature_template only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_room_document, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scheduled_at": {
@@ -11755,6 +11953,10 @@ requires passport scope "send".)
     },
     "subject": {
       "description": "email_new, email_reply only",
+      "type": "string"
+    },
+    "threadId": {
+      "description": "reply_room_thread only",
       "type": "string"
     },
     "to": {

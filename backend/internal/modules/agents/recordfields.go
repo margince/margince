@@ -43,19 +43,17 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:         reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:         reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:            reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:            reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:        reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:         reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship:    reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
-		datasource.EntityProduct:         reflect.TypeFor[crmcontracts.CreateProductRequest](),
-		datasource.EntityOfferTemplate:   reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
-		datasource.EntityOffer:           reflect.TypeFor[crmcontracts.CreateOfferRequest](),
-		datasource.EntityDealRoom:        reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
-		datasource.EntityDealRoomThread:  reflect.TypeFor[crmcontracts.OpenDealRoomThreadRequest](),
-		datasource.EntityDealRoomComment: reflect.TypeFor[crmcontracts.PostDealRoomCommentRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityOffer:         reflect.TypeFor[crmcontracts.CreateOfferRequest](),
+		datasource.EntityDealRoom:      reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch

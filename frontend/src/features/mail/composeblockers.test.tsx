@@ -327,3 +327,84 @@ describe("a new address", () => {
     ).toBeNull();
   });
 });
+
+// The engine answers every preview with the one it is handed.
+function answeringBackend(preview: ReturnType<typeof refusedPreview>) {
+  const answered = { count: 0 };
+  stubRoutes({});
+  const fetcher = vi.mocked(fetch);
+  const stubbed = fetcher.getMockImplementation();
+  if (!stubbed) throw new Error("Missing test transport");
+  fetcher.mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (isPreviewDoor(new URL(url, "https://test.local").pathname)) {
+      answered.count += 1;
+      return jsonResponse(preview);
+    }
+    return stubbed(input, init);
+  });
+  return answered;
+}
+
+async function newMessageTo(address: string) {
+  const user = userEvent.setup();
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="c-1"
+      contactId="c-1"
+      open
+      onClose={vi.fn()}
+    />,
+  );
+  await user.type(await screen.findByLabelText("To"), address);
+  await user.tab();
+  return within(screen.getAllByRole("dialog")[0]);
+}
+
+describe("a message with no reason for contact yet", () => {
+  it("says the reason is missing once, in the strip that picks it", async () => {
+    const answered = answeringBackend(
+      refusedPreview("anna@example.test", {
+        reason_code: "unknown_purpose",
+        decided_by: "machine",
+      }),
+    );
+    const checks = await newMessageTo("anna@example.test");
+
+    expect(await checks.findByText("No contact reason.")).toBeTruthy();
+    await waitFor(() => {
+      expect(answered.count).toBeGreaterThan(0);
+      expect(checks.queryAllByText(/^Checking whether/)).toHaveLength(0);
+    });
+    expect(checks.queryByText("This message needs one more detail")).toBeNull();
+  });
+
+  it("shows a refusal for another cause beside the strip", async () => {
+    answeringBackend(
+      refusedPreview("anna@example.test", {
+        reason_code: "marketing_objection",
+        decided_by: "subject",
+      }),
+    );
+    const checks = await newMessageTo("anna@example.test");
+
+    expect(await checks.findByText("Message cannot be sent")).toBeTruthy();
+    expect(checks.getByText("No contact reason.")).toBeTruthy();
+  });
+
+  it("shows a missing consent beside the strip", async () => {
+    answeringBackend(
+      refusedPreview("anna@example.test", {
+        reason_code: "no_marketing_consent",
+        decided_by: "machine",
+      }),
+    );
+    const checks = await newMessageTo("anna@example.test");
+
+    expect(
+      await checks.findByText("Consent needed for this message"),
+    ).toBeTruthy();
+    expect(checks.getByText("No contact reason.")).toBeTruthy();
+  });
+});

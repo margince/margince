@@ -34318,20 +34318,23 @@ type Automation struct {
 	OwnerId *openapi_types.UUID    `json:"owner_id,omitempty"`
 	Params  map[string]interface{} `json:"params"`
 
-	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+	// PausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 	PausedReason *AutomationPausedReason `json:"paused_reason,omitempty"`
 
 	// RunsLast30Days Runs other than skipped ones in the 30 days before the server read the list. Every GET /automations item carries it, 0 for a rule that has not run; a single read, a create and an update leave it out.
-	RunsLast30Days *int             `json:"runs_last_30_days,omitempty"`
-	Status         AutomationStatus `json:"status"`
-	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
-	Version        *int             `json:"version,omitempty"`
+	RunsLast30Days *int `json:"runs_last_30_days,omitempty"`
+
+	// SetterPassportId The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
+	SetterPassportId *openapi_types.UUID `json:"setter_passport_id,omitempty"`
+	Status           AutomationStatus    `json:"status"`
+	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
+	Version          *int                `json:"version,omitempty"`
 }
 
 // AutomationLastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
 type AutomationLastRunOutcome string
 
-// AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the passport of the agent that set the rule up was revoked. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
+// AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 type AutomationPausedReason string
 
 // AutomationStatus defines model for Automation.Status.
@@ -34400,7 +34403,8 @@ type AutomationRetryResult struct {
 	// means nobody has established that running this handler twice is safe.
 	// `trigger_event_unavailable` means the event cannot be rebuilt, which is
 	// permanent for a scheduled firing rather than a condition that clears.
-	// `passport_revoked` means the rule stopped with the passport that set it up.
+	// `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+	// or connection was revoked or expired.
 	Refusal *AutomationRetryResultRefusal `json:"refusal,omitempty"`
 
 	// Retried True when the firing was re-dispatched. It does NOT promise the firing then
@@ -34414,7 +34418,8 @@ type AutomationRetryResult struct {
 // means nobody has established that running this handler twice is safe.
 // `trigger_event_unavailable` means the event cannot be rebuilt, which is
 // permanent for a scheduled firing rather than a condition that clears.
-// `passport_revoked` means the rule stopped with the passport that set it up.
+// `passport_revoked` means the rule stopped with the agent that set it up, whose passport
+// or connection was revoked or expired.
 type AutomationRetryResultRefusal string
 
 // AutomationRun One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of
@@ -41362,11 +41367,11 @@ type ContactStop struct {
 	Reason     *string   `json:"reason,omitempty"`
 	RecordedAt time.Time `json:"recorded_at"`
 
-	// RecordedByColleague A colleague recorded the stop. False when the contact recorded it on a link in a mail or
-	// Margince recorded it, for example for a bounce.
+	// RecordedByColleague A colleague recorded the stop, by hand or through their agent. False when the contact recorded
+	// it on a link in a mail or Margince recorded it, for example for a bounce.
 	RecordedByColleague bool `json:"recorded_by_colleague"`
 
-	// RecordedByName The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+	// RecordedByName The colleague's current name, the user an agent acted for included. Null when no colleague recorded it, or their seat is gone.
 	RecordedByName *string `json:"recorded_by_name,omitempty"`
 }
 
@@ -46255,6 +46260,9 @@ type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
 type ForecastMovement struct {
+	// BaseCurrency The currency every amount here is in: the base currency both snapshots converted to.
+	BaseCurrency string `json:"base_currency"`
+
 	// Buckets The named causes, in the order a waterfall draws them — what arrived, what crossed the period, what was repriced, and only then what the machinery did. A bucket that moved nothing is absent rather than zero.
 	Buckets      []ForecastMovementBucket `json:"buckets"`
 	ClosingMinor int64                    `json:"closing_minor"`
@@ -51118,19 +51126,39 @@ type MailDraft struct {
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
-	Bcc        []string            `json:"bcc"`
-	Body       string              `json:"body"`
-	Cc         []string            `json:"cc"`
-	CreatedAt  time.Time           `json:"created_at"`
+
+	// Attachments The chosen files the author can still attach, in the order chosen, so the composer
+	// draws each one without asking again. Resolved only by the draft read and the save
+	// answer: absent elsewhere, so its absence there does not mean the draft has no files.
+	Attachments *[]ApprovalPreviewFile `json:"attachments,omitempty"`
+
+	// AttachmentsUnavailable How many chosen files the send would now refuse: removed, out of the author's sight,
+	// kept without bytes, or empty. Not named, because a file the author cannot see answers
+	// 404 everywhere else. Absent when every file resolves.
+	AttachmentsUnavailable *int     `json:"attachments_unavailable,omitempty"`
+	Bcc                    []string `json:"bcc"`
+	Body                   string   `json:"body"`
+	Cc                     []string `json:"cc"`
+
+	// CommunicationContext The reason for contact the author chose. Absent when none was.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+	CreatedAt            time.Time             `json:"created_at"`
 
 	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
 	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
 	HtmlBody  *string            `json:"html_body,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
-	Subject   string             `json:"subject"`
-	To        []string           `json:"to"`
-	UpdatedAt time.Time          `json:"updated_at"`
-	Version   int64              `json:"version"`
+
+	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
+	// draft schedules nothing. Absent when none was picked.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
+	Subject     string    `json:"subject"`
+	To          []string  `json:"to"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	Version     int64     `json:"version"`
 }
 
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
@@ -51154,14 +51182,34 @@ type MailDraftInput struct {
 	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
 	// record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
-	Bcc        *[]string           `json:"bcc,omitempty"`
-	Body       *string             `json:"body,omitempty"`
-	Cc         *[]string           `json:"cc,omitempty"`
+
+	// AttachmentIds The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+	// whole draft, so omitting this clears the files; a client keeps them by sending back
+	// the `id` of each entry in the draft's `attachments`.
+	//
+	// Held to the send's own cap. A file the caller cannot see, or one the send would
+	// refuse, is left out rather than refused, so a save never loses the words; the answer
+	// counts it in `attachments_unavailable`.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+	Bcc           *[]string             `json:"bcc,omitempty"`
+	Body          *string               `json:"body,omitempty"`
+	Cc            *[]string             `json:"cc,omitempty"`
+
+	// CommunicationContext The reason for contact the rep chose, checked as the send checks it: a category
+	// reserved for the installation's own notices is refused 422. Omit it for none.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
-	HtmlBody *string   `json:"html_body,omitempty"`
-	Subject  *string   `json:"subject,omitempty"`
-	To       *[]string `json:"to,omitempty"`
+	HtmlBody *string `json:"html_body,omitempty"`
+
+	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
+	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledTz The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
+	ScheduledTz *string   `json:"scheduled_tz,omitempty"`
+	Subject     *string   `json:"subject,omitempty"`
+	To          *[]string `json:"to,omitempty"`
 }
 
 // MailHistoryBaseline The local date this mailbox's automatic commitment suggestions start from. Absent when the
@@ -53083,7 +53131,7 @@ type OpenDealRoomThreadRequest struct {
 	// RequiredChange Only with a document. Marks the thread as one the seller still owes an answer on.
 	RequiredChange *bool `json:"required_change,omitempty"`
 
-	// Source Provenance. Required on the seller edge; a buyer's comment always carries the credential's own value. `manual` for someone writing through this product.
+	// Source Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential.
 	Source *string `json:"source,omitempty"`
 }
 
@@ -53568,7 +53616,9 @@ type PostDealRoomCommentRequest struct {
 	// saying the same thing twice on purpose is allowed, and a key derived from
 	// the text would refuse the second one.
 	RequestId *openapi_types.UUID `json:"request_id,omitempty"`
-	Source    *string             `json:"source,omitempty"`
+
+	// Source Provenance. A user's client names it on the seller edge. An agent that omits it records `agent`, and a buyer's comment always records the credential.
+	Source *string `json:"source,omitempty"`
 }
 
 // PreferenceCenter The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
@@ -62663,9 +62713,12 @@ type User struct {
 	// Timezone The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC.
 	Timezone *string `json:"timezone,omitempty"`
 
-	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster.
-	TimezoneChosen *bool      `json:"timezone_chosen,omitempty"`
-	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
+	// TimezoneChosen Whether the user chose `timezone` themselves, rather than the app storing the browser's guess or an agent setting it. Present on the caller's own seat; absent on the roster.
+	TimezoneChosen *bool `json:"timezone_chosen,omitempty"`
+
+	// TimezoneSetBy The agent that set `timezone` for this user, as its `captured_by` stamp. Present on the caller's own seat while the zone is the agent's; absent once the user chooses, and on the roster.
+	TimezoneSetBy *string    `json:"timezone_set_by,omitempty"`
+	UpdatedAt     *time.Time `json:"updated_at,omitempty"`
 }
 
 // UserAllowedActions defines model for User.AllowedActions.
@@ -102922,8 +102975,6 @@ func (siw *ServerInterfaceWrapper) PreviewReportingReportAsRole(w http.ResponseW
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -128369,8 +128420,6 @@ func (siw *ServerInterfaceWrapper) SendOffer(w http.ResponseWriter, r *http.Requ
 func (siw *ServerInterfaceWrapper) MessageOnboardingCompany(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

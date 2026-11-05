@@ -87,6 +87,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [how-to/implement-deal-viability-review.md](how-to/implement-deal-viability-review.md): the plan for the
   review of deals whose customer stopped answering, and what is still open.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md): add or change an API call.
+- [prove-a-tool-in-the-role-matrix.md](how-to/prove-a-tool-in-the-role-matrix.md): make a new MCP tool show
+  ✓ or ✗ for every role.
 - [add-a-module.md](how-to/add-a-module.md): add a module, or link two modules.
 - [add-a-job.md](how-to/add-a-job.md): add a job.
 - [add-a-setting.md](how-to/add-a-setting.md): add, rename or remove a setting.

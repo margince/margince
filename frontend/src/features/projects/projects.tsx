@@ -24,7 +24,11 @@ import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { useSavedViews } from "../../lib/savedviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
-import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "../lists/savedviews";
 import { useProjectCreateForm } from "./projects.create";
 import {
   PHASE_LABEL,
@@ -153,13 +157,8 @@ export function ProjectsScreen() {
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
   const createAction = !state.isPending && <NewProjectAction />;
-  // The first-run plate: nothing exists yet, and nothing is narrowing the
-  // list. A filtered-empty list is the table's own case — it already knows to
-  // offer the way back — and a list that is empty because a reader typed a
-  // search must not be told the product has no projects. A saved view is
-  // reachable only from the table's rail, so the plate waits for the views
-  // read to confirm there is none; an unanswered or failed read keeps the
-  // table, where SaveViewAction says what went wrong.
+  // First run: nothing exists and nothing narrows the list. It waits for the
+  // views read, since a saved view is reachable only from the rail.
   const firstRun =
     !state.isPending &&
     !state.isError &&
@@ -241,7 +240,8 @@ export function ProjectsScreen() {
           ownerColumn<Project>(t),
           lastActivityColumn<Project>(t, locale, readerZone),
         ]}
-        saveView={<SaveViewAction resource="projects" query={state.query} />}
+        saveView={<SaveViewAction resource="projects" state={state} />}
+        notice={<SavedViewsFailure resource="projects" />}
         rowKey={(project) => project.id}
         rowRoute={(project) => ({ screen: "projects", id: project.id })}
         dataViews={savedViews}

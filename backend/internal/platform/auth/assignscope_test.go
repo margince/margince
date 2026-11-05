@@ -4,9 +4,16 @@
 package auth
 
 import (
+	"context"
+	"errors"
+	"maps"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
@@ -46,5 +53,51 @@ func TestOnlyARunAsOwnerIsHeldToTheCallersScope(t *testing.T) {
 	}
 	if !strings.HasPrefix(runAs, record+" AND ") || !strings.Contains(runAs, "u.owner_id") {
 		t.Errorf("a run-as owner is not the record rule plus the caller's write scope:\nrecord: %s\nrun-as: %s", record, runAs)
+	}
+}
+
+// seatOutsideScopeTx answers that dest may own records and is outside the
+// caller's scope: the scoped probe says no and the unscoped one yes.
+type seatOutsideScopeTx struct {
+	pgx.Tx
+	probes int
+}
+
+func (tx *seatOutsideScopeTx) QueryRow(context.Context, string, ...any) pgx.Row {
+	tx.probes++
+	return answerRow(tx.probes > 1)
+}
+
+type answerRow bool
+
+func (r answerRow) Scan(dest ...any) error {
+	answer, ok := dest[0].(*bool)
+	if !ok {
+		return errors.New("answerRow: the probe scans a bool")
+	}
+	*answer = bool(r)
+	return nil
+}
+
+// An eligible seat outside the caller's scope is refused as any other, and only
+// a recorder learns that the scope refused it. Without one, nothing asks.
+func TestAnAssigneeOutsideTheScopeIsNotedOnlyForARecorder(t *testing.T) {
+	caller := human(principal.RowScopeOwn)
+	shipped := &seatOutsideScopeTx{}
+	var refused *AssigneeNotAllowedError
+	if err := EnsureRunAsOwner(principal.WithActor(context.Background(), caller), shipped, ids.NewV7()); !errors.As(err, &refused) {
+		t.Fatalf("an assignee outside the scope was answered %v, want the assignee refusal", err)
+	}
+	if shipped.probes != 1 {
+		t.Errorf("with no recorder the gate asked %d probes, want 1", shipped.probes)
+	}
+
+	rec := &checkRecorder{actor: caller.ID, checks: map[string]bool{}, refused: map[string]bool{}}
+	ctx := context.WithValue(principal.WithActor(context.Background(), caller), checkRecorderKey{}, rec)
+	if err := EnsureRunAsOwner(ctx, &seatOutsideScopeTx{}, ids.NewV7()); !errors.As(err, &refused) {
+		t.Fatalf("an assignee outside the scope was answered %v under a recorder, want the assignee refusal", err)
+	}
+	if got := slices.Sorted(maps.Keys(rec.refused)); !slices.Equal(got, []string{"row:assignee"}) {
+		t.Errorf("recorded refusals %v, want [row:assignee]", got)
 	}
 }

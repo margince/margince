@@ -1418,6 +1418,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Branche",
   "reporting.allIndustries": "Alle Branchen",
   "reporting.valueBasis": "Wertbasis",
+  "reporting.filtersMore": "Filter",
+  "reporting.filtersActive": "Filter · {active}",
   "reporting.basis.all": "Gesamter Wert",
   "reporting.basis.software": "Nur Software",
   "reporting.basis.implementation": "Nur Umsetzung",
@@ -3406,6 +3408,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.headActions": "Weitere Aktionen",
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
+  "list.viewToggleOn": "An",
+  "list.viewToggleOff": "Aus",
+  "list.viewMenu": "Ansicht",
+  "list.viewMenuBack": "zurück zu den Ansichtsoptionen",
+  "list.viewMenuChanged": "geändert",
+  "list.viewMenuFilters_one": "{count} Filter",
+  "list.viewMenuFilters_other": "{count} Filter",
+  "list.viewMenuNone": "Keine",
   "list.loadMore": "Mehr laden",
   "scrollSentinel.loading": "Mehr wird geladen…",
   "scrollSentinel.failed": "Weitere Einträge konnten nicht geladen werden.",
@@ -3423,15 +3433,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.rowsPerPage": "Zeilen pro Seite",
   "table.perPage": "{count} pro Seite",
   "table.sortedBy": "sortiert nach {column}",
-  "table.shownColumns": "Sichtbare Spalten",
-  "table.display": "Darstellung",
-  "table.density": "Dichte",
   "table.compact": "Kompakt",
+  "table.filters": "Filter",
+  "table.columns": "Spalten",
+  "table.columnsShown": "{shown} von {total}",
+  "table.sortValue": "{column}, {direction}",
   "table.columnHandle": "{name} verschieben, {position} von {total}",
   "table.columnMoved": "{name} auf {position} von {total} verschoben",
   "table.sort": "Sortieren",
-  "table.sortNamed": "Sortierung: {column}",
-  "table.sortMenu": "Sortieren nach",
   "table.sortDefault": "Standardreihenfolge",
   "table.sortAscending": "aufsteigend",
   "table.sortDescending": "absteigend",
@@ -3441,6 +3450,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
   "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
+  "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "Kontakte",
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
@@ -3449,9 +3459,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "unit.partners": "Partner",
   "unit.products": "Produkte",
   "unit.offerTemplates": "Angebotsvorlagen",
-  "table.filter": "Filter",
   "table.filterSearch": "Attribute durchsuchen",
-  "table.addFilter": "Filter hinzufügen",
   "table.filterIs": "ist",
   "table.filterCondition": "Bedingung",
   "table.filterMore": "Weitere Aktionen für den Filter {filter}",
@@ -3461,7 +3469,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "table.filterSearching": "Wird gesucht…",
   "table.filterSearchFailed": "Suche fehlgeschlagen. Bitte versuche es erneut.",
   "table.filterNoMatches": "Keine Treffer.",
-  "table.filterBack": "Zurück zu allen Filtern",
+  "table.filterBack": "zurück zu allen Filtern",
 
   "contacts.name": "Name",
   "contacts.email": "E-Mail",
@@ -3483,6 +3491,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Diese Ansicht speichern",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
+  "views.loadFailed":
+    "Die gespeicherten Ansichten konnten nicht geladen werden.",
   "views.manage": "Ansichten verwalten",
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
@@ -6154,6 +6164,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Abschlusstag speichern",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "Deal in {pipeline}: {count}",
+  "deals.countInPipeline_other": "Deals in {pipeline}: {count}",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Nur Admins können dir erlauben, die Summen dieser verantwortlichen Person auszuwerten.",
@@ -7373,7 +7385,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Der Entwurf wurde dort gesendet oder gelöscht. Beim Speichern bleibt der Text auf dem Bildschirm als neuer Entwurf erhalten.",
   "compose.savedDraftFailed":
-    "Der Entwurf konnte nicht gespeichert werden. Speichere den Entwurf erneut oder schließe den Dialog noch einmal, um den Text zu verwerfen.",
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schließe noch einmal, um den Text zu verwerfen.",
+  "compose.savedDraftAutosaveFailed":
+    "Das Speichern des Entwurfs wurde nicht abgeschlossen. Es wird erneut versucht, sobald du weiterschreibst oder wieder online bist.",
+  "compose.savedDraftAutosaveRefused":
+    "Der Entwurf wurde nicht gespeichert. Wähle „Erneut versuchen“ oder schreibe weiter, um es erneut zu versuchen.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} Datei konnte nicht wiederhergestellt werden.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} Dateien konnten nicht wiederhergestellt werden.",
+  "compose.sendWaitsForAddress":
+    "Korrigiere oder entferne den Text, der keine E-Mail-Adresse ist.",
+  "compose.notAnAddress_one":
+    "Keine E-Mail-Adresse: {parts}. Korrigiere oder entferne sie.",
+  "compose.notAnAddress_other":
+    "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
@@ -8016,6 +8042,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.deliveryCoversAll":
     "Diese Zahlen umfassen jedes Projekt, das du lesen kannst.",
   "analytics.attention": "Braucht deine Aufmerksamkeit",
+  "analytics.board.rail": "Ausblick und nächste Schritte",
   "analytics.attentionNoOwner": "Kein Verantwortlicher",
   "analytics.attentionOutOfDate": "veraltet, seit der Prüfung geändert",
   "analytics.attentionAtStake": "{amount} betroffen",
@@ -12651,7 +12678,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.pausedReason.listInvalid":
     "Pausiert, da der Filter der beobachteten Live-Liste nicht mehr funktioniert. Wenn du den Filter reparierst, läuft die Automatisierung nicht von selbst weiter.",
   "auto.pausedReason.passportRevoked":
-    "Die Regel wurde pausiert, da der Passport des Agenten, der sie eingerichtet hat, widerrufen wurde. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, da sein Passport abgelaufen oder widerrufen wurde oder seine Verbindung beendet wurde. Setze sie fort, dann läuft sie ohne Agenten weiter.",
+  "auto.setByYourAgent": "Von deinem Agenten",
+  "auto.setByAnAgent": "Von einem Agenten",
   "auto.pausedReason.listUnavailable":
     "Pausiert, da das zuständige Teammitglied die beobachtete Liste nicht mehr findet.",
   "auto.pausedReason.burst":
@@ -12700,8 +12729,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.action.addToShortlist": "zur Shortlist hinzufügen",
   "auto.pausedShort.listArchived": "Pausiert · Liste archiviert",
   "auto.pausedShort.listInvalid": "Pausiert · Listenfilter defekt",
-  "auto.pausedShort.passportRevoked":
-    "Pausiert · Passport des Agenten widerrufen",
+  "auto.pausedShort.passportRevoked": "Pausiert · Zugang des Agenten beendet",
   "auto.pausedShort.listUnavailable": "Pausiert · Liste nicht gefunden",
   "auto.pausedShort.burst": "Pausiert · zu viele Datensätze",
   "auto.withheld":
@@ -14653,6 +14681,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
@@ -14671,6 +14700,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callBelowLine":
     "Unter den bereits gewonnenen {won}, wie erfasst gezeigt",
   "forecast.model.quarter": "Modelliertes Quartalsergebnis",
+  "forecast.model.short": "Mittlere 80 % der Ergebnisse",
   "forecast.model.month": "Modelliertes Monatsergebnis",
   "forecast.model.week": "Modelliertes Wochenergebnis",
   "forecast.model.value": "{low} bis {high}",
@@ -15237,6 +15267,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.timezoneLabel": "Zeitzone",
   "account.timezoneHelp":
     "Zeiten in Margince, deine buchbaren Zeiten und Mails an dich nutzen diese Zeitzone. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
+  "account.timezoneSetByAgent": "Von deinem Agenten",
   "workingHours.zoneIs": "Deine Zeiten gelten in {zone}.",
   "workingHours.changeZone": "Zeitzone ändern",
   "account.languageCard": "Sprache und Zeitzone",
@@ -17320,7 +17351,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Aufzählung",
   "richtext.numberList": "Nummerierte Liste",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link-URL (leer lassen, um den Link zu entfernen)",
+  "richtext.linkAdd": "Link einfügen",
+  "richtext.linkEdit": "Link bearbeiten",
+  "richtext.linkAddress": "Web- oder E-Mail-Adresse",
+  "richtext.linkPlaceholder": "example.com oder name@example.com",
+  "richtext.linkApply": "Anwenden",
+  "richtext.linkRemove": "Link entfernen",
+  "richtext.linkRefused":
+    "Das ist keine Web- oder E-Mail-Adresse. Gib eine ein, etwa example.com oder name@example.com.",
   "contact.composer.intentAgenda":
     "eine Agenda für den anstehenden Termin vorschlagen",
   "contact.composer.intentReply":
@@ -18985,7 +19023,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.retryRefusedRepeats":
     "Diese Regel darf nicht zweimal ausgeführt werden, da ein erneuter Lauf ihre Aktionen wiederholen könnte.",
   "worklist.verb.retryRefusedPassportRevoked":
-    "Der Passport des Agenten, der diese Regel eingerichtet hat, wurde widerrufen. Darum ist sie pausiert. Setze sie fort, dann läuft sie ohne Agenten dahinter weiter.",
+    "Der Agent, der die Regel eingerichtet hat, hat keinen Zugang mehr, darum ist die Regel pausiert. Setze sie fort, dann läuft sie ohne Agenten weiter.",
   "worklist.verb.retryRefusedEventGone":
     "Dieser Lauf kann nicht erneut ausgeführt werden, da das auslösende Ereignis nicht mehr existiert. Zeitgesteuerte Regeln prüfen automatisch erneut.",
   "worklist.verb.acknowledgeFailed":
@@ -20574,6 +20612,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Erwartete Lücke {amount}",
   "analytics.hero.surplus": "Erwarteter Überschuss {amount}",
   "analytics.hero.prior": "Zum selben Zeitpunkt der Vorperiode: {amount}",
+  "analytics.hero.ofTarget": "Ziel von {target}",
+  "analytics.hero.short": "{amount} unter Ziel",
+  "analytics.hero.over": "{amount} über Ziel",
+  "analytics.trajectory.label": "Gewonnener Umsatz im Zeitraum",
+  "analytics.trajectory.today": "Heute · {date}",
+  "analytics.trajectory.through": "Bis {date}",
+  "analytics.trajectory.target": "Ziel {amount}",
+  "analytics.trajectory.projection": "{amount} erwartet",
+  "analytics.trajectory.range": "Modellierter Abschluss",
   "analytics.overview.more": "Mehr",
   "analytics.outlook.valuedCount": "{included} von {eligible} mit Wert",
   "analytics.outlook.periodPipeline":
@@ -20583,6 +20630,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.team": "Ausblick zur Teamakquise",
   "analytics.outlook.prospecting": "Akquiseausblick",
   "analytics.outlook.records": "Zugehörige Datensätze anzeigen",
+  "analytics.outlook.more": "Ganzen Ausblick lesen",
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",

@@ -163,10 +163,10 @@ describe("whether the open deals support the reference", () => {
     );
 
     // Compact, because a slot is not as wide as an amount.
-    expect(screen.getByText("2,400 EUR")).toBeTruthy();
+    expect(screen.getByText("€2,400")).toBeTruthy();
     const detail = screen.getByText(/open ·/);
-    expect(detail.textContent).toBe("1,200 EUR open · to reach 1,000 EUR");
-    expect(detail.textContent).not.toContain("2,400 EUR");
+    expect(detail.textContent).toBe("€1,200 open · to reach €1,000");
+    expect(detail.textContent).not.toContain("€2,400");
   });
 
   it("renders coverage as a whole percent", () => {
