@@ -69,7 +69,12 @@ export function LineRecordsOpener({
   const titleId = useId();
   return (
     <>
-      <Button variant="link" onClick={() => setOpen(true)}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={() => setOpen(true)}
+      >
         {summary}
       </Button>
       <Modal

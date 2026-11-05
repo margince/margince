@@ -137,6 +137,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* `Button align="start"`. Two classes, so it outranks `.btn` on specificity
+   rather than on which sheet the bundler emitted first. */
+.btn[data-align="start"] {
+  justify-content: flex-start;
+  text-align: start;
+}
 /* Every button in the product had NO focus style: no rule here, none in
    app.css, none in tokens.css or brand.css, so a keyboard reader got whatever
    the engine drew by default and one screen file had patched its own chips
@@ -654,6 +660,7 @@ kbd {
 .code-block {
   margin: 0;
   max-height: 300px;
+  position: relative;
   overflow: auto;
   padding: var(--space-3);
   border: 1px solid var(--groundEdge);

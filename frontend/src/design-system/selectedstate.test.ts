@@ -44,9 +44,9 @@ const LOCATION_MARKERS = new Set([
   "src/app/shell.css: .rail .navitem.active { color: var(--accentText) }",
   "src/app/shell.css: .rail .railmore.active { color: var(--accentText) }",
   "src/app/shell.css: .rail .railmore.active { background: var(--accentLight) }",
-  "src/app/shell.css: .rail.collapsed:not(.sheetopen) .navitem.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
-  "src/app/shell.css: .rail:not(.sheetopen) .navitem.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
-  "src/app/shell.css: .rail:not(.sheetopen) .railmore.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
+  "src/app/shell.css: .rail.collapsed:not(.menuopen) .navitem.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
+  "src/app/shell.css: .rail > .navlevel .navitem.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
+  "src/app/shell.css: .rail:not(.menuopen) .railmore.active { box-shadow: inset 0 0 0 1px var(--accentText) }",
 ]);
 
 function stateMarkers(selector: string): string[] {

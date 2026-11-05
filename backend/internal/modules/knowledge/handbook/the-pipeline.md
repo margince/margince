@@ -36,8 +36,8 @@ Also called: close won, close a deal as won, win an opportunity.
 ### How do I mark a deal as lost?
 When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. There is no separate Lost button.
 1. Open the deal and click the Lost stage on its **Stage** ladder. Or drag the card to the Lost column on **Board**.
-2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. **Confirm** stays off until you pick a reason.
-3. Press **Confirm**.
+2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. The note box has room for several lines, and Enter starts a new line. **Confirm** stays off until you pick a reason.
+3. Press **Confirm**, or press Ctrl+Enter (⌘+Enter on a Mac) in the note.
 
 The reason and the note are kept on the deal. If the customer comes back later, reopen the deal instead of creating a new one. Pressing **Cancel** or Escape, or clicking outside, clears what you picked and typed.
 Also called: close lost, lose a deal, mark an opportunity lost, the customer said no.
@@ -143,13 +143,13 @@ or lost stage asks first:
 > **Move to Lost?** This closes the deal as lost. Nothing changes until you
 > confirm.
 
-If the deal has open tasks, the dialog lists them, and **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
+If the deal has open tasks, the dialog lists them under the question, each with its due date or **No due date**. It lists at most five, then says how many more there are, if any. **Confirm** waits until you pick **Complete all** or **Keep**. **Complete all** marks them done once the deal has closed, and the note that says so offers **Undo**. Tasks filed on the deal's company or contact are not listed.
 
 ### Losing
 
-**A lost deal needs a reason** from **Why was it lost?**, which an administrator
-keeps under **Settings → Loss reasons**. The **Note** is optional. Reopening
-clears the reason, and the deal's history keeps every time it was lost.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Loss reasons**. The **Note** is optional.
+**How it stands** shows the reason beside the day the deal closed, with the note under it. A long note shows its first two lines, and **Show more** opens the rest.
+Reopening clears the reason, and the deal's history keeps every time it was lost.
 
 ### Winning
 

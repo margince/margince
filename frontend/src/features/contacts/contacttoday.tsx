@@ -224,7 +224,12 @@ function MomentSource({
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
-      <Button variant="link" className="btn-valuelabel" onClick={open}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={open}
+      >
         {item.label}
       </Button>
     </>
