@@ -477,8 +477,7 @@ func promptMinorUnitFindings(t *testing.T, moduleRoot string, parse func(string)
 		t.Fatalf("walking %s for prompt encoders: %v", root, err)
 	}
 	// A declared tool result is judged by toolWalk, which knows the display the
-	// registry adds beside its amounts, so a new tool joins that walk and leaves
-	// this one.
+	// registry adds beside its amounts. A new tool joins that walk and leaves this one.
 	toolResults := packages.toolResultTypes(filepath.Join(moduleRoot, toolResultDir))
 	for _, dir := range dirs {
 		files := packages.load(dir)
