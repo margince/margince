@@ -34,6 +34,8 @@ var ciLegsOverride = regexp.MustCompile(`make check-backend\b[^\n]*\bCHECK_LEGS=
 // literal or a matrix value.
 var staticLegsOverride = regexp.MustCompile(`make check-static\b[^\n]*\bSTATIC_LEGS="([^"]*)"`)
 
+var legsAssignment = regexp.MustCompile(`\b[A-Z]+_LEGS=`)
+
 var matrixRef = regexp.MustCompile(`^\$\{\{\s*matrix\.([a-z_-]+)\s*\}\}$`)
 
 type stepRuns struct {
@@ -130,6 +132,11 @@ func legsPassedBy(t *testing.T, wf stepRuns, job, command string, override *rege
 		}
 		if match := override.FindStringSubmatch(step.Run); match != nil {
 			return matrixLegs(t, wf, job, match[1]), true
+		}
+		// Read as "no override", an assignment in another quoting would count
+		// every leg as run.
+		if legsAssignment.MatchString(step.Run) {
+			t.Fatalf("job %q: cannot read the legs in %q; pass them double-quoted, as NAME=\"leg leg\"", job, step.Run)
 		}
 		return nil, true
 	}
