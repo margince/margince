@@ -64,6 +64,20 @@ const NOTES: Record<BookingMode, MessageKey> = {
   link: "scheduling.linkNote",
 };
 
+function bookingReady(
+  draft: BookingDraft,
+  configured: boolean,
+  refusal: string | undefined,
+  pending: boolean | undefined,
+) {
+  return (
+    configured &&
+    !refusal &&
+    !pending &&
+    Boolean(draft.contactId && draft.attendee && draft.subject.trim())
+  );
+}
+
 export function BookingReview({
   mode,
   draft,
@@ -73,6 +87,8 @@ export function BookingReview({
   configured,
   zone,
   searchContacts,
+  contactRefusal,
+  contactPending,
 }: Readonly<{
   mode: BookingMode;
   draft: BookingDraft;
@@ -82,15 +98,13 @@ export function BookingReview({
   configured: boolean;
   zone: string;
   searchContacts: (q: string) => Promise<{ id: string; name: string }[]>;
+  contactRefusal?: string;
+  contactPending?: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const ready =
-    configured &&
-    !!draft.contactId &&
-    !!draft.attendee &&
-    !!draft.subject.trim();
+  const ready = bookingReady(draft, configured, contactRefusal, contactPending);
   const needed = mode === "propose" ? 2 : mode === "invite" ? 1 : 0;
   const cta = (() => {
     if (!configured) return t("scheduling.connectFirst");
@@ -120,6 +134,7 @@ export function BookingReview({
   return (
     <Panel title={t("scheduling.review")}>
       <PanelBody className="book-review">
+        {contactRefusal && <ErrorLine>{contactRefusal}</ErrorLine>}
         <RecordPicker
           label={t("scheduling.contact")}
           selected={

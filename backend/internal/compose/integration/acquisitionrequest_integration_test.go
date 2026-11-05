@@ -15,9 +15,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -71,6 +73,16 @@ func queuedFollowUp(t *testing.T, e *Env, gate *consent.Gate, address string) fu
 	}
 }
 
+// acquisitionRequestOn reads the request the contact read serves.
+func acquisitionRequestOn(t *testing.T, e *Env, contact ids.ContactID) *crmcontracts.ContactAcquisitionRequest {
+	t.Helper()
+	read, err := e.Contacts.GetContact(e.Admin(), contact, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("reading the contact: %v", err)
+	}
+	return read.AcquisitionRequest
+}
+
 // A contact acquired because they asked for a quote may be followed up with no
 // age limit. Once the request is withdrawn, a follow-up already queued on it is
 // refused at transmit. The acquisition row stays as the record of how the
@@ -94,11 +106,17 @@ func TestAWithdrawnAcquisitionRequestStopsAQueuedFollowUp(t *testing.T) {
 			contact := ids.From[ids.ContactKind](ids.UUID(created.Id))
 			transmit := queuedFollowUp(t, e, consent.NewGate(consent.NewStore(e.DB())), address)
 
+			if got := acquisitionRequestOn(t, e, contact); got == nil || len(got.Kinds) != 1 || string(got.Kinds[0]) != kind {
+				t.Fatalf("the contact read shows request %+v, want %s", got, kind)
+			}
 			if ticket := transmit(1); !ticket.Allowed {
 				t.Fatalf("the queued follow-up was refused before the withdrawal: %q", ticket.Reason)
 			}
 			if err := e.Contacts.RetractAcquisitionRequest(e.Admin(), contact); err != nil {
 				t.Fatalf("withdrawing the request: %v", err)
+			}
+			if got := acquisitionRequestOn(t, e, contact); got != nil {
+				t.Errorf("the contact read still shows the withdrawn request %+v", got)
 			}
 			if ticket := transmit(2); ticket.Allowed {
 				t.Fatal("the queued follow-up went out after its request was withdrawn")

@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
 import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
@@ -64,10 +65,13 @@ export function MailSendNotices({
   to,
   cc,
   context,
+  newContacts = [],
 }: Readonly<{
   to: string[];
   cc: string[];
   context: CommunicationContext | undefined;
+  /** Addresses on no record, which the send adds as the sender's contacts. */
+  newContacts?: readonly string[];
 }>) {
   const t = useT();
   return (
@@ -75,6 +79,13 @@ export function MailSendNotices({
       {sharedUnsubscribeAhead(to, cc, context) && (
         <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
       )}
+      {newContacts.map((address) => (
+        <Callout
+          key={address}
+          kind="standing"
+          title={t("compose.newContact", { address })}
+        />
+      ))}
     </>
   );
 }

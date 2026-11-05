@@ -2639,6 +2639,7 @@ export const en = {
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
+  "history.field.about_deal": "Deal it was about",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
@@ -2931,6 +2932,8 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "contact.attachRefused":
+    "You can only read this contact. Ask its owner for write access.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -2938,6 +2941,13 @@ export const en = {
   "record.moreActionsFor": "More actions for {subject}",
   "record.fullHistory": "Full history",
 
+  "share.bulkConfirmTitle": "Share these contacts?",
+  "share.bulkConfirmBody":
+    "This replaces {name}’s existing shares on these contacts with {access} and the chosen expiry. It can reduce or end their existing access.",
+  "share.companyContacts": "Share contacts",
+  "share.companyContactsNote":
+    "Share the current contacts you can read and share. Contacts you cannot share are skipped. Hidden contacts are not counted.",
+  "share.companyContactsResult": "{shared} shared · {skipped} skipped",
   "share.title": "Share this record",
   "share.ceiling.pre": "A grant changes who can see ",
   "share.ceiling.recordEmphasis": "exactly this one record",
@@ -3439,6 +3449,38 @@ export const en = {
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
     "Permissions apply to the named purpose. Account and service notices do not authorize sales or marketing; each message is checked before sending.",
+  "consent.retractRequest": "Take back this request",
+  "consent.retractRequestTitle": "Take back this request?",
+  "consent.retractRequestBody":
+    "Sends stop resting on it, including a message already queued on it. The request stays on the record as withdrawn and cannot be restored.",
+  "consent.acquisitionRequest":
+    "When this contact was added, they asked for a quote or a meeting, or said face to face that they may be written to.",
+  "consent.stopsTitle": "Stops",
+  "consent.stopKind.subject_request": "Asked not to be contacted",
+  "consent.stopKind.marketing_objection": "Objected to marketing",
+  "consent.stopKind.processing_restriction": "Processing is restricted",
+  "consent.stopKind.hard_bounce": "Address does not accept mail",
+  "consent.stopKind.unknown": "Stop",
+  "consent.stopOnAddress": "For {address}",
+  "consent.stopOnPurpose": "Only for {purpose}",
+  "consent.stopRecordedBy": "Recorded by {name} on {date}",
+  "consent.stopRecordedByColleague": "Recorded by a colleague on {date}",
+  "consent.stopRecordedBySubject": "Set by the contact on {date}",
+  "consent.stopRecordedAutomatically": "Recorded by Margince on {date}",
+  "consent.stopBlocked.address":
+    "This clears when mail to the address works again.",
+  "consent.stopBlocked.restriction":
+    "Lifting a restriction means telling the contact first. Margince cannot send that notice yet, so the restriction stays.",
+  "consent.stopBlocked.subject_decision":
+    "The contact set this stop. Only they can change it.",
+  "consent.stopCorrect": "Correct this stop",
+  "consent.stopLift": "Take back this stop",
+  "consent.stopCorrectTitle": "Correct a stop recorded by mistake?",
+  "consent.stopLiftTitle": "Take back this stop?",
+  "consent.stopCorrectBody":
+    "Do this only if a colleague recorded the stop by mistake. If the contact asked for it, leave it. Mail this stop held back can be sent again.",
+  "consent.stopLiftBody": "Mail this stop held back can be sent again.",
+  "consent.stopReason": "Why (kept in the record history)",
   "consent.manage": "Manage consent and proof history",
   "contact.consent": "Consent",
   "consent.grant": "Record consent",
@@ -3517,8 +3559,10 @@ export const en = {
     "They gave consent, with the confirmation on file",
   "consent.reason.consent_withdrawn": "They withdrew consent for this purpose",
   "consent.reason.no_consent_exception_not_offered":
-    "No consent recorded, and the existing-customer exception is not offered",
+    "No consent recorded, and no purchase of theirs is covered by a declared notice",
   "consent.reason.no_consent": "No consent recorded",
+  "consent.reason.existing_customer":
+    "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
   "consent.reason.qualifying.active_deal": "An open deal connects you",
@@ -7339,8 +7383,11 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Record this reason",
-  "compose.reasonRecordFor": "Record this reason: {reason}, for {address}",
+  "compose.reasonRecord": "Keep as a standing reason",
+  "compose.reasonStanding":
+    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
+  "compose.reasonRecordFor":
+    "Keep as a standing reason: {reason}, for {address}",
   "compose.reasonLabel": "Why you may write to {address}",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
@@ -7399,6 +7446,12 @@ export const en = {
   "compose.relatedTo": "Related to",
   "compose.relatedToNone": "Nothing specific",
   "compose.relatedDeal": "Deal: {name}",
+  "compose.aboutDeal": "Deal this follow-up is about",
+  "compose.aboutDealNone": "No deal",
+  "compose.aboutDealUnavailable":
+    "The contact’s deals could not be loaded. Write from the deal’s page instead.",
+  "compose.aboutDealPartial":
+    "Not every deal is listed here. If yours is missing, write from the deal’s page.",
   "compose.draftNeedsRecipient":
     "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",
@@ -7546,10 +7599,16 @@ export const en = {
     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
+  "sendPermission.reason.optedOutAfterRequest":
+    "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+  "sendPermission.reason.consentRequired":
+    "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+  "sendPermission.reason.dealNotRequested":
+    "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":
     "The recipient has reached the marketing message limit for now. This clears automatically.",
   "sendPermission.reason.ambiguous":
-    "Several records share this address, so the recipient cannot be identified. Merge the records to resolve this.",
+    "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
   "sendPermission.reason.unconfirmed":
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
   "sendPermission.reason.noMarketingConsent":
@@ -7601,6 +7660,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.sent": "Sent as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -7643,6 +7703,8 @@ export const en = {
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
+  "compose.newContact":
+    "{address} is on no record yet. Sending adds it as your contact.",
   "compose.multiRecipientWarning":
     "This purpose adds an unsubscribe link, so a send to more than one recipient is refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
@@ -7661,6 +7723,10 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
+  "compose.reasonSwitchText":
+    "The record already shows another reason for this message.",
+  "compose.reasonSwitch": "Use “{reason}” instead",
+  "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
@@ -10431,6 +10497,39 @@ export const en = {
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
+  "privacy.customerNotices": "Existing customers",
+  "privacy.customerNoticesSub":
+    "In Germany you may send advertising for similar products to a customer without consent, if they were told when you collected their address that they can object. Declare here where and when you told them. Customers who bought from that entity in that period then receive your newsletters with an opt-out link.",
+  "privacy.customerNoticesEmpty":
+    "No notice declared yet. Customers without consent receive no advertising.",
+  "privacy.customerNoticesLoading": "Loading notices…",
+  "privacy.customerNoticeDeclare": "Declare a notice",
+  "privacy.customerNoticeGroup": "Customers covered",
+  "privacy.customerNoticeGroupHint":
+    "For example: everyone who ordered in the web shop",
+  "privacy.customerNoticeChannel": "Where the address was collected",
+  "privacy.customerNoticeChannelHint": "For example: the web shop checkout",
+  "privacy.customerNoticeText": "The notice they saw",
+  "privacy.customerNoticeEntity": "Sending entity",
+  "privacy.customerNoticeFrom": "Shown from",
+  "privacy.customerNoticeUntil": "Shown until",
+  "privacy.customerNoticeUntilHint": "Leave empty while you still show it.",
+  "privacy.customerNoticeProof": "Where the proof is kept",
+  "privacy.customerNoticeProofHint":
+    "Needed for sales before today, for example an archived copy of the checkout page. Without it the notice counts from today.",
+  "privacy.customerNoticeProofDay": "Date on the proof",
+  "privacy.customerNoticePurposes": "Newsletters for similar products",
+  "privacy.customerNoticeNoPurposes": "Add a marketing purpose first.",
+  "privacy.customerNoticePeriod": "Period",
+  "privacy.customerNoticeOngoing": "since {from}",
+  "privacy.customerNoticeRange": "{from} to {until}",
+  "privacy.customerNoticeWithdrawn": "Withdrawn",
+  "privacy.customerNoticeWithdraw": "Withdraw",
+  "privacy.customerNoticeWithdrawTitle": "Withdraw this notice",
+  "privacy.customerNoticeWithdrawBody":
+    "From now on no advertising goes out on it. Mail already sent keeps its record.",
+  "privacy.customerNoticeWithdrawReason": "Why",
+  "privacy.customerNoticeSave": "Declare",
   "privacy.kind": "Kind",
   "privacy.contact": "Contact",
   "privacy.subjectRef": "Subject reference",
@@ -11393,6 +11492,7 @@ export const en = {
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
+  "blockedDomains.source.agent": "Agent",
   "blockedDomains.source.reservedDomain":
     "Reserved domain: company identification paused",
   "blockedDomains.source.forwardedIdentity":
@@ -16994,6 +17094,19 @@ export const en = {
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
+  "contact.consent.fact.existingCustomer":
+    "Existing customer, marketing allowed",
+  "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
+  "contact.consent.fact.businessContact": "Recent business contact recorded",
+  "contact.consent.fact.serviceMessages": "Service messages allowed",
+  "contact.consent.fact.marketingPermission": "Marketing permission recorded",
+  "contact.consent.fact.bounced": "Address does not accept mail",
+  "contact.consent.fact.marketingOptOut": "Marketing opt-out recorded",
+  "contact.consent.fact.stopped": "Stop recorded",
+  "contact.consent.fact.noMarketingPermission":
+    "No marketing permission recorded",
+  "contact.consent.fact.notAllowed": "Not allowed for this purpose",
+  "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
   "contact.consent.allowedWord": "Allowed",
   "contact.consent.blockedWord": "Blocked",
   "contact.consent.unknownWord": "Unknown",
@@ -17898,6 +18011,10 @@ export const en = {
     "The request was answered or completed after scheduling. Review whether this follow-up is still needed.",
   "sched.held.meetingCanceled":
     "The meeting was canceled after scheduling. Review this message before sending it.",
+  "sched.held.recipientStopped":
+    "A recipient stopped marketing after you scheduled this. It will not send to them.",
+  "sched.held.recipientReplied":
+    "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -18502,6 +18619,7 @@ export const en = {
     "you undid the last change, so Margince waits for news",
   "changes.check.why.already_right": "already right",
   "changes.check.why.accepted_offer": "the accepted offer sets it",
+  "changes.check.why.priced_by_products": "the deal’s products set it",
   "changes.check.why.no_rate": "no exchange rate for the currency",
   "changes.check.why.no_owner": "the owner left",
   "changes.check.why.stage_rules": "the stage’s exit criteria do not allow it",

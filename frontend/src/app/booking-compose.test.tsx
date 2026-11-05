@@ -9,6 +9,7 @@ import {
   render,
   stubRoutes,
 } from "../features/mail/compose.testkit";
+import { browserZone } from "../format/timezone";
 import { bookingContact, bookingSlots } from "../testing/book.testkit";
 
 afterEach(() => {
@@ -54,7 +55,7 @@ it("sends the booking email with its preset reason and both contact and deal fil
       picks={bookingSlots}
       onRemovePick={() => {}}
       configured
-      zone="Europe/Berlin"
+      zone={browserZone()}
       searchContacts={async () => []}
     />,
   );

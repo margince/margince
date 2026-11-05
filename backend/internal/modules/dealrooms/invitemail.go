@@ -117,7 +117,7 @@ func (h Handlers) inviteSendBudget() time.Duration {
 // it within the budget.
 //
 // The send runs in its own goroutine, so a seller who leaves the request does
-// not cut the exchange short, and its outcome still lands on the invitation as
+// not cut the exchange short. Its outcome still lands on the invitation as
 // `sent` or `failed`. A goroutine and not a queued job: a job table stores its
 // arguments verbatim, and the raw credential must not enter it.
 //

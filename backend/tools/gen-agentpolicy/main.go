@@ -22,6 +22,7 @@
 package main
 
 import (
+	"cmp"
 	"flag"
 	"fmt"
 	"go/format"
@@ -157,17 +158,21 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 				} `yaml:"x-mcp-tool"`
 				AgentAccess     string                 `yaml:"x-agent-access"`
 				HumanOnlyReason string                 `yaml:"x-human-only-reason"`
+				Audience        string                 `yaml:"x-settings-audience"`
 				Security        *[]map[string][]string `yaml:"security"`
 			}
 			if err := node.Decode(&op); err != nil {
 				log.Fatalf("gen-agentpolicy: %s %s: %v", httpMethod, path, err)
 			}
 			p := policy{Route: httpMethod + " /v1" + path, Op: op.OperationID}
-			if defect := reasonDefect(op.AgentAccess, op.HumanOnlyReason, op.Security); defect != "" {
+			if defect := cmp.Or(reasonDefect(op.AgentAccess, op.HumanOnlyReason, op.Security), audienceDefect(op.Audience)); defect != "" {
 				defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
 				continue
 			}
 			switch {
+			case op.AgentAccess != "" && op.MCPTool != nil:
+				defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool and x-agent-access give opposite answers; keep one", httpMethod, path, op.OperationID))
+				continue
 			case op.AgentAccess == "human-only" || op.AgentAccess == "auth-bootstrap":
 				p.Access = op.AgentAccess
 				p.HumanOnlyReason = op.HumanOnlyReason

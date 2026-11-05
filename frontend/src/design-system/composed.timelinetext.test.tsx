@@ -119,8 +119,10 @@ describe("TimelineText on a note", () => {
       row("note", "Rückruf am Dienstag\nAgenda: https://kunde.de/plan"),
     );
     const body = container.querySelector(".tl-text-clamp");
+    // The line break is kept as one, so the two lines never run together.
+    expect(body?.querySelectorAll("br")).toHaveLength(1);
     expect(body?.textContent).toBe(
-      "Rückruf am Dienstag\nAgenda: https://kunde.de/plan",
+      "Rückruf am DienstagAgenda: https://kunde.de/plan",
     );
     expect(
       screen.getByRole("link", { name: "https://kunde.de/plan" }),

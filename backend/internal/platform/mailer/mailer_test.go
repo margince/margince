@@ -35,7 +35,7 @@ func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 	}
 }
 
-// A caller that stops waiting for the relay stops the exchange too, so the
+// A caller that stops waiting for the relay stops the exchange too. So the
 // relay cannot take the message after the caller reported it as not taken.
 func TestSendEndsTheExchangeAtTheCallersDeadline(t *testing.T) {
 	relay := startFakeRelay(t, false)

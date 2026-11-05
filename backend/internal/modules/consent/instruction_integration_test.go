@@ -77,8 +77,8 @@ func connectorCtx(ws, user ids.UUID) context.Context {
 	})
 }
 
-// agentCtx is an agent acting under a director's own grants. It must not be
-// able to mint the record that says a HUMAN decided.
+// agentCtx is an agent acting under a director's own grants, on no passport:
+// automatic work with no user who asked it.
 func agentCtx(ws, user ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -114,10 +114,10 @@ func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, 
 	return id
 }
 
-// ONLY A HUMAN HOLDING THE GRANT DIRECTS A SEND. Three refusals and one
-// success, because each arm answers a different question about who this
+// Only a user holding the grant, or their agent, directs a send. Three refusals
+// and one success, because each arm answers a different question about who this
 // authority belongs to.
-func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
+func TestOnlyAUserHoldingTheGrantDirectsASend(t *testing.T) {
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -136,11 +136,9 @@ func TestOnlyAHumanHoldingTheGrantDirectsASend(t *testing.T) {
 		t.Errorf("a rep directed a send: %v — the exception grant is its own authority", err)
 	}
 
-	// AN AGENT MAY NOT, even carrying the grant. The row asserts that a CONTACT
-	// took responsibility, and an agent minting it would make that assertion
-	// false while looking entirely correct.
+	// An agent on no passport may not, even carrying the grant: no user asked it.
 	if _, err := e.store.DirectSend(agentCtx(ws, user), review, valid); err == nil {
-		t.Error("an agent minted the record that says a human decided")
+		t.Error("an agent with no user behind it recorded a user's decision")
 	}
 
 	// A CONNECTOR MAY NOT EITHER, and this is the arm auth.RequireHuman does

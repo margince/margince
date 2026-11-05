@@ -16,6 +16,7 @@ import {
   bookingProfile,
   bookingSlots,
 } from "../../testing/book.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BookingInviteScreen } from "./booking-invite";
 
 vi.mock("../mail/compose", () => ({
@@ -84,7 +85,9 @@ function mount(
       const path = new URL(request.url).pathname;
       paths.push(path);
       let body: unknown;
-      if (request.method === "POST" && path.endsWith("/invitations")) {
+      if (path === "/v1/me") {
+        body = meFixture({ allow: { activity: ["read", "create"] } });
+      } else if (request.method === "POST" && path.endsWith("/invitations")) {
         invitations.push(await request.json());
         body = { ...bookingInvitation, id: "meeting-1" };
       } else if (request.method === "POST") {
@@ -499,3 +502,29 @@ it("drops the starting deal when the booking contact changes", async () => {
   expect(composer.getAttribute("data-deal-id")).toBeNull();
   expect(composer.getAttribute("data-entity-id")).toBe("contact-b");
 });
+
+it.each([false, undefined])(
+  "refuses a direct booking before proposal creation without attach rights: %s",
+  async (attachable) => {
+    const user = userEvent.setup();
+    const { proposals } = mount(true, 30, () => bookingSlots, bookingHours, {
+      attachable,
+    });
+    expect(
+      await screen.findByText(
+        "You can only read this contact. Ask its owner for write access.",
+      ),
+    ).toBeTruthy();
+    for (const slot of bookingSlots) {
+      await user.click(
+        await screen.findByRole("button", { name: slotName(slot.start) }),
+      );
+    }
+    const review = screen.getByRole("button", {
+      name: "Review email · 2 times",
+    });
+    expect(review).toHaveProperty("disabled", true);
+    await user.click(review);
+    expect(proposals).toHaveLength(0);
+  },
+);
