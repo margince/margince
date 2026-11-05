@@ -138,10 +138,9 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
-	// An owner a case admission names already holds a merged contact, and a
-	// consented receiver agreed to take the record. So the run-as scope is not
-	// asked of them, and an invited seat is not admitted.
-	if admittedCaseGrantee(ctx, dest) || handOverConsented(ctx, dest) {
+	// An owner a case admission names already holds a merged contact, so the
+	// run-as scope is not asked of them, and an invited seat is not admitted.
+	if admittedCaseGrantee(ctx, dest) {
 		eligible = recordOwnerSQL
 	}
 	status := "status"

@@ -439,6 +439,9 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 		ownerless: crmcontracts.AssignLeadOutcomeKindAssigned,
 		theirs:    crmcontracts.AssignLeadOutcomeKindForbidden,
 	}
+	if len(outcomes) != len(want) {
+		t.Fatalf("%d outcomes for %d named leads: every row answers", len(outcomes), len(want))
+	}
 	for _, outcome := range outcomes {
 		if outcome.Outcome != want[outcome.LeadID] {
 			t.Errorf("lead %s answered %q, want %q", outcome.LeadID, outcome.Outcome, want[outcome.LeadID])

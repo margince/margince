@@ -12,30 +12,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-type handOverConsentKey struct{}
-
-// WithHandOverConsent admits one colleague as the receiver of records the
-// caller hands over, when that colleague agreed to take them. EnsureRunAsOwner
-// then asks only AssigneeEligibleSQL for that colleague: the receiver's consent
-// stands in for the caller's own write scope. It widens no other receiver, no
-// read and no write authority over the records themselves.
-func WithHandOverConsent(ctx context.Context, receiver ids.UUID) context.Context {
-	return context.WithValue(ctx, handOverConsentKey{}, receiver)
-}
-
-func handOverConsented(ctx context.Context, dest ids.UUID) bool {
-	receiver, ok := ctx.Value(handOverConsentKey{}).(ids.UUID)
-	return ok && !dest.IsZero() && receiver == dest
-}
-
 // EnsureHandOverRecipient answers whether dest may receive a record they agreed
 // to take: a live human seat that can write.
-// It is EnsureAssignee under WithHandOverConsent, so the seat SQL is shared.
+// It is EnsureAssignee with a stronger lock, so the seat SQL is shared.
 func EnsureHandOverRecipient(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	// Held to commit: EnsureAssignee's FOR KEY SHARE lets a suspension land
 	// first. Ordinary assignments keep the lighter lock.
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM app_user WHERE id = $1 FOR NO KEY UPDATE`, dest); err != nil {
 		return fmt.Errorf("auth: holding the receiver of a handover: %w", err)
 	}
-	return EnsureAssignee(WithHandOverConsent(ctx, dest), tx, dest)
+	return EnsureAssignee(ctx, tx, dest)
 }
