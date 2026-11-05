@@ -74,10 +74,12 @@
   margin: 0;
   padding: var(--space-3) var(--padPanel);
 }
-/* A notice on the sheet stands inside the sections' inset. */
+/* A notice on the sheet is a tinted section of its own, its words on the
+   sections' inset. A margin here would add to a host's row gap. */
 .analytics-sheet > .callout,
 .analytics-sheet > .reporting-results-part > .callout {
-  margin: var(--space-3) var(--padPanel); /* ds:ignore the sheet's section inset */
+  border-radius: 0;
+  padding: var(--space-3) var(--padPanel); /* ds:ignore the sheet's section inset */
 }
 /* In the rail a plate is one column: each reading a row of its own. */
 .analytics-board-rail .stat-strip[data-density="plate"] {
