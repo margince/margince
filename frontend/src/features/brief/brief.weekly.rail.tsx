@@ -14,8 +14,8 @@ import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useUrlParams } from "../../lib/urlstate";
-import { useWeeklyPlan } from "../worklist/weeklyplan.queries";
 import { weeklyNumericStatus } from "./brief.numeric";
+import { usePlanConstraintsShown } from "./brief.plan.contract";
 import {
   useWeeklyReview,
   useWeeklyReviewIndex,
@@ -31,11 +31,10 @@ export function useWeeklyRailShown(): boolean {
   const [params] = useUrlParams();
   const review = useWeeklyReview(params.get("week") ?? undefined);
   const weeks = useWeeklyReviewIndex();
-  const plan = useWeeklyPlan();
-  if (review.isLoading || weeks.isLoading || plan.isLoading) return true;
-  return (
-    Boolean(review.data) || listsWeeks(weeks.data ?? []) || Boolean(plan.data)
-  );
+  const constraints = usePlanConstraintsShown();
+  if (review.isLoading || weeks.isLoading || constraints === undefined)
+    return true;
+  return Boolean(review.data) || listsWeeks(weeks.data ?? []) || constraints;
 }
 
 /**

@@ -54,6 +54,12 @@ export function planEditable(
 }
 
 /** What the week is up against, on its own, for the report's side column. */
+/** Whether `PlanConstraints` draws anything, or `undefined` while it reads. */
+export function usePlanConstraintsShown(): boolean | undefined {
+  const plan = useWeeklyPlan();
+  return plan.isLoading ? undefined : Boolean(plan.data);
+}
+
 export function PlanConstraints() {
   const plan = useWeeklyPlan();
   const canEdit = useCanWrite("weekly_plan", "update");
