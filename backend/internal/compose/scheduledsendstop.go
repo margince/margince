@@ -83,7 +83,7 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 // withdrawal names the purpose it withdrew. A lead's consent.changed shares the
 // event type and is not this consumer's: a scheduled send addresses contacts.
 func stopOf(env events.Envelope) (purpose string, stop bool, err error) {
-	if env.Entity.Type != "contact" || env.Entity.ID == ids.Nil {
+	if env.Entity.Type != string(recordTypeContact) || env.Entity.ID == ids.Nil {
 		return "", false, nil
 	}
 	switch env.Type {

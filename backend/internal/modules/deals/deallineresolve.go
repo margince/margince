@@ -160,9 +160,9 @@ func insertDealLine(ctx context.Context, tx pgx.Tx, dealID ids.DealID, line deal
 		return err
 	}
 	cols, holders, args := columnValues(append(dealLineValues(line),
-		columnValue{"id", line.ID}, columnValue{dealIDColumn, dealID}, columnValue{"position", line.Position},
+		columnValue{"id", line.ID}, columnValue{dealIDColumn, dealID}, columnValue{positionField, line.Position},
 		columnValue{productIDColumn, line.ProductID}, columnValue{"catalog_name", line.CatalogName},
-		columnValue{"sku", line.SKU}, columnValue{currencyField, line.Currency},
+		columnValue{productSkuColumn, line.SKU}, columnValue{currencyField, line.Currency},
 		columnValue{componentKindColumn, line.ComponentKind}, columnValue{"captured_by", by})...)
 	if _, err := tx.Exec(ctx, `INSERT INTO deal_line_item (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
 		return fmt.Errorf("insert deal line: %w", err)

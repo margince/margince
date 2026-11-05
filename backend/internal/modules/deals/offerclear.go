@@ -14,11 +14,14 @@ import (
 // expiry read all spell it.
 const validUntilColumn = "valid_until"
 
-// buyerCompanyColumn and introTextColumn are spelled by the insert, the header
-// patch and the clear map alike.
+// The offer header columns the insert, the header patch and the clear map all
+// spell.
 const (
 	buyerCompanyColumn = "buyer_company_id"
 	introTextColumn    = "intro_text"
+	termsTextColumn    = "terms_text"
+	templateIDColumn   = "template_id"
+	offerNumberColumn  = "offer_number"
 )
 
 // clearableOfferColumns are the offer header's nullable columns, by request
@@ -35,8 +38,8 @@ func clearableOfferColumns(current crmcontracts.Offer) map[string]storekit.Clear
 	return map[string]storekit.Clearable{
 		buyerCompanyColumn: {Column: buyerCompanyColumn, Current: current.BuyerCompanyId},
 		introTextColumn:    {Column: introTextColumn, Current: current.IntroText},
-		"terms_text":       {Column: "terms_text", Current: current.TermsText},
-		"template_id":      {Column: "template_id", Current: current.TemplateId},
+		termsTextColumn:    {Column: termsTextColumn, Current: current.TermsText},
+		templateIDColumn:   {Column: templateIDColumn, Current: current.TemplateId},
 		validUntilColumn:   {Column: validUntilColumn, Current: current.ValidUntil},
 	}
 }

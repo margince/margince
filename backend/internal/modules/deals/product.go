@@ -175,7 +175,7 @@ const (
 // moves the pair together and stays the way to say nobody has classified it.
 func clearableProductColumns(current crmcontracts.Product) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"sku":               {Column: "sku", Current: current.Sku},
+		productSkuColumn:    {Column: productSkuColumn, Current: current.Sku},
 		descriptionColumn:   {Column: descriptionColumn, Current: current.Description},
 		componentKindColumn: {Column: componentKindColumn, Current: current.ComponentKind},
 		taxCategoryField:    {Column: taxCategoryField, Current: current.TaxCategory},
@@ -197,7 +197,7 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		p.Set("name", current.Name, name)
 	}
 	if in.SKU != nil {
-		p.Set("sku", current.Sku, *in.SKU)
+		p.Set(productSkuColumn, current.Sku, *in.SKU)
 	}
 	if in.Description != nil {
 		p.Set("description", current.Description, *in.Description)

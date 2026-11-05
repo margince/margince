@@ -32,7 +32,7 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 		return map[string]json.RawMessage{}, true, nil
 	case previewAdvanceDeal, previewProgressDeal:
 		changes := map[string]json.RawMessage{fieldStageID: args["to_stage_id"]}
-		keys := []string{"won_without_contract_reason", "won_without_contract_detail", "lost_reason", "lost_reason_code", bulkParamNote}
+		keys := []string{"won_without_contract_reason", "won_without_contract_detail", previewFieldLostReason, "lost_reason_code", bulkParamNote}
 		for _, key := range keys {
 			if value, ok := args[key]; ok {
 				changes[key] = value

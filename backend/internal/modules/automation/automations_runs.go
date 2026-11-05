@@ -31,26 +31,29 @@ const (
 	runSkipped = "skipped"
 )
 
+// runStatusRequiresApproval is the stored status of a run an approval holds.
+const runStatusRequiresApproval = "requires_approval"
+
 // runStatusByOutcome maps the contract's outcome vocabulary onto the
 // workflow_run.status set (the two differ where the wire says what the
 // user sees — "fired", "queued_for_approval" — and the row says what the
 // engine did).
 var runStatusByOutcome = map[string]string{
 	"fired":               "applied",
-	"failed":              "failed",
+	runStatusFailed:       runStatusFailed,
 	runBlocked:            runBlocked,
 	runSkipped:            runSkipped,
-	"queued_for_approval": "requires_approval",
+	"queued_for_approval": runStatusRequiresApproval,
 }
 
 // runOutcomeByStatus is the inverse mapping; the status CHECK constraint
 // (migration 0061) closes the domain, so the map is total over stored rows.
 var runOutcomeByStatus = map[string]string{
-	"applied":           "fired",
-	"failed":            "failed",
-	runBlocked:          runBlocked,
-	runSkipped:          runSkipped,
-	"requires_approval": "queued_for_approval",
+	"applied":                 "fired",
+	runStatusFailed:           runStatusFailed,
+	runBlocked:                runBlocked,
+	runSkipped:                runSkipped,
+	runStatusRequiresApproval: "queued_for_approval",
 }
 
 // recentRunsWindow is how far back a run summary's count reaches.

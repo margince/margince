@@ -106,7 +106,7 @@ func WithdrawUnaskedCommitmentsTx(ctx context.Context, tx pgx.Tx, in datatask.Ba
 		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT `+columns+` `+unaskedCommitmentScope+` AND id > @after ORDER BY id LIMIT @batch_limit`,
-		pgx.NamedArgs{"commitment": kindCommitmentTask, cursorArg: after, "batch_limit": in.Limit})
+		pgx.NamedArgs{"commitment": kindCommitmentTask, cursorArg: after, batchLimitArg: in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending commitments: %w", err)
 	}

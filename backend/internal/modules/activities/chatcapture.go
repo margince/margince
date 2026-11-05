@@ -45,7 +45,9 @@ const MaxChatText = 6000
 
 // ChatImageMIMEs are the image types a chat is read from: the photo types the
 // image policy reads (ai.CarriesImage), which compose holds equal to this list.
-func ChatImageMIMEs() []string { return []string{"image/jpeg", "image/png", "image/gif", "image/webp"} }
+func ChatImageMIMEs() []string {
+	return []string{mediaTypeJPEG, "image/png", "image/gif", "image/webp"}
+}
 
 // ChatCaptureError is one refused confirm. Field names the request field the
 // caller fixes; it is empty when nothing in the request can fix it.

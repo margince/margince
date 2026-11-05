@@ -126,11 +126,11 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 
 	id := ids.New[ids.OfferKind]()
 	cols, holders, args := columnValues(
-		columnValue{"id", id}, columnValue{dealIDColumn, dealID}, columnValue{"offer_number", number},
+		columnValue{"id", id}, columnValue{dealIDColumn, dealID}, columnValue{offerNumberColumn, number},
 		columnValue{"revision", 1}, columnValue{offerStatusField, "draft"}, columnValue{currencyField, in.Currency},
 		columnValue{buyerCompanyColumn, in.BuyerCompanyID}, columnValue{"valid_until", in.ValidUntil},
-		columnValue{introTextColumn, in.IntroText}, columnValue{"terms_text", in.TermsText},
-		columnValue{"template_id", in.TemplateID}, columnValue{sourceColumn, in.Source}, columnValue{"captured_by", by},
+		columnValue{introTextColumn, in.IntroText}, columnValue{termsTextColumn, in.TermsText},
+		columnValue{templateIDColumn, in.TemplateID}, columnValue{sourceColumn, in.Source}, columnValue{"captured_by", by},
 		columnValue{"legal_entity_id", entity}, columnValue{"language", in.Language},
 		columnValue{"source_commercial_revision", fromRevision})
 	if _, err := tx.Exec(ctx, `INSERT INTO offer (`+cols+`) VALUES (`+holders+`)`, args...); err != nil {
@@ -147,7 +147,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", "offer", id.UUID,
-		nil, map[string]any{"offer_number": number, dealIDColumn: dealID, currencyField: in.Currency})
+		nil, map[string]any{offerNumberColumn: number, dealIDColumn: dealID, currencyField: in.Currency})
 	if err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("audit offer create: %w", err)
 	}
@@ -203,7 +203,7 @@ func resolveOfferTemplateRef(ctx context.Context, tx pgx.Tx, templateID *ids.Off
 		return fmt.Errorf("check offer_template reference: %w", err)
 	}
 	if !exists {
-		return auth.NameMissingReference("template_id", apperrors.ErrNotFound)
+		return auth.NameMissingReference(templateIDColumn, apperrors.ErrNotFound)
 	}
 	return nil
 }
@@ -462,13 +462,13 @@ func offerHeaderPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer
 		p.Set(introTextColumn, current.IntroText, *in.IntroText)
 	}
 	if in.TermsText != nil {
-		p.Set("terms_text", current.TermsText, *in.TermsText)
+		p.Set(termsTextColumn, current.TermsText, *in.TermsText)
 	}
 	if in.TemplateID != nil {
 		if err := resolveOfferTemplateRef(ctx, tx, in.TemplateID); err != nil {
 			return nil, nil, err
 		}
-		p.Set("template_id", current.TemplateId, *in.TemplateID)
+		p.Set(templateIDColumn, current.TemplateId, *in.TemplateID)
 	}
 	return p, retired, nil
 }
