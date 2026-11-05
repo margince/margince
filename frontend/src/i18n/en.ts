@@ -5319,6 +5319,7 @@ export const en = {
   "lead.source.manual": "Created manually",
   "lead.source.inbound": "Inbound",
   "lead.source.webform": "Web form",
+  "lead.source.webformNamed": "Web form “{name}”",
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
