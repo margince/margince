@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { calendarDay } from "../../format/calendarday";
+import { UTC_ZONE } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   type Approval,
@@ -561,7 +562,7 @@ const ARCHIVE = (() => {
     // Read in UTC from a UTC noon, so no reader's zone moves the date.
     calendarDay(
       new Date(Date.parse(`${WEEK_START}T12:00:00Z`) - back * 7 * 864e5),
-      "UTC",
+      UTC_ZONE,
     ),
   );
   return {
