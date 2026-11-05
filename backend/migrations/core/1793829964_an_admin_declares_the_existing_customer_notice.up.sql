@@ -51,8 +51,9 @@ CREATE TABLE existing_customer_notice (
         CHECK (withdrawn_reason IS NULL OR length(btrim(withdrawn_reason)) BETWEEN 1 AND 500)
 );
 
-CREATE INDEX idx_existing_customer_notice_live_entity
-    ON existing_customer_notice (legal_entity_id) WHERE withdrawn_at IS NULL;
+-- Whole, not limited to live rows, so a legal_entity delete can check it too.
+CREATE INDEX idx_existing_customer_notice_legal_entity
+    ON existing_customer_notice (legal_entity_id);
 
 -- The marketing purposes a declaration covers: the ones that advertise goods
 -- or services similar to what its customers bought.
