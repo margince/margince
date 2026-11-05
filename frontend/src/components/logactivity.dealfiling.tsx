@@ -96,6 +96,8 @@ export function useLogDealFiling(
                   <RecordPicker
                     {...control}
                     searchTargets={search}
+                    searchOnFocus
+                    onSearchChange={() => setChoice(null)}
                     selected={held?.kind === "deal" ? held.candidate : null}
                     onPick={(candidate) => pick({ kind: "deal", candidate })}
                   />

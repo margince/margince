@@ -3187,6 +3187,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.addStakeholder": "Thêm bên liên quan",
   "rel.dealStakeholders": "Bên liên quan",
   "rel.dealStakeholdersEmpty": "Deal này chưa có bên liên quan nào",
+  "rel.employerUnavailable":
+    "Không thể đọc thông tin nơi làm việc. Nhập để tìm trong tất cả giao dịch đang mở.",
   "rel.kind": "Loại",
   "rel.saveDone": "Đã lưu quan hệ",
   "rel.role": "Vai trò",

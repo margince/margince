@@ -100,6 +100,24 @@ async function save(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("filing a logged call from its contact", () => {
+  it("lists this company's open deals on focus before typing", async () => {
+    const { urls } = mount({ choice_required: true, company_id: "o1" });
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("searchbox", { name: en["log.dealFiling"] }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Chosen renewal" }),
+    ).toBeTruthy();
+    const request = urls.find(
+      (url) =>
+        url.pathname.endsWith("/deals") &&
+        url.searchParams.get("company_id") === "o1",
+    );
+    expect(request?.searchParams.get("status")).toBe("open");
+    expect(request?.searchParams.get("q")).toBe("");
+  });
+
   it("requests the server's one-deal rule and refreshes the actual deal returned by the write", async () => {
     const { posted, client } = mount(
       { choice_required: false, company_id: "o1", suggested_deal_id: "d1" },
