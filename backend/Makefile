@@ -137,8 +137,9 @@ help: ## List targets with their descriptions (the default goal)
 # Each phase reports how long it took (scripts/phase-timer.sh). The ledger has
 # ONE owner per run: the root `check-backend` or `check` exports
 # PHASE_TIMER_OWNED and prints the table itself, covering its other phases and
-# these four together; run on its own (`make check-go`, or here directly) this
-# target is the owner instead and prints its own four. Without that, a standalone run
+# these together (three under CHECK_WRITERS_RAN, four otherwise); run on its own
+# (`make check-go`, or here directly) this target is the owner instead and prints
+# its own four. Without that, a standalone run
 # would leave its rows to be counted inside somebody else's table, and a
 # standalone run that FAILED would leave its open phase to abort the next one.
 #

@@ -62,7 +62,9 @@ remember() { # pid
     # rather than a fact about the process. So is a fixture that has not yet
     # run its `exec -a`: until then ps shows the wrapping `bash -c`, which no
     # probe below recognises, and on a loaded machine that lasts long enough to
-    # turn a recognised stack into a FAIL.
+    # turn a recognised stack into a FAIL. A wrapper that is still there when
+    # the retries run out is no signature either: the exec changes the command
+    # line later, and the trap would then not find the process.
     local signature tries=0
     signature=$(signature_of "$1")
     while [[ -z "$signature" || "$signature" == *'exec-a"$0"'* ]] && ((tries < 50)); do
@@ -70,8 +72,8 @@ remember() { # pid
         tries=$((tries + 1))
         signature=$(signature_of "$1")
     done
-    if [[ -z "$signature" ]]; then
-        printf '  FAIL a fixture (pid %s) had no command line to sign, so the trap could not tell it from a recycled pid\n' "$1" >&2
+    if [[ -z "$signature" || "$signature" == *'exec-a"$0"'* ]]; then
+        printf '  FAIL a fixture (pid %s) had no final command line to sign, so the trap could not tell it from a recycled pid\n' "$1" >&2
         failures=$((failures + 1))
         return
     fi

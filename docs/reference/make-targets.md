@@ -53,7 +53,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 |---|---|
 | `check` | **The merge gate.** Backend `make check` = build + vet + lint + `arch-lint` + test + drift. Root `make check` runs that plus `craft static` (it needs `origin/main`, and the network on a first run to fetch the pinned binary), the root script gates and `check-fe`. It runs the writers first and then four lanes side by side; see [How `make check` runs](#how-make-check-runs) |
 | `check-all` | `check` plus the whole integration lane, locally. `check` does not reach that lane: its `test` target is `go test ./...`, and every integration file carries `//go:build integration`. Optional: CI runs the lane on every non-draft PR that changes `backend/`, `scripts/`, `extensions/` or the `Makefile`, and the shipping loop asks for `make test-it DIR=<pkg>` on the packages a change touches. Needs `make db-up` and takes minutes |
-| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone. `check-backend` = `contract-frontend-drift`, then `check-root-gates`, then backend `check`. The CI `deterministic-gates` job runs it with `CHECK_LEGS="test test-extensions"`, and `backend-lint` runs `check-static`. It needs no frontend toolchain: `contract-frontend-drift` skips loudly without pnpm. `check-fe` = the composed typecheck, `frontend-check`, and the unit screens' own suites (`fe-test-ext`), failing loudly if `frontend/node_modules` is missing |
+| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone. `check-backend` = `contract-frontend-drift`, then `check-root-gates`, then backend `check`. The CI `deterministic-gates` job runs it with `CHECK_LEGS="test test-extensions"`, and `backend-lint` runs `check-static`. It needs no frontend toolchain: `contract-frontend-drift` skips loudly without pnpm. `check-fe` = the composed typecheck (which installs the frontend dependencies first), `frontend-check`, and the unit screens' own suites (`fe-test-ext`) |
 | `check-root-gates` | The root script gates below, side by side (`-j$(GATE_JOBS)`, the core count). The list is `ROOT_SCRIPT_GATES` in the root `Makefile` |
 | `build` | `go build ./...` |
 | `vet` | `go vet ./...` |
@@ -233,7 +233,7 @@ Some steps of the gate write files that other steps read. A reader that opens su
 
 The lanes run with `CHECK_WRITERS_RAN=1`. Then `composition` and `fe-drift` print a line and write nothing, and the backend `check` leaves out `drift`. The other writes in a lane are files that only that lane reads: `check-fe` installs the composed frontend workspace under `build/composition-frontend/` and builds `frontend/dist`.
 
-Each lane writes its output to `.tmp/check-lanes/<lane>.log`, because make 3.81 (on macOS) cannot keep the output of parallel jobs apart. When a lane fails, `scripts/check-lane-end.sh` prints the end of its log and the path to the full log. Then `make check` fails with the name of the lane.
+Each lane writes its output to `.tmp/check-lanes/<lane>.log`, because make 3.81 (on macOS) cannot keep the output of parallel jobs apart. When a lane fails, `scripts/check-lane-end.sh` prints the lines of its log that name a failure. Then it prints the end of the log and the path to the full log. Then `make check` fails with the name of the lane.
 
 `TestMakeCheckRunsEveryLegItsTwoHalvesRun` in `backend/gates/checklanes_test.go` fails when `make check` does not reach a leg that `check-backend` or `check-fe` runs.
 

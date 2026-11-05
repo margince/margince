@@ -61,6 +61,11 @@ sed -i.orig 's/^  "Release|/  "Release|no-such-help-entry /' "$TMP/helpentry/scr
 
 pids=()
 judge shipped pass "make target parity OK" "the shipped Makefiles" & pids+=($!)
+# The gate's dry run of `make check` sends the lane logs to a temp folder, and
+# a temp folder can have a space in its path.
+plant spaced ""
+mkdir -p "$TMP/tmp with space"
+TMPDIR="$TMP/tmp with space" judge spaced pass "make target parity OK" "the shipped Makefiles, with a space in the temp path" & pids+=($!)
 judge phony fail "SILENT FROM ROOT: \`make vuln\`" "a forwarded name in the root .PHONY list" & pids+=($!)
 judge noforce fail "SILENT FROM ROOT: \`make tools\`" "a forwarding rule without FORCE, beside a tools/ folder" & pids+=($!)
 judge swallow fail "SWALLOWED TYPO" "a forwarding rule that ignores backend's failure" & pids+=($!)

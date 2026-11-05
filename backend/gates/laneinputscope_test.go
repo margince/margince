@@ -588,10 +588,9 @@ func TestTheCensusFailsOnAScopeThatOmitsAScriptItsLaneRuns(t *testing.T) {
 func TestARecursiveMakeBehindAnEnvironmentPrefixIsStillAnEdge(t *testing.T) {
 	t.Parallel()
 
-	// `make check` starts its lanes behind an environment prefix, and a reader
-	// that required the line to open with $(MAKE) followed none of them. It saw
-	// one timer script where whole trees of gates hang. The census shape that
-	// fails short is the one this file exists to refuse, so the spelling is a case.
+	// `make check` starts its lanes behind an environment prefix, so a recursive
+	// make after that prefix must count as an edge. A census that misses this
+	// spelling undercounts the gates it starts.
 	for command, want := range map[string][]string{
 		"\t@PHASE_TIMER_OWNED=1 $(MAKE) check-backend":                         {"check-backend"},
 		"\t@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j4 check-lane-fe": {"check-lane-fe"},

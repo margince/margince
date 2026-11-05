@@ -81,10 +81,23 @@ if in_lane fe stop >/dev/null 2>&1; then
 fi
 
 # reset drops a phase a failed run left open, in every lane.
+in_lane fe start "frontend: unit"
 timer reset
-if ! in_lane backend start "backend: build again" 2>/dev/null; then
-	fail "reset: a phase left open by an earlier run still blocks the next one"
+for lane in backend fe; do
+	if ! in_lane "$lane" start "$lane: after reset" 2>/dev/null; then
+		fail "reset: a phase left open in lane $lane by an earlier run still blocks the next one"
+	fi
+done
+
+# A relative PHASE_TIMER_DIR is read from the repository root, so a phase
+# opened from one folder closes from another (a sub-make in backend/).
+relative=".tmp/phase-timer-test.$$"
+(cd "$TMP" && env -u PHASE_LANE PATH="$TMP/bin:$PATH" PHASE_TIMER_DIR="$relative" bash "$TIMER" reset)
+(cd "$TMP" && env -u PHASE_LANE PATH="$TMP/bin:$PATH" PHASE_TIMER_DIR="$relative" bash "$TIMER" start "from one folder")
+if ! (cd "$TMP/bin" && env -u PHASE_LANE PATH="$TMP/bin:$PATH" PHASE_TIMER_DIR="$relative" bash "$TIMER" stop) 2>/dev/null; then
+	fail "relative dir: a phase opened in one folder could not be closed from another"
 fi
+rm -rf "${SCRIPT_DIR:?}/../$relative"
 
 # A lane name becomes part of a file name, so only a plain name is taken.
 if in_lane "../x" start "escape" >/dev/null 2>&1; then

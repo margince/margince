@@ -22,6 +22,8 @@ set -eu
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 ledger_dir="${PHASE_TIMER_DIR:-$root/.tmp}"
+# Read from the repository root, so a sub-make in backend/ finds the same ledger.
+[[ "$ledger_dir" == /* ]] || ledger_dir="$root/$ledger_dir"
 ledger="$ledger_dir/check-timings.tsv"
 started_at="$ledger_dir/check-timings.start"
 lane="${PHASE_LANE:-main}"

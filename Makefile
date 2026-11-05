@@ -136,7 +136,7 @@ check-backend:
 	@bash scripts/phase-timer.sh start "frontend contract types (gen:api)"
 	$(MAKE) contract-frontend-drift
 	@bash scripts/phase-timer.sh stop
-	$(MAKE) check-root-gates
+	PHASE_TIMER_OWNED=1 $(MAKE) check-root-gates
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@bash scripts/phase-timer.sh report
 
@@ -154,10 +154,15 @@ check-backend:
 ## line stays a bare `$(MAKE)` line, because
 ## backend/gates/frontendlaneparity_test.go reads those lines to find the legs,
 ## and a wrapper would hide all of them.
+##
+## Run alone, it owns the timing ledger; under check-backend or a `make check`
+## lane, PHASE_TIMER_OWNED leaves the ledger to the caller.
 check-root-gates:
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
 	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
 # The steps of `make check` that rewrite files another step reads, measured
 # step by step: the frontend install (frontend/node_modules), composition
@@ -193,7 +198,7 @@ check:
 	@bash scripts/phase-timer.sh start "writers ($(CHECK_WRITERS))"
 	$(MAKE) -j1 $(CHECK_WRITERS)
 	@bash scripts/phase-timer.sh stop
-	@rm -rf $(CHECK_LANE_LOGS)
+	@rm -rf "$(CHECK_LANE_LOGS)"
 	@echo "check: $(words $(CHECK_LANES)) lanes, $(CHECK_LANE_JOBS) at a time, each logs to $(CHECK_LANE_LOGS)/<lane>.log"
 	@CHECK_WRITERS_RAN=1 PHASE_TIMER_OWNED=1 $(MAKE) -j$(CHECK_LANE_JOBS) $(CHECK_LANES)
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
@@ -204,17 +209,17 @@ check:
 # line that holds $(MAKE) and only prints the others.
 check-lane-craft:
 	@PHASE_LANE=craft bash scripts/phase-timer.sh start "craft static (strict)"
-	@mkdir -p $(CHECK_LANE_LOGS) && PHASE_LANE=craft $(MAKE) craft-static >$(CHECK_LANE_LOGS)/craft.log 2>&1; bash scripts/check-lane-end.sh craft $$? $(CHECK_LANE_LOGS)/craft.log
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=craft $(MAKE) craft-static >"$(CHECK_LANE_LOGS)/craft.log" 2>&1; bash scripts/check-lane-end.sh craft $$? "$(CHECK_LANE_LOGS)/craft.log"
 	@PHASE_LANE=craft bash scripts/phase-timer.sh stop
 
 check-lane-gates:
-	@mkdir -p $(CHECK_LANE_LOGS) && PHASE_LANE=gates $(MAKE) check-root-gates >$(CHECK_LANE_LOGS)/gates.log 2>&1; bash scripts/check-lane-end.sh gates $$? $(CHECK_LANE_LOGS)/gates.log
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=gates $(MAKE) check-root-gates >"$(CHECK_LANE_LOGS)/gates.log" 2>&1; bash scripts/check-lane-end.sh gates $$? "$(CHECK_LANE_LOGS)/gates.log"
 
 check-lane-backend:
-	@mkdir -p $(CHECK_LANE_LOGS) && PHASE_LANE=backend $(MAKE) -C backend check >$(CHECK_LANE_LOGS)/backend.log 2>&1; bash scripts/check-lane-end.sh backend $$? $(CHECK_LANE_LOGS)/backend.log
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=backend $(MAKE) -C backend check >"$(CHECK_LANE_LOGS)/backend.log" 2>&1; bash scripts/check-lane-end.sh backend $$? "$(CHECK_LANE_LOGS)/backend.log"
 
 check-lane-fe:
-	@mkdir -p $(CHECK_LANE_LOGS) && PHASE_LANE=fe $(MAKE) check-fe >$(CHECK_LANE_LOGS)/fe.log 2>&1; bash scripts/check-lane-end.sh fe $$? $(CHECK_LANE_LOGS)/fe.log
+	@mkdir -p "$(CHECK_LANE_LOGS)" && PHASE_LANE=fe $(MAKE) check-fe >"$(CHECK_LANE_LOGS)/fe.log" 2>&1; bash scripts/check-lane-end.sh fe $$? "$(CHECK_LANE_LOGS)/fe.log"
 
 ## check-all — `check` plus the integration lane. `check` reaches that lane
 ## NOT AT ALL: its `test` target is `go test ./...`, and every integration file
@@ -355,9 +360,10 @@ FORCE:
 # The match-anything rule above would otherwise try to remake this file.
 Makefile: ;
 
-## check-fe — the frontend half of the gate (part of `make check`). Fails loudly
-## if the frontend deps are missing rather than skipping — a set-up worktree has
-## run `make install`, which installs them. The CI frontend job runs this too.
+## check-fe — the frontend half of the gate (part of `make check`). Its first
+## leg, fe-typecheck-composed, installs the frontend deps, and the check below
+## fails loudly if they are still missing after that. The CI frontend job runs
+## this too.
 check-fe: fe-typecheck-composed
 	@[ -d frontend/node_modules ] || { echo "check-fe: frontend/node_modules missing — run 'make install' (or 'make fe-install') first" >&2; exit 1; }
 	@bash scripts/phase-timer.sh start "frontend: core suite (ds-gates, drift, lint, unit, build)"
