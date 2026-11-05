@@ -2383,6 +2383,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",
   "systemJob.enabled_oidc_providers_read": "Lesen der Anmeldeanbieter",
+  "systemJob.client_check_read": "Lesen des Schalters für die KI-Tool-Prüfung",
   "systemJob.client_registration_read": "Lesen der Registrierung von KI-Tools",
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
@@ -9040,6 +9041,33 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Direkt unter „MCP-Clients“ registriert. Das Tool muss das Client-Secret senden.",
   "agentClients.methods.alwaysOn": "Immer aktiv",
   "agentClients.methods.readOnly": "Nur Admins können das ändern.",
+  "agentClients.experiments.title": "Experimente",
+  "agentClients.experiments.sub":
+    "Funktionen zum Ausprobieren, die sich ändern oder wegfallen können. Für alle deaktiviert, bis ein Admin sie hier aktiviert.",
+  "agentClients.experiments.clientCheck": "Tool-Unterstützung prüfen",
+  "agentClients.experiments.clientCheckHint":
+    "Lässt das KI-Tool eines Admins ein kleines Formular zeigen, um zu prüfen, ob es eines beantworten kann.",
+  "agentClients.experiments.about": "Über dieses Experiment",
+  "agentClients.experiments.whyTitle": "Warum",
+  "agentClients.experiments.why":
+    "Margince kann dich im Chat vor einer Massenänderung fragen, oder welchen Datensatz du meintest, wenn dein KI-Tool ein kleines Formular zeigen kann. Diese Prüfung zeigt, welche deiner KI-Tools das können. Änderungen, die eine Freigabe brauchen, warten weiter unter Freigaben.",
+  "agentClients.experiments.howTitle": "So testest du",
+  "agentClients.experiments.step1": "Aktiviere dies.",
+  "agentClients.experiments.step2":
+    "Verbinde Margince in deinem KI-Tool neu, damit es das neue Tool lädt.",
+  "agentClients.experiments.step3": "Frage es:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Nutze das Margince-Tool check_client, um zu prüfen, ob dieses KI-Tool ein Margince-Formular zeigen kann.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Frage",
+  "agentClients.experiments.copy": "Frage kopieren",
+  "agentClients.experiments.copied": "Kopiert",
+  "agentClients.experiments.copyRemedy":
+    "Der Browser hat das Kopieren abgelehnt. Markiere die Frage und kopiere sie von Hand.",
+  "agentClients.experiments.step4":
+    "Wenn dein KI-Tool ein Formular zeigt, in dem du eine Farbe wählst, unterstützt es Formulare. Sonst nennt die Antwort das Tool, seine Version und den Grund.",
+  "agentClients.experiments.safeTitle": "Gefahrlos zu testen",
+  "agentClients.experiments.safe":
+    "Solange es aktiviert ist, sehen Admins das Tool in jedem KI-Tool, das sie verbinden. Es liest und ändert keine Daten. Deaktiviere es, wenn du fertig bist.",
   "agentClients.title": "MCP-Clients",
   "agentClients.sub":
     "Jeder Client, über den sich ein KI-Tool anmeldet, und wie er entstanden ist.",

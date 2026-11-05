@@ -36860,6 +36860,12 @@ components:
             Accept a client ID that is the URL of the tool's published metadata document (CIMD).
             Off stops new sign-ins through such a client; connections already made keep renewing.
             Needs `agent_client` update. The deployment file can hold it off.
+        mcp_client_check:
+          type: boolean
+          description: |
+            Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+            answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+            update. Read as `client_check` on `GET /installation/agent-clients`.
         oidc_group_role_map:
           type: object
           maxProperties: 64
@@ -67869,11 +67875,16 @@ components:
         metadata_document: { $ref: '#/components/schemas/AgentClientMethod' }
     AgentClientListResponse:
       type: object
-      required: [data, page, registration]
+      required: [data, page, registration, client_check]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/AgentClient' } }
         page: { $ref: '#/components/schemas/PageInfo' }
         registration: { $ref: '#/components/schemas/AgentClientRegistration' }
+        client_check:
+          type: boolean
+          description: |
+            Whether admins' AI tools are offered the `check_client` tool. Change it with
+            `mcp_client_check` on `PATCH /installation/settings`.
     RegisterAgentClientRequest:
       type: object
       additionalProperties: false

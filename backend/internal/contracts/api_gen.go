@@ -30178,6 +30178,9 @@ type AgentClientRegisteredBy string
 
 // AgentClientListResponse defines model for AgentClientListResponse.
 type AgentClientListResponse struct {
+	// ClientCheck Whether admins' AI tools are offered the `check_client` tool. Change it with
+	// `mcp_client_check` on `PATCH /installation/settings`.
+	ClientCheck  bool                    `json:"client_check"`
 	Data         []AgentClient           `json:"data"`
 	Page         PageInfo                `json:"page"`
 	Registration AgentClientRegistration `json:"registration"`
@@ -62015,6 +62018,11 @@ type UpdateInstallationSettingsRequest struct {
 
 	// IndividualPerformance Show individual performance. Omit to leave it unchanged. Each change is audited.
 	IndividualPerformance *bool `json:"individual_performance,omitempty"`
+
+	// McpClientCheck Offer the `check_client` tool to admins' AI tools, so an admin can test which tools
+	// answer a form. Off by default; off, no one sees the tool. Needs `agent_client`
+	// update. Read as `client_check` on `GET /installation/agent-clients`.
+	McpClientCheck *bool `json:"mcp_client_check,omitempty"`
 
 	// MetadataDocumentClients Accept a client ID that is the URL of the tool's published metadata document (CIMD).
 	// Off stops new sign-ins through such a client; connections already made keep renewing.

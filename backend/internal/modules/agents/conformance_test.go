@@ -246,6 +246,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterRouteVerbs(r, []RouteVerb{shareRecordVerb, revertStageVerb, downloadVerbForTest}, func(context.Context, RouteCall) (json.RawMessage, error) {
 		return json.RawMessage(`{}`), nil
 	})
+	RegisterClientCheckTool(r, discardLog())
 	RegisterDocumentTools(r, &fakeDocuments{})
 	RegisterDuplicateTools(r, stubDuplicateQueue{})
 	RegisterListTools(r, &stubLists{})

@@ -2295,6 +2295,7 @@ export const en = {
   "systemJob.domain_triage": "Website triage",
   "systemJob.employment_import_worker": "Employment history import",
   "systemJob.enabled_oidc_providers_read": "Sign-in provider read",
+  "systemJob.client_check_read": "AI tool check switch read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.extension_inventory": "Extension inventory",
@@ -9061,6 +9062,33 @@ export const en = {
     "Registered by hand under MCP clients. The tool must send the client secret.",
   "agentClients.methods.alwaysOn": "Always on",
   "agentClients.methods.readOnly": "Only an admin can change these.",
+  "agentClients.experiments.title": "Experiments",
+  "agentClients.experiments.sub":
+    "Test features that may change or go away. Off for everyone until an admin turns them on here.",
+  "agentClients.experiments.clientCheck": "Tool support check",
+  "agentClients.experiments.clientCheckHint":
+    "Lets an admin’s AI tool show a small form, to test whether it can answer one.",
+  "agentClients.experiments.about": "About this experiment",
+  "agentClients.experiments.whyTitle": "Why",
+  "agentClients.experiments.why":
+    "Margince can ask you in the chat before a bulk change, or which record you meant, when your AI tool can show a small form. This check finds out which of your AI tools can. Changes that need approval still wait in Approvals.",
+  "agentClients.experiments.howTitle": "How to test",
+  "agentClients.experiments.step1": "Turn this on.",
+  "agentClients.experiments.step2":
+    "In your AI tool, reconnect Margince so it loads the new tool.",
+  "agentClients.experiments.step3": "Ask it:",
+  "agentClients.experiments.clientCheckQuestion":
+    "Use the Margince check_client tool to check whether this AI tool can show a Margince form.",
+  "agentClients.experiments.clientCheckQuestionLabel": "Question",
+  "agentClients.experiments.copy": "Copy the question",
+  "agentClients.experiments.copied": "Copied",
+  "agentClients.experiments.copyRemedy":
+    "The browser refused the copy. Select the question and copy it by hand.",
+  "agentClients.experiments.step4":
+    "If your AI tool shows a form that asks you to pick a color, it supports forms. If not, the answer names the tool, its version and the reason.",
+  "agentClients.experiments.safeTitle": "Safe to try",
+  "agentClients.experiments.safe":
+    "While it is on, admins see the tool in every AI tool they connect. It reads and changes no data. Turn it off when you are done.",
   "agentClients.title": "MCP clients",
   "agentClients.sub":
     "Each client an AI tool signs in through, and how it came to exist.",
