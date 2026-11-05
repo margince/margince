@@ -75,8 +75,8 @@ describe("ClientSurfaceScreen", () => {
     expect(screen.queryByText("Brandt Automotive GmbH")).toBeNull();
     const links = screen.getAllByRole("link", { name: "Open 360 view" });
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
-      "#/contacts/p-1",
-      "#/contacts/p-2",
+      "/#/contacts/p-1",
+      "/#/contacts/p-2",
     ]);
   });
 
@@ -96,6 +96,6 @@ describe("ClientSurfaceScreen", () => {
       within(answer)
         .getByRole("link", { name: "Capture as lead" })
         .getAttribute("href"),
-    ).toBe("#/leads");
+    ).toBe("/#/leads");
   });
 });

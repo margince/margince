@@ -84,11 +84,16 @@ func StalledSQL(alias string) string {
 // this expression is composed into larger statements whose placeholders are
 // numbered by their own callers; an int is not attacker-reachable.
 func QuietSQL(alias string, days int) string {
+	return quietAtSQL(alias, days, "now()")
+}
+
+// quietAtSQL is QuietSQL judged at the instant the SQL expression instant names.
+func quietAtSQL(alias string, days int, instant string) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
-		AND %[3]s < now() - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= now())
+		AND %[3]s < %[5]s - interval '%[2]d days'
+		AND (%[1]swait_until IS NULL OR %[1]swait_until <= %[5]s)
 		AND NOT %[4]s)`,
-		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias))
+		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
 }
 
 // MeetingAheadSQL is true when the deal has a booked meeting its stored clock

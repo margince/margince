@@ -75,3 +75,28 @@ export const NoSignatureDark: Story = {
   ...NoSignature,
   globals: { theme: "dark" },
 };
+
+export const PersonalHtml: Story = {
+  render: () => {
+    stubWithSession(
+      {
+        "POST /emails:sign-off": () =>
+          jsonResponse({
+            text: "Mira Voss\nSales",
+            html: "<p><b>Mira Voss</b><br><i>Sales</i></p>",
+            kind: "signature",
+          }),
+      },
+      {},
+    );
+    return (
+      <StoryProviders>
+        <SignOffPreview body={BODY} subject="Tuesday" />
+      </StoryProviders>
+    );
+  },
+};
+export const PersonalHtmlDark: Story = {
+  ...PersonalHtml,
+  globals: { theme: "dark" },
+};

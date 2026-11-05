@@ -160,8 +160,8 @@ describe("DealCard + PipelineBoard", () => {
     const hrefs = screen
       .getAllByRole("link")
       .map((each) => each.getAttribute("href"));
-    expect(hrefs).toContain("#/deals/d1");
-    expect(hrefs).toContain("#/companies/o-1");
+    expect(hrefs).toContain("/#/deals/d1");
+    expect(hrefs).toContain("/#/companies/o-1");
   });
 
   // The refusal case, and the reason the card takes an href rather than an id:
@@ -173,7 +173,7 @@ describe("DealCard + PipelineBoard", () => {
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
       screen.getAllByRole("link").map((each) => each.getAttribute("href")),
-    ).toEqual(["#/deals/d1"]);
+    ).toEqual(["/#/deals/d1"]);
   });
 
   // A company has three readings on a card and only one of them is blank. The
@@ -388,8 +388,10 @@ describe("DealCard + PipelineBoard", () => {
     );
     expect(screen.getByText("40%")).toBeTruthy();
     expect(screen.getByText("1 deal")).toBeTruthy();
-    expect(screen.getByText("≈ €60,500.00")).toBeTruthy();
-    expect(screen.getByText("weighted €24,200.00")).toBeTruthy();
+    expect(screen.getByText(/^€60\.5k$/i)).toBeTruthy();
+    expect(document.querySelector(".board-col-weighted")?.textContent).toMatch(
+      /^€24\.2k weighted$/i,
+    );
   });
 
   // A caller with a capped card fetch (the Kanban board) supplies
@@ -437,9 +439,13 @@ describe("DealCard + PipelineBoard", () => {
         zone="Europe/Berlin"
       />,
     );
-    expect(screen.getByText("≈ €1,250.00")).toBeTruthy();
-    expect(screen.getByText(/Converted · rates as of/)).toBeTruthy();
-    expect(screen.getByText("2 deals not priced · excluded")).toBeTruthy();
+    expect(screen.getByText("€1,250")).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Rates ${formatDayMonth("2026-10-01", "en", "Europe/Berlin")}`,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("2 not priced")).toBeTruthy();
     expect(screen.getByText("29 deals")).toBeTruthy();
   });
 
@@ -493,7 +499,11 @@ describe("DealCard + PipelineBoard", () => {
       />,
     );
     expect(screen.getByText("4 deals")).toBeTruthy();
-    expect(screen.getByText(`weighted ${MONEY_ABSENT}`)).toBeTruthy();
+    expect(
+      screen.getByText(MONEY_ABSENT, {
+        selector: ".board-col-weighted-figure",
+      }),
+    ).toBeTruthy();
     expect(
       screen.getByText(MONEY_ABSENT, { selector: ".board-col-money" }),
     ).toBeTruthy();

@@ -34,8 +34,17 @@ type DealFiler interface {
 // The decider needs activity.update, as for a project link, and must be able
 // to reach the deal; a refusal writes nothing and is no fault. A deal link
 // that landed first is kept and reported as the filing it is.
-func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, dealID ids.UUID) (DealOutcome, error) {
+func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, dealID ids.UUID, candidates DealCandidates) (DealOutcome, error) {
 	if may, err := mayFileOnDeal(f, tx, dealID); err != nil || !may {
+		return DealNotWritable, err
+	}
+	// Deal edits may have committed while the candidate read waited for its lock.
+	facts, err := readDealFacts(f.decider, tx, activityID, false)
+	if err != nil {
+		return "", err
+	}
+	current, err := decideDeal(f.decider, tx, facts, candidates)
+	if err != nil || current.Outcome != DealLinked || current.Deal != dealID {
 		return DealNotWritable, err
 	}
 	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, f.evidence)

@@ -37,7 +37,14 @@ type ListPrelude struct {
 	where  []string
 	args   []any
 	arg    func(any) int
+	// positions, when set, receives each row's resume cursor (CollectPositions).
+	positions *[]string
 }
+
+// CollectPositions asks the read to answer, for each row of its page, the
+// cursor that resumes the list after that row. A caller merging this list with
+// another can then stop between any two rows.
+func (p *ListPrelude) CollectPositions(into *[]string) { p.positions = into }
 
 // Where is the scope-bounded, cursor-bounded WHERE the prelude has assembled.
 // A caller appends its own record-specific terms to the returned slice.
@@ -164,6 +171,16 @@ func RunListPageTx[T any](
 	out, cursorKeys, err := scan(rows, active, pre.sorted)
 	if err != nil {
 		return nil, Page{}, err
+	}
+	if pre.positions != nil {
+		for i := range min(len(out), pre.limit) {
+			createdAt, id := key(out[i])
+			after, err := pre.sorted.EncodePageCursor(cursorKeys[i], createdAt, id)
+			if err != nil {
+				return nil, Page{}, err
+			}
+			*pre.positions = append(*pre.positions, after)
+		}
 	}
 	var page Page
 	if len(out) > pre.limit {

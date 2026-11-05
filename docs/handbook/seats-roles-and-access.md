@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx -->
+<!-- describes: frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -22,14 +22,28 @@ To invite a colleague to Margince, open **Settings → Members** and choose **In
 You need the permission to manage users. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
+### What if the invitation email did not arrive?
+You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**.
+1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
+2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
+3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.
+**Resend invitation** shows only when Margince can send email. Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
+Also called: invite failed, invitation not received, invitation expired, resend invite.
+
 ### How do I change someone's role or make someone an admin?
-To change a colleague's role in Margince, open **Settings → Members** and choose the role on their row.
+To change a colleague's role in Margince, open **Settings → Members** and press the role on their row.
 1. Open **Settings → Members**.
 2. Find the colleague in the **Members** list.
-3. Choose the role on their row. It reads as plain text, and **Not set** when they hold no role. Pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**.
+3. Press the role on their row, or the edit mark beside it. It reads **Not set** when they hold no role. In the dialog pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving.
 4. The note "Role changed for {name}" confirms it.
-Choosing a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
+Saving a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
 Also called: promote, demote, change permissions, make admin.
+
+### Why can a colleague not connect their mailbox?
+A role that cannot record activities cannot connect a mailbox or calendar. Read-only is the shipped role that cannot. A custom role needs create rights on activities, contacts and leads. The colleague sees no connect button, and one sentence says to ask an admin.
+
+When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities.
+Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
 
 ### How do I find and edit a colleague?
 
@@ -152,7 +166,7 @@ Margince comes with six roles: Admin, Ops, Management, Team lead, User and Read-
 | **Management** | every record in the company | every record; no admin rights |
 | **Team lead** | records | records owned by anyone on a live team with them; settings read-only; no access to exchange rates, AI prices, imports or retention |
 | **User** | records | records they own; settings read-only; all of their own saved views |
-| **Read-only** | every record and most settings | nothing, except their own saved views |
+| **Read-only** | every record and most settings | nothing, except their own saved views; cannot connect a mailbox |
 
 This is the biggest difference between Admin and Ops: **Ops cannot manage members or teams.** It also cannot read the audit log or the privacy list, or reset the installation. It reads the list of roles but does not edit it. Everything else in daily running belongs to Ops.
 
@@ -218,7 +232,7 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. Margince answers all three with **not found**, so a link alone shows nothing.
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record.
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
@@ -326,8 +340,8 @@ Rules worth knowing:
 - Sharing the same record again **replaces** the whole share. Anything you leave out
   is cleared.
 - Taking back a share counts from the next request of the user it was shared with. There is no undo.
-- An agent cannot share at all, and cannot ask a colleague to approve a share
-  for it.
+- An agent you connected can share a record and take a share back, within your
+  rights. It cannot ask a colleague to approve a share for it.
 
 There are no levels of shares, no sharing by rules, and no way to give someone else the right to share. A share is made by hand, with one exception: a contact merge makes a share for the owner of a merged-away contact. Every share and every end of a share goes into the audit log.
 
@@ -341,7 +355,11 @@ When two contacts merge, the owner of the merged-away contact keeps access to th
 
 This holds for every contact merge: **Merge contact** on the record, a group of possible duplicates, or a merge an agent makes. Shares the merged-away contact had move to the remaining contact; of two shares, the higher access stays.
 
-**Who may merge a group.** You may merge a group of possible duplicate contacts when you can edit every contact you tick. A group often holds contacts that different colleagues own. An owner who may edit only their own contacts then cannot merge the group.
+**Who may merge two records.** You may merge two records when you can edit both. For two contacts, companies or leads that Margince lists as a possible duplicate, edit access to one is enough. Then you may merge yours into the other, which stays with its owner. You cannot merge a colleague's record into yours; merge yours into theirs, or ask its owner. So each owner can settle the pair, and nobody loses a record because someone copied it.
+
+A pair someone marked as different people is no longer a possible duplicate. Marking a pair as different people still needs edit access to both.
+
+**Who may merge a group.** You may merge a whole group of possible duplicate contacts when you can edit every contact you tick. A group often holds contacts that different colleagues own. An owner who may edit only their own contacts then merges one pair at a time. They tick their own contact and one possible duplicate of it, and keep the other contact and its owner.
 
 **Shared merge reviews** changes that. An admin turns it on in **Settings → Roles and permissions**; it is off at the start. When it is on, an owner of one ticked contact with a full seat may merge the other ticked contacts too. That opens only those contacts, and only for that merge. It opens no mail, no files and no other record. The owners of the other contacts keep access through the share above.
 
@@ -349,7 +367,7 @@ Turning **Shared merge reviews** off again stops new merges of that kind. Merges
 
 ## Inviting and removing colleagues: the rules
 
-To invite and remove colleagues you need the permission to manage users. Only the Admin role holds it by default, and only a human may use it: an agent may never create an account for a human.
+To invite and remove colleagues you need the permission to manage users. Only the Admin role holds it by default. An agent acting for someone who holds it can invite and remove colleagues too. It cannot give the Admin role, act on an Admin, or change its own user's seat or teams.
 
 Inviting, deactivating and the **Members** settings list all answer to that permission. So a custom role that holds it manages colleagues without being called Admin.
 

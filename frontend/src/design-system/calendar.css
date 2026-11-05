@@ -56,7 +56,7 @@
   cursor: pointer;
 }
 .calendar-day:hover:not([aria-disabled="true"]) {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .calendar-day:focus-visible {
   outline: var(--focus-ring);
@@ -75,7 +75,7 @@
 /* Today, unchosen: a quiet disc. It answers "where am I" without competing
    with the day the reader has actually picked. */
 .calendar-day-today {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 
 /* The chosen day: the chip ground, an ink ring and weight, so it reads apart

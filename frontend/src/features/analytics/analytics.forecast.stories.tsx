@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -47,9 +47,15 @@ function readings(over: Partial<Readings> = {}): Readings {
     period_start: "2026-07-01",
     period_end: "2026-09-30",
     scope_kind: "workspace",
+    qualification_mode: "off",
     won_minor: 92_000_00,
     evidence_minor: 148_000_00,
-    best_case_minor: 260_000_00,
+    likely_threshold: 90,
+    by_source: {
+      stage: { open_minor: 240_000_00, weighted_minor: 132_000_00 },
+      human: { open_minor: 0, weighted_minor: 0 },
+      margince: { open_minor: 0, weighted_minor: 0 },
+    },
     open_minor: 240_000_00,
     weighted_minor: 132_000_00,
     eligible_count: 52,
@@ -60,7 +66,7 @@ function readings(over: Partial<Readings> = {}): Readings {
     // The zone the period's days were cut in. Nothing this section draws reads
     // it, and the reader's own is what the field would carry on a real
     // installation — so the fixture names no zone of its own.
-    timezone: viewerZone(),
+    timezone: browserZone(),
     base_currency: "EUR",
     current_call: {
       id: "22222222-2222-4222-8222-222222222222",
@@ -132,6 +138,38 @@ export const SomeDealsUnpriced: Story = {
   },
 };
 
+// Where the quarter lands, beside the sheet: the landing and the modelled
+// range stand in the rail above the receipt.
+export const WithLanding: Story = {
+  render: () => {
+    const landed = readings({
+      range_low_minor: 180_000_00,
+      range_high_minor: 310_000_00,
+    });
+    installFetchStub(
+      routes({
+        ...landed,
+        landing: {
+          amount_minor: landed.won_minor + landed.evidence_minor,
+          measure: "likely",
+          won_minor: landed.won_minor,
+          remaining_minor: landed.evidence_minor,
+        },
+      }),
+    );
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit={false} />
+      </StoryProviders>
+    );
+  },
+};
+
+export const WithLandingDark: Story = {
+  ...WithLanding,
+  globals: { theme: "dark" },
+};
+
 // Recording what somebody believes will close, opened. The editor is a panel of
 // its own: the lead sentence says a call moves no deal, the two fields are its
 // body, and cancel and save stand in the action band under them.
@@ -179,13 +217,29 @@ export const EveryDealPricedPhone: Story = {
   tags: ["uat-phone"],
 };
 
-function recipient(kind: "live" | "snapshot") {
+// A share states its landing and modelled finish. A snapshot frozen before
+// the landing was kept says its basis is not recorded and keeps its range.
+function recipient(kind: "live" | "snapshot", landingKept = true) {
   return () => {
+    const shared = readings({
+      range_low_minor: 200_000_00,
+      range_high_minor: 360_000_00,
+    });
     const view = {
       kind,
       target: "forecast",
       as_of: kind === "snapshot" ? "2026-07-14T06:00:00Z" : undefined,
-      readings: readings(),
+      readings: landingKept
+        ? {
+            ...shared,
+            landing: {
+              amount_minor: shared.won_minor + shared.evidence_minor,
+              measure: "likely",
+              won_minor: shared.won_minor,
+              remaining_minor: shared.evidence_minor,
+            },
+          }
+        : shared,
       withheld: false,
     } satisfies components["schemas"]["SharedForecastView"];
     installFetchStub({
@@ -200,3 +254,6 @@ function recipient(kind: "live" | "snapshot") {
 }
 export const LiveRecipient: Story = { render: recipient("live") };
 export const SnapshotRecipient: Story = { render: recipient("snapshot") };
+export const SnapshotRecipientBeforeTheLandingWasKept: Story = {
+  render: recipient("snapshot", false),
+};

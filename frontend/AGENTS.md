@@ -61,7 +61,7 @@ with some of the tone, plus a line in the tone; `primary` has a fill with all of
 Sparkles. No `uppercase`, no click; `badge-spelling.test.ts` fails a badge built by hand or a new
 look for one.
 
-**A settings `Panel` has no `tone`** and at most one primary. A page saves through one `PageSaveBar`
+**A settings `Panel` has no `tone`** and at most one primary. System health may tint its one leading action panel with its result tone. A page saves through one `PageSaveBar`
 (`useSaveDraft`); no card or row has its own "Save". A `Switch` alone writes when turned.
 
 ### Indigo is a claim about the source

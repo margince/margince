@@ -12,6 +12,7 @@ import {
   type ProjectOwnerPicker,
   projectOwnerField,
 } from "../../components/projectownerfield";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FieldGuard } from "../../design-system/rbac";
@@ -226,12 +227,12 @@ export function DealProjectLine({ deal }: Readonly<{ deal: Deal }>) {
   return (
     <div className="deal-project-line">
       {t("deal.project")}{" "}
-      <a
+      <AppLink
         href={routeHash(ENTITY.project.route(deal.project_id))}
         data-testid="deal-project"
       >
         {name ?? t("deal.projectUnnamed")}
-      </a>
+      </AppLink>
     </div>
   );
 }

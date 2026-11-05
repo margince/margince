@@ -51,7 +51,7 @@ func newAnalyticsQueryHandlers(
 func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var schema analyticsquery.Schema
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
 		return err
@@ -85,7 +85,7 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 		answer AnalyticsAnswer
 		runID  *ids.UUID
 	)
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, h.floor)
 		if err != nil {
@@ -134,12 +134,12 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		schema analyticsquery.Schema
 	)
 	ctx := r.Context()
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
 			return err
 		}
-		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit))
+		runs, more, err = ListReportRuns(ctx, tx, after, storekit.ClampLimit(params.Limit), params.Entity)
 		return err
 	}); err != nil {
 		httperr.Write(w, r, err)
@@ -171,10 +171,11 @@ func (h analyticsQueryHandlers) ListReportRuns(
 // runSummary lists a saved question by its shape alone. Its filter values and
 // scope name records and teams, so they stay out. A question the caller's
 // vocabulary no longer admits is not listed; the page keeps its place by the
-// last row read, listed or not.
+// last row read, listed or not. One that now mixes currencies is listed, so
+// opening it shows the refusal and how to re-ask it.
 func runSummary(run ReportRunSummary, schema analyticsquery.Schema) (crmcontracts.ReportRunSummary, bool, error) {
 	shape := analyticsquery.Query{Entity: run.Query.Entity, GroupBy: run.Query.GroupBy, Measures: run.Query.Measures, Limit: run.Query.Limit}
-	if shape.Validate(schema) != nil {
+	if shape.ValidateVocabulary(schema) != nil {
 		return crmcontracts.ReportRunSummary{}, false, nil //nolint:nilerr // a question the vocabulary no longer admits is skipped, not a fault
 	}
 	asked, err := wireFromQuery(shape)
@@ -193,7 +194,7 @@ func (h analyticsQueryHandlers) GetReportRun(
 ) {
 	ctx := r.Context()
 	var run ReportRun
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		// The caller's floor, not the stored one. A run saved under a laxer
 		// floor must not serve rows this installation would withhold today.
@@ -271,7 +272,7 @@ func (h analyticsQueryHandlers) ExplainReportRunCell(
 
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = ExplainReportRunCell(ctx, tx, ids.UUID(runID), group, h.floor)
 		return err
@@ -431,7 +432,7 @@ func (h analyticsQueryHandlers) ExplainAnalyticsCell(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = ExplainAnalyticsCell(ctx, tx, in, h.floor)
 		return err

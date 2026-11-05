@@ -31,24 +31,28 @@ func StampActivityAffordances(ctx context.Context, tx pgx.Tx, page []crmcontract
 	return stampAwaitingOutcome(ctx, tx, page, asOf)
 }
 
-// stampActivitiesWritable answers the question the update path asks: the
-// object grant, then the row authority auth.ActivityWritableSubset answers
-// for the whole page at once.
+// stampActivitiesWritable answers what the update and archive paths ask. The
+// update path needs the object grant, then the row authority for the whole
+// page at once. Archivable is auth.ArchivableSubset's answer whole.
 func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+	named := make([]ids.UUID, len(page))
+	for i := range page {
+		named[i] = ids.UUID(page[i].Id)
+	}
 	may := make(map[ids.UUID]bool)
 	if mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate) && len(page) > 0 {
-		named := make([]ids.UUID, len(page))
-		for i := range page {
-			named[i] = ids.UUID(page[i].Id)
-		}
 		var err error
 		if may, err = auth.ActivityWritableSubset(ctx, tx, named); err != nil {
 			return err
 		}
 	}
-	for i := range page {
-		w := may[ids.UUID(page[i].Id)]
-		page[i].Writable = &w
+	archivable, err := auth.ArchivableSubset(ctx, tx, auth.ActivityArchive, named)
+	if err != nil {
+		return err
+	}
+	for i, id := range named {
+		w, a := may[id], archivable[id]
+		page[i].Writable, page[i].Archivable = &w, &a
 	}
 	return nil
 }

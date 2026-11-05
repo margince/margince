@@ -95,3 +95,21 @@ export const OpensADialog: Story = {
     ).toHaveAttribute("aria-haspopup", "dialog");
   },
 };
+
+// The link half, which a row with an address uses. Asserted as a link and not
+// as a button, because that difference is what the half exists for. A press
+// handler gives a reader no address to copy.
+export const OpensALink: Story = {
+  render: () => <RowOpen href="#/tasks/t-1" label="Open Renewal reminder" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("link", {
+      name: "Open Renewal reminder",
+    });
+    // The rendered address carries the leading slash AppLink gives it.
+    await expect(link).toHaveAttribute("href", "/#/tasks/t-1");
+    await expect(
+      canvas.queryByRole("button", { name: "Open Renewal reminder" }),
+    ).toBeNull();
+  },
+};

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
+<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -32,13 +32,25 @@ provider record ──▶ connector.Normalize ──▶ Sink.Upsert  (ONE transa
               idempotent on (source_system, source_id) — a replay is a free no-op
 ```
 
-Three rules sit on top of that write:
+Four rules sit on top of that write:
 
 - **connector ≤ human.** A connector's declared scopes must be a part of the granting human's *live*
   scopes. This is checked at connect time (`ErrScopeExceeded`), the same rule agents follow.
   - Every connector declares `ScopeRead` / `TierAutoExecute` for **capture**. What it pulls in is never
     more than its granting human may see.
   - If the human gets a lower role, every grant the sync runs under gets smaller at once.
+- A role that cannot record what capture writes cannot capture. `capture.CaptureRefusal` is the one
+  check. It refuses a read seat, and a role without `create` on `activity`, `contact` or `lead`, the
+  objects the Sink creates. The shipped Read-only role is the one that fails it.
+  - Connect asks it before the vault write, so a refusal stores no row and no secret. Every connect
+    branch answers `403 role_cannot_capture`, and so does a history import start.
+  - The connect screen reads it first, as `seat_capture` on `GET /connectors`, and shows no connect
+    button.
+  - Each sync, backfill page, import preview and push-watch renewal asks it before the credential is
+    read. A sync records the refusal as the `forbidden` class below.
+  - A role change and a role grant edit make the holders' connections due at once, through
+    `identity.Service.WithMailCapture`. The member dialog warns before a change that stops a
+    member's connections.
 - **Capture only reads; sending is a separate seam.** Two connectors also implement an *optional* send
   seam. One is Gmail (`connector.EmailSender`), which asks for `gmail.send` beside `gmail.readonly` on
   one consent, because Google will not add a scope to an existing refresh token. The other is Telegram
@@ -46,9 +58,10 @@ Three rules sit on top of that write:
   - Neither can be reached from the capture path. The `comms` module owns the outbound side. It stages
     a lasting row, checks the seat of the staging human again at send time, and gates on consent. See
     [outbound-messaging.md](outbound-messaging.md).
-- **Only humans connect.** Every connector operation is `x-agent-access: human-only` (except the OAuth
-  callback, which has no session). An agent must never grant itself read access to a human's personal
-  mail.
+- **Only humans connect.** Every connect flow is `x-agent-access: human-only` (except the OAuth
+  callback, which has no session), because the provider's consent needs a browser. An agent must never
+  grant itself read access to a human's personal mail. Once connected, an agent may change the mailbox's
+  settings or disconnect it for its user, and asks first where a change reaches colleagues.
 
 ## The connector interface
 
@@ -116,9 +129,13 @@ One pipeline step runs *inside* the Sink, before anything is written:
   contacts module. A full match is used again, and a close match makes a record and logs it for the
   review queue. An erased address stays erased.
 
-  The **company** is not made here. Making a company from every mail domain that is not a consumer one
-  would make companies named after single users (`sebastian@kestner.example` would become "Kestner").
-  - Capture records an open question in `company_domain_disposition`, and a `domain_triage` site read
+  The employer check belongs to the shared contact writer in
+  `backend/internal/modules/contacts/employerresolve.go`. Typed entry, agents, leads,
+  imports and capture all reach it. A chosen company is used again. A company
+  name uses one clear match or creates a company and employment in the same write. Conflicting
+  name and domain matches are refused. Without a name, a business domain reuses a known company
+  or enters durable triage; a personal domain never supplies a made-up company name.
+  - The resolver records an open question in `company_domain_disposition`, and a `domain_triage` site read
     answers it. A `company` verdict makes the company from what the site states. A `personal` or
     `provider` verdict refuses one for good.
   - Mail from a consumer domain is answered by that domain, and asks nothing. The list is the shipped baseline plus
@@ -173,8 +190,14 @@ A connector's records reach the CRM through one of five paths, and all of them e
      (`2m·2^n`, capped at `4h`, ±20% jitter).
    - After 20 failures in a row, it drops to a daily probe, and it comes back after one success. `error` can
      still sync; only `disconnected` / `reauth_required` park a row.
-   - The error classes (`rate_limited | unreachable | auth | history_gone | internal`) show up as
-     `last_sync_error_class`.
+   - The error classes (`rate_limited | unreachable | auth | history_gone | forbidden | internal`)
+     show up as `last_sync_error_class`.
+   - `forbidden` means the member's role or seat no longer lets capture write. The sync asks before it
+     reads the credential, so the provider gets no call. The row turns `error` at once, and the next
+     check comes after the normal mail wait (`capture.mail_sync_interval_seconds`), not on the back-off
+     ladder. It writes one `system_log` line
+     when the class starts, not one per tick. A restored role resumes on the next tick, and a history
+     import that the role stopped resumes with it.
 3. **Push: the two mail vendors.** With a Pub/Sub topic set up, Gmail delivers change notices to
    `POST /webhooks/gmail`. It checks a shared secret token, + Google OIDC when set. With a notice URL set
    up, Graph delivers them to `POST /webhooks/graph`. It checks the token alone, since Microsoft signs
@@ -229,8 +252,9 @@ refresh token (see below).
 ## The connectors
 
 Every connection is standing, and syncs in the background. Mail and calendar are always separate
-connections, on both Google and Microsoft. There is one consent each, so a seat can bring one without
-the other, and disconnect either.
+connections, on both Google and Microsoft, so a seat can bring one without the other, and disconnect
+either. Each has its own consent, with one exception. A Gmail connect with `also_connect: gcal` asks
+for both on one Google screen. The callback seals that one grant into both connections.
 
 | | **Gmail** | **IMAP** | **Graph** (Outlook mail) | **Calendar** (gcal) | **Graph calendar** (graphcal) | **Telegram** |
 |---|---|---|---|---|---|---|
@@ -365,9 +389,19 @@ connection** footer. The roster manages an existing connection.
 
 ### Google Calendar (gcal): standing OAuth, poll only
 
-OAuth2 to Google with `calendar.readonly`. It **uses the same Google OAuth app as Gmail**, but as its
-*own* authorization that asks for the calendar scope alone. It sets no `include_granted_scopes`, so the
-grant to read mail never leaks into this credential.
+OAuth2 to Google with `calendar.readonly` and `calendar.events.owned` (`gcal.ConsentScopes`). It **uses
+the same Google OAuth app as Gmail**. Connected alone, it is its *own* authorization that asks for
+those calendar scopes only. It sets no
+`include_granted_scopes`, so an earlier grant to read mail never leaks into this credential.
+
+Connected together with Gmail, it shares the mail consent instead
+(`internal/compose/connectors_sharedconsent.go`). The Gmail consent adds the calendar scopes, so the user
+sees one screen. The code from Google is single use, so the callback exchanges it once and seals that
+grant into both rows. The calendar row then holds a refresh token that also carries the mail scopes,
+and its `provider_scopes` says so.
+
+The user can clear the calendar on that screen. A grant without `calendar.readonly` connects the
+mailbox alone and lands as a refused calendar. Disconnecting one row deletes only its own vault copy.
 
 The sync of new mail uses a `syncToken`. A stale token
 (`ErrSyncTokenGone`) starts it again. No push, and no `Backfiller`. The first sync takes a full list
@@ -489,6 +523,7 @@ The pipeline is live; these were left out of scope:
 | The one Sink + write shape + the guard against a double write | `internal/modules/capture/sink.go` |
 | The registry: the scope check, `Connect`/`Disconnect`, SyncOnce, backfill, watch | `internal/modules/capture/registry.go`, `registry_connections.go`, `registry_watch.go`, `backfill.go` |
 | The sync state side table (back off, error classes, move down and come back) | `internal/modules/capture/syncstate.go` |
+| Whether a member's role may capture (connect, sync, backfill, role dialog) | `internal/modules/capture/captureauthority.go`, `captureseats.go`, `internal/compose/memberseam.go` |
 | The consumer mail gate + the workspace's own list | `internal/platform/freemail/`, `internal/modules/capture/freemaildomain.go` |
 | Domain triage: the company question and its verdict | `internal/modules/contacts/domaintriage.go`, `domaintriageresolve.go`, `internal/compose/deepreadtriage.go` |
 | Counterparty and RFC822 mapping (direction, ThreadKey, skip rules) | `internal/modules/capture/mailmap/mailmap.go` |
@@ -522,3 +557,17 @@ The pipeline is live; these were left out of scope:
   [outbound-webhooks.md](outbound-webhooks.md).
 - What every module owns, including the tables and HTTP surface of `capture`:
   [reference/modules.md](../reference/modules.md).
+
+## A stopped connection needs help
+
+The connection health classifier supplies the owner banner, feed and System health.
+It finds failed connections and imports, late syncs, and mailboxes with no recent delivery.
+Delivery time changes only to the newest arrival time the mail provider reports in a
+completed sync. Mail filtered out still proves delivery; sender date headers, unknown
+arrival times, backfills and calendar events do not. Replaying old mail cannot restart the timer. The sync snapshot fence
+stops an old pull from changing the new connection's health.
+
+The owner can dismiss a silence warning. A later delivery followed by another silence brings
+the warning back. Sync failures cannot be dismissed. Connection settings use the existing
+lifecycle audit; the event catalog has no connection entity. Admin and ops read connection
+state through the same classifier without reading correspondence.

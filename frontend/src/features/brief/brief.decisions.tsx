@@ -3,6 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import type {
   DecisionCardLabels,
   DecisionStatusLabels,
@@ -21,7 +22,6 @@ import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatCountdown } from "../../format/now";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -31,12 +31,13 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   resolveDisplay,
   stagedDayFormatter,
@@ -54,6 +55,7 @@ import {
 } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
 import { commitTray } from "./brief.decisions.commit";
+import { DECK_KEY_WORDS } from "./brief.deckwords";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
 // what is in it.
@@ -98,14 +100,15 @@ function deckLabels(
   t: (key: MessageKey, params?: Record<string, string>) => string,
   plural: PluralTranslator,
   locale: Parameters<typeof formatDateTime>[1],
+  zone: string,
 ): DecisionDeckLabels {
   const card: DecisionCardLabels = {
-    accept: t("brief.approval.approve"),
-    edit: t("trust.edit"),
-    reject: t("decision.reject"),
+    accept: t(DECK_KEY_WORDS.accept),
+    edit: t(DECK_KEY_WORDS.edit),
+    reject: t(DECK_KEY_WORDS.reject),
     // The deck is the one surface where "later" is a real answer: it is the top
     // of the pile, not the pile itself, and the full queue is one click away.
-    skip: t("brief.deck.later"),
+    skip: t(DECK_KEY_WORDS.skip),
     expired: t("decision.expired"),
     draftSubject: t("decision.draftSubject"),
     draftBody: t("decision.draftBody"),
@@ -113,6 +116,7 @@ function deckLabels(
     showLess: t("brief.deck.showLess"),
     noContent: t("common.empty"),
     loading: t("brief.panel.decisions"),
+    summaryWords: summaryWords(t),
   };
   return {
     card,
@@ -137,10 +141,10 @@ function deckLabels(
       plural("brief.deck.edited", count, {
         count: formatNumber(count, locale),
       }),
-    commit: t("brief.deck.commit"),
+    commit: t(DECK_KEY_WORDS.commit),
     commitNothingToSend: t("brief.deck.commitNothingToSend"),
     acceptanceChanged: t("brief.deck.acceptanceChanged"),
-    unstage: t("brief.deck.unstage"),
+    unstage: t(DECK_KEY_WORDS.unstage),
     clearedTitle: t("brief.deck.clearedTitle"),
     cleared: (count) =>
       plural("brief.deck.cleared", count, {
@@ -148,7 +152,7 @@ function deckLabels(
       }),
     clearedTime: (atMs) =>
       t("brief.deck.clearedTime", {
-        at: formatDateTime(new Date(atMs).toISOString(), locale, viewerZone()),
+        at: formatDateTime(new Date(atMs).toISOString(), locale, zone),
       }),
     empty: t("brief.deck.empty"),
     bundleSummary: (members) =>
@@ -187,11 +191,11 @@ export function DecisionsSection({
   onAlreadyDecided: () => void;
   expanded?: boolean;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const stagedDay = stagedDayFormatter(locale, recordZone);
+  const stagedDay = stagedDayFormatter(locale, readerZone);
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,
@@ -297,15 +301,18 @@ export function DecisionsSection({
         listCap={LISTED}
         listRest={(hidden) => (
           <p className="ddeck-list-rest">
-            <a className="entity-link" href={worklistLaneHref("decisions")}>
+            <AppLink
+              className="entity-link"
+              href={worklistLaneHref("decisions")}
+            >
               {plural("brief.deck.rest", hidden, {
                 count: formatNumber(hidden, locale),
               })}
-            </a>
+            </AppLink>
           </p>
         )}
         labels={{
-          ...deckLabels(t, plural, locale),
+          ...deckLabels(t, plural, locale, readerZone),
           ...(expanded ? { compactRow: undefined } : {}),
         }}
         state={state}
@@ -377,7 +384,7 @@ export function DecisionsSection({
             approval.assignee_inactive,
             approval.preview,
             locale,
-            recordZone,
+            readerZone,
           ),
         })}
       />

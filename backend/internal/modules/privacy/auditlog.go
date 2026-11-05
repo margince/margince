@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -88,20 +89,6 @@ type AuditPage struct {
 	HasMore    bool
 }
 
-// ListAuditLog reads the installation's audit history, newest first.
-//
-// Human-only: an agent reading the log that records its own governance would
-// observe exactly the oversight trail that bounds it. The agent gate refuses
-// the route as well, and this is the arm that survives a routing change.
-//
-// Admin-only, and deliberately NOT "unbounded row scope". This is the
-// unrestricted compliance read, distinct from the per-record history every
-// member may read on records they can see, and the spec's governance matrix
-// reserves it for the admin alone. Row scope is the wrong predicate for it:
-// ops and read_only both seed with scope `all`, so an unbounded check handed
-// the whole governance trail to two roles the matrix denies — the compliance
-// read is oversight OF ops' machine-origin actions and cannot sit with the
-// role it oversees.
 // auditActivityAlias names the activity an audit row is ABOUT, joined so the
 // audience the row's author set can be asked about it. It is deliberately not
 // `a` or one of the app_user aliases already in the statement.
@@ -256,14 +243,21 @@ const auditContentStateKey = "content_state"
 // cannot be partially redacted.
 var auditWithheldImage = []byte(`{"` + auditContentStateKey + `":"` + string(crmcontracts.ActivityContentStateWithheld) + `"}`)
 
+// ListAuditLog reads the installation's audit history, newest first.
+//
+// A user who may read the trail may hand that read to the agent on their passport.
+// The agent sees its own entries there under its own name.
+//
+// Gated on a grant and not on unbounded row scope, because the governance matrix
+// reserves this unrestricted compliance read for the admin. Row scope is the wrong
+// predicate: ops and read_only both seed with scope `all`, and this read is
+// oversight of ops' machine-origin actions.
 func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPage, error) {
-	// Human is spelled out rather than delegated to auth.RequireHuman, which
-	// only turns agents away: nothing internal reads this trail, so connector
-	// and system principals are refused here too — which is also why
-	// RequireAdmin's system bypass below is unreachable.
+	// Connector and system principals are refused too, because nothing internal
+	// reads this trail. So RequireAdmin's system bypass below is unreachable.
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return AuditPage{}, fmt.Errorf("human-only compliance read: %w", apperrors.ErrPermissionDenied)
+	if !ok || !actor.HumanOrItsAgent() {
+		return AuditPage{}, fmt.Errorf("this compliance read is for a user or their agent: %w", apperrors.ErrPermissionDenied)
 	}
 	// A grant rather than the literal admin role, so an installation can hand
 	// the trail to whoever answers for it. Admin alone by default, and ops
@@ -338,11 +332,11 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			`SELECT a.id, a.actor_type, a.actor_id, a.passport_id, a.on_behalf_of,
 			        a.action, a.entity_type, a.entity_id, a.before, a.after, a.authorization_rule,
 			        a.evidence, a.occurred_at, a.batch_id,
-			        `+auditActorNameColumn+`, obo.display_name, oc.client_name,
+			        `+auditattribution.ActorNameColumn+`, obo.display_name, oc.client_name,
 			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
 			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
-			 FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+auditActivityJoin+`
+			 FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+auditActivityJoin+`
 			 WHERE `+where+`
 			 ORDER BY a.occurred_at DESC, a.id DESC
 			 LIMIT `+arg(limit+1), args...)

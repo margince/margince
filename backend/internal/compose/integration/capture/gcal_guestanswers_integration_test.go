@@ -189,7 +189,7 @@ func TestEachGuestsAnswerIsStoredAndShown(t *testing.T) {
 			shown[deref1(guest.Address)] = *guest.Response
 		}
 	}
-	if shown[guestLater] != crmcontracts.MeetingResponseDeclined || shown[guestUnread] != crmcontracts.MeetingResponseNeedsAction {
+	if shown[guestLater] != crmcontracts.MeetingResponseDeclined {
 		t.Errorf("the guest list shows the answers %v", shown)
 	}
 	answers := map[ids.UUID]crmcontracts.MeetingResponse{}
@@ -199,6 +199,14 @@ func TestEachGuestsAnswerIsStoredAndShown(t *testing.T) {
 			answers[ids.UUID(*answer.UserId)] = answer.Response
 		case answer.ContactId != nil:
 			answers[ids.UUID(*answer.ContactId)] = answer.Response
+		}
+	}
+	for _, address := range []string{guestUnread, guestOptional} {
+		if len(rows[address]) != 1 || rows[address][0].contactID == nil {
+			t.Fatalf("eligible guest %s is not a contact: %+v", address, rows[address])
+		}
+		if answers[*rows[address][0].contactID] != crmcontracts.MeetingResponseNeedsAction {
+			t.Errorf("eligible guest %s response = %s, want needs_action", address, answers[*rows[address][0].contactID])
 		}
 	}
 	if answers[colleagueA] != crmcontracts.MeetingResponseAccepted || answers[colleagueB] != crmcontracts.MeetingResponseTentative ||

@@ -9,16 +9,18 @@ import {
   useCallStart,
 } from "../../lib/callstart";
 import { intentAbout } from "../../lib/compose.intent";
+import { useMailboxConnected } from "../../lib/connectors";
 import { COMPOSE_PARAM, THREAD_PARAM } from "../../lib/contactpage.address";
 import {
   transportForActivity,
   useTransports,
 } from "../../lib/contacttransports";
+import { NOTICE_CASE_PARAM } from "../../lib/privacycaselink";
 import { navigate } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import { useUrlParams } from "../../lib/urlstate";
 import { useWriteTo, type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { ComposeModal } from "../mail/compose";
-import { useMailboxConnected } from "../settings/writetohost";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import type { Contact360, ContactMomentAction } from "./contactpage";
 
@@ -53,6 +55,16 @@ function composerIntentOf(
   return intentAbout(t(key), prefill?.subject);
 }
 
+/**
+ * Whether pressing this action has the model write. One rule for the press and
+ * for the face: a verb that drafts wears indigo, and one that wears indigo drafts.
+ */
+export function momentDrafts(action: ContactMomentAction): boolean {
+  return action.destination
+    ? action.destination.surface === "composer"
+    : action.kind === "draft_reply";
+}
+
 // What a moment card's action does, off the surface the server named. A
 // standalone function rather than a closure inside ContactPageV2: the switch's
 // branches are this function's cognitive weight, not the page's.
@@ -65,7 +77,7 @@ export function runContactMomentAction(
   t: ReturnType<typeof useT>,
   handlers: Readonly<{
     contactId: string;
-    openComposer: (intent: string) => void;
+    openComposer: (intent: string, drafts?: boolean) => void;
     setDrawer: (drawer: Drawer) => void;
     openBrief: (activityId: string | null) => void;
     // The prep moment is raised off the next meeting, so that is the one it
@@ -79,17 +91,25 @@ export function runContactMomentAction(
   if (!destination) {
     // An action with no destination is its own destination. The composer is
     // the sensible home for the drafting kinds.
-    if (action.kind === "draft_reply") {
-      handlers.openComposer("");
+    if (momentDrafts(action)) {
+      handlers.openComposer("", true);
     }
     return;
   }
   switch (destination.surface) {
+    case "privacy_notice":
+      if (destination.entity_id) {
+        navigate(
+          settingsHref("privacy"),
+          new Map([[NOTICE_CASE_PARAM, destination.entity_id]]),
+        );
+      }
+      return;
     case "booking":
       navigate({ screen: "book", id: `contact-${handlers.contactId}` });
       return;
     case "composer":
-      handlers.openComposer(composerIntentOf(destination.prefill, t));
+      handlers.openComposer(composerIntentOf(destination.prefill, t), true);
       return;
     case "research":
       handlers.setDrawer("research");
@@ -136,14 +156,14 @@ export function ContactWriteTo({
   children,
 }: Readonly<{
   contactId: string;
-  onWrite: () => void;
+  onWrite: (draftIntent: string | undefined) => void;
   children: ReactNode;
 }>) {
   const shell = useWriteTo();
   const connected = useMailboxConnected();
   const writeTo: WriteTo = (target) => {
     if (target.entityType === "contact" && target.entityId === contactId) {
-      onWrite();
+      onWrite(target.draftIntent);
       return;
     }
     shell?.(target);
@@ -202,6 +222,9 @@ export type Drawer =
   | "activity_call"
   | null;
 
+/** What a press on this page asked the composer for. */
+export type PressedComposer = Readonly<{ intent: string; drafts: boolean }>;
+
 /**
  * Whether the composer is open, what it is about, and how to close it.
  *
@@ -220,7 +243,7 @@ export type Drawer =
 export function useComposer(
   t: ReturnType<typeof useT>,
   pressedOpen: boolean,
-  pressedIntent: string,
+  pressed: PressedComposer,
   onPressedClose: () => void,
 ): Readonly<{
   open: boolean;
@@ -244,7 +267,7 @@ export function useComposer(
   };
   return {
     open: pressedOpen || key !== undefined,
-    intent: key ? t(key) : pressedIntent,
+    intent: key ? t(key) : pressed.intent,
     // Which conversation, when the address named one. Read beside the intent
     // rather than folded into it: the intent is words for the reader, and this
     // decides which transport the composer opens on.
@@ -254,8 +277,9 @@ export function useComposer(
     // dismissed would anchor that press on it.
     threadId: (key !== undefined && params.get(THREAD_PARAM)) || undefined,
     // The address is the worklist's prepared move, pressed as an AI verb, so
-    // that composer drafts on arrival. A press of Write here starts empty.
-    draftOnOpen: key !== undefined,
+    // that composer drafts on arrival, as a pressed AI verb's does. A press of
+    // Write here starts empty.
+    draftOnOpen: key !== undefined || pressed.drafts,
     close,
   };
 }

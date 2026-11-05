@@ -11,10 +11,11 @@ The weekly review in Margince is on **Home → Weekly**, and reads as a report. 
 once, on the Monday after the week it covers, and marks it **Frozen**. You cannot make it again: the
 counts are what they were.
 
-Its title is the week it covers. Above it are the calendar week and when the report was frozen.
-Beside the title, the two arrows **Earlier week** and **Later week** step through the weeks that have
-a report. Under it, a card holds what Margince wrote about the week, in your own language, marked
-as written by AI. The report's parts are:
+Its title is the week it covers, under the calendar week. The line under the title says when the
+report was frozen. At the end of the calendar week's line, the two arrows **Earlier week** and
+**Later week** step through the weeks that have a report. When Margince wrote about the week, a
+card first in the report holds those words, in your own language, marked as written by AI. The
+report's parts are:
 - **At a glance**: four figures. Deals won shows what they were worth; the other three show their
   share as a bar. Each shows its change on the week before, where there is one.
 - **Closed deals**: the deals won and lost, each with what it closed at, and a bar of won against
@@ -67,8 +68,8 @@ The weekly review counts recorded work, and says plainly where the record is sho
 
 The **Weekly scorecard** is one table. Each row has a count and what the count rests on.
 
-For leads and meetings it shows leads moved on, how many replies missed the target, and meetings
-held (with booked and missed meetings beside them).
+For leads and meetings it shows leads moved on and leads past the reply target, answered late or not answered.
+It also shows meetings marked held, with booked and no-show meetings beside them. A seat that cannot read activities sees no meeting figures in the review.
 
 For deals it shows stage moves on and back, and the middle value of the days a deal spent in the stage
 it left. It shows how many open deals have a next step, and how many have more than one contact. It

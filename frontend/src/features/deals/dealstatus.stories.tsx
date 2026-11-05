@@ -1,7 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { NextTaskProvider } from "../../components/nexttaskslot";
-import { Button } from "../../design-system/atoms";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,12 +11,7 @@ import { DealStatusCardPanel } from "./dealstatus";
 type WrittenBy = components["schemas"]["WrittenBy"];
 type Situation = "task" | "request" | "covered";
 
-function panel(
-  writer: WrittenBy,
-  situation: Situation = "task",
-  coverage?: components["schemas"]["MailCaptureCoverage"]["state"],
-  withNextTask = false,
-) {
+function panel(writer: WrittenBy, situation: Situation = "task") {
   const request = situation !== "task";
   const next = request
     ? {
@@ -66,16 +59,6 @@ function panel(
       "GET /deals/demo-deal/status": () =>
         jsonResponse({
           deal_id: "demo-deal",
-          ...(coverage
-            ? {
-                mail_coverage: {
-                  channel: "email",
-                  state: coverage,
-                  interval_to: "2026-09-05T09:00:00Z",
-                  evaluated_at: "2026-09-05T09:00:00Z",
-                },
-              }
-            : {}),
           story: {
             sentences: [
               {
@@ -99,18 +82,12 @@ function panel(
     });
     return (
       <StoryProviders>
-        <NextTaskProvider
-          value={
-            withNextTask ? <Button variant="ghost">Next task</Button> : null
-          }
-        >
-          <DealStatusCardPanel
-            deal={{
-              id: "demo-deal",
-              name: request ? "Won account" : "Demo proposal",
-            }}
-          />
-        </NextTaskProvider>
+        <DealStatusCardPanel
+          deal={{
+            id: "demo-deal",
+            name: request ? "Won account" : "Demo proposal",
+          }}
+        />
       </StoryProviders>
     );
   };
@@ -122,9 +99,6 @@ type Story = StoryObj;
 
 export const ExistingTask: Story = { render: panel("model") };
 export const ComposedBrief: Story = { render: panel("deterministic") };
-export const WithNextTask: Story = {
-  render: panel("model", "task", undefined, true),
-};
 export const ExistingTaskDark: Story = {
   globals: { theme: "dark" },
   render: panel("model"),
@@ -142,11 +116,4 @@ export const RequestAlreadyCovered: Story = {
 export const RequestAlreadyCoveredDark: Story = {
   ...RequestAlreadyCovered,
   globals: { theme: "dark" },
-};
-
-export const CurrentRequestWithUnavailableCapture: Story = {
-  render: panel("deterministic", "covered", "unavailable"),
-};
-export const HistoricalReviewWithPartialCapture: Story = {
-  render: panel("deterministic", "request", "partial"),
 };

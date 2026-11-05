@@ -4,9 +4,11 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../format/timezone";
+import { ProblemError } from "../lib/problem";
 import { RecordView } from "./recordview";
 
 afterEach(cleanup);
@@ -95,5 +97,78 @@ describe("the record's feed", () => {
     expect(
       follows(screen.getByTestId("record-tabs"), screen.getByText("Body")),
     ).toBe(true);
+  });
+});
+
+describe("renaming the record", () => {
+  const rename = (onSave = vi.fn(async (_next: string) => {})) => ({
+    label: "Full name",
+    value: "Brandt Automotive GmbH",
+    canEdit: true,
+    onSave,
+  });
+
+  it("opens the name from the heading in a dialog and saves it on Save", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async (_next: string) => {});
+    render(<RecordView {...record} rename={rename(onSave)} />);
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Brandt Automotive GmbH",
+    });
+    await user.click(
+      within(heading).getByRole("button", { name: /^Change Full name/ }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Full name" });
+    const field = within(dialog).getByRole("textbox", { name: "Full name" });
+    await user.clear(field);
+    await user.type(field, "Brandt Mobility GmbH");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith("Brandt Mobility GmbH");
+  });
+
+  it("cannot save a blank name, and keeps the dialog open", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async (_next: string) => {});
+    render(<RecordView {...record} rename={rename(onSave)} />);
+    await user.click(screen.getByRole("button", { name: /^Change Full name/ }));
+    const field = screen.getByRole("textbox", { name: "Full name" });
+    await user.clear(field);
+    await user.type(field, "   {Enter}");
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("dialog", { name: "Full name" })).toBeVisible();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("shows a refused rename in the dialog and keeps what was typed", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async (_next: string) => {
+      throw new ProblemError({ detail: "Somebody else changed this record." });
+    });
+    const onEditingChange = vi.fn();
+    render(
+      <RecordView
+        {...record}
+        rename={{ ...rename(onSave), onEditingChange }}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /^Change Full name/ }));
+    expect(onEditingChange).toHaveBeenLastCalledWith(true);
+    const field = screen.getByRole("textbox", { name: "Full name" });
+    await user.type(field, " AG{Enter}");
+    expect(
+      await screen.findByText("Somebody else changed this record."),
+    ).toBeVisible();
+    expect(field).toHaveValue("Brandt Automotive GmbH AG");
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onEditingChange).toHaveBeenLastCalledWith(true);
+  });
+
+  it("keeps the name as text for a reader who cannot change it", () => {
+    render(<RecordView {...record} rename={{ ...rename(), canEdit: false }} />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Brandt Automotive GmbH",
+    );
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

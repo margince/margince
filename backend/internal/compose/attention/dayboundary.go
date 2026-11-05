@@ -13,6 +13,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -153,6 +154,29 @@ func (s *Service) location(ctx context.Context) (*time.Location, error) {
 		return nil, errors.New("attention: the installation timezone resolved to no location")
 	}
 	return resolved, nil
+}
+
+// zoneOncePerRead answers the first zone it resolves for the rest of one read.
+// Every lane of a read measures its day in that one zone, so asking again only
+// repeats a query. A failure is not kept, so the next lane asks again.
+func zoneOncePerRead(z Zone) Zone {
+	if z == nil {
+		return nil
+	}
+	var mu sync.Mutex
+	var known *time.Location
+	return func(ctx context.Context) (*time.Location, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		if known != nil {
+			return known, nil
+		}
+		resolved, err := z(ctx)
+		if err == nil {
+			known = resolved
+		}
+		return resolved, err
+	}
 }
 
 // The five runs a dated row can fall into. Named rather than spelled at each

@@ -51,9 +51,8 @@ var McpClientCheck = config.DefineStored(config.Spec[bool]{
 // asked for it, a settings answer or a tool list did.
 const clientCheckReadActor = "system:client_check_read"
 
-// ReadClientCheck reads the switch as the system. Every role reads the settings
-// answer and every passport a tool list. Only an admin may read agent_client, so
-// a seat's own read would refuse both.
+// ReadClientCheck reads the switch as the system, because every passport's tool
+// list reads it and only an admin may read agent_client.
 func ReadClientCheck(ctx context.Context, cfg *config.Config) (bool, error) {
 	return config.StoredVal(principal.SystemActing(ctx, clientCheckReadActor), cfg, McpClientCheck)
 }
@@ -124,4 +123,14 @@ func (m RegistrationMethods) admits(createdVia string) bool {
 		return m.MetadataDocument
 	}
 	return true
+}
+
+// ClientCheck reads the switch for the admin's client list, under the reader's
+// own agent_client grant. A service built without its configuration reads it off.
+func (s *Service) ClientCheck(ctx context.Context, actor Identity) (bool, error) {
+	ctx, err := admit(ctx, actor, agentClientObject, principal.ActionRead)
+	if err != nil || s.config == nil {
+		return false, err
+	}
+	return config.StoredVal(ctx, s.config, McpClientCheck)
 }

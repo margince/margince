@@ -47,7 +47,8 @@ const MaxBodyLen = 8000
 // the raw original reaches the Sink verbatim as evidence, so a field absent
 // here is not a field lost.
 type Event struct {
-	ID string
+	Private bool
+	ID      string
 	// ICalUID is the event's identity ACROSS providers, and ID is not: ID is
 	// whatever the provider numbered this event in its own store, so the same
 	// meeting read from Google and from Graph carries two of them and dedupes
@@ -84,6 +85,10 @@ type Event struct {
 	Attendees []Actor
 	// PartiesHidden: the provider withheld guests from this copy of the event.
 	PartiesHidden bool
+	// GoogleMeet says the event's conference is a Google Meet call.
+	GoogleMeet bool
+	// Documents are the files the provider lists as attached to the event.
+	Documents []Document
 }
 
 // Actor is one organizer or attendee. The address resolves the counterparty
@@ -114,10 +119,12 @@ type Meeting struct {
 	icalUID         string
 	subject         string
 	body            string
+	agenda          string
 	masked          bool
 	occurredAt      time.Time
 	allDay          bool
 	durationSeconds *int
+	private         bool
 	cancelled       bool
 	ownerDeclined   bool
 	hasExternal     bool // any party outside the OWNER's own domain; the sink judges the rest
@@ -125,6 +132,7 @@ type Meeting struct {
 	ownerDomain     string
 	addresses       []string
 	participants    connector.Parties
+	notes           []capture.MeetingDocument
 }
 
 // Classify applies the meeting rules to one decoded event against the account
@@ -141,10 +149,12 @@ func Classify(ev Event, owner string) Meeting {
 		icalUID:         strings.TrimSpace(ev.ICalUID),
 		subject:         strings.TrimSpace(ev.Subject),
 		body:            body,
+		agenda:          agendaFingerprint(ev.Description),
 		masked:          masked,
 		occurredAt:      ev.StartsAt,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
+		private:         ev.Private,
 		cancelled:       ev.Cancelled,
 		ownerDeclined:   ev.OwnerDeclined,
 		// The organizer counts as a party: an externally-organized meeting is a
@@ -159,6 +169,7 @@ func Classify(ev Event, owner string) Meeting {
 		ownerDomain:   ownerDom,
 		addresses:     eventAddresses(ev, owner),
 		participants:  meetingParties(ev),
+		notes:         NotesDocuments(ev, owner),
 	}
 }
 
@@ -232,16 +243,19 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
-			Kind:    "meeting",
-			Subject: m.subject,
-			Body:    m.body,
+			Kind:            "meeting",
+			ProviderPrivate: m.private,
+			Subject:         m.subject,
+			Body:            m.body,
 			// The sink adds a mask of the subject to this.
 			CredentialsMasked: m.masked,
+			AgendaFingerprint: m.agenda,
 			OccurredAt:        m.occurredAt,
 			DateOnly:          m.allDay,
 			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
-			Direction: "",
+			Direction:        "",
+			MeetingDocuments: m.notes,
 		},
 		Source:     connectorName + ":" + m.id,
 		CapturedBy: "connector:" + connectorName,
@@ -483,12 +497,4 @@ func SettlementOf(raw []byte, owner string, decode Decode) (Settlement, error) {
 	}
 	_, settlement := Classify(ev, owner).Settle()
 	return settlement, nil
-}
-
-func eventDuration(event Event) *int {
-	if event.StartsAt.IsZero() || !event.EndsAt.After(event.StartsAt) {
-		return nil
-	}
-	seconds := int(event.EndsAt.Sub(event.StartsAt) / time.Second)
-	return capture.StorableDuration(&seconds)
 }

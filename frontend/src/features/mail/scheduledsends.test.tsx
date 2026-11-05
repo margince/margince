@@ -79,7 +79,11 @@ type Call = {
   ifMatch: string | null;
 };
 
-function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
+function mount(
+  rows: Send[],
+  preview: PreviewFor = allowedPreview,
+  mailboxes: readonly unknown[] = [],
+) {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -115,6 +119,11 @@ function mount(rows: Send[], preview: PreviewFor = allowedPreview) {
           JSON.stringify({ ...moved, version: (moved?.version ?? 0) + 1 }),
           { headers: { "Content-Type": "application/json" } },
         );
+      }
+      if (url.pathname.endsWith("/connectors")) {
+        return new Response(JSON.stringify({ data: mailboxes }), {
+          headers: { "Content-Type": "application/json" },
+        });
       }
       if (isPreviewDoor(url.pathname)) {
         return new Response(JSON.stringify(preview(previewedAddresses(body))), {
@@ -403,10 +412,22 @@ it("narrows to the held messages and hides the timeline", async () => {
   expect(screen.queryByText("The renewal quote")).toBeNull();
 });
 
-it("says nothing is scheduled with one sentence, not three", async () => {
+it("says nothing is scheduled once, and offers the way to write one", async () => {
+  mount([], allowedPreview, [
+    { id: "m1", provider: "gmail", status: "connected", can_backfill: true },
+  ]);
+  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
+  const write = await screen.findByRole("link", { name: "Write a message" });
+  expect(write.getAttribute("href")).toMatch(/#\/contacts$/);
+  // One heading for the empty page, not one per group.
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(1);
+  expect(screen.getByText("Open a contact and choose Email.")).toBeTruthy();
+});
+
+it("offers no way to write a message without a mailbox to send from", async () => {
   mount([]);
-  expect(await screen.findByText("No scheduled messages yet.")).toBeTruthy();
-  expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+  expect(await screen.findByText("No messages scheduled.")).toBeTruthy();
+  expect(screen.queryByRole("link", { name: "Write a message" })).toBeNull();
 });
 
 // The queue says WHOSE decision stopped a message, in the composer's words.

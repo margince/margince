@@ -10,6 +10,7 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { WrittenBy } from "../../../components/citations.list";
 import { AiPending } from "../../../design-system/aipending";
+import { AiReveal } from "../../../design-system/aireveal";
 import { Badge } from "../../../design-system/atoms";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { useT } from "../../../i18n";
@@ -86,23 +87,27 @@ function BriefSentences({
     return <AiPending label={t("roomtab.brief.pending")} lines={2} />;
   }
   return (
-    <ul className="roombrief">
-      {brief.sentences.map((sentence) => {
-        const sources = sentence.evidence.map(
-          (evidence) => nameOf(evidence) ?? t("roomtab.brief.unknownSource"),
-        );
-        return (
-          <li key={sentence.text}>
-            <p>{sentence.text}</p>
-            <p className="t-caption">
-              {t("roomtab.brief.from", {
-                sources: [...new Set(sources)].join(", "),
-              })}
-            </p>
-          </li>
-        );
-      })}
-    </ul>
+    <AiReveal
+      text={brief.sentences.map((sentence) => sentence.text).join("\n")}
+    >
+      <ul className="roombrief">
+        {brief.sentences.map((sentence) => {
+          const sources = sentence.evidence.map(
+            (evidence) => nameOf(evidence) ?? t("roomtab.brief.unknownSource"),
+          );
+          return (
+            <li key={sentence.text}>
+              <p>{sentence.text}</p>
+              <p className="t-caption">
+                {t("roomtab.brief.from", {
+                  sources: [...new Set(sources)].join(", "),
+                })}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </AiReveal>
   );
 }
 

@@ -86,6 +86,7 @@
 
 .webhook-picker-list {
   max-height: 400px;
+  position: relative;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -213,7 +214,8 @@
   margin-inline-start: auto;
 }
 
-.webhook-insert-panel {
+/* The popover's own panel class positions it (fixed), so it needs no position here. */
+.popover-panel.webhook-insert-panel {
   max-height: 320px;
   overflow: auto;
 }
@@ -241,8 +243,8 @@
 
 .webhook-picker-group {
   padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--bgWell);
 }
 
 .webhook-picker-group-name {

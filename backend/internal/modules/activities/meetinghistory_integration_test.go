@@ -326,8 +326,8 @@ func TestTheSourceKeyRefusesASecondTransitionOnItsOwn(t *testing.T) {
 	insert := func() error {
 		_, err := e.owner.Exec(context.Background(), `
 			INSERT INTO activity_meeting_history
-			    (activity_id, status, effective_at, scheduled_start, actor, source_system, source_id)
-			VALUES ($1, 'held', now(), now(), 'system:connector', $2, $3)`,
+			    (activity_id, status, effective_at, scheduled_start, scheduled_precision, actor, source_system, source_id)
+			VALUES ($1, 'held', now(), now(), 'instant', 'system:connector', $2, $3)`,
 			id.UUID, system, external)
 		return err
 	}
@@ -354,8 +354,8 @@ func TestOneCalendarEventCanRecordTwoDifferentTransitions(t *testing.T) {
 	record := func(status string) error {
 		_, err := e.owner.Exec(context.Background(), `
 			INSERT INTO activity_meeting_history
-			    (activity_id, status, effective_at, scheduled_start, actor, source_system, source_id)
-			VALUES ($1, $2, now(), now(), 'system:connector', $3, $4)`,
+			    (activity_id, status, effective_at, scheduled_start, scheduled_precision, actor, source_system, source_id)
+			VALUES ($1, $2, now(), now(), 'instant', 'system:connector', $3, $4)`,
 			id.UUID, status, system, external)
 		return err
 	}
@@ -389,8 +389,8 @@ func TestABackfilledRowClaimsNoBookingMoment(t *testing.T) {
 	}
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO activity_meeting_history
-		    (activity_id, status, effective_at, scheduled_start, actor, partial_pre_history)
-		SELECT a.id, a.meeting_status, a.created_at, a.occurred_at, 'system:migration', true
+		    (activity_id, status, effective_at, scheduled_start, scheduled_precision, actor, partial_pre_history)
+		SELECT a.id, a.meeting_status, a.created_at, a.occurred_at, 'instant', 'system:migration', true
 		FROM activity a WHERE a.id = $1`, id.UUID); err != nil {
 		t.Fatalf("seeding the baseline row: %v", err)
 	}

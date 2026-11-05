@@ -1,10 +1,10 @@
 import type { components } from "../../api/schema";
 import {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
   formatDateAbbrev,
   formatDateTime,
-  formatHours,
-  formatMoney,
-  formatMoneyCompact,
   formatNumber,
 } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
@@ -32,6 +32,11 @@ export function reportingQuery(selection: ReportingSelection) {
     end_at: selection.interval?.end_at,
     target_basis: selection.target_basis,
     close_window: selection.close_window,
+    product_id: selection.product_id,
+    initiative_id: selection.initiative_id,
+    country: selection.country,
+    industry: selection.industry,
+    value_basis: selection.value_basis,
     metrics: selection.metrics,
     blocks: selection.blocks,
   };
@@ -45,14 +50,15 @@ export function reportingAmount(
 ): string {
   if (value == null) return "—";
   if (reportingMoneyUnit(unit, currency))
-    return currency ? formatMoney(value, currency, locale) : "—";
-  if (unit === "hours") return formatHours(value, locale);
-  return `${formatNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
+    return currency ? formatAnalyticsMoney(value, currency, locale) : "—";
+  if (unit === "hours") return formatAnalyticsHours(value, locale);
+  if (unit === "ratio") return formatNumber(value, locale);
+  return `${formatAnalyticsNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
 }
 
-export function metricLabel(metric: ReportingMetricID, t: Translator): string {
-  return t(`reporting.${metric}`);
-}
+// Names a metric as the catalog does, in the reader's language.
+export type MetricNames = (metric: ReportingMetricID) => string;
+
 export function blockLabel(block: ReportingBlockKind, t: Translator): string {
   return t(`reporting.${block}`);
 }
@@ -111,9 +117,17 @@ export function reportingCompactAmount(
 ): string {
   return value != null && reportingMoneyUnit(unit, currency)
     ? currency
-      ? formatMoneyCompact(value, currency, locale)
+      ? formatAnalyticsMoney(value, currency, locale)
       : "—"
     : reportingAmount(value, unit, currency, locale);
+}
+
+// A period read at its first instant, such as this week at Monday midnight.
+export function reportingPeriodIsEmpty(interval: {
+  start_at: string;
+  end_at: string;
+}): boolean {
+  return Date.parse(interval.end_at) <= Date.parse(interval.start_at);
 }
 
 export function reportingPeriodLabel(
@@ -121,6 +135,10 @@ export function reportingPeriodLabel(
   zone: string,
   locale: Locale,
 ): string {
+  // An empty period has no last day to name, only the day it starts.
+  if (reportingPeriodIsEmpty(interval)) {
+    return formatDateAbbrev(interval.start_at, locale, zone);
+  }
   return `${formatDateAbbrev(interval.start_at, locale, zone)} – ${formatDateAbbrev(new Date(Date.parse(interval.end_at) - 1).toISOString(), locale, zone)}`;
 }
 

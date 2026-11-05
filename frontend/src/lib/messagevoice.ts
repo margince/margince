@@ -67,3 +67,20 @@ export function owesOrIsOwed(row: Activity): boolean {
   const role = contactRole(row);
   return role === undefined || role === "author" || role === "addressee";
 }
+
+// Mirrors activities.WroteItOurSide: authorship names the side when known;
+// direction supplies the answer for older or unresolved projections.
+export function correspondenceSide(
+  row: Activity,
+): "ours" | "theirs" | undefined {
+  if (!row.direction) return undefined;
+  switch (row.voice?.author?.kind) {
+    case "colleague":
+      return "ours";
+    case "contact_record":
+      return "theirs";
+  }
+  if (row.direction === "outbound") return "ours";
+  if (row.direction === "inbound") return "theirs";
+  return undefined;
+}

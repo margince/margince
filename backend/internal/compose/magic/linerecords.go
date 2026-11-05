@@ -58,32 +58,37 @@ func (s *Service) LineRecords(
 	}
 	offset := pos.offset
 	out := crmcontracts.MagicLineRecords{Data: []crmcontracts.MagicLineRecord{}}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		entries, _, err := doneSince(ctx, tx, from, maxLimit)
-		if err != nil {
-			return err
-		}
-		if pos.asOf.IsZero() {
-			pos.asOf = newestOccurred(entries)
-		}
-		members, found := lineMembers(asOf(entries, pos.asOf), lineID)
-		if !found {
-			return apperrors.ErrNotFound
-		}
-		end := min(offset+limit, len(members))
-		if offset < end {
-			out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
+	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+			entries, _, err := doneSince(ctx, tx, from, maxLimit)
 			if err != nil {
 				return err
 			}
-		}
-		if end < len(members) {
-			next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
-			out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
-		}
-		total := len(members)
-		out.Page.Total = &total
-		return nil
+			if pos.asOf.IsZero() {
+				pos.asOf = newestOccurred(entries)
+			}
+			members, found := lineMembers(asOf(entries, pos.asOf), lineID)
+			if !found {
+				return apperrors.ErrNotFound
+			}
+			end := min(offset+limit, len(members))
+			if offset < end {
+				if err := loadDeferredImages(ctx, tx, members[offset:end]); err != nil {
+					return err
+				}
+				out.Data, err = s.recordsOf(ctx, tx, members[offset:end])
+				if err != nil {
+					return err
+				}
+			}
+			if end < len(members) {
+				next := recordsCursor{offset: end, asOf: pos.asOf}.encode()
+				out.Page = crmcontracts.PageInfo{HasMore: true, NextCursor: &next}
+			}
+			total := len(members)
+			out.Page.Total = &total
+			return nil
+		})
 	})
 	if err != nil {
 		return crmcontracts.MagicLineRecords{}, fmt.Errorf("open a done line: %w", err)

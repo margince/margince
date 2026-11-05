@@ -96,8 +96,8 @@ func TestAReadOnlyShareIsNotEnoughToSeeAPendingDecision(t *testing.T) {
 		t.Helper()
 		var n int
 		if err := e.svc.db.Tx(as, func(tx pgx.Tx) error {
-			out, err := e.svc.PendingForTarget(as, tx, tableCompany, target, PendingScanCap)
-			n = len(out)
+			out, err := e.svc.PendingForTarget(as, tx, tableCompany, target)
+			n = len(out.Approvals)
 			return err
 		}); err != nil {
 			t.Fatalf("PendingForTarget: %v", err)

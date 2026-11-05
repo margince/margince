@@ -63,6 +63,8 @@ export MARGINCE_TEST_DSN     ?= postgres://margince_owner:dev@localhost:$(PG_POR
 # clone is copied from that template — see bench_db in scripts/lib-testdb.sh.
 BENCH_DB_NAME                ?= margince_bench
 BENCH_DAILY_DB_NAME          ?= margince_bench_daily
+BENCH_DAILY_TEST             ?= TestDailyUseBudgets
+BENCH_BACKLOG_DB_NAME        ?= margince_bench_backlog
 export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
 export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
 export MARGINCE_TEST_REDIS_DB ?= 15
@@ -111,7 +113,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -439,6 +441,18 @@ test-db-up: composition ## (Re)build the migrated margince_test template the par
 test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
 
+# The MCP role sweep: every tool and action as every seeded role. Its test
+# carries `integration && rolesweep`, so no merge gate runs it; scheduled.yml
+# runs it weekly. The extension verbs are measured first, because the sweep
+# reads their measured.json. UPDATE_MCP_TOOL_ROLES=1 writes all three files.
+test-roles: composition ## The MCP role sweep, weekly in CI: make test-roles [UPDATE_MCP_TOOL_ROLES=1] (needs db-up)
+	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh backend/internal/compose/integration/extensionrole
+	@$(GOWORK_COMPOSED) IT_TAGS=integration,rolesweep INTEGRATION_TIMEOUT=$(ROLE_SWEEP_TIMEOUT) \
+	  bash ../scripts/test-integration-one.sh backend/internal/compose/integration/toolrole
+
+# A whole sweep takes minutes on a laptop and several times that on a runner.
+ROLE_SWEEP_TIMEOUT ?= 2700s
+
 # The lane's connection ceiling and budget, for a lane that runs ONE package at a
 # time. Declared in scripts/lib-testdb.sh like every other lane's, and evaluated
 # lazily (`=`, not `:=`) so a make invocation that never runs the serial lane
@@ -560,14 +574,24 @@ bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over 
 # Leaves its database behind: the corpus and its plans are what you debug a slow
 # row with, and bench-daily-clean is the only thing that drops it. A failed run
 # has still written its record but stops before perfdoc; `make perfdoc` renders it.
-# cache_statement is pgx's default, which the API's pool keeps and the test pool
-# overrides: without it no generic plan can appear. `|| exit` stops a failed bench_db.
+# cache_statement is pgx's default, which the API and test pools both keep; named
+# here because without it no generic plan can appear. `|| exit` stops a failed bench_db.
 bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP, mid-market tier; records and re-renders the budget pages (needs db-up; leaves margince_bench_daily, see bench-daily-clean; after a failed run, make perfdoc)
-	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
+	@$(GOWORK_COMPOSED) bash -c '$(GO) test -tags "integration bench" -list "^$(BENCH_DAILY_TEST)$$" ./internal/compose/integration | grep -Fx "$(BENCH_DAILY_TEST)" >/dev/null || { echo "Unknown benchmark test: $(BENCH_DAILY_TEST)" >&2; exit 1; }; cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
 	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
 	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
-	  $(GO) test -tags "integration bench" -run "^TestDailyUseBudgets$$" -count=1 -v -timeout 120m ./internal/compose/integration'
+	  $(GO) test -tags "integration bench" -run "^$(BENCH_DAILY_TEST)$$" -count=1 -v -timeout 120m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
+
+# The Worklist over a synthetic backlog past every lane bound, on a small daily
+# corpus: the stage 0 measurement of the Worklist redesign. It records nothing.
+# MARGINCE_BENCH_BACKLOG_SIZES picks the candidate counts (default 100,1000,10000).
+bench-worklist-backlog: composition ## Worklist first page, walk and whole-source enumeration over a growing synthetic backlog (needs db-up; leaves margince_bench_backlog)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_BACKLOG_DB_NAME) && cd backend || exit; \
+	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
+	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
+	  $(GO) test -tags "integration bench" -run "^TestDailyWorklistBacklog$$" -count=1 -v -timeout 180m ./internal/compose/integration'
+	@$(GO) test -run '^$$' -bench '^BenchmarkRankingAWholeBacklog$$' -benchmem ./internal/compose/attention
 
 bench-daily-clean: ## Drop margince_bench_daily, the database bench-daily leaves behind
 	@bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && db_admin drop-db --name $(BENCH_DAILY_DB_NAME)'
@@ -680,7 +704,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go -agents internal/modules/agents
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-queryenums -in api/crm.yaml -out internal/compose/queryenums_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentcontract -in api/crm.yaml -catalog migrations/testdata/head_catalog.txt \
 		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
@@ -699,7 +723,12 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 config-gen: ## Regenerate the configuration docs, templates and schema from the settings registry
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 
-drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
+drift: ## Fail when a committed generated file drifted from what its generator produces
+	@# The generators rewrite every output, and Go replays a cached test result
+	@# only while the files it read keep their mtime; an unchanged output keeps it.
+	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/drift-mtimes
+	$(MAKE) gen perfdoc
+	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/drift-mtimes
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.

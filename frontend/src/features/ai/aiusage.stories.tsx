@@ -78,7 +78,7 @@ export const WithPricesLink: Story = {
       await within(canvasElement).findByRole("link", {
         name: "Prices are set on AI models",
       }),
-    ).toHaveAttribute("href", "#/settings/models");
+    ).toHaveAttribute("href", "/#/settings/models");
   },
 };
 

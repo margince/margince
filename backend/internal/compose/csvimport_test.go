@@ -47,6 +47,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"size_band":           in.SizeBand != nil,
 				"description":         in.Description != nil,
 				"domain":              len(in.Domains) > 0,
+				"phone":               in.Phone != nil,
+				"email":               in.Email != nil,
 				"linkedin_url":        in.LinkedInURL != nil,
 				"author":              in.Author.AuthorName != nil,
 				"owner_email":         in.OwnerID != nil,
@@ -65,6 +67,8 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"industry":     up.Industry != nil,
 				"size_band":    up.SizeBand != nil,
 				"description":  up.Description != nil,
+				"phone":        up.Phone != nil,
+				"email":        up.Email != nil,
 				"linkedin_url": up.LinkedInURL != nil,
 				"owner_email":  up.OwnerID != nil,
 				// The replace-set behind a pointer: non-nil means the file

@@ -105,25 +105,7 @@ func methodsByType(t *testing.T, dir string) map[string]map[string]bool {
 	return byType
 }
 
-// collectUnionTerms records the bare type names in one embedded interface
-// term. A union parses as a left-leaning `|` chain, so the recursion follows
-// the chain; the embedded river.JobArgs is a SelectorExpr, not a kind, and is
-// skipped by naming only *ast.Ident.
-func collectUnionTerms(e ast.Expr, into map[string]bool) {
-	switch term := e.(type) {
-	case *ast.Ident:
-		into[term.Name] = true
-	case *ast.BinaryExpr:
-		collectUnionTerms(term.X, into)
-		collectUnionTerms(term.Y, into)
-	}
-}
-
-// declaredKindTypes reads the union terms of declaredJobArgs out of the
-// generated file — the same closed set the compiler enforces at every
-// registration site. Read from the source rather than imported because this
-// package may not depend on internal/platform (.go-arch-lint.yml), and
-// because the claim is about the generated set itself.
+// declaredKindTypes reads the registration markers the compiler requires.
 func declaredKindTypes(t *testing.T) map[string]bool {
 	t.Helper()
 	path := filepath.Join("internal", "compose", "jobkinds_gen.go")
@@ -131,52 +113,22 @@ func declaredKindTypes(t *testing.T) map[string]bool {
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
+	marker := jobRegistrationMarker(t, file)
 	declared := map[string]bool{}
-	ast.Inspect(file, func(n ast.Node) bool {
-		spec, ok := n.(*ast.TypeSpec)
-		if !ok || spec.Name.Name != "declaredJobArgs" {
-			return true
+	for _, declaration := range file.Decls {
+		method, ok := declaration.(*ast.FuncDecl)
+		if ok && method.Recv != nil && method.Name.Name == marker {
+			declared[promptReceiverType(method)] = true
 		}
-		iface, ok := spec.Type.(*ast.InterfaceType)
-		if !ok {
-			return false
-		}
-		for _, field := range iface.Methods.List {
-			if len(field.Names) > 0 {
-				continue // a method, not an embedded term
-			}
-			collectUnionTerms(field.Type, declared)
-		}
-		return false
-	})
+	}
 	if len(declared) < jobArgsFloor {
-		t.Fatalf("read only %d declared args types out of %s, expected at least %d — the union walk matched almost nothing", len(declared), path, jobArgsFloor)
+		t.Fatalf("registration census found only %d declared args types", len(declared))
 	}
 	return declared
 }
 
-// composedJobArgsTypes are the ONLY args types whose kinds api/jobs.yaml does
-// not name, and the exemption is two names rather than a pattern on purpose.
-//
-// They are the extension tier's job seam (internal/compose/extjobs.go). A
-// composed unit's kinds are not knowable when this repository is generated —
-// the file below is committed and drift-gated, so a composed installation could
-// not regenerate it without failing that gate on every build that enabled a
-// unit — and the closed union's members are bare identifiers in package
-// compose, which an extension module cannot be. So these two types carry their
-// kind in a FIELD, one pair serving every composed job.
-//
-// What replaces the guarantee this gate gives every other type is not nothing,
-// and it is not weaker at the point that matters. The union stops an undeclared
-// kind at COMPILE time; for these two it is stopped at BOOT, by the same
-// jobs.MustBeTotal the runner already refuses on — RegisterExtensions declares
-// the composed kinds through jobs.RegisterComposed before NewJobRunner runs, so
-// a kind with no declaration still cannot reach River's one-minute default. It
-// aborts the boot instead of failing the build.
-//
-// A pattern (say, any name beginning ext) would re-open exactly what this gate
-// closes: someone could add a third args type that looks like the seam's and
-// take the exemption with it. Two names means a third one fails here.
+// Composed kinds are unknown to the committed generator and use two runtime carriers.
+// Boot validates those carriers against the composed catalog before River starts.
 var composedJobArgsTypes = map[string]bool{
 	"extJobDispatcherArgs": true,
 	"extJobWorkspaceArgs":  true,

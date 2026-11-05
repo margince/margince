@@ -233,7 +233,7 @@ fenced warning.
 ### 4.0 Contract-first, but extensions register rather than join
 
 Core has three closed, compile-time sets: `ServerInterface` (one interface for every endpoint,
-`internal/contracts/api_gen.go`), `declaredJobArgs` (a type union in `package compose`), and the
+`internal/contracts/api_gen.go`), `declaredJobArgs` (a generated registration constraint in `package compose`), and the
 agent-policy/RBAC generated tables. None can reference an extension module. The composed workspace uses
 the same backend tree (`emit.go:composedWork` adds `../../backend`), so only the composition module can.
 
@@ -587,7 +587,7 @@ is a reviewed decision rather than a fix-round line. Filed as #658 instead of bu
 ### 4.4 Jobs
 
 Extension jobs ride the existing River runner through a registration seam, not the closed
-`declaredJobArgs` union (§4.0).
+`declaredJobArgs` constraint (§4.0).
 
 **A scheduled extension job is two kinds.** `gen-jobs`' `validateCadence` forbids a cadence on a
 workspace-role kind, so it is a dispatcher (`ext_<name>_<job>`, cadenced) plus a workspace child

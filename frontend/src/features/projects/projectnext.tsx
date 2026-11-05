@@ -1,12 +1,13 @@
 import type { ComponentProps, ReactNode } from "react";
-import { NextBar } from "../../design-system/nextbar";
+import { RecordNextBar } from "../../components/latestinbound";
+import type { NextBar } from "../../design-system/nextbar";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { reveal } from "../../lib/reveal";
 import { useMe } from "../../lib/session";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { useViewerZone } from "../../lib/viewerzone";
 import { PROJECT_COMMITMENTS_ANCHOR } from "./projectreadings";
 import type { Project360 } from "./projectsections";
 import { nextCommitment } from "./projectstanding";
@@ -28,11 +29,11 @@ export function ProjectNext({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const me = useMe();
   const next = nextCommitment(view);
   if (!next) {
-    return <NextBar />;
+    return <RecordNextBar />;
   }
   const mine = next.assigneeId !== null && next.assigneeId === me.data?.user.id;
   const sub = [
@@ -46,7 +47,7 @@ export function ProjectNext({
         t("project.standing.assignedTo", { name: next.assigneeName }),
   ].filter(Boolean);
   return (
-    <NextBar
+    <RecordNextBar
       title={
         <button
           type="button"

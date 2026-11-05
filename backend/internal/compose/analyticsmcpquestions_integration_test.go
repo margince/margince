@@ -95,6 +95,7 @@ var caseSurfaces = map[string]string{
 	"F03": "read_forecast",
 	"F04": "read_forecast",
 	"F05": "read_forecast",
+	"F06": "read_reporting",
 }
 
 // canonicalCases maps each corpus id to its executable proof.
@@ -128,6 +129,7 @@ func canonicalCases() map[string]func(t *testing.T) {
 		"F03": proveF03ForecastInputsCanBeTrusted,
 		"F04": proveF04DealsWithInputProblems,
 		"F05": proveF05ForecastSources,
+		"F06": proveF06QuarterAgainstItsTarget,
 	}
 }
 
@@ -211,8 +213,8 @@ func proveG01OwnPipeline(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
-		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount)
+		e.seedOpenDeal(t, "Theirs", 20, &e.Rep3, &amount)
 	}
 	got, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}]}`)
@@ -234,7 +236,7 @@ func proveG02WorkspaceRefused(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount)
 	}
 	total, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`)
@@ -307,10 +309,10 @@ func proveM04OneRowPerStage(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 5 {
-		e.seedOpenDeal(t, "Early", 20, &e.Rep1, &amount, nil)
-		e.seedOpenDeal(t, "Late", 60, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Early", 20, &e.Rep1, &amount)
+		e.seedOpenDeal(t, "Late", 60, &e.Rep1, &amount)
 		// Somebody else's pipeline, which "my" must exclude.
-		e.seedOpenDeal(t, "Not mine", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Not mine", 20, &e.Rep3, &amount)
 	}
 	// Closed deals in the same stages, so "open only" has something to leak.
 	seedPricedDeal(t, e, "Won already", 90_000, "EUR", "won")

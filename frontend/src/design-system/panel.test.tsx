@@ -239,7 +239,7 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     // The body is the point of the variant. An emptied rule reads as a live
     // one to every gate that only counts selectors.
     for (const [, , body] of hovers) {
-      expect(body).toMatch(/background:\s*var\(--bgHover\)/);
+      expect(body).toMatch(/background:\s*var\(--groundHover\)/);
     }
   });
 
@@ -281,7 +281,7 @@ describe("panel.css keeps the row's hover on its two variants", () => {
         (rule) => rule.selector === `.panel > ${first} + ${second}`,
       );
       expect(declaredValue(seam?.block ?? "", "border-top")).toBe(
-        "1px solid var(--borderSubtle)",
+        "1px solid var(--groundSeam)",
       );
     }
   });
@@ -321,7 +321,7 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     const line = /(?:^|\n)\.panel-row::before\s*\{([^}]*)\}/.exec(panelCss());
     expect(line).not.toBeNull();
     const drawn = line?.[1] ?? "";
-    expect(drawn).toMatch(/background:\s*var\(--borderSubtle\)/);
+    expect(drawn).toMatch(/background:\s*var\(--groundSeam\)/);
     expect(drawn).toMatch(/height:\s*1px/);
     // WHICH inset: the panel's own, read off the body rather than spelled here.
     // The hairline stopping at the padding is the whole point of drawing it as
@@ -344,9 +344,9 @@ describe("panel.css keeps the row's hover on its two variants", () => {
   it("rules the header and the footer edge to edge", () => {
     const css = panelCss();
     const head = /(?:^|\n)\.panel-head\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
-    expect(head).toMatch(/border-bottom:\s*1px solid var\(--borderSubtle\)/);
+    expect(head).toMatch(/border-bottom:\s*1px solid var\(--groundEdge\)/);
     const foot = /(?:^|\n)\.panel-foot\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
-    expect(foot).toMatch(/border-top:\s*1px solid var\(--borderSubtle\)/);
+    expect(foot).toMatch(/border-top:\s*1px solid var\(--groundEdge\)/);
     expect(css).not.toMatch(/\.panel-head::after/);
     expect(css).not.toMatch(/\.panel-foot::before/);
   });

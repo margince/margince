@@ -17,6 +17,11 @@ export type NoticeAcquisition = NonNullable<
 >;
 
 const RULE: Partial<Record<string, { label: MessageKey; hint: MessageKey }>> = {
+  none: { label: "notice.rule.none", hint: "notice.ruleHint.none" },
+  unassessed: {
+    label: "notice.source.title",
+    hint: "notice.source.explanation",
+  },
   art13: { label: "notice.rule.art13", hint: "notice.ruleHint.art13" },
   art14: { label: "notice.rule.art14", hint: "notice.ruleHint.art14" },
 };

@@ -22,6 +22,7 @@ import {
   senderParties,
 } from "./emailmessage";
 import { EmailText } from "./emailtext";
+import { ReaderRendering } from "./readerrendering";
 import { SurfaceState } from "./surfacestate";
 import { ProvenanceTag } from "./trust";
 import "./emailthread.css";
@@ -282,7 +283,12 @@ function OpenMessage({
         </EmailEnvelope>
       )}
       <TextNotice completeness={presentation.body_completeness} />
-      <EmailText body={presentation.body ?? ""} />
+      <ReaderRendering
+        activityId={presentation.id}
+        language={presentation.language}
+      >
+        <EmailText body={presentation.body ?? ""} />
+      </ReaderRendering>
       <EmailAttachments files={presentation.attachments} />
       {related?.()}
       {renderActions && (
@@ -299,6 +305,14 @@ const TEXT_NOTICES = {
   unreadable: "email.thread.textUnreadable",
   forwarded: "email.thread.textForwarded",
   unassessed: "email.thread.textUnassessed",
+  unverifiable: "email.thread.textUnverifiable",
+} as const;
+
+const TEXT_HINTS = {
+  partial: "email.thread.textUnreadableHint",
+  unreadable: "email.thread.textUnreadableHint",
+  unassessed: "email.thread.textUnassessedHint",
+  unverifiable: "email.thread.textUnverifiableHint",
 } as const;
 
 function TextNotice({
@@ -311,17 +325,14 @@ function TextNotice({
   if (
     completeness !== "partial" &&
     completeness !== "unreadable" &&
-    completeness !== "unassessed"
+    completeness !== "unassessed" &&
+    completeness !== "unverifiable"
   ) {
     return null;
   }
   return (
     <Callout kind="standing" title={t(TEXT_NOTICES[completeness])}>
-      {t(
-        completeness === "unassessed"
-          ? "email.thread.textUnassessedHint"
-          : "email.thread.textUnreadableHint",
-      )}
+      {t(TEXT_HINTS[completeness])}
     </Callout>
   );
 }

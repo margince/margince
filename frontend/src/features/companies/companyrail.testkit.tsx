@@ -28,6 +28,8 @@ export const company = {
   industry: "automotive" as const,
   size_band: "51-200" as const,
   linkedin_url: "https://linkedin.com/company/brandt",
+  phone: "+49891234567",
+  email: "info@brandt.example",
   address: { city: "Munich", country: "DE" },
   domains: [
     {

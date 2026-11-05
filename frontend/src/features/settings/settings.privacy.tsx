@@ -7,6 +7,8 @@ import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { NOTICE_CASE_PARAM } from "../../lib/privacycaselink";
+import { useUrlParams } from "../../lib/urlstate";
 import { NoticeCasesCard } from "../privacy/noticecases";
 import { NewDsrForm, PrivacyInboxCard } from "../privacy/privacy";
 import {
@@ -15,6 +17,7 @@ import {
 } from "../privacy/privacy.corrections";
 import { ConsentPurposesCard } from "../privacy/privacy.purposes";
 import { RetentionCard } from "../privacy/retention";
+import { CustomerNoticesCard } from "./customernotices";
 import {
   PinRecordAction,
   RestrictedRecordsCard,
@@ -24,9 +27,13 @@ import {
 /** The governance page's panels in working order: defaults, the requests
  * that override them, then the duties nobody asked for. */
 export function PrivacyLanes() {
+  const [params] = useUrlParams();
+  const caseId = params.get(NOTICE_CASE_PARAM);
+  if (caseId) return <NoticeCasesCard key={caseId} caseId={caseId} />;
   return (
     <>
       <ConsentPurposesCard />
+      <CustomerNoticesCard />
       <RetentionCard />
       <RequestsPanel />
       <NoticeCasesCard />

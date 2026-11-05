@@ -5,14 +5,7 @@
 
 package gates
 
-// Every exported method on a module's *Store or *Service (the seam both the
-// HTTP handlers and the MCP tool surface call through) references the platform
-// auth gate (object RBAC and/or the row-scope spellings), directly or through a
-// same-package helper. A store method without one
-// is an ungoverned door into tenant data: reachable by any transport
-// wired to it, invisible to review. Row-scope composition itself stays
-// a call-site obligation until it moves into the database (the ADR
-// direction); this gate pins the half that is statically checkable.
+// Store and Service entry points must reach an auth gate or carry a ratified reason.
 //
 // Gatedness is resolved transitively over same-package calls, matched
 // by name within the RECEIVER the entry point is declared on, plus the
@@ -69,13 +62,17 @@ import (
 // being read on its own: "a sweep runs it" is not one, "no row leaves this
 // call" is.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
+	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
 	"internal/modules/contacts:TellContactOwnerOfLead":    "the follow-up to a refusal the caller's own gated lead write produced: it acts only on a ContactHoldsIdentityError that a create behind auth.Require(lead, create) returned, and files a task for the contact's owner as the system. It reads and returns no record; the caller learns only whether the owner was told",
 	"internal/modules/contacts:TellContactOwnerOfArrival": "the same follow-up for a door that found the contact itself: the capture sink after its lead create was gated by auth.Require(lead, create), and TellContactOwnerOfLead. It reads only the contact's owner, to address the task, and returns no record",
 	"internal/modules/contacts:AskHolderToShare":          "the follow-up to a refusal the caller's own gated write produced: it acts only on a ContactHeldByColleagueError that a create, replace or promotion behind auth.Require returned, and files a share request for the contact's owner to decide. It reads and returns no record; the caller learns only whether a request is open",
+	"internal/modules/activities:RetireMeetingCopyTx":     "archives one meeting row onto another live row holding the same meeting. It refuses any principal but a system job or a calendar sync, and both callers prove first that the copy's own seat stored it and that its calendar binds the event to the survivor. No human grant can cover it, because the copy may be a colleague's row. It returns no record",
 	"internal/modules/activities:DoneRows":                "answers which of the named Worklist rows the CALLER marked done, read by the caller's own user id and refused to any principal without a human behind it. It takes no object grant because it reads the reader's own choices and no record: a privacy officer without activity read still has a Worklist, and their Done must still hide their rows",
 	"internal/compose/attention:ReopenRows":               "the undo behind Done. It removes only the caller's own Done rows, keyed by their user id, and the store refuses a caller with no human behind it. A row on an activity keeps the activity grant and content gate in the store. Nothing it reaches is a record the caller could not already see",
 	"internal/modules/contacts:RecordLogoIntent":          "declares a mark's key provisional before its bytes are put. It writes one row naming a key the caller already holds, reads nothing, and discloses nothing — and what may then be DELETED is decided by the sweep's reference check against the mark columns, never by this row. Gating it on the company write grant would refuse the site-read worker, which calls it and is itself ungated for the reason RecordSiteReadLogo gives: the worker is not a human principal and the human's authority was checked when the read was started",
 	"internal/modules/deals:RecordOfferPdfIntent":         "the same declaration for a rendered offer PDF: one row naming the key the handler is about to put, written immediately before it. The handler's own grant governs the render, and the sweep's reference check against offer.pdf_asset_ref governs deletion — this row only asks that the key be looked at",
+	"internal/modules/contacts:MailLetterheadTx":          "MailLetterhead inside the caller's transaction, for privacy notices staged in one: the same fixed projection of the installation's own company name and logo key, nothing written",
+	"internal/modules/contacts:MailLetterhead":            "the system relay heads its mail (password resets included, which run with no member) with the installation's own company name and logo key. The anchor selector fixes the record, the caller names nothing, and nothing is written; the key stays on the server and only the sized image leaves inside mail the installation sends as itself",
 	"internal/modules/contacts:PublicBookingBrand":        "anonymous booking pages show the name and logo of the legal entity the page's host works for. The caller names a host, never a company or an entity; this fixed projection exposes no private profile fields, and writes nothing",
 	"internal/modules/capture:ReaderAddressesTx":          "answers one seat's OWN email addresses \u2014 their login, what they declared about themselves, and the labels of the mailboxes they connected. It takes no object grant because there is no object: these are private aliases rather than a record, and the RBAC vocabulary has no verb for them. What bounds it is selfOnly, in the function: a human principal may ask only about themselves, and a system principal is admitted because the overnight assembly reads for a named seat with no acting human to compare against \u2014 bounded there by the caller, which resolves the id from the reader it is assembling for and never from a request. A read for another seat is refused with ErrPermissionDenied",
 
@@ -200,7 +197,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/capture:Get":                            "SettingsStore.Get reads each capture setting through config.StoredVal, which first calls settings.RequireRead — the object grant PER SETTING against the object the entry declares (auth.Require(def.Object(), ActionRead)) — and then reads through Store.Raw, which takes it again. internal/platform/settings is one of THIS gate's roots, so that gate is judged here directly rather than assumed; re-gating in the wrapper would re-check the same read against a coarser object, the same shape as identity:GetInstallation",
 	"internal/modules/capture:AutoEnrichOn":                   "the same shape as capture:Get above: one setting read through config.StoredVal, whose settings.RequireRead takes the entry's capture_settings read grant, so re-gating here would check the same read twice",
 	"internal/modules/capture:SiteReadLimits":                 "the same shape as capture:Get above: each limit is read through config.StoredValTx, whose settings.RequireRead takes the per-setting object grant (capture_settings for all three), so re-gating here would check the same read twice",
-	"internal/modules/capture:LadderByActivityID":             "the bound is a PREDICATE IN THE SQL, not a grant: the lookup selects `user_id = <caller>` and can express nothing else, so it reaches only rows the calling member's own connection produced. There is no object to gate on because capture_trace rows answer to their owner rather than to a grant — 0258 is categorical that no grant widens them — and an auth.Require here would check the wrong question. The sibling LadderByTraceID asks auth.Require itself, but only to decide whether to ALSO admit workspace-owned rows (user_id IS NULL); this call has no such branch, since a shared binding's rows are reached through the trace id, never through somebody's activity",
+	"internal/modules/capture:LadderByActivityID":             "the bound is a PREDICATE IN THE SQL, not a grant: the lookup selects `user_id = <caller>` and can express nothing else, so it reaches only rows the calling member's own connection produced. There is no object to gate on because capture_trace rows answer to their owner rather than to a grant — 0258 is categorical that no grant widens them — and an auth.Require here would check the wrong question. The sibling LadderByTraceID asks auth.Allows itself, but only to decide whether to ALSO admit workspace-owned rows (user_id IS NULL), and hides such a row with auth.HideRow when the answer is no; this call has no such branch, since a shared binding's rows are reached through the trace id, never through somebody's activity",
 	"internal/modules/capture:LinkProposal":                   "sweep bookkeeping: binds the staged proposal to the pending row it was raised from",
 	"internal/modules/capture:ListDueCompanies":               "auto-enrich sweep (compose/captureautoenrich.go) under the system principal",
 	"internal/modules/capture:MarkQueued":                     "auto-enrich sweep bookkeeping for a company it just queued",
@@ -249,6 +246,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/identity:SaveMyDisplayName":              "writes the CALLER's own row and nobody else's, on the same terms as SaveMyLocale below: the id comes off the bound principal rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow. It refuses every principal that is not a human seat, agents included, because an agent carrying its grantor's authority must not rename its grantor. The name is trimmed, bounded by the contract's own length, and written only to a LIVE member — a deactivated seat is refused, so a departed colleague cannot go on renaming themselves in the pickers their old records appear in",
 	"internal/modules/identity:SaveMyGreetingName":             "writes the CALLER's own row and nobody else's, on the same terms as SaveMyDisplayName above: the id comes off the bound principal rather than from a parameter, and every principal that is not a human seat is refused, agents included. The name is flattened to one line, bounded by the contract's own length, and written only to a LIVE member",
 	"internal/modules/identity:MyWorkingHours":                 "reads the CALLER's own row and nobody else's, on the same terms as MyDelivery above: the user id comes off the bound principal rather than from a parameter, so there is no other account it could reach. It answers when this contact is bookable and whether they chose it, which is a fact about their own week",
+	"internal/modules/identity:SaveMyTimezone":                 "writes the CALLER's own row and nobody else's, on the same terms as SaveMyWorkingHours: selfScoped takes the id off the principal and no parameter names an account. An agent acting under someone's authority is refused, because the zone a user reads in is that user's call",
 	"internal/modules/identity:SaveMyWorkingHours":             "writes the CALLER's own row and nobody else's, on the same terms as SaveMyLocale below: the id comes off the principal and no parameter names an account. An agent acting under someone's authority is refused, because when a contact is bookable is that contact's call — and an installation-wide version of this setting, which an admin WOULD gate, is the shape the design refuses (docs/explanation/scheduling.md)",
 	"internal/modules/identity:ListSessions":                   "reads the CALLER's own rows and nobody else's, on the same terms as MyWorkingHours above: the user id comes off the bound principal via selfScoped rather than from a parameter, so there is no other account it could reach and no object for a grant to narrow. It lists the sessions open under that member's account — a fact about their own sign-ins — and the opaque token behind each is never read back. A principal with no human behind it is refused",
 	"internal/modules/identity:RevokeSession":                  "acts on the CALLER's own rows and nobody else's: the user id comes off the bound principal via selfScoped, not a parameter, and every statement is scoped to it, so a session id belonging to anyone else is a row-scope miss answered as not-found rather than a reachable object. Ending one's own session is session self-management, the same self-scoping ChangePassword above relies on, and a principal with no human behind it is refused outright",
@@ -291,6 +289,8 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/identity:Authenticate":              "pre-principal: this resolves the session cookie INTO the principal every other gate consumes",
 	"internal/modules/identity:AuthenticateAgent":         "pre-principal: passport verification is what admits the agent actor (every call re-authenticates, ADR-0055)",
 	"internal/modules/identity:AuthenticateAgentByID":     "pre-principal: the by-id half of passport verification, same admission seam",
+	"internal/modules/identity:AgentForStoredWork":        "passport verification again, for the agent whose queued work is about to run: the same predicate AgentForStagedCallTx reads",
+	"internal/modules/identity:AgentForStagedCallTx":      "passport verification again, for the agent whose staged call an approval will release: the approvals engine asks it so a preview and a context pin read as that agent. It answers about a credential the approval row already names, never about a record",
 	"internal/modules/identity:InstallationWorkspace":     "singleton-company resolution (ADR-0061), bound by the middleware before any principal exists",
 	"internal/modules/identity:BootstrapInstallation":     "boot-time provisioning under the system principal (ADR-0061); no human principal can exist before it",
 	"internal/modules/identity:FillRbacDefaults":          "boot-time fill of a unit's declared starting grants, admitted to a system principal only: the function refuses any other, so no human reaches it. An admin changes a grant through SetRoleObjectGrant, which is gated, and the fill writes only an entry the document does not have, so it never overrides one",
@@ -315,7 +315,6 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/consent:StopForCredential":       "the same write in its own transaction, for the public handler that has none; bounded exactly as the Tx form above is",
 
 	"internal/modules/consent:ResolveWithdrawalToken": "public withdrawal resolve: possession of the emailed link IS the authority, on the same session-less edge as the two resolves below. Its bounds are DIFFERENT from theirs and deliberately so, because this credential is meant to outlive them: 256-bit crypto/rand, sha256 at rest (the preference token beside it is plaintext, which is tolerable only because that one is short-lived), a 24-month ceiling matching what the mail itself is retained for, and revocation by erasure, merge and the admin compromise route. What makes the long life safe is the NARROWNESS: the ref it returns carries an address and a scope and nothing else, so a holder cannot read a consent state, cannot grant, and cannot reach business correspondence. Unknown, revoked and expired all read as absent, so the surface is not an oracle for which it was",
-
 	"internal/modules/consent:ResolveConfirmToken":    "confirm-details resolve: possession of the emailed link IS the authority, on the same session-less edge as the preference resolve above and with strictly tighter bounds, because this one DISPLAYS the record rather than a list of switches. 256-bit crypto/rand, sha256 at rest so a stolen table opens nobody's record, a 14-day expiry, spent on first submit, superseded by any fresh issuance, and deleted by both Art. 17 erasure and the retention anonymizer. Unknown, expired and spent all read as absent, so the surface is not an oracle for which it was",
 	"internal/modules/approvals:LockPendingGroupInTx": "takes row locks on the CALLER's transaction and answers nothing but an error — no record, no count, not even whether the group it locked is empty — so there is nothing an ungated caller could learn from it. The batch stagers that call it hold their grant before the transaction opens, and each proposal they go on to stage is gated on its own way in; a gate here would re-ask that question against a coarser object",
 	"internal/modules/approvals:AutoApplyMode":        "reads whether the CALLER has put one kind on automatic. It takes no user id: the subject is the principal on the context, so there is no row a caller can ask for but not be, which bounds it more tightly than a grant would — a grant can be held over somebody else. There is also no object to gate on, `approval` not being in the closed core set, so a Require here would have to invent a vocabulary entry to check nothing extra. It answers one enum value about the caller's own preference and returns no record and no count. A principal with no contact behind it is refused outright rather than reading a zero-uuid row",
@@ -419,21 +418,13 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:CompanyNameCandidates":        "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named companies and the signature evidence naming them",
 	"internal/modules/privacy:EvaluateInstallation":          "the retention pass: its one production caller is the privacy-retention River worker (compose/jobs_privacyretention.go), which builds a PrincipalSystem actor onto the context before the call, so no human principal exists here to admit. Gating it on one would be wrong rather than merely redundant — a retention obligation outlives any seat, and an installation whose reviewer lost access must still age out the data it promised to",
 
-	// comms: delivery machinery, not the message. StageTx runs inside the
-	// caller's own transaction, alongside the activity write that already
-	// passed the gated activity:create check — the outbound send itself was
-	// admitted there. But activity:create alone would only prove the actor
-	// may create an activity, not that the delivery may send through THEIR
-	// mailbox — the security-relevant fact this store owns — so StageTx
-	// itself derives user_id from the authenticated principal on ctx
-	// (storekit.Actor) and fails closed when none resolves to an app_user;
-	// no caller input can name a different sender. Object-RBAC has nothing
-	// left to narrow once that derivation stands. Load/RecordSent/Park/
-	// ParkTransmitted/RecordFailure/RecordDeferral/MarkInFlight/ClearInFlight
-	// are the dispatcher's own state-machine steps, driven by the outbox/River worker
-	// under the system principal with no human principal in the call at all;
-	// nothing here discloses a record to anyone — the reason each of them
-	// writes is an operator-facing transport diagnosis, not tenant data.
+	// comms: delivery machinery, not the message. StageTx runs in the caller's
+	// transaction, beside an activity write that passed activity:create. That
+	// check does not prove the delivery may send through the actor's mailbox.
+	// So StageTx derives user_id from the principal on ctx (storekit.Actor) and
+	// fails closed when none resolves to an app_user. The other methods are the
+	// dispatcher's state-machine steps, run by the worker under the system
+	// principal; they write transport diagnosis, not tenant data.
 	"internal/modules/comms:StageTx":                      "derives user_id from the authenticated principal (storekit.Actor) and fails closed with no caller-suppliable override; the activity:create check on the shared transaction admits the send action itself, but the sending IDENTITY is enforced here, in the store, not inherited from that check",
 	"internal/modules/comms:StageChannelTx":               "the channel-shaped twin of StageTx and the same posture: it derives user_id from the authenticated principal (stagingUser, shared with StageTx so neither can grow a caller-suppliable override) and runs inside the caller's already-gated activity transaction",
 	"internal/modules/comms:StageControllerTx":            "the INSTALLATION sending in its own name, so there is no human identity to derive and no seat to check: the caller is a compose seam acting for the system principal, and what constrains the write instead is the registered template — an unregistered key, a placeholder that disagrees with the material, and an absent registry are all refused before any row is written. Admission for the underlying act happened where the timeline activity was logged, on the same transaction",
@@ -774,6 +765,7 @@ var authNotDecisions = map[string]string{
 	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
 	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
 	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"RefuseRow":       "relays a refusal the store already decided on a rule the record holds, and records it; it reads no grant and decides nothing",
 	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
 }
 
@@ -789,6 +781,7 @@ var authDecisionsByRatification = map[string]string{
 	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
 	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
 	"WritableBy":       "the write half of the same question",
+	"Allows":           "Require read as a boolean, recording nothing: its callers withhold what the caller lacks, by the same decision Require refuses on",
 }
 
 // TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate
@@ -984,10 +977,9 @@ func storeReceiver(name string) bool {
 }
 
 // takesContext keeps the gate on ENTRY POINTS. A method that takes no
-// context does no request work — option setters (WithClock), accessors
-// and constructors — and demanding an auth gate of them would grow a
-// ratification list that says nothing about whether the real entry
-// points are covered.
+// context does no request work: option setters (WithClock, SetClock),
+// accessors and constructors. Demanding an auth gate of them would grow a
+// ratification list that says nothing about the real entry points.
 func takesContext(fn *ast.FuncDecl) bool {
 	for _, param := range fn.Type.Params.List {
 		if sel, ok := param.Type.(*ast.SelectorExpr); ok {

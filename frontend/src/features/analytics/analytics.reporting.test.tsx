@@ -20,7 +20,6 @@ afterEach(() => {
 });
 
 it.each([
-  "#/analytics",
   "#/analytics/performance",
   "#/analytics/win-loss",
   "#/analytics/stage-age",
@@ -47,7 +46,7 @@ it("opens the saved report library with the same reporting implementation", asyn
   render(<AnalyticsScreen />);
   await user.click(await screen.findByRole("button", { name: "Reports" }));
   expect(
-    await screen.findByRole("button", { name: "Create from Performance" }),
+    await screen.findByRole("link", { name: "Create from Performance" }),
   ).toBeTruthy();
 });
 
@@ -84,7 +83,12 @@ it.each([
         scope_kind: "workspace",
         won_minor: 40000,
         evidence_minor: 120000,
-        best_case_minor: 180000,
+        likely_threshold: 90,
+        by_source: {
+          stage: { open_minor: 250000, weighted_minor: 130000 },
+          human: { open_minor: 0, weighted_minor: 0 },
+          margince: { open_minor: 0, weighted_minor: 0 },
+        },
         open_minor: 250000,
         weighted_minor: 130000,
         eligible_count: 12,

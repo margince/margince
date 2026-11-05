@@ -1,4 +1,5 @@
 import { type ReactNode, type RefObject, useId } from "react";
+import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
 import { formatMoney, formatNumber } from "../format/format";
@@ -264,14 +265,14 @@ export function AgentPanel({
             <div className="artiles">
               {/* The tile leads with the number a reader scans for. Its name
                   leads with the label, because "10" alone names nothing. */}
-              <a
+              <AppLink
                 className="arbox artile"
                 href="#/worklist"
                 aria-label={`${t("agent.panel.decisions")} ${formatNumber(signals.waiting, locale)}`}
               >
                 <b>{formatNumber(signals.waiting, locale)}</b>
                 <span>{t("agent.panel.decisions")}</span>
-              </a>
+              </AppLink>
             </div>
           )}
         </PanelSection>
@@ -283,9 +284,9 @@ export function AgentPanel({
           // A verb, beside the title rather than inside it. Inside the heading,
           // it took the heading's weight and read as a second title.
           mayOpenLog ? (
-            <a className="link-button" href={AI_SETTINGS_HREF}>
+            <AppLink className="link-button" href={AI_SETTINGS_HREF}>
               {t("agent.panel.fullLog")}
-            </a>
+            </AppLink>
           ) : undefined
         }
       >

@@ -248,35 +248,33 @@ func (s *PendingStore) NoiseMailForTx(ctx context.Context, tx pgx.Tx, email stri
 // PurgeRawCaptureTx deletes the provider originals behind the given activities,
 // on the caller's transaction so they die with the text they duplicate.
 //
-// Without this the redaction destroys a copy and leaves the original: capture
-// writes the verbatim provider payload — full headers and body — to raw_capture,
+// Without this the redaction destroys a copy and leaves the original. Capture
+// writes the verbatim provider payload (full headers and body) to raw_capture,
 // keyed on the message's natural key. Nulling activity.subject/body while that
-// row survives would make "the content is destroyed" false, and raw_capture has
-// its own retention scope keyed on age, which ages an ORIGINAL rather than
-// answering an erase of the record; and Art. 17 erasure, which is scoped to a
-// CONTACT and therefore structurally unreachable for a noise-judged sender, who
-// has no contact record by construction.
+// row survives would make "the content is destroyed" false. Nothing else
+// reaches the row in time. raw_capture's own retention scope ages an original
+// by age and does not answer an erase of the record. Art. 17 erasure is scoped
+// to a contact, and a noise-judged sender has no contact record.
 //
 // The activity row keeps its source key, so the capture natural key still
-// tombstones a replay — what goes is the content, not the fact of the message.
+// tombstones a replay. The content goes, and the fact of the message stays.
 func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
 	if len(activityIDs) == 0 {
 		return nil
 	}
-	// TWO ARMS, because raw_capture has two writers and they key differently.
+	// Two arms, because raw_capture has two writers and they key differently.
 	//
-	// The stored LINK is the exact one: the ingest that created the activity
-	// knew which original it read and now says so. Everything captured since
-	// that column landed is destroyed by this arm, whatever lane it came
-	// through.
+	// The stored link is the precise one: the ingest that created the activity
+	// knew which original it read and records it. This arm destroys everything
+	// captured since that column landed, whatever lane it came through.
 	//
-	// The NATURAL-KEY join is for the rows written before it. It holds only
-	// where the two writers' keys agree, which is mail alone — the channel
-	// sink stores the provider's redelivery key, not the domain natural key —
-	// so it is a backstop for deployed history and never the primary answer.
-	// It cannot simply be dropped: an installation upgrading today has years of
-	// originals whose activity carries no link, and a purge that skipped them
-	// would leave exactly the verbatim payloads this sweep exists to destroy.
+	// The natural-key join is for the rows written before it. It holds only
+	// where the two writers' keys agree, which is mail alone. The channel sink
+	// stores the provider's redelivery key, not the domain natural key. So it is a
+	// backstop for deployed history and never the primary answer. It cannot be
+	// dropped. An upgraded installation has years of originals whose activity
+	// carries no link. A purge that skipped them would leave those verbatim
+	// payloads behind.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM raw_capture r
 		 USING activity a
@@ -285,7 +283,7 @@ func (s *PendingStore) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activit
 		activityIDs); err != nil {
 		return fmt.Errorf("capture: purging the redacted message's provider originals: %w", err)
 	}
-	return nil
+	return purgePartySourcesTx(ctx, tx, activityIDs)
 }
 
 // disownedSenders gathers the addresses the workspace has disowned, and by

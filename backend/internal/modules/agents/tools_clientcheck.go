@@ -14,23 +14,24 @@ import (
 )
 
 const (
-	clientCheckTool     = "check_client"
-	clientCheckKey      = "margince_client_check"
-	framingModern       = "modern"
-	framingHandshake    = "handshake"
-	maxClientInfoEcho   = 64
-	maxDeclaredEcho     = 1024
-	elicitationMethod   = "elicitation/create"
-	actionAccept        = "accept"
-	clientCheckQuestion = "Margince client check: pick a colour. Nothing is changed."
+	clientCheckTool   = "check_client"
+	clientCheckKey    = "margince_client_check"
+	framingModern     = "modern"
+	framingHandshake  = "handshake"
+	maxClientInfoEcho = 64
+	maxDeclaredEcho   = 1024
 )
 
 var clientCheckColours = []string{"red", "green", "blue"}
 
-// clientCheckForm is the one form the check shows. Its enum is clientCheckColours,
-// which a test holds.
-const clientCheckForm = `{"mode":"form","message":"` + clientCheckQuestion + `","requestedSchema":{` +
-	`"type":"object","properties":{"colour":{"type":"string","enum":["red","green","blue"]}},"required":["colour"]}}`
+// clientCheckQuestion is the one form the check shows. Its enum is
+// clientCheckColours, which a test holds.
+var clientCheckQuestion = chatQuestion{
+	Key:     clientCheckKey,
+	Message: "Margince client check: pick a colour. Nothing is changed.",
+	Schema: json.RawMessage(`{"type":"object","required":["colour"],` +
+		`"properties":{"colour":{"type":"string","enum":["red","green","blue"]}}}`),
+}
 
 // ClientCheckResult is what the check reports about one client.
 type ClientCheckResult struct {
@@ -39,7 +40,7 @@ type ClientCheckResult struct {
 	ProtocolVersion string          `json:"protocol_version" jsonschema:"The revision the request declared; empty in the handshake era."`
 	Client          *ClientIdentity `json:"client" jsonschema:"The client's name and version, or null when it sent none."`
 	Reason          string          `json:"reason,omitempty" jsonschema:"Why the client is not supported, or what was wrong with its answer."`
-	Declared        json.RawMessage `json:"declared,omitempty" jsonschema:"The capabilities the client declared, when it declared no elicitation."`
+	Declared        json.RawMessage `json:"declared,omitempty" jsonschema:"The capabilities the client declared, when it could not be asked."`
 	Action          string          `json:"action,omitempty" jsonschema:"accept, decline or cancel: what the user did with the form."`
 	Answer          json.RawMessage `json:"answer,omitempty" jsonschema:"The form's values when the user accepted."`
 }
@@ -70,10 +71,9 @@ func (t checkClient) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	facts := requestFactsOf(ctx)
-	result, ask := t.measure(facts)
-	if ask != nil {
-		return nil, ask
+	result, err := measureClient(ctx, requestFactsOf(ctx))
+	if err != nil {
+		return nil, err
 	}
 	var name, version string
 	if result.Client != nil {
@@ -84,30 +84,32 @@ func (t checkClient) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	return json.Marshal(result)
 }
 
-// measure answers the check for one call, or the request for the form.
-func (t checkClient) measure(facts requestFacts) (ClientCheckResult, *InputRequired) {
+// measureClient asks the form through the chat mechanism every tool shares, so
+// the check measures the very path a real question takes.
+func measureClient(ctx context.Context, facts requestFacts) (ClientCheckResult, error) {
 	result := ClientCheckResult{Framing: framingHandshake, ProtocolVersion: facts.version, Client: clientIdentityOf(facts.clientInfo)}
 	if !facts.modern {
 		result.Reason = "this server asks for input only in the 2026-07-28 framing; the handshake era needs a stream /mcp does not open"
 		return result, nil
 	}
 	result.Framing = framingModern
-	if facts.responses != nil && facts.elicitation == elicitationForm {
-		return answered(result, facts.responses), nil
-	}
-	switch facts.elicitation {
-	case elicitationNone:
-		result.Reason = "the client declared no elicitation capability"
+	if !canAskInChat(ctx) {
+		result.Reason = "the client declared no form elicitation"
+		if facts.elicit {
+			result.Reason = "the client declared form elicitation, but this server has no key to sign the question"
+		}
 		result.Declared = boundedDeclared(facts.capabilities)
-	case elicitationURLOnly:
-		result.Reason = "the client declared only url mode, and this check uses form mode"
-	case elicitationForm:
-		return result, colourForm()
+		return result, nil
 	}
-	if facts.responses != nil {
-		result.Reason += ", yet it sent an answer: the answer is not counted"
+	reply, err := replyInChat(ctx, clientCheckQuestion)
+	if err != nil {
+		return result, err
 	}
-	return result, nil
+	if !reply.Accepted {
+		result.Supported, result.Action = true, reply.Action
+		return result, nil
+	}
+	return acceptedColour(result, reply.Content), nil
 }
 
 // boundedDeclared quotes the declared capabilities when they are short, and
@@ -119,49 +121,14 @@ func boundedDeclared(capabilities json.RawMessage) json.RawMessage {
 	return capabilities
 }
 
-func colourForm() *InputRequired {
-	return &InputRequired{Requests: map[string]InputRequest{
-		clientCheckKey: {Method: elicitationMethod, Params: json.RawMessage(clientCheckForm)},
-	}}
-}
-
-// answered reads the retry. A reply that is missing or malformed is reported as
-// data, which tells an admin more than a protocol error would.
-func answered(result ClientCheckResult, responses map[string]json.RawMessage) ClientCheckResult {
-	var reply struct {
-		Action  string          `json:"action"`
-		Content json.RawMessage `json:"content"`
-	}
-	raw, present := responses[clientCheckKey]
-	if !present {
-		result.Reason = "the retry carried inputResponses, but none under " + clientCheckKey
-		return result
-	}
-	if json.Unmarshal(raw, &reply) != nil {
-		result.Reason = "the answer to the form was not an object with an action"
-		return result
-	}
-	switch reply.Action {
-	case "decline", "cancel":
-		result.Supported, result.Action = true, reply.Action
-	case actionAccept:
-		result = acceptedColour(result, reply.Content)
-	default:
-		result.Reason = "the answer's action was not accept, decline or cancel"
-	}
-	return result
-}
-
-func acceptedColour(result ClientCheckResult, content json.RawMessage) ClientCheckResult {
-	var picked struct {
-		Colour string `json:"colour"`
-	}
-	if json.Unmarshal(content, &picked) != nil || !slices.Contains(clientCheckColours, picked.Colour) {
+func acceptedColour(result ClientCheckResult, content map[string]json.RawMessage) ClientCheckResult {
+	var colour string
+	if json.Unmarshal(content["colour"], &colour) != nil || !slices.Contains(clientCheckColours, colour) {
 		result.Reason = "an accepted form did not carry one of the offered colours"
 		return result
 	}
-	result.Supported, result.Action = true, actionAccept
-	if answer, err := json.Marshal(picked); err == nil {
+	result.Supported, result.Action = true, "accept"
+	if answer, err := json.Marshal(map[string]string{"colour": colour}); err == nil {
 		result.Answer = answer
 	}
 	return result

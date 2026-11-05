@@ -75,9 +75,7 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 		return BlockedDomain{}, fmt.Errorf("contacts: %q is not a domain", domain)
 	}
 	// The human is stamped as the domain's owner where it had none. Triage
-	// refuses to mint rows for a domain nobody is accountable for, so a row
-	// re-opened under nobody's name would come straight back to this list
-	// having spent an attempt and answered nothing.
+	// also accepts ownerless questions; a human re-opening one takes ownership.
 	owner := actingHuman(ctx)
 	if owner == nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: re-asking about %s needs a human to answer for it", base)

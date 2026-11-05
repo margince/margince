@@ -4,29 +4,32 @@
 import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
-import { viewerZone } from "../../format/timezone";
+import { QuietVerbs } from "../../design-system/verbvolume";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
-import { askKey } from "./worklist.ask";
-import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import {
   briefContextTitle,
   briefSubjectLabel,
   dealFactsText,
-  isUnprepared,
   itemTitle,
   phrasedReasons,
   reasonText,
   rowHref,
   subjectHref,
   whenText,
-} from "./worklist.copy";
+} from "../../lib/worklistcopy";
+import {
+  conditionOf,
+  eyebrowKeyFor,
+  kindClass,
+} from "../../lib/worklisteyebrow";
+import { askKey } from "./worklist.ask";
+import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
-import { leadFactsText } from "./worklist.leadfacts";
 import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
@@ -35,6 +38,7 @@ import type { WorklistItem } from "./worklist.queries";
 import {
   noticeDetail,
   readerTask,
+  sentenceTitled,
   sharedResponsibility,
 } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
@@ -47,6 +51,8 @@ import {
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
+import { useViewerZone } from "../../lib/viewerzone";
+import { PreparationNote } from "./worklist.ready";
 import { rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
@@ -136,10 +142,10 @@ export function WorklistRow({
   RowDensity) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  // A task's deadline is the record's day; everything else on this row is a
-  // moment the reader is racing on their own clock.
-  const recordZone = useRecordZone();
+  const zone = useViewerZone();
+  // The due day is the server's bucket, counted on the company's clock (B1),
+  // so the day comparison and the due-day text read that clock.
+  const companyZone = useCompanyZone();
   // Inside the drawer a row's record links carry the way back to it.
   const listed = useListed();
   const target = rowHref(item);
@@ -147,16 +153,19 @@ export function WorklistRow({
   // Open the activity itself without leaving the queue for its linked record.
   const source = useRowSource(item);
   const viewer = useMe(false).data?.user;
-  const name = framedName(readerTask(item, viewer, t), t, locale, framed);
+  const name = framedName(
+    readerTask(sentenceTitled(item), viewer, t),
+    t,
+    locale,
+    framed,
+  );
   const title = name.title;
-  const facts =
-    dealFactsText(item, t, locale, zone) ??
-    leadFactsText(item, t, locale, zone);
+  const facts = dealFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying
   // by how long — on the two rows whose whole claim is a moment.
-  const when = whenText(item, t, locale, zone, recordZone, new Date());
+  const when = whenText(item, t, locale, zone, companyZone, new Date());
   // The supporting line, which every source sends as a sentence already.
   const sourceDetail = noticeDetail(item, viewer, t);
   const detail = sourceDetail === item.verdict?.line ? undefined : sourceDetail;
@@ -188,9 +197,9 @@ export function WorklistRow({
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  // Whether the day put a state on this row — overdue, or a meeting with
-  // nothing prepared. They ride on the title line, which is why it is drawn on
-  // a row that has no title of its own to draw.
+  // Whether the day put a state on this row: overdue, or a meeting the reader
+  // has not confirmed ready. They ride on the title line, which is why it is
+  // drawn on a row that has no title of its own to draw.
   const badged = item.overdue === true || isUnprepared(item);
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two
@@ -290,6 +299,7 @@ export function WorklistRow({
             />
           )}
           <RowAsk item={item} framed={framed} />
+          <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
           <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />
@@ -297,26 +307,29 @@ export function WorklistRow({
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work
-            where it has, so the answer keeps one x down the whole queue. */}
-        <RowActs
-          allowPin={allowPin}
-          onOpenEmail={onOpenEmail}
-          item={item}
-          title={title}
-          href={href}
-          owner={owner}
-          primary={answer.primary}
-          equals={answer.equals}
-          onReview={onReview}
-          context={context}
-          framed={framed}
-          titled={titleLinks(emailOpener, href, source.open)}
-        />
-        {/* An answer that is not a VERB: a duplicate pair, whose two buttons
+            where it has, so the answer keeps one x down the whole queue.
+            Outlined in a list; only the card in hand has a filled verb. */}
+        <QuietVerbs quiet={!framed}>
+          <RowActs
+            allowPin={allowPin}
+            onOpenEmail={onOpenEmail}
+            item={item}
+            title={title}
+            href={href}
+            owner={owner}
+            primary={answer.primary}
+            equals={answer.equals}
+            onReview={onReview}
+            context={context}
+            framed={framed}
+            titled={titleLinks(emailOpener, href, source.open)}
+          />
+          {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
             it. It stays a block under the row, where it has the width to show
             both sides. */}
-        {answer.below}
+          {answer.below}
+        </QuietVerbs>
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>

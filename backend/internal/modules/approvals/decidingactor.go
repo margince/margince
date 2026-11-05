@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -52,6 +53,11 @@ var sendingKinds = map[string]bool{
 	// approving it lets it go.
 	KindScheduledSendHeld: true,
 }
+
+// humanAcceptedKinds are agreements between two colleagues. Taking on a
+// colleague's record, or giving one's own away, is that colleague's own consent
+// and is not delegated to a credential.
+var humanAcceptedKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true}
 
 // ReleaseSends reports whether APPROVING this kind puts a message on the wire at
 // the moment of decision, which is the classification agentMayDecide charges the
@@ -103,6 +109,10 @@ func agentMayDecide(p principal.Principal, a row, approve bool, own ownRelease) 
 	if kind == KindVolumeRelease {
 		return fmt.Errorf("a volume step-up is answered by the human who lent this credential, not by it: %w",
 			apperrors.ErrPermissionDenied)
+	}
+	if approve && humanAcceptedKinds[kind] {
+		return fmt.Errorf("a %s is accepted by the colleague it is put to, in the CRM; their agent may "+
+			"decline it but not accept it: %w", kind, apperrors.ErrPermissionDenied)
 	}
 	if !p.Scopes.Has(principal.ScopeWrite) {
 		return fmt.Errorf("deciding a staged action spends the write cap, which this credential does not carry: %w",

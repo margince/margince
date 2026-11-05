@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { briefSubjectLabel, subjectHref } from "./worklist.copy";
+import { briefSubjectLabel, subjectHref } from "../../lib/worklistcopy";
 import { employerOf } from "./worklist.meetingparties";
 import type { HeldTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
@@ -122,16 +123,16 @@ export function RowCaptions({
             before how long it has waited. */}
         {about && (
           <p className="t-caption worklist-row-about">
-            <a className="entity-link" href={about.href}>
+            <AppLink className="entity-link" href={about.href}>
               {about.label}
-            </a>
+            </AppLink>
           </p>
         )}
         {about?.company && (
           <p className="t-caption worklist-row-about">
-            <a className="entity-link" href={about.company.href}>
+            <AppLink className="entity-link" href={about.company.href}>
               {about.company.label}
-            </a>
+            </AppLink>
           </p>
         )}
         {host && <p className="t-caption worklist-row-host">{host}</p>}

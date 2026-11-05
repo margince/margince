@@ -5,127 +5,141 @@
 
 package gates
 
-// Address use is a conservative signal of invitation delivery. Decoder reads
-// and display-only intended-attendee projections are checked separately.
+// A booking's attendee addresses reach the calendar invitation, and the
+// contract says the booking queues one. Both halves fail together: a booking
+// that drops the addresses again, or prose that stops matching the delivery.
 
 import (
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// noSendStatement is the contract's own sentence saying no invite goes out.
-//
-// The CLAIM side is held by requiring this rather than by hunting for promises,
-// because the promises are open-ended: "sends an invite" was the one that
-// shipped, and "emails an invitation" or "notifies the attendee" would have
-// passed a gate that only knew the first. A disclaimer that must be PRESENT is
-// closed — there is one sentence to keep, and deleting it is what fails.
-const noSendStatement = "No invite is sent"
-
-// deliveryClaims are promises that contradict it. A short list and the weaker
-// half of this gate: it catches prose that says both things at once, which the
-// disclaimer requirement alone cannot. It does not pretend to be exhaustive,
-// which is why it is not the thing the gate rests on.
-var deliveryClaims = []string{
-	"sends an invite", "sends the invite", "sends an invitation",
-	"emails an invitation", "emails the attendee", "notifies the attendee",
-	"invites the attendee",
-}
-
 // attendeeField is the parsed request value.
 const attendeeField = "AttendeeEmails"
 
-// The decoder anchors the field census; a rename must fail rather than shorten it.
-const attendeeDecoder = "internal/modules/activities/booking.go:method Handlers.BookMeeting"
+// queuedStatement is the contract's sentence about what a booking does.
+const queuedStatement = "queues a calendar invitation"
 
-func TestTheBookingContractDoesNotPromiseAnInviteItCannotSend(t *testing.T) {
+// syncDeliveryClaims promise delivery at the moment of the 201, which the
+// asynchronous engine cannot: the provider call happens in the worker.
+var syncDeliveryClaims = []string{
+	"No invite is sent", "sends an invite", "sends the invite", "provider sends the invite",
+	"notifies the attendee", "emails the attendee",
+}
+
+// bookingFlow lists the steps the attendee addresses take from the request to
+// the provider event. Each function must name AttendeeEmails, and the steps
+// that hand the addresses on must call the next one.
+var bookingFlow = []struct {
+	file, fn string
+	calls    string
+}{
+	{"internal/modules/activities/booking.go", "Handlers.BookMeeting", "BookMeeting"},
+	{"internal/modules/activities/booking_invitee.go", "Store.bookingInvitation", ""},
+	{"internal/modules/activities/scheduling_roster.go", "furtherAttendees", ""},
+}
+
+// bookingHandoff is where the mapped request enters the engine.
+var bookingHandoff = []struct{ file, fn, calls string }{
+	{"internal/modules/activities/booking.go", "Store.BookMeeting", "bookingInvitation"},
+	{"internal/modules/activities/booking.go", "Store.BookMeeting", "reserveAndQueueInvitation"},
+	{"internal/modules/activities/scheduling_invitation.go", "Store.reserveAndQueueInvitation", "resolveRoster"},
+	{"internal/modules/activities/scheduling_roster.go", "Store.resolveRoster", "furtherAttendees"},
+}
+
+func TestABookingsAttendeesReachTheCalendarInvitation(t *testing.T) {
 	t.Parallel()
+	for _, step := range bookingFlow {
+		fn := gateFunc(t, step.file, step.fn)
+		if !namesAttendees(fn.Body) {
+			t.Errorf("%s:%s no longer touches %s; the booking's attendees stop there and never reach the calendar event", step.file, step.fn, attendeeField)
+		}
+		if step.calls != "" && !bodyCalls(fn.Body, step.calls) {
+			t.Errorf("%s:%s no longer calls %s", step.file, step.fn, step.calls)
+		}
+	}
+	if fn := gateFunc(t, "internal/modules/activities/booking_invitee.go", "Store.bookingInvitation"); !assignsAttendees(fn.Body) {
+		t.Errorf("Store.bookingInvitation no longer sets the invitation request's %s; a booking's further attendees are dropped", attendeeField)
+	}
+	for _, step := range bookingHandoff {
+		if !bodyCalls(gateFunc(t, step.file, step.fn).Body, step.calls) {
+			t.Errorf("%s:%s no longer calls %s, so a booking does not reach the invitation engine", step.file, step.fn, step.calls)
+		}
+	}
+}
 
+func TestTheBookingContractSaysItQueuesAnInvitation(t *testing.T) {
+	t.Parallel()
 	contract, err := os.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	described := bookMeetingDescription(t, string(contract))
-	disclaims := strings.Contains(described, noSendStatement)
-	consumers := attendeeConsumers(t)
-
-	switch {
-	case len(consumers) == 0 && !disclaims:
-		t.Errorf("nothing outside %s does anything with the attendee addresses, and "+
-			"crm.yaml no longer says %q. A booking accepts them, holds them for four "+
-			"lines and drops them — so the contract is describing a feature this build "+
-			"does not have, and it is the tool description an agent reads before telling "+
-			"somebody the invite went out.", attendeeDecoder, noSendStatement)
-	case len(consumers) > 0 && disclaims:
-		t.Errorf("%v use attendee addresses beyond an intended-attendee display, but crm.yaml still "+
-			"says %q. Whoever wired the transport has left the operation denying it, and "+
-			"an agent reading that will tell a user nothing was sent.",
-			consumers, noSendStatement)
+	if !strings.Contains(described, queuedStatement) {
+		t.Errorf("crm.yaml's bookMeeting no longer says it %q; the tool description an agent reads must say what the booking does", queuedStatement)
 	}
-
-	// The weaker half: prose that promises delivery alongside the disclaimer.
-	if len(consumers) == 0 {
-		for _, claim := range deliveryClaims {
-			if strings.Contains(described, claim) {
-				t.Errorf("crm.yaml says %q while nothing reads the attendee addresses — "+
-					"the disclaimer and this promise cannot both be true, and a reader "+
-					"believes whichever they meet first", claim)
-			}
+	for _, claim := range syncDeliveryClaims {
+		if strings.Contains(described, claim) {
+			t.Errorf("crm.yaml's bookMeeting says %q, but delivery happens later in the worker; say the invitation is queued", claim)
 		}
 	}
 }
 
-// attendeeConsumers answers the FUNCTIONS that do something with the booking's
-// attendee addresses, other than the one that decodes them.
-//
-// Per function, not per file. The decoder and `Store.BookMeeting` live in one
-// file, and a transport would most naturally be wired in the second — so a
-// file-level exclusion blinded this gate to the exact change it exists to
-// notice.
-func attendeeConsumers(t *testing.T) []string {
+// The planted mutation: a bookingInvitation that reads the addresses but never
+// hands them to the request is what the assignment check exists to catch.
+func TestTheBookingGateFailsWhenTheMappingIsDropped(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		body string
+		want bool
+	}{
+		"mapped":  {`addresses := normalizedAttendees(in.AttendeeEmails); req.AttendeeEmails = &addresses`, true},
+		"dropped": {`addresses := normalizedAttendees(in.AttendeeEmails); _ = addresses`, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			file, err := parser.ParseFile(token.NewFileSet(), "fixture.go", "package fixture; func check() {"+tc.body+"}", 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fn, ok := file.Decls[0].(*ast.FuncDecl)
+			if !ok {
+				t.Fatal("fixture has no function")
+			}
+			if got := assignsAttendees(fn.Body); got != tc.want {
+				t.Fatalf("assignsAttendees=%t want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+// gateFunc finds one named function; a rename fails rather than shortening the census.
+func gateFunc(t *testing.T, path, label string) *ast.FuncDecl {
 	t.Helper()
-	var found []string
-	decoderMatches := 0
-	decoderNamesField := false
-	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || !strings.HasSuffix(path, ".go") ||
-			strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
-			return err
-		}
-		file, parseErr := gatekit.ParseFile(path, 0)
-		if parseErr != nil {
-			return parseErr
-		}
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
-			}
-			name := funcLabel(fn)
-			if filepath.ToSlash(path)+":"+name == attendeeDecoder {
-				decoderMatches++
-				decoderNamesField = namesAttendees(fn.Body)
-				continue
-			}
-			if !attendeeDeliveryMention(fn) {
-				continue
-			}
-			found = append(found, filepath.ToSlash(path)+":"+name)
-		}
-		return nil
-	})
+	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
-		t.Fatalf("walking for readers of the attendee addresses: %v", err)
+		t.Fatalf("parsing %s: %v", path, err)
 	}
-	if decoderMatches != 1 || !decoderNamesField {
-		t.Fatal("booking decoder no longer names AttendeeEmails; re-derive the gate anchor")
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if ok && fn.Body != nil && bookingFuncLabel(fn) == label {
+			return fn
+		}
 	}
-	return found
+	t.Fatalf("%s has no %s; re-derive the booking flow this gate follows", path, label)
+	return nil
+}
+
+func bookingFuncLabel(fn *ast.FuncDecl) string {
+	if owner := receiverName(fn); owner != "" {
+		return owner + "." + fn.Name.Name
+	}
+	return fn.Name.Name
 }
 
 // namesAttendees reports whether a body mentions the parsed attendee field.
@@ -140,25 +154,48 @@ func namesAttendees(body *ast.BlockStmt) bool {
 	return mentioned
 }
 
-// bookMeetingDescription cuts the one operation's prose out of the contract.
-//
-// Scoped rather than searched whole, because these phrases are ordinary English
-// and the file is thirty thousand lines: an unrelated operation that legitimately
-// does send an invite would hold this gate red for ever, and — as the first
-// draft proved — so would a sentence explaining that booking does not.
+func assignsAttendees(body *ast.BlockStmt) bool {
+	assigned := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if assign, ok := n.(*ast.AssignStmt); ok {
+			for _, lhs := range assign.Lhs {
+				if sel, ok := lhs.(*ast.SelectorExpr); ok && sel.Sel.Name == attendeeField {
+					assigned = true
+				}
+			}
+		}
+		return !assigned
+	})
+	return assigned
+}
+
+func bodyCalls(body *ast.BlockStmt, name string) bool {
+	called := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		if call, ok := n.(*ast.CallExpr); ok {
+			switch fun := call.Fun.(type) {
+			case *ast.Ident:
+				called = called || fun.Name == name
+			case *ast.SelectorExpr:
+				called = called || fun.Sel.Name == name
+			}
+		}
+		return !called
+	})
+	return called
+}
+
+// bookMeetingDescription cuts the one operation's prose out of the contract:
+// these phrases are ordinary English, and another operation may say them.
 func bookMeetingDescription(t *testing.T, contract string) string {
 	const op = "operationId: bookMeeting"
 	start := strings.Index(contract, op)
 	if start < 0 {
-		t.Fatalf("no %q in the contract, so this gate is reading for a phrase in an "+
-			"operation that has moved or been renamed, and would pass having compared "+
-			"nothing", op)
+		t.Fatalf("no %q in the contract; this gate would pass having read nothing", op)
 	}
-	rest := contract[start:]
-	before, _, ok := strings.Cut(rest, "x-mcp-tool:")
+	before, _, ok := strings.Cut(contract[start:], "\n      parameters:")
 	if !ok {
-		t.Fatal("bookMeeting declares no x-mcp-tool, which is where its prose ends — " +
-			"re-derive this gate's bounds from the operation's current shape")
+		t.Fatal("bookMeeting declares no parameters, which is where its prose ends; re-derive this gate's bounds")
 	}
 	return before
 }

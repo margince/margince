@@ -5,7 +5,6 @@ package forecasting
 
 import (
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
@@ -13,17 +12,16 @@ import (
 func TestTheQualifiedReadingsLeaveOutAReviewedDealAndCountTheUnknownApart(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 	deal := func(id string, amount int64, q viability.Qualification) Deal {
 		d := healthyDeal(t)
 		d.ID, d.AmountMinor, d.BaseMinor, d.Qualification = id, new(amount), new(amount), q
 		return d
 	}
-	got, err := Compute(period, asOf, []Deal{
+	got, err := Compute(period, []Deal{
 		deal("supported", 100_000, viability.QualificationEligible),
 		deal("silent", 400_000, viability.QualificationExcluded),
 		deal("unread", 20_000, viability.QualificationUnknown),
-	})
+	}, testRules)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +30,7 @@ func TestTheQualifiedReadingsLeaveOutAReviewedDealAndCountTheUnknownApart(t *tes
 		t.Fatalf("baseline evidence %d weighted %d, want 520000 and 260000", got.EvidenceMinor, got.WeightedMinor)
 	}
 	want := QualifiedReadings{
-		EvidenceMinor: 100_000, BestCaseMinor: 100_000, WeightedMinor: 50_000,
+		OpenMinor: 100_000, EvidenceMinor: 100_000, WeightedMinor: 50_000,
 		ExcludedMinor: 400_000, UnknownMinor: 20_000, ExcludedCount: 1, UnknownCount: 1,
 	}
 	if got.Qualified == nil || *got.Qualified != want {
@@ -42,7 +40,7 @@ func TestTheQualifiedReadingsLeaveOutAReviewedDealAndCountTheUnknownApart(t *tes
 
 func TestNoQualifiedReadingExistsWhileEnforcementIsOff(t *testing.T) {
 	t.Parallel()
-	got, err := Compute(testPeriod(t), *day(t, time.May, 14), []Deal{healthyDeal(t)})
+	got, err := Compute(testPeriod(t), []Deal{healthyDeal(t)}, testRules)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +54,7 @@ func TestALeftOutDealWithNoVisibleAmountMarksTheSubtotalsPartial(t *testing.T) {
 	t.Parallel()
 	masked := healthyDeal(t)
 	masked.AmountMinor, masked.BaseMinor, masked.Qualification = nil, nil, viability.QualificationExcluded
-	got, err := Compute(testPeriod(t), *day(t, time.May, 14), []Deal{masked})
+	got, err := Compute(testPeriod(t), []Deal{masked}, testRules)
 	if err != nil {
 		t.Fatal(err)
 	}

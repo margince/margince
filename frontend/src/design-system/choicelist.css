@@ -253,7 +253,7 @@
   border-radius: 50%;
   corner-shape: round;
   background: var(--accent);
-  color: var(--textOnAccent);
+  color: var(--textOnAccentControl);
   opacity: 0;
   transform: scale(0.6);
   transition:
@@ -305,4 +305,13 @@
   .choicelist-tiles .choicelist-choice:hover {
     transform: none;
   }
+}
+
+/* The detail under the question spans the whole question in every layout. */
+.choicelist-row > .choicelist-detail,
+.choicelist-tiles > .choicelist-detail {
+  flex-basis: 100%;
+}
+.choicelist-cards > .choicelist-detail {
+  grid-column: 1 / -1;
 }

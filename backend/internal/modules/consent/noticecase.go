@@ -28,21 +28,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// NoticeRule names which disclosure duty a case records. Art. 13 is owed when
-// the data came FROM the subject, Art. 14 when it came from somewhere else —
-// different deadlines and different content, so the case says which it is
-// rather than leaving a later reader to re-derive it from the acquisition kind.
+// NoticeRule records the confirmed disclosure rule, or an unassessed source.
 type NoticeRule string
 
 const (
 	// RuleArt13 — collected from the subject. The disclosure is owed AT
 	// collection, so a case in this rule is already due when it is created.
 	RuleArt13 NoticeRule = "art13"
+	// RuleUnassessed keeps an unknown source from asserting a disclosure duty.
+	RuleUnassessed NoticeRule = "unassessed"
+	// RuleNone records the confirmed absence of a separate notice duty.
+	RuleNone NoticeRule = "none"
 	// RuleArt14 — obtained from anywhere else. One month from the acquisition.
 	RuleArt14 NoticeRule = "art14"
 )
 
-// NoticeState is where a case stands.
+// NoticeState is where a duty or source assessment stands.
 //
 // There is deliberately NO `overdue`. Overdue is a reading of the clock against
 // due_at, not a fact anybody writes: a stored one would make a case overdue
@@ -76,9 +77,10 @@ const fieldRule = "rule"
 // needed from here, and not_required is the older way of closing a case with no
 // reason attached.
 const (
-	NoticeOpen     NoticeState = "open"
-	NoticeAssigned NoticeState = "assigned"
-	NoticeQueued   NoticeState = "queued"
+	NoticeSourceReview NoticeState = "source_review"
+	NoticeOpen         NoticeState = "open"
+	NoticeAssigned     NoticeState = "assigned"
+	NoticeQueued       NoticeState = "queued"
 	// NoticeDeliveryFailed — a disclosure this installation sent did not
 	// arrive. The duty is owed AGAIN: the subject was not told, so the case
 	// returns to the queue rather than resting in a state that reads like an
@@ -116,7 +118,7 @@ const (
 var noticeStates = []NoticeState{
 	NoticeOpen, NoticeAssigned, NoticeQueued, NoticeDeliveryFailed,
 	NoticeCompleted, NoticeProvidedElsewhere, NoticeExemptWithReason,
-	NoticeBlocked, NoticeNotRequired,
+	NoticeBlocked, NoticeNotRequired, NoticeSourceReview,
 }
 
 // terminalNoticeStates are the states a discharged duty rests in. Membership
@@ -165,11 +167,12 @@ func unresolvedNoticeStates() []string {
 // screen — there is no notice-case screen to route to, so a card naming only the
 // case would prompt a reader with nowhere to go.
 type OpenNoticeCase struct {
-	OwnerID   *ids.UUID
-	ID        ids.UUID
-	ContactID ids.ContactID
-	Rule      NoticeRule
-	DueAt     time.Time
+	OwnerID              *ids.UUID
+	ID                   ids.UUID
+	ContactID            ids.ContactID
+	Rule                 NoticeRule
+	DueAt                time.Time
+	DeadlineIsUpperBound bool
 	// OpenedAt is when the duty was recorded. One recorded after its own
 	// deadline came from history this installation imported late.
 	OpenedAt time.Time
@@ -207,14 +210,15 @@ type NoticeCaseInput struct {
 // which is back on the agenda.
 func agendaNoticeStates() []string {
 	return slices.DeleteFunc(unresolvedNoticeStates(), func(state string) bool {
-		return state == string(NoticeQueued)
+		return state == string(NoticeQueued) || state == string(NoticeSourceReview)
 	})
 }
 
 // NoticeAgendaInput narrows the contact-linked agenda before its page limit.
 // A nil owner reads visible work; a zero owner reads unassigned work.
 type NoticeAgendaInput struct {
-	OwnerID *ids.UUID
+	ContactID *ids.ContactID
+	OwnerID   *ids.UUID
 	// TeamOwners includes unowned duties. Nil leaves team membership unrestricted.
 	TeamOwners []ids.UUID
 	Limit      int
@@ -225,10 +229,18 @@ type NoticeAgendaInput struct {
 // agenda additionally requires a live, readable contact because its action
 // opens one. Archiving a contact does not discharge its compliance case.
 func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaInput) ([]OpenNoticeCase, error) {
+	var out []OpenNoticeCase
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.OpenNoticeCasesDueSoonestTx(ctx, tx, in)
+		return err
+	})
+	return out, err
+}
+
+// OpenNoticeCasesDueSoonestTx shares the agenda's authority and scope with record reads.
+func (s *Store) OpenNoticeCasesDueSoonestTx(ctx context.Context, tx pgx.Tx, in NoticeAgendaInput) ([]OpenNoticeCase, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	if in.Limit <= 0 {
@@ -238,32 +250,11 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		in.Limit = noticeCaseListMax
 	}
 	var out []OpenNoticeCase
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
-		if err != nil {
-			return err
-		}
-		where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(agendaNoticeStates()))
-		if scope != "" {
-			where += " AND " + scope
-		}
-		// An explicit case assignment takes precedence over the contact's owner.
-		owner := "COALESCE(n.owner_user_id, c.owner_id)"
-		if in.OwnerID != nil {
-			if in.OwnerID.IsZero() {
-				where += " AND " + owner + " IS NULL"
-			} else {
-				where += storekit.SQLf(" AND "+owner+" = $%d", arg(*in.OwnerID))
-			}
-		}
-		if in.TeamOwners != nil {
-			where += storekit.SQLf(" AND ("+owner+" IS NULL OR "+owner+" = ANY($%d))", arg(in.TeamOwners))
-		}
-		query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `, n.acquisition_id
-   FROM privacy_notice_case n JOIN contact c ON c.id = n.contact_id
-   WHERE ` + where + storekit.SQLf(" ORDER BY n.due_at, n.id LIMIT $%d", arg(in.Limit))
+	query, args, err := noticeAgendaQuery(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	err = func() error {
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
@@ -273,7 +264,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		for rows.Next() {
 			var c OpenNoticeCase
 			var acquisition ids.UUID
-			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.OpenedAt, &c.Blocked, &c.OwnerID, &acquisition); err != nil {
+			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.OpenedAt, &c.Blocked, &c.OwnerID, &acquisition, &c.DeadlineIsUpperBound); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -293,8 +284,45 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 			}
 		}
 		return nil
-	})
+	}()
 	return out, err
+}
+
+func noticeAgendaQuery(ctx context.Context, in NoticeAgendaInput) (string, []any, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		return "", nil, err
+	}
+	where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(agendaNoticeStates()))
+	where += " AND NOT (" + UnverifiedNoticeSourceSQL("n", "e") + ")"
+	if scope != "" {
+		where += " AND " + scope
+	}
+	if in.ContactID != nil {
+		where += storekit.SQLf(" AND c.id = $%d", arg(in.ContactID.UUID))
+	}
+	// An explicit case assignment takes precedence over the contact's owner.
+	owner := "COALESCE(n.owner_user_id, c.owner_id)"
+	if in.OwnerID != nil {
+		if in.OwnerID.IsZero() {
+			where += " AND " + owner + " IS NULL"
+		} else {
+			where += storekit.SQLf(" AND "+owner+" = $%d", arg(*in.OwnerID))
+		}
+	}
+	if in.TeamOwners != nil {
+		where += storekit.SQLf(" AND ("+owner+" IS NULL OR "+owner+" = ANY($%d))", arg(in.TeamOwners))
+	}
+	query := `SELECT n.id, n.contact_id, n.rule, n.due_at, n.created_at, n.state = 'blocked', ` + owner + `, n.acquisition_id, CASE WHEN n.source_kind IS NOT NULL THEN n.source_obtained_at IS NULL ELSE e.occurred_at IS NULL END
+   FROM privacy_notice_case n JOIN contact c ON c.id = n.contact_id
+   JOIN contact_acquisition_evidence e ON e.id = n.acquisition_id
+   WHERE ` + where + storekit.SQLf(" ORDER BY n.due_at, n.id LIMIT $%d", arg(in.Limit))
+	return query, args, nil
 }
 
 // OpenNoticeCaseTx records one duty, in the transaction that created the
@@ -334,6 +362,10 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 	// written. ON CONFLICT DO NOTHING makes a redelivery a no-op, and auditing
 	// one would record a duty being opened that already existed — an audit
 	// trail that says something happened twice is worse than one that is quiet.
+	var due *time.Time
+	if in.State != NoticeSourceReview {
+		due = &in.DueAt
+	}
 	var caseID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO privacy_notice_case
@@ -342,7 +374,7 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (acquisition_id) DO NOTHING
 		RETURNING id`,
-		in.ContactID, in.AcquisitionID, string(in.Rule), in.DueAt, routes,
+		in.ContactID, in.AcquisitionID, string(in.Rule), due, routes,
 		string(in.State), in.OwnerUserID, in.BlockedReason, in.CompletedAt).Scan(&caseID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The duty was already recorded for this acquisition. Nothing happened,
@@ -358,7 +390,7 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 	// lives. No event: nothing outside this module acts on a case being opened,
 	// and an event no consumer reads is a contract nobody can change later.
 	if _, err := storekit.Audit(ctx, tx, "create", "privacy_notice_case", caseID, nil, map[string]any{
-		fieldRule: string(in.Rule), "due_at": in.DueAt, fieldState: string(in.State),
+		fieldRule: string(in.Rule), fieldDueAt: due, fieldState: string(in.State),
 	}); err != nil {
 		return fmt.Errorf("audit the notice case: %w", err)
 	}

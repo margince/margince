@@ -28,6 +28,9 @@ import {
   isConnected,
   memberLabel,
   ownerChoices,
+  pairKeep,
+  pairLocked,
+  pairProblem,
 } from "./contactcase.selection";
 
 type Props = Readonly<{
@@ -48,6 +51,8 @@ function selectionProblem(
   owner: string,
 ): MessageKey | null {
   if (selected.length < 2) return "contactCase.tooFew";
+  const pair = pairProblem(contactCase, selected);
+  if (pair) return pair;
   if (!isConnected(contactCase, selected)) return "contactCase.notConnected";
   if (!owner) return "contactCase.noOwner";
   return null;
@@ -101,7 +106,9 @@ export function CaseForm({
   const [selected, setSelected] = useState(() =>
     defaultSelection(contactCase, startId),
   );
-  const [survivor, setSurvivor] = useState(() => selected[0] ?? "");
+  const [survivor, setSurvivor] = useState(
+    () => pairKeep(contactCase, selected) ?? selected[0] ?? "",
+  );
   const [owner, setOwner] = useState(() =>
     defaultOwner(contactCase, selected, survivor),
   );
@@ -111,6 +118,7 @@ export function CaseForm({
   const merge = useContactCaseMerge();
   const locked = !contactCase.can_merge;
   const choices = ownerChoices(contactCase, selected);
+  const mustKeep = pairKeep(contactCase, selected);
   const problem = selectionProblem(contactCase, selected, owner);
   const body: ContactCaseDecision = {
     revision: contactCase.revision,
@@ -124,7 +132,9 @@ export function CaseForm({
       : false;
 
   const choose = (next: readonly string[], keep: string) => {
-    const kept = next.includes(keep) ? keep : (next[0] ?? "");
+    const kept =
+      pairKeep(contactCase, next) ??
+      (next.includes(keep) ? keep : (next[0] ?? ""));
     setSelected(next);
     setSurvivor(kept);
     const stillEligible = ownerChoices(contactCase, next).some(
@@ -170,7 +180,11 @@ export function CaseForm({
                 <Checkbox
                   label={<MemberDetail member={member} />}
                   checked={ticked}
-                  disabled={locked || (!ticked && against.length > 0)}
+                  disabled={
+                    locked ||
+                    (!ticked && against.length > 0) ||
+                    pairLocked(contactCase, selected, member.id)
+                  }
                   onChange={(event) => toggle(member.id, event.target.checked)}
                 />
                 <Radio
@@ -180,7 +194,11 @@ export function CaseForm({
                     name: memberLabel(contactCase, member.id),
                   })}
                   checked={survivor === member.id}
-                  disabled={locked || !ticked}
+                  disabled={
+                    locked ||
+                    !ticked ||
+                    (mustKeep !== undefined && mustKeep !== member.id)
+                  }
                   onChange={() => choose(selected, member.id)}
                 />
                 {!ticked && against.length > 0 && (

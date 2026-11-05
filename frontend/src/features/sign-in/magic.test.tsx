@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   line,
@@ -328,7 +328,7 @@ describe("the receipt draws every lane it promises", () => {
     ).toBeNull();
     const decide = within(waiting).getByRole("link", { name: "Decide" });
     expect(decide.getAttribute("href")).toBe(
-      "#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
+      "/#/home?approval=0198a0de-0000-7000-8000-00000000d0c1",
     );
     expect(within(waiting).queryAllByRole("button")).toEqual([]);
     expect(within(waiting).queryByText("Undo")).toBeNull();
@@ -580,7 +580,7 @@ describe("the receipt draws every lane it promises", () => {
     // The outage's own date, not the read's: a client showing occurred_at here
     // would date every watched source to this page load.
     expect(when.textContent).toContain(
-      formatDateTime("2026-08-20T06:00:00Z", "en", viewerZone()),
+      formatDateTime("2026-08-20T06:00:00Z", "en", browserZone()),
     );
   });
 

@@ -1,12 +1,10 @@
 import type { components } from "../../api/schema";
-import { NextTaskSlot } from "../../components/nexttaskslot";
+import { RecordNextBar } from "../../components/latestinbound";
 import { Button } from "../../design-system/atoms";
-import { NextBar } from "../../design-system/nextbar";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { type PeekTask, tasksPeek } from "../../lib/standingpeeks";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Lead } from "./leads";
 import { leadNext } from "./leadstandingparts";
 
@@ -35,11 +33,12 @@ export function LeadNextBar({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  const record = useRecordZone();
-  const next = leadNext(lead, { t, locale, zone, record, asOf });
+  const zone = useViewerZone();
+  const next = leadNext(lead, { t, locale, zone, record: zone, asOf });
   return (
-    <NextBar
+    <RecordNextBar
+      // A lead ready to qualify outranks what just came in.
+      urgent={next.qualify || undefined}
       title={next.title}
       late={next.late}
       sub={next.sub}
@@ -64,7 +63,6 @@ export function LeadNextBar({
           () => navigate({ screen: "worklist" }),
         ),
       }}
-      onward={<NextTaskSlot />}
     />
   );
 }

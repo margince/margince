@@ -36,13 +36,14 @@ func (h Handlers) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 	for _, err := range []error{
 		httperr.RequireSent(r, "body", "body is required: send the signature, or empty text to clear it"),
 		httperr.RefuseNull(r, "body"),
+		httperr.RefuseNull(r, "html"),
 	} {
 		if err != nil {
 			writeStoreErr(w, r, err)
 			return
 		}
 	}
-	signature, err := h.store.SaveMyEmailSignature(r.Context(), SaveSignatureInput{Body: body.Body, Title: body.Title, Phone: body.Phone})
+	signature, err := h.store.SaveMyEmailSignature(r.Context(), SaveSignatureInput{Body: body.Body, Title: body.Title, Phone: body.Phone, HTML: body.Html})
 	if err != nil {
 		// No branch for SignatureTooLongError: it implements
 		// apperrors.FieldFault, so every surface renders the same 422 from the
@@ -56,6 +57,7 @@ func (h Handlers) SaveMyEmailSignature(w http.ResponseWriter, r *http.Request) {
 func emailSignatureWire(signature EmailSignature) crmcontracts.EmailSignature {
 	return crmcontracts.EmailSignature{
 		Body:           signature.Body,
+		Html:           signature.HTML,
 		Title:          signature.Title,
 		Phone:          signature.Phone,
 		TemplateActive: signature.TemplateActive,

@@ -48,7 +48,7 @@
   opacity: 1;
 }
 .tagspanel-remove:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 .tagspanel-remove:focus-visible {

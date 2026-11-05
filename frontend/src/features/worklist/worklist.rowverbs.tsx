@@ -9,10 +9,17 @@
 
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { faceClass } from "../../design-system/button";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
+import {
+  atRegionVolume,
+  QuietVerbs,
+  useQuietVerbs,
+} from "../../design-system/verbvolume";
 import { useT } from "../../i18n";
 import { useCurrentMove } from "../../lib/currentmove";
 import { opensElsewhere } from "../../lib/linkclick";
@@ -22,7 +29,7 @@ import {
   moveLabel,
   moveOpensComposer,
   subjectHref,
-} from "./worklist.copy";
+} from "../../lib/worklistcopy";
 import {
   DoneVerb,
   HandBackLines,
@@ -138,9 +145,13 @@ export function RowActs({
         <OverflowMenu label={t("worklist.rowMenu", { title })}>
           <PutDownLines write={write} />
           {ways.map(({ action, destination }) => (
-            <a key={action} className={NAVIGATING_VERB} href={destination}>
+            <AppLink
+              key={action}
+              className={NAVIGATING_VERB}
+              href={destination}
+            >
               {VERB_LABEL[action](t)}
-            </a>
+            </AppLink>
           ))}
           {pins && <PinLine item={item} />}
           {handsOff && (
@@ -151,12 +162,15 @@ export function RowActs({
           <HandBackLines write={write} />
         </OverflowMenu>
       )}
+      {/* An open form is the panel in hand, so its confirm keeps the fill. */}
       {handingOff && (
-        <ReassignForm
-          item={item}
-          owner={owner}
-          onClose={() => setHandingOff(false)}
-        />
+        <QuietVerbs quiet={false}>
+          <ReassignForm
+            item={item}
+            owner={owner}
+            onClose={() => setHandingOff(false)}
+          />
+        </QuietVerbs>
       )}
     </div>
   );
@@ -179,17 +193,17 @@ function RowAnswer({
     <>
       {!item.batch && <PreparedMove item={item} onOpenEmail={onOpenEmail} />}
       {lead && (
-        <a className={NAVIGATING_VERB} href={lead.destination}>
+        <AppLink className={NAVIGATING_VERB} href={lead.destination}>
           {VERB_LABEL[lead.action](t)}
-        </a>
+        </AppLink>
       )}
       {item.source === "brief_item" &&
         !primary &&
         !moveHref(item) &&
         subjectHref(item) && (
-          <a className={NAVIGATING_VERB} href={subjectHref(item)}>
+          <AppLink className={NAVIGATING_VERB} href={subjectHref(item)}>
             {t("deal.openDeal")}
-          </a>
+          </AppLink>
         )}
       {primary}
     </>
@@ -247,6 +261,7 @@ function PreparedMove({
   onOpenEmail,
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
+  const quiet = useQuietVerbs();
   const check = useCurrentMove<{ activityId: string } | { href: string }>(
     (target) => {
       if ("activityId" in target) {
@@ -288,8 +303,8 @@ function PreparedMove({
     moveOpensComposer(item) || item.move?.action === "open_meeting_brief";
   return (
     <>
-      <a
-        className={modelWrites ? PREPARED_VERB : NAVIGATING_VERB}
+      <AppLink
+        className={modelWrites ? preparedVerb(quiet) : NAVIGATING_VERB}
         href={move}
         aria-busy={check.isPending}
         aria-disabled={check.isPending}
@@ -303,7 +318,7 @@ function PreparedMove({
       >
         {modelWrites && <Sparkles aria-hidden="true" />}
         {moveLabel(item, t)}
-      </a>
+      </AppLink>
       <ErrorLine error={check.error} />
     </>
   );
@@ -339,9 +354,12 @@ function verbDestination(
 // The alternative is a second spelling of the ghost button in worklist.css.
 // `features/settings/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost";
-// The move the product worked out, as an anchor in the agent's own chrome:
-// the same `ai` face `Button` draws, for the reason given where it is drawn.
-const PREPARED_VERB = "btn btn-ai";
+// The move the product worked out, as an anchor in the agent's own chrome. It
+// takes the face `Button` draws for `ai` at the region's volume: filled in the
+// card in hand, outlined in a list.
+function preparedVerb(quiet: boolean): string {
+  return `btn ${faceClass(atRegionVolume("ai", quiet))}`;
+}
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —

@@ -40,6 +40,12 @@ func (h Handlers) serveAsAgent(ctx context.Context, w http.ResponseWriter, r *ht
 		httperr.Write(w, r, &auth.ScopeRequiredError{Scope: principal.ScopeRead})
 		return
 	}
+	allowed, err := h.svc.individualPerformance(ctx)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	ctx = auth.WithIndividualPerformance(ctx, allowed)
 	next.ServeHTTP(w, r.WithContext(principal.WithActor(ctx, agent.Principal())))
 }
 
@@ -102,6 +108,7 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 // gate reads. One spelling for both hand-offs below, so a session admitted by
 // either arrives as the same principal.
 func withHumanPrincipal(ctx context.Context, id Identity) context.Context {
+	ctx = auth.WithIndividualPerformance(ctx, id.IndividualPerformance)
 	return principal.WithActor(withIdentity(ctx, id), principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + id.UserID.String(),

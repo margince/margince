@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type MouseEvent, type ReactNode, useId } from "react";
+import { AppLink } from "./applink";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
 import "./iconaction.css";
@@ -133,7 +134,7 @@ export function IconAction(
           {face}
         </Button>
       ) : (
-        <a
+        <AppLink
           className={`btn btn-${props.variant ?? "ghost"} btn-icon`}
           href={props.href}
           onClick={props.onClick}
@@ -142,7 +143,7 @@ export function IconAction(
           data-testid={props.testId}
         >
           {face}
-        </a>
+        </AppLink>
       )}
       {tip}
       {/* The description a screen reader reads AFTER the name, and the one a

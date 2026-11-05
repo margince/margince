@@ -337,6 +337,7 @@ export const routes: readonly MockRoute[] = [
     path: "/activities/a-quarterly",
     handle: reply(insight.quarterlyReview),
   },
+  { method: "GET", path: "/activities/latest-inbound", handle: empty },
   {
     method: "GET",
     path: /^\/activities\/([^/]+)$/,

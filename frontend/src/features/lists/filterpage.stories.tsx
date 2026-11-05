@@ -130,7 +130,7 @@ function newContactFilter(options?: Parameters<typeof routes>[0]) {
 }
 
 // The page as it opens: its name, the record type, two ways in, and the line
-// saying what would bring a count. One emerald control.
+// saying what would bring a count. One accent control.
 export const CalmStart: Story = { render: newContactFilter() };
 
 export const OneIncompleteCondition: Story = {
@@ -152,8 +152,8 @@ export const OneCompleteCondition: Story = {
   },
 };
 
-// Complete, so the band under the editor says the filter is not kept yet and
-// offers the one emerald Save, with the exports in More beside it.
+// Complete: the band under the editor says the filter is not kept yet. It
+// offers the one accent Save, with the exports in More beside it.
 export const CompleteWithFooter: Story = {
   render: newContactFilter(),
   play: async ({ canvasElement }) => {

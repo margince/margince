@@ -17,13 +17,13 @@ import { Switch } from "../../design-system/switch";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
-import { viewerZone } from "../../format/timezone";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
-import { RulePausedReason } from "./automations.lists";
+import { RulePausedReason, RuleSetByAgent } from "./automations.lists";
 import { recipeSentence } from "./automations.recipe";
 import "./automations.css";
 
@@ -314,6 +314,7 @@ function LastRun({
   automation,
   now,
 }: Readonly<{ automation: Automation; now: number }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const at = automation.last_run_at;
@@ -322,7 +323,7 @@ function LastRun({
   }
   return (
     <CellStack>
-      <time dateTime={at} title={formatDateTime(at, locale, viewerZone())}>
+      <time dateTime={at} title={formatDateTime(at, locale, readerZone)}>
         {formatRelativeTime(at, locale, new Date(now))}
       </time>
       <RunOutcome outcome={automation.last_run_outcome} />
@@ -419,6 +420,7 @@ function AutomationStatus({
           {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
         </Badge>
       )}
+      <RuleSetByAgent automation={automation} />
       <RulePausedReason automation={automation} />
       {/* A refused flip moves nothing on screen, so this line is its only report. */}
       {flip.isError && <ErrorLine>{problemMessageOf(flip.error, t)}</ErrorLine>}

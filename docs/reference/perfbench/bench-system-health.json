@@ -1,0 +1,91 @@
+{
+  "target": "bench-system-health",
+  "measured_on": "2026-11-01",
+  "machine": {
+    "os": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M5 Max",
+    "cores": 18,
+    "memory_gib": 48,
+    "toolchain": "go1.27.3",
+    "postgres": "16.15"
+  },
+  "budgets": [
+    {
+      "id": "PERF-11",
+      "name": "system_health",
+      "p50_ms": 48.900959,
+      "p95_ms": 53.696458,
+      "p99_ms": 54.374458,
+      "budget_ms": 750,
+      "samples": 30,
+      "seat": "admin",
+      "flow": "system_health",
+      "verdict": "within budget",
+      "note": "Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2."
+    },
+    {
+      "id": "PERF-12",
+      "name": "system_health_diagnostics_history",
+      "p50_ms": 8.770834,
+      "p95_ms": 9.673541,
+      "p99_ms": 9.760833,
+      "budget_ms": 1000,
+      "samples": 30,
+      "seat": "admin",
+      "flow": "system_health_diagnostics",
+      "verdict": "within budget",
+      "note": "Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2."
+    },
+    {
+      "id": "PERF-12",
+      "name": "system_health_diagnostics_capture",
+      "p50_ms": 71.143458,
+      "p95_ms": 76.720083,
+      "p99_ms": 76.909,
+      "budget_ms": 1000,
+      "samples": 30,
+      "seat": "admin",
+      "flow": "system_health_diagnostics",
+      "verdict": "within budget",
+      "note": "Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2."
+    },
+    {
+      "id": "PERF-12",
+      "name": "system_health_diagnostics_automatic",
+      "p50_ms": 45.599042,
+      "p95_ms": 49.7235,
+      "p99_ms": 51.476375,
+      "budget_ms": 1000,
+      "samples": 30,
+      "seat": "admin",
+      "flow": "system_health_diagnostics",
+      "verdict": "within budget",
+      "note": "Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2."
+    },
+    {
+      "id": "PERF-11",
+      "name": "system_health_eight_readers",
+      "p50_ms": 214.924667,
+      "p95_ms": 251.1865,
+      "p99_ms": 253.927917,
+      "budget_ms": 750,
+      "samples": 30,
+      "seat": "admin",
+      "flow": "system_health",
+      "verdict": "within budget",
+      "note": "Eight simultaneous overview requests; whole-round latency; each response \u003c= 50 KiB gzip; Retained job runs: 10000; sender classifications: 500; refused inputs: 1000; automatic items: 1800; recorded passing restore drill. HTTP reads only; browser rendering is measured separately; Go schedulers: 2."
+    }
+  ],
+  "corpus": {
+    "scale": 1,
+    "contacts": 250000,
+    "companies": 10000,
+    "deals": 25000,
+    "leads": 100000,
+    "projects": 500,
+    "activities": 500000,
+    "reps": 12,
+    "managers": 2
+  }
+}

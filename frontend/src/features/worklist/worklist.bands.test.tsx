@@ -53,78 +53,26 @@ function banded(over: Partial<Parameters<typeof day>[0]> = {}) {
   });
 }
 
-describe("a band holding nothing says so", () => {
-  // The case the field exists for. Nothing is waiting on this reader today and
-  // the page says it in as many words, rather than leaving the reader to infer
-  // it from a heading that is not there.
-  it("draws the empty band's own line", async () => {
+describe("an empty band draws nothing", () => {
+  // The queue says once that the day is clear. A heading and a line per empty
+  // band repeated that under every band, which is the stack this removes.
+  it("draws neither a heading nor a line for an empty band", async () => {
     stub(banded());
     renderWorklist("en");
 
-    expect(
-      await screen.findByText("No urgent items. Remaining work is below."),
-    ).toBeTruthy();
-    // A band that stays in the day. `review` is drawn in its own panel below
-    // now, so it declares no empty run here.
-    expect(screen.getByText("No prospecting work waiting.")).toBeTruthy();
+    expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
+    expect(headings()).not.toContain("Now");
+    expect(headings()).not.toContain("Prospecting");
+    expect(document.querySelector(".worklist-band-clear")).toBeNull();
   });
 
-  // And the heading above it, so the line is attributed. A line saying
-  // "Nothing needs you today" under no heading is a sentence about the whole
-  // page rather than about one band.
-  it("draws the empty band's heading with it", async () => {
-    stub(banded());
-    renderWorklist("en");
-
-    await screen.findByText("No urgent items. Remaining work is below.");
-    expect(headings()).toContain("Now");
-    expect(headings()).toContain("Prospecting");
-  });
-
-  // Each band says what the reader is clear OF. Four copies of one generic
-  // "nothing here" would cost the same space and tell the reader less.
-  it("says something different about each empty band", async () => {
-    stub(banded());
-    renderWorklist("en");
-
-    await screen.findByText("No urgent items. Remaining work is below.");
-    for (const line of ["No prospecting work waiting."]) {
-      expect(screen.queryByText(line)).toBeTruthy();
-    }
-    // NOT the review band's line, and this is the split rather than a gap:
-    // judgements are drawn in their own panel below the day, so a heading for
-    // them inside it would stand over nothing while that work sits underneath.
-    expect(screen.queryByText("Nothing to review.")).toBeNull();
-    // And NOT the line for the band that holds a row.
-    expect(screen.queryByText("No agreed work is drifting.")).toBeNull();
-  });
-
-  // A band that DOES hold rows draws them, not a line claiming it is clear.
-  it("says nothing about a band that holds rows", async () => {
+  // A band that holds rows draws them under its heading.
+  it("draws a band that holds rows", async () => {
     stub(banded());
     renderWorklist("en");
 
     expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
     expect(headings()).toContain("Keep momentum");
-  });
-});
-
-describe("a page with more to load claims no band is empty", () => {
-  // The pagination trap. The queue arrives band-sorted, so a band missing from
-  // page one may hold rows on page three — and "nothing needs you today" over
-  // a Load more button is the page claiming to have looked at work it has not
-  // fetched. The reassurance waits until the whole day is loaded.
-  it("draws no empty-band line while a page is still unfetched", async () => {
-    stub(banded({ next_cursor: "page-two" }));
-    renderWorklist("en");
-
-    // Anchored on a line drawn in the same pass, so the absence is asserted
-    // against a rendered page rather than against one that has not arrived.
-    expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
-    expect(
-      screen.queryByText("No urgent items. Remaining work is below."),
-    ).toBeNull();
-    expect(screen.queryByText("Nothing to review.")).toBeNull();
   });
 });
 
@@ -162,29 +110,6 @@ describe("the headings follow the QUEUE", () => {
         (n) => n.textContent,
       ),
     ).toEqual(["1", "2"]);
-  });
-
-  // A band the server declared and the loaded rows never reach keeps the
-  // server's own position rather than being appended after everything: an empty
-  // Now belongs above a drawn Review, not below it.
-  it("slots a declared empty band into its own place", async () => {
-    stub(
-      day({
-        bands: [
-          { band: "now", shown: 0 },
-          { band: "review", shown: 1 },
-        ],
-        queue: [
-          row({ id: "one", title: "A duplicate to judge", band: "review" }),
-        ],
-        summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
-      }),
-    );
-    renderWorklist("en");
-
-    await screen.findByText("No urgent items. Remaining work is below.");
-    const drawn = headings();
-    expect(drawn.indexOf("Now")).toBeLessThan(drawn.indexOf("Review"));
   });
 });
 

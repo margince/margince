@@ -8,7 +8,7 @@ import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import { CallingSettingsRows } from "./installation-settings.calling";
@@ -70,11 +70,13 @@ const FULL: InstallationSettings = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
-  timezone: meFixture().user.timezone,
+  forecast_forward_measure: "likely",
+  timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   base_currency_locked: false,
-  mcp_client_check: false,
+  individual_performance: true,
+  forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
   ...ALL_ON,
 };
 

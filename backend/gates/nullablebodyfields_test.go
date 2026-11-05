@@ -43,6 +43,9 @@ var nullIgnoredByHandler = gatekit.Waive(map[string]string{
 	"SetWeeklyPlanContract": "decodes map[string]json.RawMessage and reads presence per key " +
 		"in contractField; an explicit null clears there.",
 
+	"UpdateSalesInitiative": "the PATCH replaces every field of the definition from the body, so an " +
+		"absent and an explicit null both write NULL; nothing of the row is kept.",
+
 	"UpdateOfferLineItem": "reads the nulls with NullKeysOf in updateLineInput, " +
 		"which the agent tool shares; an explicit null clears there.",
 	"SetLeadManualSignal": wholeReplace,

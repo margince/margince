@@ -121,6 +121,8 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
+		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
 	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
 	"internal/modules/activities:updateActivityInTx":       "held FOR UPDATE via lockActivityForWrite, one hop past what this witness's AST walk follows — see the shared rationale above",
@@ -141,7 +143,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/agents/runner:FinishJob":             "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
 	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",
 	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
-	"internal/modules/consent:AssignNoticeCase":            "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
+	"internal/modules/consent:setNoticeCaseOwner":          "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
 	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
@@ -240,6 +242,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the
 	// function's own helper mints) — the guard exists, one frame up.
+	"internal/modules/approvals:storeContextDigest": "pins the context the reader sees: the decision holds the row FOR UPDATE, and a preview fills only a pending row's missing digest, where any reader's current context is a correct pin",
 	"internal/modules/approvals:applyEditedPayload": "runs only inside decideInTx, after its FOR UPDATE lock on the approval row",
 	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",

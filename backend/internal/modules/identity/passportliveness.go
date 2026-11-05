@@ -3,6 +3,8 @@
 
 package identity
 
+import "github.com/margince/margince/backend/internal/shared/kernel/workforce"
+
 // What makes a passport still a credential, and the two moments it is asked.
 //
 // Its own file because passport.go had outgrown the size cap, and because this
@@ -55,6 +57,11 @@ const agentLivenessPredicate = `
 const (
 	agentByHashPredicate = `p.token_hash = $1`
 	agentByIDPredicate   = `p.id = $1`
+
+	agentOfHumanByIDPredicate        = `p.id = $1 AND p.on_behalf_of = $2`
+	agentNewestOnConnectionPredicate = `p.oauth_grant_id = $1 AND p.on_behalf_of = $2
+		  AND p.id = (SELECT newest.id FROM passport newest WHERE newest.oauth_grant_id = $1
+		              ORDER BY newest.created_at DESC, newest.id DESC LIMIT 1)`
 )
 
 // agentAuthQuery assembles the agent-authentication statement around one
@@ -97,3 +104,10 @@ var passportStillLiveQuery = `SELECT 1
 		FROM passport p
 		JOIN app_user u ON u.id = p.on_behalf_of` + agentLivenessJoins + `
 		WHERE p.id = $1 AND p.on_behalf_of = $2` + agentLivenessWhere
+
+// liveClientPredicate says "this client is still a client". Every
+// statement that reads oauth_client carries it: authentication, issuance, and the
+// lock the code exchange takes before it commits a grant. Disable and soft-delete are
+// the operator's off switch. A switch that only stopped calls would spend a human's
+// approval on a client an admin already killed.
+const liveClientPredicate = workforce.LiveOAuthClientSQL

@@ -9,7 +9,7 @@ import type { components } from "../../../api/schema";
 import { EntityRef } from "../../../components/entityref";
 import { FieldRow } from "../../../design-system/fieldgrid";
 import { Popover } from "../../../design-system/popover";
-import { provenanceOf } from "../../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../../design-system/provenanceof";
 import { FieldGuard } from "../../../design-system/rbac";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
@@ -26,12 +26,15 @@ import {
   translatePlural,
   useT,
 } from "../../../i18n";
-import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
 import { writtenByLabel } from "../../../lib/leadorigins";
-import { useRecordZone } from "../../../lib/recordzone";
+import {
+  lostReasonWords,
+  useLossReasons,
+} from "../../../lib/lossreasons.queries";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
+import { useViewerZone } from "../../../lib/viewerzone";
 import {
   LostReasonFact,
   type WonWithoutContract,
@@ -53,7 +56,6 @@ export type DealIdentity = Partial<
     | "expected_close_date"
     | "closed_at"
     | "close_date_provisional"
-    | "forecast_category"
     | "wait_until"
     | "fx_rate_to_base"
     | "fx_rate_date"
@@ -65,9 +67,11 @@ export type DealIdentity = Partial<
     | "source"
     | "imported_from"
     | "captured_by"
+    | "created_by"
     | "author"
     | "status"
     | "lost_reason"
+    | "lost_reason_code"
   >
 > &
   WonWithoutContract;
@@ -122,7 +126,7 @@ export function DealRecordRows({
   locale: Locale;
 }>): ReactNode {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const viewerId = useViewerId();
   // The installation's own reporting currency: an unnamed base is not a euro
   // base.
@@ -150,12 +154,15 @@ export function DealRecordRows({
         <Popover
           label={
             <ProvenanceTag
-              provenance={provenanceOf(
-                deal.captured_by,
-                viewerId,
-                deal.author,
-                deal.source,
-                deal.imported_from,
+              provenance={withCreator(
+                provenanceOf(
+                  deal.captured_by,
+                  viewerId,
+                  deal.author,
+                  deal.source,
+                  deal.imported_from,
+                ),
+                deal.created_by,
               )}
             />
           }
@@ -180,6 +187,7 @@ export function DealRecordRows({
 // won, a loss says why.
 function ClosingRow({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
   const t = useT();
+  const reasons = useLossReasons(deal.status === "lost").data;
   if (deal.status === "won" && deal.won_without_contract_reason) {
     return (
       <FieldRow label={t("deals.winReason")}>
@@ -187,10 +195,11 @@ function ClosingRow({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
       </FieldRow>
     );
   }
-  if (deal.status === "lost" && deal.lost_reason) {
+  const lost = lostReasonWords(deal, reasons);
+  if (deal.status === "lost" && lost) {
     return (
       <FieldRow label={t("deals.lostReason")}>
-        <LostReasonFact reason={deal.lost_reason} />
+        <LostReasonFact reason={lost} />
       </FieldRow>
     );
   }
@@ -244,9 +253,6 @@ export function closeWords(
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
-  if (deal.forecast_category) {
-    parts.push(forecastLabel(deal.forecast_category, t));
-  }
   if (waitHolds(deal.wait_until, zone, new Date())) {
     parts.push(
       t("deal.strip.close.waiting", {
@@ -262,26 +268,6 @@ export function closeWords(
       Boolean(deal.close_date_provisional) ||
       (daysLeft !== undefined && daysLeft < 0),
   };
-}
-
-// The forecast words, in the reader's language. An unmapped value renders as
-// itself: the category is a wire enum, and a newer server naming a fifth is
-// still telling this reader something.
-const FORECAST_LABELS: Record<string, MessageKey> = {
-  commit: "deal.forecast.commit",
-  best_case: "deal.forecast.bestCase",
-  pipeline: "deal.forecast.pipeline",
-  omitted: "deal.forecast.omitted",
-};
-
-export function forecastLabel(
-  value: string,
-  t: (key: MessageKey) => string,
-): string {
-  const key = Object.hasOwn(FORECAST_LABELS, value)
-    ? FORECAST_LABELS[value]
-    : undefined;
-  return key === undefined ? value.replaceAll("_", " ") : t(key);
 }
 
 // The amount, converted into the installation's base currency at the frozen
@@ -306,7 +292,7 @@ export function FxLine({
   locale: Locale;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // A deal carrying a rate but no amount converts to nothing, not to zero.
   const baseMinor =
     amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
@@ -315,7 +301,7 @@ export function FxLine({
       {t("deal.fxBase", {
         value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
         rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
+        date: fxRateDate ? formatDate(fxRateDate, locale, readerZone) : "—",
       })}
     </p>
   );

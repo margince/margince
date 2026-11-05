@@ -84,8 +84,12 @@ func (m *StatementMeter) add(spent StatementCost) {
 }
 
 // statementTracer feeds the meter on a pgx call's context. A context with no
-// meter costs one value lookup per hook and records nothing.
-type statementTracer struct{ now func() time.Time }
+// meter costs one value lookup per hook and records nothing. A pool holds one
+// tracer, so the census rides here; it is nil unless SQLCensusDirEnv is set.
+type statementTracer struct {
+	now    func() time.Time
+	census *sqlCensus
+}
 
 var (
 	_ pgx.QueryTracer       = statementTracer{}
@@ -163,7 +167,8 @@ func (t statementTracer) ended(ctx context.Context, err error) {
 	start.meter.add(spent)
 }
 
-func (t statementTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
+func (t statementTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
+	t.census.record(data.SQL)
 	return t.started(ctx, statementCall)
 }
 
@@ -178,7 +183,8 @@ func (t statementTracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx
 
 // TraceBatchQuery runs once per query whose result pgx read; one conn reads
 // them in turn, so the start needs no lock.
-func (statementTracer) TraceBatchQuery(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+func (t statementTracer) TraceBatchQuery(ctx context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+	t.census.record(data.SQL)
 	start, ok := startOf(ctx)
 	if !ok {
 		return

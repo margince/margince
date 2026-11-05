@@ -15,8 +15,8 @@ import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import type { CompanyTab } from "../../lib/companytab";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { RecordHistoryTab } from "../records/history";
 import { WorklistReturnLink } from "../worklist/worklist.return";
@@ -34,7 +34,7 @@ import {
 } from "./companyheaderactions";
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
-import { CompanyRail } from "./companyrail";
+import { CompanyRail, useCompanyRename } from "./companyrail";
 
 // openTaskId is scoped to the account being read, like the tab. The route
 // swaps one company for another without unmounting this component, so a
@@ -98,7 +98,7 @@ export function CompanyPage({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const archivedParagraphId = useId();
   // Why this account takes no changes from this reader (archived, or not
   // theirs to write), said once for the page. The header's verbs, the document
@@ -144,6 +144,7 @@ export function CompanyPage({
   // timeline (the 360 renders it, not an `["activities", …]` query), the
   // workspace-wide queue, and the task's own detail.
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", company.id));
+  const rename = useCompanyRename(company);
   const rail = (
     <CompanyRail
       company={company}
@@ -179,6 +180,7 @@ export function CompanyPage({
     <RecordView
       back={<WorklistReturnLink />}
       name={company.display_name}
+      rename={rename}
       identity={company.id}
       avatarSrc={company.logo_url}
       // What the account is, its site and the best way in, one line each.
@@ -192,7 +194,7 @@ export function CompanyPage({
           <LatestInboundLine latest={latest} onOpen={() => onTab("overview")} />
         )
       }
-      zone={recordZone}
+      zone={readerZone}
       // The composer opens from a button rather than standing open above the
       // page. A whole form in the header's action strip would push the
       // account's own story below the fold.
@@ -284,7 +286,7 @@ export function CompanyPage({
         could then put it over an already-open dialog. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={recordZone}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
       />
       {/* The audit spine, opened from the header's overflow menu. It belongs

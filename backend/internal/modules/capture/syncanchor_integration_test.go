@@ -62,7 +62,7 @@ func (c *anchorRecorder) SyncFrom(
 func TestARetryOfAFirstSyncReadsWhereTheFirstAttemptDid(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	rec := &anchorRecorder{window: 7 * 24 * time.Hour, failUntil: 1}
 	reg.Register(rec)
 
@@ -90,7 +90,7 @@ func TestAnOutagePastTheBoundRecordsWhatNobodyRead(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	const window = 7 * 24 * time.Hour
 	rec := &anchorRecorder{window: window, failUntil: 1}
 	reg.Register(rec)
@@ -132,7 +132,7 @@ func TestAStoredWatermarkReleasesTheAnchor(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	reg.Register(&anchorRecorder{window: 7 * 24 * time.Hour})
 
 	if err := syncOnceOf(ctx, t, reg, anchorProvider); err != nil {
@@ -175,7 +175,7 @@ func TestAConnectionWithAStoredWatermarkIsToldNoAnchor(t *testing.T) {
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
-	reg.WithClock(func() time.Time { return at })
+	reg.SetClock(func() time.Time { return at })
 	rec := &anchorRecorder{window: 7 * 24 * time.Hour}
 	reg.Register(rec)
 
@@ -184,7 +184,7 @@ func TestAConnectionWithAStoredWatermarkIsToldNoAnchor(t *testing.T) {
 	if err := syncOnceOf(ctx, t, reg, anchorProvider); err != nil {
 		t.Fatalf("the first sync failed: %v", err)
 	}
-	reg.WithClock(func() time.Time { return at.Add(200 * 24 * time.Hour) })
+	reg.SetClock(func() time.Time { return at.Add(200 * 24 * time.Hour) })
 	if err := syncOnceOfExisting(ctx, t, reg, anchorProvider); err != nil {
 		t.Fatalf("the second sync failed: %v", err)
 	}

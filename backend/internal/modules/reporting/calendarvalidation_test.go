@@ -5,6 +5,8 @@ package reporting
 
 import (
 	"errors"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -75,7 +77,7 @@ func TestAnUnsupportedPeriodOrTargetBasisNamesWhatIsAccepted(t *testing.T) {
 		err      error
 		accepted []string
 	}{
-		{periodErr, []string{"this_month", "last_month", "last_week", "this_quarter", "custom"}},
+		{periodErr, contractPeriods(t)},
 		{basisErr, []string{"month", "fiscal_quarter"}},
 	} {
 		if !errors.Is(c.err, apperrors.ErrInvalidArgument) {
@@ -85,6 +87,43 @@ func TestAnUnsupportedPeriodOrTargetBasisNamesWhatIsAccepted(t *testing.T) {
 			if !strings.Contains(c.err.Error(), name) {
 				t.Errorf("the refusal does not name %q, so an assistant must guess it: %v", name, c.err)
 			}
+		}
+	}
+}
+
+// contractPeriods reads the periods a reporting selection may name, as
+// crm.yaml declares them, so a period added there must be resolved here.
+func contractPeriods(t *testing.T) []string {
+	t.Helper()
+	raw, err := os.ReadFile("../../../api/crm.yaml")
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	selection := regexp.MustCompile(`(?s)\n    ReportingSelection:\n.*?\n        period:\n          type: string\n          enum:\n((?:          - [a-z_]+\n)+)`).FindStringSubmatch(string(raw))
+	if selection == nil {
+		t.Fatal("the contract declares no ReportingSelection period enum")
+	}
+	var periods []string
+	for _, line := range regexp.MustCompile(`(?m)^          - ([a-z_]+)$`).FindAllStringSubmatch(selection[1], -1) {
+		periods = append(periods, line[1])
+	}
+	return periods
+}
+
+func TestEveryContractPeriodResolvesToAnInterval(t *testing.T) {
+	at := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	calendar := Calendar{Timezone: "Europe/Berlin", FiscalStartMonth: 4}
+	periods := contractPeriods(t)
+	if len(periods) < 2 {
+		t.Fatalf("the contract lists %d periods, so the census proved nothing", len(periods))
+	}
+	for _, period := range periods {
+		selection := crmcontracts.ReportingSelection{Period: crmcontracts.ReportingSelectionPeriod(period)}
+		if period == "custom" {
+			selection.Interval = &crmcontracts.ReportingWindow{StartAt: at.AddDate(0, 0, -3), EndAt: at}
+		}
+		if _, err := Interval(selection, calendar, at); err != nil {
+			t.Errorf("the contract period %q does not resolve: %v", period, err)
 		}
 	}
 }

@@ -24,7 +24,7 @@ import { type Locale, useLocale, useT } from "../../../i18n";
 import { DEAL_COMMITMENTS_KEY } from "../../../lib/activitykeys";
 import { useCanWrite } from "../../../lib/capability";
 import { problemStatus, unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
+import { useViewerZone } from "../../../lib/viewerzone";
 
 type DealCommitments = components["schemas"]["DealCommitments"];
 type DealCommitment = DealCommitments["data"][number];
@@ -123,7 +123,7 @@ function CommitmentRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const differs = row.differs_from_deal;
   return (
     <OverviewRow

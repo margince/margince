@@ -115,7 +115,11 @@ describe("DealHistoryTab", () => {
   // To, and a task the product filed offers no email at all.
   it("offers Reply on mail and Write email only where the server can address the row", async () => {
     const rows = [
-      { ...CALL_ACTIVITY, offers_email: true },
+      {
+        ...CALL_ACTIVITY,
+        offers_email: true,
+        email_target: { entity_type: "contact", entity_id: "p-1" },
+      },
       {
         ...CALL_ACTIVITY,
         id: "a-2",
@@ -140,6 +144,7 @@ describe("DealHistoryTab", () => {
         subject: "Send the revised quote",
         is_done: false,
         offers_email: true,
+        email_target: { entity_type: "contact", entity_id: "p-1" },
       },
       {
         ...CALL_ACTIVITY,

@@ -5,6 +5,7 @@ import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { InvitationBadge } from "../../components/booking-meeting-parts";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -20,8 +21,8 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
 import { useMeetingInvitation } from "../../lib/meeting-invitation-query";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Activity = components["schemas"]["Activity"];
 type Invitation = components["schemas"]["MeetingInvitation"];
@@ -60,7 +61,7 @@ function useMeetingSpan(
   precision: OccurredPrecision,
 ): string | null {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return activityTimeSpan(start, end, precision, locale, zone);
 }
 
@@ -70,7 +71,7 @@ function DateTile({
   precision,
 }: Readonly<{ at: string; precision: OccurredPrecision }>) {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const tile = activityDay(at, precision, locale, zone, dateTileParts);
   return (
     <time className="pe-meeting-date" dateTime={at}>
@@ -97,7 +98,7 @@ function DaysAway({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const days = activityDaysAway(at, precision, Date.parse(asOf), zone, zone);
   if (days < 0) return null;
   const label =
@@ -138,12 +139,12 @@ export function MeetingTitle({
     : "pe-meeting-title";
   if (!opens) return <span className={className}>{children}</span>;
   return (
-    <a
+    <AppLink
       className={`entity-link ${className}`}
       href={routeHash({ screen: "book", id: `meeting-${activityId}` })}
     >
       {children}
-    </a>
+    </AppLink>
   );
 }
 

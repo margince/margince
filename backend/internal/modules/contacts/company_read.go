@@ -107,7 +107,9 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	return out, nil
 }
 
-func readCompany(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Company, error) {
+// readCompanyRow is one company row with its children, and what a before-image
+// or an internal check reads.
+func readCompanyRow(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Company, error) {
 	q := `SELECT ` + companyColumns + storekit.SelectSuffix(active) + ` FROM company WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND archived_at IS NULL`
@@ -136,6 +138,9 @@ func readCompany(ctx context.Context, tx pgx.Tx, id ids.CompanyID, archived stor
 	if err := attachCompanyRelationshipTypes(ctx, tx, companies); err != nil {
 		return crmcontracts.Company{}, err
 	}
+	if err := attachCompanyPartners(ctx, tx, companies); err != nil {
+		return crmcontracts.Company{}, err
+	}
 	return companies[0], nil
 }
 
@@ -150,7 +155,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var addr crmcontracts.Address
 	var resolvedCountries []string
 	var logoObjectKey *string
-	var linkedinURL *string
+	var linkedinURL, email *string
 	var version int64
 	var visibility string
 	var assessAgainst *ids.UUID
@@ -161,7 +166,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&id, &o.DisplayName, &o.LegalName, &o.Description, &o.Industry, &o.SizeBand, &ownerID, &visibility,
 		&addr.Line1, &addr.Line2, &addr.City, &addr.Region, &addr.PostalCode, &addr.Country,
 		&resolvedCountries,
-		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
+		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Phone, &email, &o.Source, &o.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
 		&o.LastActivityAt, &o.LegalHold, &assessAgainst,
@@ -185,6 +190,9 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	o.Lifecycle = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
+	if email != nil {
+		o.Email = new(openapi_types.Email(*email))
+	}
 	o.AssessAgainstEntityId = uuidPtr(assessAgainst)
 	if a := addressOrNil(addr); a != nil {
 		o.Address = a

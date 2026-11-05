@@ -80,7 +80,14 @@ func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProje
 	if in.FromOwnerID == in.ToOwnerID {
 		return 0, &SameOwnerError{}
 	}
-	if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
+	err := ensureActiveOwner(ctx, tx, in.ToOwnerID)
+	// An own-scope seat's write scope holds no other seat to hand work to. Its
+	// refused handover is the scope's refusal; a wider seat's is the receiver's.
+	if p, ok := principal.Actor(ctx); ok && (err == nil || errors.As(err, new(*OwnerNotActiveError))) {
+		teamScope := auth.Check{RowScope: principal.RowScopeTeam}
+		auth.RecordDecision(ctx, teamScope, err == nil || teamScope.HeldBy(p))
+	}
+	if err != nil {
 		return 0, err
 	}
 	candidates, err := transferableProjectIDs(ctx, tx, in.FromOwnerID)
@@ -120,21 +127,21 @@ func ensureActiveOwner(ctx context.Context, tx pgx.Tx, owner ids.UserID) error {
 }
 
 // transferableProjectIDs enumerates the live projects the from-owner holds
-// that the caller may both see and write. The write arm is auth.WritableBy,
-// which every single-row mutation asks. So a `read` share of a colleague's
-// project shows it in the list and still leaves it where it is here.
+// that the caller may both see and write. The write arm is auth.WritableSubset,
+// the one query the single-row check runs, asked for the whole set at once. So a
+// `read` share of a colleague's project shows it and still leaves it where it is.
 func transferableProjectIDs(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids.UUID, error) {
 	seen, err := auth.VisibleOwnedIDs(ctx, tx, projectObject, from.UUID)
 	if err != nil {
 		return nil, err
 	}
+	allowed, err := auth.WritableSubset(ctx, tx, projectObject, seen)
+	if err != nil {
+		return nil, err
+	}
 	writable := make([]ids.UUID, 0, len(seen))
 	for _, id := range seen {
-		ok, err := auth.WritableBy(ctx, tx, projectObject, id)
-		if err != nil {
-			return nil, err
-		}
-		if ok {
+		if allowed[id] {
 			writable = append(writable, id)
 		}
 	}

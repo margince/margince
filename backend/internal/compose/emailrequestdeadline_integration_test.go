@@ -47,7 +47,7 @@ func requestTaskDue(t *testing.T, e *integration.Env, subject string, sent time.
 		t.Fatal(err)
 	}
 	ctx := principal.WithActor(e.Admin(), principal.Principal{Type: principal.PrincipalSystem, ID: "system:owed_verdict", Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
-	if _, err := e.Activities.SetCaptureLabel(ctx, message, "commitment"); err != nil {
+	if _, err := e.LabelCapture(ctx, message, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.Activities.SetOwedVerdict(ctx, message, activities.OwedVerdictAsksUs, "prompts-test", sent); err != nil {

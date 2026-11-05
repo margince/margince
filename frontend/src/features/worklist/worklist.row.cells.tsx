@@ -6,7 +6,7 @@ import { Badge } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { isUnprepared } from "./worklist.copy";
+import { isUnprepared } from "../../lib/meetingreadiness";
 import { RowCaptions } from "./worklist.row.captions";
 import type { RowReadings } from "./worklist.row.compact";
 import { RowName } from "./worklist.rowname";
@@ -40,7 +40,7 @@ export function RowText({
   readings: RowReadings;
   /** Opens a waiting message. Its presence is what names the row. */
   emailOpener: ((activityId: string) => void) | undefined;
-  /** Whether the day put a state on this row: overdue, or nothing prepared. */
+  /** Whether the day put a state on this row: overdue, or not confirmed ready. */
   badged: boolean;
 }>) {
   const {

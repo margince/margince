@@ -128,6 +128,7 @@ func TestACategoryWhoseSourceHitItsBoundSaysThereMayBeMore(t *testing.T) {
 		decisions = append(decisions, item("d"+string(rune(i)), "approval", withKind("send_email")))
 	}
 	day := crmcontracts.Attention{AsOf: rankInstant, NeedsYou: decisions}
+	day.Counts.ApprovalsOpen = new(batchScanDepth + 50)
 
 	got := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
 

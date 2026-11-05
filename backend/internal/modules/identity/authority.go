@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -208,4 +209,12 @@ func liveSeatType(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (string, err
 		return "", apperrors.ErrNotFound
 	}
 	return seatType, err
+}
+
+// EffectiveAuthorityTx resolves live authority inside a composed mutation's transaction.
+func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	if _, err := storekit.LockRow(ctx, tx, "app_user", humanID, storekit.LiveOnly); err != nil {
+		return authz.RBAC{}, "", err
+	}
+	return EffectiveAuthorityTx(ctx, tx, humanID)
 }

@@ -123,6 +123,9 @@ type Copy struct {
 
 	RoomSharedBy   string
 	ControllerFrom string
+	// PoweredBy is the small line under the letterhead of mail the system
+	// relay sends as the installation.
+	PoweredBy string
 
 	ConfirmRecordAction  string
 	ConfirmConsentAction string
@@ -141,6 +144,8 @@ type Copy struct {
 	MailPromisedBy      string
 	MailInTheirWords    string
 	MailWhyYou          string
+	MailAlsoChanges     string
+	MailPreviewStatus   string
 	MailTranscriptOf    string
 	MailReasonRequested string
 	MailReasonOnBehalf  string

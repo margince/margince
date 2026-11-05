@@ -25,12 +25,22 @@ import type { WorklistItem } from "./worklist.queries";
 
 const CONTACT = "01a05500-0000-7000-8000-0000000000aa";
 
+// A whole row, as the queue serves one. Spelled out rather than asserted into
+// shape. The pane reads `because`, and an assertion let the fixture leave it
+// out, so every frame below threw instead of drawing.
 function contactRow(): WorklistItem {
   return {
     id: "one",
     title: "Kirsten Vogel is waiting on an answer",
     subject: { type: "contact", id: CONTACT, label: "Kirsten Vogel" },
-  } as WorklistItem;
+    source: "contact_case",
+    category: "customer_waiting",
+    level: 2,
+    actions: [],
+    because: [],
+    consequence: "buyer_waits",
+    occurred_precision: "instant",
+  };
 }
 
 function stub360(answer: () => Promise<Response>) {
@@ -49,6 +59,19 @@ function frame(item: WorklistItem, answer: () => Promise<Response>) {
       </div>
     </StoryProviders>
   );
+}
+
+// The deal-bearing row the pane draws nothing for. Whole, for the same reason
+// the contact row is: the pane reads `because` before it decides to draw.
+function dealRow(): WorklistItem {
+  return {
+    ...contactRow(),
+    id: "two",
+    title: "Fleet retrofit closes on Friday",
+    subject: { type: "deal", id: "d-fleet", label: "Fleet retrofit" },
+    category: "deals_at_risk",
+    consequence: "deal_slips_past_close",
+  };
 }
 
 const meta: Meta<typeof WorklistPane> = {
@@ -97,13 +120,5 @@ export const CouldNotBeRead: Story = {
 /** A row about a deal rather than a contact draws NOTHING — not an empty frame,
  *  which would read as a pane that failed to arrive. */
 export const NoPaneForThisRow: Story = {
-  render: () =>
-    frame(
-      {
-        id: "two",
-        title: "Fleet retrofit closes on Friday",
-        subject: { type: "deal", id: "d-fleet", label: "Fleet retrofit" },
-      } as WorklistItem,
-      async () => jsonResponse({ data: [] }),
-    ),
+  render: () => frame(dealRow(), async () => jsonResponse({ data: [] })),
 };

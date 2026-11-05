@@ -6,7 +6,10 @@ package approvals
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 )
 
 func TestALinkedInMatchEditMayFlipOnlyItsTwoBoxes(t *testing.T) {
@@ -55,5 +58,33 @@ func TestACardStagedWithoutTheBoxesTakesNoBox(t *testing.T) {
 func TestAKindWithNoListKeepsTheGeneralEditRule(t *testing.T) {
 	if err := assertEditableMembers("send_email", json.RawMessage(`{"subject":"a"}`), json.RawMessage(`{"subject":"b"}`)); err != nil {
 		t.Errorf("a content edit on an unlisted kind was refused: %v", err)
+	}
+}
+
+func TestAHandoverTakesNoEditToAnyMember(t *testing.T) {
+	staged := map[string]string{
+		"record_type": "company", "record_id": "0190a1b2-0000-7000-8000-000000000001",
+		"from_id": "0190a1b2-0000-7000-8000-000000000002", "to_id": "0190a1b2-0000-7000-8000-000000000003",
+		"requested_by": "0190a1b2-0000-7000-8000-000000000003", "decider_id": "0190a1b2-0000-7000-8000-000000000002",
+		"note": "I run this account now",
+	}
+	raw, err := json.Marshal(staged)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := assertEditableMembers(approvalsubject.KindOwnershipTransfer, raw, raw); err != nil {
+		t.Errorf("accepting the request as staged was refused: %v", err)
+	}
+	for member := range staged {
+		edited := maps.Clone(staged)
+		edited[member] = "contact"
+		body, err := json.Marshal(edited)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var invalid *InvalidEditError
+		if err := assertEditableMembers(approvalsubject.KindOwnershipTransfer, raw, body); !errors.As(err, &invalid) {
+			t.Errorf("an edit to %s answered %v, want an invalid-edit refusal", member, err)
+		}
 	}
 }

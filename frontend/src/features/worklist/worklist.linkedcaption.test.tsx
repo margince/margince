@@ -46,6 +46,8 @@ function draw(filter: WorklistFilter, onFilter = () => {}) {
         loaded={[]}
         scope="mine"
         filter={filter}
+        view="today"
+        onView={() => {}}
         owner=""
         onScope={() => {}}
         onFilter={onFilter}

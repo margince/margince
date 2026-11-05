@@ -350,7 +350,7 @@ test.each(["untried", "answered"] as const)(
       name: "Open",
       description: "Best route",
     });
-    expect(door.getAttribute("href")).toBe("#/contacts/p-1");
+    expect(door.getAttribute("href")).toBe("/#/contacts/p-1");
     // The name is inside the card the door's stretched target covers, so a
     // press on it is a press on this link.
     const card = door.closest(".stat-card");

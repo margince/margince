@@ -893,15 +893,13 @@ if [[ -z "$henning" ]]; then
 fi
 
 # Mid-morning on two of next week's days, so an honest answer has to work around
-# something. 201 or 409 — 409 is a re-run finding its own block already held —
-# and anything else is a seed reporting a full calendar it never wrote.
+# something. A booked meeting holds the slot with no calendar connected, which is
+# how this stack runs: POST /bookings now needs a real calendar to invite on.
 book_block() {
-  local subject="$1" days="$2" hour="$3" body code
-  body="$(printf '{"start":"%sT%02d:00:00Z","end":"%sT%02d:00:00Z","subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
-    "$(days_ahead "$days")" "$hour" "$(days_ahead "$days")" "$((hour + 2))" "$subject" "$henning")"
-  code="$(status_of POST /bookings "$body")"
-  [[ "$code" = "201" || "$code" = "409" ]] || {
-    echo "booking \"$subject\" answered HTTP $code" >&2; exit 1; }
+  local subject="$1" days="$2" hour="$3" body
+  body="$(printf '{"kind":"meeting","meeting_status":"booked","host_user_id":"%s","occurred_at":"%sT%02d:00:00Z","duration_seconds":7200,"subject":"%s","links":[{"entity_type":"contact","entity_id":"%s"}]}' \
+    "$me" "$(days_ahead "$days")" "$hour" "$subject" "$henning")"
+  create_or_die "/activities" "$body" "the booked block \"$subject\"" >/dev/null
 }
 # The first two days of the COMING week, whichever day the lane runs on. `date
 # +%u` numbers Monday 1 through Sunday 7, so 8 minus today lands on the next
@@ -1049,7 +1047,7 @@ ines="$(lead_id_by_email "Ines Waldner" "ines.waldner@stahlbau-waldner.test")"
 if [[ -z "$ines" ]]; then
   body="$(printf '{"full_name":"Ines Waldner","email":"ines.waldner@stahlbau-waldner.test","title":"Einkaufsleiterin","company_name":"Stahlbau Waldner","status":"engaged","source":"webform","owner_id":"%s"}' "$me")"
   ines="$(create_or_die "/leads" "$body" "the engaged lead")"
-  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Fassadenanker","body":"Ja, gerne — passt Donnerstag für ein Gespräch?","links":[{"entity_type":"lead","entity_id":"%s"}]}' \
+  body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"%s","subject":"Re: Angebot Fassadenanker","body":"Ja, gerne — passt Donnerstag für ein Gespräch?","participants":{"from":"ines.waldner@stahlbau-waldner.test"},"links":[{"entity_type":"lead","entity_id":"%s"}]}' \
     "$(days_ago 6)" "$ines")"
   create_or_die "/activities" "$body" "the reply that justifies promotion" >/dev/null
 fi
@@ -1391,7 +1389,11 @@ freeze_forecast() {
 if [[ "$(lane_psql "SELECT count(*) FROM forecast_snapshot WHERE trigger = 'daily'")" -ne 2 ]]; then
   lane_psql "DELETE FROM forecast_snapshot WHERE trigger = 'daily'" >/dev/null
   freeze_forecast
-  lane_psql "UPDATE forecast_snapshot SET taken_at = taken_at - interval '7 days', local_day = local_day - 7 WHERE trigger = 'daily'" >/dev/null
+  # The table refuses an UPDATE by trigger, so the trigger is off for this one
+  # backdating and back on in the same transaction.
+  lane_psql "ALTER TABLE forecast_snapshot DISABLE TRIGGER forecast_snapshot_is_frozen;
+    UPDATE forecast_snapshot SET taken_at = taken_at - interval '7 days', local_day = local_day - 7 WHERE trigger = 'daily';
+    ALTER TABLE forecast_snapshot ENABLE TRIGGER forecast_snapshot_is_frozen" >/dev/null
   vorort_deal="$(deal_id_by_name "Vorort Systeme Ausbau")"
   valantic_deal="$(deal_id_by_name "valantic Migrationsprojekt")"
   [[ -n "$vorort_deal" && -n "$valantic_deal" ]] || { echo "case 50 needs the Vorort and valantic deals" >&2; exit 1; }

@@ -19,13 +19,13 @@ import {
   RecordDetails,
 } from "../../design-system/recorddetails";
 import { sectionState } from "../../design-system/surfacestate";
-import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatNumber } from "../../format/format";
 import { formatDateAbbrev } from "../../format/format.dates";
 import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useProjectEdit } from "./projectedit";
 import { PHASE_LABEL, type Project } from "./projects.form";
 import { timeUsed } from "./projectstanding";
@@ -66,7 +66,7 @@ function CompanyRef({ view }: Readonly<{ view: Project360 }>) {
 export function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const used = timeUsed(view, zone);
   return (
     <>
@@ -154,7 +154,7 @@ function CompanyCard({
   const summary = useEmployerSummary(companyId).data;
   const lifecycle =
     summary?.lifecycle && summary.lifecycle !== "unknown"
-      ? t(COMPANY_LIFECYCLE_LABELS[summary.lifecycle])
+      ? t(LIFECYCLE_LABELS[summary.lifecycle])
       : undefined;
   const facts = [
     lifecycle,
@@ -180,7 +180,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
   const cf = useObjectCustomFields("project");
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const display = useCustomFieldDisplay();
   const grants = useProjectGrants(view.project.id);
   const project = view.project;

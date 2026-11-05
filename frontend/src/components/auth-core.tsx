@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AmbientWaves } from "../design-system/ambient-waves";
+import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import {
   MarginceCoreScene,
@@ -191,9 +192,9 @@ function LegalFooter() {
           legal sentence above still reads as a statement and not as a control.
           The row already wraps, so the extra item cannot widen the surface. */}
       <span className="auth-legal-links">
-        <a href="/legal/terms">{t("auth.legalTerms")}</a>
+        <AppLink href="/legal/terms">{t("auth.legalTerms")}</AppLink>
         <span className="auth-legal-sep" aria-hidden />
-        <a href="/legal/privacy">{t("auth.legalPrivacy")}</a>
+        <AppLink href="/legal/privacy">{t("auth.legalPrivacy")}</AppLink>
         <span className="auth-legal-sep" aria-hidden />
         <ThemeToggle />
       </span>

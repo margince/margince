@@ -174,7 +174,7 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Locat
 		Interactions90d: e.Interactions90d,
 		Inbound90d:      e.Inbound90d,
 		Outbound90d:     e.Outbound90d,
-		TwoWay:          twoWay(e),
+		TwoWay:          twoWay(e.Inbound90d, e.Outbound90d),
 	}
 	if e.LastAt != nil {
 		last := *e.LastAt
@@ -187,10 +187,10 @@ func evidenceOf(e *crmcontracts.ContactGraphEdge, now time.Time, loc *time.Locat
 
 // twoWay is the claim that separates a relationship from a mailing list, in
 // relstrength's direction words over the colleague's 90-day counts.
-func twoWay(e *crmcontracts.ContactGraphEdge) bool {
+func twoWay(inbound, outbound *int) bool {
 	sides := relstrength.Sides{
-		TheyWrote: e.Inbound90d != nil && *e.Inbound90d > 0,
-		WeWrote:   e.Outbound90d != nil && *e.Outbound90d > 0,
+		TheyWrote: inbound != nil && *inbound > 0,
+		WeWrote:   outbound != nil && *outbound > 0,
 	}
 	return sides.Direction() == relstrength.DirectionTwoWay
 }

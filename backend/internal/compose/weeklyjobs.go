@@ -101,6 +101,10 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 	// The enumeration runs as the system: it reads the installation timezone
 	// and the seat roster — facts about WHO is due a review, which belong to no
 	// rep. Every read of a rep's own data happens under her own principal.
+	ctx, individual, err := bindIndividualPerformance(ctx, w.pool)
+	if err != nil {
+		return err
+	}
 	sysCtx := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:weekly-review",
 	})
@@ -135,7 +139,11 @@ func (w *weeklyGenerateWorker) measureWorkspace(
 		}
 	}
 	// Finish database-only measurements before optional model or relay calls.
-	failures = append(failures, w.snapshotTeams(sysCtx, wsID, now, failedMembers)...)
+	// A team's week names each member's figures, so none is frozen while the
+	// installation shows no individual performance.
+	if individual {
+		failures = append(failures, w.snapshotTeams(sysCtx, wsID, now, failedMembers)...)
+	}
 	for _, ready := range mailable {
 		sendCtx := principal.WithCorrelationID(
 			principal.WithActor(ctx, ready.rep), ids.NewV7())

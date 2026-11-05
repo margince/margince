@@ -7,41 +7,32 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// MeetingResponsibilitySQL renders "this seat answers for this meeting", over
-// the activity row `meeting` and the seat expression `seat`. The Worklist
-// lanes, the follow-up reminder, the weekly figures and plan capacity read it.
-//
-// Three kinds of evidence each record taking part. The first is the host a
-// human logged the meeting with. The second is a provider-recorded organizer
-// or attendee row. The third is an invitation this seat sent through the
-// booking doors. A captured meeting's host column says only whose calendar it
-// came from, so on a connector row it is no evidence. Importing a copy, being
-// copied on mail about it, or filing it is none of these.
-//
-// Both arguments are SQL the caller renders: a table alias and a placeholder
-// or column. Neither is ever request text.
+// MeetingResponsibilitySQL binds work to a supported host, participant or booking.
+// Importing a record or owning its calendar does not establish attendance.
+// Arguments are compile-time SQL expressions, never request text.
 func MeetingResponsibilitySQL(meeting, seat string) string {
-	return fmt.Sprintf(`((%[1]s.host_user_id = %[2]s AND NOT starts_with(%[1]s.captured_by, 'connector:'))
+	return fmt.Sprintf(`((%[4]s = %[2]s AND NOT starts_with(%[1]s.captured_by, 'connector:'))
 	   OR EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id = %[2]s
 	                 AND attending.role IN ('organizer', 'attendee')
 	                 AND %[3]s)
 	   OR EXISTS (SELECT 1 FROM meeting_invitation booked
 	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s))`,
-		meeting, seat, auth.ParticipantStandsSQL("attending", meeting))
+		meeting, seat, auth.ParticipantStandsSQL("attending", meeting), KnownMeetingHostSQL(meeting))
 }
 
 // UnclaimedMeetingSQL is a meeting no seat answers for by that same evidence.
 func UnclaimedMeetingSQL(meeting string) string {
-	return fmt.Sprintf(`((%[1]s.host_user_id IS NULL OR starts_with(%[1]s.captured_by, 'connector:'))
+	return fmt.Sprintf(`((%[3]s IS NULL OR starts_with(%[1]s.captured_by, 'connector:'))
 	   AND NOT EXISTS (SELECT 1 FROM activity_participant attending
 	               WHERE attending.activity_id = %[1]s.id AND attending.user_id IS NOT NULL
 	                 AND attending.role IN ('organizer', 'attendee')
 	                 AND %[2]s)
 	   AND NOT EXISTS (SELECT 1 FROM meeting_invitation booked WHERE booked.activity_id = %[1]s.id))`,
-		meeting, auth.ParticipantStandsSQL("attending", meeting))
+		meeting, auth.ParticipantStandsSQL("attending", meeting), KnownMeetingHostSQL(meeting))
 }
 
 // MeetingCreditSQL renders "this seat is credited with this meeting" for the
@@ -106,7 +97,7 @@ func meetingCreditedSeatSQL(meeting, host string) string {
 	   (SELECT attending.user_id FROM activity_participant attending
 	     WHERE attending.activity_id = %[1]s.id AND attending.user_id IS NOT NULL
 	       AND %[2]s AND %[4]s ORDER BY attending.user_id LIMIT 1))`,
-		meeting, creditedAttendanceSQL("attending", meeting), host, auth.ParticipantStandsSQL("attending", meeting))
+		meeting, creditedAttendanceSQL("attending", meeting), knownHostExpressionSQL(meeting, host), auth.ParticipantStandsSQL("attending", meeting))
 }
 
 func meetingCreditSQL(meeting, host, seat string) string {
@@ -116,7 +107,7 @@ func meetingCreditSQL(meeting, host, seat string) string {
 	                 AND %[3]s AND %[5]s)
 	   OR EXISTS (SELECT 1 FROM meeting_invitation booked
 	               WHERE booked.activity_id = %[1]s.id AND booked.host_user_id = %[2]s))`,
-		meeting, seat, creditedAttendanceSQL("attending", meeting), host, auth.ParticipantStandsSQL("attending", meeting))
+		meeting, seat, creditedAttendanceSQL("attending", meeting), knownHostExpressionSQL(meeting, host), auth.ParticipantStandsSQL("attending", meeting))
 }
 
 // creditedAttendanceSQL is one participant row that proves its seat took part.
@@ -130,4 +121,24 @@ func creditedAttendanceSQL(participant, meeting string) string {
 	   AND (NOT starts_with(%[2]s.captured_by, 'connector:')
 	     OR %[1]s.response = 'accepted'
 	     OR (%[1]s.role = 'organizer' AND %[1]s.response IS NULL))`, participant, meeting)
+}
+
+// ExplicitMeetingHostEvidence records a supplied host in the append-only creation audit.
+const ExplicitMeetingHostEvidence = "explicit_meeting_host"
+
+// KnownMeetingHostSQL withholds an importer's default unless source attribution or an explicit host write supports it.
+func KnownMeetingHostSQL(meeting string) string {
+	return knownHostExpressionSQL(meeting, meeting+".host_user_id")
+}
+
+func knownHostExpressionSQL(meeting, host string) string {
+	return fmt.Sprintf(`(CASE WHEN (%[2]s) IS NULL THEN NULL
+ WHEN starts_with(coalesce(%[1]s.source_system,''),'%[3]s')
+ AND %[1]s.captured_by = 'human:' || (%[2]s)::text
+ AND %[1]s.source_author_id IS DISTINCT FROM (%[2]s)
+ AND NOT EXISTS (SELECT 1 FROM audit_log host_statement
+     WHERE host_statement.entity_type='activity' AND host_statement.entity_id=%[1]s.id
+       AND host_statement.action='create'
+       AND host_statement.evidence->>'%[4]s'=(%[2]s)::text)
+ THEN NULL ELSE %[2]s END)`, meeting, host, provenance.ReservedSourceSystemPrefix, ExplicitMeetingHostEvidence)
 }

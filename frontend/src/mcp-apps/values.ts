@@ -63,3 +63,24 @@ export function day(value: unknown): string {
   if (Number.isNaN(at.getTime())) return ABSENT;
   return at.toISOString().slice(0, 10);
 }
+
+/**
+ * compactMoney renders an amount the way a headline states it: "€115K". The
+ * scale follows the currency's own minor units, as `money` does.
+ */
+export function compactMoney(amountMinor: unknown, currency: unknown): string {
+  const minor = asFiniteNumber(amountMinor);
+  const code = asText(currency);
+  if (minor === null || code === "" || !Number.isSafeInteger(minor))
+    return ABSENT;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: code,
+      notation: "compact",
+      maximumSignificantDigits: 3,
+    }).format(toMajorUnits(minor, code));
+  } catch {
+    return ABSENT;
+  }
+}

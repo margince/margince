@@ -76,7 +76,7 @@ export type Routes = Record<
 // report went with Brief's open-pipeline panel — and a read that arrives by
 // accident is named rather than quietly served an empty page.
 const DEFAULTS: Routes = {
-  "GET /teams": () => jsonResponse({ data: [] }),
+  "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /me": () => jsonResponse(meFixture()),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   "GET /digest": () =>

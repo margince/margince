@@ -18,6 +18,8 @@ const (
 	ReasonContactEmailHeld           ReasonCode = "contact_email_held"
 	ReasonContactHoldsLead           ReasonCode = "contact_holds_lead"
 	ReasonAddressErased              ReasonCode = "address_erased"
+	ReasonEmployerRefused            ReasonCode = "employer_refused"
+	ReasonEmployerWillCreate         ReasonCode = "employer_will_create"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
 	ReasonLinkedinHeld               ReasonCode = "linkedin_held"
@@ -113,6 +115,17 @@ const (
 )
 
 var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+	ReasonEmployerRefused: {text: map[textlang.Lang]string{
+		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
+		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
+		textlang.Vietnamese: "Không thể xác định công ty. Hãy chọn một công ty rõ ràng mà bạn được phép liên kết.",
+	}},
+	ReasonEmployerWillCreate: {params: []string{paramName}, text: map[textlang.Lang]string{
+		textlang.English:    "The employer {name} will be created if it is still missing when this row is imported.",
+		textlang.German:     "Der Arbeitgeber {name} wird erstellt, falls er beim Import dieser Zeile noch fehlt.",
+		textlang.Vietnamese: "Công ty {name} sẽ được tạo nếu chưa có khi nhập hàng này.",
+	}},
+
 	ReasonEmptyPayload: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row has no fields.",
 		textlang.German:     "Die Zeile enthält keine Felder.",

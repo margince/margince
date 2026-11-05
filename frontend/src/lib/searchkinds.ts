@@ -239,3 +239,25 @@ export function searchHitDestination(
   }
   return searchHitRoute(hit.type, hit.id);
 }
+
+export function bestIdentifierMatch(
+  hits: readonly components["schemas"]["SearchResult"][],
+): components["schemas"]["SearchResult"] | undefined {
+  const rank = (hit: components["schemas"]["SearchResult"]) =>
+    hit.identifier_match === "exact"
+      ? 2
+      : hit.identifier_match === "prefix"
+        ? 1
+        : 0;
+  return hits
+    .filter((hit) => rank(hit) > 0)
+    .sort((left, right) => {
+      const leftKey = `${left.type}:${left.id}`;
+      const rightKey = `${right.type}:${right.id}`;
+      return (
+        rank(right) - rank(left) ||
+        (right.score ?? 0) - (left.score ?? 0) ||
+        (leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0)
+      );
+    })[0];
+}

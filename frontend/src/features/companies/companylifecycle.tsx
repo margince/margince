@@ -123,6 +123,11 @@ export function CompanyLifecycleControl({
       // would be the one control in the header naming itself twice. The label
       // still names it for assistive tech.
       labelHidden
+      hint={
+        (pending ?? stored) === "live"
+          ? t("company.lifecycle.live.help")
+          : undefined
+      }
       error={failure ?? undefined}
     >
       {(control) => (

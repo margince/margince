@@ -21,6 +21,7 @@ import { ConnectionOutcomesCard } from "./connection-outcomes";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 const HELD: components["schemas"]["HeldThread"] = {
@@ -168,4 +169,24 @@ it("returns focus to the card while the drawer's list is still re-reading", asyn
       screen.getByText("What your connections found"),
     ),
   );
+});
+
+it("opens the held-mail controls from health and clears only the review parameter on close", async () => {
+  window.location.hash = "#/settings/capture-activity?review=held&keep=1";
+  installFetchStub(
+    routes({
+      "GET /capture/held-threads": () => jsonResponse({ data: [HELD] }),
+    }),
+  );
+  const user = userEvent.setup();
+  renderCard();
+  expect(
+    await screen.findByRole("dialog", { name: "Held threads" }),
+  ).toBeVisible();
+  await user.keyboard("{Escape}");
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(window.location.hash).toContain("keep=1");
+  expect(window.location.hash).not.toContain("review=");
 });

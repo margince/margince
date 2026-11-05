@@ -124,8 +124,10 @@ func setupPromoteConsent(t *testing.T) *promoteConsentEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"lead":    {Create: true, Read: true, Update: true, Delete: true},
-				"contact": {Create: true, Read: true, Update: true, Delete: true},
+				"company":      {Create: true, Read: true, Update: true},
+				"relationship": {Create: true, Read: true, Update: true},
+				"lead":         {Create: true, Read: true, Update: true, Delete: true},
+				"contact":      {Create: true, Read: true, Update: true, Delete: true},
 				// The lead vocabularies share the custom-field catalog's grant.
 				"custom_field": {Create: true, Read: true, Update: true, Delete: true},
 			},
@@ -252,7 +254,7 @@ func TestPromotionMergeAppliesWithdrawalWinsAndStateStands(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	contact, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "inbound_reply"})
+	contact, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
 	if err != nil {
 		t.Fatalf("promote: %v", err)
 	}

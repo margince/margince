@@ -42,7 +42,7 @@ type summaryCopy struct {
 	// Correspondence. Addresses, subjects and bodies pass through, quoted where
 	// the sentence quotes them.
 	sendEmail, cc, sendSubject, sendMessage, draftReply, accountSend, accountSendFiled, booking,
-	bookingHost, bookingLinks, noSubject, relinkActivity, relinkActivities string
+	bookingHost, bookingLinks, hostNamed, noSubject, relinkActivity, relinkActivities string
 
 	// Imports. The counts are the report's; the record type reads as a noun.
 	importPreview, importCommit, importCreate, importUpdate, importUnchanged, importSkip,
@@ -97,7 +97,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		updateProfileField:  "Update profile field %s on company %s",
 		mergeTags:           "Fold tag %q into %q, releasing the name %q",
 		mergeMembers:        "Merge member %q (%s) into %q (%s). The duplicate is removed, and personal record access and correspondence follow the surviving account.",
-		setUpPartner:        "Set up a partner program on company %s (role: %s), with no margin tier",
+		setUpPartner:        "Set up a partner program on company %s (kinds: %s), with no margin tier",
 		promoteLead:         "Promote lead %s to a contact (%s)",
 		disqualifyLead:      "Disqualify lead %s",
 		demoteLead:          "Reverse the promotion of lead %s",
@@ -117,6 +117,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Book %q from %s to %s",
 		bookingHost:         " on %s's calendar",
 		bookingLinks:        ", attached to %d record(s)",
+		hostNamed:           "%s (entered address)",
 		noSubject:           "(no subject)",
 		relinkActivity:      "Re-associate activity %s to %s %s",
 		relinkActivities:    "Re-associate %d activities to %s %s",
@@ -175,7 +176,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		updateProfileField:  "Profilfeld %s zum Unternehmen %s ändern",
 		mergeTags:           "Tag %q in %q überführen und den Namen %q freigeben",
 		mergeMembers:        "Mitglied %q (%s) mit %q (%s) zusammenführen. Das Duplikat wird entfernt und der persönliche Zugriff auf Datensätze und Korrespondenz geht auf das verbleibende Konto über.",
-		setUpPartner:        "Partnerprogramm für Firma %s einrichten (Rolle: %s), ohne Margenstufe",
+		setUpPartner:        "Partnerprogramm für Firma %s einrichten (Arten: %s), ohne Margenstufe",
 		promoteLead:         "Lead %s zum Kontakt überführen (%s)",
 		disqualifyLead:      "Lead %s disqualifizieren",
 		demoteLead:          "Überführung von Lead %s rückgängig machen",
@@ -195,6 +196,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Termin buchen: %q von %s bis %s",
 		bookingHost:         " im Kalender von %s",
 		bookingLinks:        ", verknüpfte Datensätze: %d",
+		hostNamed:           "%s (eingegebene Adresse)",
 		noSubject:           "(kein Betreff)",
 		relinkActivity:      "Aktivität %s neu zuordnen: %s %s",
 		relinkActivities:    "%d Aktivitäten neu zuordnen: %s %s",
@@ -253,7 +255,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		updateProfileField:  "Cập nhật trường hồ sơ %s của công ty %s",
 		mergeTags:           "Gộp thẻ %q vào %q, giải phóng tên %q",
 		mergeMembers:        "Gộp thành viên %q (%s) vào %q (%s). Tài khoản trùng bị xóa và tài khoản giữ lại kế thừa quyền truy cập bản ghi cá nhân cùng thư từ.",
-		setUpPartner:        "Thiết lập chương trình đối tác cho công ty %s (vai trò: %s), chưa có bậc biên lợi nhuận",
+		setUpPartner:        "Thiết lập chương trình đối tác cho công ty %s (loại: %s), chưa có bậc biên lợi nhuận",
 		promoteLead:         "Chuyển lead %s thành liên hệ (%s)",
 		disqualifyLead:      "Loại lead %s",
 		demoteLead:          "Hoàn tác việc chuyển đổi lead %s",
@@ -273,6 +275,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		booking:             "Đặt lịch %q từ %s đến %s",
 		bookingHost:         " trên lịch của %s",
 		bookingLinks:        ", gắn với %d bản ghi",
+		hostNamed:           "%s (địa chỉ được nhập)",
 		noSubject:           "(không có tiêu đề)",
 		relinkActivity:      "Liên kết lại hoạt động %s với %s %s",
 		relinkActivities:    "Liên kết lại %d hoạt động với %s %s",

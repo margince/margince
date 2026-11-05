@@ -13,19 +13,20 @@ import "./composed.css";
 import {
   automaticLabel,
   CommitmentReviewFlag,
-  directionClass,
   entryDay,
   entryMove,
   entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
+  sideClass,
+  sideOf,
   TIMELINE_ICON,
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
   TimelineWhen,
 } from "./timelineentry";
-import { TimelineText } from "./timelinetext";
+import { TimelineBody } from "./timelinetext";
 
 // How many of a thread's messages stand open before the rest fold behind a
 // count. Three is a conversation a reader takes in at a glance: the ask,
@@ -102,13 +103,16 @@ function messageLead(
     return { actor: t(automatic) };
   }
   const who = otherSideOf(entry);
-  if (entry.direction === "inbound") {
+  // Authorship, not transport: a contact's reply is their word whichever way
+  // the copy travelled, and a colleague's inbound copy is still ours.
+  const side = sideOf(entry);
+  if (side === "theirs") {
     return {
       actor: who ?? t("timeline.thread.them"),
       verb: t("timeline.thread.wrote"),
     };
   }
-  if (entry.direction === "outbound") {
+  if (side === "ours") {
     // An imported row knows who sent it, and neither "we" nor "you" is that
     // colleague. The import ran as one administrator, so every row it wrote
     // reads as that seat's own sending. The author is asked first for the same
@@ -179,11 +183,11 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
   // record so it is that contact's colour everywhere, never the lead line's
   // phrase.
   const [face] = otherSide(entry);
-  if (entry.direction === "inbound" && face) {
+  const side = sideOf(entry);
+  if (side === "theirs" && face) {
     return <Avatar name={face.name} identity={face.key} />;
   }
-  const Icon =
-    entry.direction === "outbound" ? Send : TIMELINE_ICON[entry.kind];
+  const Icon = side === "ours" ? Send : TIMELINE_ICON[entry.kind];
   return (
     <span className="tl-msg-mark">
       <Icon aria-hidden />
@@ -195,7 +199,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
 // through EmailWords, the canonical spelling of a message's words. That is
 // also where the withheld rule lives, so this row cannot answer that question
 // differently from the row beside it. A message without a summary (a chat, or
-// a server that has not caught up) draws its body through TimelineText. That
+// a server that has not caught up) draws its body through TimelineBody. That
 // is the one the chronicle uses, with the same fold. A withheld row draws the
 // sentence where its words would be, whatever it is handed.
 function MessageWords({
@@ -208,7 +212,7 @@ function MessageWords({
   if (entry.emailSummary) {
     return <EmailWords summary={entry.emailSummary} />;
   }
-  return entry.body ? <TimelineText text={entry.body} entry={entry} /> : null;
+  return entry.body ? <TimelineBody entry={entry} body={entry.body} /> : null;
 }
 
 /**
@@ -331,7 +335,7 @@ export function ThreadRow({
   // every member of which is withheld says so where its subject would go.
   const subject = group.entries.find((entry) => !entry.withheld)?.title;
   return (
-    <li className={directionClass(newest.direction)}>
+    <li className={sideClass(newest)}>
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}

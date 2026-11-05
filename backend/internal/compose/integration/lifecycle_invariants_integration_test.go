@@ -462,7 +462,7 @@ func TestReopeningWithARedundantLostReasonStillCleans(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: lost, LostReason: new("price")}); err != nil {
+	if _, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: lost, LostReason: new("price"), LostReasonCode: new("price")}); err != nil {
 		t.Fatalf("closing as lost: %v", err)
 	}
 	reopened, err := e.Deals.AdvanceDeal(admin, ids.From[ids.DealKind](ids.UUID(d.Id)), deals.AdvanceDealInput{ToStageID: open, LostReason: new("price")})

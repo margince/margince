@@ -65,6 +65,7 @@ type senderMail struct {
 func seedSenderMail(t *testing.T, trustDomain bool) senderMail {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
 	// Two colleagues of one name make the promiser ambiguous.
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya' WHERE id = $1`, e.Rep2)
 	if trustDomain {

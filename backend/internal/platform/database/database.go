@@ -92,7 +92,15 @@ func PoolConfig(dsn string) (*pgxpool.Config, error) {
 	setSessionUTC(cfg)
 	// Inert until a caller binds a StatementMeter to the context. The worklist
 	// binds one to split each stage's time into pgx calls, pool waits and the rest.
-	cfg.ConnConfig.Tracer = statementTracer{now: time.Now}
+	tracer := statementTracer{now: time.Now}
+	if censusDir != "" {
+		census, err := processCensus(censusDir)
+		if err != nil {
+			return nil, err
+		}
+		tracer.census = census
+	}
+	cfg.ConnConfig.Tracer = tracer
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		RegisterIDTypes(conn)
 		RegisterUTCTimes(conn)

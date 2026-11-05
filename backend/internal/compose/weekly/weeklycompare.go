@@ -200,7 +200,7 @@ func closedInWeek(
 		return nil, nil, err
 	}
 	coverage := deals.UnpricedValueCountSQL(amountSQL, nativeAmount, "TRUE")
-	value := "CASE WHEN (" + coverage + ") > 0 THEN NULL ELSE " + deals.FinalizeBaseTotalSQL("sum("+amountSQL+")", coverage) + " END"
+	value := deals.IncompleteBaseTotalSQL("sum("+amountSQL+")", coverage)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
 		  (SELECT %[5]s FROM deal d
@@ -281,9 +281,10 @@ func readPriorWeek(
 		return nil, nil
 	}
 	return &PriorWeek{
-		LocalWeekStart: prior.LocalWeekStart,
-		Counts:         prior.Counts,
-		Money:          prior.Money,
+		LocalWeekStart:   prior.LocalWeekStart,
+		Counts:           prior.Counts,
+		Money:            prior.Money,
+		MeetingsWithheld: prior.MeetingsWithheld,
 	}, nil
 }
 

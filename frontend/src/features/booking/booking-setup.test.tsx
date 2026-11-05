@@ -64,7 +64,7 @@ it("opens meeting settings in another tab without discarding the invitation draf
   const settings = await screen.findByRole("link", {
     name: "Open meeting settings",
   });
-  expect(settings.getAttribute("href")).toBe("#/settings/meetings");
+  expect(settings.getAttribute("href")).toBe("/#/settings/meetings");
   expect(settings.getAttribute("target")).toBe("_blank");
   await user.type(
     screen.getByLabelText("Message for your guest"),

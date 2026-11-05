@@ -11,16 +11,16 @@ What Margince keeps, for how long, what a delete destroys, and how you get data 
 ## Getting data out, getting data in, and removing records
 
 ### How do I export my data from Margince?
-To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar. Build a filter, then choose **Export CSV** or **Export JSON** under **⋯** (**More for this filter**).
+To export or download records from Margince (for example all your contacts), open **Filters and views** in the sidebar. Build a filter, then press **Export CSV** or **Export JSON** beside the count of **Matching records**.
 1. Open **Filters and views**.
 2. Press **New filter** and pick the record type.
 3. Press **Add condition** and fill it.
-4. Press **⋯** (**More for this filter**) at the bottom, then **Export CSV** or **Export JSON**. The file downloads.
+4. Press **Export CSV** or **Export JSON** beside the count of **Matching records**. The file downloads.
 The export holds only records you can see, and every export is written to the audit log. Agents cannot export.
 Also called: download, get my data out, backup, extract to Excel or spreadsheet.
 
 ### How do I get all of my company's data out of Margince?
-Margince has an export of the whole company: a ZIP with one CSV for each record type, plus files that describe how records link. The app has no button for it yet. Ask whoever runs your Margince to download it for you. Only an admin or ops user can have it made, agents cannot, and it holds only what that user can see. Every download goes into the audit log. For daily exports use **Filters and views** → **New filter** → … → **⋯** (**More for this filter**) → **Export CSV**.
+Margince has an export of the whole company: a ZIP with one CSV for each record type, plus files that describe how records link. The app has no button for it yet. Ask whoever runs your Margince to download it for you. Only an admin or ops user can have it made, agents cannot, and it holds only what that user can see. Every download goes into the audit log. For daily exports use **Filters and views** → **New filter** → … → **Export CSV** beside the count.
 
 Also called: full export, data handover, migrate away, leave Margince.
 
@@ -79,7 +79,7 @@ To pause a rule, turn **Enabled** off; **Delete policy** removes it fully.
 Also called: data retention, retention period, auto-delete.
 
 ### How do I record a contact's consent?
-To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to mail the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
+To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to preview the mail and then send the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
 
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
 
@@ -137,6 +137,11 @@ The three retention actions are **Archive**, **Anonymize** and **Erase**. With *
 The app makes this clear: "Archive keeps the record. Anonymize and erase destroy data and are held back in retain-only mode."
 
 Anonymize and erase clear different things. An erasure also reaches the first copies of captured messages and the files sent with those messages. It reaches the contact's leads and scores, their unsubscribe links and their Deal Room seats too. Anonymizing leaves all of those.
+
+Both actions remove stored recipient evidence used to add contacts from captured
+conversations. An access package includes only the subject's own addresses from
+messages the requester may share. It excludes other recipients' addresses and
+private folder names.
 
 ### What anonymize and erase do
 **Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.
@@ -285,7 +290,7 @@ The default is **deny**. A purpose with no record for a contact is not consent.
 
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 
-Agents cannot write consent at all; see [What the AI does](what-the-ai-does.md).
+An agent can record consent for its user, and it asks them first. It cannot record a purpose that needs double opt-in; only the contact can confirm that. The Proof log names it as an Agent, so the entry never reads as the user's own. See [What the AI does](what-the-ai-does.md).
 
 ## The audit trail
 
@@ -303,7 +308,7 @@ There are two exports, and they answer different questions.
 
 #### The list export
 
-On **Filters and views** you build a filter and choose **Export CSV** or **Export JSON** under **⋯** (**More for this filter**). Those are the only two file types. The screen offers **contacts, companies, deals and leads**. You export either a new filter or a saved view.
+On **Filters and views** you build a filter and press **Export CSV** or **Export JSON** beside the count of **Matching records**. Those are the only two file types. The screen offers **contacts, companies, deals and leads**. You export either a new filter or a saved view.
 
 **It exports only what you can see**, by the same rules as the list on your screen. Only a human can export; an agent cannot. **Every export goes into the audit log**, so someone can always find out who made a copy of what, and when.
 

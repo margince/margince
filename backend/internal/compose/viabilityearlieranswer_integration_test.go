@@ -85,10 +85,26 @@ func (v *viabilityEnv) checkAt(t *testing.T, at time.Time) {
 	v.check(t)
 }
 
+// storedReminderAt pushes the deferral already recorded past the ceiling, in
+// the table rather than through the verb.
+//
+// The verb refuses such a moment now, so a row naming one was written before it
+// did. That is the row this case is about: the reader has to end it on time
+// whatever the writer admitted when it was stored.
+func (v *viabilityEnv) storedReminderAt(t *testing.T, at time.Time) {
+	t.Helper()
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE assurance_resolution SET remind_at = $1 WHERE outcome = $2`,
+		at, assurance.OutcomeRemindLater); err != nil {
+		t.Fatalf("storing a reminder past the ceiling: %v", err)
+	}
+}
+
 func TestAnEarlierReminderHoldsNoLongerThanAnyAnswerMay(t *testing.T) {
 	v := setupViability(t)
-	remind := v.now.AddDate(0, 0, 200)
-	v.answerEarlierCheck(t, assurance.Resolution{Outcome: assurance.OutcomeRemindLater, RemindAt: &remind})
+	inside := v.now.AddDate(0, 0, 30)
+	v.answerEarlierCheck(t, assurance.Resolution{Outcome: assurance.OutcomeRemindLater, RemindAt: &inside})
+	v.storedReminderAt(t, v.now.AddDate(0, 0, 200))
 
 	v.check(t)
 	if v.openReviews(t, v.silent) != 0 {

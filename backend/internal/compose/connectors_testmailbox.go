@@ -11,15 +11,11 @@ package compose
 // gates. ConnectConnector's dispatch in connectors.go answers 422 otherwise.
 
 import (
-	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -89,48 +85,5 @@ func (h connectorHandlers) connectTestMailbox(w http.ResponseWriter, r *http.Req
 		})
 		return
 	}
-	if _, err := h.registry.Connect(ctx, testmailbox.Name, auth); err != nil {
-		if errors.Is(err, apperrors.ErrScopeExceeded) {
-			// Defense-in-depth: connectTestMailbox grants the descriptor's
-			// scopes from the human's authority, so a human cannot normally
-			// trip this.
-			httperr.Write(w, r, &httperr.DetailedError{
-				Status: http.StatusForbidden,
-				Code:   "scope_exceeded",
-				Detail: "This connection requires a capture scope that was not granted.",
-			})
-			return
-		}
-		slog.ErrorContext(r.Context(), "test_mailbox connector: persisting connection", "err", err)
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError,
-			Code:   codeConnectorStoreFailed,
-			Detail: "The connection could not be stored. Nothing was captured; try again.",
-		})
-		return
-	}
-	views, err := h.registry.Connections(r.Context())
-	if err != nil {
-		slog.ErrorContext(r.Context(), "test_mailbox connector: reading back connection", "err", err)
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusInternalServerError,
-			Code:   codeConnectorStoreFailed,
-			Detail: "The connection was stored but could not be read back.",
-		})
-		return
-	}
-	for _, v := range views {
-		if v.Provider == testmailbox.Name {
-			conn := toContractConnection(v)
-			httperr.WriteJSON(w, http.StatusOK, crmcontracts.ConnectConnectorResponse{
-				Connection: &conn,
-			})
-			return
-		}
-	}
-	httperr.Write(w, r, &httperr.DetailedError{
-		Status: http.StatusInternalServerError,
-		Code:   codeConnectorStoreFailed,
-		Detail: "The connection was stored but did not appear in the read-back.",
-	})
+	h.storeConnection(ctx, w, r, testmailbox.Name, auth)
 }

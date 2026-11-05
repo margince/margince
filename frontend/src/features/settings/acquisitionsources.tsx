@@ -100,7 +100,7 @@ function sourceColumns({
 }
 
 // A seat that may not read deals is sent no count, and a zero would claim none.
-function DealsWithheld() {
+export function DealsWithheld() {
   const t = useT();
   return (
     <span title={t("acqSources.dealsWithheld")}>
@@ -156,7 +156,11 @@ export function AcquisitionSourcesCard() {
         ? refusalId
         : undefined,
     onActive: (source, active) =>
-      update.mutate({ id: source.id, body: { active } }),
+      update.mutate({
+        id: source.id,
+        version: source.version,
+        body: { active },
+      }),
     onRename: (source) => open({ mode: "rename", source }),
   });
   const done = { onSuccess: () => setNamingOpen(false) };
@@ -224,7 +228,14 @@ export function AcquisitionSourcesCard() {
         nameProblem={refused.nameProblem}
         onSave={(label) => {
           if (naming.mode === "rename") {
-            rename.mutate({ id: naming.source.id, body: { label } }, done);
+            rename.mutate(
+              {
+                id: naming.source.id,
+                version: naming.source.version,
+                body: { label },
+              },
+              done,
+            );
           } else {
             create.mutate({ label }, done);
           }

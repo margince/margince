@@ -21,7 +21,7 @@ export const bookingProfile: components["schemas"]["SchedulingProfile"] = {
   host_name: "Ada Lovelace",
   company_name: "Gradion",
   slug: "ada-lovelace",
-  public_url: "https://crm.example.test/#/book/ada-lovelace",
+  public_url: "https://crm.example.test/book/ada-lovelace",
 };
 export const bookingInvitation: components["schemas"]["MeetingInvitation"] = {
   id: "0198f011-aaaa-7000-8000-000000000001",

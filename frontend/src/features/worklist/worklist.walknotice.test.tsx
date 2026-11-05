@@ -114,6 +114,8 @@ function notice(
 // notice would sit there after the reader did what it asked.
 describe("refreshing starts a new walk", () => {
   it("asks for a first page with no cursor", async () => {
+    // Without an observer the scroll sentinel offers its button to press.
+    vi.stubGlobal("IntersectionObserver", undefined);
     const asked: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -151,7 +153,7 @@ describe("refreshing starts a new walk", () => {
     // PAGE FIRST, which is the case the concern is about: with only page one
     // loaded there is no cursor to resume and any implementation passes.
     await userEvent.click(
-      await screen.findByRole("button", { name: en["worklist.more"] }),
+      await screen.findByRole("button", { name: en["list.loadMore"] }),
     );
     await waitFor(() => {
       expect(asked.some((url) => url.includes("cursor="))).toBe(true);

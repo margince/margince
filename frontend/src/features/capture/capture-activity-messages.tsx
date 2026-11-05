@@ -7,9 +7,9 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { RowOpen } from "../../design-system/rowopen";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useProviderLabel } from "../../lib/channelproviders";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // Settings › Capture activity: one row per message in the window, each opening
 // the trace drawer that shows every step the pipeline took with it.
@@ -80,7 +80,7 @@ export function CaptureMessages({
   const { locale } = useLocale();
   const providerLabel = useProviderLabel();
   // The reader's own zone: a trace is read against "I sent that at 9:04".
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const columns: DataTableColumn<TraceEntry>[] = [
     {
       key: "when",

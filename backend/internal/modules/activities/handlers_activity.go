@@ -33,6 +33,10 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		in.Kind = &k
 	}
 	in.ChannelProvider = params.ChannelProvider
+	if params.CallOutcome != nil {
+		outcome := string(*params.CallOutcome)
+		in.CallOutcome = &outcome
+	}
 	if err := httperr.RequirePair("entity_type", params.EntityType,
 		"entity_id", params.EntityId); err != nil {
 		httperr.Write(w, r, err)
@@ -103,4 +107,14 @@ func (h Handlers) GetActivity(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, activity)
+}
+
+// ListLatestInbound serves a record page what it leads its Next bar with.
+func (h Handlers) ListLatestInbound(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLatestInboundParams) {
+	list, err := h.store.LatestInbound(r.Context(), string(params.EntityType), ids.UUID(params.EntityId))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, list)
 }

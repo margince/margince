@@ -20,10 +20,10 @@ func CustomerMeetingSQL(activityAlias string) string {
 // customerLinkSQL is what makes a link under alias al a customer link.
 const customerLinkSQL = "(al.contact_id IS NOT NULL OR al.lead_id IS NOT NULL OR al.company_id IS NOT NULL)"
 
-// openMeetingStatusSQL is a meeting whose result nobody has recorded. NULL counts:
+// OpenMeetingStatusSQL is a meeting under alias a whose result nobody has recorded. NULL counts:
 // capture writes calendar events with no status, and dropping them would empty
 // the question on a connected calendar.
-const openMeetingStatusSQL = "(a.meeting_status IS NULL OR a.meeting_status = 'booked')"
+const OpenMeetingStatusSQL = "(a.meeting_status IS NULL OR a.meeting_status = 'booked')"
 
 // appendCustomerMeetingClause narrows a list to customer meetings, counting
 // only a customer link whose record this reader may see. A link to a record
@@ -41,7 +41,7 @@ func appendCustomerMeetingClause(ctx context.Context, in ListActivitiesInput, ar
 }
 
 func customerMeetingClause(ctx context.Context, arg func(any) int) (string, error) {
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
 	if err != nil {
 		return "", err
 	}
@@ -50,6 +50,19 @@ func customerMeetingClause(ctx context.Context, arg func(any) int) (string, erro
 	}
 	return `a.kind = 'meeting' AND EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id
 	   AND ` + customerLinkSQL + ` AND (` + visible + `))`, nil
+}
+
+// appendOutsidePartyClause keeps the meetings with somebody from outside on
+// them, when the read asks for WithOutsideParty.
+func appendOutsidePartyClause(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.outsideParty == nil {
+		return where, nil
+	}
+	outside, err := in.outsideParty(arg)
+	if err != nil {
+		return nil, err
+	}
+	return append(where, outside), nil
 }
 
 func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
@@ -67,10 +80,22 @@ func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, ar
 // took place by asOf. The outcome lane filters on it and every Activity read
 // stamps it (stampAwaitingOutcome).
 func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) int) (string, error) {
+	open, tookPlace, err := openCustomerMeeting(ctx, asOf, arg)
+	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + ")", err
+}
+
+// UpcomingMeetingClause is a live customer meeting under alias a with no
+// result recorded that has not taken place by asOf. It and
+// awaitingOutcomeClause split the open meetings between them.
+func UpcomingMeetingClause(ctx context.Context, asOf time.Time, arg func(any) int) (string, error) {
+	open, tookPlace, err := openCustomerMeeting(ctx, asOf, arg)
+	return "(a.archived_at IS NULL AND " + open + " AND NOT " + tookPlace + ")", err
+}
+
+func openCustomerMeeting(ctx context.Context, asOf time.Time, arg func(any) int) (string, string, error) {
 	customer, err := customerMeetingClause(ctx, arg)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	tookPlace := occurredday.MeetingTookPlaceSQL("a", sprintf("$%d::timestamptz", arg(asOf)))
-	return "(a.archived_at IS NULL AND " + customer + " AND " + openMeetingStatusSQL + " AND " + tookPlace + ")", nil
+	return customer + " AND " + OpenMeetingStatusSQL, occurredday.MeetingTookPlaceSQL("a", sprintf("$%d::timestamptz", arg(asOf))), nil
 }

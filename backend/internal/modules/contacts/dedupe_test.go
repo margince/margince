@@ -116,3 +116,22 @@ func TestBothSpellingsOfADomainAreOneMailDomain(t *testing.T) {
 		t.Fatalf("mailDomainsOf = %v, want %v", got, want)
 	}
 }
+
+// A domain in unicode and the same domain in punycode are one domain here, as
+// they are everywhere else in the tree.
+//
+// Two companies whose names differ by an accent stay two. The fold punycodes
+// rather than unaccenting, and that pair is the one the old fold guarded.
+func TestOneDomainFoldKeepsAccentedCompaniesApart(t *testing.T) {
+	t.Parallel()
+	munich := normalizeDomain("münich.example")
+	if got := normalizeDomain("xn--mnich-kva.example"); got != munich {
+		t.Errorf("punycode folds to %q and unicode to %q, want one domain", got, munich)
+	}
+	if got := normalizeDomain("MÜNICH.example"); got != munich {
+		t.Errorf("upper case folds to %q, want %q", got, munich)
+	}
+	if plain := normalizeDomain("munich.example"); plain == munich {
+		t.Errorf("munich.example folds to %q, the same as the accented one", plain)
+	}
+}

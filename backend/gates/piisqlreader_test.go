@@ -88,21 +88,27 @@ func sqlLiterals(t *testing.T, path string) []string {
 	return out
 }
 
-// erasureCascadeFiles are the sources that make up the Art. 17 cascade — the
-// files EraseContact's own transaction executes SQL from. It is a LIST because
-// the cascade spans more than one file, and a gate pinned to a single path
-// silently stops covering a table the moment its scrub is extracted to a
-// neighbour. It is deliberately NOT the whole privacy
-// package: retention.go also writes subject tables, and letting a retention
-// sweep satisfy "Art. 17 reaches this table" is exactly the confusion this test
-// exists to prevent.
+// erasureCascadeFiles are the files EraseContact's own transaction executes SQL
+// from: the Art. 17 cascade. It is a list because a gate pinned to one path stops
+// covering a table once its scrub moves to a neighbour file. It is not the whole
+// privacy package: retention.go also writes subject tables, and a retention sweep
+// must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	// Capture owns the projection purge reached through privacy.RawCapturePurger.
+	"internal/modules/capture/partysourceerase.go",
+	// ai owns the voice samples copied from sent mail, emptied through the
+	// same seam's PurgeTextCopiesTx.
+	"internal/modules/ai/voicesentmailerase.go",
+	"internal/modules/privacy/partyprojections.go",
+	// The addresses a merge bound the subject's recorded requests to.
+	"internal/modules/privacy/requestaddresses.go",
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/activitycontenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/erasure.go",
 	// The per-reader brief cache, which both acts purge: the row holds
 	// generated prose about the subject and no cascade reaches it while the
@@ -203,6 +209,8 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
+	"internal/modules/ai/voice_corpus_summary.go":      "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
+	"internal/modules/ai/voice_source_mutations.go":    "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
 	"internal/modules/privacy/erasuretally.go":         "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
 	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
@@ -238,6 +246,7 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
+	"internal/modules/privacy/reportingbindings.go",
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",

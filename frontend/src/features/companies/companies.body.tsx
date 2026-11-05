@@ -7,7 +7,6 @@ import { liveProjects } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import type { CompanyTab } from "../../lib/companytab";
-import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -30,6 +29,7 @@ import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { useCompanyVerbRefusal } from "./companyheader";
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./companytabs.css";
 
 // What the composer is anchored on. A reply answers the message it names. An
@@ -132,7 +132,7 @@ export function CompanyRecordBody({
   // drawer stays mounted to animate out, and dropping the anchor on close would
   // empty it in front of the reader. Null only before the first composer opens.
   const shownAnchor = useRef<ComposeAnchor | null>(null);
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const canWriteCompany =
     useCanWriteRecord("company", company) && !company.archived_at;
   const verbRefusal = useCompanyVerbRefusal(company);
@@ -154,26 +154,31 @@ export function CompanyRecordBody({
       {tab === "overview" && (
         <div className="record-stack">
           {failed && <EmptyState>{t("co.partial")}</EmptyState>}
-          <CompanyLatestInbound latest={latest} companyId={company.id} />
           {/* What the rep must act on comes before what only reports state. It
               is built from sections the page already read: open tasks, the
               calendar, what changed since the last visit, and the suggestions.
               They come in the order a rep works them, with facts, assessments
               and recommendations labelled apart. */}
-          <CompanyOverviewStack
-            company={company}
-            view={view}
-            loading={loading}
-            failed={failed}
-            onOpenTab={onTab}
-            taskUpdate={taskUpdate}
-            onOpenRecord={openCitation}
+          <CompanyLatestInbound
+            latest={latest}
+            companyId={company.id}
             onOpenEmail={receipt.openEmail}
-            onOpenTasks={() => onTab("tasks")}
-            onOpenTask={onOpenTaskFromToday}
-            onLogActivity={onLogActivity}
-            onDraftTo={(id) => onCompose({ kind: "account", id })}
-          />
+          >
+            <CompanyOverviewStack
+              company={company}
+              view={view}
+              loading={loading}
+              failed={failed}
+              onOpenTab={onTab}
+              taskUpdate={taskUpdate}
+              onOpenRecord={openCitation}
+              onOpenEmail={receipt.openEmail}
+              onOpenTasks={() => onTab("tasks")}
+              onOpenTask={onOpenTaskFromToday}
+              onLogActivity={onLogActivity}
+              onDraftTo={(id) => onCompose({ kind: "account", id })}
+            />
+          </CompanyLatestInbound>
         </div>
       )}
       <ContactMeetingBrief
@@ -308,7 +313,7 @@ export function CompanyRecordBody({
           the same reason: both are what a chip on this page opens into. */}
       <OpenEmailDrawer
         activityId={receipt.email}
-        zone={recordZone}
+        zone={readerZone}
         onClose={receipt.closeEmail}
       />
       <CompanyProfileTab

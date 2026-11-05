@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -17,7 +18,7 @@ type readImport struct{ routed }
 func (readImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_import", Title: "Read an import run or the import format", Version: toolVersionV1,
-		Description: readImportCopy.render(),
+		Description: readImportCopy.render(), Instead: readImportCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"report is one run's state and, once validated, what it will do or did; format is the files and columns an import takes"}}}`),
 	}
@@ -40,6 +41,7 @@ func (readForecast) Spec() mcp.ToolSpec {
 		Instead:     readForecastCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"readings: what a period is expected to close; movement: why it changed between two snapshots; input_summary, input_exceptions and input_sources: whether its inputs can be trusted"}}}`),
+		UI: &mcp.ToolUI{ResourceURI: apps.ForecastURI, Visibility: []string{mcp.VisibilityModel}},
 	}
 }
 

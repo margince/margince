@@ -1,4 +1,5 @@
 <!-- prose:plain -->
+<!-- describes: backend/internal/platform/jobs/health.go backend/internal/platform/jobs/healthassessment.go backend/internal/platform/jobs/healthhistory.go backend/internal/compose/jobhealth.go backend/internal/compose/jobhealthhistory.go -->
 # Job surfaces
 
 The two readers of the job table: the `/metrics` families and `GET /v1/admin/job-health`. The other
@@ -152,7 +153,7 @@ workspace and every kind, because an operator who scrapes a service is outside t
 That is the reason the ID is let in, and nothing past the ID. Keep `/metrics` behind the same access
 control as any other operator surface, and never proxy it to a tenant.
 
-**`GET /v1/admin/job-health`: whose work failed for good, and why?** Only for admins, and only on a human
+**`GET /v1/admin/job-health`: whose work failed for good, and why?** Requires `job_health:read` and a human
 session. The middleware refuses an agent passport, and the handler refuses it again. For each kind,
 it reports the counts of waiting, running, retrying and dead jobs, and the oldest waiting age. It
 also lists up to 50 of the newest failures.
@@ -168,3 +169,20 @@ also lists up to 50 of the newest failures.
   One fixed sentence replaces anything outside the closed vocabulary. Margince never reads the panic
   trace River stores. A row that recorded no cause (a job cancelled before it ran) says so. It does
   not claim a failure that never happened.
+
+## System health summary and history
+
+`GET /v1/admin/system-health` reads each source only after checking its grant.
+A source that fails leaves the others readable. Each check has its own time; the report is not one database snapshot.
+
+The queue [rule](../../backend/internal/platform/jobs/healthassessment.go) is shared by summary and detail reads.
+A runnable wait past a fixed declared interval needs work. With no declared interval, the wait is shown without claiming it is on time.
+Only a recorded future attempt supports a retry state. A canceled run alone raises no alert.
+Missing history does not prove completion, so an empty history cannot show recovery.
+
+`GET /v1/admin/job-health/history` returns grouped totals and a bounded page of runs still kept.
+The page key binds the reader, workspace, filters and start time. Runs use IDs from high to low to avoid duplicates while paging.
+
+The time window covers finished runs; current retries stay in view at any age.
+Each page reads current outcomes and retention. Later pages say that the set may have changed.
+A group names a kind and state, not a shared cause. Error text uses the same checked words as the existing detail read.

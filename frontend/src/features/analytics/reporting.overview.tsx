@@ -1,36 +1,50 @@
-import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
-import { formatDateTime } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { usePipelines } from "../../lib/pipelines.queries";
-import { problemCodeOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
+import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
+import { problemCodeOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import {
+  currentParams,
+  replaceDial,
+  replaceParams,
+  useUrlParams,
+} from "../../lib/urlstate";
 import { AnalyticsAttention } from "./analytics.attention";
-import type { AnalyticsScope } from "./analytics.context";
+import { type AnalyticsScope, scopeKey } from "./analytics.context";
+import { periodCaption } from "./analytics.period";
 import { ReportingCharts } from "./reporting.charts";
+import { CustomReportDrawer } from "./reporting.custombuilder";
+import {
+  applyDimensions,
+  type Dimensions,
+  valueBasisOf,
+} from "./reporting.dimensions";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
+import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { ReportingExportButton } from "./reporting.export";
 import { REPORTING_PERIODS, ReportingFilters } from "./reporting.filters";
+import type { ReportingSelection } from "./reporting.model";
 import {
-  type ReportingEvaluation,
-  type ReportingEvidenceRef,
-  type ReportingSelection,
-  reportingQuery,
-} from "./reporting.model";
-import { useReportingCatalog } from "./reporting.queries";
+  useReportingCatalog,
+  useReportingEvaluation,
+  useReportingFramework,
+} from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
-import { metricView, type ReportingView, VIEW_SHAPE } from "./reporting.views";
+import {
+  type ReportingView,
+  VIEW_SHAPE,
+  viewRequest,
+  workflowMetrics,
+} from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 
@@ -53,29 +67,41 @@ export function ReportingOverview({
 }>) {
   const t = useT();
   const catalog = useReportingCatalog();
-  const pipelines = usePipelines();
+  // Only deal figures take a pipeline, so the other views never wait on one.
+  const dealFilters = VIEW_SHAPE[view].dealFilters;
+  const pipelines = usePipelines(dealFilters);
+  const body = (
+    catalog: Catalog,
+    pipelines: readonly components["schemas"]["Pipeline"][],
+  ) => (
+    <OverviewBody
+      view={view}
+      scope={scope}
+      scopeControl={scopeControl}
+      emptyNotice={emptyNotice}
+      catalog={catalog}
+      pipelines={pipelines}
+    />
+  );
   return (
     <QueryGate query={catalog} pendingLabel={t("reporting.performance")}>
-      {(catalog) => (
-        <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
-          {(pipelines) => (
-            <OverviewBody
-              view={view}
-              scope={scope}
-              scopeControl={scopeControl}
-              emptyNotice={emptyNotice}
-              catalog={catalog}
-              pipelines={pipelines}
-            />
-          )}
-        </QueryGate>
-      )}
+      {(catalog) =>
+        dealFilters ? (
+          <QueryGate query={pipelines} pendingLabel={t("reporting.pipeline")}>
+            {(pipelines) => body(catalog, pipelines)}
+          </QueryGate>
+        ) : (
+          body(catalog, [])
+        )
+      }
     </QueryGate>
   );
 }
 
-function useOverviewFilters(
+/** The page's dials, read from the address; `defaultPeriod` is the view's own. */
+export function useOverviewFilters(
   pipelines: readonly components["schemas"]["Pipeline"][],
+  defaultPeriod: ReportingSelection["period"] = "this_month",
 ) {
   const [params] = useUrlParams();
   const from = params.get("from") ?? "";
@@ -86,12 +112,9 @@ function useOverviewFilters(
   const setEnd = (value: string) => replaceDial("through", value);
   const period =
     REPORTING_PERIODS.find((value) => value === params.get("period")) ??
-    "this_month";
+    defaultPeriod;
   const setPeriod = (value: string) => replaceDial("period", value);
-  const defaultPipeline =
-    pipelines.find((pipeline) => pipeline.is_default)?.id ??
-    pipelines[0]?.id ??
-    "";
+  const defaultPipeline = defaultPipelineOf(pipelines)?.id ?? "";
   const pipelineId =
     params.get("pipeline") === "all"
       ? ""
@@ -105,6 +128,31 @@ function useOverviewFilters(
   const closeWindow: ReportingSelection["close_window"] =
     params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
   const setCloseWindow = (value: string) => replaceDial("close", value);
+  const dimensions: Dimensions = {
+    product_id: params.get("product") || undefined,
+    initiative_id: params.get("initiative") || undefined,
+    country: params.get("country") || undefined,
+    industry: params.get("industry") || undefined,
+    value_basis:
+      params.get("basis") && params.get("basis") !== "all"
+        ? valueBasisOf(params.get("basis") ?? "")
+        : undefined,
+  };
+  const setDimensions = (next: Dimensions) => {
+    const dials = new Map(currentParams());
+    const pairs: [string, string | undefined][] = [
+      ["product", next.product_id],
+      ["initiative", next.initiative_id],
+      ["country", next.country],
+      ["industry", next.industry],
+      ["basis", next.value_basis === "all" ? undefined : next.value_basis],
+    ];
+    for (const [dial, value] of pairs) {
+      if (value) dials.set(dial, value);
+      else dials.delete(dial);
+    }
+    replaceParams(dials);
+  };
   return {
     start,
     end,
@@ -118,6 +166,8 @@ function useOverviewFilters(
     setTargetBasis,
     closeWindow,
     setCloseWindow,
+    dimensions,
+    setDimensions,
   };
 }
 
@@ -137,7 +187,7 @@ function OverviewBody({
   pipelines: readonly components["schemas"]["Pipeline"][];
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const { locale } = useLocale();
   const {
     start,
@@ -152,21 +202,28 @@ function OverviewBody({
     setTargetBasis,
     closeWindow,
     setCloseWindow,
+    dimensions,
+    setDimensions,
   } = useOverviewFilters(pipelines);
   const canSave = useCanWrite("report_definition", "create");
   const [saving, setSaving] = useState(false);
-  const [evidence, setEvidence] = useState<ReportingEvidenceRef | null>(null);
+  const [customizing, setCustomizing] = useState(false);
   const shape = VIEW_SHAPE[view];
-  const metrics = catalog.metrics
-    .filter(
-      (metric) =>
-        metricView(metric.id) === view &&
-        // The expected finish is always this fiscal quarter's, so it is
-        // asked only when the page reads this quarter too.
-        (metric.id !== "forecast_landing" || period === "this_quarter"),
-    )
-    .map((metric) => metric.id);
-  const desired = shape.blocks;
+  const framework = useReportingFramework(view === "sdr");
+  const [params] = useUrlParams();
+  const requested = viewRequest(view, catalog, period);
+  const metrics = defaultDetailMetrics(
+    view,
+    requested.metrics,
+    framework.data?.definition.template,
+    params.has("metrics"),
+  );
+  const blocks = requested.blocks.filter((block) =>
+    catalog.metrics.some(
+      (definition) =>
+        metrics.includes(definition.id) && definition.blocks.includes(block),
+    ),
+  );
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     pipeline_id: shape.dealFilters ? pipelineId || undefined : undefined,
@@ -175,39 +232,45 @@ function OverviewBody({
     target_basis: targetBasis,
     // The contract asks for a close window on every selection. Only deal
     // figures read it, so other views keep the default and never the address's.
-    close_window: shape.dealFilters ? closeWindow : "all_open",
+    close_window: shape.closeWindow ? closeWindow : "all_open",
+    ...(shape.dealFilters ? dimensions : {}),
     metrics,
-    blocks: desired.filter((block) =>
-      catalog.metrics.some(
-        (metric) =>
-          metrics.includes(metric.id) && metric.blocks.includes(block),
-      ),
-    ),
+    blocks,
   };
   const validDates = validDateRange(period, start, end);
   // A seat whose catalog holds none of the view's metrics has nothing to ask.
-  const validPeriod = validDates && metrics.length > 0;
-  const query = useQuery({
-    enabled: validPeriod,
-    queryKey: ["reporting-evaluation", selection],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/analytics/evaluate", {
-          params: { query: reportingQuery(selection) },
-        }),
-      );
-    },
-  });
+  const validPeriod = canEvaluateDetail(
+    validDates,
+    metrics.length,
+    view,
+    framework.isPending,
+    framework.isError,
+  );
+  const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
+  const { evidence, openEvidence, closeEvidence } =
+    useSelectionEvidence(contextKey);
   const invalidSelection =
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
+      <FrameworkRetry view={view} query={framework} />
       <FilterBar
         label={t("analytics.filters")}
+        quiet
+        labels="inside"
         actions={
           <>
             {query.data && <ReportingExportButton evaluation={query.data} />}
+            {canSave && (
+              <Button
+                variant="ghost"
+                onClick={() => setCustomizing(true)}
+                disabled={!query.isSuccess}
+              >
+                {t("reporting.customize")}
+              </Button>
+            )}
             {canSave && (
               <Button
                 onClick={() => setSaving(true)}
@@ -220,7 +283,7 @@ function OverviewBody({
         }
         caption={
           validDates
-            ? resultsThrough(query.data, locale, t)
+            ? periodCaption(query.data, locale, t)
             : t("reporting.chooseDates")
         }
       >
@@ -228,8 +291,9 @@ function OverviewBody({
         <ReportingFilters
           selection={selection}
           showScope={false}
-          showCloseWindow={shape.dealFilters}
+          showCloseWindow={shape.closeWindow}
           showPipeline={shape.dealFilters}
+          showDimensions={shape.dealFilters && "folded"}
           showTargets={false}
           dates={{
             from: start,
@@ -237,7 +301,6 @@ function OverviewBody({
             onChange: (from, through) => {
               setStart(from);
               setEnd(through);
-              setEvidence(null);
             },
           }}
           onChange={(next) => {
@@ -253,7 +316,8 @@ function OverviewBody({
               setTargetBasis(next.target_basis);
             if (next.close_window !== closeWindow)
               setCloseWindow(next.close_window);
-            setEvidence(null);
+            if (shape.dealFilters)
+              applyDimensions({ dimensions, setDimensions }, next);
           }}
         />
       </FilterBar>
@@ -263,7 +327,9 @@ function OverviewBody({
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
-      {(!validPeriod || query.isError) && <AnalyticsAttention scope={scope} />}
+      {view === "sales" && (!validPeriod || query.isError) && (
+        <AnalyticsAttention scope={scope} />
+      )}
       {validPeriod && !invalidSelection && (
         <QueryGate query={query} pendingLabel={t("reporting.performance")}>
           {(evaluation) => (
@@ -271,15 +337,35 @@ function OverviewBody({
               {emptyNotice?.(evaluation.context.scope_holds_deals)}
               <ReportingCharts
                 evaluation={evaluation}
-                afterSummary={<AnalyticsAttention scope={scope} />}
-                onEvidence={setEvidence}
+                board
+                afterSummary={
+                  view === "sales" ? (
+                    <AnalyticsAttention scope={scope} />
+                  ) : undefined
+                }
+                onEvidence={openEvidence}
+                onApplySelection={(next) => {
+                  // The server named the selection; the page only moves its
+                  // dials to it.
+                  if (next.period !== period) setPeriod(next.period);
+                  if (next.pipeline_id !== selection.pipeline_id)
+                    setPipelineId(next.pipeline_id ?? "");
+                  if (scopeKey(next.scope) !== scopeKey(scope))
+                    replaceDial("scope", scopeKey(next.scope));
+                }}
               />
               {evidence && (
                 <ReportingEvidenceDrawer
                   key={`${contextKey}:${JSON.stringify(evidence)}`}
                   evaluation={evaluation}
                   reference={evidence}
-                  onClose={() => setEvidence(null)}
+                  onClose={closeEvidence}
+                />
+              )}
+              {customizing && (
+                <CustomReportDrawer
+                  initial={evaluation.selection}
+                  onClose={() => setCustomizing(false)}
                 />
               )}
               {saving && (
@@ -304,7 +390,7 @@ function OverviewBody({
   );
 }
 
-function customInterval(
+export function customInterval(
   period: string,
   start: ISODate | "",
   end: ISODate | "",
@@ -317,28 +403,61 @@ function customInterval(
   };
 }
 
-function validDateRange(period: string, start: string, end: string): boolean {
+export function validDateRange(
+  period: string,
+  start: string,
+  end: string,
+): boolean {
   return period !== "custom" || !!(start && end);
 }
 
-// "Results through" only while the period is still running: a closed period
-// ends where it says it does, and the line would only repeat it.
-function resultsThrough(
-  evaluation: ReportingEvaluation | undefined,
-  locale: Locale,
-  t: Translator,
-): string | undefined {
-  if (
-    !evaluation ||
-    evaluation.context.interval.end_at !== evaluation.context.evaluated_at
-  ) {
-    return undefined;
-  }
-  return t("reporting.resultsThrough", {
-    at: formatDateTime(
-      evaluation.context.interval.end_at,
-      locale,
-      evaluation.context.timezone,
-    ),
-  });
+function defaultDetailMetrics(
+  view: ReportingView,
+  metrics: ReportingSelection["metrics"],
+  template: string | undefined,
+  explicit: boolean,
+) {
+  if (view !== "sdr" || !template || explicit) return metrics;
+  return workflowMetrics(metrics, template).filter(
+    (id) => id !== "leads_promoted" && id !== "leads_awaiting_response",
+  );
+}
+
+function detailFrameworkReady(
+  view: ReportingView,
+  pending: boolean,
+  failed: boolean,
+): boolean {
+  return view !== "sdr" || (!pending && !failed);
+}
+
+function canEvaluateDetail(
+  valid: boolean,
+  count: number,
+  view: ReportingView,
+  pending: boolean,
+  failed: boolean,
+) {
+  return valid && count > 0 && detailFrameworkReady(view, pending, failed);
+}
+
+function FrameworkRetry({
+  view,
+  query,
+}: Readonly<{
+  view: ReportingView;
+  query: ReturnType<typeof useReportingFramework>;
+}>) {
+  const t = useT();
+  if (view !== "sdr" || !query.isError) return null;
+  return (
+    <ErrorLine
+      error={query.error}
+      actions={
+        <Button onClick={() => void query.refetch()}>
+          {t("common.retry")}
+        </Button>
+      }
+    />
+  );
 }

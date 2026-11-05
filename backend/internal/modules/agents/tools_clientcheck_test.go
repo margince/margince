@@ -20,7 +20,9 @@ import (
 func checkClientDispatcher(offered bool) *Dispatcher {
 	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}), WithToolGate(func(context.Context) bool { return offered }))
 	registry.Register(checkClient{log: slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))})
-	return NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
+	d := NewDispatcher(registry, bindAuthenticated, "margince-crm", "test").WithLogger(discardLog())
+	WithInputStateKey(testStateKey)(d)
+	return d
 }
 
 // callCheck sends one tools/call the way a client does: era and capabilities in
@@ -74,9 +76,8 @@ func TestTheCheckAsksOnlyAClientThatDeclaredAForm(t *testing.T) {
 		{"an empty elicitation object reads as form", `{"elicitation":{}}`, true, ""},
 		{"a form member", `{"elicitation":{"form":{}}}`, true, ""},
 		{"form and url", `{"elicitation":{"form":{},"url":{}}}`, true, ""},
-		{"url only", `{"elicitation":{"url":{}}}`, false, "only url mode"},
-		{"none declared", `{}`, false, "no elicitation"},
-		{"only a mode this server does not know", `{"elicitation":{"sampling":{}}}`, false, "no elicitation"},
+		{"url only", `{"elicitation":{"url":{}}}`, false, "no form elicitation"},
+		{"none declared", `{}`, false, "no form elicitation"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := callCheck(t, checkClientDispatcher(true), clientMeta(tc.capabilities), "")
@@ -101,8 +102,18 @@ func TestTheCheckAsksOnlyAClientThatDeclaredAForm(t *testing.T) {
 	}
 }
 
-func TestTheRetryAnswersWhetherTheFormWasShown(t *testing.T) {
+// retryCheck asks once, then answers under the state the question carried.
+func retryCheck(t *testing.T, d *Dispatcher, responses string) map[string]any {
+	t.Helper()
 	form := clientMeta(`{"elicitation":{}}`)
+	state, ok := callCheck(t, d, form, "")["requestState"].(string)
+	if !ok {
+		t.Fatal("the question carries no requestState")
+	}
+	return callCheck(t, d, form, `"requestState":"`+state+`","inputResponses":`+responses+`,`)
+}
+
+func TestTheRetryAnswersWhetherTheFormWasShown(t *testing.T) {
 	for _, tc := range []struct {
 		name, responses string
 		supported       bool
@@ -112,12 +123,9 @@ func TestTheRetryAnswersWhetherTheFormWasShown(t *testing.T) {
 		{"decline", `{"margince_client_check":{"action":"decline"}}`, true, "decline"},
 		{"cancel", `{"margince_client_check":{"action":"cancel"}}`, true, "cancel"},
 		{"a colour that was not offered", `{"margince_client_check":{"action":"accept","content":{"colour":"pink"}}}`, false, ""},
-		{"an entry under another key", `{"other":{"action":"accept"}}`, false, ""},
-		{"an entry that is not an object", `{"margince_client_check":"yes"}`, false, ""},
-		{"an unknown action", `{"margince_client_check":{"action":"maybe"}}`, false, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			data := checkData(t, callCheck(t, checkClientDispatcher(true), form, `"inputResponses":`+tc.responses+`,`))
+			data := checkData(t, retryCheck(t, checkClientDispatcher(true), tc.responses))
 			if data["supported"] != tc.supported {
 				t.Errorf("supported = %v, want %v: %v", data["supported"], tc.supported, data)
 			}
@@ -128,6 +136,27 @@ func TestTheRetryAnswersWhetherTheFormWasShown(t *testing.T) {
 				t.Errorf("an unsupported answer names no reason: %v", data)
 			}
 		})
+	}
+}
+
+func TestARetryTheServerCannotUseIsAskedAgain(t *testing.T) {
+	for name, responses := range map[string]string{
+		"an entry under another key":     `{"other":{"action":"accept"}}`,
+		"an entry that is not an object": `{"margince_client_check":"yes"}`,
+		"an unknown action":              `{"margince_client_check":{"action":"maybe"}}`,
+	} {
+		if got := retryCheck(t, checkClientDispatcher(true), responses); got[fieldResultType] != resultTypeInputRequired {
+			t.Errorf("%s: answered %v, want the form asked again", name, got)
+		}
+	}
+}
+
+func TestAServerWithNoSigningKeyReportsWhyItDidNotAsk(t *testing.T) {
+	d := checkClientDispatcher(true)
+	d.inputState = inputStateSigner{}
+	data := checkData(t, callCheck(t, d, clientMeta(`{"elicitation":{}}`), ""))
+	if reason, _ := data["reason"].(string); data["supported"] != false || !strings.Contains(reason, "no key") {
+		t.Errorf("an unarmed server answered %v, want unsupported naming the missing key", data)
 	}
 }
 
@@ -285,17 +314,6 @@ func TestOnlyAProtocolOnlyToolIsHandedTheRequestFacts(t *testing.T) {
 	}
 }
 
-func TestACallThatAsksForInputTheClientDidNotDeclareIsRefusedAsADefect(t *testing.T) {
-	d := checkClientDispatcher(true)
-	for _, fr := range []framing{{}, {modern: true}, {modern: true, elicitation: elicitationURLOnly}} {
-		got := d.inputRequiredAnswer(clientCheckTool, &InputRequired{}, fr)
-		refusal, ok := got.(map[string]any)
-		if !ok || refusal["isError"] != true {
-			t.Errorf("framing %+v was asked for input: %v", fr, got)
-		}
-	}
-}
-
 func TestAnInputRequiredResultCarriesItsResultType(t *testing.T) {
 	got := callCheck(t, checkClientDispatcher(true), clientMeta(`{"elicitation":{}}`), "")
 	if got[fieldResultType] != resultTypeInputRequired {
@@ -323,18 +341,16 @@ func TestLongDeclaredCapabilitiesAreNotQuotedBack(t *testing.T) {
 
 func TestTheFormOffersTheColoursTheCheckAccepts(t *testing.T) {
 	var form struct {
-		RequestedSchema struct {
-			Properties struct {
-				Colour struct {
-					Enum []string `json:"enum"`
-				} `json:"colour"`
-			} `json:"properties"`
-		} `json:"requestedSchema"` //nolint:tagliatelle // the protocol's own member name
+		Properties struct {
+			Colour struct {
+				Enum []string `json:"enum"`
+			} `json:"colour"`
+		} `json:"properties"`
 	}
-	if err := json.Unmarshal([]byte(clientCheckForm), &form); err != nil {
+	if err := json.Unmarshal(clientCheckQuestion.Schema, &form); err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(form.RequestedSchema.Properties.Colour.Enum, clientCheckColours) {
-		t.Errorf("the form offers %v but the check accepts %v", form.RequestedSchema.Properties.Colour.Enum, clientCheckColours)
+	if !slices.Equal(form.Properties.Colour.Enum, clientCheckColours) {
+		t.Errorf("the form offers %v but the check accepts %v", form.Properties.Colour.Enum, clientCheckColours)
 	}
 }

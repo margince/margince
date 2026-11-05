@@ -31,7 +31,12 @@ type ScoreRow = Readonly<{
 export function ScorecardPanel({
   scorecard,
   weekStart,
-}: Readonly<{ scorecard: Scorecard | undefined; weekStart: string }>) {
+  meetingsWithheld = false,
+}: Readonly<{
+  scorecard: Scorecard | undefined;
+  weekStart: string;
+  meetingsWithheld?: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   // A review written before scorecards existed carries none, and draws none.
@@ -40,7 +45,12 @@ export function ScorecardPanel({
   if (!lead && !deal) return null;
   const n = (value: number) => formatNumber(value, locale);
   const rows = [
-    ...(lead ? leadRows(lead, t, n) : []),
+    // A withheld meeting figure is a zero that says nothing, so its row goes.
+    ...(lead
+      ? leadRows(lead, t, n).filter(
+          (row) => !(meetingsWithheld && MEETING_ROWS.has(row.key)),
+        )
+      : []),
     ...(deal ? dealRows(deal, t, n) : []),
   ];
   return (
@@ -80,6 +90,8 @@ export function ScorecardPanel({
     </>
   );
 }
+
+const MEETING_ROWS = new Set(["meetings", "partial"]);
 
 function leadRows(
   block: LeadBlock,

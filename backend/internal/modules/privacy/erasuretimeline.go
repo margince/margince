@@ -112,7 +112,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// and Sink.Upsert refuses a suppressed account before it writes — so there
 	// is no redelivery left for the key to deduplicate.
 	rows, err := tx.Query(ctx, `
-		UPDATE activity a SET subject = $5, body = NULL, raw = NULL,
+		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
 		  -- read. A verdict saying a subject replied negatively is a claim about

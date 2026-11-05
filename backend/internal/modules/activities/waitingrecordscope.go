@@ -67,7 +67,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	if err != nil {
 		return "", err
 	}
-	linkVisible, err := auth.LinkTargetVisibleClause(ctx, "wl", arg)
+	linkVisible, err := auth.LinkTargetReadableClause(ctx, "wl", arg)
 	if err != nil {
 		return "", err
 	}

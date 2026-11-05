@@ -4,8 +4,11 @@ import type { components } from "../../api/schema";
 import { providerName, VENDOR_SERVICES } from "../../format/connectorprovider";
 import type { Translator } from "../../i18n";
 import { useConnectAccount } from "../../lib/connect-account";
-import { missingCalendarWriteGrant } from "../../lib/connector-status";
-import { useConnectors } from "../../lib/connectors";
+import {
+  isConnectedAtAll,
+  missingCalendarWriteGrant,
+} from "../../lib/connector-status";
+import { captureRefusalOf, useConnectors } from "../../lib/connectors";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 
@@ -19,7 +22,7 @@ export function useBookingCalendar(provider: string, loadCalendars = true) {
   );
   const ready =
     !!connection &&
-    (connection.status === "connected" || connection.status === "error") &&
+    isConnectedAtAll(connection) &&
     !missingCalendarWriteGrant(connection);
   const calendars = useQuery({
     queryKey: ["scheduling-calendars", provider],
@@ -138,12 +141,17 @@ export function calendarToConnect(
     : null;
 }
 
-/** Connect or reconnect a calendar from Meetings, landing back on Meetings. */
+/**
+ * Connect or reconnect a calendar from Meetings, landing back on Meetings.
+ * `refusal` is set when the server refuses every connect; callers show it
+ * in place of the button.
+ */
 export function useCalendarConnect() {
   const connect = useConnectAccount();
   const connectors = useConnectors();
   return {
     connect,
+    refusal: captureRefusalOf(connectors.data),
     target: calendarToConnect(connectors.data),
     start: (provider: CalendarProvider | null) => {
       if (provider === null) {

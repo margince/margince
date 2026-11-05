@@ -39,7 +39,7 @@ func (s *Store) previewMergeClaims(ctx context.Context, tx pgx.Tx, source ids.UU
 }
 
 func previewMergeHandoffs(ctx context.Context, tx pgx.Tx, kind string, source ids.UUID) ([]SDRHandoff, error) {
-	if err := auth.Require(ctx, rbacHandoff, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, HandoffObject, principal.ActionRead); err != nil {
 		return nil, err
 	}
 

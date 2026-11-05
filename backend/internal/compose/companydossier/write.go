@@ -128,7 +128,7 @@ func ParseDossier(reply string, in Input) ([]Section, error) {
 	known := KnownRecords(in)
 	bySection := map[string][]claims.Sentence{}
 	for _, section := range parsed.Sections {
-		kept := claims.Keep(section.Sentences, known, knownNature, natureFact)
+		kept := keepNatures(section.Sentences, known, map[string]bool{natureFact: true})
 		bySection[section.Kind] = append(bySection[section.Kind], kept...)
 	}
 	// orderedSections emits only the kinds the contract declares, in reading

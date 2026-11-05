@@ -7,7 +7,7 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { CompanyTab } from "../../lib/companytab";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { StandingFigures } from "./companystanding.figures";
 
 // The four figures under How it stands. Each draws even when it has no
@@ -100,7 +100,7 @@ async function renderFigures(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {zone ? (
-          <RecordZoneProvider zone={zone}>{figures}</RecordZoneProvider>
+          <ViewerZoneProvider zone={zone}>{figures}</ViewerZoneProvider>
         ) : (
           figures
         )}
@@ -148,6 +148,24 @@ describe("the figures under How it stands", () => {
       within(plate).getByText(en["company.lifecycle.prospect"]),
     ).toBeTruthy();
   });
+
+  it.each(["onboarding", "live"] as const)(
+    "bills an account that is %s",
+    async (lifecycle) => {
+      const plate = await renderFigures(
+        view({
+          state_strip: {
+            ...customer,
+            account: { ...customer.account, lifecycle },
+          },
+        }),
+      );
+
+      expect(
+        within(plate).queryByText(en["co.strip.fin.neverInvoiced"]),
+      ).toBeNull();
+    },
+  );
 
   it("draws the open-deals figure compactly, never at full length", async () => {
     const plate = await renderFigures(

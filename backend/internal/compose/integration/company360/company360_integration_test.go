@@ -153,11 +153,15 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 		VALUES ($1, 'dana@acme.test', true, 'manual', 'human:x')`, contact)
 
 	// Two qualifying interactions inside the §4 window, one each way, so
-	// the score is non-zero and reciprocity is balanced.
+	// the score is non-zero and reciprocity is balanced. The inbound one names
+	// the contact as its sender, as capture does.
 	for _, direction := range []string{"inbound", "outbound"} {
 		activity := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'terms', '2026-05-30T09:00:00Z', '`+direction+`', 'manual', 'human:x')`)
 		integration.LinkActivity(t, owner, activity, "contact", contact)
+		if direction == "inbound" {
+			integration.LinkActivitySender(t, owner, activity, contact)
+		}
 	}
 
 	purpose := seedConsentPurpose(t, owner, "marketing_email", "Marketing email")

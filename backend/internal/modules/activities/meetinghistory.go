@@ -30,6 +30,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -41,11 +42,11 @@ type meetingTransition struct {
 	// and recordMeetingTransition returns without writing — a note being edited
 	// is not a meeting transition.
 	Status string
-	// ScheduledStart is the start this meeting was booked for, as of NOW. Kept
-	// per transition rather than read from the activity, because a reschedule
-	// moves it and "which period was this due in" must be answerable at any
-	// past instant.
-	ScheduledStart *time.Time
+	// Scheduled is the start this meeting is booked for at this transition,
+	// and whether it is a time or only a date. A reschedule moves the
+	// activity's start, so each transition keeps its own to answer "which day
+	// was this held on" later.
+	Scheduled *occurredday.Moment
 	// SourceSystem and SourceID name the connector event this came from. Both
 	// nil for a human action. Together they are the idempotency key: a resynced
 	// calendar writes no second transition.
@@ -116,14 +117,19 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	if sourceSystem == nil || sourceID == nil {
 		sourceSystem, sourceID = nil, nil
 	}
+	var start *time.Time
+	var precision *string
+	if in.Scheduled != nil {
+		start, precision = &in.Scheduled.At, new(scheduledPrecision(*in.Scheduled))
+	}
 	args := []any{in.ActivityID.UUID}
 	activityParameter := fmt.Sprintf("$%d", len(args))
-	args = append(args, in.Status, in.ScheduledStart, actor.ID, sourceSystem, sourceID)
+	args = append(args, in.Status, start, precision, actor.ID, sourceSystem, sourceID)
 	placeholders := storekit.Placeholders(args)
 	args = append(args, in.RecordedAt)
 	recordedParameter := fmt.Sprintf("$%d", len(args))
 	_, err := tx.Exec(ctx, `INSERT INTO activity_meeting_history
-        (activity_id,status,scheduled_start,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change)
+        (activity_id,status,scheduled_start,scheduled_precision,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change)
         SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),`+CustomerMeetingSQL("a")+` FROM activity a WHERE a.id=`+activityParameter, args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
@@ -133,4 +139,18 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 		return fmt.Errorf("activities: recording a meeting transition: %w", err)
 	}
 	return nil
+}
+
+// scheduledPrecision spells a transition's start in the activity column's own
+// vocabulary, so the history and the meeting read one precision the same way.
+func scheduledPrecision(start occurredday.Moment) string {
+	if start.DateOnly {
+		return PrecisionDay
+	}
+	return PrecisionInstant
+}
+
+// scheduledAs is the start a writer holds, as the history records it.
+func scheduledAs(at time.Time, precision string) *occurredday.Moment {
+	return &occurredday.Moment{At: at, DateOnly: occurredday.IsDay(precision)}
 }

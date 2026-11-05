@@ -120,3 +120,24 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 		t.Errorf("dynamic reads %q, want the clause to describe the tier rather than today's only users", dynamic)
 	}
 }
+
+// A tool marked ask-first that runs with no human approval tells the client to get
+// the user's yes first. A call a human approves already has that yes.
+func TestDescribeForClientAsksTheUserFirstOnlyWhereNoHumanApproves(t *testing.T) {
+	describe := func(tier mcp.RiskTier, askFirst bool) string {
+		return DescribeForClient(mcp.ToolSpec{
+			Name: "t", Description: "Retires the thing.", RequiredScope: principal.ScopeWrite,
+			Tier: tier, AskUserFirst: askFirst,
+		})
+	}
+	const ask = "get it before calling"
+	if got := describe(mcp.TierAutoExecute, true); !strings.Contains(got, "the user's yes is needed for it") || !strings.Contains(got, ask) {
+		t.Errorf("auto-execute archive reads %q, want the client told to ask the user first", got)
+	}
+	if got := describe(mcp.TierConfirmationRequired, true); strings.Contains(got, ask) {
+		t.Errorf("confirm-first archive reads %q, want no second confirmation asked", got)
+	}
+	if got := describe(mcp.TierAutoExecute, false); strings.Contains(got, ask) {
+		t.Errorf("an ordinary write reads %q, want no confirmation asked", got)
+	}
+}

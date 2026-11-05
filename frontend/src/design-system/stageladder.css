@@ -44,6 +44,7 @@
   margin: calc(-1 * var(--space-1));
   padding: var(--space-1);
   min-inline-size: 0;
+  position: relative;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   /* A rung reached by Tab, or rested on, stops clear of the faded edge. */
@@ -337,7 +338,7 @@
   font: var(--fontBodySmall);
 }
 .stage-ladder-bar-step.btn:hover:not(:disabled) {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .stage-ladder-bar-step.btn:disabled {
   opacity: 1;

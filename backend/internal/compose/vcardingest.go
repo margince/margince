@@ -158,7 +158,7 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 	// would leave exactly the gap it looks like it closes.
 	// The verdict reader decides whether a human's correction still stands
 	// against a mailed card, as it does for an uploaded one.
-	store := contacts.NewStore(InstallationDB(w.pool)).
+	store := newContactsStore(InstallationDB(w.pool)).
 		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(w.pool)))
 	results, err := store.ImportVCardsFromMessage(actorCtx, entries, args.Activity)
 	if err != nil {

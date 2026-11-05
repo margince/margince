@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ghostedThresholdDays (SIG-PARAM-6) is twice the no_reply suggestion's window,
@@ -98,11 +99,11 @@ func scanGhostedThreads(ctx context.Context, tx pgx.Tx, now time.Time) ([]ghoste
 		  JOIN company o ON o.id = n.company_id AND o.archived_at IS NULL
 		 WHERE n.direction = 'outbound'
 		   AND n.occurred_at < $2
-		   AND (o.lifecycle IN ('prospect','opportunity','customer')
+		   AND (o.lifecycle = ANY($3)
 		        OR EXISTS (SELECT 1 FROM deal d
 		                    WHERE d.company_id = o.id AND d.status = 'open'
 		                      AND d.archived_at IS NULL))`,
-		now, cutoff)
+		now, cutoff, values.EngagedLifecycles())
 	if err != nil {
 		return nil, fmt.Errorf("scan ghosted threads: %w", err)
 	}

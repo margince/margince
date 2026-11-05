@@ -193,11 +193,12 @@ func recomputeUnderOverrideTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID,
 }
 
 // leadBehavioralSignals derives the §3.1 signal rows from the lead's
-// linked activities: an inbound email is a reply, a meeting counts by
-// its recorded status.
+// linked activities: an inbound reply is a reply, a meeting counts by
+// what meetingProof says it proves. Signals decay by age, so they take no
+// waiting horizon.
 func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([]BehavioralSignal, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.meeting_status, ''), a.occurred_at
+		SELECT a.id, a.kind, coalesce(a.direction, ''), coalesce(a.meeting_status, ''), a.occurred_at, `+leadDeclinedSQL("$1", "a")+`
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.lead_id = $1 AND a.archived_at IS NULL AND `+auth.ActivityAvailableClause("a")+`
@@ -211,17 +212,16 @@ func leadBehavioralSignals(ctx context.Context, tx pgx.Tx, leadID ids.LeadID) ([
 		var id ids.ActivityID
 		var kind, direction, meetingStatus string
 		var occurredAt time.Time
-		if err := rows.Scan(&id, &kind, &direction, &meetingStatus, &occurredAt); err != nil {
+		var declined bool
+		if err := rows.Scan(&id, &kind, &direction, &meetingStatus, &occurredAt, &declined); err != nil {
 			return nil, err
 		}
 		var signalKind string
-		switch {
-		case kind == "email" && direction == "inbound":
+		switch proof, proves := meetingProof(meetingStatus, declined); {
+		case storekit.IsInboundReply(kind, direction):
 			signalKind = "reply"
-		case kind == "meeting" && meetingStatus == "held":
-			signalKind = "meeting_held"
-		case kind == "meeting" && meetingStatus == "booked":
-			signalKind = "meeting_booked"
+		case kind == "meeting" && proves:
+			signalKind = string(proof)
 		default:
 			continue
 		}

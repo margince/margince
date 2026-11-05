@@ -10,6 +10,7 @@
 // column, a total or a forecast.
 
 import { type ReactNode, useId, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
@@ -30,7 +31,6 @@ import { activityDay } from "../format/activitywhen";
 import { formatMoney } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
-import { useRecordZone } from "../lib/recordzone";
 import { routeHash } from "../lib/router";
 import { useRecordOwnerOptions } from "./assigneepicker";
 import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
@@ -46,6 +46,7 @@ import "./dealsuggestion.css";
 import { currencyOptions } from "../format/currencychoices";
 import { useLeadingCurrencies } from "../lib/leadingcurrencies";
 import { usePipelines } from "../lib/pipelines.queries";
+import { useViewerZone } from "../lib/viewerzone";
 
 function confidenceLevel(confidence: number): ConfidenceLevel {
   if (confidence >= 0.8) {
@@ -78,7 +79,7 @@ export function DealSuggestionCard({
 }: Readonly<{ suggestion: DealSuggestion; compact?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <StagingCard>
       <div className="dealsuggestion" data-testid="deal-suggestion">
@@ -92,7 +93,7 @@ export function DealSuggestionCard({
           {compact ? (
             // On the board this card is the suggestion's only trace. It leads to
             // the company it is about, as the Worklist row does.
-            <a
+            <AppLink
               className="staged-value"
               href={routeHash({
                 screen: "companies",
@@ -100,7 +101,7 @@ export function DealSuggestionCard({
               })}
             >
               {suggestedName(suggestion, t)}
-            </a>
+            </AppLink>
           ) : (
             <span className="staged-value">{suggestedName(suggestion, t)}</span>
           )}

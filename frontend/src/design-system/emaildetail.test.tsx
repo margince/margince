@@ -266,7 +266,9 @@ describe("the drawer's participants", () => {
     await openEnvelope();
 
     const contact = await screen.findByRole("link", { name: "Ana Sommer" });
-    expect(contact.getAttribute("href")).toBe(`#/contacts/${ANA}`);
+    expect(contact.getAttribute("href")).toBe(
+      `/r/contacts/${ANA}#/contacts/${ANA}`,
+    );
     // BESIDE the message, not over it: the reader is part-way through a mail
     // in a drawer over the record they were working on, and following the
     // contact in this tab would close both to reach a page they could have
@@ -531,6 +533,24 @@ describe("a mail whose text could not be read", () => {
     expect(
       screen.queryByText("Open it in your mail program to see it."),
     ).toBeNull();
+  });
+
+  // A mail whose original is gone will never be checked, so its notice says so
+  // and promises no check.
+  it("says a mail with no original left can no longer be checked", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unverifiable",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText("This mail’s text can no longer be checked"),
+    ).toBeTruthy();
+    expect(screen.getByText(/Its stored original is gone/)).toBeTruthy();
+    expect(screen.queryByText("Email text not verified")).toBeNull();
   });
 
   // A hostile fixture: the server sends no completeness on a withheld mail,

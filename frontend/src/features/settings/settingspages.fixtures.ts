@@ -7,9 +7,8 @@ import { agentClientList } from "../../testing/agent-clients.fixtures";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { allowance, status } from "../../testing/ai-admin.testkit";
 import { bookingProfile } from "../../testing/book.testkit";
-import { readingsDay } from "../../testing/brief.fixtures";
 import { formatFixture } from "../../testing/import.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { FIXTURE_TIMEZONE, type GrantSpec } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { SEEDED_ASSIGNABLE_ROLES } from "../../testing/roles.testkit";
 import { jsonResponse, type RouteMap } from "../../testing/story-utils";
@@ -33,6 +32,7 @@ const NOTIFICATION_PREFERENCES: Schemas["NotificationPreferenceList"] = {
     { class: "approval_pending", delivery: "email", chosen: false },
     { class: "automation", delivery: "in_app", chosen: false },
     { class: "lead_sla", delivery: "in_app", chosen: false },
+    { class: "project_health", delivery: "in_app", chosen: false },
     { class: "capture", delivery: "in_app", chosen: false },
     { class: "system", delivery: "in_app", chosen: false },
     { class: "coach", delivery: "in_app", chosen: false },
@@ -68,8 +68,8 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
   agent_allowances: defaultAgentAllowances,
-  forecast_forward_measure: "commit_evidence",
-  timezone: meFixture().user.timezone,
+  forecast_forward_measure: "likely",
+  timezone: FIXTURE_TIMEZONE,
   base_currency: "EUR",
   date_format: "dmy",
   time_format: "24h",
@@ -77,7 +77,9 @@ const INSTALLATION_SETTINGS: Schemas["InstallationSettings"] = {
   call_whatsapp: true,
   call_telegram: true,
   call_zalo: true,
-  mcp_client_check: false,
+  individual_performance: true,
+  forecast_self_correcting: true,
+  forecast_likely_threshold: 90,
 };
 
 // A fresh installation's port, read from its default.
@@ -146,9 +148,7 @@ export const NOTIFICATION_ROUTES: RouteMap = {
   "GET /me/notification-preferences": () =>
     jsonResponse(NOTIFICATION_PREFERENCES),
   "GET /me/brief-delivery": () => jsonResponse({}),
-  "GET /teams": () => jsonResponse({ data: [] }),
-  "GET /worklist": () =>
-    jsonResponse({ ...readingsDay({}, [], []), team_week: "none" }),
+  "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
 };
 
 // Every page story routes all of these: a card can sit on more than one page.

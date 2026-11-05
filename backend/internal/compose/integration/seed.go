@@ -79,6 +79,10 @@ func SeedStakeholder(t *testing.T, e *Env, owner *pgx.Conn, deal ids.UUID, direc
 			t.Fatalf("seeding %q touch: %v", direction, err)
 		}
 		LinkActivity(t, owner, touch, "contact", contact)
+		if direction == "inbound" {
+			// Strength counts an inbound touch only when the contact wrote it.
+			LinkActivitySender(t, owner, touch, contact)
+		}
 	}
 	return contact
 }

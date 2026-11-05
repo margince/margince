@@ -21,7 +21,8 @@ export type NextBarMore = Readonly<{
 /**
  * The one thing to do next on a record, as a bar at the top of its Overview.
  * It shows what it is, how late, why, and the verbs that settle or defer it. An absent
- * `title` says there is nothing dated next, rather than drawing an empty bar.
+ * `title` draws `empty`, the caller's sentence for what it knows when nothing
+ * is next, rather than an empty bar. Without one it says nothing is due next.
  */
 export function NextBar({
   title,
@@ -32,7 +33,7 @@ export function NextBar({
   action,
   snooze,
   more,
-  onward,
+  empty,
 }: Readonly<{
   title?: ReactNode;
   // How late, or what makes it due ("19 days late", "Demo booked").
@@ -50,9 +51,9 @@ export function NextBar({
   // The other open tasks, behind a link to the record's task list. `peek`
   // names them on hover and focus, so "+2 tasks" is never a lone number.
   more?: NextBarMore;
-  // The way past this record once its work is done, such as the next task on
-  // another record. Drawn last, whether or not anything is next here.
-  onward?: ReactNode;
+  // What the bar says with no `title`. Only a caller that read the record's
+  // tasks and may see them all can say that none is recorded.
+  empty?: string;
 }>) {
   const t = useT();
   return (
@@ -62,7 +63,9 @@ export function NextBar({
         <span className="next-bar-rule" aria-hidden="true" />
         <div className="next-bar-body">
           {title === undefined ? (
-            <span className="next-bar-none">{t("standing.next.none")}</span>
+            <span className="next-bar-none">
+              {empty ?? t("standing.next.none")}
+            </span>
           ) : (
             <>
               <span className="next-bar-title-row">
@@ -86,7 +89,7 @@ export function NextBar({
             </>
           )}
         </div>
-        {(action || snooze || more || onward) && (
+        {(action || snooze || more) && (
           <div className="next-bar-verbs">
             {action}
             {snooze && (
@@ -99,7 +102,6 @@ export function NextBar({
               </Button>
             )}
             {more && more.count > 0 && <MoreTasks more={more} />}
-            {onward}
           </div>
         )}
       </div>

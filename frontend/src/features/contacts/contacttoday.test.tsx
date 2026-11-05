@@ -253,7 +253,10 @@ describe("the day's work on a contact", () => {
   it("answers a quiet record inside the bar", () => {
     show(VIEW, QUIET);
 
-    expect(screen.getByText(en["standing.next.none"])).toBeTruthy();
+    // It says what the read can back: no task is recorded. It never claims
+    // that nothing is left to do.
+    expect(screen.getByText(en["standing.next.noTask"])).toBeTruthy();
+    expect(screen.queryByText(en["standing.next.none"])).toBeNull();
     // Nobody suggested that nothing needs doing, and there is nothing to press
     // about it.
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
@@ -565,4 +568,106 @@ describe("Call on the move a call left owed", () => {
       await screen.findByRole("link", { name: en["record.verb.call"] }),
     ).toBeTruthy();
   });
+});
+
+describe("the face of the move's verb", () => {
+  const FOLLOW_UP: ContactMoment = {
+    ...QUIET,
+    claim_key: "moment:gone_quiet",
+    rule: "gone_quiet",
+    headline: "No reply recorded for 233 days",
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "available",
+      destination: { surface: "composer", prefill: { intent: "follow_up" } },
+    },
+  };
+
+  it("wears indigo where the press has the model draft the mail", () => {
+    show(VIEW, FOLLOW_UP);
+
+    const draft = screen.getByRole("button", { name: "Draft a follow-up" });
+    expect(draft.classList.contains("btn-ai")).toBe(true);
+  });
+
+  it("keeps the accent where the press only opens a form", () => {
+    show(VIEW, {
+      ...FOLLOW_UP,
+      recommended_action: {
+        kind: "log_activity",
+        label: "Log an interaction",
+        state: "available",
+        destination: { surface: "activity_log" },
+      },
+    });
+
+    const log = screen.getByRole("button", { name: "Log an interaction" });
+    expect(log.classList.contains("btn-ai")).toBe(false);
+  });
+});
+
+it("shows a privacy duty in place of the quiet answer and opens its review action", async () => {
+  const action = vi.fn();
+  const privacy: ContactMoment = {
+    ...QUIET,
+    rule: "privacy_notice_due",
+    headline: "Privacy notice owed",
+    why_now: "An unresolved disclosure duty is recorded for this contact.",
+    recommended_action: {
+      kind: "open_record",
+      label: "Review privacy duty",
+      state: "available",
+      destination: { surface: "privacy_notice", entity_id: "case-1" },
+    },
+  };
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider>
+        <ContactToday view={VIEW} moment={privacy} onAction={action} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Privacy notice owed")).not.toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["standing.next.snooze"] }),
+  ).toBeNull();
+  expect(screen.queryByText(en["standing.next.noTask"])).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Review privacy duty" }));
+  expect(action).toHaveBeenCalledWith(privacy.recommended_action);
+});
+
+it("offers a follow-up task on a quiet record to a reader who may log one", async () => {
+  const user = userEvent.setup();
+  const onAddTask = vi.fn();
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ContactToday
+          view={VIEW}
+          moment={QUIET}
+          onAction={() => {}}
+          onAddTask={onAddTask}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["standing.next.addTask"] }),
+  );
+  expect(onAddTask).toHaveBeenCalledTimes(1);
+});
+
+it("keeps a quiet relationship readable when compliance work is outside the reader's role", () => {
+  show({ ...VIEW, sections_omitted: ["privacy_notice_duties"] }, QUIET);
+  expect(screen.getByText(en["standing.next.noTask"])).not.toBeNull();
+  expect(screen.queryByText(/Not included: privacy duties/)).toBeNull();
 });

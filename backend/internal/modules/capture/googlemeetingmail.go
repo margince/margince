@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -48,8 +49,9 @@ func googleMeetingMailTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, em
 	}
 	var authenticated bool
 	if err := tx.QueryRow(ctx, `
-		SELECT inbound_sender_authenticated AND counterparty_email IS NOT DISTINCT FROM $2
-		  FROM activity WHERE id = $1`,
+		SELECT EXISTS(SELECT 1 FROM activity a WHERE a.id=$1
+ AND a.inbound_sender_authenticated AND a.counterparty_email IS NOT DISTINCT FROM $2
+ AND `+auth.ActivityAvailableClause("a")+`)`,
 		activityID, correspondence.Fold(email)).Scan(&authenticated); err != nil {
 		return false, fmt.Errorf("capture: reading whether the message's sender was authenticated: %w", err)
 	}

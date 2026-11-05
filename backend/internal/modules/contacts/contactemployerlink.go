@@ -13,8 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/freemail"
-	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -37,9 +35,8 @@ type LinkEmployerResult struct {
 	CompanyDomain *string
 }
 
-// LinkContactEmployer attaches an employer to a contact the caller may change,
-// creating the company when it is named rather than picked. The company, its
-// domain and the edge land in one transaction or not at all.
+// LinkContactEmployer matches or creates a named employer, or links the picked company.
+// A new company, its domain and the edge land in one transaction or not at all.
 func (s *Store) LinkContactEmployer(ctx context.Context, contactID ids.ContactID, in LinkEmployerInput) (LinkEmployerResult, error) {
 	choice, err := employerChoiceFromRequest(in.CompanyID, in.CompanyName, linkEmployerSource)
 	if err != nil {
@@ -92,10 +89,7 @@ func missingEmployerField(in LinkEmployerInput) string {
 	return endCompanyColumn
 }
 
-// newEmployerDomainsTx is the domain a company created for this contact may
-// carry: their work address's registrable domain. Consumer mail, a domain refused
-// a company and one another company holds give none. A holder the caller can
-// read refuses the write with DuplicateDomainError, so the reader links it instead.
+// newEmployerDomainsTx filters consumer, suppressed and inaccessible work domains.
 func (s *Store) newEmployerDomainsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]CompanyDomainInput, error) {
 	var email string
 	err := tx.QueryRow(ctx, `
@@ -108,25 +102,13 @@ func (s *Store) newEmployerDomainsTx(ctx context.Context, tx pgx.Tx, contactID i
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading the work address of a contact: %w", err)
 	}
-	matcher, err := s.consumerMailMatcher(ctx, tx)
+	return s.employerDomainsForAddressTx(ctx, tx, email)
+}
+
+func (s *Store) employerDomainsForAddressTx(ctx context.Context, tx pgx.Tx, email string) ([]CompanyDomainInput, error) {
+	facts, err := s.employerDomainFactsTx(ctx, tx, email)
 	if err != nil {
 		return nil, err
 	}
-	host := owndomain.OfAddress(email)
-	domain, ok := freemail.Hostname(host)
-	if !ok || matcher.IsConsumer(host) {
-		return nil, nil
-	}
-	suppressed, err := domainSuppressedTx(ctx, tx, domain)
-	if err != nil || suppressed {
-		return nil, err
-	}
-	err = claimedDomainOwner(ctx, tx, ids.CompanyID{}, domain)
-	if taken, ok := errors.AsType[*DuplicateDomainError](err); ok && taken.ExistingID.IsZero() {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return []CompanyDomainInput{{Domain: domain, IsPrimary: true}}, nil
+	return employerDomainsVisible(ctx, tx, facts)
 }

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -30,6 +29,18 @@ type SchedulingCalendar interface {
 	Check(context.Context, ids.UserID, string) error
 	List(context.Context, ids.UserID, string) ([]connector.CalendarOption, error)
 	CheckRecipient(context.Context, ids.UserID, ids.UUID, string) error
+	// ResolveAttendees says what each address is to the host: a contact they
+	// can see, a live colleague, a lead, or host-named.
+	ResolveAttendees(context.Context, ids.UserID, []string) ([]connector.CalendarAttendee, error)
+	// InviteeAddress reads a linked contact's or lead's address under the
+	// host's row scope, and the contact a promoted lead became.
+	InviteeAddress(context.Context, ids.UserID, string, ids.UUID, []string) (string, ids.UUID, error)
+	// Blocker says why the host's connected calendar cannot take bookings,
+	// without a provider call.
+	Blocker(context.Context, ids.UserID, string) (crmcontracts.SchedulingProfileBlocker, error)
+	// ReconnectedSince says whether the host granted the calendar again after
+	// since: the evidence a parked queue waits for.
+	ReconnectedSince(context.Context, ids.UserID, string, time.Time) (bool, error)
 	Busy(context.Context, ids.UserID, string, string, time.Time, time.Time) ([]connector.CalendarInterval, error)
 	Inspect(context.Context, ids.UserID, string, string, string) (connector.CalendarState, error)
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
@@ -102,13 +113,23 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 			profile = *stored
 		}
 		profile.Slug = &slug
-		return nil
+		profile.Alias = nil
+		alias, err := liveBookingPageAlias(ctx, tx, host)
+		if alias != "" {
+			profile.Alias = &alias
+		}
+		return err
 	})
 	profile.HostName = &name
 
-	if err == nil && profile.Slug != nil && s.publicOriginUsable() == nil {
-		link := strings.TrimRight(s.publicBaseURL, "/") + "/#/book/" + url.PathEscape(*profile.Slug)
-		profile.PublicUrl = &link
+	if err == nil && profile.Slug != nil {
+		address := *profile.Slug
+		if profile.Alias != nil {
+			address = *profile.Alias
+		}
+		if link, ok := s.publicBookingURL(address); ok {
+			profile.PublicUrl = &link
+		}
 	}
 	return profile, err
 }
@@ -120,11 +141,45 @@ func (s *Store) SchedulingProfile(ctx context.Context) (crmcontracts.SchedulingP
 		return crmcontracts.SchedulingProfile{}, err
 	}
 	profile, err := s.hostSchedulingProfile(ctx, host)
+	if err != nil {
+		return profile, err
+	}
+	blocker, err := s.calendarBlocker(ctx, host, profile)
+	profile.Blocker = &blocker
 	return s.brandSchedulingProfile(ctx, host, profile), err
 }
 
+// pagePaused is the one answer to whether a standing booking page takes
+// bookings: the host switched it on, and its calendar can take them. The
+// guest profile, the free-time read and both booking reads ask it.
+func (s *Store) pagePaused(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (bool, error) {
+	if !profile.Enabled {
+		return true, nil
+	}
+	blocker, err := s.calendarBlocker(ctx, host, profile)
+	return blocker != crmcontracts.SchedulingProfileBlockerNone, err
+}
+
+// calendarBlocker is why bookings cannot reach the host's calendar. A page that
+// names no calendar, which is every page saved before the profile existed, is
+// blocked without asking the seam.
+func (s *Store) calendarBlocker(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) (crmcontracts.SchedulingProfileBlocker, error) {
+	switch {
+	case profile.Provider == "":
+		return crmcontracts.SchedulingProfileBlockerNoCalendar, nil
+	case s.calendar == nil:
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	return s.calendar.Blocker(ctx, host, string(profile.Provider))
+}
+
+// calendarNotConnected is the refusal a host can act on when their calendar
+// refused us; calendarAuthFailure recognises it by value.
+var calendarNotConnected = SchedulingArgumentError{Field: "provider", Code: codeRequired, Message: "Connect a calendar first"}
+
 func errCalendarNotConnected() error {
-	return &SchedulingArgumentError{Field: "provider", Code: "required", Message: "Connect a calendar first"}
+	refusal := calendarNotConnected
+	return &refusal
 }
 
 // unconnectedAsRefusal turns the provider seam's "no usable connection" into
@@ -198,8 +253,7 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	if err != nil {
 		return profile, err
 	}
-	saved, err := s.hostSchedulingProfile(ctx, host)
-	return s.brandSchedulingProfile(ctx, host, saved), err
+	return s.SchedulingProfile(ctx)
 }
 
 // checkBookingCalendar asks the provider only when a live page gains a calendar
@@ -348,13 +402,13 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 			return err
 		}
 		if errors.Is(err, pgx.ErrNoRows) || (profile.ReplaceLink != nil && *profile.ReplaceLink) {
-			id, err = replaceBookingPage(ctx, tx, host)
+			id, err = s.replaceBookingPage(ctx, tx, host)
 			if err != nil {
 				return err
 			}
 		}
-		profile.Slug, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil
-		profile.HostName = nil
+		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
+		profile.HostName, profile.Blocker = nil, nil
 		args = []any{profile, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err
@@ -372,9 +426,14 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 	})
 }
 
-func replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
+func (s *Store) replaceBookingPage(ctx context.Context, tx pgx.Tx, host ids.UserID) (ids.UUID, error) {
 	args := schedulingArgs{}
 	if _, err := tx.Exec(ctx, `UPDATE booking_page SET revoked_at=now() WHERE host_user_id=`+args.add(host)+` AND revoked_at IS NULL`, args...); err != nil {
+		return ids.Nil, err
+	}
+	// Replace address stops every public address of the old page, the alias
+	// included. The alias is retired, so its cooldown starts now.
+	if err := s.retireBookingAliasTx(ctx, tx, host); err != nil {
 		return ids.Nil, err
 	}
 	slug, err := SeedBookingPageTx(ctx, tx, host)

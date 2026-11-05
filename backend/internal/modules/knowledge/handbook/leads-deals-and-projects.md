@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
+<!-- describes: frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx backend/internal/compose/leadworktasks.go frontend/src/features/leads frontend/src/features/deals frontend/src/features/projects backend/internal/modules/contacts/promoteexistingdeal.go backend/internal/compose/leadqualifydeal.go backend/internal/modules/contacts/leadstatus.go backend/internal/modules/contacts/leadscore.go backend/internal/modules/contacts/leadcompanyfacts.go backend/internal/modules/deals/deal_create.go backend/internal/modules/deals/deal_update.go backend/internal/modules/projects -->
 # Leads, deals and projects
 
 A lead is someone you may sell to. A deal is one opportunity with one company, and a project is work a deal may belong to. See [Records](records.md) for contacts, companies, archiving, undo, custom fields and tags.
@@ -8,8 +8,7 @@ A lead is someone you may sell to. A deal is one opportunity with one company, a
 
 > "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
-A lead needs no origin. Email and LinkedIn address are the fields used to
-find copies of one lead; a second live lead with the same email is refused.
+A lead needs no origin. Email and LinkedIn address are the fields used to find copies of one lead; a second live lead with the same email is refused.
 
 ### How do I create a lead?
 To create a lead in Margince, open **Leads** in the sidebar and choose **New lead**.
@@ -17,7 +16,8 @@ To create a lead in Margince, open **Leads** in the sidebar and choose **New lea
 2. You may fill **Email**, **LinkedIn URL**, **Title** and **Company**. The company is free text.
 3. Pick the **Owner** (required; **Unassigned** is one of the choices).
 4. Pick the **Origin** if you know it: where the lead came from, such as a referral or an event. You may add an **Origin note**, such as the event name. Only the origin counts for the score, and a lead with none gets no points for it.
-5. Fill any custom fields, then choose **Create**.
+5. Pick **Referred by partner** if a partner sent the lead. The choice shows once a company is a partner, and only to a role that may see companies and partners.
+6. Fill any custom fields, then choose **Create**.
 Many leads at once come in through Settings → **Data import**.
 Also called: add a prospect, new lead.
 
@@ -40,25 +40,22 @@ A lead has five statuses. The first three are open, the last two are final.
 | **Qualified** | A contact now exists for this lead |
 | **Disqualified** | Closed, with a reason |
 
-Captured activity sets Contacted and Engaged automatically. You can also set them by hand; the record tells you which.
+Captured activity sets Contacted and Engaged automatically. An imported reply already older than 30 days, or a meeting the lead declined, does not set Engaged. You can also set them by hand; the record tells you which.
 
-You may move an open lead to any open step, forward or back, on its **Lead
-status** ladder. Margince itself only ever moves it forward.
+You may move an open lead to any open step, forward or back, on its **Lead status** ladder. Margince itself only ever moves it forward.
+
+On the leads board, the **Qualified** and **Disqualified** columns follow the board's filters, both their counts and their cards. When a filter cannot be counted, such as a search or tags, the count is withheld and the column says why. An open column lists a page of matching leads, and **Load more** at its foot adds the next page. If the owner filter names someone whose figures you may not see, it says "No count for this owner’s leads. Only an administrator can let you measure them." If the counts or the leads fail to load, the board offers **Retry**.
 
 ### How do I qualify a lead or convert it into a deal?
-To qualify a lead in Margince, open the lead and choose **Qualify**; tick **Also open a deal** to create a deal in the same step.
+To qualify a lead in Margince, open the lead and choose **Qualify**. The dialog offers deal choices.
 1. Check the **Contact** preview: "Qualifying creates a new contact." or "Qualifying merges into the existing contact". A lead linked to a company you can open gives that contact a job link there. If that company has no industry, it gets the **Industry** typed on the lead.
-2. For a deal, tick **Also open a deal** and set **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
+2. Pick **Add to an existing deal** to join an open deal at the employer. Pick **Open a new deal** for a new one. A new deal asks for **Pipeline**, **Stage**, **Deal name** and, if you like, **Amount**.
 3. Read **Why** and add an **Evidence note (optional)**.
-4. Choose **Qualify**, or **Qualify and open deal**.
+4. Choose **Qualify**, **Qualify and add to deal**, or **Qualify and open deal**.
 **Qualify** is turned off until the lead has an email address and an open status.
 Also called: convert a lead, promote a lead, turn a lead into a contact or opportunity.
 
-Qualifying a lead records what started it: a reply that came in, a meeting
-booked, a meeting held, or your own call. The **Why** line in the dialog is
-filled from the captured activity when there is one. If not, it reads "Reason:
-qualified by you." Mail you sent that had no reply **does not count**. A lead qualifies when
-they engage with you; importing it or writing to it is not enough.
+Qualifying a lead records what started it: a reply that came in, a meeting booked, a meeting held, or your own call. A synced meeting nobody marked counts as booked. A reply or meeting counts only within the last 30 days, or the shorter time your team's reply speed sets. The **Why** line in the dialog is filled from that activity, or reads "Reason: qualified by you." when there is none. Mail you sent that had no reply **does not count**. A lead qualifies when they engage with you; importing it or writing to it is not enough.
 
 Then one of two things happens, in a single step:
 
@@ -66,9 +63,11 @@ Then one of two things happens, in a single step:
   contact. No copy is created.
 - If not, a new contact is created.
 
-Either way the lead's history and activities come with it, and the lead is
-marked qualified and archived. You can preview which of the two
-will happen before you confirm.
+Either way the lead's history and activities come with it, and the lead is marked qualified and archived. You can preview which of the two will happen before you confirm.
+
+The contact's company comes from the lead. Without a company link, the lead's work email domain decides, as for captured mail. The company holding that domain is linked, or a new one is created under the typed company name.
+
+A personal address such as Gmail names no company. The dialog then offers **Add … as the employer**, which links or creates the company with the typed name. Left unticked, the contact gets no job link, and its page offers the typed name to link or create.
 
 Margince does not qualify a lead on its own. Mail and chat stay on the lead, and a booking is filed there too.
 A current reply or booking gives the lead's owner a task to review the lead and qualify them
@@ -85,8 +84,9 @@ to see. The preview then says "Qualifying merges into an existing contact you
 cannot see." and does not show you the contact. **No contact shown does not mean
 no match.**
 
-A deal opened in the same step takes the lead's owner and is left with no
-company. The amount is a whole number in the base currency of your
+The only open deal you can change at the employer starts selected. Choose **Qualify without a deal** to create no deal. When you pick one, the contact joins its team and the lead links to it. A deal that closes or moves to another company before you confirm is refused.
+
+A deal opened in the same step takes the lead's owner and the contact's employer, when one exists. The amount is a whole number in the base currency of your
 installation.
 
 ### How do I reverse a qualification?
@@ -124,10 +124,7 @@ To disqualify several at once, tick them on the **Leads** list and choose **Disq
 Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
-Disqualifying archives the lead. It records a reason, from a list that
-administrators manage, and a note if you add one. You can still open the lead,
-but it becomes read-only:
-"This lead is closed and cannot be changed."
+Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "This lead is closed and cannot be changed."
 
 ### How do I reopen a disqualified lead?
 To reopen a disqualified lead in Margince, open the lead and choose **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
@@ -136,17 +133,20 @@ Leads disqualified in bulk have no one-step undo: reopen them one at a time.
 Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
-To edit a lead in Margince, open it from **Leads** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
-1. Click a value, change it, and press Enter or pick from the list. Esc cancels. **Email** opens a small form with **Save**.
-2. Fields: **Full name**, **Email**, **Title**, **Company**, **Industry**, **Owner**, **Company routing key**, **Project**, **Origin**, **Origin note**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
+1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. Pressing the **Email** address starts a message; press the box around it or its mark to change it.
+2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**, **Owner**. More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
+
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead "cannot be changed".
 Also called: update a lead, rename a lead, correct a prospect.
 
+**Referred by partner** shows once a company is a partner, to a role that may see companies and partners. On a lead that names a partner, a role that may change partners then sees **Accept for partner**; see [Partners and commission](partners.md#what-does-activated-mean). The **Leads** table then has a **Referred by partner** column. A lead that no one has accepted for its partner yet says **Awaiting acceptance** there.
+
 ### How do I change a lead's owner?
-To change or set the owner of a lead in Margince, open the lead and choose **Assign** beside **Owner** at its top. Then pick a colleague under **Choose a colleague**.
-1. **Assign to me** is listed first; picking it on a lead with no owner claims the lead for you.
+To change or set the owner of a lead in Margince, open the lead and press the **Owner** value under **Ownership** in its **Details** panel. Then pick a colleague under **Choose a colleague** and press **Save**.
+1. **Assign to me** is listed first; saving it on a lead with no owner claims the lead for you.
 2. Pick anyone else to hand the lead over.
-The **Owner** row in **Details** does the same. For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
+For many leads, tick them on the **Leads** table and use **Choose owner** → **Assign**.
 The new owner must be "an active colleague you may assign work to".
 Also called: assign a lead, reassign a prospect, take a lead, claim a lead.
 
@@ -197,11 +197,11 @@ On a company or project page, the button is hidden when the pipeline has no open
 Also called: opportunity.
 
 ### How do I edit a deal?
-To edit a deal in Margince, open it from **Deals** and click the value to change in its **Details** panel. Each field changes in place, with no Edit button.
+To edit a deal in Margince, open it from **Deals** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
 1. If the panel is hidden, choose **Show details**.
-2. Click a value, change it, and press Enter or pick from the list. Esc cancels. **Value** and **Company** open a small form with **Save**.
+2. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. **Value**, **Company** and **Referring partner** open a dialog with several fields.
 
-Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **via partner**, **Forecast category**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
+Fields: **Deal name**, **Value**, **Currency**, **Owner**, **Company**, **Project**, **Referring partner**, **Probability**, **Expected close**, **Wait until**, **Deal brief**, **Commercial motion**, **Priority**, **Acquisition source**, custom fields. The stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
@@ -225,7 +225,7 @@ A deal and its project must belong to the same company. The **Project** field of
 Also called: move a deal to another account, attach a deal to a project.
 
 ### How do I change the owner of a deal?
-To reassign a deal to a colleague in Margince, open the deal and pick the colleague in the **Owner** row of its **Details** panel. It saves as soon as you pick.
+To reassign a deal to a colleague in Margince, open the deal and press the **Owner** row of its **Details** panel. Pick the colleague in the dialog and press **Save**.
 
 To reassign many, switch **Deals** to **Table** and tick them. Use **Pick an owner** → **Assign owner** in the bulk bar, then **Change owner**.
 The new owner must be "an active colleague you may assign work to". That is a user on a full seat, not an agent, within your own reach.
@@ -241,7 +241,7 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change the role, choose **Edit** on the row. To take someone off, choose **Remove** ("Remove this relationship? There is no undo.").
+To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
 
@@ -250,7 +250,7 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-No. Win probability in Margince belongs to the stage (**Settings → Pipelines**, **Win probability**), not to a single deal. To say how likely one deal is, set its **Forecast category** in **Details**: Commit, Best case, Pipeline or Omitted.
+Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Pipelines**, **Win probability**). Moving the deal to another stage also sets it back to that stage's.
 Also called: deal probability, likelihood, confidence.
 
 ## Projects
@@ -288,8 +288,8 @@ Then comes **Open tasks**: the open tasks filed under the project, soonest due f
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
-To edit or rename a project in Margince, open it from **Projects** and choose **More actions** → **Edit project**. Change the fields and choose **Save**.
-You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), click its value in the project's **Details** panel instead.
+To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
+You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), press its value in the project's **Details** panel instead.
 
 The company is not in this form: add or take off companies in the project's **Companies** panel. The phase moves on the **Phase** bar. An archived project takes no changes.
 Also called: update a project, change the project's end date.

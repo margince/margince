@@ -209,6 +209,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
+		err = eraser.purgePartyProjections(ctx, tx, subjectEmails)
+	}
+	if err == nil {
 		// The duplicate-pair snapshot, which no cascade reaches because this is
 		// an anonymize: it holds the address and phone number cleared above.
 		err = scrubDedupeEvidence(ctx, tx, []ids.UUID{id}, nil)
@@ -363,7 +366,7 @@ func purgeSubjectPurchases(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // record, so an old basis would authorize writing to them on the strength of a
 // conversation nobody can now identify.
 //
-// A live objection is neither: it is re-pinned to the address. The eraser can
+// A stop is neither: it is pinned to the addresses (retentionstops.go). The eraser can
 // delete one because it also hashes every address onto erasure_suppression, so
 // an erased subject cannot be re-captured at all. The anonymizer writes no such
 // row by design, so deleting the objection here would let a returning subject
@@ -375,6 +378,9 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	// subject's acquisition record standing after an operator was told the
 	// contact had been anonymized.
 	if _, err := tx.Exec(ctx, `DELETE FROM contact_acquisition_evidence WHERE contact_id = $1`, id); err != nil {
+		return err
+	}
+	if err := clearRequestAddresses(ctx, tx, id); err != nil {
 		return err
 	}
 	// Per row, not one constant. A single delivery can carry two decisions for
@@ -411,39 +417,7 @@ func clearCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, addre
 	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE contact_id = $1`, id); err != nil {
 		return err
 	}
-	// The objection SURVIVES an anonymization, re-pinned to the address.
-	//
-	// This is where the anonymizer parts company with the eraser. The eraser
-	// hashes every address onto erasure_suppression, so an erased subject
-	// cannot be re-captured at all and a per-contact objection has nothing left
-	// to protect. The anonymizer deliberately writes no such row, because an
-	// anonymized subject may lawfully return — and if their objection were
-	// deleted here they would return unsuppressed, having never withdrawn it.
-	// So the contact link is cut and the address kept, which is exactly what the
-	// address-only row shape exists for.
-	// EVERY row is detached, revoked or not, and the revoked ones keep their
-	// revoked_at. Filtering on `revoked_at IS NULL` here was safe while nothing
-	// could set that column; consent's lift verb now can, and a lift committing
-	// between this statement and the DELETE below would leave the row unmatched
-	// here and then deleted there — losing an address the anonymizer is about to
-	// orphan. Detaching a revoked row costs nothing: it stays revoked, so it
-	// suppresses nothing, and it carries the address forward for the record
-	// rather than vanishing mid-transaction.
-	if _, err := tx.Exec(ctx, `
-		UPDATE communication_suppression
-		   SET contact_id = NULL, address = coalesce(address, u.addr)
-		  FROM unnest($2::text[]) AS u(addr)
-		 WHERE contact_id = $1`, id, addresses); err != nil {
-		return err
-	}
-	// Whatever the detach could not reach — a row whose address is not among
-	// the subject's — names a contact who is going, so it goes with them.
-	// Merged-away records too: their live stops were copied onto this contact,
-	// and that copy is what the detach above carried forward.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM communication_suppression
-		 WHERE contact_id = $1
-		    OR contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`, id); err != nil {
+	if err := keepContactStops(ctx, tx, id, addresses); err != nil {
 		return err
 	}
 	// An override has NO address column to detach onto, unlike the suppression

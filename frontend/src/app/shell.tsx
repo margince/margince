@@ -17,9 +17,11 @@ import { useScrollMemory } from "../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
+import { CaptureHealthBanner } from "./capturehealthbanner";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
+import { isSidebarChord } from "./hotkeys";
 import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
@@ -165,17 +167,7 @@ export function Shell({
   // on the platform, and a composer is exactly where a reader would reach for it.
   useEffect(() => {
     function onKeyDown(event: globalThis.KeyboardEvent) {
-      // The chord EXACTLY: one platform modifier and no others. Accepting any
-      // combination that merely included Meta or Ctrl took Cmd+Shift+B — which
-      // is bold-with-a-selection in most editors, and something of its own in
-      // the browser — and swallowed it with preventDefault.
-      const platformKey = event.metaKey !== event.ctrlKey;
-      if (
-        !platformKey ||
-        event.altKey ||
-        event.shiftKey ||
-        event.key.toLowerCase() !== "b"
-      ) {
+      if (!isSidebarChord(event)) {
         return;
       }
       // `instanceof` rather than an assertion: an event target is an
@@ -266,6 +258,7 @@ export function Shell({
                 onOpenSearch={onOpenSearch}
               />
             )}
+            <CaptureHealthBanner />
             <ConnectivityBanner />
             <EconomyBanner />
             <EmbedReindexBanner />

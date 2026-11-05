@@ -108,6 +108,16 @@ describe("commercial approval preview", () => {
       expect(approvalAcceptable({ preview: incomplete })).toBe(false);
     },
   );
+  it("says a colleague who can see the records must decide", () => {
+    const hidden = { ...preview, state: "needs_wider_sight" };
+    const rows = commercialPreviewDisplay(hidden, (key, params) =>
+      translate("en", key, params),
+    );
+    expect(rows[0].value).toBe(
+      translate("en", "approval.preview.needsWiderSight"),
+    );
+    expect(approvalAcceptable({ preview: hidden })).toBe(false);
+  });
   it("refuses an unsupported preview version", () => {
     const newer = { ...preview, version: 999 };
     expect(approvalAcceptable({ preview: newer })).toBe(false);
@@ -914,7 +924,7 @@ it.each(LOCALES)("labels contact source context in %s", (locale) => {
 });
 
 it.each(LOCALES)("describes offer creation and full terms in %s", (locale) => {
-  const terms = "First paragraph.\n\n" + "Complete terms. ".repeat(40);
+  const terms = `First paragraph.\n\n${"Complete terms. ".repeat(40)}`;
   const rows = commercialPreviewDisplay(
     {
       ...preview,

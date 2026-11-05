@@ -170,7 +170,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
                 joins the accessible name. The visible text is unchanged and
                 is still its prefix, so the spoken name and the seen one do
                 not come apart. */}
-            {mayMerge && (
+            {mayMerge && (!pair.keep_id || pair.keep_id === side.id) && (
               // At the card's own FOOT, on its trailing edge: the verb belongs
               // to the record above it, and `.card-actions` is the catalog's
               // trailing row for exactly that — the air above the verbs rides

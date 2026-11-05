@@ -144,7 +144,7 @@ describe("the sign-off under the composer's body", () => {
       screen
         .getByRole("link", { name: "Set your signature" })
         .getAttribute("href"),
-    ).toBe("#/settings/account");
+    ).toBe("/#/settings/account");
   });
 
   // The answer holds one member's signature and name. A different member

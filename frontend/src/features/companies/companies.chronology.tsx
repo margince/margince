@@ -1,10 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useRoster } from "../../components/entityref";
-import {
-  type JustIn,
-  LatestInboundPanel,
-} from "../../components/latestinbound";
+import { type JustIn, JustInScope } from "../../components/latestinbound";
 import {
   hasTimelineFilters,
   useRecordTimeline,
@@ -17,7 +14,7 @@ import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { OpenReceipt } from "../records/record360";
 import {
   ChronologyFilter,
@@ -73,7 +70,7 @@ export function useChronologySlots({
 } {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The workspace roster, for the ids a change row stores. Still walks rather
   // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
   // `values.nameOf`, called per row as it renders, so the ids are unknown here.
@@ -119,7 +116,7 @@ export function useChronologySlots({
     // ids. An owner moving between colleagues is the change most often sought.
     // An account holds no currency of its own. A minor-unit column on it says
     // so, rather than printing a bare integer under a currency it never had.
-    values: { currency: null, locale, zone: recordZone, nameOf: colleagueName },
+    values: { currency: null, locale, zone: readerZone, nameOf: colleagueName },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -192,7 +189,7 @@ export function useChronologySlots({
         (filter === "conversations" ? (
           <ConversationList
             groups={groupChronology(history.entries, timeline.hasNextPage)}
-            zone={recordZone}
+            zone={readerZone}
           />
         ) : undefined),
     },
@@ -248,16 +245,26 @@ export function useCitedReceipt() {
 }
 
 /**
- * The newest unanswered thing anyone at the account sent, leading the
- * Overview, with the verbs its row has in the timeline.
+ * The newest unanswered thing anyone at the account sent, for the Overview's
+ * Next bar, with the verbs its row has in the timeline.
  */
 export function CompanyLatestInbound({
   latest,
   companyId,
-}: Readonly<{ latest: JustIn | undefined; companyId: string }>) {
+  onOpenEmail,
+  children,
+}: Readonly<{
+  latest: JustIn | undefined;
+  companyId: string;
+  onOpenEmail?: (activityId: string) => void;
+  children: ReactNode;
+}>) {
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="company"
+      entityId={companyId}
+      onOpenEmail={onOpenEmail}
       actions={(activity) => (
         <RowAnswerActions
           activity={activity}
@@ -265,6 +272,8 @@ export function CompanyLatestInbound({
           entityId={companyId}
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }

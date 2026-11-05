@@ -14,7 +14,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -97,10 +96,6 @@ func (stubComms) Availability(context.Context, *ids.UUID, time.Time, time.Time, 
 	return agents.AvailabilityResult{}, nil
 }
 
-func (stubComms) BookMeeting(context.Context, agents.BookMeetingArgs) (json.RawMessage, error) {
-	return nil, nil
-}
-
 // stubSoR satisfies the record reader the 🟡 comms verbs stage against. This
 // walk only reads Specs(), so nothing calls it — but RegisterCommsTools now
 // refuses a nil provider at wiring time, because a surface that advertises
@@ -114,7 +109,7 @@ func TestEveryConfirmationRequiredToolHasADecisionGrantMapping(t *testing.T) {
 	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 	// A nil brief reader is a legal wiring: this walk reads Specs() only, and
 	// the tool answers the assembled picture when no brief seam is bound.
-	agents.RegisterIntentTools(registry, stubRetriever{}, nil, nil)
+	agents.RegisterIntentTools(registry, stubRetriever{}, nil, nil, nil, nil)
 	agents.RegisterCommsTools(registry, stubComms{}, stubSoR{})
 
 	for _, spec := range registry.Specs() {

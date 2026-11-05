@@ -29,7 +29,7 @@ const PREFIX_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ["introductions", ["intro_request"]],
   ["consent_privacy", ["consent", "retention"]],
   ["signals", ["signal"]],
-  ["forecasts_weekly_plans", ["forecast", "weekly_plan"]],
+  ["forecasts_weekly_plans", ["forecast", "weekly_plan", "sales_initiative"]],
   ["notices_notifications", ["notice", "notification", "user_delivery"]],
   ["members_access", ["user", "role", "team", "passport", "onboarding"]],
   [
@@ -38,6 +38,7 @@ const PREFIX_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
       "user_display_name",
       "user_greeting_name",
       "user_locale",
+      "user_timezone",
       "email_signature",
       "linkedin_account",
       "linkedin_network",

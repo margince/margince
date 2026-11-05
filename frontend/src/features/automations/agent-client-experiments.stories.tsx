@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { agentClientList } from "../../testing/agent-clients.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -25,8 +26,8 @@ function served(on: boolean) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ agent_client: ["read", "update"] }),
-      "GET /installation/settings": () =>
-        jsonResponse({ mcp_client_check: on }),
+      "GET /installation/agent-clients": () =>
+        jsonResponse({ ...agentClientList([]), client_check: on }),
     });
     return (
       <StoryProviders>

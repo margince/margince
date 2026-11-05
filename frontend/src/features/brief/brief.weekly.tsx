@@ -3,6 +3,7 @@
 
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { type ReactNode, useId } from "react";
+import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelRow } from "../../design-system/panel";
@@ -15,7 +16,7 @@ import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { openAnalyticsSection } from "../../lib/analytics.address";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { routeHash } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { weeklyNumericStatus } from "./brief.numeric";
@@ -48,7 +49,7 @@ export function WeeklySection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const [params] = useUrlParams();
   const asked = params.get("week") ?? undefined;
   const review = useWeeklyReview(asked);
@@ -268,6 +269,7 @@ function reportSections(
           <ScorecardPanel
             scorecard={review.scorecard}
             weekStart={review.local_week_start}
+            meetingsWithheld={review.meetings_withheld}
           />
           <FiguresFootnote partial={numeric.partial} basis={numeric.basis} />
         </>
@@ -292,12 +294,12 @@ type Deal = WeeklyReview["deals"][number];
  *  renamed since still reads as it did that week. */
 function DealName({ deal }: Readonly<{ deal: Deal }>) {
   return (
-    <a
+    <AppLink
       className="brief-weekly-deal-name link-button"
       href={routeHash({ screen: "deals", id: deal.deal_id })}
     >
       {deal.label}
-    </a>
+    </AppLink>
   );
 }
 
@@ -325,7 +327,7 @@ function ClosedDeals({
 }: Readonly<{ review: WeeklyReview; deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   const pipeline = review.pipeline;
   const total = pipeline ? pipeline.won_minor + pipeline.lost_minor : 0;
   return (
@@ -385,7 +387,7 @@ function ClosedDeals({
 function MovedDeals({ deals }: Readonly<{ deals: readonly Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const recordZone = useCompanyZone();
   return (
     <Panel>
       {deals.map((deal) => (

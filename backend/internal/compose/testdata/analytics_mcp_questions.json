@@ -196,6 +196,13 @@
       "question": "Which sources feed the forecast, and are they connected?",
       "tool": "read_forecast",
       "expects": "Each source with its state. A mailbox nobody connected is said to be not connected rather than left out."
+    },
+    {
+      "id": "F06",
+      "persona": "management",
+      "question": "How far is this quarter from its sales target, and does the open pipeline cover what is left?",
+      "tool": "read_reporting",
+      "expects": "The gap between the target and the expected landing, what is left to win, and the open pipeline over that remainder, over all open deals and over qualified deals. A manager call is the whole quarter and is never added to what is already won. The tool's comparison is the web evaluation's, figure for figure."
     }
   ]
 }

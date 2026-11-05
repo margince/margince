@@ -12,7 +12,7 @@ import (
 // publicEdgePrefixes are the paths the anonymous edges answer, each named by
 // the constant its edge tests the request path against.
 var publicEdgePrefixes = []string{
-	publicFormsPrefix, publicConfirmPrefix, publicPreferencesPrefix,
+	publicFormsPrefix, publicConfirmPrefix, publicPreferencesPrefix, publicRecordPreviewPrefix,
 	publicBookingPrefix, publicMeetingPrefix, publicProposalPrefix, publicDealRoomPrefix,
 }
 

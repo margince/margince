@@ -249,7 +249,7 @@ describe("the settings search box", () => {
     // if the search had answered nothing.
     expect(options().length).toBeGreaterThan(0);
     for (const option of options()) {
-      expect(option.getAttribute("href")).toMatch(/^#\/settings\/[a-z-]+$/);
+      expect(option.getAttribute("href")).toMatch(/^\/#\/settings\/[a-z-]+$/);
     }
   });
 
@@ -342,10 +342,14 @@ describe("the settings search box", () => {
     );
     await user.keyboard("{ArrowDown}".repeat(index + 1));
     await user.keyboard("{Enter}");
-    expect(navigate).toHaveBeenCalledWith({
-      screen: "settings",
-      id: "system-health",
-    });
+    expect(navigate).toHaveBeenCalledWith(
+      {
+        screen: "settings",
+        id: "system-health",
+        id2: "configuration",
+      },
+      new Map([["section", "operations.retention.label"]]),
+    );
   });
 });
 
@@ -371,7 +375,7 @@ describe("the settings search box, by a setting's name", () => {
         `${key} · Installation`,
       );
       expect(hit.getAttribute("href")).toBe(
-        `#/settings/configuration?q=${query}`,
+        `/#/settings/configuration?q=${query}`,
       );
       await user.click(hit);
       expect(navigate).toHaveBeenCalledWith(
@@ -387,7 +391,7 @@ describe("the settings search box, by a setting's name", () => {
     await user.type(box(), "MARGINCE_");
 
     expect(configuration()?.getAttribute("href")).toBe(
-      "#/settings/configuration?q=MARGINCE_",
+      "/#/settings/configuration?q=MARGINCE_",
     );
   });
 

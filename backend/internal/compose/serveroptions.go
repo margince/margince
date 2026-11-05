@@ -81,6 +81,12 @@ func WithMCPResource(resource string) Option {
 	}
 }
 
+// WithMCPInputStateKey lets a tool ask the user in the chat, signing each
+// question with the deployment's HMAC key. Without one no tool asks.
+func WithMCPInputStateKey(key string) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.mcpInputStateKey = key }
+}
+
 // WithMCPConnector turns the remote MCP connector on: the /mcp transport,
 // the OAuth authorization server and both discovery documents are mounted
 // together. Without it none of those routes exists — an installation that
@@ -221,6 +227,11 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		// the panic that says so at boot rather than at the read.
 		if s.aiRoutingHandlers.store != nil {
 			s.aiRoutingHandlers.store = s.aiRoutingHandlers.store.WithSealer(vaultSealer(vault, s.log))
+		}
+		// The status read names the lanes whose vendor holds no key, and a
+		// sealed key counts as held.
+		if s.aiAdminHandlers.store != nil {
+			s.aiAdminHandlers.store = s.aiAdminHandlers.store.WithSealer(vaultSealer(vault, s.log))
 		}
 		// The sync lists each vendor's models with the key sealed here; guarded
 		// like the store above, for a role that composed no AI surface.

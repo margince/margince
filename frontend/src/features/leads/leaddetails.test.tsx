@@ -1,8 +1,10 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { changeChoice } from "../../testing/choicedialog.testkit";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { LeadScreen } from "./leads";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
 
@@ -32,8 +34,9 @@ const linked = {
 function serve(served: Record<string, unknown>) {
   const patches: Record<string, unknown>[] = [];
   stubFetch(async (url, method, request) => {
-    if (url.includes("/v1/companies/c-7")) {
-      return jsonResponse({ id: "c-7", display_name: "Nordwind Holding SE" });
+    const named = companyNamesAnswer(url, { "c-7": "Nordwind Holding SE" });
+    if (named) {
+      return named;
     }
     if (method === "PATCH") {
       const body: Record<string, unknown> = JSON.parse(await request.text());
@@ -45,8 +48,8 @@ function serve(served: Record<string, unknown>) {
   return patches;
 }
 
-async function showEmptyFields() {
-  await userEvent.click(
+async function showEmptyFields(user: UserEvent) {
+  await user.click(
     await screen.findByRole("button", { name: /^Show \d+ empty fields?$/ }),
   );
 }
@@ -67,7 +70,7 @@ describe("a lead's company facts", () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Change Industry" }),
+      screen.queryByRole("button", { name: /^Change Industry/ }),
     ).toBeNull();
   });
 
@@ -85,12 +88,7 @@ describe("a lead's company facts", () => {
     expect(within(group).queryByText("Country")).toBeNull();
     expect(within(group).queryByText("Industry")).toBeNull();
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Manufacturing" }),
-    );
+    await changeChoice(userEvent.setup(), "Industry", "Manufacturing");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "manufacturing" }),
@@ -102,21 +100,17 @@ describe("a lead's company facts", () => {
     serve({ ...lead, company_id: "c-7", industry: "software" });
     render(<LeadScreen id="l-1" />);
     expect(
-      await screen.findByRole("button", { name: "Change Industry" }),
+      await screen.findByRole("button", { name: /^Change Industry/ }),
     ).toHaveTextContent("Software");
     expect(screen.queryByRole("region", { name: /^From / })).toBeNull();
   });
 
   it("lets a rep type an industry on an unlinked lead", async () => {
     const patches = serve(lead);
+    const user = userEvent.setup();
     render(<LeadScreen id="l-1" />);
-    await showEmptyFields();
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Change Industry" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Logistics and Transport" }),
-    );
+    await showEmptyFields(user);
+    await changeChoice(user, "Industry", "Logistics and Transport");
     await waitFor(() =>
       expect(patches).toEqual([
         expect.objectContaining({ industry: "logistics_transport" }),

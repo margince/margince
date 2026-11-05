@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -75,6 +73,9 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 	// cross-door resolution.
 	known, alreadyFiled, err := s.activityHoldingIdentity(ctx, tx, rec)
 	if err != nil {
+		return datasource.EntityRef{}, false, counterpartyDecision{}, err
+	}
+	if known, err = s.foldOwnDuplicate(ctx, tx, known, alreadyFiled, rec); err != nil {
 		return datasource.EntityRef{}, false, counterpartyDecision{}, err
 	}
 	// The row the other door filed IS the row this capture is about, so the
@@ -316,6 +317,9 @@ func (s *Sink) finishNewActivity(
 		if err != nil {
 			return counterpartyDecision{}, err
 		}
+		if err := s.recordMeetingDocuments(ctx, tx, id, rec, false); err != nil {
+			return counterpartyDecision{}, err
+		}
 	}
 	// And a MESSAGE under the contacts who were on it beyond its counterparty —
 	// the cc'd contact the ladder never judged, whose own inbound mail is what
@@ -379,20 +383,11 @@ func (s *Sink) upsertActivity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 	fields ActivityFields, birth birthDecision,
 ) (ids.ActivityID, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedActivityObject, principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
-	// Attested outbound is the ONLY write that turns "does this workspace
-	// correspond with them" from no to yes, and a verdict acts on that answer
-	// inside its own transaction — so the two serialize here rather than racing.
-	// Taken only for the attested row: inbound mail cannot change the answer,
-	// and locking every capture insert on its sender would serialize a busy
-	// address against itself for nothing.
-	if rec.Counterparty.SentByOwner() {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			mailidentity.CorrespondenceLockKey(rec.Counterparty.Email)); err != nil {
-			return ids.ActivityID{}, false, err
-		}
+	if err := lockActivityInsertTx(ctx, tx, rec); err != nil {
+		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
 	query, args := capturedActivityInsert(ctx, rec, fields, birth)
@@ -485,16 +480,13 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 	args := []any{
 		fields.Kind, nullableString(fields.ChannelProvider), nullableString(fields.Subject), nullableString(fields.Body), occurredAt, nullableString(fields.Direction),
 		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, captureSource(rec), capturedByFor(ctx, rec), nullableString(rec.ThreadKey), nullableString(correspondence.Fold(rec.Counterparty.Email)),
-		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.DetectFirst(textlang.MessageOpening(fields.Body, 1200), fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
+		rec.Counterparty.SentByOwner(), rec.Counterparty.ListUnsubscribe, audience, nullableString(audienceReason), fields.HasCalendarPart, meetingHostUserID(ctx, fields.Kind), nullableString(string(textlang.OfMessage(fields.Body, fields.Subject))), nullableID(rec.StoredOriginal), fields.DurationSeconds, nullableID(fields.SentByColleague), nullableString(fields.CalendarMethod),
 		fields.judged.foreignLink, fields.judged.senderWasStranger, inboundSenderAuthenticated(rec, fields), string(fields.BodyCompleteness.stored()), senderIsMachine(rec, fields),
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
+		nullableString(fields.AgendaFingerprint),
 	}
-	placeholders := make([]string, len(args))
-	for i := range args {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender)
- VALUES (` + strings.Join(placeholders, ",") + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint)
+ VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

@@ -17,7 +17,7 @@ import { NoticeCasesCard } from "./noticecases";
 // The disclosure-duty queue: who we obtained without asking, whether anybody
 // has told them, and by when we must.
 
-type NoticeCase = components["schemas"]["NoticeCase"];
+type NoticeCase = components["schemas"]["NoticeCaseReview"];
 
 // A fixed 2026 deadline: late for good, so no verdict waits on the clock.
 const OVERDUE: NoticeCase = {
@@ -44,7 +44,8 @@ const CLAIMED: NoticeCase = {
   contact_id: "00000000-0000-4000-8000-0000000000c2",
   contact_name: "Jonas Berg",
   acquisition: {
-    kind: "mailbox_history",
+    kind: "purchased_or_imported",
+    deadline_is_upper_bound: true,
     occurred_at: null,
     captured_at: "2026-08-30T09:00:00Z",
     captured_by: "connector:gmail",
@@ -85,7 +86,7 @@ const LONG: NoticeCase = {
   id: "nc-5",
   contact_name: "Maximiliane Theodora von Hohenzollern-Sigmaringen-Wittelsbach",
   acquisition: {
-    kind: "requested_quote_or_meeting",
+    kind: "referral",
     occurred_at: "2026-01-03T09:00:00Z",
     captured_at: "2026-01-04T09:00:00Z",
     captured_by: "agent:capture",
@@ -119,7 +120,7 @@ const ROSTER = {
 
 function queue(rows: NoticeCase[]): RouteMap {
   return {
-    "GET /privacy/notice-cases": () =>
+    "GET /privacy/notice-case-reviews": () =>
       jsonResponse({
         data: rows,
         page: { next_cursor: null, has_more: false },
@@ -273,13 +274,13 @@ export const LongContentPhone: Story = {
 
 export const Loading: Story = {
   render: duties([], WORKS_DUTIES, {
-    "GET /privacy/notice-cases": () => new Promise(() => {}),
+    "GET /privacy/notice-case-reviews": () => new Promise(() => {}),
   }),
 };
 
 export const ReadFailed: Story = {
   render: duties([], WORKS_DUTIES, {
-    "GET /privacy/notice-cases": () =>
+    "GET /privacy/notice-case-reviews": () =>
       jsonResponse(
         { title: "Internal Server Error", status: 500, code: "internal" },
         500,
@@ -290,7 +291,7 @@ export const ReadFailed: Story = {
 // A refused claim lands on the card, under the queue it was made from.
 export const RefusedAssign: Story = {
   render: duties([OVERDUE], WORKS_DUTIES, {
-    "POST /privacy/notice-cases/nc-1/assign": () =>
+    "POST /privacy/notice-case-reviews/nc-1/assign": () =>
       jsonResponse(
         { title: "Forbidden", status: 403, code: "permission_denied" },
         403,
@@ -305,5 +306,33 @@ export const RefusedAssign: Story = {
       await screen.findByRole("option", { name: "Anna Weber" }),
     );
     await canvas.findByRole("alert");
+  },
+};
+
+export const SourceReviewQueue: Story = {
+  render: duties([
+    {
+      ...OVERDUE,
+      id: "nc-review",
+      rule: "unassessed",
+      state: "source_review",
+      due_at: null,
+      allowed_routes: [],
+    },
+  ]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Review source" }),
+    );
+    const actions = await canvas.findByRole("button", { name: /^Actions for/ });
+    await userEvent.click(actions);
+    const choices = await screen.findAllByRole("button", {
+      name: "Review source",
+    });
+    const choice = choices.at(-1);
+    if (!choice) throw new Error("Source assessment action was not offered");
+    await userEvent.click(choice);
+    await expect(await screen.findByRole("dialog")).toBeVisible();
   },
 };

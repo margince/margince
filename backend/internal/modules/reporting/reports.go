@@ -30,6 +30,7 @@ const (
 func scanReport(row pgx.Row) (crmcontracts.ReportingReport, error) {
 	var report crmcontracts.ReportingReport
 	err := row.Scan(&report.Id, &report.OwnerId, &report.Name, &report.Description, &report.Audience, &report.AudienceTeamId, &report.Revision, &report.Version, &report.CreatedAt, &report.ArchivedAt, &report.Selection, &report.DraftRevision)
+	withChartList(&report.Selection)
 	return report, storedError(err)
 }
 
@@ -149,6 +150,7 @@ func (s *Service) validateReport(ctx context.Context, tx pgx.Tx, in *crmcontract
 // validateRevision checks what one revision holds, and resolves its scope. A
 // draft and a published revision pass the same checks.
 func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *crmcontracts.ReportingSelection) error {
+	withChartList(selection)
 	deriveLayoutBlocks(selection)
 	if err := s.validateSelection(ctx, *selection); err != nil {
 		return err
@@ -247,7 +249,7 @@ func (s *Service) insertReport(ctx context.Context, in crmcontracts.ReportingRep
 		if err != nil {
 			return err
 		}
-		if err := s.saveReportRevision(ctx, tx, out); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
 		return recordChange(ctx, tx, "report_definition", ids.UUID(out.Id), "create", nil, out)
@@ -265,7 +267,10 @@ func reportDescription(typed *string) *string {
 	return &trimmed
 }
 
-func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report crmcontracts.ReportingReport) error {
+// saveReportRevision stores the report's selection as its next revision, with
+// the questions its cards are bound to. Binding rewrites those cards in place,
+// so the caller answers and audits the selection as stored.
+func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report *crmcontracts.ReportingReport) error {
 	framework, err := s.framework(ctx, tx)
 	if err != nil {
 		return err
@@ -274,13 +279,25 @@ func (s *Service) saveReportRevision(ctx context.Context, tx pgx.Tx, report crmc
 	if err != nil {
 		return err
 	}
+	kept, err := s.bindQuestions(ctx, tx, ids.UUID(report.Id), &report.Selection)
+	if err != nil {
+		return err
+	}
 	selection, err := encode(report.Selection)
 	if err != nil {
 		return err
 	}
+	questions, err := encode(kept)
+	if err != nil {
+		return err
+	}
+	versions, err := encode(s.evaluator.MetricVersions(report.Selection.Metrics))
+	if err != nil {
+		return err
+	}
 	var b bindings
-	values := []string{b.add(report.Id), b.add(report.Revision), b.add(selection), b.add(framework.Revision), b.add(s.now()), b.add(author)}
-	_, err = tx.Exec(ctx, "INSERT INTO report_definition_revision(report_id,revision,selection,framework_revision,created_at,created_by) VALUES ("+strings.Join(values, ",")+")", b.values...)
+	values := []string{b.add(report.Id), b.add(report.Revision), b.add(selection), b.add(framework.Revision), b.add(s.now()), b.add(author), b.add(questions), b.add(versions)}
+	_, err = tx.Exec(ctx, "INSERT INTO report_definition_revision(report_id,revision,selection,framework_revision,created_at,created_by,question_bindings,metric_versions) VALUES ("+strings.Join(values, ",")+")", b.values...)
 	return err
 }
 
@@ -337,7 +354,7 @@ func (s *Service) UpdateReport(ctx context.Context, id ids.UUID, version int64, 
 		if _, err := tx.Exec(ctx, query, b.values...); err != nil {
 			return err
 		}
-		if err := s.saveReportRevision(ctx, tx, out); err != nil {
+		if err := s.saveReportRevision(ctx, tx, &out); err != nil {
 			return err
 		}
 		return recordChange(ctx, tx, "report_definition", id, "update", &before, out)

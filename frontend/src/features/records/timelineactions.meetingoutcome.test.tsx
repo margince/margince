@@ -78,7 +78,7 @@ it("offers a meeting the server says awaits an outcome the same choice as the la
   const user = userEvent.setup();
 
   await user.click(
-    await screen.findByRole("button", { name: "Update Site visit" }),
+    await screen.findByRole("button", { name: "Add notes to Site visit" }),
   );
   const dialog = await screen.findByRole("dialog");
   await user.click(within(dialog).getByRole("combobox"));
@@ -106,15 +106,18 @@ it.each([
     screen.getByRole("button", { name: "More actions for Site visit" }),
   );
   expect(await screen.findByRole("button", { name: "Relink" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /^Update/ })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^(Add notes|Held)/ }),
+  ).toBeNull();
   expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
 });
 
 it("offers no cancel on a meeting the server marks calendar-managed", async () => {
   show({ ...MEETING, invitation_status: "confirmed", calendar_managed: true });
   expect(
-    await screen.findByRole("button", { name: "Update Site visit" }),
+    await screen.findByRole("button", { name: "Add notes to Site visit" }),
   ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Held: Site visit" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /canceled/ })).toBeNull();
 });
 

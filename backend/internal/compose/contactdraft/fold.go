@@ -306,7 +306,7 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time, zone *time.Lo
 			ID:      turn.ID,
 			Kind:    string(turn.Kind),
 			At:      occurredday.When(occurredday.Moment{At: turn.At, DateOnly: turn.DateOnly}),
-			Inbound: turn.Direction == string(crmcontracts.ActivityDirectionInbound),
+			Inbound: turn.TheirWord(),
 			Subject: turn.Subject,
 		}
 		switch {
@@ -322,7 +322,9 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time, zone *time.Lo
 				readInbound = true
 				folded.Snippet = turn.Text
 			}
-		case turn.Direction == string(crmcontracts.ActivityDirectionOutbound):
+		// A colleague's inbound mail is still ours. A row naming no direction
+		// stays unset, as it did: nobody said it that we can show.
+		case turn.ByColleague || turn.Direction == string(crmcontracts.ActivityDirectionOutbound):
 			folded.Said = turn.Text
 		}
 		out = append(out, folded)

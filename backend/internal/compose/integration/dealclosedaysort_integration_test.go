@@ -30,7 +30,7 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 	ctx := e.Admin()
 
 	now := clocktest.Now(t)
-	e.Deals.WithClock(func() time.Time { return now })
+	e.Deals.SetClock(func() time.Time { return now })
 	local := now.In(zone)
 	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
 	create := func(name string, forecast *time.Time) ids.DealID {
@@ -64,7 +64,7 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 	won := create("Won with a stale forecast", forecast(365))
 	closeDeal(won, wonStage, deals.AdvanceDealInput{WonWithoutContractReason: &reason}, forecast(-5))
 	lostDeal := create("Lost with a forecast", forecast(60))
-	closeDeal(lostDeal, lost, deals.AdvanceDealInput{LostReason: &lostReason}, forecast(-2))
+	closeDeal(lostDeal, lost, deals.AdvanceDealInput{LostReason: &lostReason, LostReasonCode: new("other")}, forecast(-2))
 
 	// 10:00Z and 18:30Z on one UTC date are one day in UTC. In Ho Chi Minh
 	// the later one is already the next morning.

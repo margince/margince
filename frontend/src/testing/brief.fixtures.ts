@@ -380,8 +380,7 @@ export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
     period_end: "2026-07-05",
     base_currency: "EUR",
     won_minor: 96_500_00,
-    commit_minor: 42_000_00,
-    best_case_minor: 78_000_00,
+    likely_minor: 42_000_00,
     weighted_minor: 55_400_00,
     movement: [],
   },
@@ -391,8 +390,7 @@ export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
     period_end: "2026-07-31",
     base_currency: "EUR",
     won_minor: 96_500_00,
-    commit_minor: 214_000_00,
-    best_case_minor: 356_000_00,
+    likely_minor: 214_000_00,
     weighted_minor: 248_200_00,
     movement: [],
   },
@@ -402,12 +400,11 @@ export const weeklyOutlook: NonNullable<WeeklyReview["outlook"]> = [
     period_end: "2026-09-30",
     base_currency: "EUR",
     won_minor: 96_500_00,
-    commit_minor: 512_000_00,
-    best_case_minor: 940_000_00,
+    likely_minor: 512_000_00,
     weighted_minor: 604_500_00,
     opening_landing_minor: 572_000_00,
     closing_landing_minor: 604_500_00,
-    forward_measure: "commit_evidence",
+    forward_measure: "likely",
     // The bars sum to the move between the two landings, because a bridge that
     // does not reconcile draws its own warning.
     movement: [
@@ -569,6 +566,12 @@ export function meetingRow(
     because: prepared ? [] : [{ kind: "meeting_unprepared" }],
     consequence: prepared ? "none" : "meeting_unprepared",
     actions: ["open"],
+    preparation: {
+      activity_id: id,
+      state: prepared ? "ready" : "needs_review",
+      revision: "rev-1",
+      changed: [],
+    },
   };
 }
 

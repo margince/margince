@@ -2,16 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { type ReactNode, useState } from "react";
+import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { StoryProviders } from "../testing/story-utils";
-import { LatestInboundLine, LatestInboundPanel } from "./latestinbound";
+import { OpenSourceProvider } from "../lib/opensource";
+import { StoryProviders, storyQueryClient } from "../testing/story-utils";
+import {
+  type JustIn,
+  JustInScope,
+  LatestInboundLine,
+  latestInboundKey,
+  RecordNextBar,
+} from "./latestinbound";
 
 type Activity = components["schemas"]["Activity"];
 
-// The newest unanswered thing on a record, as the panel leading its Overview
-// and as the line in its head on every other tab. The times are an hour or so
-// before now, so the label reads the way it does on a live record.
+// The newest unanswered thing on a record, in each place it shows. The times
+// are an hour or so before now, so the label reads as on a live record.
 const hoursAgo = (hours: number) =>
   new Date(Date.now() - hours * 3_600_000).toISOString();
 
@@ -27,6 +35,7 @@ function activity(id: string, fields: Partial<Activity>): Activity {
     created_at: at,
     updated_at: at,
     offers_email: true,
+    email_target: { entity_type: "contact", entity_id: "p-1" },
     is_done: false,
     ...fields,
   };
@@ -70,66 +79,166 @@ const chat = activity("chat", {
 // Stands in for the record's own row verbs, which each page hands in.
 const verbs = () => <Button variant="primary">Reply</Button>;
 
-const meta: Meta<typeof LatestInboundPanel> = {
+const notice = () => undefined;
+const MAIL: JustIn = {
+  activity: mail,
+  kind: "email",
+  accepts_request: true,
+  notice,
+};
+
+function OnRecord({
+  latest,
+  children,
+}: Readonly<{ latest: JustIn; children: ReactNode }>) {
+  return (
+    <StoryProviders>
+      <div style={{ maxWidth: 720 }}>
+        <JustInScope
+          latest={latest}
+          entityType="contact"
+          entityId="story-contact"
+          actions={verbs}
+        >
+          {children}
+        </JustInScope>
+      </div>
+    </StoryProviders>
+  );
+}
+
+const meta: Meta<typeof RecordNextBar> = {
   title: "Records/Just in",
-  component: LatestInboundPanel,
+  component: RecordNextBar,
 };
 export default meta;
-type Story = StoryObj<typeof LatestInboundPanel>;
+type Story = StoryObj<typeof RecordNextBar>;
 
 export const Email: Story = {
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{ activity: mail, kind: "email", notice: () => undefined }}
-          actions={verbs}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord latest={MAIL}>
+      <RecordNextBar />
+    </OnRecord>
+  ),
+};
+
+export const UrgentNext: Story = {
+  name: "Under something more urgent",
+  render: () => (
+    <OnRecord latest={MAIL}>
+      <RecordNextBar
+        title="Send the pilot results"
+        sub="Promised for Monday"
+        late={{ label: "3 days late", tone: "danger" }}
+      />
+    </OnRecord>
   ),
 };
 
 export const WebForm: Story = {
   name: "Web form",
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{ activity: form, kind: "web_form", notice: () => undefined }}
-          actions={verbs}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord
+      latest={{
+        activity: form,
+        kind: "web_form",
+        accepts_request: false,
+        notice,
+      }}
+    >
+      <RecordNextBar />
+    </OnRecord>
   ),
 };
 
 export const Message: Story = {
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{ activity: chat, kind: "message", notice: () => undefined }}
-          actions={verbs}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord
+      latest={{
+        activity: chat,
+        kind: "message",
+        accepts_request: false,
+        notice,
+      }}
+    >
+      <RecordNextBar />
+    </OnRecord>
   ),
 };
 
 export const Withheld: Story = {
   render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <LatestInboundPanel
-          latest={{
-            activity: { ...mail, content_state: "withheld" },
-            kind: "email",
-          }}
-        />
-      </div>
-    </StoryProviders>
+    <OnRecord
+      latest={{
+        activity: { ...mail, content_state: "withheld" },
+        kind: "email",
+        accepts_request: false,
+      }}
+    >
+      <RecordNextBar />
+    </OnRecord>
   ),
+};
+
+// Nothing came in and nothing is next: the record's last exchange, a meeting
+// held yesterday with no reply direction, as history above the bar.
+const lunch = activity("lunch", {
+  kind: "meeting",
+  source: "manual",
+  captured_by: "human:u-1",
+  occurred_at: hoursAgo(26),
+  subject: "Introductory lunch",
+  meeting_status: "held",
+});
+
+// Seeded and never stale, so the story's empty fetch stub does not replace it.
+function seededClient() {
+  const client = storyQueryClient();
+  const key = latestInboundKey("deal", "story-deal");
+  client.setQueryDefaults(key, { staleTime: Number.POSITIVE_INFINITY });
+  client.setQueryData(key, {
+    data: [],
+    last_exchange: { activity: lunch, whose_move: "neither" },
+  });
+  return client;
+}
+
+function LastExchangeOnRecord() {
+  const [client] = useState(seededClient);
+  return (
+    <StoryProviders client={client}>
+      <OpenSourceProvider openSource={() => {}}>
+        <div style={{ maxWidth: 720 }}>
+          <JustInScope
+            latest={undefined}
+            entityType="deal"
+            entityId="story-deal"
+          >
+            <RecordNextBar />
+          </JustInScope>
+        </div>
+      </OpenSourceProvider>
+    </StoryProviders>
+  );
+}
+
+export const LastExchange: Story = {
+  name: "Last exchange as history",
+  render: () => <LastExchangeOnRecord />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Introductory lunch")).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "View meeting" }),
+    ).toBeVisible();
+    await expect(canvas.getByText("Nothing is due next.")).toBeVisible();
+  },
+};
+
+export const LastExchangeDark: Story = {
+  ...LastExchange,
+  name: "Last exchange as history, dark",
+  globals: { theme: "dark" },
 };
 
 export const HeadLine: Story = {
@@ -137,10 +246,7 @@ export const HeadLine: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 300 }}>
-        <LatestInboundLine
-          latest={{ activity: mail, kind: "email", notice: () => undefined }}
-          onOpen={() => {}}
-        />
+        <LatestInboundLine latest={MAIL} onOpen={() => {}} />
       </div>
     </StoryProviders>
   ),

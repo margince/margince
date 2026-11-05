@@ -105,7 +105,7 @@ const ROUTES: RouteMap = {
         submitted_at: "2026-08-01T09:00:00Z",
       },
     ]),
-  "GET /privacy/notice-cases": () =>
+  "GET /privacy/notice-case-reviews": () =>
     page([
       {
         id: "nc-1",

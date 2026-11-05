@@ -9,8 +9,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F1F5F2",
-  "theme_color": "#0B7A53",
+  "background_color": "#EFF6F3",
+  "theme_color": "#045647",
   "icons": [
     {
       "src": "/icon.svg",

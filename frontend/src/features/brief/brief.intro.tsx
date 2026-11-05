@@ -11,8 +11,9 @@ import {
   formatTimeOfDay,
   hourInZone,
 } from "../../format/format";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { dayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import type { Worklist } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
@@ -21,13 +22,14 @@ import { useMorningDigest } from "./brief.queries";
 import { meetingsReading } from "./brief.readings.meetings";
 
 import "./brief.intro.css";
+import { useViewerZone } from "../../lib/viewerzone";
 
-/** How long the greeting stands before it lifts away. */
+/** How long the greeting stands when the page under it is never ready. */
 export const SHOW_MS = 4500;
 /** How long it takes to lift away and draw up off the page. */
 export const LEAVE_MS = 900;
-/** How long the day's figures stand when the read lands late in the greeting. */
-export const FIGURES_STAND_MS = 2000;
+/** How long the greeting stands at least, so its words arrive before it lifts. */
+export const GREETING_MS = 1500;
 // Where the choreography places the night's line and the first figure, from
 // the moment the curtain rises (brief.intro.css).
 const READ_AT_MS = 950;
@@ -51,8 +53,10 @@ export function BriefIntro({
   now: Date;
 }>) {
   const reduced = usePrefersReducedMotion();
-  const zone = viewerZone();
-  const today = dayInZone(now.getTime(), zone);
+  const zone = useViewerZone();
+  // "Today's" read is the server's day, counted on the company's clock (B1).
+  const companyZone = useCompanyZone();
+  const today = dayInZone(now.getTime(), companyZone);
   const [due] = useState(
     () => readStored(STORAGE_KEYS.briefIntroShown) !== today,
   );
@@ -62,7 +66,8 @@ export function BriefIntro({
   // A read from an earlier day would greet with yesterday's figures, so the
   // curtain shows figures only from today's read.
   const fresh =
-    day !== undefined && dayInZone(Date.parse(day.as_of), zone) === today;
+    day !== undefined &&
+    dayInZone(Date.parse(day.as_of), companyZone) === today;
   const showing = due && !reduced && !ended;
 
   useEffect(() => {
@@ -74,17 +79,15 @@ export function BriefIntro({
     return () => globalThis.removeEventListener("keydown", end);
   }, [showing, today]);
 
-  // Left alone it lifts away after SHOW_MS. Figures that land late still stand
-  // long enough to be read; a read that never lands does not hold it up.
+  // The page under it is drawn once the day's read lands, so the greeting lifts
+  // then, never holding a ready page. A read that never lands lifts it at SHOW_MS.
+  const ready = day !== undefined;
   useEffect(() => {
     if (!showing || leaving) return;
-    const elapsed = Date.now() - startedAt;
-    const hold = fresh
-      ? Math.max(SHOW_MS - elapsed, FIGURES_STAND_MS)
-      : SHOW_MS - elapsed;
-    const lift = setTimeout(() => setLeaving(true), hold);
+    const hold = (ready ? GREETING_MS : SHOW_MS) - (Date.now() - startedAt);
+    const lift = setTimeout(() => setLeaving(true), Math.max(0, hold));
     return () => clearTimeout(lift);
-  }, [showing, leaving, fresh, startedAt]);
+  }, [showing, leaving, ready, startedAt]);
 
   useEffect(() => {
     if (!leaving) return;
@@ -100,6 +103,7 @@ export function BriefIntro({
       day={fresh ? day : undefined}
       now={now}
       zone={zone}
+      dayZone={companyZone}
       startedAt={startedAt}
       leaving={leaving}
       onEnd={() => setEnded(true)}
@@ -113,6 +117,7 @@ function IntroCurtain({
   day,
   now,
   zone,
+  dayZone,
   startedAt,
   leaving,
   onEnd,
@@ -121,6 +126,8 @@ function IntroCurtain({
   day: Worklist | undefined;
   now: Date;
   zone: string;
+  /** The zone Home's day is counted in: the company's (B1). */
+  dayZone: string;
   startedAt: number;
   leaving: boolean;
   onEnd: () => void;
@@ -128,7 +135,9 @@ function IntroCurtain({
   const t = useT();
   const { locale } = useLocale();
   const digest = useMorningDigest();
-  const emails = digest.data?.capture.messages_synced;
+  // A body without its capture figures shows no count rather than failing
+  // the whole curtain.
+  const emails = digest.data?.capture?.messages_synced;
   const greeting = greetingText(firstName, hourInZone(now, zone), t);
   return (
     // Named by its own text, so a screen reader hears the greeting and its
@@ -144,7 +153,7 @@ function IntroCurtain({
           {/* The agent's orb: it wrote the brief this greeting opens. */}
           <MarginceCoreScene size="md" className="brief-intro-core" />
           <span className="t-eyebrow brief-intro-date">
-            {formatDayLong(now.toISOString(), locale, zone)} ·{" "}
+            {formatDayLong(now.toISOString(), locale, dayZone)} ·{" "}
             {formatTimeOfDay(now.toISOString(), locale, zone)}
           </span>
         </span>

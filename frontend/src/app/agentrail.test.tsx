@@ -66,6 +66,8 @@ const CANDIDATE = (id: string): Candidate => ({
   // Fed only to the test that proves the rail says nothing of the queue, so
   // the authority is granted rather than left as a second reason for silence.
   can_decide: true,
+  can_merge: true,
+  keep_id: null,
   status: "open",
   created_at: "2026-08-01T09:00:00Z",
 });

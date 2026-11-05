@@ -17,6 +17,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -127,6 +128,9 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := redactSubjectReporting(ctx, tx, subject, emails); err != nil {
 			return err
 		}
+		if err := e.purgePartyProjections(ctx, tx, emails); err != nil {
+			return err
+		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
 		if err != nil {
 			return err
@@ -154,7 +158,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
 			return err
 		}
-		if err := purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, reason, e.payloads); err != nil {
+		if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
 			return err
 		}
 		// The messages nobody has sent yet — scheduled, or still a draft. They
@@ -263,11 +267,16 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 }
 
 // purgeRedactedActivityTraces finishes off the activities the timeline redaction
-// just emptied: their vectors, their own audit spines, the external identities
-// they answered to, the proposals read out of them, and the transmitted copy in
-// the send log.
-func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
-	if err := purgeActivityTraces(ctx, tx, activities, payloads); err != nil {
+// just emptied. It removes their vectors, their own audit spines, the external
+// identities they answered to and the proposals read out of them. It also
+// clears the transmitted copy in the send log and the copies other modules
+// took of their text. Those copies go for the held activities too: the floor
+// keeps the original record, never a voice sample read from it.
+func (e *Eraser) purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities, held []ids.UUID, reason string) error {
+	if err := purgeActivityTraces(ctx, tx, activities, e.payloads); err != nil {
+		return err
+	}
+	if err := e.purgeTextCopies(ctx, tx, append(slices.Clone(activities), held...)); err != nil {
 		return err
 	}
 	return tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure)
@@ -488,11 +497,4 @@ func tombstoneCollateralScrubs(ctx context.Context, tx pgx.Tx, entityType string
 		}
 	}
 	return nil
-}
-
-func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
-	if err := auth.EnsureWritableForSubjectRights(ctx, tx, "contact", subject.UUID); err != nil {
-		return err
-	}
-	return refuseContactUnderLegalHold(ctx, tx, subject)
 }

@@ -144,8 +144,9 @@ func TestOwnershipScopesTheOverdueScanAtEveryQuietWindow(t *testing.T) {
 	for i := range slippingScanLimit + 1 {
 		e.SeedDeal(t, fmt.Sprintf("Other dated recovery %d", i), pipeline, stage, &e.Rep3)
 	}
-	e.WsExec(t, `UPDATE deal SET expected_close_date = $1 WHERE pipeline_id = $2`, at.AddDate(0, 0, -20), pipeline)
-	e.WsExec(t, `UPDATE deal SET expected_close_date = $1 WHERE id = $2`, at.AddDate(0, 0, -1), own)
+	today := installationDay(t, e, at)
+	e.WsExec(t, `UPDATE deal SET expected_close_date = $1 WHERE pipeline_id = $2`, today.AddDate(0, 0, -20), pipeline)
+	e.WsExec(t, `UPDATE deal SET expected_close_date = $1 WHERE id = $2`, today.AddDate(0, 0, -1), own)
 	for _, days := range []int{19, 60} {
 		rows, cut, err := quietDealScanWithClock(e.Pool, days, func() time.Time { return at })(e.Admin(), &storekit.OwnerSet{IDs: []ids.UUID{e.Rep1}})
 		if err != nil {

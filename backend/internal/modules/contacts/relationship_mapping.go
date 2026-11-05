@@ -38,6 +38,9 @@ const (
 // kind needs is the rel_*_shape CHECKs' rule, and dropping a field here turns
 // their refusal into a lie about what the caller sent.
 func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) (CreateRelationshipInput, error) {
+	if err := refuseUnknownEmploymentStatus(req.EmploymentStatus); err != nil {
+		return CreateRelationshipInput{}, err
+	}
 	source, err := httperr.RequireNonBlank("source", req.Source)
 	if err != nil {
 		return CreateRelationshipInput{}, err
@@ -78,6 +81,9 @@ func relationshipCreateInput(req crmcontracts.CreateRelationshipRequest) (Create
 // one is a new edge and an archive, never an update — which is why this takes
 // the version pin the create mapper has no use for.
 func relationshipUpdateInput(req crmcontracts.UpdateRelationshipRequest, ifVersion *int64, cleared []string) (UpdateRelationshipInput, error) {
+	if err := refuseUnknownEmploymentStatus(req.EmploymentStatus); err != nil {
+		return UpdateRelationshipInput{}, err
+	}
 	in := UpdateRelationshipInput{
 		Role:             req.Role,
 		IsCurrentPrimary: req.IsCurrentPrimary,
@@ -156,4 +162,14 @@ func wireEnum[T ~string](value *string) *T {
 	}
 	out := T(*value)
 	return &out
+}
+
+func refuseUnknownEmploymentStatus[T interface {
+	~string
+	Valid() bool
+}](status *T) error {
+	if status != nil && !(*status).Valid() {
+		return &EmploymentImportError{Field: employmentStatusField, Message: "Choose current or former, or omit employment_status when no further status is known."}
+	}
+	return nil
 }

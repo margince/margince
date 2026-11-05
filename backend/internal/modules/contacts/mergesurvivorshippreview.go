@@ -75,6 +75,10 @@ func (s *Store) PreviewMergeSurvivorship(ctx context.Context, kind string, sourc
 		return out, err
 	}
 	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		ctx, err := admitDuplicatePairMerge(ctx, tx, kind, source, target)
+		if err != nil {
+			return err
+		}
 		for _, id := range []ids.UUID{source, target} {
 			if err := auth.EnsureWritableLive(ctx, tx, kind, id); err != nil {
 				return err
@@ -86,7 +90,6 @@ func (s *Store) PreviewMergeSurvivorship(ctx context.Context, kind string, sourc
 		if err := storekit.EnsureIfMatch(ctx, tx, kind, target, targetVersion); err != nil {
 			return err
 		}
-		var err error
 		out, err = readMergeSurvivorship(ctx, tx, kind, source, target)
 		if err != nil {
 			return err

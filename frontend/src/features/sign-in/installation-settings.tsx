@@ -9,6 +9,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
+import { formatPercent } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -32,6 +33,10 @@ import {
   SETTINGS_IN_SERVER_TEXT,
 } from "./aicaches";
 import { CallingSettingsRows } from "./installation-settings.calling";
+import {
+  ForecastSelfCorrectingRows,
+  IndividualPerformanceRows,
+} from "./installation-settings.individual";
 import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
@@ -60,6 +65,7 @@ const EDITABLE_FACTS = [
   "time_format",
   "fiscal_year_start_month",
   "forecast_forward_measure",
+  "forecast_likely_threshold",
 ] as const;
 
 // Which fact the reader pressed Edit on. The dialog always edits all of them —
@@ -89,6 +95,15 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       queryClient.setQueryData(INSTALLATION_SETTINGS_KEY, data);
       // These texts are cached by record id alone, and focus does not refetch.
       // An open page would keep text written in the old language or zone.
+      // The switch changes what every reading may show, so nothing cached
+      // under the old answer may be drawn again.
+      if (
+        patch.individual_performance !== undefined ||
+        patch.forecast_self_correcting !== undefined ||
+        patch.forecast_likely_threshold !== undefined
+      ) {
+        void queryClient.invalidateQueries();
+      }
       if (SETTINGS_IN_SERVER_TEXT.some((key) => patch[key] !== undefined)) {
         for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
           void queryClient.invalidateQueries({ queryKey: prefix });
@@ -161,6 +176,8 @@ function InstallationSettingsForm({
     setEditing(null);
   });
   const calling = useUpdateInstallationSettings();
+  const individual = useUpdateInstallationSettings();
+  const selfCorrecting = useUpdateInstallationSettings();
   const [draft, setDraft] = useState(settings);
   const seeded = useRef(serverSignature(settings));
 
@@ -314,12 +331,36 @@ function InstallationSettingsForm({
             t("installationSettings.forwardMeasure"),
           )}
         />
+        <SettingRow
+          label={t("installationSettings.likelyThreshold")}
+          description={t("installationSettings.likelyThreshold.help")}
+          value={formatPercent(
+            settings.forecast_likely_threshold / 100,
+            locale,
+          )}
+          control={editVerb(
+            "forecast_likely_threshold",
+            t("installationSettings.likelyThreshold"),
+          )}
+        />
       </SettingList>
       <CallingSettingsRows
         settings={settings}
         canManage={canManage}
         denialId={denialId}
         update={calling}
+      />
+      <IndividualPerformanceRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={individual}
+      />
+      <ForecastSelfCorrectingRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={selfCorrecting}
       />
       {editing !== null && (
         <InstallationProfileDialog

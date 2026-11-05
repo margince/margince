@@ -78,6 +78,7 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 		ReferencesFromRequest:    true,
 		ToStageID:                pathID[ids.StageKind](req.ToStageId),
 		LostReason:               req.LostReason,
+		LostReasonCode:           req.LostReasonCode,
 		IfVersion:                ifVersion,
 		WonWithoutContractDetail: req.WonWithoutContractDetail,
 	}
@@ -239,10 +240,7 @@ func dealUpdateInput(req crmcontracts.UpdateDealRequest, ifVersion *int64) Updat
 		in.Priority = &priority
 	}
 	in.AcquisitionSource = req.AcquisitionSource
-	if req.ForecastCategory != nil {
-		cat := string(*req.ForecastCategory)
-		in.ForecastCategory = &cat
-	}
+	in.WinProbability = req.WinProbability
 	if req.WaitUntil != nil {
 		in.WaitUntil = &req.WaitUntil.Time
 	}

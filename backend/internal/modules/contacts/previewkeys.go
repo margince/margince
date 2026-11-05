@@ -19,6 +19,7 @@ const (
 	mergeTargetKey    = "target"
 	mergeSubjectKey   = "subject"
 	mergeOtherKey     = "other"
+	mergeEntityKey    = "entity"
 	recordKindParam   = "kind"
 	factValueKeyParam = "key"
 )

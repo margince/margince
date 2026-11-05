@@ -5,14 +5,14 @@ package activities
 
 // Two threads that turn out to be one conversation become one.
 //
-// A captured email's thread_key is the FIRST id of its References header, and
-// mail programs shorten that header: iPhone Mail sends only the direct parent,
-// so every reply it makes starts a new root and one conversation lands under
+// A captured email's thread_key is the first id of its References header.
+// Mail programs shorten that header: iPhone Mail sends only the direct parent,
+// so every reply it makes starts a new root. One conversation then lands under
 // several keys. An import states its own key (the importer's thread), which a
 // mailbox capturing the same messages never derives. Capture notices when a
-// message links two keys (capture/threadjoin.go) and compose merges them
-// (compose/threadmerge.go); this file owns the two tables of this module that
-// carry a thread key, and the reply links that make the join possible.
+// message links two keys (capture/threadjoin.go). Compose merges them
+// (compose/threadmerge.go). This file owns this module's two tables that carry
+// a thread key, and the reply links that make the join possible.
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 // RecordMailReferencesTx stores the Message-IDs one email says it answers.
 //
 // Idempotent: a re-sync of the same message states the same links. The ids are
-// the sender's text; nothing here trusts them — MailNeighboursTx only reports
+// the sender's text, so nothing here trusts them. MailNeighboursTx only reports
 // candidates, and capture acts on one only when the same seat holds both ends.
 func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, referenced []string) error {
 	if len(referenced) == 0 {
@@ -45,12 +45,12 @@ func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 }
 
 // MailNeighboursTx answers the live messages directly linked to one email by a
-// reply: the ones it names (its In-Reply-To and References, resolved through
-// activity_identity, which holds every door's Message-ID) and the ones that
-// name it.
+// reply. These are the ones it names (its In-Reply-To and References, resolved
+// through activity_identity, which holds every door's Message-ID) and the ones
+// that name it.
 //
 // Both directions, because messages arrive in any order. A backfill walks a
-// mailbox newest first, so the reply is routinely stored before the message it
+// mailbox newest first. So the reply is often stored before the message it
 // answers, and only the reverse read can find it.
 func MailNeighboursTx(
 	ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string,
@@ -81,17 +81,16 @@ func MailNeighboursTx(
 }
 
 // EarliestThreadKeyTx orders candidate thread keys by the earliest live message
-// each holds, and answers the first; ties go to the smaller key so two
+// each holds, and answers the first. Ties go to the smaller key so two
 // concurrent joins agree.
 //
 // The earliest message is the conversation's opener as far as this workspace
-// knows it, which is the root a capture with an unshortened References chain
-// would have chosen — so the surviving key is the one later mail most likely
-// derives by itself.
+// knows it. A capture with an unshortened References chain would have chosen
+// that root, so later mail most likely derives the surviving key by itself.
 //
-// No live message under any of the keys answers "": the messages were archived
-// between the caller reading the keys and this read, and there is nothing left
-// to join into. That is not an error, or the capture that asked fails on it.
+// It answers "" when no live message remains under any of the keys. The
+// messages were archived after the caller read the keys, and nothing is left to
+// join into. That is not an error, or the capture that asked would fail on it.
 func EarliestThreadKeyTx(ctx context.Context, tx pgx.Tx, keys []string) (string, error) {
 	var key string
 	err := tx.QueryRow(ctx, `

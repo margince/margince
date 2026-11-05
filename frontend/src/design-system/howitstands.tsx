@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { CSSProperties, ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useId, useState } from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { Badge } from "./atoms";
 import { Heading } from "./heading";
+import { useLineClamped } from "./lineclamp";
 import { Panel } from "./panel";
 import { type ReadingTone, readingColours } from "./readingtone";
 import "./howitstands.css";
@@ -22,10 +23,12 @@ export type StandingSources =
   | Readonly<{ by: "model"; count: number }>;
 
 /** The call at the head of the card: one word, the sentence under it, and
- *  the tone both are drawn in. */
+ *  the tone both are drawn in. A `note` is what a rep wrote about it, set
+ *  in body text under the sentence and held to two lines until asked. */
 export type StandingVerdict = Readonly<{
   word: string;
   sentence?: ReactNode;
+  note?: string;
   tone: ReadingTone;
 }>;
 
@@ -71,6 +74,8 @@ export function HowItStands({
     "--standing-ink":
       verdict.tone === "neutral" ? "var(--textPrimary)" : colours.ink,
   };
+  // An unjudged verdict keeps a plain edge, as it keeps a plain ground.
+  if (verdict.tone !== "neutral") vars["--standing-edge"] = colours.ink;
   return (
     <div className="standing-sheet" style={vars}>
       <Panel
@@ -98,6 +103,7 @@ export function HowItStands({
             {verdict.sentence ? (
               <p className="standing-sheet-sentence">{verdict.sentence}</p>
             ) : null}
+            {verdict.note ? <StandingNote note={verdict.note} /> : null}
           </div>
           {(dims || besideRing) && (
             <div className="standing-sheet-readings">
@@ -111,6 +117,38 @@ export function HowItStands({
         {figures && <div className="standing-sheet-figures">{figures}</div>}
       </Panel>
     </div>
+  );
+}
+
+// The whole note stays in the card: the clamp only shortens it, and the
+// control shows only when the clamp hides something.
+function StandingNote({ note }: Readonly<{ note: string }>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [setBox, clipped] = useLineClamped(open, note);
+  const noteId = useId();
+  return (
+    <>
+      <p
+        ref={setBox}
+        id={noteId}
+        className="standing-sheet-note"
+        data-clamped={open ? undefined : ""}
+      >
+        {note}
+      </p>
+      {(clipped || open) && (
+        <button
+          type="button"
+          className="link-button standing-sheet-note-toggle"
+          aria-expanded={open}
+          aria-controls={noteId}
+          onClick={() => setOpen(!open)}
+        >
+          {t(open ? "standing.noteLess" : "standing.noteMore")}
+        </button>
+      )}
+    </>
   );
 }
 

@@ -114,6 +114,13 @@ func sumFactsBefore(facts []reporting.Fact, end time.Time) *float64 {
 	return sum
 }
 
+// An event reader covers an empty week; a share needs a denominator.
+var weeklyEmptyIsZero = map[crmcontracts.ReportingMetricID]string{
+	reportingMeetingsHeld:          "the reader reads every held meeting in the interval, so a week with none held is zero",
+	reportingAcceptedOpportunities: "the reader reads every acceptance in the interval, so a week with none accepted is zero",
+	reportingLeadsQualified:        "the reader reads first qualifications in the interval, so a week with none qualified is zero",
+}
+
 func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChart) crmcontracts.ReportingChart {
 	frame := out.Result.Context
 	chart.ContextId = reportingInterval
@@ -136,13 +143,19 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 			}
 		}
 		value, _, _ := metricSum(selected)
+		if len(selected) == 0 && weeklyEmptyIsZero[chart.Metric] == "" {
+			value = nil
+		}
 		key := start.Format(time.DateOnly)
 		label := start.Format("2 Jan") + "–" + end.Add(-time.Nanosecond).Format("2 Jan")
 		if days < 7 || end.Sub(start) < 6*24*time.Hour {
 			label += " (partial)"
 		}
 		group := "week:" + key
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &start, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
+		// A copy: start moves on to the next week below, and the point keeps
+		// the start of its own week.
+		weekStart := start
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: key, Label: label, At: &weekStart, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: reportingInterval, GroupKey: &group}})
 		start = end
 	}
 	return chart

@@ -75,11 +75,7 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	// Every door derives the blocks from a layout, so the charts drawn are the
 	// ones the layout places.
 	deriveLayoutBlocks(&selection)
-	// A selection with no charts serialises the same whichever door built it,
-	// so the evaluation key does not depend on nil versus empty.
-	if selection.Blocks == nil {
-		selection.Blocks = []crmcontracts.ReportingBlockKind{}
-	}
+	withChartList(&selection)
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
@@ -87,7 +83,7 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err != nil {
 		return Evaluation{}, err
 	}
-	if err := s.applyTargets(ctx, tx, &out.Result); err != nil {
+	if err := s.applyTargets(ctx, tx, &out); err != nil {
 		return Evaluation{}, err
 	}
 	out.Result.EvaluationKey, err = evaluationKey(out)
@@ -118,7 +114,14 @@ func (s *Service) EvaluateReport(ctx context.Context, id ids.UUID, revision *int
 			return err
 		}
 		out, err = s.evaluateSelection(ctx, tx, selection, framework)
-		return err
+		if err != nil {
+			return err
+		}
+		recorded, err := s.revisionMetricVersions(ctx, tx, id, chosen)
+		if err != nil {
+			return err
+		}
+		return withdrawChangedDefinitions(&out, recorded)
 	})
 	return out.Result, err
 }
@@ -190,7 +193,24 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			out.Truncated = true
 			break
 		}
-		out.Rows = append(out.Rows, fact.Row)
+		row := fact.Row
+		if fact.EvidenceAt != nil {
+			row.OccurredAt = fact.EvidenceAt
+		}
+		if fact.OwnerLabel != "" && !fact.OwnerWithheld && !row.Restricted {
+			row.OwnerLabel = &fact.OwnerLabel
+		}
+		if fact.StageLabel != "" && !row.Restricted {
+			row.StageLabel = &fact.StageLabel
+		}
+		if fact.OwnerWithheld || row.Restricted {
+			row.OwnerId = nil
+			row.OwnerLabel = nil
+		}
+		if row.Restricted {
+			row.StageLabel = nil
+		}
+		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
 }
@@ -200,10 +220,12 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 		return true
 	}
 	if after, ok := strings.CutPrefix(group, "owner:"); ok {
-		return fact.OwnerID.String() == after
+		return !fact.OwnerWithheld && fact.OwnerID.String() == after
 	}
+	// A stage cohort's outcome group starts like its stage's and names the
+	// outcome after it, so the fact's own key answers it.
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
-		return fact.StageID == after
+		return fact.StageID == after || fact.GroupKey == group
 	}
 	if strings.HasPrefix(group, "week:") && fact.At() != nil {
 		zone, err := time.LoadLocation(frame.Timezone)

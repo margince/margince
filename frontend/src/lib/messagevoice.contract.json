@@ -1,0 +1,77 @@
+[
+  {
+    "direction": null,
+    "author": null,
+    "side": null
+  },
+  {
+    "direction": null,
+    "author": "contact_record",
+    "side": null
+  },
+  {
+    "direction": null,
+    "author": "colleague",
+    "side": null
+  },
+  {
+    "direction": null,
+    "author": "machine",
+    "side": null
+  },
+  {
+    "direction": null,
+    "author": "unresolved",
+    "side": null
+  },
+  {
+    "direction": "inbound",
+    "author": null,
+    "side": "theirs"
+  },
+  {
+    "direction": "inbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "direction": "inbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "direction": "inbound",
+    "author": "machine",
+    "side": "theirs"
+  },
+  {
+    "direction": "inbound",
+    "author": "unresolved",
+    "side": "theirs"
+  },
+  {
+    "direction": "outbound",
+    "author": null,
+    "side": "ours"
+  },
+  {
+    "direction": "outbound",
+    "author": "contact_record",
+    "side": "theirs"
+  },
+  {
+    "direction": "outbound",
+    "author": "colleague",
+    "side": "ours"
+  },
+  {
+    "direction": "outbound",
+    "author": "machine",
+    "side": "ours"
+  },
+  {
+    "direction": "outbound",
+    "author": "unresolved",
+    "side": "ours"
+  }
+]

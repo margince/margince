@@ -1,21 +1,17 @@
-# ai-tasks.yaml — the AI task contract (spec §1.2, ai-operational-spec.md).
+# ai-tasks.yaml — the AI task contract.
 #
-# Authority relationship (ratified: this repository's AI runtime contract +
-# certification arc): THIS file is the normative authority for the AI task
-# DECLARATION — the task list, its tiers, each task's fallback ladder, execution
-# mode (interactive | background), budget-exhaustion posture (degrade | queue),
-# and (ADR-0074) whether the task ships at all, its named invocation sites, its
-# payload-capture posture, its company-context policy, and which cost-unit rule
-# prices it. The build repo's copy
-# (backend/api/ai-tasks.yaml) must match it verbatim; the build's
-# tools/gen-aitasks compiles that copy into the binary (tasks_gen.go) behind a
-# drift gate, the same mechanism crm.yaml already uses for the HTTP contract.
+# This file is the authority for the AI task DECLARATION — the task list, its
+# tiers, each task's fallback ladder, execution mode (interactive | background),
+# budget-exhaustion posture (degrade | queue), and (ADR-0074) whether the task
+# ships at all, its named invocation sites, its payload-capture posture, its
+# company-context policy, and which cost-unit rule prices it. tools/gen-aitasks
+# compiles it into the binary (tasks_gen.go) behind a drift gate, the same
+# mechanism crm.yaml uses for the HTTP contract.
 # Tier→model binding (which concrete provider/model serves local_small /
 # cheap_cloud / premium / frontier / local_large) stays a per-deployment config
 # (config/ai-routing.yaml, §1.4) — editing THAT never requires a rebuild.
-# Editing the ladders/posture below is a routing-POLICY change: it requires a
-# spec update here, the mirrored edit in the build repo, `make gen`, and a
-# rebuild — never a silent code diff.
+# Editing the ladders/posture below is a routing-POLICY change: it needs this
+# edit, `make gen`, and a rebuild — never a silent code diff.
 # Closed pairing invariant: interactive tasks use `degrade`; background tasks
 # use `queue`. Here `queue` means "return a typed budget deferral to the task's
 # existing durable carrier" — the router never creates an unowned generic job.
@@ -318,6 +314,41 @@ tasks:
     company_context: none
     doc: "Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands."
 
+  report_setup:
+    display_name: "Setting up a report from a description"
+    summary: "Turns a described sales initiative or custom report into a setup you check before saving."
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [initiative_setup, custom_report_setup]
+    company_context: none
+    doc: "Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal."
+
+  report_interpret:
+    display_name: "Assessing a sales report"
+    summary: "Writes an assessment beside a report's leading chart, citing the figures it rests on."
+    ladder: [premium, cheap_cloud]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [sales_assessment]
+    company_context: none
+    no_payload: true
+    doc: "Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable."
+
+  reader_rendering:
+    display_name: "Showing a message in your language"
+    summary: "Shows a note, email or meeting in the reader's own language when they ask for it."
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    sites: [activity_text]
+    company_context: none
+    no_payload: true
+    doc: "activity_text — one note, email, meeting or call, written in one reader's language when that reader presses the button for it. It renders what the text means rather than its words: names, numbers, amounts, dates, addresses, links, commitments and questions are kept exactly, and a validator refuses a reply that lost a digit run, an email address or a link, or that is in another language than the target. A mail is rendered from its current message, without the quoted history. Nothing is stored and no payload is kept, because the text is a customer's correspondence and the rendering is for one reader. Text already in the target language is answered unchanged without a call; text past what one answer can carry is refused before the call. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic rendering to fall back to."
+
   corpus_ask:
     display_name: "Document corpus question"
     summary: "Answers questions from the documents your company filed, citing where each answer comes from."
@@ -352,7 +383,7 @@ tasks:
     status: shipped
     sites: [deal_status]
     company_context: none
-    doc: "deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever."
+    doc: "deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever."
 
   weekly_review:
     display_name: "Weekly review narrative"

@@ -93,14 +93,11 @@
  * NEUTRAL, and that is the point: the panel around it already carries who
  * wrote it, in its border and its head band, so a second tint in here restates
  * that claim as decoration — and painting only the indigo half would leave a
- * model-written opener unframed while a composition's kept its frame. The
- * recessed ground is the plate's, so the block reads as inset rather than as a
- * card inside a card. */
+ * model-written opener unframed while a composition's kept its frame. */
 .mb-open {
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-inline-start: 2px solid var(--borderSubtle);
-  background: var(--bgInset);
 }
 
 .mb-arc-row {

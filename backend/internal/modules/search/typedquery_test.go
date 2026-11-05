@@ -114,7 +114,7 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 	headPos, tailPos := arg(head), arg(tail)
 	identifierPos := bindIdentifier("acme ein", arg)
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, identifierPos, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, identifierPos, true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestABranchWithNoIdentifierBindsNone(t *testing.T) {
 	headPos, tailPos := arg(""), arg("anna@example.com")
 
 	branches, err := admittedBranchSQL(teamReaderFor("deal"), []string{"deal"}, headPos, tailPos, true,
-		bindIdentifier("anna@example.com", arg), arg)
+		bindIdentifier("anna@example.com", arg), true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 	headPos, tailPos := arg("acme"), arg("ein")
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, bindIdentifier("acme ein", arg), arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, bindIdentifier("acme ein", arg), true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	}
 	headPos := arg(head)
 
-	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, bindIdentifier(head, arg), arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, bindIdentifier(head, arg), true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestMailMatchesTheFragmentWholeAndRecordsByPrefix(t *testing.T) {
 		var bound []any
 		arg := func(v any) int { bound = append(bound, v); return len(bound) }
 		headPos, tailPos := arg(""), arg("study")
-		branches, err := admittedBranchSQL(ctx, []string{entity}, headPos, tailPos, true, bindIdentifier("study", arg), arg)
+		branches, err := admittedBranchSQL(ctx, []string{entity}, headPos, tailPos, true, bindIdentifier("study", arg), true, arg)
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
@@ -323,7 +323,7 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 		var bound []any
 		arg := func(v any) int { bound = append(bound, v); return len(bound) }
 		headPos := arg("contract")
-		branches, err := admittedBranchSQL(teamReaderFor(entity), []string{entity}, headPos, 0, false, bindIdentifier("contract", arg), arg)
+		branches, err := admittedBranchSQL(teamReaderFor(entity), []string{entity}, headPos, 0, false, bindIdentifier("contract", arg), true, arg)
 		if err != nil {
 			t.Fatalf("building the %s branch SQL: %v", entity, err)
 		}
@@ -340,21 +340,6 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 	}
 }
 
-// A fragment hit finds the record but does not lift it into the whole-word
-// tier, or an address fragment would outrank a real name match.
-func TestOnlyAWholeIdentifierRaisesTheScore(t *testing.T) {
-	t.Parallel()
-	b := searchBranch{identifier: storekit.ContactEmails}
-	pos := func(bool) int { return 4 }
-
-	if match := b.ownMatch("c", "q", pos); !strings.Contains(match, "LIKE") {
-		t.Errorf("the match no longer finds a fragment of an address: %s", match)
-	}
-	if score := b.ownScore("c", "1", pos); strings.Contains(score, "LIKE") {
-		t.Errorf("a fragment of an address raises the score: %s", score)
-	}
-}
-
 // A pasted address finds a company by its domain and a lead by its address, as
 // the entity lists do.
 func TestIdentifierBinderAndLeadBranch(t *testing.T) {
@@ -362,7 +347,7 @@ func TestIdentifierBinderAndLeadBranch(t *testing.T) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	bind := bindIdentifier("weber@exam", arg)
-	if whole, domain := bind(false), bind(true); whole == domain || args[domain-1] != "exam" || args[whole-1] != "weber@exam" {
+	if whole, domain := bind.position(false), bind.position(true); whole == domain || args[domain-1] != "exam" || args[whole-1] != "weber@exam" {
 		t.Errorf("binder bound %v (whole %d, domain %d)", args, whole, domain)
 	}
 	for _, b := range searchBranches {

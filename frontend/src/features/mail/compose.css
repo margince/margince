@@ -82,7 +82,7 @@
    line. A fieldset for its name, without a fieldset's frame. */
 .compose-rewrite {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   margin: 0;
@@ -121,7 +121,7 @@
   cursor: pointer;
 }
 .schedule-preset:hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
 }
 .schedule-preset:focus-visible {
   outline: var(--focus-ring);
@@ -190,12 +190,6 @@
   align-items: center;
   gap: var(--space-2);
 }
-.compose-draftbar > svg {
-  flex: none;
-  inline-size: 16px;
-  block-size: 16px;
-  color: var(--aiText);
-}
 .compose-draftbar .input {
   flex: 1 1 12rem;
   min-inline-size: 0;
@@ -227,19 +221,32 @@
   background: var(--dangerBg);
 }
 
-/* What the draft was written from, above the body it explains. The reasons
-   are the same answer read twice — a line for scanning before the draft, and
-   chips for checking one input after — so they share a block rather than
-   sitting in two places the reader has to connect. */
-.compose-reasons {
+/* What the draft was written from: a quiet hint under the band's line, and
+   the card only once opened. The chevron sits beside the words, so the hint
+   reads as one small control rather than a section header. */
+.compose-reasons.disclosure {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.compose-reasons > .disclosure-summary {
+  inline-size: fit-content;
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+}
+.compose-reasons > .disclosure-summary > .disclosure-label {
+  flex: none;
+}
+.compose-reasons-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-3);
-  background: var(--bgInset);
+  padding: var(--padCard);
+  border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
 }
-.compose-reasons .chips {
+.compose-reasons-card .chips {
   margin: 0;
 }
 
@@ -319,12 +326,13 @@
 .compose-aiband > p {
   margin: 0;
 }
-/* The drafted line: the disclosure takes what is left and ends in an
-   ellipsis, its verbs keep their width at the end. */
+/* The drafted line: the disclosure is read whole, so where its verbs do not
+   fit beside it they wrap to a row of their own. */
 .compose-band-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1) var(--space-2);
   color: var(--aiText);
 }
 .compose-band-line > svg {
@@ -333,12 +341,10 @@
   block-size: 1rem;
 }
 .compose-band-text {
-  flex: 1;
+  flex: 1 1 14rem;
   min-inline-size: 0;
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* A reason to write, picked at the end of the refusal's strip. */
@@ -386,6 +392,10 @@
   border-radius: 0;
   font: var(--fontBodySmall);
 }
+.compose-blockers > p {
+  margin: 0;
+  padding-inline: var(--space-4) var(--space-3); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+}
 .compose-strip-ai {
   background: var(--aiLight);
 }
@@ -402,8 +412,12 @@
 }
 .compose-blockers .callout-title,
 .compose-blockers .callout-text,
-.compose-blockers .callout-text > p {
+.compose-blockers .callout-text > p:first-child {
   display: inline;
+}
+/* A second paragraph is a new line, not a continuation of the first. */
+.compose-blockers .callout-text > p + p {
+  display: block;
 }
 .compose-blockers .callout-title {
   margin-inline-end: var(--space-1);

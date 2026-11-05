@@ -25,20 +25,22 @@ func TestEveryReasonDeclaresItsRemedy(t *testing.T) {
 	}
 }
 
-// TestOnlyAnAdminMayTakeAnExceptionPastASubjectsStop holds that a subject's own
-// stop lists the admin exception and never the plain one every sender holds.
-func TestOnlyAnAdminMayTakeAnExceptionPastASubjectsStop(t *testing.T) {
+// TestNobodySendsPastASubjectsStop holds that a subject's own stop lists no
+// remedy at all: no answer, no fact, and no exception, an admin's included.
+func TestNobodySendsPastASubjectsStop(t *testing.T) {
 	t.Parallel()
+	stops := 0
 	for _, reason := range reasonConstants(t) {
 		if LevelForReason(reason) != LevelSubject {
 			continue
 		}
-		if HasRemedy(reason, RemedyException) {
-			t.Errorf("%q is the subject's own stop but lists the exception any sender may take", reason)
+		stops++
+		if got := RemediesFor(reason); len(got) != 0 {
+			t.Errorf("%q is the subject's own stop and lists %v; nobody may send past it", reason, got)
 		}
-		if !HasRemedy(reason, RemedyAdminException) {
-			t.Errorf("%q is the subject's own stop and an admin may still send past it, yet it lists no admin exception", reason)
-		}
+	}
+	if stops != 5 {
+		t.Errorf("found %d subject-level stops, want the five: objection, withdrawal, restriction, request to stop, opt-out after a request", stops)
 	}
 }
 
@@ -49,6 +51,7 @@ func TestNoAnswerOrFactSuppliesConsentOrLiftsAStop(t *testing.T) {
 	for _, reason := range []string{
 		ReasonNoMarketingConsent, ReasonObjection, ReasonRestricted, ReasonSubjectRequest,
 		ReasonConsentWithdrawn, ReasonHardBounce, ReasonUnconfirmedDOI, ReasonFrequencyCapReached,
+		ReasonOptedOutAfterRequest, ReasonMarketingConsentRequired,
 	} {
 		if HasRemedy(reason, RemedyAnswer) || HasRemedy(reason, RemedyFact) {
 			t.Errorf("%q must not be resolvable by an answer or a recorded fact", reason)
@@ -65,5 +68,57 @@ func TestRemediesForReturnsACopyAndNothingForAnUnknownReason(t *testing.T) {
 	}
 	if len(RemediesFor("made_up")) != 0 {
 		t.Error("an undeclared reason offers a remedy")
+	}
+}
+
+func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
+	t.Parallel()
+	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
+	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
+	allowed := Decision{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}
+	if !(DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception may answer missing consent and a bounce, yet the set refuses it")
+	}
+	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest} {
+		set := DecisionSet{Decisions: []Decision{missing, {Verdict: VerdictDeny, ReasonCode: stop}}}
+		if set.ExceptionMayAnswer(true) {
+			t.Errorf("an admin's exception answers a set holding %q", stop)
+		}
+	}
+}
+
+// A rep's exception answers what any sender may answer and nothing an admin
+// alone may: a bounce recorded after it was given stops the message.
+func TestARepsExceptionDoesNotCoverAnAdminOnlyRefusal(t *testing.T) {
+	t.Parallel()
+	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
+	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
+	if !(DecisionSet{Decisions: []Decision{missing}}).ExceptionMayAnswer(false) {
+		t.Error("a rep's exception does not answer missing marketing consent")
+	}
+	if (DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(false) {
+		t.Error("a rep's exception answers a hard bounce, which only an admin may")
+	}
+	if !(DecisionSet{Decisions: []Decision{missing, bounced}}).ExceptionMayAnswer(true) {
+		t.Error("an admin's exception does not answer a hard bounce")
+	}
+}
+
+// Where the recipient's country requires prior consent, nobody records an
+// exception in its place. The country's advertising ceiling is not lifted for
+// one message either.
+func TestNoExceptionStandsInForConsentWhereTheCountryRequiresIt(t *testing.T) {
+	t.Parallel()
+	for _, reason := range []string{ReasonMarketingConsentRequired, ReasonFrequencyCapReached, ReasonOptedOutAfterRequest} {
+		if got := RemediesFor(reason); len(got) != 0 {
+			t.Errorf("%q lists %v; nobody may send past it, an admin included", reason, got)
+		}
+		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
+		if set.ExceptionMayAnswer(true) {
+			t.Errorf("an admin's exception answers %q", reason)
+		}
+	}
+	if !HasRemedy(ReasonNoMarketingConsent, RemedyException) {
+		t.Error("outside such a country missing marketing consent keeps the exception")
 	}
 }

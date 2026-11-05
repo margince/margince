@@ -12,13 +12,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
-// gateCopies counts the content gates in a rendered filter by the request
-// source each one checks.
 func gateCopies(where []string) int {
-	return strings.Count(strings.Join(where, " AND "), "FROM activity request_source")
+	return auth.ContentGateCopies(strings.Join(where, " AND "))
 }
 
 // discoverCopies counts the discover gates on the listed row by the link fold
@@ -65,5 +64,26 @@ func TestTheRemindersArmOfADiscoverGatedReadAddsTheAudienceAlone(t *testing.T) {
 	}
 	if got, want := discoverCopies(with), discoverCopies(without); got != want {
 		t.Fatalf("the reminders arm repeated the discover gate %d time(s) the outer read already applies", got-want)
+	}
+}
+
+// A content-gated read lets through only rows whose content the reader may
+// read, so its projection selects true rather than a second audience arm.
+func TestAContentGatedReadCarriesOneGateAcrossFilterAndProjection(t *testing.T) {
+	until := clocktest.Now(t)
+	for name, in := range map[string]ListActivitiesInput{
+		"content-gated":  {OpenAndDueBy: &until, WorklistAsOf: &until, ReadableOnly: true},
+		"discover-gated": {OpenAndDueBy: &until, WorklistAsOf: &until},
+	} {
+		where, content, _, _, err := listActivitiesFilter(teamScopedCtx(), in)
+		if err != nil {
+			t.Fatalf("%s: rendering the filter: %v", name, err)
+		}
+		if got := gateCopies(append(where, content)); got != 1 {
+			t.Fatalf("%s: filter and projection carry %d content gates, want 1", name, got)
+		}
+		if gated := in.ReadableOnly; gated != (content == sqlTrue) {
+			t.Fatalf("%s: projection %.40q, want true only under the content gate", name, content)
+		}
 	}
 }

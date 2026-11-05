@@ -21,8 +21,8 @@ import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
 import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   type EntryFieldChange,
   entryFieldChanges,
@@ -101,11 +101,11 @@ function EntryFieldDetail({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   if (changes.length === 0) {
     return null;
   }
-  const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
+  const valueCtx: HistoryValueCtx = { currency, locale, zone: readerZone };
   return (
     <ul className="entry-fields">
       {changes.map((change) => (
@@ -200,7 +200,7 @@ function UndoButton({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const client = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   // What the server said when it refused the press. Held apart from the
@@ -309,7 +309,7 @@ function UndoButton({
                   {historyValue(
                     change.field,
                     change.oldValue,
-                    { currency, locale, zone: recordZone },
+                    { currency, locale, zone: readerZone },
                     change.oldPrecision,
                   ) ?? t("history.cleared")}
                 </span>
@@ -346,7 +346,7 @@ function HistoryEntryRow({
 }>) {
   const t = useT();
   const viewerId = useViewerId();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // An edge entry's images are the LINK's columns, not this record's, so it has
   // no field changes to draw or to name in a confirm — the sentence the read
   // wrote and the edge block below are the whole of what this row says.
@@ -357,7 +357,7 @@ function HistoryEntryRow({
       <span className="tl-body">
         <span className="tl-title">{historyLine(entry, t)}</span>
         <span className="tl-meta">
-          <span>{formatDateTime(entry.occurred_at, locale, recordZone)}</span>
+          <span>{formatDateTime(entry.occurred_at, locale, readerZone)}</span>
           <ProvenanceTag
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name

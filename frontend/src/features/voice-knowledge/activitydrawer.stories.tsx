@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import { viewerZone } from "../../format/timezone";
+import type { components } from "../../api/schema";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,12 +12,13 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { OpenActivityDrawer } from "./activitydrawer";
+import { WebFormSubmission } from "./webformsubmission";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const meta: Meta<typeof OpenActivityDrawer> = {
   title: "Records/Record 360/Activity source review",
   component: OpenActivityDrawer,
-  args: { activityId: id, zone: viewerZone(), onClose: () => {} },
+  args: { activityId: id, zone: browserZone(), onClose: () => {} },
   decorators: [
     (Story) => (
       <StoryProviders>
@@ -173,5 +175,62 @@ export const WithCustomFieldValue: Story = {
 };
 export const WithCustomFieldValueDark: Story = {
   ...WithCustomFieldValue,
+  globals: { theme: "dark" },
+};
+
+const WEB_FORM: components["schemas"]["WebFormSubmission"] = {
+  message: "Second send, right after Back",
+  full_name: "Bea Probe",
+  email: "back.probe@example.com",
+  extra: [{ name: "Fleet size", value: "12 vans" }],
+  page_url: "https://www.example.com/quote",
+  campaign: [{ name: "utm_source", value: "newsletter" }],
+  consent: {
+    ticked: true,
+    wording: "I agree that Brandt Automotive may contact me about my enquiry.",
+    policy_version: "2026-10",
+  },
+};
+
+// A note a website form wrote. Each field it sent sits under its own label,
+// with the page as a link and the consent with its policy.
+export const WebFormNote: Story = {
+  render: (args) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      [`GET /activities/${id}`]: () =>
+        jsonResponse({
+          id,
+          kind: "note",
+          subject: "Website form: Website quote request",
+          body: "> Second send, right after Back",
+          occurred_at: "2026-10-28T13:33:00Z",
+          content_state: "available",
+          source_system: "web_form",
+          links: [],
+          web_form: WEB_FORM,
+        }),
+    });
+    return <OpenActivityDrawer {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement.ownerDocument.body);
+    await expect(await page.findByText("Agreed")).toBeTruthy();
+    await expect(page.getByText("Policy 2026-10")).toBeTruthy();
+    await expect(
+      page.getByRole("link", { name: "www.example.com/quote" }),
+    ).toBeTruthy();
+  },
+};
+export const WebFormNoteDark: Story = {
+  ...WebFormNote,
+  globals: { theme: "dark" },
+};
+
+export const WebFormFields: Story = {
+  render: () => <WebFormSubmission sent={WEB_FORM} filed={[]} />,
+};
+export const WebFormFieldsDark: Story = {
+  ...WebFormFields,
   globals: { theme: "dark" },
 };

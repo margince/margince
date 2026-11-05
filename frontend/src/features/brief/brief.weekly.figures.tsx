@@ -14,7 +14,7 @@ import {
 } from "../../format/format";
 import { startOfDayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import {
   figureReading,
   figureValue,
@@ -133,10 +133,16 @@ function weekFigures(t: Translator, locale: Locale): readonly WeekFigure[] {
 
 const HEADLINE = ["won", "commitments", "leads", "meetings"];
 
-/** Only the figures a review of this age carries: an older one has no tasks. */
+/**
+ * Only the figures the review carries. An older one has no tasks. One read by
+ * a seat that may not read activities has its meetings withheld, and their
+ * zeros say nothing.
+ */
 function carried(review: WeeklyReview, t: Translator, locale: Locale) {
   return weekFigures(t, locale).filter(
-    (figure) => figure.count(review.counts) !== undefined,
+    (figure) =>
+      figure.count(review.counts) !== undefined &&
+      !(review.meetings_withheld && figure.figure === "meetings"),
   );
 }
 
@@ -172,7 +178,7 @@ export function HeadlineFigures({
 }: Readonly<{ review: WeeklyReview; figures: WeeklyFigures }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const priorStart = review.prior?.local_week_start;
   return (
     <>
@@ -222,7 +228,7 @@ function HeadlineTile({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const reading = figureReading(
     state,
     { value: figure.shown(review.counts) },

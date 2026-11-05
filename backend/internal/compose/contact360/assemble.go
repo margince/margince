@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -54,6 +53,9 @@ type Service struct {
 	// category vocabulary from. Nil where no adapter is compiled in.
 	providers    providerDescriptors
 	mailCoverage mailcoverage.Reader
+	// activities reads the activity custom-field catalog. Nil leaves the
+	// timeline rows without their custom-field values.
+	activities *activities.Store
 }
 
 // NewService binds the composite read to its module stores. now is the
@@ -88,6 +90,22 @@ func (s *Service) WithProviders(reg providerDescriptors) *Service {
 	return s
 }
 
+// WithActivityFields lets the timeline sections carry the activities' custom
+// field values.
+func (s *Service) WithActivityFields(store *activities.Store) *Service {
+	s.activities = store
+	return s
+}
+
+// activityColumns reads the timeline's custom-field columns. The catalog opens
+// a connection of its own, so this runs before the page's transaction.
+func (s *Service) activityColumns(ctx context.Context) (activities.CustomColumns, error) {
+	if s.activities == nil {
+		return activities.CustomColumns{}, nil
+	}
+	return s.activities.ActiveActivityColumns(ctx)
+}
+
 // providerDescriptors is the slice of the adapter registry this package
 // needs. Narrowed to one method so contact360 does not depend on the
 // integrations module for a read that only wants a category list.
@@ -113,6 +131,9 @@ type AssembleOptions struct {
 	// what the page wants. A reader with its own clock, the quiet lane, passes
 	// that clock so its window and its touches agree.
 	AsOf time.Time
+	// activityColumns are the activity custom fields the timeline rows carry,
+	// read above the page's transaction.
+	activityColumns activities.CustomColumns
 }
 
 // Assemble keeps denied sections distinct from empty records.
@@ -144,19 +165,16 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 	if err != nil {
 		return crmcontracts.Contact360{}, err
 	}
+	if opts.activityColumns, err = s.activityColumns(ctx); err != nil {
+		return crmcontracts.Contact360{}, err
+	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		contact, err := s.contacts.GetContactTx(ctx, tx, contactID, storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
 		out.Contact = contact
-		created, found, err := privacy.CreationAttributionTx(ctx, tx, "contact", contactID.UUID)
-		if err != nil {
-			return err
-		}
-		if found {
-			out.CreatedBy = created.Wire()
-		}
+		out.CreatedBy = contact.CreatedBy
 		// The scope is a read of the project, gated before any section
 		// filters on it — and as the whole read's refusal, not a section's:
 		// a page narrowed to a project the caller may not see has no honest
@@ -241,6 +259,9 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedNetwork, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.networkSection(ctx, tx, contactID, now, out)
+		}},
+		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedPrivacyNoticeDuties, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
+			return s.noticeDutiesSection(ctx, tx, contactID, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedConsent, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.consentSection(ctx, tx, contactID, out)

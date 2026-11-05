@@ -19,6 +19,7 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
+import type { RecordRename } from "../../design-system/recordview";
 import { countryBeyondCity } from "../../format/address";
 import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
@@ -95,12 +96,7 @@ function RailBody({
   lists,
 }: RailProps & Readonly<{ lists?: ReactNode }>) {
   const t = useT();
-  const writable = useCanWriteRecord("company", company);
-  const reason = useCompanyReadOnlyReason(company);
-  const edit = {
-    canEdit: writable && !reason,
-    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
-  };
+  const edit = useCompanyEditGate(company);
   const sections: DetailSection[] = [
     {
       key: "about",
@@ -135,12 +131,37 @@ function RailBody({
 
 export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
 
+/** Whether this reader may change the account's own fields, and if not, why. */
+function useCompanyEditGate(company: Company): Edit {
+  const t = useT();
+  const writable = useCanWriteRecord("company", company);
+  const reason = useCompanyReadOnlyReason(company);
+  return {
+    canEdit: writable && !reason,
+    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
+  };
+}
+
+/** The account's name as the record's head renames it, with the rail's gate. */
+export function useCompanyRename(company: Company): RecordRename {
+  const t = useT();
+  const edit = useCompanyEditGate(company);
+  const save = useCompanyFieldSave(company);
+  return {
+    label: t("create.displayName"),
+    value: company.display_name,
+    canEdit: edit.canEdit,
+    readOnlyReason: edit.reason,
+    onSave: (next) => save(mapCompanyUpdate({ display_name: next }, {})),
+  };
+}
+
 function isBlank(value: string | null | undefined): boolean {
   return !value?.trim();
 }
 
-// One details row per kind of field. Each edits in place (or in a small form,
-// for a field of several inputs) and folds while empty.
+// One details row per kind of field. Each opens its edit in a dialog (the
+// record's edit form, for a field of several inputs) and folds while empty.
 export function useRowBuilders(company: Company, edit: Edit) {
   const t = useT();
   const save = useCompanyFieldSave(company);
@@ -149,8 +170,9 @@ export function useRowBuilders(company: Company, edit: Edit) {
   const write = (key: string) => (next: string) =>
     save(mapCompanyUpdate({ [key]: next }, {}));
   const text = (
-    key: "industry" | "legal_name" | "linkedin_url",
+    key: "industry" | "legal_name" | "linkedin_url" | "phone" | "email",
     label: MessageKey,
+    shape: Readonly<{ type?: "email"; link?: ReactNode }> = {},
   ): DetailRow => ({
     key,
     term: t(label),
@@ -159,6 +181,8 @@ export function useRowBuilders(company: Company, edit: Edit) {
       <InlineText
         label={t(label)}
         value={company[key] ?? ""}
+        type={shape.type}
+        link={shape.link}
         placeholder={t("field.unset")}
         canEdit={edit.canEdit}
         readOnlyReason={edit.reason}
@@ -196,7 +220,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
     which: CompoundField,
     label: string,
     reading: ReactNode | undefined,
-    flag?: ReactNode,
+    shape: Readonly<{ flag?: ReactNode; link?: boolean }> = {},
   ): DetailRow => ({
     key: which,
     term: label,
@@ -208,10 +232,11 @@ export function useRowBuilders(company: Company, edit: Edit) {
           which={which}
           label={label}
           reading={reading}
+          link={shape.link}
           canEdit={edit.canEdit}
           readOnlyReason={edit.reason}
         />
-        {flag && <> {flag}</>}
+        {shape.flag && <> {shape.flag}</>}
       </>
     ),
   });
@@ -264,16 +289,13 @@ function useAboutRows(
         label: t(LIFECYCLE_LABELS[value]),
       })),
     ),
-    compound(
-      "address",
-      t("co.address.summary"),
-      addressLine(company),
-      company.address_country_mismatch && (
+    compound("address", t("co.address.summary"), addressLine(company), {
+      flag: company.address_country_mismatch && (
         <AddressCountryMismatchBadge
           mismatch={company.address_country_mismatch}
         />
       ),
-    ),
+    }),
     ...(wayIn
       ? [
           {

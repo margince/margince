@@ -16,21 +16,23 @@ import { CommitmentReview } from "../../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
-import { Markdown } from "../../design-system/markdown";
+import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
+import { callOutcomeLabel } from "../../lib/calloutcome";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
 import { worklistKey } from "../worklist/worklist.queries";
+import { WebFormSubmission } from "./webformsubmission";
 import "../../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];
@@ -191,10 +193,16 @@ function ActivityBody({
               {" "}
               ·{" "}
               {t("co.next.due", {
-                when: formatDate(activity.due_at, locale, zone),
+                when: formatDue(
+                  activity.due_at,
+                  activity.due_has_time,
+                  locale,
+                  zone,
+                ),
               })}
             </>
-          )}{" "}
+          )}
+          <CallOutcomeNote activity={activity} />{" "}
           {activity.is_done && (
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
@@ -223,7 +231,7 @@ function ActivityBody({
         )}
         <CustomFieldLines activity={activity} />
       </div>
-      {withheldOrBody(activity, t)}
+      {withheldOrBody(activity, filed, t)}
       {activity.content_state !== "withheld" && (
         <>
           <Panel title={t("files.title")}>
@@ -388,6 +396,7 @@ function colleaguesOf(activity: Activity): string[] {
 
 function withheldOrBody(
   activity: Activity,
+  filed: readonly ActivityLink[],
   t: ReturnType<typeof useT>,
 ): ReactNode {
   if (activity.content_state === "withheld") {
@@ -402,6 +411,10 @@ function withheldOrBody(
       </SurfaceState>
     );
   }
+  // The body says the same as text; the fields read better as fields.
+  if (activity.web_form) {
+    return <WebFormSubmission sent={activity.web_form} filed={filed} />;
+  }
   const body = activity.body?.trim();
   if (!body) {
     return null;
@@ -414,7 +427,7 @@ function withheldOrBody(
   });
   return markdown ? (
     <div className="t-body">
-      <Markdown source={body} autolink />
+      <NoteMarkdown source={body} />
     </div>
   ) : (
     <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
@@ -442,4 +455,13 @@ function activityTitle(
   if (!activity) return t("activity.detail.none");
   if (activity.content_state === "withheld") return t("timeline.withheld");
   return activity.subject?.trim() || t(TIMELINE_KIND_LABEL[activity.kind]);
+}
+
+/** How a call ended, after its time. Nothing on a call without an outcome. */
+function CallOutcomeNote({
+  activity,
+}: Readonly<{ activity: Pick<Activity, "kind" | "call_outcome"> }>) {
+  const t = useT();
+  const label = callOutcomeLabel(activity, t);
+  return label ? <> · {label}</> : null;
 }

@@ -24,16 +24,16 @@
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
+import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
-import { subjectHref } from "./worklist.copy";
+import { subjectHref } from "../../lib/worklistcopy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
 import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
@@ -41,10 +41,7 @@ import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 export function HandledForYouPanel() {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  // The READER's own zone. A receipt says when something happened to them, and
-  // an instant rendered in UTC asks them to do the arithmetic.
-  const zone = viewerZone();
+  const readerZone = useViewerZone();
   const handled = useHandledForYou();
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
@@ -53,6 +50,9 @@ export function HandledForYouPanel() {
   // column names and a silence, where the sentence saying nothing was done on
   // the reader's behalf is the whole answer.
   const state = listReadState(handled, receipts);
+  // A day with nothing done draws no panel: the empty sentence sat beside the
+  // queue's own on every quiet day. A failed read still shows, with its retry.
+  if (state === "empty") return null;
   return (
     <Panel
       className={AFTER_THE_DAY}
@@ -108,7 +108,7 @@ export function HandledForYouPanel() {
                     header: t("worklist.handled.what"),
                     render: (row: Receipt) => (
                       <>
-                        {receiptSummary(row, t, locale, recordZone)}
+                        {receiptSummary(row, t, locale, readerZone)}
                         {receiptBasis(row, t, locale) && (
                           <p className="t-caption">
                             {receiptBasis(row, t, locale)}
@@ -127,7 +127,7 @@ export function HandledForYouPanel() {
                     key: "when",
                     header: t("worklist.handled.when"),
                     render: (row: Receipt) =>
-                      formatDateTime(row.occurred_at, locale, zone),
+                      formatDateTime(row.occurred_at, locale, readerZone),
                   },
                   {
                     // The one verb this panel carries, and only on the rows
@@ -162,8 +162,8 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
   const href = subjectHref(receipt);
   if (!href) return <>{subject.label}</>;
   return (
-    <a className="entity-link" href={href}>
+    <AppLink className="entity-link" href={href}>
       {subject.label}
-    </a>
+    </AppLink>
   );
 }

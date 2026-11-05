@@ -43,11 +43,11 @@ type LastTouchCandidate struct {
 	LastTouch  time.Time
 }
 
-// genuineEngagement is what counts as a real touch for the quiet reminders:
-// live, an engagement rather than a notice, visible to the workspace, and not
-// the engine's own output. The scan reads it to find a silence and the
-// resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
-// would not have moved the anchor does not close the reminder either.
+// genuineEngagement is what counts as a real touch for the quiet reminders. It
+// is live, an engagement rather than a notice, visible to the workspace, and not
+// the engine's own output. The scan reads it to find a silence. The resolver
+// (CompleteQuietRemindersReachedBy) reads it to find the silence's end, so a
+// touch that would not have moved the anchor does not close the reminder.
 // Mail from a sending system, an invitation and a meeting that did not happen
 // are not contact, by the rules every recency clock reads (relstrength).
 //

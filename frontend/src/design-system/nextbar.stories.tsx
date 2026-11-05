@@ -91,23 +91,6 @@ export const TaskWithDetail: Story = {
   },
 };
 
-/** The way on to another record's task, last among the verbs, and still
- *  drawn when nothing is next here. */
-export const OnwardWithNothingNext: Story = {
-  args: {
-    onward: (
-      <Button variant="ghost" onClick={noop}>
-        Next task
-      </Button>
-    ),
-  },
-  play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByRole("button", { name: "Next task" }),
-    ).toBeVisible();
-  },
-};
-
 /** Nothing dated next: one quiet sentence rather than an empty bar. */
 export const NothingNext: Story = {
   args: {},
@@ -115,6 +98,22 @@ export const NothingNext: Story = {
     await expect(
       within(canvasElement).getByText("Nothing is due next."),
     ).toBeVisible();
+  },
+};
+
+/** A caller that read every task says what it knows, and offers the verb. */
+export const NoTaskRecorded: Story = {
+  args: {
+    empty: "No follow-up task recorded.",
+    action: <Button variant="ghost">Add follow-up</Button>,
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText("No follow-up task recorded."),
+    ).toBeVisible();
+    await expect(
+      within(canvasElement).queryByText("Nothing is due next."),
+    ).toBeNull();
   },
 };
 

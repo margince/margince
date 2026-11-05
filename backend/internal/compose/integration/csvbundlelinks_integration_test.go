@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -133,10 +134,10 @@ func TestABrokenLinkSkipsTheRowUnlessTheRunSaysImportAnyway(t *testing.T) {
 }
 
 // stageRefRun stages contacts.csv of a ZIP under a broken-link policy.
-func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, policy string) importRunDTO {
+func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, policy string) importjobtest.Run {
 	t.Helper()
-	var run importRunDTO
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	var run importjobtest.Run
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": uploadZip(t, e, "b.zip", zipBytes(t, files)).SourceRef,
 		"source_name": "b", "on_broken_link": policy, "parts": contactRefParts(),
 	}, &run); status != http.StatusAccepted {
@@ -212,8 +213,8 @@ func TestAContactLinksToACompanyTheZipNamesByID(t *testing.T) {
 	}
 }
 
-// In a ZIP run the employer-name column follows the run's broken-link policy as
-// company_ref does. A single CSV still lands the row and reports only the link.
+// A new employer name creates its company in CSV and ZIP imports.
+// A missing company reference still follows the broken-link policy.
 func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 	nameParts := []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
 		"ref": "ref", "email": "email", "name": "full_name", "company": "company_name",
@@ -222,41 +223,38 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)
 			files := map[string]string{"contacts.csv": "ref,email,name,company\nP-1,lu@" + policy + ".example,Lu,Nowhere Ltd\n"}
-			var run importRunDTO
-			if status := testCall(t, e, "/v1/imports", AnyMap{
+			var run importjobtest.Run
+			if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 				"connector": "csv", "source_ref": uploadZip(t, e, "c.zip", zipBytes(t, files)).SourceRef,
 				"source_name": "c", "on_broken_link": policy, "parts": nameParts,
 			}, &run); status != http.StatusAccepted {
 				t.Fatalf("stage → %d, want 202", status)
 			}
-			wantKind, wantCreated := "broken_link", 0
-			if policy == "drop_link" {
-				wantKind, wantCreated = "dropped_link", 1
-			}
+
 			report := readImportReport(t, e, run.ID)
-			if report.Disposition.Created != wantCreated || !hasIssue(report, wantKind, "Nowhere Ltd") {
-				t.Fatalf("report = %+v, want %d created and a %s issue naming Nowhere Ltd", report, wantCreated, wantKind)
+			if report.Disposition.Created != 1 || report.Links == nil || len(report.Links.Unresolved) != 0 {
+				t.Fatalf("preview=%+v, want one contact and its employer", report)
 			}
 			approveAndRead(t, e, run.ID)
-			if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != wantCreated || !hasIssue(committed, wantKind, "Nowhere Ltd") {
-				t.Fatalf("committed = %+v, want the commit to do what the dry run said", committed)
+			if committed := readImportReport(t, e, run.ID); committed.Disposition.Created != 1 || employerOf(t, e, "lu@"+policy+".example") != "Nowhere Ltd" {
+				t.Fatalf("commit=%+v, want one contact at Nowhere Ltd", committed)
 			}
 		})
 	}
 	t.Run("single csv", func(t *testing.T) {
 		e := setupImportApp(t)
-		profile, status := uploadCSV(t, e, "contact", "Email,Name,Company\nlu@single.example,Lu,Nowhere Ltd\n")
+		profile, status := importjobtest.UploadCSV(t, e, "contact", "Email,Name,Company\nlu@single.example,Lu,Nowhere Ltd\n")
 		if status != http.StatusOK {
 			t.Fatalf("upload → %d, want 200", status)
 		}
-		run, status := createRunWithMapping(t, e, "contact", profile.SourceRef,
+		run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef,
 			map[string]string{"Email": "email", "Name": "full_name", "Company": "company_name"})
 		if status != http.StatusAccepted {
 			t.Fatalf("stage → %d, want 202", status)
 		}
 		report := readImportReport(t, e, run.ID)
-		if report.Disposition.Created != 1 || len(report.Issues) != 0 || report.Links == nil || len(report.Links.Unresolved) != 1 {
-			t.Fatalf("report = %+v, want the row created, no issue and the link unresolved", report)
+		if report.Disposition.Created != 1 || len(report.Issues) != 1 || report.Issues[0].ReasonCode != "employer_will_create" || report.Links == nil || len(report.Links.Unresolved) != 0 {
+			t.Fatalf("report = %+v, want the row and employer created with a preview notice", report)
 		}
 	})
 }
@@ -310,7 +308,7 @@ func TestALeadsCompanyNameNeverSkipsTheLead(t *testing.T) {
 
 // namedCompanyZip stages a ZIP whose company row names an existing company by
 // id under ref CO-7, and whose contact links to CO-7.
-func namedCompanyZip(t *testing.T, e *apptest.AppEnv, companyCSV string) importRunDTO {
+func namedCompanyZip(t *testing.T, e *apptest.AppEnv, companyCSV string) importjobtest.Run {
 	t.Helper()
 	files := map[string]string{
 		"companies.csv": companyCSV,

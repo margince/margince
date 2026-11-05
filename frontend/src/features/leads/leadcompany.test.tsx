@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { LeadCompany, useLeadCompanyName } from "./leadcompany";
 
@@ -61,8 +62,11 @@ function stubServer() {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
-      if (request.url.includes("/v1/companies/c-7")) {
-        return jsonResponse({ id: "c-7", display_name: "Nordwind Holding SE" });
+      const named = companyNamesAnswer(request.url, {
+        "c-7": "Nordwind Holding SE",
+      });
+      if (named) {
+        return named;
       }
       posted.push(await request.json());
       return jsonResponse({ ...lead, company_id: match.id });

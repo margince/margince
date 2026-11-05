@@ -17,6 +17,7 @@ import (
 
 // ContactCreationPreview resolves creation defaults and identity before approval.
 type ContactCreationPreview struct {
+	Employer        ContactEmployerPreview
 	Input           CreateContactInput
 	CustomFields    map[string]any
 	ReviewContactID *ids.ContactID
@@ -62,6 +63,10 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 		if err != nil {
 			return err
 		}
+		out.Employer, err = s.previewContactEmployerTx(creatorCtx, tx, in.Employer, in.Emails)
+		if err != nil {
+			return err
+		}
 		out.Input = in
 		if out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields); err != nil {
 			return err
@@ -81,10 +86,7 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 // refuseAgentContactExtras is what an agent's contact create may not carry, for
 // the preview and the write alike.
 func refuseAgentContactExtras(ctx context.Context, in CreateContactInput) error {
-	if err := refuseAgentConvert(ctx, in.ConvertLeadIDs); err != nil {
-		return err
-	}
-	return refuseAgentEmployer(ctx, in.Employer)
+	return refuseAgentConvert(ctx, in.ConvertLeadIDs)
 }
 
 // admitAndDedupeContactCreate runs a typed create's identity refusals in order.

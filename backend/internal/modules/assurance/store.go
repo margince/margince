@@ -125,6 +125,11 @@ type SourceCoverage struct {
 // system and a run captured_by a manager would attribute to them every
 // exception it raises.
 func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time, requestedBy *string) (ids.UUID, error) {
+	return s.openRun(ctx, tx, asOf, requestedBy, nil)
+}
+
+// openRun opens a run over every deal, or over one when deal is set.
+func (s *Store) openRun(ctx context.Context, tx pgx.Tx, asOf time.Time, requestedBy *string, deal *ids.UUID) (ids.UUID, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return ids.Nil, err
 	}
@@ -138,10 +143,10 @@ func (s *Store) StartRun(ctx context.Context, tx pgx.Tx, asOf time.Time, request
 	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO assurance_run (as_of, rule_versions, status, captured_by, requested_by)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO assurance_run (as_of, rule_versions, status, captured_by, requested_by, subject_deal_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id`,
-		asOf, versions, StatusRunning, capturedBy, requestedBy).Scan(&id); err != nil {
+		asOf, versions, StatusRunning, capturedBy, requestedBy, deal).Scan(&id); err != nil {
 		return ids.Nil, fmt.Errorf("assurance: opening the run: %w", err)
 	}
 	return id, nil
@@ -230,11 +235,17 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		    updated_at = now(),
 		    -- A reopened row is a new episode, and its task link belongs to the
 		    -- old one: the new episode's review is delivered afresh. Every SET
-		    -- reads the row as it was, so all four test the same old status.
+		    -- reads the row as it was, so each tests the same old status.
 		    episode = CASE WHEN ` + reopensSQL + ` THEN assurance_exception.episode + 1
 		                   ELSE assurance_exception.episode END,
 		    task_activity_id = CASE WHEN ` + reopensSQL + ` THEN NULL
 		                            ELSE assurance_exception.task_activity_id END,
+		    delivery_state = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                          ELSE assurance_exception.delivery_state END,
+		    delivery_attempts = CASE WHEN ` + reopensSQL + ` THEN 0
+		                             ELSE assurance_exception.delivery_attempts END,
+		    delivered_assignee_id = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                                 ELSE assurance_exception.delivered_assignee_id END,
 		    status = CASE WHEN ` + reopensSQL + ` THEN 'open' ELSE assurance_exception.status END,
 		    -- The deal's owner tonight, not the one it had when first raised: a
 		    -- review of a deal that changed hands belongs to the new owner.
@@ -261,19 +272,21 @@ func (s *Store) FinishRun(
 	if err := auth.Require(ctx, "forecast", principal.ActionCreate); err != nil {
 		return err
 	}
-	tag, err := tx.Exec(ctx, `
+	var deal *ids.UUID
+	err := tx.QueryRow(ctx, `
 		UPDATE assurance_run
 		SET eligible_deals = $2, eligible_signals = $3, status = $4,
 		    readiness = $5, updated_at = now()
-		WHERE id = $1 AND status = 'running'`,
-		runID, eligibleDeals, eligibleSignals, status, readiness)
-	if err != nil {
-		return fmt.Errorf("assurance: closing the run: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
+		WHERE id = $1 AND status = 'running'
+		RETURNING subject_deal_id`,
+		runID, eligibleDeals, eligibleSignals, status, readiness).Scan(&deal)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// Already closed, or never opened. Either way this call would be
 		// rewriting a verdict somebody may have read.
 		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("assurance: closing the run: %w", err)
 	}
 	// The RUN is what the audit log records, not each finding. A pass over a
 	// large pipeline mints thousands of exceptions, and an audit row per
@@ -294,6 +307,7 @@ func (s *Store) FinishRun(
 			// silently retired four hundred findings must not read like one
 			// that retired none.
 			"cleared": cleared,
+			"deal_id": deal,
 		})
 	if err != nil {
 		return err
@@ -310,6 +324,7 @@ func (s *Store) FinishRun(
 		Status:          crmcontracts.PublicEventForecastAssuranceCreatedStatus(status),
 		EligibleDeals:   eligibleDeals,
 		EligibleSignals: &eligibleSignals,
+		DealId:          (*openapi_types.UUID)(deal),
 	}
 	if readiness != "" {
 		verdict := crmcontracts.PublicEventForecastAssuranceCreatedReadiness(readiness)
@@ -345,11 +360,18 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 		err := tx.QueryRow(ctx, `
 			SELECT id, as_of, eligible_deals, eligible_signals, status, readiness
 			FROM assurance_run
-			WHERE status <> 'running'
+			WHERE status <> 'running' AND subject_deal_id IS NULL
 			ORDER BY as_of DESC, id DESC
 			LIMIT 1`).
 			Scan(&out.ID, &out.AsOf, &out.EligibleDeals, &out.EligibleSignals,
 				&out.Status, &out.Readiness)
+		if err != nil {
+			return err
+		}
+		if out.Freshness, err = readFreshness(ctx, tx); err != nil {
+			return err
+		}
+		out.Deliveries, err = reviewDeliveryCounts(ctx, tx)
 		return err
 	})
 	if err != nil {
@@ -369,6 +391,10 @@ type Run struct {
 	EligibleSignals int
 	Status          string
 	Readiness       *string
+	// Freshness is what changed after this reading. A reading the records
+	// moved past is never shown as current.
+	Freshness  Freshness
+	Deliveries DeliveryCounts
 }
 
 // InTx runs fn inside one workspace transaction.
@@ -468,4 +494,7 @@ type Exception struct {
 	// because it decides what to group and never draws a row — and the wire
 	// then names the subject by id alone, which is what it did before.
 	SubjectLabel string
+	// InputsChanged says whether the subject, or the workspace, changed after
+	// the last run read it (MarkOutOfDate). Nil when that is not known.
+	InputsChanged *bool
 }

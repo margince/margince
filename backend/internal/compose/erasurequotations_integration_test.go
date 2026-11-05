@@ -35,6 +35,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -106,6 +107,9 @@ func stageQuotingProposal(t *testing.T, e *integration.Env, activityID ids.UUID,
 		TargetType: transcriptTargetType,
 		TargetID:   activityID,
 		Summary:    summary,
+		SummaryParts: &crmcontracts.ApprovalSummaryParts{
+			Sentence: summary, Fields: []crmcontracts.ApprovalSummaryField{{Field: "activity_id", Value: activityID.String()}},
+		},
 		Evidence: []approvals.Evidence{{
 			Snippet:     snippet,
 			SourceType:  transcriptTargetType,
@@ -149,6 +153,9 @@ func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
 
 	if n := countQuoting(t, e, quotedTranscriptLine); n != 0 {
 		t.Error("a staged proposal still quotes the erased transcript verbatim — the timeline row is a tombstone while a card in the inbox reads out what was said in the meeting")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND summary_parts IS NOT NULL`, approvalID); n != 0 {
+		t.Error("the emptied card still carries its summary's parts, which the inbox shows as the proposed values")
 	}
 	// The card is inert, proven by asking it to be approved rather than by
 	// reading its status column: a blanked proposal a colleague can still

@@ -16,12 +16,11 @@ import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
-type PrincipalAttribution = components["schemas"]["PrincipalAttribution"];
 
 // The fixed word claims the destination is LinkedIn, and a crawl or connector
 // can write any host into `social`. So the host is checked before the anchor
@@ -47,7 +46,7 @@ export function ContactFacts({
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const ownerName = useMemberName(contact.owner_id);
   const email = contact.primary_email;
   const phone = primaryPhone(contact.phones)?.phone;
@@ -124,10 +123,7 @@ export function ContactFacts({
  * source. The popover behind it answers which one, which for a mailbox capture
  * is a message id no reader should have to scan past.
  */
-export function ContactSource({
-  contact,
-  createdBy,
-}: Readonly<{ contact: Contact; createdBy?: PrincipalAttribution }>) {
+export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const viewerId = useViewerId();
   return (
@@ -142,7 +138,7 @@ export function ContactSource({
               contact.source,
               contact.imported_from,
             ),
-            createdBy,
+            contact.created_by,
           )}
         />
       }

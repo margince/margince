@@ -290,7 +290,7 @@ func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	reason := "Budget moved"
 	pid, held := holdInHumanTx(t, e, w, func(tx pgx.Tx) error {
 		_, err := w.store.AdvanceDealTx(w.ctx, tx, ids.From[ids.DealKind](closing), deals.AdvanceDealInput{
-			ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason,
+			ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason, LostReasonCode: new("other"),
 		}, deals.CustomColumns{})
 		return err
 	}, release)

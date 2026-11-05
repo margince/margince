@@ -189,8 +189,8 @@ func TestACaseMergeOfColleaguesContactsNeedsThePolicy(t *testing.T) {
 	rep := c.rep(c.e.Rep1)
 
 	off := c.read(rep, t, members[0])
-	if off.MergeMode != crmcontracts.ContactCaseMergeModeNone || off.CanMerge {
-		t.Fatalf("with the policy off a rep reads merge_mode %s, want none", off.MergeMode)
+	if off.MergeMode != crmcontracts.ContactCaseMergeModePair || !off.CanMerge {
+		t.Fatalf("with the policy off a rep reads merge_mode %s, want pair: they may merge their own pair", off.MergeMode)
 	}
 	_, err := c.store.MergeContactCase(rep, members[0], caseDecision(off, members, members[1], c.e.Rep1))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {

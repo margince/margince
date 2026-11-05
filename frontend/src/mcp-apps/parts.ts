@@ -45,7 +45,7 @@ export function panel(
   );
   const id = `panel-title-${nextTitleID++}`;
   section.setAttribute("aria-labelledby", id);
-  const head = el("header", "panel-head");
+  const head = el("header", "panel-head panel-head-flat");
   const name = heading("medium", title, {
     as: opts?.level ?? "h2",
     className: "panel-title",
@@ -110,6 +110,14 @@ export function button(
   return node;
 }
 
+/** rowAction is a row's way on, drawn as a text action; view.css adds its arrow. */
+export function rowAction(label: string, onPress: () => void): HTMLElement {
+  const action = el("button", "row-action", label);
+  action.setAttribute("type", "button");
+  action.addEventListener("click", onPress);
+  return action;
+}
+
 /**
  * keepFocus runs a renderer that rebuilds the whole card and puts focus back on
  * the button the reader was on, matched by its label. A press re-renders for its
@@ -120,14 +128,31 @@ export function keepFocus(root: HTMLElement, draw: () => void): void {
   const active = document.activeElement;
   const label =
     active instanceof HTMLButtonElement && root.contains(active)
-      ? active.textContent
+      ? nameOf(active)
       : null;
   draw();
   if (label === null) return;
   const same = [...root.querySelectorAll("button")].find(
-    (b) => b.textContent === label,
+    (b) => nameOf(b) === label,
   );
   same?.focus();
+}
+
+/** nameOf is a button's accessible name: its label, or its words. */
+function nameOf(button: HTMLButtonElement): string {
+  return button.getAttribute("aria-label") ?? button.textContent;
+}
+
+/**
+ * arrowAction is a row's way on, drawn as a round arrow. Its label names the
+ * row, so each arrow has a name of its own for assistive technology and focus.
+ */
+export function arrowAction(label: string, onPress: () => void): HTMLElement {
+  const action = el("button", "attention-ask");
+  action.setAttribute("type", "button");
+  action.setAttribute("aria-label", label);
+  action.addEventListener("click", onPress);
+  return action;
 }
 
 /** A view's draw: the card for one result, rebuilt under root. */
@@ -169,4 +194,9 @@ export function strengthMeter(band: StrengthBand, word: string): HTMLElement {
   for (let i = 0; i < 3; i++) bars.appendChild(el("i"));
   node.append(bars, word);
   return node;
+}
+
+/** eyebrow mirrors `Eyebrow` in its label use: the small title over a line. */
+export function eyebrow(text: string): HTMLElement {
+  return el("span", "t-eyebrow", text);
 }

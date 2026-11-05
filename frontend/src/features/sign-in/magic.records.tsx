@@ -15,13 +15,14 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ChangeList } from "../../components/changelist";
 import { ReceiptReview } from "../../components/receiptreview";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
@@ -68,7 +69,12 @@ export function LineRecordsOpener({
   const titleId = useId();
   return (
     <>
-      <Button variant="link" onClick={() => setOpen(true)}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={() => setOpen(true)}
+      >
         {summary}
       </Button>
       <Modal
@@ -149,11 +155,11 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   return (
     <li className="magic-record">
       <div className="magic-record-head">
-        {href ? <a href={href}>{label}</a> : <span>{label}</span>}
+        {href ? <AppLink href={href}>{label}</AppLink> : <span>{label}</span>}
         <RecordActions record={record} />
       </div>
       <time className="t-caption" dateTime={record.occurred_at}>
-        {formatDateTime(record.occurred_at, locale, viewerZone())}
+        {formatDateTime(record.occurred_at, locale, browserZone())}
       </time>
       <ChangeList changes={record.changes} />
     </li>

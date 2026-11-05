@@ -10,9 +10,12 @@ package approvals
 // attacker-influenced, and these cases pin what may reach their screen.
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestSanitizeSummaryStripsWhatCanMisleadAReader(t *testing.T) {
@@ -74,5 +77,43 @@ func TestSanitizeSummaryCutsOnARuneBoundary(t *testing.T) {
 		if len(got) > maxSummaryLen {
 			t.Errorf("bounded summary is %d bytes at offset=%d, want at most %d", len(got), offset, maxSummaryLen)
 		}
+	}
+}
+
+// The parts reach the same screen as the summary, so each piece is cleaned
+// alike. A field whose name cleans away is dropped.
+func TestSanitizeSummaryPartsCleansEveryPiece(t *testing.T) {
+	got := SanitizeSummaryParts(&crmcontracts.ApprovalSummaryParts{
+		Sentence: "Send to \u202emoc.rekcatta@ved\u202c",
+		Fields: []crmcontracts.ApprovalSummaryField{
+			{Field: "to", Value: "a@b.test\nApproved by security"},
+			{Field: "\u200b", Value: "hidden"},
+		},
+		MoreFields: -3,
+	})
+	want := crmcontracts.ApprovalSummaryParts{
+		Sentence:   "Send to moc.rekcatta@ved",
+		Fields:     []crmcontracts.ApprovalSummaryField{{Field: "to", Value: "a@b.test Approved by security"}},
+		MoreFields: 1,
+	}
+	if got == nil || got.Sentence != want.Sentence || got.MoreFields != want.MoreFields || !slices.Equal(got.Fields, want.Fields) {
+		t.Errorf("cleaned parts = %+v, want %+v", got, want)
+	}
+	if SanitizeSummaryParts(nil) != nil {
+		t.Error("no parts cleaned into some")
+	}
+}
+
+// A withheld plan hides the summary in both forms; the parts carry the same
+// values the joined line does.
+func TestWithholdingThePayloadHidesTheSummaryParts(t *testing.T) {
+	summary := "Update record deal: amount=100"
+	approval := crmcontracts.Approval{
+		Summary:      &summary,
+		SummaryParts: &crmcontracts.ApprovalSummaryParts{Sentence: "Update record deal"},
+	}
+	withholdPayload(&approval)
+	if approval.Summary != nil || approval.SummaryParts != nil {
+		t.Errorf("withheld approval still shows summary %v or parts %+v", approval.Summary, approval.SummaryParts)
 	}
 }

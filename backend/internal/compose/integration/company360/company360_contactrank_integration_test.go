@@ -45,6 +45,9 @@ func TestCompany360RanksContactsBeforeTruncatingTheSection(t *testing.T) {
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, "Re: your proposal",
 		"inbound", company360Clock.AddDate(0, 0, -3))
 	integration.LinkActivity(t, owner, mail, "contact", waiting)
+	// Named as its sender, as capture does: their own message is what makes
+	// the contact the one we owe.
+	integration.LinkActivitySender(t, owner, mail, waiting)
 
 	view, err := company360Service(e).Assemble(ctx, ids.CompanyID{UUID: company})
 	if err != nil {

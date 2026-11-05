@@ -357,9 +357,13 @@ func (s *Service) freezeWalk(
 	// that failed would abort the page's whole transaction, so "a walk we could
 	// not record costs the reader their next page, not their day" would become
 	// a 500 three lanes later. Its own transaction is what keeps that true.
+	// Detached also outlives a caller who left, so that case is refused here.
+	if ctx.Err() != nil {
+		return walkState{}
+	}
 	id, err := s.walks.Freeze(
 		s.detached(ctx), fingerprint(scope, filter, s.taskOwner), asOf,
-		frozenBuckets(bucketsOf(rows)), frozenRows(rows))
+		frozenBuckets(bucketsOf(outstanding(rows, s.view))), frozenRows(rows))
 	if err != nil {
 		return walkState{}
 	}

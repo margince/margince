@@ -16,21 +16,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--space-6);
-}
-.record-split-details,
-.record-split-sheet {
-  background: var(--pane);
-  border: 1px solid var(--paneEdge);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-rest);
-  min-inline-size: 0;
-}
-/* Only the two main cards rest on a shadow. A pane inside one is a box in a
-   box, and its hairline alone separates it. */
-.record-split-details .panel,
-.record-split-sheet .panel {
-  box-shadow: none;
+  gap: var(--gapPanes);
 }
 
 .record-split-details {
@@ -38,49 +24,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-5);
-  position: sticky;
-  inset-block-start: 0;
-  max-block-size: calc(
-    100dvh -
-    var(--topbarH, 0px) -
-    var(--pageGapTop, 0px) -
-    var(--space-6)
-  );
-  overflow-y: auto;
-  /* The card scrolls only to stay in view, so its bar is no part of the
-     picture until the pointer is on the card. */
-  scrollbar-color: transparent transparent;
-}
-/* Under :where() so the shell's accent still lights the bar itself
-   (app.css). */
-.record-split-details:where(:hover) {
-  scrollbar-color: var(--borderControl) transparent;
-}
-/* Chrome and Safari draw a 6px bar from the WebKit pseudo-elements, which
-   they ignore while either standard property is set; Firefox keeps the thin
-   standard bar. Three classes outrank the shell's hover rule (app.css). */
-@supports selector(::-webkit-scrollbar) {
-  .record-split .record-split-row .record-split-details {
-    scrollbar-width: auto;
-    scrollbar-color: auto;
-  }
-  .record-split-details::-webkit-scrollbar {
-    width: 6px;
-  }
-  /* The track stops short of the card's rounded corners. */
-  .record-split-details::-webkit-scrollbar-track {
-    margin: var(--r-lg) 0;
-  }
-  .record-split-details::-webkit-scrollbar-thumb {
-    background: transparent;
-  }
-  .record-split-details:hover::-webkit-scrollbar-thumb {
-    background: var(--borderControl);
-  }
-  .record-split-details::-webkit-scrollbar-thumb:hover {
-    background: var(--accent);
-  }
+  padding: var(--padPane);
 }
 .record-split-sheet {
   flex: 1 1 0;
@@ -95,8 +39,8 @@
   flex-direction: column;
   gap: var(--space-3);
   padding-block-end: var(--space-5);
-  margin-inline: calc(-1 * var(--space-5));
-  padding-inline: var(--space-5);
+  margin-inline: calc(-1 * var(--padPane));
+  padding-inline: var(--padPane);
   border-block-end: 1px solid var(--borderSubtle);
 }
 .record-split-identity {
@@ -116,6 +60,31 @@
   line-clamp: 3;
   overflow: hidden;
 }
+/* The name as its own edit pill, in the heading's type. The text inside the
+   pill holds the clamp, so the h1 clips nothing and the focus ring shows whole. */
+.record-split-rename {
+  flex: 1;
+  min-inline-size: 0;
+}
+.record-split-rename .record-split-name {
+  display: block;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+  overflow: visible;
+}
+.record-split-rename .editable-value {
+  font: inherit;
+  color: inherit;
+}
+/* The pill is one box on the h1's one line, so the text inside it holds the
+   three-line clamp; the face's padding stays outside the clip. */
+.record-split-name-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
 .record-split-lines {
   display: flex;
   flex-direction: column;
@@ -129,19 +98,15 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The verbs as one bordered bar of tiles, glyph over word, sharing the width.
-   A glyph-only verb shows its accessible name as the word, so the tile and
-   the screen reader say one thing. The one filled verb runs full width above
-   the tiles; a refusal sentence the verbs point at drops under them. */
+/* The verbs as one row of tiles, glyph over word, sharing the width, with no
+   box of their own. A glyph-only verb shows its accessible name as the word, so
+   the tile and the screen reader say one thing. The one filled verb runs full
+   width above the tiles; a refusal sentence the verbs point at drops under. */
 .record-split-verbs {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 0;
-  padding: 2px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-control);
-  background: var(--bgElevated);
 }
 /* A one-pixel basis keeps every tile on one row in equal widths, however
    narrow the sheet; a wider one wrapped a verb or two onto a ragged second
@@ -173,7 +138,7 @@
   border-color: transparent;
   border-inline-width: 0;
   box-shadow: none;
-  background: var(--bgElevated);
+  background: var(--ground);
   font: var(--fontBodySmall);
   text-align: center;
   white-space: nowrap;
@@ -205,7 +170,7 @@
   background: var(--borderSubtle);
 }
 .record-split-verbs .btn:not(.btn-primary):hover {
-  background: var(--bgHover);
+  background: var(--groundHover);
   color: var(--textPrimary);
 }
 /* One short word under the glyph, on one line in every language; the full
@@ -320,7 +285,7 @@
   display: inline;
   min-inline-size: 0;
   padding: 0;
-  background: var(--pane);
+  background: var(--ground);
   color: var(--textSecondary);
   font-weight: var(--fontWeightRegular);
 }
@@ -372,7 +337,7 @@
     flex-direction: column;
     align-items: stretch;
   }
-  .record-split-details {
+  .record-split-row > .record-split-details {
     flex-basis: auto;
     position: static;
     max-block-size: none;
@@ -396,5 +361,15 @@
   }
   .record-split-details .recorddetails > .recorddetails-toggle {
     justify-self: start;
+  }
+}
+/* The first tab stands over the feed's first card, so the two insets move
+   together. */
+@media (max-width: 700px) {
+  .record-split-tabs {
+    padding-inline: var(--padPane);
+  }
+  .record-split-feed {
+    padding: var(--padPane);
   }
 }

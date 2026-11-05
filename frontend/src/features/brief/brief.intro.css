@@ -1,8 +1,7 @@
 /* The morning's greeting over the whole window. One press anywhere ends it, so
  * the whole curtain is the button, and it carries no button chrome of its own.
- * Above the shell's bar, because it stands in for the page under it. The page
- * ground wears the shell's two lit corners, so the curtain and the page under
- * it read as one room. */
+ * Above the shell's bar, because it stands in for the page under it. The
+ * ground is the shell's, so the curtain and the page under it read as one room. */
 .brief-intro {
   position: fixed;
   inset: 0;
@@ -14,10 +13,7 @@
   padding: var(--space-8);
   overflow: hidden;
   border: 0;
-  background:
-    radial-gradient(1100px 760px at 0 0, var(--glowA), transparent 70%),
-    radial-gradient(1100px 760px at 100% 0, var(--glowB), transparent 70%),
-    var(--bgPage);
+  background: var(--bgPage);
   color: var(--textPrimary);
   font: inherit;
   text-align: left;

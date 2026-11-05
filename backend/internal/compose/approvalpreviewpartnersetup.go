@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -18,12 +19,13 @@ import (
 const operationSetUpPartner = "set_up_partner"
 
 type partnerSetUpPreviewRequest struct {
-	PartnerRole       string  `json:"partner_role"`
-	RelationshipStage *string `json:"relationship_stage"`
-	NextStep          *string `json:"next_step"`
-	NextStepDueAt     *string `json:"next_step_due_at"`
-	CompanyID         *string `json:"company_id"`
-	ApprovalID        *string `json:"approval_id"`
+	PartnerKinds      []string `json:"partner_kinds"`
+	PartnerRole       *string  `json:"partner_role"`
+	RelationshipStage *string  `json:"relationship_stage"`
+	NextStep          *string  `json:"next_step"`
+	NextStepDueAt     *string  `json:"next_step_due_at"`
+	CompanyID         *string  `json:"company_id"`
+	ApprovalID        *string  `json:"approval_id"`
 }
 
 // decodePartnerSetUpPreview reads an approval's edited payload by the tool's own
@@ -45,11 +47,19 @@ func decodePartnerSetUpPreview(approval crmcontracts.Approval) (partnerSetUpPrev
 	if err := decoder.Decode(&request); err != nil {
 		return request, false, nil //nolint:nilerr // A malformed stored request is shown as incomplete.
 	}
-	if !crmcontracts.SetUpPartnerRequestPartnerRole(request.PartnerRole).Valid() {
+	if request.PartnerKinds == nil && request.PartnerRole != nil {
+		if !crmcontracts.SetUpPartnerRequestPartnerRole(*request.PartnerRole).Valid() {
+			return request, false, nil
+		}
+		request.PartnerKinds = []string{*request.PartnerRole}
+	}
+	if len(request.PartnerKinds) == 0 {
 		return request, false, nil
 	}
-	if stage := request.RelationshipStage; stage != nil && !crmcontracts.SetUpPartnerRequestRelationshipStage(*stage).Valid() {
-		return request, false, nil
+	for _, kind := range request.PartnerKinds {
+		if !crmcontracts.PartnerKind(kind).Valid() {
+			return request, false, nil
+		}
 	}
 	if due := request.NextStepDueAt; due != nil {
 		if _, err := time.Parse(time.DateOnly, *due); err != nil {
@@ -89,14 +99,14 @@ func (r approvalPreviewReader) partnerSetUpPreview(ctx context.Context, approval
 		out.State = previewStaleState
 		return out, nil
 	}
-	err = contacts.NewStore(r.db).CheckPartnerSetUp(ctx, ids.From[ids.CompanyKind](company))
+	err = contacts.NewStore(r.db).CheckPartnerSetUp(ctx, ids.From[ids.CompanyKind](company), request.RelationshipStage)
 	if previewUnavailable(err) {
 		return out, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	details := []crmcontracts.ApprovalPreviewDetail{previewDetail("partner_role", request.PartnerRole)}
+	details := []crmcontracts.ApprovalPreviewDetail{previewDetail("partner_kinds", strings.Join(request.PartnerKinds, ","))}
 	for _, optional := range []struct {
 		field string
 		value *string

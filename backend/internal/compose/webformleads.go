@@ -5,10 +5,13 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -45,9 +48,13 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	system, key := provenance.WebFormSource, landing.SourceKey
 	subject := "Website form: " + landing.FormName
 	body := webFormNote(landing)
+	raw, err := webFormRaw(landing)
+	if err != nil {
+		return err
+	}
 	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
-		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource,
+		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource, Raw: &raw,
 	})
 	if err != nil {
 		return fmt.Errorf("compose: writing the website form's note: %w", err)
@@ -55,9 +62,9 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 	return nil
 }
 
-// lead answers the record the note belongs on. Nil with no error is a contact
-// this principal may not read. Its owner has a task about it, and nothing more
-// is written.
+// lead answers the record the note belongs on. Nil with no error means nothing
+// more is written. That is a contact this principal may not read, whose owner
+// has a task about it, or an address on the erasure list.
 func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*activities.ActivityLinkInput, error) {
 	active, err := l.catalog.ActiveColumns(ctx, "lead")
 	if err != nil {
@@ -86,6 +93,11 @@ func (l webFormLeads) lead(ctx context.Context, landing webforms.Landing) (*acti
 			return nil, nil //nolint:nilnil // a contact this principal may not read has no note target, and that is no failure
 		}
 		return &activities.ActivityLinkInput{EntityType: string(recordTypeContact), EntityID: held.ContactID.UUID}, nil
+	}
+	if _, erased := errors.AsType[*storekit.ErasedIdentifierError](err); erased {
+		// The visitor gets the receipt every post gets. A refusal would tell an
+		// anonymous sender that the address belongs to an erased subject.
+		return nil, nil //nolint:nilnil // an erased address has no note target, and that is no failure
 	}
 	if err != nil {
 		return nil, err
@@ -189,6 +201,44 @@ func webFormNote(landing webforms.Landing) string {
 		return consent + sent
 	}
 	return consent + "\n\n" + sent
+}
+
+// webFormRaw keeps the submission field by field on the note, where the
+// activity read answers it as `web_form`. The body says the same as text.
+//
+//craft:ignore naked-any raw is the activity's free-form source payload column
+func webFormRaw(landing webforms.Landing) (map[string]any, error) {
+	e := landing.Enquiry
+	sent := crmcontracts.WebFormSubmission{
+		Message: optional(e.Message), FullName: optional(e.FullName), Email: e.Email,
+		Phone: optional(e.Phone), Company: optional(e.Company), Title: optional(e.Title),
+		Extra: webFormValues(e.Extra), PageUrl: optional(e.PageURL), Referrer: optional(e.Referrer),
+		Campaign: webFormValues(e.UTM),
+	}
+	if landing.ConsentWording != nil {
+		formID := openapi_types.UUID(landing.FormID)
+		sent.Consent = &crmcontracts.WebFormConsent{
+			Ticked: e.Consent, Wording: *landing.ConsentWording, PolicyVersion: landing.ConsentPolicyVersion,
+			FormId: &formID, FormName: optional(landing.FormName), PageUrl: optional(e.PageURL),
+		}
+	}
+	encoded, err := json.Marshal(sent)
+	if err != nil {
+		return nil, fmt.Errorf("compose: encoding the website form's fields: %w", err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(encoded, &raw); err != nil {
+		return nil, fmt.Errorf("compose: decoding the website form's fields: %w", err)
+	}
+	return raw, nil
+}
+
+func webFormValues(fields []webforms.Field) []crmcontracts.WebFormValue {
+	out := make([]crmcontracts.WebFormValue, len(fields))
+	for i, f := range fields {
+		out[i] = crmcontracts.WebFormValue{Name: f.Name, Value: f.Value}
+	}
+	return out
 }
 
 // webFormConsent is the form's own record of its consent box. The admin's

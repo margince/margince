@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { AppLink } from "../../design-system/applink";
 import { formatNumber } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -44,21 +45,21 @@ export function CompanyHeadLines({
     <>
       {company.industry && <span>{industryWords(t, company.industry)}</span>}
       {website && (
-        <a className="entity-link" href={website}>
+        <AppLink className="entity-link" href={website}>
           {displayHost(website)}
-        </a>
+        </AppLink>
       )}
       {wayIn?.contributor_contact_id && (
         <span>
           {t("co.pulse.strongestLead")}{" "}
           {/* No space before the tail: it opens with its own comma. */}
           {named ? (
-            <a
+            <AppLink
               className="entity-link"
               href={routeHash({ screen: "contacts", id: named.contact_id })}
             >
               {named.full_name}
-            </a>
+            </AppLink>
           ) : (
             <EntityRef kind="contact" id={wayIn.contributor_contact_id} />
           )}

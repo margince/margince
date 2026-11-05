@@ -1,7 +1,9 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
 import {
   interval,
   REPORTING_FIXTURE_ZONE,
+  reportingMetricNames,
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
@@ -12,10 +14,13 @@ import {
   jsonResponse,
   meRoute,
   type RouteMap,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import type { ReportingEvaluation } from "./reporting.model";
+import { reportingCatalogKey } from "./reporting.queries";
 
 export {
+  reportingMetricNames,
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
@@ -202,6 +207,7 @@ function sectionDefinition(
 ): MetricDefinition {
   return {
     id,
+    label: reportingMetricNames[id],
     version: "1",
     unit,
     temporal_basis,
@@ -241,13 +247,36 @@ export const reportingSectionMetrics: readonly MetricDefinition[] = [
   sectionDefinition("partner_activity", "count", "state_at", false, [
     "breakdown",
   ]),
+  sectionDefinition("stage_conversion", "percent", "event_period", false, [
+    "stage_cohort",
+  ]),
 ];
 
 // Every metric a seat with lead, partner and commission access reads.
 export const reportingSectionsCatalog: components["schemas"]["ReportingCatalog"] =
   {
     metrics: [...reportingStoryCatalog.metrics, ...reportingSectionMetrics],
+    presets: reportingStoryCatalog.presets,
   };
+
+// A client that already holds every metric's name, as the loaded Analytics
+// screen does. A component that names metrics then draws at once.
+export function reportingCatalogClient(): QueryClient {
+  const client = storyQueryClient();
+  client.setQueryDefaults(reportingCatalogKey, {
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  client.setQueryData(reportingCatalogKey, {
+    ...reportingSectionsCatalog,
+    metrics: [
+      ...reportingSectionsCatalog.metrics,
+      sectionDefinition("forecast_landing", "money", "state_at", false, [
+        "forecast_support",
+      ]),
+    ],
+  });
+  return client;
+}
 
 const sectionCoverage = { status: "ok", withheld: false } as const;
 

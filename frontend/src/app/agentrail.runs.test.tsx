@@ -132,7 +132,9 @@ describe("AgentRail", () => {
       await settlesOnLine(container, `Summarizing ${name}…`);
       const link = container.querySelector(".arline a");
       expect(link?.textContent).toBe(name);
-      expect(link?.getAttribute("href")).toBe(`${page}${id}`);
+      expect(link?.getAttribute("href")).toBe(
+        `/r/${page.slice(2)}${id}${page}${id}`,
+      );
       if (!link) throw new Error("no record link in the line");
       await user.click(link);
       expect(document.querySelector(".arloose")).toBeNull();
@@ -182,7 +184,7 @@ describe("AgentRail", () => {
     );
     await openPanel(user, container);
     const links = [...panel().querySelectorAll("a")].filter(
-      (a) => a.getAttribute("href") === `#/companies/${id}`,
+      (a) => a.getAttribute("href") === `/r/companies/${id}#/companies/${id}`,
     );
     expect(links.map((a) => a.textContent)).toEqual([
       "Brandt Automotive",

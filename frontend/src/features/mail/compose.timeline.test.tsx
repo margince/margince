@@ -176,7 +176,9 @@ describe("ComposeModal — channel reply", () => {
     await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
 
-    expect(await screen.findByText(/has not granted consent/i)).toBeTruthy();
+    expect(
+      await screen.findByText("This message cannot be sent as it stands."),
+    ).toBeTruthy();
     // The rep's words survive the refusal, and this test proves that, not only
     // that an error rendered. Losing a written reply to a 409 once makes a rep
     // stop trusting the surface.
@@ -214,6 +216,7 @@ describe("TimelineActions", () => {
     kind: "note",
     links: [{ entity_type: "contact", entity_id: "c1" }],
     offers_email: true,
+    email_target: { entity_type: "contact", entity_id: "p-1" },
   };
 
   it("withholds Relink and the audience control on an activity the server says is not the reader's to change", async () => {
@@ -289,6 +292,7 @@ describe("TimelineActions", () => {
       kind: "task",
       automatic_kind: "product",
       offers_email: false,
+      email_target: undefined,
     };
     render(
       <>

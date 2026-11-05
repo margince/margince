@@ -38,7 +38,7 @@ func PreviewNoticeCarryTx(ctx context.Context, tx pgx.Tx, kind string, source id
 			return nil, apperrors.ErrNotFound
 		}
 	}
-	rows, err = tx.Query(ctx, `SELECT id, kind, subject, body, target_type, target_id, created_at, origin, read_at, coalesce(dedupe_key, '')
+	rows, err = tx.Query(ctx, `SELECT `+centreColumns+`
  FROM notice WHERE target_type=@kind AND target_id=@source ORDER BY id LIMIT 501`, pgx.StrictNamedArgs{noticeKindArg: kind, "source": source})
 	if err != nil {
 		return nil, err

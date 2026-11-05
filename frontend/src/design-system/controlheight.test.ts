@@ -229,9 +229,10 @@ const ACCEPTED = new Map<string, string>([
   // 2.2 AA asks 44px of a thumb. `max()` is what keeps them a floor: a later
   // rise in the shared height passes straight through.
   [
-    "user",
-    "the account chip takes the coarse-pointer 44px floor; at a fine pointer it " +
-      "is --controlHeight like every other control",
+    ".topbar-trail .iconbtn, .topbar-trail .btn.btn-bare",
+    "the top bar's glyphs take a 44px-tall box under a coarse pointer, as wide " +
+      "as half the gap to each neighbour allows, and clip their fill to the " +
+      "--controlHeight square inside it (app/topbar.css)",
   ],
   [
     ".segmented button",
@@ -257,6 +258,12 @@ const ACCEPTED = new Map<string, string>([
     "button:has(> .visibility-opens)",
     "a visibility mark's button takes the coarse-pointer 44px floor; the pill " +
       "inside it keeps its own height, so a row of marks keeps one line",
+  ],
+  [
+    ".lt-search, .lt-vtrigger, .lt-vpanel :is(.lt-mi, .lt-mback), .lt-vfoot .btn",
+    "the list's search field and View button, the panel's rows, its way back " +
+      "and its footer verbs take the coarse-pointer 44px floor; at a fine " +
+      "pointer they are --controlHeight",
   ],
   [
     "worklist-rank-select",
@@ -316,6 +323,11 @@ const ACCEPTED = new Map<string, string>([
     ".overflow-menu-items .btn",
     "a Button turned into a menu ROW — the fill, the border and the control " +
       "height all go, and what is left is the Select option's geometry",
+  ],
+  [
+    "compose-choice",
+    "a Button turned into a thread ROW of two lines, as tall as its subject " +
+      "and its summary need",
   ],
   ["stat-card", "a card: the strip's tile, and the tile filling its cell"],
   ["arhit", "the agent orb's hit area, sized to the orb rather than to a verb"],

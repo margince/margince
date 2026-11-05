@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { searchHitRoute } from "../../lib/searchkinds";
@@ -27,9 +28,9 @@ export function NearMatches({
           return (
             <li key={`${match.type}:${match.id}`} className="search-hit">
               {route ? (
-                <a className="entity-link" href={routeHash(route)}>
+                <AppLink className="entity-link" href={routeHash(route)}>
                   {match.title}
-                </a>
+                </AppLink>
               ) : (
                 <span>{match.title}</span>
               )}

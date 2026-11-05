@@ -55,6 +55,7 @@ type EnsureOutcome struct {
 
 // EnsureRequest names one captured message's counterparty for the resolver.
 type EnsureRequest struct {
+	Admission       func(context.Context, pgx.Tx, bool) error
 	Email           string
 	DisplayName     string // untrusted header text
 	Domain          string
@@ -102,6 +103,7 @@ func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedR
 	// The party the ladder judged — see counterpartyDecision.subject.
 	cp := decision.subject
 	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
+		Admission:       s.counterpartyAdmission(rec, ref, cp),
 		Email:           cp.Email,
 		DisplayName:     cp.DisplayName,
 		Domain:          cp.Domain,
@@ -204,16 +206,18 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		// The message landed and named nobody a record could be created for.
 		return counterpartyDecision{}.traced(TraceCaptured, traceReasonNoCounterparty), nil
 	}
-	cp = subject
+	return s.decideMailSubject(ctx, tx, rec, activityID, subject)
+}
 
-	row, decision, ok, err := s.derivationStart(ctx, tx, rec, subject, activityID)
+func (s *Sink) decideMailSubject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.UUID, cp connector.Counterparty) (counterpartyDecision, error) {
+	row, decision, ok, err := s.derivationStart(ctx, tx, rec, cp, activityID)
 	if err != nil || !ok {
 		// decision, not a zero value: derivationStart's no-granting-human arm is
 		// a FAULT the member should see, and it returns before the guarded arm
 		// that reports every other one.
 		return decision, err
 	}
-	decision.subject = subject
+	decision.subject = cp
 	private, _, err := threadIsPrivateTx(ctx, tx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err
@@ -223,6 +227,10 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		// threadIsPrivateTx. The message commits and keeps its audience.
 		return decision.traced(TraceCaptured, TraceReasonPrivateThread), nil
 	}
+	return s.decideCorrespondent(ctx, tx, rec, activityID, cp, row, decision)
+}
+
+func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.UUID, cp connector.Counterparty, row dispositionRow, decision counterpartyDecision) (counterpartyDecision, error) {
 	// T1 correspondence-positive: the workspace has provably written to this
 	// address. Asked of EVERY sender, not only those a suppression rule matched,
 	// since T4 defers the ambiguous class and this answer decides
@@ -293,32 +301,7 @@ func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.
 		return decision.traced(TraceCaptured, TraceReasonRoleMailbox), nil
 	}
 
-	// T3 free-mail (CAP-PARAM-5). A consumer mailbox says what it is not — an
-	// company — so the company is suppressed either way. What it does NOT say
-	// is whether the contact behind it is a counterparty: a customer's private
-	// gmail and a founder's sister arrive identically, and minting on sight put
-	// nineteen of the latter in a shared CRM. So the address defers to the
-	// verdict instead of creating, and only a prior admission (alreadyKnown,
-	// above) or a verdict makes the record.
-	consumer, err := consumerMailSender(ctx, tx, cp.Domain)
-	if err != nil {
-		return counterpartyDecision{}, err
-	}
-	if consumer {
-		decision.suppressCompany = true
-	}
-
-	if !decision.create {
-		deferReason, err := s.deferAmbiguous(ctx, tx, rec, row)
-		if err != nil {
-			return counterpartyDecision{}, err
-		}
-		return decision.traced(TraceDeferred, deferReason), nil
-	}
-	if err := s.askWhoseRecord(ctx, tx, row); err != nil {
-		return counterpartyDecision{}, err
-	}
-	return decision, nil
+	return s.finishMailSubject(ctx, tx, rec, row, cp.Domain, decision)
 }
 
 // alreadyDecided applies the tier for an address this workspace has ALREADY
@@ -388,41 +371,7 @@ func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) 
 		return "", nil
 	}
 	var status string
-	err := tx.QueryRow(ctx, `
-		SELECT CASE
-		         WHEN EXISTS (
-		           SELECT 1 FROM contact_email pe JOIN contact p ON p.id = pe.contact_id
-		            WHERE pe.email = $1 AND p.archived_at IS NULL
-		              AND pe.from_correspondence) THEN 'real'
-		         ELSE coalesce((
-		           -- A real-status row whose KIND names no human is not an
-		           -- instruction to create one. role_mailbox and
-		           -- company_sender resolve to real because the mail is
-		           -- genuine correspondence that must stay visible — but there
-		           -- is nobody to record, and reading the status alone would
-		           -- create the very contact the verdict declined to create,
-		           -- on the sender's second message.
-		           SELECT CASE
-		                    WHEN status = 'real' AND kind IS NOT NULL AND kind <> 'contact'
-		                      THEN 'known_noncontact'
-		                    ELSE status
-		                  END
-		             FROM capture_pending_counterparty
-		            WHERE email = $1
-		              AND status IN ('real', 'noise', 'rejected', 'suppressed')
-		              -- A noise answer settles only the mail it can still reach.
-		              -- Past that, this message is new evidence and gets its own
-		              -- question: otherwise one forged message would silently
-		              -- bar an address forever, and later mail would be neither
-		              -- judged nor hidden -- the worst of both. The other
-		              -- answers do not expire, because real and a human decline
-		              -- are decisions about the SENDER, not about one message.
-		              AND (status <> 'noise'
-		                   OR resolved_at IS NULL
-		                   OR resolved_at >= now() - make_interval(secs => $2))
-		            ORDER BY resolved_at DESC NULLS LAST
-		            LIMIT 1), '')
-		       END`, normalized, noiseVerdictReach.Seconds()).Scan(&status)
+	err := tx.QueryRow(ctx, "SELECT "+priorDispositionExpression("$1", "$2"), normalized, noiseVerdictReach.Seconds()).Scan(&status)
 	if err != nil {
 		return "", fmt.Errorf("capture: reading the prior disposition: %w", err)
 	}
@@ -476,6 +425,29 @@ func (s *Sink) decideCounterpartyGuarded(ctx context.Context, tx pgx.Tx, rec con
 	}
 	if err := sp.Commit(ctx); err != nil {
 		return counterpartyDecision{}, fmt.Errorf("capture: committing the counterparty gate: %w", err)
+	}
+	return decision, nil
+}
+
+func (s *Sink) finishMailSubject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, row dispositionRow, domain string, decision counterpartyDecision) (counterpartyDecision, error) {
+	// Consumer addresses defer to a verdict; their domain alone proves no business relationship.
+	consumer, err := consumerMailSender(ctx, tx, domain)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	if consumer {
+		decision.suppressCompany = true
+	}
+
+	if !decision.create {
+		deferReason, err := s.deferAmbiguous(ctx, tx, rec, row)
+		if err != nil {
+			return counterpartyDecision{}, err
+		}
+		return decision.traced(TraceDeferred, deferReason), nil
+	}
+	if err := s.askWhoseRecord(ctx, tx, row); err != nil {
+		return counterpartyDecision{}, err
 	}
 	return decision, nil
 }

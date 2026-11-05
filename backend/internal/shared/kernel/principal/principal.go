@@ -129,9 +129,15 @@ type Principal struct {
 // Such an agent may do without a human's approval whatever that colleague could
 // do unaided in the product. Their live grants bound it at the store, as they
 // bound the colleague. A passportless agent is automatic work with nobody behind
-// it, and keeps the confirm-first tier and the human-edit precedence split.
+// it, and keeps the confirm-first tier.
 func (p Principal) ActsAsItsUser() bool {
 	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
+}
+
+// HumanOrItsAgent reports whether p is a human, or an agent acting for one on
+// their passport. Either may do what that human does in the product.
+func (p Principal) HumanOrItsAgent() bool {
+	return p.Type == PrincipalHuman || p.ActsAsItsUser()
 }
 
 // Action is one CRUD verb of the object-level RBAC matrix

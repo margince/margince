@@ -13,6 +13,7 @@ import {
 } from "../format/format";
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
+import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
@@ -108,7 +109,7 @@ function DealCardCompany({
         // stopPropagation keeps the click off the card's stretched anchor.
         // preventDefault would be wrong: it would leave the card's own
         // navigation to fire while this link did nothing.
-        <a
+        <AppLink
           className="deal-company-name deal-company-link"
           href={deal.companyHref}
           onClick={(event) => {
@@ -117,7 +118,7 @@ function DealCardCompany({
           }}
         >
           {deal.company}
-        </a>
+        </AppLink>
       ) : (
         <span className="deal-company-name">{deal.company}</span>
       )}
@@ -443,7 +444,7 @@ export function DealCard({
           NAME rather than sitting empty, so the accessible name of the link is
           the deal a reader is opening — an empty stretched anchor reads to a
           screen reader as a link with no text. */}
-      <a
+      <AppLink
         ref={dealLink}
         className="deal-name deal-open"
         href={href}
@@ -453,7 +454,7 @@ export function DealCard({
         onClick={(event) => onOpen?.(deal, event)}
       >
         {deal.name}
-      </a>
+      </AppLink>
       <span className="deal-figure">
         {/* Compact, because a card is compared at a glance: the column head
             sums the stage exactly and the deal states its own figure whole. */}

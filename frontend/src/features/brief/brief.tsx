@@ -20,13 +20,14 @@ import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
+import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
 import {
   MeetingDetailModal,
   TaskDetailModal,
 } from "../worklist/taskdetailmodal";
-import { drawerScope } from "../worklist/worklist.address";
+import { drawerQueue } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";
 import {
   useHandledForYou,
@@ -40,13 +41,20 @@ import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
 import { BriefFeed } from "./brief.feed";
+import {
+  dayRows,
+  FOCUS_PARAM,
+  identity,
+  rowByKey,
+  useStaleFocusCleared,
+} from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
 import { BriefIntro } from "./brief.intro";
 import { homeJourneyMarks } from "./brief.journey";
 import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
-import { BriefReadingsStrip } from "./brief.readings";
+import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
@@ -54,23 +62,45 @@ import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
+// The queue the button opens, which keeps the drawer's scope and owner from
+// the address. It shares the drawer's query key, so the two report one total.
+function useDrawerDay(
+  params: ReturnType<typeof useUrlParams>[0],
+  drawerOpen: boolean,
+  homeDay: ReturnType<typeof briefDay>,
+) {
+  const owner = params.get("owner") ?? "";
+  const drawer = drawerQueue(params);
+  // The server counts every candidate before it applies a view, so Home's own
+  // read already holds a closed drawer's total over the same queue.
+  const homeQueue = drawer.scope === "mine" && owner === "";
+  const queued = useWorklist(
+    drawer.scope,
+    "all",
+    owner === "" ? undefined : owner,
+    drawerOpen || !homeQueue,
+    drawer.view,
+  );
+  if (homeQueue && !drawerOpen) {
+    // A disabled query stops refetching, so its cached day goes stale.
+    return { drawer, queuedDay: homeDay };
+  }
+  const queuedDay =
+    briefDay(queued.data?.pages) ?? (homeQueue ? homeDay : undefined);
+  return { drawer, queuedDay };
+}
+
 export function BriefScreen() {
   const t = useT();
   const nowMs = useNow(60_000);
   const me = useMe();
-  const query = useWorklist("mine", "all");
+  // The drawer's default queue, so an open drawer joins this read.
+  const query = useWorklist("mine", "all", undefined, true, DEFAULT_VIEW);
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
-  // The queue the button opens, which keeps the drawer's scope and owner from
-  // the address. It shares the drawer's query key, so the two report one total.
-  const owner = params.get("owner") ?? "";
-  const queued = useWorklist(
-    drawerScope(params),
-    "all",
-    owner === "" ? undefined : owner,
-  );
-  const queuedDay = briefDay(queued.data?.pages);
+  const drawerOpen = params.get("queue") === "1";
+  const { drawer, queuedDay } = useDrawerDay(params, drawerOpen, day);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
   const brief = useMorningBrief();
@@ -87,8 +117,8 @@ export function BriefScreen() {
   const queueToggle = (
     <PageAsideToggle
       controlled={{
-        open: params.get("queue") === "1",
-        count: queuedDay ? pillCount(queuedDay, "all") : undefined,
+        open: drawerOpen,
+        count: queuedDay ? pillCount(queuedDay, "all", drawer.view) : undefined,
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
@@ -102,6 +132,7 @@ export function BriefScreen() {
       }}
     />
   );
+  // The dial ends the facts' line, and the week stepper the title's.
   const glance = (
     <BriefGlance
       view={address.view}
@@ -123,13 +154,12 @@ export function BriefScreen() {
       week={review.data}
       firstName={firstName}
       now={new Date(nowMs)}
+      pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
       titleAside={morning ? undefined : <WeekStepper />}
     />
   );
-  // The dial stands on the date's line, and the week stepper on the title's.
-  const head = <div className="brief-head">{glance}</div>;
   return (
     <div className="wrap brief-wrap">
       {/* A link to one decision, from a notice or a receipt, opens it here. */}
@@ -137,12 +167,12 @@ export function BriefScreen() {
       {morning && (
         <BriefIntro firstName={firstName} day={day} now={new Date(nowMs)} />
       )}
-      <BriefBody
-        address={address}
-        query={query}
-        head={head}
-        queueToggle={queueToggle}
-      />
+      {/* The head stands over the panes in both views, so the dial never
+          moves when it is pressed. */}
+      <div className="brief-frame">
+        {glance}
+        <BriefBody address={address} query={query} queueToggle={queueToggle} />
+      </div>
       <BriefQueue />
     </div>
   );
@@ -153,33 +183,29 @@ export { deckItems } from "../../lib/brief.decisions.items";
 function BriefBody({
   address,
   query,
-  head,
   queueToggle,
 }: Readonly<{
   address: BriefAddress;
   query: ReturnType<typeof useWorklist>;
-  head: ReactNode;
   queueToggle: ReactNode;
 }>) {
   if (address.view === "weekly")
     return (
-      <div className="brief-weekly-page">
-        {head}
-        <WeeklySection plan={<PlanSection />} />
-      </div>
+      <PageZones
+        shape="single"
+        panes
+        mainClassName="brief-weekly-page"
+        main={<WeeklySection plan={<PlanSection />} />}
+      />
     );
-  return (
-    <PersonalMorning query={query} head={head} queueToggle={queueToggle} />
-  );
+  return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 
 function PersonalMorning({
   query,
-  head,
   queueToggle,
 }: Readonly<{
   query: ReturnType<typeof useWorklist>;
-  head: ReactNode;
   queueToggle: ReactNode;
 }>) {
   const t = useT();
@@ -189,17 +215,22 @@ function PersonalMorning({
   const [params] = useUrlParams();
   const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
-  const context = day?.focus?.items.find(
-    (item) => `${item.source}-${item.id}` === selected,
+  const rows = dayRows(day, query.data?.pages);
+  // A row named by the address opens as a click on it does; mail links there.
+  const linkedFocus = params.get(FOCUS_PARAM);
+  const context = rowByKey(rows, linkedFocus || selected);
+  useStaleFocusCleared(
+    linkedFocus,
+    context,
+    query.isSuccess && !query.isFetching,
   );
   // A task named by the address, as a reminder notification opens it. It
   // opens whether or not the day lists it, and writes only where a row the
   // reader holds offers `complete`.
   const linkedTask = context ? undefined : params.get(TASK_PARAM);
-  const linkedRow = [
-    ...(day?.focus?.items ?? []),
-    ...(query.data?.pages.flatMap((page) => page.queue) ?? []),
-  ].find((item) => item.source === "task" && item.id === linkedTask);
+  const linkedRow = linkedTask
+    ? rowByKey(rows, identity({ source: "task", id: linkedTask }))
+    : undefined;
   const state = query.isPending
     ? "loading"
     : query.isError && !day
@@ -222,16 +253,16 @@ function PersonalMorning({
           figures and the meetings the work is read against. */}
       <PageZones
         shape="aside"
+        panes
         className="brief-morning"
         mainClassName="brief-main"
         asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={
           <>
-            {head}
             <BriefFeed
               day={day}
-              onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+              onContext={(item) => setSelected(identity(item))}
               state={state}
               changed={changedSinceBrief(day)}
               refreshFailed={query.isRefetchError}
@@ -272,6 +303,18 @@ function PersonalMorning({
                 />
               </div>
             )}
+            {/* The figures stand above the meetings, so their wait holds
+                their place rather than letting the meetings rise and fall. */}
+            {/* Hidden from a screen reader: the meetings below already
+                announce the wait. */}
+            {state === "loading" && (
+              <div className="brief-overview" aria-hidden="true">
+                <Eyebrow as="h2" className="brief-section-label">
+                  {t("brief.rail.numbers")}
+                </Eyebrow>
+                <BriefReadingsPending />
+              </div>
+            )}
             <SchedulePanel day={day} state={state} />
             <BriefChanges />
           </>
@@ -290,7 +333,10 @@ function PersonalMorning({
         <FocusDetails
           item={context}
           update={update}
-          onClose={() => setSelected("")}
+          onClose={() => {
+            setSelected("");
+            if (linkedFocus) replaceDial(FOCUS_PARAM, undefined);
+          }}
         />
       )}
     </>

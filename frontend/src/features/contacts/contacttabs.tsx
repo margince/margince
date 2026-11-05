@@ -1,9 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import {
-  type JustIn,
-  LatestInboundPanel,
-} from "../../components/latestinbound";
+import { type JustIn, JustInScope } from "../../components/latestinbound";
 import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -15,7 +13,6 @@ import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab } from "../records/history";
 import {
   CHRONOLOGY_EMPTY_KEYS,
@@ -34,6 +31,7 @@ import { callBackNumber } from "./contactmemory.rows";
 import { timelineState } from "./contacttimelinestate";
 import "./contact360.css";
 import { invalidateRecord } from "../../lib/recordwritekeys";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The tabs beside Overview that read what the 360 already assembled — the same
 // rule the overview cards hold to (contactcards.tsx): a tab can never show a
@@ -86,19 +84,23 @@ function ContactRowActions({
   );
 }
 
-/** The newest unanswered thing the contact sent, leading the Overview. */
+/** The newest unanswered thing the contact sent, for the Overview's Next bar. */
 export function ContactLatestInbound({
   latest,
   contactId,
   view,
+  children,
 }: Readonly<{
   latest: JustIn | undefined;
   contactId: string;
   view: Contact360;
+  children: ReactNode;
 }>) {
   return (
-    <LatestInboundPanel
+    <JustInScope
       latest={latest}
+      entityType="contact"
+      entityId={contactId}
       actions={(activity) => (
         <ContactRowActions
           activity={activity}
@@ -107,7 +109,9 @@ export function ContactLatestInbound({
           answerOnly
         />
       )}
-    />
+    >
+      {children}
+    </JustInScope>
   );
 }
 
@@ -139,7 +143,7 @@ export function ContactTimelineTab({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const { filter, filters, setFilters, openCut, kinds } =
     useChronologyCut(contactId);
   // Every cut renders through the ONE chronicle, off the same groups: the
@@ -168,7 +172,7 @@ export function ContactTimelineTab({
     // says so instead of printing an integer. No name resolver: a mail filed
     // here may have been sent by somebody else. A resolved link name would
     // hide that sender behind this contact's own.
-    values: { currency: null, locale, zone: recordZone },
+    values: { currency: null, locale, zone: readerZone },
     renderActions: (activity) => (
       <ContactRowActions
         activity={activity}
@@ -242,7 +246,7 @@ export function ContactTimelineTab({
           >
             <List
               groups={groupChronology(chronology.entries, timeline.hasNextPage)}
-              zone={recordZone}
+              zone={readerZone}
             />
           </SurfaceState>
         )}

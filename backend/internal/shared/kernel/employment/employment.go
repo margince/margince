@@ -65,6 +65,15 @@ func IsCurrentSQL(date string, asserted ...string) string {
 	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
 }
 
+// CurrentMembershipSQL is a live employment edge that still belongs to its contact.
+func CurrentMembershipSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return prefix + "kind = 'employment' AND " + prefix + "archived_at IS NULL AND " + IsCurrentSQL(prefix+"ended_at")
+}
+
 // CurrentPrimarySQL is what a READER of `is_current_primary` means:
 // the flag AND the employment still being theirs. Spelled once so a new reader
 // cannot trust the flag alone, which is what let somebody go on counting at a

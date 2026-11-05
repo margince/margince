@@ -43,6 +43,10 @@ const subjectKindDeal = "deal"
 // distinct from one that is missing or out of range.
 const codeInvalid = "invalid"
 
+// codeOutOfRange refuses a moment past the ceiling, for an expiry and a
+// deferral alike.
+const codeOutOfRange = "out_of_range"
+
 // slotOutcome names the answer kind, in the one place it is spelled.
 const slotOutcome = "outcome"
 
@@ -59,6 +63,21 @@ var noExpiry *time.Time
 // made from, and "the value is correct" is a claim about a value on a day —
 // values change, and an uncapped suppression outlives the fact it rested on.
 const MaxSuppression = 90 * 24 * time.Hour
+
+// LiveRemindAtSQL is when a deferral actually comes back: the moment it named,
+// or MaxSuppression after it was given, whichever is sooner.
+//
+// Read rather than trusted, because answers written before the ceiling was
+// refused still name a moment past it. days is SQL the caller renders, so a
+// caller binds it however its own statement binds parameters.
+func LiveRemindAtSQL(answer, days string) string {
+	return "LEAST(" + answer + ".remind_at, " + answer +
+		".created_at + make_interval(days => " + days + "))"
+}
+
+// MaxSuppressionDays is MaxSuppression as the whole number of days a SQL
+// interval takes.
+func MaxSuppressionDays() int { return int(MaxSuppression / (24 * time.Hour)) }
 
 // Resolution is somebody's answer to a finding.
 type Resolution struct {
@@ -104,17 +123,27 @@ func (s *Store) ResolveTx(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID, 
 // admitResolution checks who answers and what, before any transaction, and
 // returns the expiry the answer is stored with.
 func admitResolution(ctx context.Context, in Resolution, now time.Time) (principal.Principal, *time.Time, error) {
-	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+	actor, err := answeringActor(ctx)
+	if err != nil {
 		return principal.Principal{}, nil, err
+	}
+	settled, err := checkResolution(in, now)
+	return actor, settled, err
+}
+
+// answeringActor is who may answer any finding at all. AnswerableFindings asks
+// it too, so a list never offers an answer this refuses.
+func answeringActor(ctx context.Context) (principal.Principal, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionUpdate); err != nil {
+		return principal.Principal{}, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
 		// An answer is given BY somebody. A system principal has nobody to
 		// attribute one to, and the auto-resolve path is a different door.
-		return principal.Principal{}, nil, apperrors.ErrPermissionDenied
+		return principal.Principal{}, apperrors.ErrPermissionDenied
 	}
-	settled, err := checkResolution(in, now)
-	return actor, settled, err
+	return actor, nil
 }
 
 func (s *Store) resolveIn(
@@ -206,6 +235,9 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	if signalErr := auth.Require(ctx, subjectKindSignal, principal.ActionUpdate); signalErr == nil {
 		kinds = append(kinds, subjectKindSignal)
 	}
+	if callErr := auth.Require(ctx, "forecast", principal.ActionCreate); callErr == nil {
+		kinds = append(kinds, SubjectKindForecastCall)
+	}
 	if len(kinds) == 0 {
 		return dealErr
 	}
@@ -225,6 +257,9 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	if kind == subjectKindSignal {
 		return ensureSignalAnswerable(ctx, tx, subjectID)
 	}
+	if kind == SubjectKindForecastCall {
+		return ensureCallAnswerable(ctx, tx, subjectID)
+	}
 	if kind != subjectKindDeal {
 		return apperrors.ErrNotFound
 	}
@@ -234,6 +269,24 @@ func ensureAnswerable(ctx context.Context, tx pgx.Tx, exceptionID ids.UUID) erro
 	// Not the live probe: an answer puts nothing on the deal, and CloseDeparted
 	// closes the findings of a deal that was archived.
 	return auth.EnsureWritable(ctx, tx, subjectKindDeal, subjectID)
+}
+
+// ensureCallAnswerable admits the call's own author: an answer about a call
+// is the author saying the number still stands, or that they called again.
+func ensureCallAnswerable(ctx context.Context, tx pgx.Tx, callID ids.UUID) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	var authored bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM forecast_call WHERE id = $1 AND author_id = $2)`,
+		callID, actor.UserID).Scan(&authored); err != nil {
+		return fmt.Errorf("assurance: reading who made the call: %w", err)
+	}
+	if !authored {
+		return apperrors.ErrNotFound
+	}
+	return nil
 }
 
 // ReviewOutcomes are the four answers a viability review takes. Revived is
@@ -290,6 +343,15 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 				Message: "a deferral names when it comes back, or it is a dismissal",
 			}
 		}
+		// Refused rather than silently shortened, as an expiry past the ceiling
+		// is. A deferral hides the finding as an expiry does, so it cannot
+		// outlive the fact it rested on either.
+		if in.RemindAt.After(now.Add(MaxSuppression)) {
+			return nil, &values.ParseError{
+				Field: "remind_at", Code: codeOutOfRange,
+				Message: "a finding may be deferred for at most 90 days: a value that was correct in May is a claim about May",
+			}
+		}
 		return noExpiry, nil
 	}
 
@@ -311,7 +373,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	}
 	if !in.ExpiresAt.After(now) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "an expiry in the past suppresses nothing",
 		}
 	}
@@ -320,7 +382,7 @@ func checkResolution(in Resolution, now time.Time) (*time.Time, error) {
 	// believe the finding stays hidden through the next two quarters.
 	if in.ExpiresAt.After(ceiling) {
 		return nil, &values.ParseError{
-			Field: "expires_at", Code: "out_of_range",
+			Field: "expires_at", Code: codeOutOfRange,
 			Message: "a finding may be hidden for at most 90 days: a value that was correct in May is a claim about May",
 		}
 	}

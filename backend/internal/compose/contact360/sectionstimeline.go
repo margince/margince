@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/network"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -70,9 +69,8 @@ func activityScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityContentClause)
 }
 
-// activityDiscoverScope is the DISCOVER gate for the sections that disclose a
-// date and a direction and nothing else (last touch): a limited conversation
-// still counts as a touch, its content stays withheld.
+// activityDiscoverScope is the DISCOVER gate for the timeline rows: a limited
+// conversation still shows as a row, its content withheld.
 func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, error) {
 	return activityScopeUnder(ctx, arg, auth.ActivityDiscoverClause)
 }
@@ -254,9 +252,13 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return nil, false, err
 	}
-	contentArm, err := auth.ActivityAudienceArm(ctx, "a", arg)
-	if err != nil {
-		return nil, false, err
+	// A draft's rows passed the content gate, which holds the audience arm, so
+	// each is readable. Projecting the arm again would plan a second copy.
+	contentArm := "TRUE"
+	if !forDraft {
+		if contentArm, err = auth.ActivityAudienceArm(ctx, "a", arg); err != nil {
+			return nil, false, err
+		}
 	}
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
@@ -288,12 +290,10 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if hasMore {
 		out = out[:sectionCap]
 	}
-	// AFTER the cap, so the statement counts the rows this page returns rather
-	// than the extra one read to detect hasMore. Same reason the summary above
-	// is composed from the shared helper: a contact page whose mail showed no
-	// paperclip while the same rows off /activities showed one is the drift
-	// this twin exists to avoid.
-	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
+	// After the cap, so the statements count the rows this page returns rather
+	// than the extra one read to detect hasMore. The finish is the one
+	// /activities runs, so a row means the same on either page.
+	if err := activities.FinishActivityRows(ctx, tx, opts.activityColumns, out, s.now()); err != nil {
 		return nil, false, err
 	}
 	// A row reaches this page through a Cc or an attendance too, so each row
@@ -301,49 +301,7 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithContactRole(ctx, tx, out, contactID.UUID); err != nil {
 		return nil, false, err
 	}
-	// Every link the caller may see, read the way /activities reads them, so
-	// a row means the same on either page.
-	if err := activities.AttachLinks(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.WithOffersEmail(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
-		return nil, false, err
-	}
-	if err := activities.StampActivityAffordances(ctx, tx, out, s.now()); err != nil {
-		return nil, false, err
-	}
 	return out, hasMore, nil
-}
-
-// lastTouchSection reads the two directions separately. Folding them into
-// one "last touch" hides the only distinction a reader acts on: a contact
-// we mailed a fortnight ago with no reply and one who wrote to us this
-// morning have the same last-touch date and opposite meanings.
-//
-// The set reader over a set of one: this page and a queue row naming the same
-// contact are answered by the statement in lasttouch.go, under the same
-// scopes. The record read above already admitted the contact, so the set
-// reader's own row scope narrows nothing here.
-func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, opts AssembleOptions, out *crmcontracts.Contact360) error {
-	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
-	if err != nil {
-		return err
-	}
-	touch := touched[contactID]
-	out.LastInboundAt = touch.InboundAt
-	out.LastOutboundAt = touch.OutboundAt
-	out.LastLiveInboundAt = touch.LiveInboundAt
-	out.LastContactAt = touch.ContactAt
-	out.LastInboundPrecision = activitywhen.Stated(touch.InboundPrecision)
-	out.LastOutboundPrecision = activitywhen.Stated(touch.OutboundPrecision)
-	out.LastContactPrecision = activitywhen.Stated(touch.ContactPrecision)
-	out.LastLiveInboundPrecision = activitywhen.Stated(touch.LiveInboundPrecision)
-	direction := crmcontracts.RelationshipDirection(touch.Direction())
-	out.RelationshipDirection = &direction
-	return nil
 }
 
 // networkSection answers "who here knows them", warmest first — the

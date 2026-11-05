@@ -35,7 +35,7 @@ func commercialChanges(approval crmcontracts.Approval) (map[string]json.RawMessa
 		changes := map[string]json.RawMessage{fieldStageID: args["to_stage_id"]}
 		keys := []string{"won_without_contract_reason", "won_without_contract_detail"}
 		if approval.Kind != deals.StageProgressionKind {
-			keys = append(keys, "lost_reason", bulkParamNote)
+			keys = append(keys, "lost_reason", "lost_reason_code", bulkParamNote)
 		}
 		for _, key := range keys {
 			if value, ok := args[key]; ok {

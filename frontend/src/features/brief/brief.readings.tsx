@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { StatCard } from "../../design-system/atoms";
+import { Skeleton, StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { useTooltip } from "../../design-system/tooltip";
 import { floorFigure, readsAsFloor } from "../../format/figure";
@@ -12,9 +12,9 @@ import {
   formatNumber,
 } from "../../format/format";
 import { pipelineValueDetail } from "../../format/pipelinevalue";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
 import type { Worklist, WorklistFilter } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
@@ -28,9 +28,9 @@ import {
 } from "./brief.readings.honesty";
 import {
   calendarStandIn,
-  meetingsDetail,
+  meetingsBasis,
+  meetingsFloor,
   meetingsReading,
-  nextMeetingLine,
   type StandIn,
 } from "./brief.readings.meetings";
 
@@ -77,8 +77,8 @@ function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
  * `warning` is deliberately narrow. Neutral ink is the default for every figure on
  * the plate, because a row where four numbers are coloured is a traffic light
  * rather than a comparison. It is spent only where the reading counts something
- * that is BREACHING — somebody waiting, a promise going, a meeting starting
- * with nothing prepared — and never on a figure that is merely large.
+ * that is BREACHING, and never on a figure that is merely large. Breaching means
+ * somebody waiting, a promise going, or a meeting starting not confirmed ready.
  */
 type Reading = Readonly<{
   label: string;
@@ -214,6 +214,7 @@ function LaneReading({
 }
 
 export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -230,6 +231,10 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const scopeCut = scopeWasCut(day);
   const unread = laneUnread(day) || scopeCut;
   const floorOf = floorTest(day);
+  // The server's exact total, present only where nothing behind it was cut.
+  const decisionsTotal = day.counts.find(
+    (count) => count.category === DECISIONS,
+  )?.total;
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -268,21 +273,15 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // prepared is the one fact on this slot a reader must act on before
           // it begins. The count of meetings itself is neither good nor bad.
           warning={meetings.unready !== null && meetings.unready > 0}
-          floor={
-            scopeCut ||
-            day.reach?.find((entry) => entry.source === "meeting")
-              ?.more_available ||
-            day.sources_unavailable.some(
-              (entry) => entry.source === "meeting" || !entry.category,
-            )
-          }
+          floor={scopeCut || meetingsFloor(day, calendar)}
           // A quiet day says when the next conversation is, since a bare zero
           // reads the same whether that is tomorrow or next month.
-          basis={
-            calendar.state === "quiet"
-              ? nextMeetingLine(calendar.next, locale, t, viewerZone())
-              : meetingsDetail(meetings, locale, t, plural)
-          }
+          basis={meetingsBasis(day, calendar, meetings, {
+            locale,
+            t,
+            plural,
+            zone: readerZone,
+          })}
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
           standIn={calendarStandIn(calendar, t)}
@@ -303,7 +302,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
             soonest === null
               ? t("brief.readings.leadsBasis")
               : t("brief.readings.leadsDue", {
-                  value: formatDateTime(soonest, locale, viewerZone()),
+                  value: formatDateTime(soonest, locale, readerZone),
                 })
           }
           unavailable={t("brief.readings.unavailable.leads")}
@@ -314,13 +313,14 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           scope={day.scope}
           label={t("brief.readings.decisions")}
           count={
-            day.sources_unavailable.some(
+            decisionsTotal ??
+            (day.sources_unavailable.some(
               (entry) => entry.category === DECISIONS || !entry.category,
             ) && readings.review === 0
               ? null
-              : readings.review
+              : readings.review)
           }
-          floor={floorOf(DECISIONS)}
+          floor={decisionsTotal === undefined && floorOf(DECISIONS)}
           // Only where something IS held up, and how much of it. Otherwise the
           // plain basis, which says what the figure was taken over and claims
           // nothing about who is waiting.
@@ -336,6 +336,27 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         />
       </StatStrip>
     </section>
+  );
+}
+
+/** One slot per reading the strip above draws, in its order. */
+export const BRIEF_READING_SLOTS = [
+  "urgent",
+  "meetings",
+  "leads",
+  "risk",
+  "decisions",
+] as const;
+
+/** The strip's room while the day is read: its own plate, one reading card's
+ *  height per slot, so what stands under it does not move when it lands. */
+export function BriefReadingsPending() {
+  return (
+    <StatStrip>
+      {BRIEF_READING_SLOTS.map((slot) => (
+        <Skeleton key={slot} width="100%" height="5.5rem" />
+      ))}
+    </StatStrip>
   );
 }
 

@@ -10,10 +10,11 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef, useEntityName } from "../../components/entityref";
 import { type RailEdit, RailField } from "../../components/railfield";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
 import { provenanceLabel } from "../../design-system/provenance";
-import { provenanceOf } from "../../design-system/provenanceof";
+import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -21,7 +22,7 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
-import { COMPANY_LIFECYCLE_LABELS } from "../../format/companylifecycle";
+import { LIFECYCLE_LABELS } from "../../format/companylifecycle";
 import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
@@ -30,16 +31,16 @@ import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
-import { forecastLabel } from "./deal360/dealheaderfacts";
 import { useDealEdit } from "./dealedit";
+import { probabilityWords } from "./dealprobability";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
 
@@ -83,7 +84,7 @@ function DealAsideBody({
     deal,
     t,
     locale,
-    zone: useRecordZone(),
+    zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
   };
   const owner = useMemberName(deal.owner_id).data;
@@ -148,7 +149,7 @@ function DealAsideBody({
   );
 }
 
-// The fields a row changes, and its value as text when it edits in place.
+// The fields a row changes, and its value as text when it is edited alone.
 type RowChange = Readonly<{ keys: readonly string[]; text?: string }>;
 
 type RowMaker = (
@@ -168,7 +169,7 @@ type Facts = Readonly<{
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
-// that names its fields changes them in place, empty or not.
+// that names its fields opens their edit, empty or not.
 function rowMaker(
   masked: readonly string[],
   t: Translator,
@@ -207,6 +208,17 @@ function money(
   return amountMinor == null || !currency
     ? null
     : formatMoneyWhole(amountMinor, currency, locale);
+}
+
+function probabilityReading(
+  deal: Deal,
+  t: Translator,
+  locale: Locale,
+): string | null {
+  const words = probabilityWords(deal, t, locale);
+  return words
+    ? [words.value, words.source, words.stage].filter(Boolean).join(" · ")
+    : null;
 }
 
 function day(value: string | null | undefined, facts: Facts) {
@@ -263,11 +275,14 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
         : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
-      "forecast",
-      "deals.filterForecast",
-      deal.forecast_category && forecastLabel(deal.forecast_category, t),
-      "forecast_category",
-      { keys: ["forecast_category"] },
+      "probability",
+      "deal.winProbability",
+      probabilityReading(deal, t, locale),
+      "win_probability",
+      // A closed deal's stage fixes its probability.
+      deal.status === "won" || deal.status === "lost"
+        ? undefined
+        : { keys: ["win_probability"] },
     ),
     row(
       "wait_until",
@@ -310,12 +325,15 @@ function registrationRows(
       "source",
       "deal.recordedBy",
       provenanceLabel(
-        provenanceOf(
-          deal.captured_by,
-          reads.viewerId,
-          deal.author,
-          deal.source,
-          deal.imported_from,
+        withCreator(
+          provenanceOf(
+            deal.captured_by,
+            reads.viewerId,
+            deal.author,
+            deal.source,
+            deal.imported_from,
+          ),
+          deal.created_by,
         ),
         t,
         undefined,
@@ -362,13 +380,13 @@ function DealPartner({ deal }: Readonly<{ deal: Deal }>) {
         ? t("deal.attributionInfluenced")
         : undefined;
   return (
-    <a
+    <AppLink
       className="deal-aside-link"
       href={routeHash({ screen: "companies", id: deal.partner_company_id })}
       title={role}
     >
       {[name ?? t("field.unset"), role].filter(Boolean).join(" · ")}
-    </a>
+    </AppLink>
   );
 }
 
@@ -400,13 +418,13 @@ function listSection(
       children: (
         <span className="deal-aside-chips">
           {lists.map((list) => (
-            <a
+            <AppLink
               key={list.id}
               className="deal-aside-chip"
               href={routeHash({ screen: "lists", id: list.id })}
             >
               {list.name}
-            </a>
+            </AppLink>
           ))}
         </span>
       ),
@@ -422,7 +440,7 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const name = company?.display_name;
   const stage =
     company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(COMPANY_LIFECYCLE_LABELS[company.lifecycle])
+      ? t(LIFECYCLE_LABELS[company.lifecycle])
       : undefined;
   const facts = [
     stage,

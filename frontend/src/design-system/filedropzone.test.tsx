@@ -4,9 +4,11 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { FileUp } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { FileDropzone } from "./filedropzone";
+import { Field } from "./atoms";
+import { FileDropzone, FileDropzoneControl } from "./filedropzone";
 
 // The two ways in, and the one way out. A drop zone that only works with a
 // mouse silently excludes every keyboard and screen-reader user, so the input
@@ -167,6 +169,28 @@ describe("choosing a file", () => {
     expect(
       screen.queryByText("Drop a file here, or click to choose one"),
     ).toBeNull();
+  });
+
+  it("draws a caller's mark as decoration, outside the control's name", () => {
+    render(
+      <LocaleProvider initial="en">
+        <Field label="Document">
+          {(control) => (
+            <FileDropzoneControl
+              control={control}
+              emptyLabel="Drop a file here, or click to choose one"
+              icon={FileUp}
+              onPick={vi.fn()}
+            />
+          )}
+        </Field>
+      </LocaleProvider>,
+    );
+
+    const mark = zone().querySelector(".fdz-icon");
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(mark?.querySelector("svg")).toBeTruthy();
+    expect(screen.getByLabelText("Document")).toBe(target());
   });
 
   // Dropping a folder's worth of files at once is the point of asking for

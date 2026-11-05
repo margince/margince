@@ -72,7 +72,7 @@ const DAY_ON_SCREEN = EXPECTED.work
   : "#brief-today .surfacestate-empty";
 const QUEUE_BUTTON = "#brief-today .record-details-toggle";
 const QUEUE_OPEN = `${QUEUE_BUTTON}[aria-pressed="true"]`;
-const HOME_LINK = 'nav a[href="#/home"]';
+const HOME_LINK = 'nav a[href="/#/home"]';
 
 // Roles and labels for what the bench presses, in the German the browser runs
 // in. A rail entry is found by its aria-label, because the agent panel inside

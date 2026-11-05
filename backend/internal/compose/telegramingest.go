@@ -91,7 +91,7 @@ type telegramIngestWorker struct {
 // seam because this IS the composition layer contacts.Store already reaches
 // into for that ensurer.
 func newTelegramIngestWorker(pool *pgxpool.Pool, cfg CaptureConfig, log *slog.Logger) *telegramIngestWorker {
-	return &telegramIngestWorker{pool: pool, sink: newCaptureSink(pool, cfg), contacts: contacts.NewStore(InstallationDB(pool)), log: log}
+	return &telegramIngestWorker{pool: pool, sink: newCaptureSink(pool, cfg), contacts: newContactsStore(InstallationDB(pool)), log: log}
 }
 
 // Work re-establishes the workspace context from job.Args (never inherited
@@ -270,17 +270,8 @@ func (w *telegramIngestWorker) applyMembership(actorCtx context.Context, botID s
 	return nil
 }
 
-// telegramChannelPrincipal is design §6.4's workspace-channel connector
-// identity: deliberately NOT channel_connection.connected_by. That column is
-// audit-only on the connection row itself (channelconn.go's channelActor
-// comment) — reusing it as this principal's UserID/OnBehalfOf would make
-// every captured message look like the connecting admin's own row-scoped
-// activity, which is exactly the "owned record" §4.1 forbids. Its
-// permissions are the fixed minimum this worker exercises — the activity it
-// captures, and the contact the channel ensure auto-creates for an unmatched
-// sender (design D1) — and workspace-wide (RowScopeAll): a channel message
-// belongs to the whole workspace a single bot serves, not to whichever human
-// happened to run Connect.
+// telegramChannelPrincipal keeps channel capture workspace-scoped, without impersonating the admin who connected it.
+// Its grants cover captured activity, contacts and employer resolution.
 func telegramChannelPrincipal() principal.Principal {
 	return principal.Principal{
 		Type: principal.PrincipalConnector,
@@ -288,8 +279,9 @@ func telegramChannelPrincipal() principal.Principal {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{
-				tableActivity: {Create: true},
-				tableContact:  {Create: true},
+				tableActivity:             {Create: true},
+				tableContact:              {Create: true},
+				string(recordTypeCompany): {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

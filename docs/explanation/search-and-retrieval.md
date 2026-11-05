@@ -5,6 +5,20 @@
 Search is how a typed query becomes a ranked list of records. Behind one more seam, it is also how
 the AI layers build their answers on the workspace's own data.
 
+A complete email or domain match comes before an identifier prefix, and both come before a
+name-only match. An email prefix needs an `@`, so a first name keeps its text rank.
+
+The server
+scores these before each page is cut. In record search, a company also ranks higher when its
+domain belongs to a visible contact or lead whose address matches. Retrieval does not use this
+address link. The domain rank breaks company ties before record identity.
+The ranked cursor carries the complete score and ranking version; an older version is refused.
+
+The palette and results page show the strongest identifier hit as **Best match**, and keep it in
+its normal group. The server supplies that match kind; a client using an older server shows
+the groups without guessing a winner. Finding a domain fragment does not add contacts. Only
+a company name or exact domain can seed the employer arm.
+
 Two separate ranks run for each query. The **lexical** arm is Postgres full-text search over
 generated `search_tsv` columns. The **vector** arm ranks by how much the meaning matches, over
 pgvector embeddings. RRF (`reciprocal rank fusion`) merges the two into one list.
@@ -73,8 +87,8 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
 - **A pasted address or domain finds its record.** The `search_tsv` of a contact holds no email
   address, and that of a company holds no domain. So the contact and company branches also match
   `storekit.ContactEmails` and `storekit.CompanyDomains`. They compare the whole query, in lower
-  case, with a live row. The contact and company lists match the same two tables. A hit found this way
-  gets the 1 a whole word adds, and it passes the same row scope as a name hit.
+  case, with a live row. The contact and company lists match the same two tables. Whole identifiers
+  and prefixes rank before text-only hits, with the same row scope as a name hit.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
   operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
   index. The query per branch, kept to one identity, reads the table in order. An index over a
@@ -380,6 +394,28 @@ projection, which has its own rules for how it stays current; see
 | `/readyz` embed line | `active` · `needs_reindex` · `reembedding` · `unknown` (no lane, or the marker read failed); never gates readiness |
 | Agent access | `/v1/search` is a 🟢 `search_records` read under a passport; the context walk and all three reindex endpoints are `x-agent-access: human-only` |
 | Settings (embed binding, `dimensions`, reindex endpoints, provider notes) | [../reference/configuration.md](../reference/configuration.md) |
+
+## Query plan hops
+
+A query plan may take one hop from the record it searches to a related record. The hops are derived;
+nobody keeps a list of them.
+
+- **A column naming a record is a hop.** `deal.company_id` names a company, so a deal has the
+  hop `company`. `deal.owner_id` names a user, which search does not read, so it is no hop.
+- **A role column hops under its role.** `deal.partner_company_id` gives the hop `partner_company`,
+  and `company.parent_company_id` gives `parent_company`. Which record such a column names is
+  declared once, in `roleNamedReferences` (`queryreferencescope.go`). The same entry guards a filter
+  on that column. `TestEveryQueryableReferenceResolvesToItsRecordType` holds it against the schema.
+- **Every hop also runs back.** The way back is named for the record that holds the column: company
+  has `deals`. A role column adds its role, so company also has `deals_by_partner_company` and
+  `companies_by_parent_company`. Two columns into one record so never share a name.
+- **A merge pointer is no hop.** The record that carries `merged_into_id` is archived, and a hop reads
+  live records only.
+- **Contacts and activities hop through a link table.** A contact's companies come from employment
+  rows in `relationship`, and an activity's records from `activity_link` (`queryjoins.go`).
+
+`TestEveryPublishedReferenceIsAHopInBothDirections` fails when a reference the contract publishes has
+no hop each way, or when two hops on one record share a name.
 
 ## Short rules
 

@@ -12,7 +12,6 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NextTaskProvider } from "../../components/nexttaskslot";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { DealStatusCardPanel } from "./dealstatus";
@@ -51,6 +50,7 @@ function serve({
   writer = "model" as "model" | "deterministic",
   reasons = ["Nobody sent the times.", "That was three weeks ago."],
   blocker = undefined as string | undefined,
+  mailCoverage = undefined as string | undefined,
 }) {
   vi.stubGlobal(
     "fetch",
@@ -72,6 +72,16 @@ function serve({
             ...(blocker === undefined
               ? {}
               : { blocker: { sentences: [{ text: blocker, evidence: [] }] } }),
+            ...(mailCoverage === undefined
+              ? {}
+              : {
+                  mail_coverage: {
+                    channel: "email",
+                    state: mailCoverage,
+                    interval_to: "2026-08-24T00:00:00Z",
+                    evaluated_at: "2026-08-24T00:00:00Z",
+                  },
+                }),
             generated_at: "2026-08-24T00:00:00Z",
             generated_by: writer,
           }),
@@ -426,22 +436,19 @@ it("background reads explicitly refuse model work", async () => {
   client.clear();
 });
 
-it("draws the shell's next-task control in the next bar", async () => {
-  serve({});
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <LocaleProvider initial="en">
-        <NextTaskProvider value={<button type="button">Next task</button>}>
-          <DealStatusCardPanel deal={{ id: DEAL, name: "Scheduling" }} />
-        </NextTaskProvider>
-      </LocaleProvider>
-    </QueryClientProvider>,
+describe("Deal360 states no mail coverage", () => {
+  // No coverage state names a step the reader can take, so the card stays
+  // silent about it. A broken connection shows on the connection health banner.
+  it.each(["partial", "unknown", "unavailable", "withheld", undefined])(
+    "draws no notice for coverage %s",
+    async (mailCoverage) => {
+      serve({ standing: "live", mailCoverage });
+      renderCard();
+      await screen.findByText("On track");
+      expect(
+        screen.queryByRole("link", { name: "Check connections" }),
+      ).toBeNull();
+      expect(screen.queryByText(/mail history/i)).toBeNull();
+    },
   );
-  expect(
-    await screen.findByRole("button", { name: "Next task" }),
-  ).toBeInTheDocument();
 });

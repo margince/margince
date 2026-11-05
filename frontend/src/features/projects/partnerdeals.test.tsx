@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { PartnerDeals } from "./partnerdeals";
 
 // The sourced-deals panel on a partner's company page. These deals belong to
@@ -37,13 +38,13 @@ function stubDeals(deals: unknown[]) {
     "fetch",
     vi.fn(async (request: Request) => {
       urls.push(request.url);
-      const body = request.url.includes("/companies/")
-        ? { id: "cust-1", display_name: "Northgate GmbH" }
-        : { data: deals, page: { has_more: false } };
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return (
+        companyNamesAnswer(request.url, { "cust-1": "Northgate GmbH" }) ??
+        new Response(
+          JSON.stringify({ data: deals, page: { has_more: false } }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        )
+      );
     }),
   );
   return urls;
@@ -177,11 +178,11 @@ describe("the deals a partner brought", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/companies/")) {
-          return new Response(
-            JSON.stringify({ id: "cust-1", display_name: "Northgate GmbH" }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
+        const named = companyNamesAnswer(request.url, {
+          "cust-1": "Northgate GmbH",
+        });
+        if (named) {
+          return named;
         }
         urls.push(request.url);
         const body = pages[Math.min(call, pages.length - 1)];

@@ -38,6 +38,7 @@ type mailedProposal struct {
 func stageMailedProposal(t *testing.T) mailedProposal {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep2, "rep")
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)

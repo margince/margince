@@ -3,18 +3,17 @@ import { RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { MailCoverageNotice } from "../../components/mailcoveragenotice";
-import { NextTaskSlot } from "../../components/nexttaskslot";
+import { RecordNextBar } from "../../components/latestinbound";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
-import { NextBar, type NextBarMore } from "../../design-system/nextbar";
+import type { NextBarMore } from "../../design-system/nextbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDayMonth } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   Citations,
@@ -126,7 +125,6 @@ export function DealStatusCardPanel({
           more={more}
         />
         {standing(cardHead(card, deal, t, onOpenEmail))}
-        <MailCoverageNotice coverage={card.mail_coverage} />
         {/* The record page says what the brief says through How it stands and
             its cards; the board's drawer has neither, so only it reads the
             brief. */}
@@ -162,7 +160,7 @@ export function DealStatusCardPanel({
 // instant of its own has no day to head the card with, so it draws nothing.
 function VerdictOnly({ head }: Readonly<{ head: DealStandingHead }>) {
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   if (!head.readAt) {
     return null;
   }
@@ -383,7 +381,7 @@ function DealNextBar({
   const notNow = useDealMoveSetAside(dealId);
   const move = card.next;
   if (!move) {
-    return <NextBar more={more} onward={<NextTaskSlot />} />;
+    return <RecordNextBar more={more} />;
   }
   // Only the message the buyer is owed an answer to opens in the email
   // drawer. A task or a meeting the move cites is not a message.
@@ -400,7 +398,11 @@ function DealNextBar({
   const snooze = move.fingerprint ? notNow.deferOf(move.fingerprint) : null;
   return (
     <>
-      <NextBar
+      <RecordNextBar
+        // The deal's ladder already weighs its requests, so its move keeps
+        // the bar and what just came in sits above it.
+        urgent
+        about={[source, ...move.evidence.map((row) => row.activity_id)]}
         title={move.reason}
         sub={move.evidence[0]?.text}
         insight={
@@ -421,7 +423,6 @@ function DealNextBar({
             : undefined
         }
         more={more}
-        onward={<NextTaskSlot />}
       />
       {notNow.failure && <ErrorLine error={notNow.failure} />}
     </>

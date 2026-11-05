@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -51,6 +52,7 @@ type row struct {
 	// card says nothing rather than saying unknown.
 	TargetLabel    *string
 	Summary        *string
+	SummaryParts   json.RawMessage
 	ProposedChange json.RawMessage
 	DiffHash       string
 	ExpiresAt      time.Time
@@ -77,6 +79,7 @@ type row struct {
 	// StagedInConversationOf is the colleague whose own live conversation with
 	// an AI client staged this, nil for any other staging.
 	StagedInConversationOf *ids.UUID
+	ContextDigest          *string
 }
 
 const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, staged_by_connection,
@@ -84,7 +87,7 @@ const columns = `id, kind, status, proposed_by, on_behalf_of, passport_id, stage
 	co_target_entity_type, co_target_entity_id, co_target_version, target_label, summary,
 	proposed_change, diff_hash, expires_at, decided_by, decided_at, consumed_at, created_at,
 	bundle_id, evidence, effect_failed_at, effect_failure, effect_ran_at, requested_decider_id,
-	staged_in_conversation_of`
+	staged_in_conversation_of, context_digest, summary_parts`
 
 func scan(r pgx.Row) (row, error) {
 	var a row
@@ -93,7 +96,7 @@ func scan(r pgx.Row) (row, error) {
 		&a.CoTargetType, &a.CoTargetID, &a.CoTargetVersion, &a.TargetLabel, &a.Summary,
 		&a.ProposedChange, &a.DiffHash, &a.ExpiresAt, &a.DecidedBy, &a.DecidedAt, &a.ConsumedAt, &a.CreatedAt,
 		&a.BundleID, &a.Evidence, &a.EffectFailedAt, &a.EffectFailure, &a.EffectRanAt, &a.RequestedDecider,
-		&a.StagedInConversationOf)
+		&a.StagedInConversationOf, &a.ContextDigest, &a.SummaryParts)
 	return a, err
 }
 
@@ -124,10 +127,8 @@ func (a row) PendingAt(now time.Time) bool {
 // of a caller's inbox.
 const inboxBatch = 200
 
-// PendingScanCap bounds how many staged rows PendingForTarget scans for one
-// record. Decidability is asked of every scanned row, so an unbounded target
-// would make a single record page pay for the whole backlog. A caller that counts a capped
-// result must read a full one as "this many or more"; CountPending is exact.
+// PendingScanCap bounds how many proposals PendingForTarget lists for one
+// record. Its Total still counts every row past the cap.
 const PendingScanCap = inboxBatch
 
 // statusPending is the status column value a staged, undecided row carries.
@@ -181,13 +182,20 @@ type ListInput struct {
 	// than a caller-supplied decider id — List binds the acting user
 	// itself, so nobody reads another contact's failures by naming them.
 	FailedForDecider bool
-	Limit            int
+	// Actionable, with Status pending, leaves out a row whose expiry has
+	// passed but whose stored status has not yet been written. It is the
+	// read of "work to decide", and the exact pending count judges the same.
+	Actionable bool
+	Limit      int
 	// Cursor continues a previous page: the opaque keyset token that page
 	// reported as next_cursor. Empty starts at the newest row.
 	Cursor string
 	// failedDecider is FailedForDecider resolved to the acting user;
 	// set by List from the principal, never by a caller.
 	failedDecider *ids.UUID
+	// actionableAt is the service clock reading Actionable resolved, so every
+	// batch of one read judges expiry at the same instant.
+	actionableAt *time.Time
 }
 
 // targeted reports whether the read is scoped to one record.
@@ -221,6 +229,10 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]row, storekit.Page,
 	// binder clamps before it gets here.
 	if in.Limit <= 0 || in.Limit > inboxBatch {
 		in.Limit = 50
+	}
+	if in.Actionable && in.Status != nil && *in.Status == statusPending {
+		now := s.now()
+		in.actionableAt = &now
 	}
 	start, err := startOf(in.Cursor)
 	if err != nil {
@@ -291,42 +303,6 @@ func walkInbox(ctx context.Context, tx pgx.Tx, in ListInput, start *keysetStart,
 	}
 }
 
-// inboxProbe is the eligibility every inbox read asks of a batch, by position.
-// A row is eligible when it is in the requested scope and p could decide it now.
-func inboxProbe(ctx context.Context, tx pgx.Tx, p principal.Principal, in ListInput) batchProbe {
-	return func(batch []row) ([]bool, error) {
-		return askWhere(batch, func(a row) bool { return requestedInScope(a, p.UserID, in) },
-			func(rows []row) ([]bool, error) { return decidableRows(ctx, tx, p, rows) })
-	}
-}
-
-// batchProbe answers a question about each row of a batch, by position.
-type batchProbe func([]row) ([]bool, error)
-
-// askWhere asks probe about the rows keep admits and refuses the rest, so a
-// row an in-memory test refuses never reaches a statement.
-func askWhere(batch []row, keep func(row) bool, probe batchProbe) ([]bool, error) {
-	var kept []row
-	var at []int
-	for i, a := range batch {
-		if keep(a) {
-			kept, at = append(kept, a), append(at, i)
-		}
-	}
-	out := make([]bool, len(batch))
-	if len(kept) == 0 {
-		return out, nil
-	}
-	answers, err := probe(kept)
-	if err != nil {
-		return nil, err
-	}
-	for j, i := range at {
-		out[i] = answers[j]
-	}
-	return out, nil
-}
-
 // admitInboxRead admits a human-backed caller and binds their mutes, so every
 // read of the inbox, and every count of it, hides the same rows.
 func admitInboxRead(ctx context.Context, in ListInput) (principal.Principal, ListInput, error) {
@@ -371,6 +347,9 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	}
 	if in.Status != nil {
 		terms = append(terms, fmt.Sprintf("status = $%d", arg(*in.Status)))
+	}
+	if in.actionableAt != nil {
+		terms = append(terms, fmt.Sprintf("(kind = ANY($%d::text[]) OR expires_at >= $%d)", arg(neverExpiringKinds()), arg(in.actionableAt.UTC())))
 	}
 	if in.Kind != nil {
 		terms = append(terms, fmt.Sprintf("kind = $%d", arg(*in.Kind)))
@@ -477,7 +456,7 @@ func (s *Service) Get(ctx context.Context, id ids.ApprovalID) (row, error) {
 			return err
 		}
 		if !visible {
-			return apperrors.ErrNotFound
+			return auth.HideRow(ctx, "approval")
 		}
 		return nil
 	})

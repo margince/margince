@@ -1,5 +1,5 @@
 /* The week just gone, as a report: one reading column, a label over each
-   section, white panels for what is listed, and a closing line. */
+   section, panels for what is listed, and a closing line. */
 .brief-weekly-deal-name {
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
@@ -45,23 +45,9 @@
   padding: 0;
 }
 
-/* ── The report ─────────────────────────────────────────────────────────────
- * One column at a reading width, so the week reads as a document rather than
- * a dashboard. */
-.brief-weekly-page {
-  max-width: 55rem;
-  margin-inline: auto;
-  padding-block: var(--space-10) var(--space-16);
-}
-.brief-weekly-page .glance {
-  gap: var(--space-4);
-}
-.brief-weekly-page .glance-greeting {
-  font: var(--fontDisplayLarge);
-}
-.brief-weekly-page .glance-sentence {
-  font: var(--fontLead);
-  max-width: none;
+/* ── The report ──────────────────────────────────────────────────────────── */
+.brief-weekly-page > .brief-report {
+  padding-block-end: var(--space-10);
 }
 .brief-report {
   display: flex;

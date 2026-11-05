@@ -523,3 +523,32 @@ resolve_it_timeout() {
     exit 1
   fi
 }
+
+# The census a lane's package processes write (MARGINCE_SQL_CENSUS_DIR) holds
+# every statement of 8 KB or more they sent. check_repeated_gates fails when one
+# carries the activity content gate twice from a sender the allowlist does not
+# name, and writes the senders it saw repeat to $2 for the staleness check.
+REPEATED_GATES_ALLOW="tools/sql-census/repeated-gates.txt"
+check_repeated_gates() { # census-dir seen-out
+  ( cd "$ROOT/backend" && go run ./tools/sql-census check -census "$1" -allow "$REPEATED_GATES_ALLOW" -seen "$2" )
+}
+stale_repeated_gates() { # seen-file...
+  ( cd "$ROOT/backend" && go run ./tools/sql-census stale -allow "$REPEATED_GATES_ALLOW" "$@" )
+}
+
+# A foreground xargs waits for every package before the next batch reuses Redis.
+# Global indices keep clone names, shard filters and logs stable across batches.
+run_integration_packages() {
+  local work="$1" jobs="$2" capacity="$3" outdir="$4"
+  if [[ ! "$jobs" =~ ^[1-9][0-9]*$ || ! "$capacity" =~ ^[1-9][0-9]*$ ]]; then
+    echo "FAIL: integration jobs and Redis capacity must be positive integers" >&2
+    return 1
+  fi
+  local count first last
+  count=$(wc -l < "$work")
+  for ((first=1; first<=count; first+=capacity)); do
+    last=$((first + capacity - 1))
+    nl -ba -w1 -s'|' "$work" | sed -n "${first},${last}p" \
+      | xargs -P "$jobs" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$outdir" || return
+  done
+}

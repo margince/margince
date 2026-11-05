@@ -11,25 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// dispatcherLiteralFloor guards against a vacuous pass. Twenty-four dispatcher
-// types exist today; the floor sits at eighteen so retiring a few passes does
-// not drag the gate along, while a walk that matched nothing — a rename of the
-// args types, a parse that silently found no files — still trips it.
-//
-// What this gate does NOT see, stated so nobody reads more into a green run
-// than it earns: it walks this package's own top-level product sources, so a
-// dispatcher value built in a subpackage, in a cmd, or through a helper that
-// returns river.JobArgs is outside it. Those are not idiom here — every
-// dispatcher in the tree is a bare args struct constructed in this package —
-// and the enqueue door itself is held separately, by the generated closed
-// union that refuses an undeclared args type and by forbidigo's ban on a
-// direct river.AddWorker.
-// FALLING WITH THE COLLAPSE. ADR-0103 is retiring the workspace dispatchers
-// one batch at a time, so this number goes down as the pair count does; it
-// bottoms out at the fan-outs that stay, which are the ones over a CONNECTION
-// or a BUILD rather than a workspace. It is a floor and not an equality for
-// that reason — it stops the walk passing on nothing without pinning a number
-// that a sanctioned retirement has to come back and edit.
+// The floor catches a scan that stopped seeing dispatcher literals.
+// It can fall as workspace dispatchers are retired.
 const dispatcherLiteralFloor = 5
 
 // periodicForArgs answers every composite literal this package's own sources

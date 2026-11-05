@@ -12,6 +12,7 @@ package compose
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -43,6 +44,11 @@ func (v *viabilityEnv) reviewOf(t *testing.T, deal ids.UUID) ids.UUID {
 
 func (v *viabilityEnv) postAnswer(t *testing.T, review ids.UUID, path string, body map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
+	return v.postAnswerAs(v.Admin(), t, review, path, body)
+}
+
+func (v *viabilityEnv) postAnswerAs(ctx context.Context, t *testing.T, review ids.UUID, path string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
 	raw, err := json.Marshal(body)
 	if err != nil {
 		t.Fatal(err)
@@ -50,7 +56,7 @@ func (v *viabilityEnv) postAnswer(t *testing.T, review ids.UUID, path string, bo
 	h := reviewAnswerHandlers{pool: v.Pool, deals: v.Deals, assurance: v.reviewStore(), now: func() time.Time { return clocktest.Now(t) }}
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/forecast/assurance/exceptions/"+review.String()+"/"+path,
-		bytes.NewReader(raw)).WithContext(v.Admin())
+		bytes.NewReader(raw)).WithContext(ctx)
 	if path == "wait" {
 		h.WaitInputCheck(rec, req, openapi_types.UUID(review))
 	} else {
@@ -113,7 +119,7 @@ func TestClosingLostClosesTheDealAndTheReview(t *testing.T) {
 		t.Fatal("a review was dismissed as not relevant while its deal is still open")
 	}
 
-	if rec := v.postAnswer(t, review, "close-lost", map[string]any{"lost_reason": "Chose another supplier"}); rec.Code != http.StatusNoContent {
+	if rec := v.postAnswer(t, review, "close-lost", map[string]any{"lost_reason": "Chose another supplier", "lost_reason_code": "competitor"}); rec.Code != http.StatusNoContent {
 		t.Fatalf("closing lost answered %d %s", rec.Code, rec.Body)
 	}
 	if got := v.WsScalar(t, `SELECT status FROM deal WHERE id = $1`, v.silent); got != "lost" {
@@ -135,7 +141,7 @@ func TestAReviewOfADealClosedSinceMovesNothing(t *testing.T) {
 	}
 	reason := "Budget cut"
 	if _, err := v.Deals.AdvanceDeal(v.Admin(), ids.From[ids.DealKind](v.silent), deals.AdvanceDealInput{
-		ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason,
+		ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason, LostReasonCode: new("other"),
 	}); err != nil {
 		t.Fatalf("closing the deal outside the review: %v", err)
 	}

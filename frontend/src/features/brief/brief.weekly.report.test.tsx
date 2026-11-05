@@ -3,7 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
-import { RecordZoneProvider } from "../../lib/recordzone";
+import { CompanyZoneProvider } from "../../lib/companyzone";
 import { zeroWeekCounts } from "../../testing/brief.fixtures";
 import {
   fleetDeal,
@@ -27,6 +27,10 @@ beforeEach(() => {
   window.location.hash = "#/home?view=weekly";
 });
 
+// The title reads as one heading: the report's week, then the days it covers.
+const kicker = (week: string) =>
+  en["brief.report.kicker"].replace("{week}", week);
+
 // ── The report's own shape ──
 
 describe("BriefScreen — the weekly report", () => {
@@ -46,9 +50,9 @@ describe("BriefScreen — the weekly report", () => {
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone="Europe/Berlin">
+      <CompanyZoneProvider zone="Europe/Berlin">
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
   };
 
@@ -58,11 +62,8 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: /^29 June\s*[–-]\s*5 July$/,
+        name: new RegExp(`^${kicker("27")}\\s*,\\s*29 June\\s*[–-]\\s*5 July$`),
       }),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(en["brief.report.kicker"].replace("{week}", "27")),
     ).toBeTruthy();
   });
 
@@ -173,9 +174,9 @@ describe("BriefScreen — the weekly report", () => {
       "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
     });
     render(
-      <RecordZoneProvider zone="Europe/Berlin">
+      <CompanyZoneProvider zone="Europe/Berlin">
         <BriefScreen />
-      </RecordZoneProvider>,
+      </CompanyZoneProvider>,
     );
     const user = userEvent.setup();
 
@@ -185,7 +186,7 @@ describe("BriefScreen — the weekly report", () => {
     expect(
       await screen.findByRole("heading", {
         level: 1,
-        name: /^22\s*[–-]\s*28 June$/,
+        name: new RegExp(`^${kicker("26")}\\s*,\\s*22\\s*[–-]\\s*28 June$`),
       }),
     ).toBeTruthy();
     expect(

@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -145,10 +146,9 @@ const (
 
 // ListFieldHistory reads one record's per-field change timeline,
 // projected inside a single workspace tx from the audit spine. The gate
-// is threefold: a human session (the agent gate only fronts mutating
-// routes, so the human-only rule binds here), object-level read on the
-// entity type, and the row-scope visibility check — out of scope reads
-// as not-found, indistinguishable from not-there.
+// has three parts: a user or the agent on their passport, object-level read
+// on the entity type, and the row-scope visibility check. Out of scope
+// reads as not-found, indistinguishable from not-there.
 //
 // The page limit counts ENTRIES, but one audit row can yield several;
 // a row's entries never split across pages, so a page may overflow the
@@ -157,7 +157,7 @@ const (
 // filled the page may have been the true last one.
 func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter) (FieldHistoryPage, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return FieldHistoryPage{}, apperrors.ErrPermissionDenied
 	}
 	if !fieldHistoryEntityTypes[f.EntityType] {
@@ -367,22 +367,17 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 		args = append(args, cursorTime, cursorID)
 	}
 	args = append(args, fieldHistoryScanBatch)
-	// auditActorNameJoins, the SAME spelling the compliance log and the record
-	// timeline resolve attribution through. Two rails on one screen answering
-	// "who did this" differently is how a reader comes to trust one and doubt
-	// the other, and this was the rail that named nobody.
-	//
-	// agentClientNameJoin for the same reason one hop further. It reads the tool
-	// from the passport the row recorded, so a token rotated since the change
-	// still names its client.
+	// The shared auditattribution joins, so this rail and the record timeline
+	// beside it name the same actor for one row. The tool is read from the
+	// passport the row recorded, so a token rotated since still names its client.
 	//
 	// Resolving through the passport list instead would name only the newest
 	// token of each connection.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id, a.action, a.actor_type, a.actor_id, a.passport_id, a.evidence,
 		       a.occurred_at, a.before, a.after,
-		       `+auditActorNameColumn+`, obo.display_name, oc.client_name
-		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
+		       `+auditattribution.ActorNameColumn+`, obo.display_name, oc.client_name
+		FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`
 		WHERE %s
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT $%d`, strings.Join(conds, " AND "), len(args)), args...)

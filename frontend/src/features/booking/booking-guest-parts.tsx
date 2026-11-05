@@ -4,6 +4,7 @@
 import { CalendarCheck, Clock, MapPin, Video } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import {
   Button,
   Checkbox,
@@ -243,7 +244,9 @@ export function PreviewNotice({ enabled }: Readonly<{ enabled: boolean }>) {
         <p>
           {t(enabled ? "scheduling.previewActive" : "scheduling.previewPaused")}
         </p>
-        <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
+        <AppLink href="#/settings/meetings">
+          {t("scheduling.openSettings")}
+        </AppLink>
       </PanelBody>
     </Panel>
   );
@@ -258,6 +261,7 @@ export function GuestUnavailable({
   zone,
 }: Readonly<{
   host: Readonly<{
+    host_name: string;
     proposal: components["schemas"]["PublicMeetingProposal"] | null;
   }>;
   zone: string;
@@ -286,7 +290,11 @@ export function GuestUnavailable({
             </Button>
           </>
         ) : (
-          <p>{t("scheduling.unavailable")}</p>
+          <p>
+            {host.host_name
+              ? t("scheduling.pausedUnavailable", { host: host.host_name })
+              : t("scheduling.unavailable")}
+          </p>
         )}
       </PanelBody>
     </Panel>

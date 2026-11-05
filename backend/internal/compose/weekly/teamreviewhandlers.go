@@ -64,6 +64,8 @@ func teamReviewToWire(review TeamReview) crmcontracts.TeamWeeklyReview {
 		GeneratedAt:    review.GeneratedAt,
 		AsOf:           review.AsOf,
 		RepsUnread:     &review.RepsUnread,
+		// Always sent, so a client can tell a withheld zero from a counted one.
+		MeetingsWithheld: &review.MeetingsWithheld,
 		Counts: crmcontracts.TeamWeeklyCounts{
 			RepsCounted: c.RepsCounted,
 			DealsWon:    c.DealsWon, DealsLost: c.DealsLost, DealsMoved: c.DealsMoved,

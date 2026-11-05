@@ -58,6 +58,11 @@ func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.N
 	if excluded == "" {
 		return "", nil
 	}
+	if excluded == reasonExcludedContainer {
+		if err := s.revokePartySourceTx(ctx, tx, rec); err != nil {
+			return "", err
+		}
+	}
 	if err := s.logBreadcrumbTx(ctx, tx, actionCaptureExcluded, rec, excluded); err != nil {
 		return "", err
 	}
@@ -109,6 +114,10 @@ func (s *Sink) DropBeforeStore(ctx context.Context, rec connector.NormalizedReco
 // that reaches the raw store has been kept whatever happens next. The answer
 // is the reason to trace, or "" when nothing matched.
 func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
+	return excludedForTx(ctx, tx, rec, actorUserID(ctx))
+}
+
+func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, owner ids.UUID) (string, error) {
 	// A message with no addresses may still have been FILED somewhere the
 	// owner keeps out, so the container arm is asked on its own. The address
 	// arms need the lists below and answer nothing without them.
@@ -139,7 +148,7 @@ func excludedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) 
 		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
 		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(actorUserID(ctx)), rec.Containers).Scan(&kind)
+		addresses, domains, nilToNull(owner), rec.Containers).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil

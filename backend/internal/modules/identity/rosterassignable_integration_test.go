@@ -15,7 +15,8 @@ import (
 
 // The roster marks each member as an owner change would answer for this caller.
 // The admin may hand work to an active rep. A rep may not hand work to the admin
-// outside their scope. Nobody may hand work to a member who left.
+// outside their scope, though the admin's seat may own records. Nobody may hand
+// work to a member who left.
 func TestTheRosterSaysWhoTheCallerMayMakeAnOwner(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-assignable")
 	ctx := context.Background()
@@ -38,11 +39,14 @@ func TestTheRosterSaysWhoTheCallerMayMakeAnOwner(t *testing.T) {
 	assertAssignable(t, "the rep, about themselves", findRosterUser(t, e, rep, false, rep.UserID.UUID), true)
 	assertAssignable(t, "the rep, about the admin outside their scope",
 		findRosterUser(t, e, rep, false, e.admin.UserID.UUID), false)
+	assertCanOwnRecords(t, "the rep, about the admin outside their scope",
+		findRosterUser(t, e, rep, false, e.admin.UserID.UUID), true)
 
 	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: rep.UserID}); err != nil {
 		t.Fatalf("deactivating the rep: %v", err)
 	}
 	assertAssignable(t, "the admin, about the deactivated rep", findRosterUser(t, e, e.admin, true, rep.UserID.UUID), false)
+	assertCanOwnRecords(t, "the admin, about the deactivated rep", findRosterUser(t, e, e.admin, true, rep.UserID.UUID), false)
 }
 
 func assertAssignable(t *testing.T, who string, row userRow, want bool) {
@@ -52,5 +56,15 @@ func assertAssignable(t *testing.T, who string, row userRow, want bool) {
 	}
 	if *row.Assignable != want {
 		t.Errorf("%s: assignable = %v, want %v", who, *row.Assignable, want)
+	}
+}
+
+func assertCanOwnRecords(t *testing.T, who string, row userRow, want bool) {
+	t.Helper()
+	if row.CanOwnRecords == nil {
+		t.Fatalf("%s: the roster did not say whether the seat may own records", who)
+	}
+	if *row.CanOwnRecords != want {
+		t.Errorf("%s: can_own_records = %v, want %v", who, *row.CanOwnRecords, want)
 	}
 }

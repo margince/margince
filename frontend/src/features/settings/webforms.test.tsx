@@ -55,6 +55,7 @@ const contactForm: WebForm = {
   created_at: "2026-09-01T09:00:00Z",
   updated_at: "2026-09-01T09:00:00Z",
   archived_at: null,
+  last_post_at: null,
 };
 
 const budgetField: CustomField = {
@@ -73,8 +74,8 @@ const budgetField: CustomField = {
   version: 1,
 };
 
-// The colleagues an owner picker offers: a colleague, plus an agent seat the
-// server refuses as an owner.
+// The roster an owner picker reads: a colleague, and one outside the reader's
+// own scope. A read seat and an agent seat are refused as owners.
 const roster = {
   data: [
     {
@@ -82,6 +83,22 @@ const roster = {
       display_name: "Jane Doe",
       email: "jane@acme.test",
       is_agent: false,
+    },
+    {
+      id: "u-77",
+      display_name: "Sam Field",
+      email: "sam@acme.test",
+      is_agent: false,
+      assignable: false,
+      can_own_records: true,
+    },
+    {
+      id: "u-88",
+      display_name: "Rita Reader",
+      email: "rita@acme.test",
+      is_agent: false,
+      assignable: false,
+      can_own_records: false,
     },
     {
       id: "agent-1",
@@ -108,7 +125,7 @@ type Sent = { method: string; url: string; body: unknown; ifMatch: string };
 // write is recorded so a case can assert what was sent.
 function backendFor(
   allow: GrantSpec,
-  forms: WebForm[],
+  forms: readonly (WebForm | Omit<WebForm, "last_post_at">)[],
   writes: Record<string, () => Response> = {},
 ) {
   const sent: Sent[] = [];
@@ -240,12 +257,41 @@ describe("WebFormsCard", () => {
     await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
     await user.click(screen.getByLabelText(/^Owner of new leads/));
     await screen.findByRole("option", { name: "Jane Doe" });
+    expect(screen.getByRole("option", { name: "Sam Field" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Rita Reader" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
     await user.click(screen.getByRole("option", { name: "Jane Doe" }));
     await user.click(screen.getByTestId("save-web-form"));
 
     await waitFor(() => expect(backend.sent).toHaveLength(1));
     expect(backend.sent[0]?.body).toMatchObject({ owner_id: "u-42" });
+  });
+
+  it("sends the privacy notice and the policy it links to", async () => {
+    const backend = backendFor(OPERATOR, [], {
+      "POST /v1/web-forms": () => jsonResponse(contactForm, 201),
+    });
+    vi.stubGlobal("fetch", backend.fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("new-web-form"));
+    await user.type(screen.getByLabelText(/^Name/), "Demo request");
+    await user.type(screen.getByLabelText(/^Websites/), "https://acme.test");
+    await user.type(
+      screen.getByLabelText(/^Privacy notice/),
+      "We use your details to answer you.",
+    );
+    await user.type(
+      screen.getByLabelText(/^Privacy policy link/),
+      "https://acme.test/privacy",
+    );
+    await user.click(screen.getByTestId("save-web-form"));
+
+    await waitFor(() => expect(backend.sent).toHaveLength(1));
+    expect(backend.sent[0]?.body).toMatchObject({
+      privacy_notice: "We use your details to answer you.",
+      privacy_notice_url: "https://acme.test/privacy",
+    });
   });
 
   it("names the owner each form's leads go to", async () => {
@@ -256,6 +302,27 @@ describe("WebFormsCard", () => {
     render(<WebFormsCard />);
     expect(await screen.findByText("Jane Doe")).toBeTruthy();
     expect(screen.getByText(/Leads go to/)).toBeTruthy();
+  });
+
+  it("says when each form last landed a post, or that none has yet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [
+        { ...contactForm, last_post_at: "2026-10-30T09:00:00Z" },
+        { ...contactForm, id: "wf-2", name: "Demo page", last_post_at: null },
+      ]).fetch,
+    );
+    render(<WebFormsCard />);
+    expect(await screen.findByText(/^Last post /)).toBeTruthy();
+    expect(screen.getByText("No post recorded yet")).toBeTruthy();
+  });
+
+  it("says nothing about posts when the server does not report them", async () => {
+    const { last_post_at: _, ...fromAnOlderServer } = contactForm;
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [fromAnOlderServer]).fetch);
+    render(<WebFormsCard />);
+    expect(await screen.findByText("Contact page")).toBeTruthy();
+    expect(screen.queryByText(/^Last post |^No post recorded yet$/)).toBeNull();
   });
 
   it("says leads arrive unassigned once the form's owner left", async () => {

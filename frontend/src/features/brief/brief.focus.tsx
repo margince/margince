@@ -5,15 +5,18 @@
 // beside it. The panel's head, states and foot are in brief.feed.tsx.
 
 import { useRef } from "react";
-import { TaskNextSteps } from "../../components/tasknextsteps";
+import {
+  TaskNextSteps,
+  TaskNextStepsPending,
+} from "../../components/tasknextsteps";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
 import { formatDayMonth, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
-import { useRecordZone } from "../../lib/recordzone";
+import { useCompanyZone } from "../../lib/companyzone";
 import { navigate } from "../../lib/router";
 import {
   briefContextTitle,
@@ -24,18 +27,15 @@ import {
   reasonText,
   subjectHref,
   whenText,
-} from "../worklist/worklist.copy";
-import { eyebrowKeyFor } from "../worklist/worklist.eyebrow";
+} from "../../lib/worklistcopy";
+import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { WorklistRow } from "../worklist/worklist.row";
 import { contactHref, useListed } from "../worklist/worklist.row.captions";
 
 import "./brief.feed.css";
-
-/** One row's identity across renders, the way the queue page spells it. */
-export function identity(item: WorklistItem): string {
-  return `${item.source}-${item.id}`;
-}
+import { useViewerZone } from "../../lib/viewerzone";
+import { identity } from "./brief.focuslink";
 
 export function Triage({
   rows,
@@ -54,8 +54,9 @@ export function Triage({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  const recordZone = useRecordZone();
+  const zone = useViewerZone();
+  // The due day is the server's bucket, counted on the company's clock (B1).
+  const companyZone = useCompanyZone();
   // A press removes the pressed button from the list. Focus follows it onto
   // the card it brought in hand; a first render takes no focus.
   const pressed = useRef(false);
@@ -66,17 +67,23 @@ export function Triage({
     }
   };
   // A task row's id is its activity's, so the card reads the task it shows.
-  const task = useActivity(lead.id, lead.source === "task").data;
+  const isTask = lead.source === "task";
+  const taskRead = useActivity(lead.id, isTask);
+  const task = taskRead.data;
+  const taskPending = isTask && taskRead.isPending;
   const cardVerbs =
-    onContext || task ? (
+    onContext || task || taskPending ? (
       <>
+        {/* The drafted mail stands beside Done, ahead of the way to read
+            more: it is the task's next step, the details are about it. */}
+        {taskPending && <TaskNextStepsPending />}
+        {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
           <Button variant="ghost" onClick={() => onContext(lead)}>
             {t("brief.focus.context")}
           </Button>
         )}
-        {task && <TaskNextSteps task={task} offerOpen={false} />}
       </>
     ) : undefined;
   // The head's facts come from the helpers the row uses, so the card and the
@@ -101,7 +108,7 @@ export function Triage({
       ]
         .filter(Boolean)
         .join(", ")
-    : whenText(lead, t, locale, zone, recordZone, new Date());
+    : whenText(lead, t, locale, zone, companyZone, new Date());
   const label = t(eyebrowKeyFor(lead));
   return (
     <div className="brief-triage">
@@ -182,9 +189,10 @@ function QueueEntry({
   rank,
   onChoose,
 }: Readonly<{ item: WorklistItem; rank: number; onChoose: () => void }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  const line = queueLine(item, t, locale, viewerZone());
+  const line = queueLine(item, t, locale, readerZone);
   return (
     <button type="button" className="brief-focus-item" onClick={onChoose}>
       <span className="brief-focus-rank t-num">
@@ -217,9 +225,9 @@ function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
   return (
     <>
       {label && href && (
-        <a className="entity-link" href={href}>
+        <AppLink className="entity-link" href={href}>
           {label}
-        </a>
+        </AppLink>
       )}
       {inbox && <span>{t(`visibility.${inbox}`)}</span>}
     </>

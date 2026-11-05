@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -93,13 +92,27 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 // returns the candidates the caller may make an owner. It asks the same
 // hypothetical row, so a picker built on it offers what the write accepts.
 func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
-	eligible := make(map[ids.UUID]bool, len(candidates))
-	if len(candidates) == 0 {
-		return eligible, nil
-	}
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return nil, err
+	}
+	return eligibleAssigneesAs(ctx, tx, p, candidates)
+}
+
+// EligibleHandOverRecipients answers EnsureHandOverRecipient for many seats in
+// one query: the seat half of EligibleAssignees, without the caller's scope.
+func EligibleHandOverRecipients(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return eligibleAssigneesAs(ctx, tx, consentedAssigner(p), candidates)
+}
+
+func eligibleAssigneesAs(ctx context.Context, tx pgx.Tx, p principal.Principal, candidates []ids.UUID) (map[ids.UUID]bool, error) {
+	eligible := make(map[ids.UUID]bool, len(candidates))
+	if len(candidates) == 0 {
+		return eligible, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -129,6 +142,15 @@ func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	return ensureAssigneeWith(ctx, tx, dest, newRecordOwnerSQL)
 }
 
+// EnsureRoutedLeadOwner is EnsureNewRecordOwner for the owner a website form
+// hands every new lead to. The installation writes those leads, never the one
+// who set up the form, so their row scope is not asked; the seat half is.
+func EnsureRoutedLeadOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, func(p principal.Principal, alias string, arg func(any) int) string {
+		return newRecordOwnerSQL(consentedAssigner(p), alias, arg)
+	})
+}
+
 func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	eligible func(principal.Principal, string, func(any) int) string,
 ) error {
@@ -140,10 +162,11 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
-	// An owner a case admission names already holds a merged contact. So the
-	// caller's scope is not asked of them, and the seat half still is.
-	if admittedCaseGrantee(ctx, dest) {
-		p.Permissions.RowScope = principal.RowScopeAll
+	// An owner a case admission names already holds a merged contact, and a
+	// consented receiver agreed to take the record. So the caller's scope is not
+	// asked of them, and the seat half still is.
+	if admittedCaseGrantee(ctx, dest) || handOverConsented(ctx, dest) {
+		p = consentedAssigner(p)
 		eligible = AssigneeEligibleSQL
 	}
 	status := "status"
@@ -153,16 +176,39 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 		}
 		status = "CASE WHEN status IN ('invited','deactivated') THEN 'active' ELSE status END AS status"
 	}
+	predicate := eligible(p, "u", arg)
+	permitted, err := assigneeAdmitted(ctx, tx, destPos, status, predicate, args)
+	if err != nil || permitted {
+		return err
+	}
+	if !recording(ctx) {
+		return refuseIneligibleAssignee(false)
+	}
+	// A seat that may own the row, outside the caller's scope, is refused by
+	// the scope: the same 422, noted as the gate's refusal.
+	var seatArgs []any
+	seatArg := func(v any) int { seatArgs = append(seatArgs, v); return len(seatArgs) }
+	seatPos := seatArg(dest)
+	seatPredicate := eligible(consentedAssigner(p), "u", seatArg)
+	if seatOK, err := assigneeAdmitted(ctx, tx, seatPos, status, seatPredicate, seatArgs); err != nil {
+		return err
+	} else if seatOK {
+		noteRefusal(ctx, assigneeRefusal)
+	}
+	return refuseIneligibleAssignee(false)
+}
+
+// assigneeAdmitted asks whether the seat bound at destPos passes the
+// eligibility predicate.
+func assigneeAdmitted(ctx context.Context, tx pgx.Tx, destPos int, status, predicate string, args []any) (bool, error) {
 	var permitted bool
 	query := fmt.Sprintf(
 		`SELECT EXISTS (SELECT 1 FROM (
 		   SELECT id AS owner_id, %s, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = $%d AND removed_at IS NULL FOR KEY SHARE) u WHERE %s)`,
-		status, destPos, eligible(p, "u", arg))
-	if err := tx.QueryRow(ctx, query, args...).Scan(&permitted); err != nil {
-		return err
-	}
-	return refuseIneligibleAssignee(permitted)
+		status, destPos, predicate)
+	err := tx.QueryRow(ctx, query, args...).Scan(&permitted)
+	return permitted, err
 }
 
 // refuseIneligibleAssignee turns the eligibility answer into the refusal.
@@ -239,7 +285,7 @@ func ensureAssignableSource(ctx context.Context, tx pgx.Tx, table string, id ids
 		return nil
 	}
 	if !unowned {
-		return apperrors.ErrPermissionDenied
+		return refuseRowChange(ctx, table)
 	}
 	// RequireHuman rather than a type comparison: it also refuses a buyer
 	// principal, which is a seat the raw check would have admitted onto the

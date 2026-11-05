@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Pencil } from "lucide-react";
-import { type ReactNode, useCallback, useRef, useState } from "react";
-import { Button } from "../design-system/atoms";
-import { IconAction } from "../design-system/iconaction";
+import { type ReactNode, useCallback, useState } from "react";
+import { EditableValue } from "../design-system/editablevalue";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineText } from "../design-system/inlinetext";
+import type { RecordRename } from "../design-system/recordview";
 import { useLocale, useT } from "../i18n";
 import type { EntityKind } from "../lib/entity";
 import {
@@ -41,15 +40,15 @@ export type RailEdit = Readonly<{
 
 type Props = Readonly<{
   edit: RailEdit;
-  // The fields this row changes. One plain field edits in place; several, a
-  // list of rows or a value drawn as a link open the edit form.
+  // The fields this row changes. One plain field edits in a one-field dialog;
+  // several, a list of rows or a value drawn as a link open the edit form.
   keys: readonly string[];
   label: string;
   // The row's resting value, kept as the column draws it.
   reading: ReactNode;
-  // The resting value as text, for a field that edits in place.
+  // The resting value as text, for a field edited on its own.
   text?: string;
-  // The value is a link, so the edit is a glyph beside it, not the value.
+  // The value is a link: it keeps its action, and the pill around it edits.
   link?: boolean;
   beside?: ReactNode;
 }>;
@@ -80,7 +79,7 @@ export function RailField(props: Props) {
 type FieldProps = Props & Readonly<{ field: CreateField }>;
 
 function useRailWrite(edit: RailEdit) {
-  const opened = useRef(edit.record);
+  const [opened, setOpened] = useState(edit.record);
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, "details");
@@ -89,7 +88,7 @@ function useRailWrite(edit: RailEdit) {
   // is open must not move it, or the save overwrites a concurrent change.
   const onEditingChange = useCallback(
     (next: boolean) => {
-      if (next && !editing) opened.current = edit.record;
+      if (next && !editing) setOpened(edit.record);
       setEditing(next);
       if (!next) setDirty(false);
     },
@@ -97,14 +96,58 @@ function useRailWrite(edit: RailEdit) {
   );
   // A save elsewhere on the record pauses this field, never its own open editor.
   const canEdit = !pending || editing;
-  return { opened, mutation, canEdit, setDirty, onEditingChange };
+  const shown = editing ? opened : edit.record;
+  return { opened, shown, mutation, canEdit, setDirty, onEditingChange };
+}
+
+/**
+ * One plain field of a record saved on its own, the way a left-column row
+ * saves it. The record's head renames through it too.
+ */
+export function useRailText(edit: RailEdit, field: CreateField) {
+  const t = useT();
+  const write = useRailWrite(edit);
+  return {
+    stored: prefillFromRecord([field], write.shown)[field.key] ?? "",
+    canEdit: write.canEdit,
+    onEditingChange: write.onEditingChange,
+    onDirtyChange: write.setDirty,
+    onSave: async (next: string) => {
+      checkFieldValue(field, next, t);
+      await write.mutation.mutateAsync({
+        values: { [field.key]: next },
+        rows: {},
+        baseline: write.opened,
+        save: edit.save,
+      });
+    },
+  };
+}
+
+/** The record's name as its head renames it, through the same save. */
+export function useRailRename(
+  edit: RailEdit,
+  key: string,
+  label: string,
+): RecordRename {
+  // An edit that does not offer the field leaves the name as text.
+  const offered = edit.fields.find((field) => field.key === key);
+  const { stored, canEdit, ...write } = useRailText(
+    edit,
+    offered ?? { key, label: "field.unset" },
+  );
+  return {
+    label,
+    value: stored,
+    canEdit: Boolean(offered) && edit.canEdit && canEdit,
+    ...write,
+  };
 }
 
 function RailText({ edit, field, label, text, beside }: FieldProps) {
   const t = useT();
   const { locale } = useLocale();
-  const write = useRailWrite(edit);
-  const stored = prefillFromRecord([field], edit.record)[field.key] ?? "";
+  const { stored, ...write } = useRailText(edit, field);
   return (
     <>
       <InlineText
@@ -122,18 +165,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         }
         maxLength={field.maxLength}
         step={field.step ?? (field.type === "number" ? "any" : undefined)}
-        canEdit={write.canEdit}
-        onEditingChange={write.onEditingChange}
-        onDirtyChange={write.setDirty}
-        onSave={async (next) => {
-          checkFieldValue(field, next, t);
-          await write.mutation.mutateAsync({
-            values: { [field.key]: next },
-            rows: {},
-            baseline: write.opened.current,
-            save: edit.save,
-          });
-        }}
+        {...write}
       />
       {beside}
     </>
@@ -143,7 +175,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
 function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
   const t = useT();
   const write = useRailWrite(edit);
-  const values = prefillFromRecord([field], edit.record);
+  const values = prefillFromRecord([field], write.shown);
   const stored = values[field.key] ?? "";
   const options = selectOptions(field, values, t);
   return (
@@ -167,7 +199,7 @@ function RailChoice({ edit, field, label, reading, beside }: FieldProps) {
           await write.mutation.mutateAsync({
             values: { [field.key]: next },
             rows: {},
-            baseline: write.opened.current,
+            baseline: write.opened,
             save: edit.save,
           });
         }}
@@ -188,38 +220,21 @@ function RailForm({
   const t = useT();
   const [open, setOpen] = useState(false);
   const { mutation, pending } = useRecordFieldWrite(edit.kind, edit.record);
-  const change = t("inlineChoice.change", { field: label });
-  const start = () => {
-    mutation.reset();
-    setOpen(true);
-  };
   return (
     <>
-      {link ? (
-        <>
-          {reading}
-          <span className="recorddetails-glyph">
-            <IconAction
-              inline
-              label={change}
-              icon={<Pencil aria-hidden="true" />}
-              disabled={pending}
-              opensDialog
-              onClick={start}
-            />
-          </span>
-        </>
-      ) : (
-        <Button
-          variant="link"
-          className="inline-editable"
-          aria-label={change}
-          disabled={pending}
-          onClick={start}
-        >
-          {reading}
-        </Button>
-      )}
+      <EditableValue
+        editLabel={t("inlineChoice.change", { field: label })}
+        placeholder={t("field.unset")}
+        link={link}
+        // A save elsewhere on the record pauses this row, never its own open form.
+        editable={open || !pending}
+        onEdit={() => {
+          mutation.reset();
+          setOpen(true);
+        }}
+      >
+        {reading}
+      </EditableValue>
       {beside}
       <EditRecordModal
         open={open}

@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "../i18n";
 import { useFocusHandoff } from "./focushandoff";
 import { Heading } from "./heading";
@@ -208,12 +209,18 @@ export function DockedWindow({
   };
   const drop = () => setSlide(null);
   const fold = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
+    // A dialog opened from inside is portalled out of this box; its Escape is its own.
+    const own =
+      event.target instanceof Node &&
+      event.currentTarget.contains(event.target);
+    if (event.key !== "Escape" || event.defaultPrevented || !own) return;
     event.preventDefault();
     onStateChange("min");
   };
   const grown = state === "max";
-  return (
+  // Portalled to the end of the body, after the dialog it was opened from. At
+  // the overlays' level, document order draws it above that dialog.
+  return createPortal(
     <>
       <section
         ref={box}
@@ -297,6 +304,7 @@ export function DockedWindow({
           <ChevronUp aria-hidden="true" />
         </button>
       )}
-    </>
+    </>,
+    document.body,
   );
 }

@@ -1,113 +1,174 @@
 import { Menu, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppLink } from "../design-system/applink";
 import { Avatar } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
+import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
-import type { Route } from "../lib/router";
+import { entryDepth } from "../lib/historydepth";
+import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import { AgentRail } from "./agentrail";
-import { BetaBadge } from "./betabadge";
 import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
-import { NavLevelView, useNavLevel } from "./navlevel";
+import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
-// One lockup at every width: a square mark, the name, and what it runs on.
-// A square is the one shape every company's mark fits at one weight.
-// Only the name is the link, and the mark repeats it, so the mark is hidden
-// from assistive tech. shell.css stretches the link over the whole card.
-function BrandBlock() {
+// The installation's own name and marks (ADR-0061: one installation, one
+// company). They come from /me, which carries them to every seat. The full
+// company profile is an admin's read. A disabled observer: the auth gate
+// already fetched /me, and this re-renders when a company save refreshes it.
+function useInstallationBrand() {
+  return useMe(false).data?.installation_brand;
+}
+
+/** The accessible name of a link home that shows the company's mark. */
+export function useHomeLinkLabel(): string {
   const t = useT();
-  /* The stage this product is at, on every branch below. It is a fact about
-   * the build, not about the company above it.
-   * Temporary: betabadge.tsx lists what its deletion takes. */
-  const marker = <BetaBadge />;
-  // The installation's own name and marks (ADR-0061: one installation, one
-  // company). They come from /me, which carries them to every seat. The full
-  // company profile is an admin's read. A disabled observer: the auth gate
-  // already fetched /me, and this re-renders when a company save refreshes it.
-  const installation = useMe(false).data?.installation_brand;
+  const installation = useInstallationBrand();
+  return installation
+    ? t("shell.companyLogoAria", { company: installation.display_name })
+    : t("shell.logoAria");
+}
+
+/**
+ * The company's square mark, or the product's own before onboarding named a
+ * company. Decorative: the link around it carries the name.
+ */
+export function WorkspaceChip() {
+  const installation = useInstallationBrand();
   const mark = useSquareMark(
     installation?.logo_icon_url,
     installation?.logo_url,
   );
-  // With no profile (the shell mounted before onboarding described anybody),
-  // the block falls back to the product's own mark and name. A company name is
-  // never invented to fill the line.
   if (!installation) {
     return (
-      <>
-        <span className="ws-chip" aria-hidden="true">
-          <Logomark />
-        </span>
-        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
+      <span className="ws-chip" aria-hidden="true">
+        <Logomark />
+      </span>
+    );
+  }
+  // Avatar draws the deterministic monogram underneath, so a company with no
+  // square mark has a face, not a gap.
+  return (
+    <span className="ws-chip ws-chip-company" aria-hidden="true">
+      {/* The brand read carries no company id, so the name keys the chip. */}
+      <Avatar
+        identity={installation.display_name}
+        name={installation.display_name}
+        src={mark}
+      />
+    </span>
+  );
+}
+
+// One lockup at every width: a square mark and the name. Once the installation
+// has a name of its own, what it runs on sits under it.
+// A square is the one shape every company's mark fits at one weight.
+// Only the name is the link, and the mark repeats it, so the mark is hidden
+// from assistive tech. The link covers the whole card (shell.css).
+function BrandBlock() {
+  const t = useT();
+  const installation = useInstallationBrand();
+  const homeLabel = useHomeLinkLabel();
+  // On the link, not the heading: the link already holds the tab stop, and the
+  // measure reaches into the heading it clips. Folded, the name has no width,
+  // so hovering the mark always shows it.
+  const {
+    ref: nameRef,
+    trigger: nameTrigger,
+    tip: nameTip,
+  } = useTruncationTooltip<HTMLAnchorElement>(installation?.display_name ?? "");
+  // With no profile (the shell mounted before onboarding described anybody),
+  // the block falls back to the product's own mark and name. A company name is
+  // never invented to fill the slot.
+  if (!installation) {
+    return (
+      <div className="railhead">
+        <WorkspaceChip />
+        <AppLink className="ws" href="#/home" aria-label={homeLabel}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
-        </a>
-        {/* No attribution here: the product's own name is already above it. */}
-        <span className="ws-company">{marker}</span>
-      </>
+        </AppLink>
+      </div>
     );
   }
   return (
-    <>
-      {/* The company's square mark. Avatar draws the deterministic monogram
-          underneath, so a company with no square mark has a face, not a gap. */}
-      <span className="ws-chip ws-chip-company" aria-hidden="true">
-        {/* The brand read carries no company id, so the name keys the chip. */}
-        <Avatar
-          identity={installation.display_name}
-          name={installation.display_name}
-          src={mark}
-        />
-      </span>
-      <a
+    <div className="railhead railhead-attributed">
+      <WorkspaceChip />
+      <AppLink
         className="ws"
         href="#/home"
-        aria-label={t("shell.companyLogoAria", {
-          company: installation.display_name,
-        })}
+        aria-label={homeLabel}
+        ref={nameRef}
+        {...nameTrigger}
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
         <Heading size="small" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
-      </a>
-      <span className="ws-company">
-        <span className="ws-company-text">{t("shell.poweredBy")}</span>
-        {marker}
-      </span>
-    </>
+        {nameTip}
+      </AppLink>
+      <span className="ws-company">{t("shell.poweredBy")}</span>
+    </div>
   );
 }
 
-// The panel's state as classes: its width, whether the phone sheet is open,
+// The panel's state as classes: its width, whether the phone menu is open,
 // whether it is mid-collapse, and whether it shows a drilled-in level. The
 // last is a class, not a CSS `:has()` on the level's markup. A `:has()` takes
 // its argument's specificity, so a rule meant only to arrange a panel would
-// have outranked the sheet's layout.
+// have outranked the menu's layout.
 function railClasses(
   state: Readonly<{
     collapsed: boolean;
-    sheetOpen: boolean;
+    menuOpen: boolean;
     leveled: boolean;
   }>,
 ): string {
   return [
     "rail",
     state.collapsed ? "collapsed" : "expanded",
-    state.sheetOpen ? "sheetopen" : "",
+    state.menuOpen ? "menuopen" : "",
     state.leveled ? "leveled" : "",
   ]
     .filter((name) => name !== "")
     .join(" ");
+}
+
+// The entry the reader stands on: its path and history depth. Read live, since
+// the router stamps the depth after the first render and re-renders nothing.
+const entryKey = (path: string) => `${path} ${entryDepth() ?? ""}`;
+
+/** Whether More's menu is open. Another entry (Back and Forward too) or a widen
+ *  past the phone width closes it, during render, so no frame shows it stale. */
+function useMenuOpen(path: string, phone: boolean) {
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  if (openedAt !== null && (openedAt !== entryKey(path) || !phone)) {
+    setOpenedAt(null);
+  }
+  const setOpen = useCallback(
+    (next: boolean) => setOpenedAt(next ? entryKey(path) : null),
+    [path],
+  );
+  return [openedAt !== null, setOpen] as const;
+}
+
+/** Whether focus sits in the menu, or fell to the body when a press left it. */
+function holdsOrDropsFocus(menu: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  return (
+    active === null ||
+    active === document.body ||
+    (menu?.contains(active) ?? false)
+  );
 }
 
 export type RailProps = {
@@ -130,80 +191,67 @@ export function WorkspaceRail({
   // it without moving focus. The tooltip is never the accessible name:
   // aria-label carries that in both states.
   const navTip = useNavTip(collapsed, nav);
-  // At phone width the same markup is a bottom bar; More expands it into a
-  // sheet carrying every destination. One nav element keeps one navigation
+  // At phone width the same markup is a bottom bar; More opens a menu over it
+  // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.
-  const [sheetOpen, setSheetOpen] = useState(false);
   const phone = usePhoneViewport();
+  // A dial written in place keeps the entry, so the menu stays; Back, Forward
+  // and a pushed query land on another. useHash re-renders on each of them.
+  useHash();
+  const [open, setOpen] = useMenuOpen(routeHash(route), phone);
+  const menuOpen = open && phone;
   const more = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
 
-  // The sheet is a popover over the page. It dismisses like every other one in
-  // the chrome: Escape from anywhere, or any click outside it. That makes
-  // the scrim behind it work without being a control of its own.
-  const closeSheet = useCallback(() => setSheetOpen(false), []);
-  usePopoverDismiss(sheetOpen, nav, closeSheet);
-
-  // Which of the route's levels the panel shows, and the two ways the reader
-  // moves between them (app/navlevel.tsx). A section's entries take over the
-  // panel rather than hanging off the destinations. 56px cannot carry two
-  // levels, and 256px carrying both reads as a list of twenty places to go.
-  //
-  // At phone width the panel is a bottom bar of four destinations, and it
-  // keeps them on a section route. A bar that gave its four tabs to a section
-  // would lose every destination and hold two controls. There the section is
-  // reached from the page head (app/sectionswitcher.tsx), so no section is
-  // walked into here.
-  const level = useNavLevel(
-    route,
-    phone ? undefined : section,
-    nav,
-    closeSheet,
-  );
-
-  // Opening a sheet that covers the page takes focus with it, or a keyboard
-  // user tabs through a page they cannot see. Closing it hands focus back to
-  // the control that opened it, not to <body>. That happens only while the
-  // sheet still holds focus; a row that navigated away put focus somewhere
-  // better. It also happens only once the sheet has been open. The effect runs
-  // on mount too, and a walk into or out of a section mounts a new rail with
-  // the level's first row focused. Without the guard, More would take it.
-  const sheetOpened = useRef(false);
-  useEffect(() => {
-    if (sheetOpen) {
-      sheetOpened.current = true;
-      nav.current?.querySelector<HTMLElement>(".navwrap .navitem")?.focus();
-      return;
-    }
-    if (sheetOpened.current && nav.current?.contains(document.activeElement)) {
-      sheetOpened.current = false;
+  // Closing hands the focus the menu held, or dropped, to More, which stands for
+  // every page the menu holds. A press that focused a control of its own keeps it.
+  const closeMenu = useCallback(() => {
+    const dropped = menu.current !== null && holdsOrDropsFocus(menu.current);
+    setOpen(false);
+    if (dropped) {
       more.current?.focus();
     }
-  }, [sheetOpen]);
+  }, [setOpen]);
+  usePopoverDismiss(menuOpen, menu, closeMenu);
 
-  // The sheet exists only at phone width; the control that closes it is not
-  // rendered above the breakpoint. Widening the window while it is open would
-  // otherwise leave the page locked and inert with nothing on screen to release
-  // it. The width is already subscribed to above, so this reads that answer
-  // rather than opening a second media query of its own.
+  // A section's entries take over the panel, one level at a time. The phone
+  // bar keeps its destinations on a section route, which is reached from the
+  // page head there (app/sectionswitcher.tsx).
+  const level = useNavLevel(route, phone ? undefined : section, nav, closeMenu);
+
+  // A new address or a widen closes the menu during render, past `closeMenu`.
+  // Its focus goes to More. After a widen it goes to the sidebar's current row,
+  // or to the first row on a page no row claims (Not Found).
+  const menuWasOpen = useRef(false);
   useEffect(() => {
-    if (sheetOpen && !phone) {
-      setSheetOpen(false);
+    const closed = menuWasOpen.current && !menuOpen;
+    menuWasOpen.current = menuOpen;
+    if (!closed || !holdsOrDropsFocus(menu.current)) {
+      return;
     }
-  }, [sheetOpen, phone]);
+    if (phone) {
+      more.current?.focus();
+    } else {
+      const rows = nav.current;
+      (
+        rows?.querySelector<HTMLElement>(".navitem[aria-current]") ??
+        rows?.querySelector<HTMLElement>(DESTINATION_ROW)
+      )?.focus();
+    }
+  }, [menuOpen, phone]);
 
-  // A scrim that only looks blocking is the worst of both worlds: the page it
-  // dims stays reachable by Tab and by a screen reader. `inert` on the content
-  // column takes it out of the tab order, the accessibility tree and pointer
-  // reach in one attribute. That is the guarantee <dialog> gives, and this nav
-  // cannot become one without giving up its landmark. The body stops scrolling
-  // for the same reason: a touch on the scrim should dismiss, not scroll.
-  //
-  // The skip link goes inert with it. It is a sibling of the nav, not a child
-  // of the column. So Tab past the sheet's last row wrapped onto it, drew it
-  // over the scrim, and pointed at an inert element. That is a control that
-  // takes focus, shows itself, and does nothing.
+  // The menu takes focus, or Tab walks a page nobody can see.
   useEffect(() => {
-    if (!sheetOpen) {
+    if (menuOpen) {
+      menu.current?.querySelector<HTMLElement>(".navitem")?.focus();
+    }
+  }, [menuOpen]);
+
+  // `inert` takes the dimmed page out of Tab, the accessibility tree and pointer
+  // reach. The skip link sits outside `.main`, so it goes inert too, and the
+  // body stops scrolling so a touch on the scrim dismisses.
+  useEffect(() => {
+    if (!menuOpen) {
       return;
     }
     const locked = document.querySelectorAll<HTMLElement>(".main, .skiplink");
@@ -218,13 +266,13 @@ export function WorkspaceRail({
         element.inert = false;
       }
     };
-  }, [sheetOpen]);
+  }, [menuOpen]);
 
   // A destination the phone bar hides behind More: there More is the current
   // tab, and claims what the row it stands in for would (`currentClaim`).
-  const sheetRow = NAV.find((item) => item.screen === level.shown.activeId);
-  const inSheet = sheetRow ? !MOBILE_PRIMARY.has(sheetRow.screen) : false;
-  const moreClaim = inSheet ? currentClaim(level.shown) : undefined;
+  const shownRow = NAV.find((item) => item.screen === level.shown.activeId);
+  const offBar = shownRow ? !MOBILE_PRIMARY.has(shownRow.screen) : false;
+  const moreClaim = offBar ? currentClaim(level.shown) : undefined;
 
   // The agent is app-level chrome: there is one of it, and it belongs to the
   // whole session rather than to any destination. A drilled-in level is
@@ -235,18 +283,29 @@ export function WorkspaceRail({
 
   return (
     <>
-      {/* The scrim dims the page the sheet covers and gives the eye the layer
-          boundary. It carries no behaviour of its own: a click on it lands
-          outside the nav, which is already what closes the sheet. */}
-      {sheetOpen && <div className="railscrim" aria-hidden="true" />}
+      {/* No behaviour of its own: a press on the scrim lands outside the menu,
+          which is what closes it. */}
+      {menuOpen && <div className="railscrim" aria-hidden="true" />}
       <nav
         ref={nav}
-        className={railClasses({ collapsed, sheetOpen, leveled })}
+        className={railClasses({ collapsed, menuOpen, leveled })}
         aria-label={t("shell.railAria")}
       >
-        <div className="railhead">
-          <BrandBlock />
-        </div>
+        {/* Before the bar in the document as it is above it on screen, so Tab
+            meets the menu first (WCAG 2.4.3). */}
+        {menuOpen && (
+          <div className="railmenu" ref={menu}>
+            <NavLevelView
+              level={level.shown}
+              counts={counts}
+              state={navTip}
+              onSelect={level.onSelect}
+              onWalkUp={level.onWalkUp}
+              rows="offbar"
+            />
+          </div>
+        )}
+        {!phone && <BrandBlock />}
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the same depth are the same level with
             another row current, and nothing should move. */}
@@ -258,37 +317,39 @@ export function WorkspaceRail({
           state={navTip}
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
+          rows={phone ? "bar" : "all"}
           // At phone width the agent stands in the middle of the bar, not at
           // the foot of a column that is not there. It sits in the row stream,
           // so a thumb and a Tab key read the bar in the same order. One Core
           // either way: the foot below renders only above the breakpoint.
           centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
         />
-        {/* Phone-width only: expands the bar into a sheet carrying every
-          destination. Hidden by CSS on the desktop sidebar.
-          It carries the active state for every destination it hides, so the
-          closed bar always shows where you are. The four tabs cannot, because
-          those routes' own rows are display:none at this width. */}
+        {/* Carries the active state for every destination the menu holds, so
+            the closed bar always shows where you are. */}
         <button
           type="button"
           ref={more}
-          className={inSheet ? "railmore active" : "railmore"}
-          // Open, this control closes the sheet, so it says so in the name as
+          className={offBar ? "railmore active" : "railmore"}
+          // Open, this control closes the menu, so it says so in the name as
           // well as in the glyph. A control whose name stays the same while its
           // job changes is the one a screen reader gets wrong.
-          aria-label={sheetOpen ? t("shell.closeMenu") : t("shell.more")}
-          aria-expanded={sheetOpen}
+          aria-label={menuOpen ? t("shell.closeMenu") : t("shell.more")}
+          aria-expanded={menuOpen}
           // The state has to reach a screen reader as well as the eye: the
           // hidden row is out of the accessibility tree at this width. Dropped
-          // once the sheet is open, because the real row is then visible and
+          // once the menu is open, because the real row is then visible and
           // carries it. Two elements claiming the current page is worse than
           // none.
-          aria-current={sheetOpen ? undefined : moreClaim}
-          onClick={() => setSheetOpen((open) => !open)}
+          aria-current={menuOpen ? undefined : moreClaim}
+          onClick={() => setOpen(!menuOpen)}
         >
-          {sheetOpen ? <X aria-hidden /> : <Menu aria-hidden />}
+          {/* Both glyphs stay drawn, so one can turn into the other. */}
+          <span className="railmore-glyphs" aria-hidden>
+            <Menu className="railmore-open" />
+            <X className="railmore-close" />
+          </span>
           <span className="navlabel">
-            {sheetOpen ? t("shell.closeMenu") : t("shell.more")}
+            {menuOpen ? t("shell.closeMenu") : t("shell.more")}
           </span>
         </button>
         <div className="grow" />

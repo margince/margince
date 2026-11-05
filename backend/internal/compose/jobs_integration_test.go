@@ -146,7 +146,7 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	integration.ApplyRiverSchema(t)
 	// The exact fixture the direct-Sweep test uses: an overdue, active,
 	// commit-override deal — never auto-final, always a staged proposal.
-	id := e.seedSweepDeal(t, "Commit slipped", e.late, new("commit"), new(-10), 3)
+	id := e.seedSweepDeal(t, "Commit slipped", e.late, new(95), new(-10), 3)
 
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	runner, err := NewJobRunner(e.Pool, quiet, JobRunnerConfig{})
@@ -161,26 +161,18 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	// Idempotent, so the deferred call is a safety net for the paths that
-	// return before the explicit stop below rather than a second shutdown.
-	// It answers the error rather than reporting it: the deferred caller is past
-	// every assertion and can only say so, while the explicit one below must not
-	// read a row the workers it failed to drain may still be writing.
+	// Idempotent, so the deferred call is a safety net for the paths that return
+	// before the explicit stop below rather than a second shutdown.
+	stop := integration.StartedJobRunner(t, runner)
 	stopped := false
-	stopRunner := func() error {
+	stopRunner := func() {
 		if stopped {
-			return nil
+			return
 		}
 		stopped = true
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		return runner.Stop(stopCtx)
+		stop()
 	}
-	defer func() {
-		if err := stopRunner(); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}()
+	defer stopRunner()
 
 	// RunOnStart enqueues both periodic dispatchers at boot; wait for the
 	// close-date pass to complete, then assert the same outcome the direct
@@ -191,15 +183,15 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	// the same one.
 	awaitKindCompleted(t, sub, CloseDateSweepArgs{}.Kind())
 
-	// Stopped BEFORE the row is read, not at the end of the test. The wait
-	// above returns on a completion event, and the runner goes on dispatching
-	// after it — so a second pass landing between the event and the read would
-	// be asserted against without anything saying one had run. Stopping first
-	// makes the four assertions below describe one settled row.
-	// Fatal because a drain that overran leaves workers holding the very rows
-	// the assertions read, so each verdict below would be a race.
-	if err := stopRunner(); err != nil {
-		t.Fatalf("Stop: %v — the workers were still running, so the row below is not settled", err)
+	// Stopped before the row is read, rather than at the end of the test. The runner
+	// goes on dispatching after the completion event, so a second pass landing
+	// between the event and the read would be asserted against silently.
+	//
+	// A drain that overran leaves workers holding the rows below, so FailNow
+	// keeps an unsettled row from being judged.
+	stopRunner()
+	if t.Failed() {
+		t.FailNow()
 	}
 
 	swept := e.readSwept(t, id)
@@ -209,12 +201,12 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	if !swept.provisional {
 		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
-	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		// The tier comes with it. best_case here is what the downgrade notch
-		// writes, reached only from a stalled finding this fixture does not
-		// carry. Naming the decision says which of the two an occurrence was.
-		t.Errorf("forecast_category = %s, want the untouched commit override (%s)",
-			shownString(swept.forecastCat), e.sweptTier(t, id))
+	if swept.probability == nil || *swept.probability != 95 {
+		// The tier comes with it. 45 here is what the downgrade notch writes,
+		// reached only from a stalled finding this fixture does not carry.
+		// Naming the decision says which of the two an occurrence was.
+		t.Errorf("probability = %s, want the untouched 95 (%s)",
+			shownInt(swept.probability), e.sweptTier(t, id))
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the job-driven pass raised %d cards, want none — it must do exactly "+
@@ -222,13 +214,17 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 	}
 }
 
-// shownString renders a nullable column for a failure message.
-//
-// `%v` on a *string prints the ADDRESS, and this bug is the reason that
-// matters: "forecast_category = 0x6e8b29e0dc40" says the column was non-nil
-// and not what was wanted, which is a different defect from the column being
-// absent — and the message could not tell the two apart, so the one failure
-// anybody had caught reported a number nobody can act on.
+// shownInt renders a nullable column for a failure message. `%v` on a
+// pointer prints the address, which says nothing anybody can act on.
+func shownInt(value *int) string {
+	if value == nil {
+		return "NULL"
+	}
+	return fmt.Sprint(*value)
+}
+
+// shownString renders a nullable text column for a failure message, for the
+// same reason as shownInt.
 func shownString(value *string) string {
 	if value == nil {
 		return "NULL"

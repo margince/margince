@@ -126,8 +126,6 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 		fields     string
 		wantNamed  string
 	}{
-		{"company_id on a contact create", createWriteShapes, "contact", `{"full_name":"A","company_id":"x"}`, "company_id"},
-		{"company_name on a contact create", createWriteShapes, "contact", `{"full_name":"A","company_name":"Acme"}`, "company_name"},
 		{"source on a contact update", updateWriteShapes, "contact", `{"source":"manual"}`, "source"},
 		{"company_id on a contact update", updateWriteShapes, "contact", `{"company_id":"x"}`, "company_id"},
 		{"a typo next to a real field", createWriteShapes, "company", `{"displayname":"Firecrawl"}`, "displayname"},
@@ -257,8 +255,6 @@ func TestEveryRenderedTimestampArgumentCarriesTheRule(t *testing.T) {
 		"log_activity.properties.follow_up_task.properties.due_at": timestampRule,
 		"check_availability.properties.from":                       windowRule,
 		"check_availability.properties.to":                         windowRule,
-		"book_meeting.properties.start":                            windowRule,
-		"book_meeting.properties.end":                              windowRule,
 	} {
 		if rendered[path] != want {
 			t.Errorf("%s carries %q, want %q", path, rendered[path], want)

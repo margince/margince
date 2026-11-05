@@ -206,6 +206,13 @@ The real test sits in the **reciprocity part**, not in a role filter. A team mem
 copied has messages in one direction, so reciprocity puts them well below someone in a real exchange.
 They show up, ranked at their real level, and do not drop out.
 
+Copy still is not writing. Each edge also keeps `sent_count_90d`, the mail and chat messages the
+team member sent the contact as `from` (`graphMemberSent` in `search/graphedge.go`). A logged call or
+meeting is not a message sent. A contact's Reach row reads its two-way verdict and its one-way writers
+from this count, so a team member who was only copied is neither. A reader without activity access
+gets the edge without the count. A row folded before the column existed holds NULL, and readers keep
+the outbound count's reading until the row is folded again.
+
 **What does not make an edge**, and why:
 
 - **Anything outside `email`, `call`, `meeting`** (`relstrength.IsInteractionKind`, written into SQL
@@ -216,12 +223,17 @@ They show up, ranked at their real level, and do not drop out.
 - **A row no human wrote** (`relstrength.WrittenByHumanSQL`, part of
   `relstrength.InteractionCountsSQL`). A mail with a calendar method is an invite, an answer to one,
   or a notice that a meeting is off. A mail whose sender capture stamped `sender_is_machine` came
-  from a sending system: a file-share notice, an automatic notice or a delivery report. A row with
-  origin `system_notice` or `system_remediation` is the product writing. The same rule moves the
-  contact and company last-touch dates and contact strength, and the read contract names it as
-  `automatic_kind`.
+  from a sending system: a file-share notice, an automatic notice or a delivery report. A mail
+  capture stamped `bulk_mail_attested` carried a List-Unsubscribe header: a newsletter or other
+  mail sent to a list, in either direction. A row with origin `system_notice` or
+  `system_remediation` is the product writing. The same rule moves the contact and company
+  last-touch dates and contact strength, and the read contract names it as `automatic_kind`.
 
-  The email reader (`signal_extract`) uses the same stamp. It skips a thread in which every message comes
+  Such a row stays on every timeline. The nightly `graph_edge_reconcile` folds every edge again, so an
+  edge folded before a kind joined the rule loses that count within a day.
+
+  The email reader (`signal_extract`) uses the sender stamp alone, and still reads a newsletter,
+  because a customer's newsletter can carry account news. It skips a thread in which every message comes
   from a sending system, so it makes no model call and saves no signal. Such a message also reaches no
   company, so a notice never puts a finding on the sending tool's company. Such mail does not end a quiet
   reminder either.

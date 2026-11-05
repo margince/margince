@@ -133,7 +133,7 @@ type CompanyNamePromoter struct {
 func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePromoter {
 	return &CompanyNamePromoter{
 		pool:      pool,
-		store:     contacts.NewStore(InstallationDB(pool)),
+		store:     newContactsStore(InstallationDB(pool)),
 		approvals: NewApprovalsService(InstallationDB(pool)),
 		feedback:  ai.NewFeedbackStore(InstallationDB(pool)),
 		log:       log,

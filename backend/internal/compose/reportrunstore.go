@@ -249,10 +249,11 @@ type ReportRunSummary struct {
 	AskedAt time.Time
 }
 
-// ListReportRuns pages the caller's own saved questions, newest first. The
-// page boundary is (created_at, id), since two runs can share a timestamp.
+// ListReportRuns pages the caller's own saved questions, newest first, about
+// one population when entity names it. The page boundary is (created_at, id),
+// since two runs can share a timestamp.
 func ListReportRuns(
-	ctx context.Context, tx pgx.Tx, after *storekit.Cursor, limit int,
+	ctx context.Context, tx pgx.Tx, after *storekit.Cursor, limit int, entity *string,
 ) ([]ReportRunSummary, bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok {
@@ -267,8 +268,9 @@ func ListReportRuns(
 		SELECT id, query, created_at FROM report_run
 		WHERE asked_by = $1
 		  AND ($2::timestamptz IS NULL OR (created_at, id) < ($2, $3::uuid))
+		  AND ($5::text IS NULL OR query->>'Entity' = $5)
 		ORDER BY created_at DESC, id DESC
-		LIMIT $4`, actor.UserID, afterAt, afterID, limit+1)
+		LIMIT $4`, actor.UserID, afterAt, afterID, limit+1, entity)
 	if err != nil {
 		return nil, false, fmt.Errorf("compose: listing saved questions: %w", err)
 	}

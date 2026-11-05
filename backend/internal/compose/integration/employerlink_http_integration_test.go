@@ -51,11 +51,7 @@ func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var company, contact, colleague AnyMap
-	if status := e.Call(t, http.MethodPost, "/v1/companies", AnyMap{
-		"source": "manual", "display_name": "Wireco", "domains": []AnyMap{{"domain": "wireco.test", "is_primary": true}},
-	}, nil, &company); status != http.StatusCreated {
-		t.Fatalf("company = %d %v", status, company)
-	}
+
 	for _, seed := range []struct {
 		into  *AnyMap
 		name  string
@@ -66,6 +62,11 @@ func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
 		}, nil, seed.into); status != http.StatusCreated {
 			t.Fatalf("contact %s = %d %v", seed.name, status, *seed.into)
 		}
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Wireco", "domains": []AnyMap{{"domain": "wireco.test", "is_primary": true}},
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("company = %d %v", status, company)
 	}
 	companyPath := "/v1/companies/" + company["id"].(string)
 
@@ -102,13 +103,12 @@ func TestTheEmployerLinkRoutesAnswerTheirContract(t *testing.T) {
 		t.Fatalf("link replay = %d %v, want the first answer", status, replayed)
 	}
 
-	var refused AnyMap
+	var reused AnyMap
 	if status := e.Call(t, http.MethodPost, "/v1/contacts/"+colleague["id"].(string)+"/employer",
-		AnyMap{"company_name": "Wireco Again"}, map[string]string{"Idempotency-Key": "near-duplicate"}, &refused); status != http.StatusConflict {
-		t.Fatalf("create and link on a held domain = %d %v, want 409", status, refused)
+		AnyMap{"company_name": "Wireco Again"}, map[string]string{"Idempotency-Key": "near-duplicate"}, &reused); status != http.StatusCreated {
+		t.Fatalf("reuse held domain = %d %v, want201", status, reused)
 	}
-	details, _ := refused["details"].(map[string]any)
-	if refused["code"] != "duplicate_domain" || details["existing_id"] != company["id"] {
-		t.Errorf("refusal = %v, want duplicate_domain naming %v", refused, company["id"])
+	if reused["company_id"] != company["id"] || reused["company_created"] != false {
+		t.Fatalf("employer = %v, want the existing company", reused)
 	}
 }

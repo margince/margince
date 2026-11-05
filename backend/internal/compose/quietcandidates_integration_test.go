@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"testing"
@@ -72,5 +73,36 @@ func TestTheQuietLimitKeepsTheStrongestRelationshipsThatAreReallyQuiet(t *testin
 	read.Owner, read.Limit = ids.UUID{}, 10
 	if got, want := quietCandidates(t, e, read), []ids.UUID{strong, older, newer}; !slices.Equal(got, want) {
 		t.Errorf("the unnarrowed read = %v, want %v, the owner's read in the same order", got, want)
+	}
+}
+
+// A deactivated colleague's exchange does not keep a relationship current. The
+// contact went quiet for every live seat, so it stays a candidate.
+func TestAnExchangeOnlyADeactivatedColleagueHadLeavesTheContactQuiet(t *testing.T) {
+	e := integration.Setup(t)
+	contact := e.SeedContact(t, "Quiet but for a departed colleague", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, contact, 70)
+	seedQuietExchange(t, e, e.Rep2, ids.UUID{}, contact, 7)
+	read := search.QuietRead{
+		Owner:        e.Rep1,
+		QuietBefore:  quietLaneNow.AddDate(0, 0, -(relstrength.QuietDays - 1)),
+		TouchedAfter: quietCeilingFrom(quietLaneNow),
+		AsOf:         quietLaneNow,
+		Limit:        10,
+	}
+	if got := quietCandidates(t, e, read); slices.Contains(got, contact) {
+		t.Fatalf("a contact a live colleague wrote to last week is a quiet candidate: %v", got)
+	}
+	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
+	if _, err := owner.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep2); err != nil {
+		t.Fatal(err)
+	}
+	if got := quietCandidates(t, e, read); !slices.Contains(got, contact) {
+		t.Errorf("the contact is not quiet once the only colleague who wrote last week is deactivated: %v", got)
 	}
 }

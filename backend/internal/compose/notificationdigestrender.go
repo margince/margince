@@ -170,9 +170,9 @@ func digestContent(lines digestLines, base string, words mailcopy.Copy) emailvie
 			body.Heading(heading)
 			group = heading
 		}
-		body.Paragraph(line.text)
+		body.Item(emailview.Item{Title: line.text})
 		if fragment := mailcopy.RecordFragment(line.target.Type, line.target.ID.String()); fragment != "" {
-			body.Action(words.MailReview, mailcopy.Destination(base, fragment))
+			body.ItemAction(words.MailReview, mailcopy.Destination(base, fragment))
 		}
 	}
 	if rest := lines.total - len(lines.quotable); rest > 0 {

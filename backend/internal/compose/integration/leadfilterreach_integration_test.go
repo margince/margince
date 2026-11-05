@@ -54,14 +54,15 @@ func refusedLeadFilters(t *testing.T, e *apptest.AppEnv) []string {
 	return *me.Authorization.RefusedLeadFilters
 }
 
-// The company's facts are the company's. A seat that may not read companies is
-// refused every dial over them, and /me names what the list refuses.
+// The company's facts are the company's, and a referring partner is a company.
+// A seat that may not read companies is refused every dial over them, and /me
+// names what the list refuses.
 func TestMeNamesTheCompanyDialsOfTheLeadListForASeatWithoutCompanyRead(t *testing.T) {
 	e := reachApp(t)
 	narrowSignedInRole(t, e, "lead_reach_no_company_read", `{"company": {"create": false, "read": false, "update": false, "delete": false}}`)
 
 	refused := refusedLeadFilters(t, e)
-	want := []string{"country", "industry", "size_band"}
+	want := []string{"country", "industry", "partner_accepted", "partner_company_id", "size_band"}
 	if !slices.Equal(refused, want) {
 		t.Errorf("/me refused %v, want %v", refused, want)
 	}

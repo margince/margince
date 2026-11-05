@@ -9,15 +9,18 @@ import {
   LatestInboundLine,
   useLatestInbound,
 } from "../../components/latestinbound";
+import { useRailRename } from "../../components/railfield";
 import { liveProjects } from "../../design-system/projectpicker";
-import { RecordView } from "../../design-system/recordview";
+import {
+  RecordView,
+  type RecordViewProps,
+} from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { contactPageState, contactQuery } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { BriefQueue } from "../brief/brief.queue";
@@ -29,6 +32,7 @@ import { ContactActions } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
 import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
+import { useContactEdit } from "./contactedit";
 import { ContactFollowState } from "./contactfollowstate";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
@@ -36,6 +40,7 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   navigateKeepingReturn,
   WorklistReturnLink,
@@ -46,6 +51,7 @@ import {
   ContactMailDrawer,
   ContactWriteTo,
   type Drawer,
+  type PressedComposer,
   runContactMomentAction,
   useComposer,
 } from "./contactpage.drawers";
@@ -55,6 +61,7 @@ import { ContactRecordTabs, ContactTabPanel } from "./contactpage.tabs";
 export { runContactMomentAction } from "./contactpage.drawers";
 
 export type Contact360 = components["schemas"]["Contact360"];
+type Contact = components["schemas"]["Contact"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 
@@ -90,7 +97,7 @@ export function ContactPageV2({
   // the aside and a row in the body lead to the same place.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const record = useQuery(contactQuery(id));
   // The server refuses the 360 and the guard for an archived row. The 360
   // runs beside the row read; the guard waits for its answer.
@@ -114,12 +121,15 @@ export function ContactPageV2({
   // it fired and says so in its prefill; before this the client dropped that
   // on the floor and opened the same empty composer as the generic button, so
   // "Draft a follow-up" and "Write an email" did exactly the same thing.
-  const [composerIntent, setComposerIntent] = useState("");
+  const [composerAsk, setComposerAsk] = useState<PressedComposer>({
+    intent: "",
+    drafts: false,
+  });
   // BOTH doors to the composer, answered in one place: the address opens it on
   // arrival, pressing "Write an email" opens it after. The page is at its
   // complexity ceiling — the lint says so — so the question is settled in the
   // hook rather than in two conditionals in the markup.
-  const composer = useComposer(t, drawer === "composer", composerIntent, () =>
+  const composer = useComposer(t, drawer === "composer", composerAsk, () =>
     setDrawer(null),
   );
 
@@ -129,9 +139,9 @@ export function ContactPageV2({
   // left behind, or it inherits a subject nobody asked for; and a composer
   // already on screen keeps what it holds, because a reader mid-sentence is not
   // asking to have their words replaced.
-  const openComposer = (intent: string) => {
+  const openComposer = (intent: string, drafts = false) => {
     if (drawer !== "composer") {
-      setComposerIntent(intent);
+      setComposerAsk({ intent, drafts });
     }
     setDrawer("composer");
   };
@@ -224,13 +234,19 @@ export function ContactPageV2({
       {/* Inside the gutter, not around it: the page's root is what insets it,
           and everything on the page, the rail included, answers a pressed
           address with this page's own composer. */}
-      <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
+      <ContactWriteTo
+        contactId={id}
+        onWrite={(draftIntent) =>
+          openComposer(draftIntent ?? "", draftIntent !== undefined)
+        }
+      >
         <ContactCallStart
           contactId={id}
           canLog={!activity.pending && activity.refusedId === undefined}
           onCall={openCallLog}
         >
-          <RecordView
+          <ContactRecordView
+            contact={contact}
             back={<WorklistReturnLink />}
             // The contact's details, under the head in the left card. They hold
             // for the contact, not the open tab, so a tab change leaves them put.
@@ -267,7 +283,7 @@ export function ContactPageV2({
                 refusedReasonId={refusedReasonId}
               />
             }
-            zone={recordZone}
+            zone={readerZone}
             // Stated once for the page, where both columns and every tab can see
             // it. Every control the record refuses points at its reason by id.
             band={band}
@@ -281,18 +297,24 @@ export function ContactPageV2({
           >
             {tab === "overview" && (
               <>
+                <ContactFollowState contactId={id} />
                 <ContactLatestInbound
                   latest={latest}
                   contactId={id}
                   view={view.data}
-                />
-                <ContactFollowState contactId={id} />
-                <ContactOverview
-                  view={view.data}
-                  onAction={runAction}
-                  onOpenEmail={setOpenEmail}
-                  onOpenTab={openTab}
-                />
+                >
+                  <ContactOverview
+                    view={view.data}
+                    onAction={runAction}
+                    onOpenEmail={setOpenEmail}
+                    onOpenTab={openTab}
+                    onAddTask={
+                      !activity.pending && activity.refusedId === undefined
+                        ? () => setDrawer("activity_task")
+                        : undefined
+                    }
+                  />
+                </ContactLatestInbound>
               </>
             )}
 
@@ -311,7 +333,7 @@ export function ContactPageV2({
           aside and one who finds it in the body land in the same place. */}
             <OpenEmailDrawer
               activityId={openEmail}
-              zone={recordZone}
+              zone={readerZone}
               onClose={() => setOpenEmail(null)}
             />
             <ContactMailDrawer
@@ -347,7 +369,7 @@ export function ContactPageV2({
             opens, driven by the same address, so a link to it from here
             and from there is one link. */}
             <BriefQueue />
-          </RecordView>
+          </ContactRecordView>
         </ContactCallStart>
       </ContactWriteTo>
     </div>
@@ -384,4 +406,18 @@ function useBriefedMeeting(): [
     setParams(out);
   };
   return [params.get(BRIEF_PARAM) ?? null, setBriefed];
+}
+
+// The record renamed from its heading, through the details' own edit.
+function ContactRecordView({
+  contact,
+  ...view
+}: RecordViewProps & Readonly<{ contact: Contact }>) {
+  const t = useT();
+  const rename = useRailRename(
+    useContactEdit(contact),
+    "full_name",
+    t("create.fullName"),
+  );
+  return <RecordView {...view} rename={rename} />;
 }

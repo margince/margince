@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { agentClientList } from "../../testing/agent-clients.fixtures";
 import { AgentClientExperimentsCard } from "./agent-client-experiments";
 import {
   ADMIN_GRANTS,
@@ -17,8 +18,8 @@ afterEach(() => {
 
 const CHECK = "Check what an AI tool supports";
 
-function settings(on: boolean) {
-  return { mcp_client_check: on };
+function clientList(on: boolean) {
+  return { ...agentClientList([]), client_check: on };
 }
 
 describe("Experiments", () => {
@@ -33,10 +34,10 @@ describe("Experiments", () => {
     let on = false;
     const calls = serve(
       {
-        "GET /installation/settings": () => json(settings(on)),
+        "GET /installation/agent-clients": () => json(clientList(on)),
         "PATCH /installation/settings": ({ body }) => {
           on = (body as { mcp_client_check: boolean }).mcp_client_check;
-          return json(settings(on));
+          return json({});
         },
       },
       ADMIN_GRANTS,
@@ -57,10 +58,10 @@ describe("Experiments", () => {
     ).toEqual({ mcp_client_check: true });
   });
 
-  it("says the switch could not be read when the settings answer fails", async () => {
+  it("says the switch could not be read when the client list fails", async () => {
     serve(
       {
-        "GET /installation/settings": () =>
+        "GET /installation/agent-clients": () =>
           json({ title: "Unavailable", status: 503 }, 503),
       },
       ADMIN_GRANTS,
@@ -76,7 +77,7 @@ describe("Experiments", () => {
   it("opens the explanation with the question to ask, and Escape closes it", async () => {
     const user = userEvent.setup();
     serve(
-      { "GET /installation/settings": () => json(settings(false)) },
+      { "GET /installation/agent-clients": () => json(clientList(false)) },
       ADMIN_GRANTS,
     );
     renderWithClient(<AgentClientExperimentsCard />);

@@ -292,7 +292,7 @@ func (f attentionDealFacts) Figures(
 			Currency:             figures.Currency,
 			ExpectedCloseDate:    figures.ExpectedCloseDate,
 			CloseDateProvisional: figures.CloseDateProvisional,
-			ForecastCategory:     figures.ForecastCategory,
+			WinProbability:       figures.WinProbability,
 			CloseOverdue:         figures.CloseOverdue,
 		}
 	}
@@ -315,6 +315,7 @@ func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time
 		ID:          ids.UUID(row.Id),
 		Subject:     subjectOfActivity(row),
 		DueAt:       row.DueAt,
+		DueHasTime:  row.DueHasTime != nil && *row.DueHasTime,
 		LinkType:    linkType,
 		LinkID:      linkID,
 		ReminderDue: contentReadable(row) && activities.ReminderDueFor(row, reader, asOf),
@@ -380,9 +381,9 @@ func taskLoadMap(rows []activities.OverdueLoad, err error) (map[ids.UUID]int, er
 // cannot come to answer different questions. A second statement, which is what a
 // true total beside a bounded page costs and what needs_you has always paid.
 func (t attentionTasks) CountOpenForViewer(
-	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID,
+	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) (int, error) {
-	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner)
+	in, ok := openTasksDueBy(ctx, asOf, until, scope, owner, team)
 	if !ok {
 		return 0, nil
 	}

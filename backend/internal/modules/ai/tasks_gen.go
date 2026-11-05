@@ -24,7 +24,7 @@ const (
 	TaskColdStart Task = "cold_start"
 	// TaskCorpusAsk is corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung.
 	TaskCorpusAsk Task = "corpus_ask"
-	// TaskDealHealth is deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever.
+	// TaskDealHealth is deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever.
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it. The `cards` site reads a PHOTO of business cards instead, on the same ladder and the same carriage declaration, for the contact import: an importer waits on it in the request, and the result goes to the approval queue, never to a contact.
 	TaskDocumentExtract Task = "document_extract"
@@ -43,6 +43,12 @@ const (
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
+	// TaskReaderRendering is activity_text — one note, email, meeting or call, written in one reader's language when that reader presses the button for it. It renders what the text means rather than its words: names, numbers, amounts, dates, addresses, links, commitments and questions are kept exactly, and a validator refuses a reply that lost a digit run, an email address or a link, or that is in another language than the target. A mail is rendered from its current message, without the quoted history. Nothing is stored and no payload is kept, because the text is a customer's correspondence and the rendering is for one reader. Text already in the target language is answered unchanged without a call; text past what one answer can carry is refused before the call. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic rendering to fall back to.
+	TaskReaderRendering Task = "reader_rendering"
+	// TaskReportInterpret is Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable.
+	TaskReportInterpret Task = "report_interpret"
+	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal.
+	TaskReportSetup Task = "report_setup"
 	// TaskRequestSettlement is Whether OUR OWN reply settled the request an inbound message made — settled, still_owed or unsure. owed_verdict answers a question about one message from that message alone, so a request answered within the hour still reads as owed a week later; this is the second question, asked of the THREAD, and only askable once the workspace has written back. The candidates are requests we have since answered: our attested reply on the thread, our attested mail to the sender with the same subject, or a logged call or held meeting with the sender's contact — the answers the needs-reply check recognises. A conversation nobody has answered is never judged here and costs nothing; the off-thread answers reach the prompt marked as such, a call's or meeting's notes as its text. A REPLY IS EVIDENCE AND NOT AN ANSWER: 'thanks, I will check' is a reply that discharges nothing, which is exactly why this is a model reading of what our words did rather than a SQL test for whether words exist. A settled verdict completes the reminder the owed pass filed, through the ordinary activity writer, so it carries the audit row and the event a human ticking the box carries; still_owed may sharpen a MACHINE-FILED, undated reminder to name what is actually outstanding, and never touches a task a human accepted, dated or reopened. Below the confidence floor the verdict is unsure, which is a real answer: the request stays owed exactly as it was before this pass existed, and the watermark advances so the same thread is not re-asked until somebody writes again. No cost_unit, for owed_verdict's reason: the candidates are live requests rather than mailbox history, so the pass deliberately does not run at backfill.
 	TaskRequestSettlement Task = "request_settlement"
 	// TaskSignalExtract is SIG-F-3: read the material events out of a settled thread — contract_ended, new_opportunity, commitment_made — each citing the message it came from. Floor 0.7; below it the event is dropped, never guessed. An event is an OBSERVATION and is written directly; what follows from one is a structural claim and stages for a human.
@@ -97,6 +103,9 @@ var taskDisplayNames = map[Task]string{
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
 	TaskRateExtract:                   "Exchange rate extraction",
+	TaskReaderRendering:               "Showing a message in your language",
+	TaskReportInterpret:               "Assessing a sales report",
+	TaskReportSetup:                   "Setting up a report from a description",
 	TaskRequestSettlement:             "Checking whether the reply answered the request",
 	TaskSignalExtract:                 "Signal extraction",
 	TaskSiteExtract:                   "Website research",
@@ -139,6 +148,9 @@ var taskSummaries = map[Task]string{
 	TaskOwedVerdict:                   "Decides whether an unanswered message actually asks us for something, or only informs us.",
 	TaskProposeRoles:                  "Suggests each contact's buying role — who signs, who champions, who can block.",
 	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
+	TaskReaderRendering:               "Shows a note, email or meeting in the reader's own language when they ask for it.",
+	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on.",
+	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
 	TaskSignalExtract:                 "Picks out important events from a finished thread, such as a contract ending or a new opportunity.",
 	TaskSiteExtract:                   "Reads a company's website in depth, quoting the pages each fact comes from.",
@@ -182,7 +194,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "373992f3d54f5e59bc0f8fdad4af23192cc6f58ebaef1b8ba289f47a31e4e671"
+const TaskContractHash = "421f5c2d027f0eaa49e44f137ab5e01451382e8d5ed81f61270a0397d40c47f0"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -208,6 +220,9 @@ func AllTasks() []Task {
 		TaskOwedVerdict,
 		TaskProposeRoles,
 		TaskRateExtract,
+		TaskReaderRendering,
+		TaskReportInterpret,
+		TaskReportSetup,
 		TaskRequestSettlement,
 		TaskSignalExtract,
 		TaskSiteExtract,
@@ -246,6 +261,9 @@ var taskLadders = map[Task][]Tier{
 	TaskOwedVerdict:                   {TierLocalSmall, TierCheapCloud},
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
+	TaskReaderRendering:               {TierCheapCloud, TierPremium},
+	TaskReportInterpret:               {TierPremium, TierCheapCloud},
+	TaskReportSetup:                   {TierCheapCloud, TierPremium},
 	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
 	TaskSignalExtract:                 {TierFrontier},
 	TaskSiteExtract:                   {TierPremium},
@@ -293,6 +311,9 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskOwedVerdict:                   ExecutionModeBackground,
 	TaskProposeRoles:                  ExecutionModeInteractive,
 	TaskRateExtract:                   ExecutionModeBackground,
+	TaskReaderRendering:               ExecutionModeInteractive,
+	TaskReportInterpret:               ExecutionModeInteractive,
+	TaskReportSetup:                   ExecutionModeInteractive,
 	TaskRequestSettlement:             ExecutionModeBackground,
 	TaskSignalExtract:                 ExecutionModeBackground,
 	TaskSiteExtract:                   ExecutionModeBackground,
@@ -359,6 +380,9 @@ var taskStatus = map[Task]string{
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
+	TaskReaderRendering:               "shipped",
+	TaskReportInterpret:               "shipped",
+	TaskReportSetup:                   "shipped",
 	TaskRequestSettlement:             "shipped",
 	TaskSignalExtract:                 "shipped",
 	TaskSiteExtract:                   "shipped",
@@ -463,6 +487,16 @@ var taskSites = map[Task][]Site{
 	TaskRateExtract: {
 		{Name: "fx", Kind: "one_shot"},
 	},
+	TaskReaderRendering: {
+		{Name: "activity_text", Kind: "one_shot"},
+	},
+	TaskReportInterpret: {
+		{Name: "sales_assessment", Kind: "one_shot"},
+	},
+	TaskReportSetup: {
+		{Name: "initiative_setup", Kind: "one_shot"},
+		{Name: "custom_report_setup", Kind: "one_shot"},
+	},
 	TaskRequestSettlement: {
 		{Name: "request_settle", Kind: "one_shot"},
 	},
@@ -547,6 +581,8 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
 	TaskOwedVerdict:                   true,
+	TaskReaderRendering:               true,
+	TaskReportInterpret:               true,
 	TaskRequestSettlement:             true,
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
@@ -637,6 +673,9 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
+	TaskReaderRendering:               {TokenBudget: 0, Conditional: false},
+	TaskReportInterpret:               {TokenBudget: 0, Conditional: false},
+	TaskReportSetup:                   {TokenBudget: 0, Conditional: false},
 	TaskRequestSettlement:             {TokenBudget: 0, Conditional: false},
 	TaskSignalExtract:                 {TokenBudget: 0, Conditional: false},
 	TaskSiteExtract:                   {TokenBudget: 0, Conditional: false},

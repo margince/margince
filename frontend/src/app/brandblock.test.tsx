@@ -1,9 +1,15 @@
 /** @vitest-environment happy-dom */
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import {
-  MARKER,
   newClient,
   renderWith,
   repSeeing,
@@ -18,7 +24,20 @@ import { WorkspaceRail } from "./shell";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
+
+const ABSURD_NAME =
+  "Bundesverband der mittelständischen Industrie- und Handelsunternehmen für erneuerbare Energien e. V.";
+
+// The happy-dom render lays nothing out, so the two widths the tip reads
+// are stubbed to say whether the name fit its one line.
+function nameFits(fits: boolean) {
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(
+    fits ? 120 : 640,
+  );
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(160);
+}
 
 describe("The rail's brand block", () => {
   // The company is the heading. The product it runs on is the line beneath
@@ -34,12 +53,29 @@ describe("The rail's brand block", () => {
     expect(document.querySelector(".ws-chip img")?.getAttribute("src")).toBe(
       TWO_MARKS.logo_icon_url,
     );
-    // The attribution and the build badge stand beside the link. Neither is
-    // somewhere a press should lead.
+    // The attribution stands beside the link, not in it: it is not somewhere a
+    // press should lead.
     const attribution = document.querySelector(".ws-company");
-    expect(attribution?.textContent).toContain("Powered by Margince");
+    expect(attribution?.textContent).toBe("Powered by Margince");
+    expect(document.querySelector(".railhead-attributed")).toBeTruthy();
     expect(within(brand).queryByText("Powered by Margince")).toBeNull();
-    expect(brand.getAttribute("href")).toBe("#/home");
+    expect(brand.getAttribute("href")).toBe("/#/home");
+  });
+
+  // The head is one line tall for a name of any length. The tooltip shows the
+  // whole name, and only when the line cut it.
+  it.each([
+    ["shows the whole name when its line cut it", false, ABSURD_NAME],
+    ["stays away when the name fits", true, null],
+  ])("%s", (_name, fits, shown) => {
+    nameFits(fits);
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing({ display_name: ABSURD_NAME }));
+    renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
+
+    fireEvent.focus(screen.getByRole("link", { name: /Bundesverband/ }));
+
+    expect(screen.queryByRole("tooltip")?.textContent ?? null).toBe(shown);
   });
 
   // A company save refreshes /me (storeCompany). The rail has to be OBSERVING
@@ -91,6 +127,9 @@ describe("The rail's brand block", () => {
     expect(container.querySelector(".ws-name")?.textContent).toBe(
       en["shell.logoAria"],
     );
+    // No company, nothing to attribute: the head is the mark and the name.
+    expect(container.querySelector(".ws-company")).toBeNull();
+    expect(container.querySelector(".railhead-attributed")).toBeNull();
   });
 
   // A company whose site declared no icon has a face rather than a gap. The
@@ -109,30 +148,6 @@ describe("The rail's brand block", () => {
     );
     expect(container.querySelector(".ws-chip img")).toBeNull();
     expect(container.querySelector(".ws-chip .avatar")?.textContent).toBe("DG");
-  });
-
-  // Every brand branch carries it — the product's own mark, an installation's
-  // logo, an installation with only a monogram. The marker is a fact about the
-  // BUILD, so it does not depend on whether there is a company name above it,
-  // and the branch with nothing to attribute is the one a first-run reader sees.
-  it.each([
-    ["the product's own mark", undefined],
-    ["an installation's logo", TWO_MARKS],
-    [
-      "an installation's monogram",
-      { ...TWO_MARKS, logo_url: undefined, logo_icon_url: undefined },
-    ],
-  ])("stamps the stage on the head with %s", (_name, company) => {
-    const client = newClient();
-    if (company) {
-      client.setQueryData(["me"], repSeeing(company));
-    }
-    const { container } = renderWith(
-      client,
-      <WorkspaceRail route={{ screen: "home" }} />,
-    );
-    expect(container.querySelectorAll(MARKER)).toHaveLength(1);
-    expect(container.querySelector(MARKER)?.textContent).toBe(en["shell.beta"]);
   });
 
   // One shape at both widths: the head never swaps marks when the panel

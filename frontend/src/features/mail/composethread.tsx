@@ -15,9 +15,7 @@ import type { RelinkKind } from "./compose";
 type Activity = components["schemas"]["Activity"];
 type EmailSummary = components["schemas"]["EmailSummary"];
 
-// How much of a long conversation to carry. A reply is written against the
-// recent turns; a thread that has run for a year does not need its first
-// message in the drawer, and fetching all of it costs the composer's open.
+// The navigation pane reads a bounded page independently of the selected reply.
 const SHOWN = 12;
 
 // How much of the record's mail one page reads to find conversations. A record
@@ -161,7 +159,7 @@ export function useRecentConversations(
   // messages are the ways in; the bulk groups are left where the History tab
   // draws them.
   const conversations = groupChronology(entries)
-    .filter((group) => group.kind !== "bulk")
+    .filter((group) => group.kind !== "bulk" && group.kind !== "newsletters")
     .flatMap((group): Conversation[] => {
       // The newest member: continuing a conversation means answering its last
       // message, which is the same activity a Reply on the History tab names.

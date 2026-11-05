@@ -17,21 +17,21 @@ GO ?= go
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
   test-dev-cleanup test-disk-headroom \
-  test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict \
+  test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage \
   test-laneorder check-image-pins check-host-ports ci-doc-parity \
   make-target-parity test-make-target-parity contract-breaking-check contract-frontend-drift \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
-  comment-budget test-comment-budget comment-density \
-  check-extension-modules \
+  comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes \
+  check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze \
   test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes
+  test-release-notes test-release-bundle embedded-binary-licenses
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -68,7 +68,7 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -478,6 +478,13 @@ ext-imports:
 seed-dev:
 	./scripts/seed-dev.sh
 	$(MAKE) -C backend seed-dev-db
+
+## seed-analytics — invented records for every Analytics Overview state,
+## through the public API, on a stack that `make seed-dev` already seeded.
+## Variants by ANALYTICS_WORKFLOW, ANALYTICS_TARGET, ANALYTICS_INDIVIDUAL and
+## ANALYTICS_FISCAL_START_MONTH (see the script's header). Idempotent.
+seed-analytics:
+	./scripts/seed-analytics.sh
 
 ## check-config — run --check-config for the api and the worker on the dev
 ## files (or CONFIG=, CONFIG_FILE=, ENV_FILE=), and fail when either refuses
@@ -1065,7 +1072,9 @@ test-sbom-license-parity:
 ## says nothing about compiled code it carries: a `.wasm` is a build output, so
 ## the SBOM sees the Go module and never what the wasm was built from. The
 ## corpus is the packages `go list -json -deps ./cmd/...` reports, so a new
-## dependency is covered the day it is added.
+## dependency is covered the day it is added. It is a root script gate as well:
+## the license gate runs only on a manifest change, and a file embedded under
+## backend/ changes no manifest.
 embedded-binary-licenses:
 	@./scripts/embedded-binary-licenses.sh
 
@@ -1160,6 +1169,12 @@ test-scheduled-report:
 ## would never reach the cases that matter.
 test-renovate-liveness:
 	@./scripts/check-renovate-liveness.test.sh
+
+## test-pace-workflow — prove the pacer starts a workflow when a run is due and
+## holds off when one is not. On main it answers only for the pushes that happen,
+## so a pacer that never starts looks the same as a quiet day.
+test-pace-workflow:
+	@./scripts/pace-workflow.test.sh
 
 ## test-ci-verdict — prove the single required check still refuses to read a
 ## skipped job as a passing one on the merge queue. GitHub counts a skipped
@@ -1269,6 +1284,12 @@ migration-versions:
 ## merely reports, and the declaration lives permanently in ci.yml.
 test-migration-versions:
 	@./scripts/test-migration-versions.sh
+
+## test-keep-unchanged-mtimes — keep-unchanged-mtimes.sh's own test: a file
+## rewritten with its own bytes keeps its mtime, and a changed or hand-edited
+## one does not, so Go's test cache never replays a stale result.
+test-keep-unchanged-mtimes:
+	@bash scripts/keep-unchanged-mtimes.test.sh
 
 ## test-lanes — hermetic-unit-lane enforcement: no untagged test may open a
 ## real Postgres/Redis; real-infra suites carry //go:build integration.
@@ -1472,6 +1493,12 @@ test-release-license-stamped:
 test-release-notes:
 	@./scripts/release-notes.test.sh
 
+## test-release-bundle — the server bundle packer's own test: what each Linux
+## tarball holds (programs, VERSION, a web.conf off the api's port), and the
+## missing platform or program it refuses. Its one caller is a tag push.
+test-release-bundle:
+	@./scripts/release-bundle.test.sh
+
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
 ## in core CODE — Go AND SQL — only in the jurisdiction seam
@@ -1517,6 +1544,12 @@ check-ext-migrations:
 ## with nothing in the tree noticing (#2003).
 check-extension-modules:
 	@./scripts/check-extension-modules.sh
+
+## go-work-sum — go.work.sum is what `make install` leaves behind. A stale one is
+## rewritten on a fresh checkout's first install, which dirties every submodule
+## consumer that requires this tree to stay unmodified.
+go-work-sum:
+	@./scripts/check-go-work-sum.sh
 
 ## pkg-freeze — published-surface freeze gate (ADR-0120 §3, EXT-P3): apidiff
 ## on every backend/pkg package vs the merge target (origin/$GITHUB_BASE_REF
@@ -1762,6 +1795,24 @@ sbom-sign: $(SBOM_SIGN_DEPS)
 	  $(COSIGN) sign-blob --yes --bundle "$$f.cosign.bundle" "$$f"; \
 	done
 	@echo "signed: $(addsuffix .cosign.bundle,$(SBOM_FILES))"
+
+## release-sign — keyless-sign a tagged release: each image by digest, and the
+## SHA256SUMS that covers every file on the release page, so one signature
+## vouches for the bundles and the SBOMs. CI only: it needs the OIDC token, and
+## release-tag.yml runs it after the build. The images are signed with the
+## registry login the job wrote under $(COSIGN_HOME), because cosign runs in its
+## own container and sees no other.
+RELEASE_DIR ?= dist/release
+COSIGN_REGISTRY ?= $(DOCKER_SBOM) -u $(shell id -u):$(shell id -g) -e HOME=/src/$(COSIGN_HOME) -e DOCKER_CONFIG=/src/$(COSIGN_HOME)/docker -e SIGSTORE_ID_TOKEN -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN $(COSIGN_IMAGE)
+release-sign:
+	@test -s $(RELEASE_DIR)/SHA256SUMS || { echo "FAIL: no $(RELEASE_DIR)/SHA256SUMS; the release build writes it"; exit 1; }
+	@test -s $(RELEASE_DIR)/images.txt || { echo "FAIL: no $(RELEASE_DIR)/images.txt; the release build writes it"; exit 1; }
+	@mkdir -p $(COSIGN_HOME)
+	$(COSIGN) sign-blob --yes --bundle $(RELEASE_DIR)/SHA256SUMS.cosign.bundle $(RELEASE_DIR)/SHA256SUMS
+	@set -e; while read -r ref; do \
+	  echo "signing $$ref"; \
+	  $(COSIGN_REGISTRY) sign --yes "$$ref"; \
+	done < $(RELEASE_DIR)/images.txt
 
 ## sbom-check — license gate: grant fails if any bundled dependency uses a non-allowed license (.grant.yaml).
 sbom-check:

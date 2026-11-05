@@ -44,13 +44,12 @@ func TestTheOpenTaskSetIsExactlyTaskNotDoneNotArchived(t *testing.T) {
 	if !strings.Contains(where, "a.archived_at IS NULL") {
 		t.Errorf("the filter does not exclude archived rows: %s", where)
 	}
-	// The kind is BOUND rather than interpolated, so the assertion is over the
-	// argument as well as the placeholder.
-	if !strings.Contains(where, "a.kind = $1") {
+	// The kind is a literal, so a generic plan still matches the task indexes.
+	if !strings.Contains(where, "a.kind = 'task'") {
 		t.Errorf("the filter does not pin the task kind: %s", where)
 	}
-	if len(args) != 1 || args[0] != "task" {
-		t.Errorf("the filter bound %v, want the single argument \"task\"", args)
+	if len(args) != 0 {
+		t.Errorf("the filter bound %v, want no argument", args)
 	}
 }
 
@@ -70,11 +69,11 @@ func TestNarrowingToOneOwnerMatchesTheAssigneeColumn(t *testing.T) {
 	owner := ids.NewV7()
 	where, args := openTasksWhere(unscopedCtx(), t, ListOpenTasksInput{AssigneeID: &owner})
 
-	if !strings.Contains(where, "a.assignee_id = $2") {
+	if !strings.Contains(where, "a.assignee_id = $1") {
 		t.Errorf("narrowing to one owner does not match assignee_id: %s", where)
 	}
-	if len(args) != 2 || args[1] != owner {
-		t.Errorf("the filter bound %v, want the owner id in position 2", args)
+	if len(args) != 1 || args[0] != owner {
+		t.Errorf("the filter bound %v, want the owner id as the only argument", args)
 	}
 }
 
@@ -93,11 +92,11 @@ func TestNarrowingToOneRecordIsAnExistsRatherThanAJoin(t *testing.T) {
 	if strings.Contains(where, "JOIN") {
 		t.Errorf("narrowing to one record joins, which duplicates a task linked twice: %s", where)
 	}
-	if !strings.Contains(where, "l.project_id = $3") {
+	if !strings.Contains(where, "l.project_id = $2") {
 		t.Errorf("narrowing to a project does not match project_id: %s", where)
 	}
-	if len(args) != 3 || args[2] != entity {
-		t.Errorf("the filter bound %v, want the record id in position 3", args)
+	if len(args) != 2 || args[1] != entity {
+		t.Errorf("the filter bound %v, want the record id in position 2", args)
 	}
 }
 

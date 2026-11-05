@@ -84,7 +84,7 @@ func (h extensionSettingsHandlers) writeSettings(w http.ResponseWriter, r *http.
 	}
 	landsRecords := landsCompaniesOrDeals(unit)
 	out := crmcontracts.ExtensionSettings{OverwritesEditedFields: on, LandsRecords: &landsRecords}
-	if auth.RequireAdmin(r.Context()) == nil {
+	if auth.AdminGranted(r.Context()) {
 		stored, err := identity.ExtensionSettingValuesOf(r.Context(), h.store)
 		if err != nil {
 			httperr.Write(w, r, err)

@@ -48,6 +48,20 @@ func RefuseMaskedFilter(ctx context.Context, object, parameter, field string) er
 	return refuseMaskedKey(ctx, object, parameter, field, "filter")
 }
 
+// RefuseUnreadableReferenceFilter refuses a filter naming a record of a type
+// this caller holds no read grant on. Row scope cannot refuse it, because every
+// seat's scope reads company and project. A list masks such a reference for a
+// role without the grant, so the narrowed page would name what the mask hid.
+func RefuseUnreadableReferenceFilter(ctx context.Context, parameter, target string) error {
+	if ReadGranted(ctx, target) {
+		return nil
+	}
+	return &values.ParseError{
+		Field: parameter, Code: CodeFieldMasked,
+		Message: "filter by " + parameter + " is not available: your role does not read " + target + " records",
+	}
+}
+
 // refuseMaskedKey is the refusal both keys owe: one question of the role and
 // one wording, so a client that handles it on a sort handles it on a filter.
 func refuseMaskedKey(ctx context.Context, object, parameter, field, verb string) error {

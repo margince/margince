@@ -5,7 +5,7 @@
 
 package gates
 
-// The browser reads a phone number with ParsePhone's separators, dial prefix and E.164 pattern.
+// The browser reads a phone number with ParsePhone's trunk mark, separators, dial prefix and E.164 pattern.
 //
 // contacturi.ts offers a messenger chat only for a number it reads as E.164. If its rules
 // drift from the server's, it links numbers the server refuses, or hides the link for stored ones.
@@ -61,6 +61,30 @@ func TestTheFrontendPhoneParseMatchesParsePhone(t *testing.T) {
 	}
 	compareSeparators(t, separators)
 	compareDialPrefix(t, body)
+	compareTrunkMark(t, source, body)
+}
+
+// compareTrunkMark holds the bracketed trunk zero to one rule on both sides: the
+// same anchored pattern, applied before the separators take its brackets.
+func compareTrunkMark(t *testing.T, source, e164DigitsBody string) {
+	t.Helper()
+	for raw, want := range map[string]string{"+49 (0) 30 123456": "+4930123456", "+49 30 1234(0)56": "+49301234056"} {
+		if got, err := values.ParsePhone(raw); err != nil || got.String() != want {
+			t.Errorf("ParsePhone(%q) = %q, %v; want %q: only the mark right after the country code goes", raw, got, err, want)
+		}
+	}
+	markBody, markFlags := tsRegexLiteral(t, source, "NATIONAL_TRUNK_MARK")
+	if strings.ContainsAny(markFlags, "gy") {
+		t.Errorf("%s: NATIONAL_TRUNK_MARK carries flags %q; the mark is anchored once at the start. Drop them", frontendContactURI, markFlags)
+	}
+	goMark := withoutCaptures(t, "values.NationalTrunkMarkPattern", values.NationalTrunkMarkPattern)
+	if tsMark := withoutCaptures(t, frontendContactURI+" NATIONAL_TRUNK_MARK", markBody); goMark != tsMark {
+		t.Errorf("trunk mark drifted: values.NationalTrunkMarkPattern reads %s, %s NATIONAL_TRUNK_MARK reads %s. Change the side that moved", goMark, frontendContactURI, tsMark)
+	}
+	dropped := regexp.MustCompile(`\.replace\(\s*NATIONAL_TRUNK_MARK\s*,\s*"\$1\$2"\s*\)\s*\.replace\(\s*PHONE_SEPARATORS\b`)
+	if !dropped.MatchString(e164DigitsBody) {
+		t.Errorf("%s: e164Digits no longer drops NATIONAL_TRUNK_MARK before PHONE_SEPARATORS, and ParsePhone does. Restore `.replace(NATIONAL_TRUNK_MARK, \"$1$2\").replace(PHONE_SEPARATORS, …)`", frontendContactURI)
+	}
 }
 
 func compareSeparators(t *testing.T, tsClass string) {

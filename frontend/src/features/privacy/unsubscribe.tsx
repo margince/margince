@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Lock, Mail } from "lucide-react";
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
+import { AppLink } from "../../design-system/applink";
 import { Button, Card, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
@@ -242,9 +243,9 @@ function UnsubscribeBody({
           >
             {t("prefs.unsub.confirm")}
           </Button>
-          <a className="link-button" href={`#/preferences/${token}`}>
+          <AppLink className="link-button" href={`#/preferences/${token}`}>
             {t("prefs.unsub.seeAll")}
-          </a>
+          </AppLink>
         </div>
         <PressError error={unsubscribe.error} />
       </Card>
@@ -367,9 +368,9 @@ function ManageLink({
 }: Readonly<{ token: string; label: string }>) {
   return (
     <p className="unsub-actions">
-      <a className="link-button" href={`#/preferences/${token}`}>
+      <AppLink className="link-button" href={`#/preferences/${token}`}>
         {label}
-      </a>
+      </AppLink>
     </p>
   );
 }

@@ -71,7 +71,7 @@ var csvTargets = map[string][]string{
 	// falls back to matching names — which two real companies may legitimately
 	// share. It round-trips: the create input takes a domain set and the patch
 	// input takes the same set as a replace-set.
-	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, fieldPhone, fieldEmail, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// The owner is named by the seat's email (csvowners.go), never by its id.
 	// `author` is a name (csvauthor.go).
 	migration.ObjectContact: append([]string{fieldFullName, "first_name", "last_name", fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
@@ -330,6 +330,13 @@ func canonicalFor(field, value string) string {
 		return canonicalIndustry(trimmed)
 	case fieldEmail:
 		return correspondence.Fold(trimmed)
+	case fieldPhone:
+		// Every writer stores E.164, so a file's "+49 30 1234567" is the stored
+		// "+49301234567". An unparseable value compares as written.
+		if parsed, err := values.ParsePhone(trimmed); err == nil {
+			return parsed.String()
+		}
+		return trimmed
 	case fieldDomain:
 		// Through the store's OWN parser, not an approximation of it. A
 		// spreadsheet's website column carries "https://www.acme.com/" where the

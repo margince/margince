@@ -6,7 +6,6 @@
 # new finding instead.
 # Format: <count> <rule> <path>
 1 react-hooks/set-state-in-effect src/App.tsx
-3 react-hooks/refs src/app/account.tsx
 3 react-hooks/refs src/app/agent-edge.tsx
 2 react-hooks/set-state-in-effect src/app/agent-edge.tsx
 1 react-hooks/set-state-in-effect src/app/agentpanelframe.tsx
@@ -16,10 +15,8 @@
 1 react-hooks/set-state-in-effect src/components/create.dialog.ts
 1 react-hooks/refs src/components/create.fields.ts
 1 react-hooks/refs src/components/listquery.tsx
-2 react-hooks/refs src/components/recordfields.tsx
 1 react-hooks/set-state-in-effect src/components/unsaved.tsx
 2 react-hooks/set-state-in-effect src/lib/scrollmemory.ts
-1 react-hooks/set-state-in-effect src/app/shellrail.tsx
 1 react-hooks/set-state-in-effect src/lib/viewport.ts
 1 react-hooks/set-state-in-effect src/design-system/airuntimechip.tsx
 1 react-hooks/set-state-in-effect src/design-system/anchoredpopup.ts
@@ -32,7 +29,6 @@
 8 react-hooks/refs src/design-system/emaildetail.tsx
 1 react-hooks/set-state-in-effect src/design-system/filepreview.tsx
 1 react-hooks/refs src/design-system/hoverintent.ts
-1 react-hooks/set-state-in-effect src/design-system/listfilter.tsx
 2 react-hooks/refs src/design-system/listmenu.tsx
 3 react-hooks/refs src/design-system/listsurface.tsx
 1 react-hooks/set-state-in-effect src/design-system/listsurface.tsx
@@ -50,7 +46,7 @@
 1 react-hooks/set-state-in-effect src/design-system/waited.ts
 1 react-hooks/set-state-in-effect src/features/contacts/addemploymentmodal.tsx
 1 react-hooks/set-state-in-effect src/features/ai/ai-routing-fields.tsx
-1 react-hooks/refs src/features/analytics/analytics.forecast.review.tsx
+1 react-hooks/refs src/features/analytics/analytics.forecast.checktable.tsx
 1 react-hooks/set-state-in-effect src/features/automations/automations.instances.tsx
 1 react-hooks/set-state-in-effect src/features/automations/automations.tsx
 1 react-hooks/set-state-in-effect src/lib/backfill-run.ts
@@ -103,14 +99,14 @@
 2 react-hooks/refs src/features/onboarding/onboarding-gate.ticker.tsx
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-ignition.tsx
 1 react-hooks/set-state-in-effect src/features/settings/preferences.tsx
-1 react-hooks/refs src/features/privacy/privacy.caselink.ts
+1 react-hooks/refs src/lib/privacycaselink.ts
 1 react-hooks/refs src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/settings/rate-manual.tsx
 1 react-hooks/set-state-in-effect src/features/records/recordaccess.tsx
 1 react-hooks/refs src/components/recordteamassign.tsx
 1 react-hooks/set-state-in-effect src/components/recordteamassign.tsx
-1 react-hooks/set-state-in-effect src/features/records/relationships.tsx
+1 react-hooks/set-state-in-effect src/components/relationships.tsx
 3 react-hooks/refs src/components/tagspanel.tsx
 1 react-hooks/set-state-in-effect src/features/ai/vertex-model-probe.ts
 1 react-hooks/refs src/features/voice-knowledge/voice-samples.tsx

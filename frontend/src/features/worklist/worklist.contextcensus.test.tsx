@@ -1,9 +1,9 @@
 /** @vitest-environment happy-dom */
 import { isValidElement } from "react";
 import { expect, it } from "vitest";
+import { KNOWN_SOURCES, rowHref } from "../../lib/worklistcopy";
 import { row } from "../../testing/worklist.testkit";
-import { KNOWN_SOURCES, rowHref } from "./worklist.copy";
-import { reviewFilter } from "./worklist.destinations";
+import { reviewView } from "./worklist.destinations";
 import { rowActivityId, rowSourceUnavailable } from "./worklist.noticesource";
 import type { WorklistItem } from "./worklist.queries";
 import { rowAnswer } from "./worklist.row.answer";
@@ -90,6 +90,7 @@ const CONTEXT = {
   customer_waiting: record("customer_waiting", "contact"),
   lead_response: record("lead_response", "lead"),
   deal_at_risk: record("deal_at_risk", "deal"),
+  deal_review: record("deal_review", "deal"),
   meeting: activity("meeting"),
   relationship_decay: record("relationship_decay", "contact"),
   failed_approval: record("failed_approval", "contact"),
@@ -149,7 +150,7 @@ it.each(Object.entries(CONTEXT))(
     } else if (via === "activity") {
       expect(rowActivityId(item)).toBeTruthy();
     } else if (via === "group") {
-      expect(reviewFilter(item)).toBe("decisions");
+      expect(reviewView(item)).toBe("decisions");
     } else {
       const answer = rowAnswer(item, {
         working: false,

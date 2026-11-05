@@ -53,6 +53,10 @@ type DuplicateCandidate struct {
 	OtherRecordID string `json:"other_record_id"`
 	// Confidence is the detection's own score, 0..1.
 	Confidence float64 `json:"confidence"`
+	// CanMerge and KeepID are the review queue's flags for this pair. KeepID is
+	// set when the caller may merge one way only: it names the record that survives.
+	CanMerge bool    `json:"can_merge"`
+	KeepID   *string `json:"keep_id,omitempty"`
 	// Evidence is the detection-time snapshot: the field that collided and the
 	// two values, as the matcher saw them. Passed through rather than
 	// paraphrased, because what a reviewer needs is what was actually compared.

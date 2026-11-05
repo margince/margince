@@ -895,10 +895,10 @@ describe("the voice act's surface/rail split", () => {
       await screen.findByRole("button", { name: /Build my voice profile/ }),
     );
 
-    // Every section is its own bordered card, and the confirm action sits
-    // on the stage's own rail beside them.
+    // The portrait leads in its own hero, and the confirm action sits on the
+    // stage's own rail beside the board.
     const identity = await screen.findByText(/Direct, concrete/);
-    expect(identity.closest(".ob-voice-result-card")).not.toBeNull();
+    expect(identity.closest(".ob-voice-result-hero")).not.toBeNull();
     const bar = document.querySelector(".ob-stage-acts");
     expect(bar).not.toBeNull();
     expect(
@@ -908,7 +908,7 @@ describe("the voice act's surface/rail split", () => {
     ).toBeTruthy();
   });
 
-  it("shows the sample as a real draft and cycles to another one already in hand", async () => {
+  it("shows the sample as a real draft and switches to another one already in hand", async () => {
     stubApi({
       preview: documentPreview,
       ingests: [{ stats: documentStats, summary: summaryOf(820) }],
@@ -926,12 +926,16 @@ describe("the voice act's surface/rail split", () => {
       await screen.findByRole("button", { name: /Build my voice profile/ }),
     );
 
-    expect(await screen.findByText("Following up on Tuesday")).toBeTruthy();
-    await userEvent.click(
-      screen.getByRole("button", { name: "Another scenario" }),
-    );
-    expect(screen.getByText("Quick nudge")).toBeTruthy();
-    expect(screen.queryByText("Following up on Tuesday")).toBeNull();
+    // Each draft is a press away by its subject; the letter shows one at a time.
+    const first = await screen.findByRole("button", {
+      name: "Following up on Tuesday",
+    });
+    expect(first.getAttribute("aria-pressed")).toBe("true");
+    const letter = () => document.querySelector(".vdna-letter-head");
+    expect(letter()?.textContent).toContain("Following up on Tuesday");
+    await userEvent.click(screen.getByRole("button", { name: "Quick nudge" }));
+    expect(letter()?.textContent).toContain("Quick nudge");
+    expect(letter()?.textContent).not.toContain("Following up on Tuesday");
   });
 
   it("measures only the dimension it actually scored, as a readout rather than a control", async () => {

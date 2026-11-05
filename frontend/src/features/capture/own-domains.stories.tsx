@@ -82,7 +82,7 @@ export const WithCompanyClaimedDomains: Story = {
     const canvas = within(canvasElement);
     await expect(
       await canvas.findByRole("link", { name: "Open the company profile" }),
-    ).toHaveAttribute("href", "#/settings/company");
+    ).toHaveAttribute("href", "/#/settings/company");
   },
 };
 

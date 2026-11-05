@@ -517,9 +517,8 @@ const fullRowPress = {
 // three that report a reading stay put. Held together as one hover on every
 // row, a panel of readings claimed all five were targets.
 //
-// Check it in both themes: the fill is `--bgHover`, a mix off the canonical
-// surface token, so light and dark are two different distances from the row's
-// own ground.
+// Check it in both themes: `--groundHover` sits a different distance from the
+// row's ground in each.
 export const InteractiveRows: Story = {
   args: {
     title: "Quarterly target",
@@ -896,7 +895,7 @@ export const FlatHead: Story = {
   render: () => (
     <Panel
       flatHead
-      title="Also on your list"
+      title="Other open tasks"
       titleAction={<Button variant="link">All tasks</Button>}
     >
       <PanelBody>Rows sit inside the card's own padding.</PanelBody>
@@ -904,7 +903,7 @@ export const FlatHead: Story = {
   ),
   play: async ({ canvasElement }) => {
     const region = within(canvasElement).getByRole("region", {
-      name: "Also on your list",
+      name: "Other open tasks",
     });
     await expect(region.querySelector(".panel-head-flat")).not.toBeNull();
   },

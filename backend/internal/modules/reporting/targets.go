@@ -70,7 +70,11 @@ func (s *Service) GetTarget(ctx context.Context, id ids.UUID) (crmcontracts.Repo
 		if err := s.targetHistory(ctx, tx, &out); err != nil {
 			return err
 		}
-		return s.targetAllocation(ctx, tx, &out)
+		owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return s.targetAllocation(ctx, tx, owners, &out)
 	})
 	return out, err
 }
@@ -81,11 +85,13 @@ func (s *Service) targetClause(ctx context.Context, tx pgx.Tx, b *bindings) (str
 }
 
 // targetReach is which targets a seat reads, resolved once so a read that
-// matches many targets asks for the seat's members once.
+// matches many targets asks for the seat's members once. every covers the
+// team and company targets; whose owner targets the seat reads is owners.
 type targetReach struct {
-	every   bool
-	members []ids.UUID
-	teams   []ids.UUID
+	every  bool
+	owners MeasurableOwners
+	teams  []ids.UUID
+	floor  TargetFloor
 }
 
 func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, error) {
@@ -93,24 +99,48 @@ func (s *Service) targetReach(ctx context.Context, tx pgx.Tx) (targetReach, erro
 	if !ok {
 		return targetReach{}, apperrors.ErrPermissionDenied
 	}
+	owners, err := s.authority.MeasurableOwnerSet(ctx, tx)
+	if err != nil {
+		return targetReach{}, err
+	}
+	floor, err := s.authority.TargetFloor(ctx, tx)
+	if err != nil {
+		return targetReach{}, err
+	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
-		return targetReach{every: true}, nil
+		return targetReach{every: true, owners: owners, floor: floor}, nil
 	}
 	// Only a seat that reaches every team and owner may set the company's
 	// target, so it reads every target it may set.
 	every, err := s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingWorkspace})
-	if err != nil || every {
-		return targetReach{every: every}, err
+	if every && !owners.IndividualOff {
+		owners.Every = true
 	}
-	members, err := s.authority.Members(ctx, tx)
-	return targetReach{members: members, teams: actor.TeamIDs}, err
+	return targetReach{every: every, owners: owners, teams: actor.TeamIDs, floor: floor}, err
 }
 
 func (r targetReach) clause(b *bindings) string {
-	if r.every {
+	reach := r.reachClause(b)
+	if !r.floor.Applies {
+		return reach
+	}
+	// An allow-list, so a scope kind or team the floor never checked is withheld.
+	shown := "t.scope_kind='owner' OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.floor.Teams) + "))"
+	if r.floor.Workspace {
+		shown += " OR t.scope_kind='workspace'"
+	}
+	return "(" + reach + " AND (" + shown + "))"
+}
+
+func (r targetReach) reachClause(b *bindings) string {
+	if r.every && r.owners.Every {
 		return "TRUE"
 	}
-	return "(t.scope_kind='workspace' OR (t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.members) + ")) OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
+	owner := "(t.scope_kind='owner' AND t.scope_id=ANY(" + b.add(r.owners.Members) + "))"
+	if r.every {
+		return "(t.scope_kind<>'owner' OR " + owner + ")"
+	}
+	return "(t.scope_kind='workspace' OR " + owner + " OR (t.scope_kind='team' AND t.scope_id=ANY(" + b.add(r.teams) + ")))"
 }
 
 // writeReaches reports whether the seat may set a target on scope, under the
@@ -140,11 +170,12 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	limit = max(1, min(limit, 100))
 	out := crmcontracts.ReportingTargetList{Data: []crmcontracts.ReportingTarget{}}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		var b bindings
-		where, err := s.targetClause(ctx, tx, &b)
+		reach, err := s.targetReach(ctx, tx)
 		if err != nil {
 			return err
 		}
+		var b bindings
+		where := reach.clause(&b)
 		if after != nil {
 			where += " AND t.id>" + b.add(*after)
 		}
@@ -165,7 +196,7 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 			return err
 		}
 		for i := range out.Data {
-			if err := s.targetAllocation(ctx, tx, &out.Data[i]); err != nil {
+			if err := s.targetAllocation(ctx, tx, reach.owners, &out.Data[i]); err != nil {
 				return err
 			}
 		}

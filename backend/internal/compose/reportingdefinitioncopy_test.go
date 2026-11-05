@@ -17,6 +17,7 @@ import (
 
 func TestReportingCatalogTranslationsCoverExactlyTheRegisteredMetrics(t *testing.T) {
 	tables := map[string]map[crmcontracts.ReportingMetricID]langcopy.Phrase{
+		"label":       reportingMetricNames,
 		"definition":  reportingDefinitionWords,
 		"attribution": reportingAttributionWords,
 		"incomplete":  reportingIncompleteWords,
@@ -56,6 +57,7 @@ func TestReportingCatalogTranslationsCoverExactlyTheRegisteredMetrics(t *testing
 		for i := range translated.Metrics {
 			got, want := &translated.Metrics[i], original.Metrics[i]
 			for name, pair := range map[string][2]string{
+				"label":       {got.Label, want.Label},
 				"definition":  {got.Definition, want.Definition},
 				"attribution": {*got.Attribution, *want.Attribution},
 				"incomplete":  {*got.IncompletePolicy, *want.IncompletePolicy},
@@ -64,7 +66,7 @@ func TestReportingCatalogTranslationsCoverExactlyTheRegisteredMetrics(t *testing
 					t.Fatalf("%s serves an untranslated %s for %s", language, name, got.Id)
 				}
 			}
-			got.Definition, got.Attribution, got.IncompletePolicy = want.Definition, want.Attribution, want.IncompletePolicy
+			got.Label, got.Definition, got.Attribution, got.IncompletePolicy = want.Label, want.Definition, want.Attribution, want.IncompletePolicy
 		}
 		if !reflect.DeepEqual(translated, original) {
 			t.Fatalf("%s changed metric facts or supported operations", language)

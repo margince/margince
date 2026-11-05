@@ -83,6 +83,7 @@ export const IMPORT_TEMPLATE_SUBPAGE = "template";
 // callback rides on.
 const SUBPAGES: Readonly<Partial<Record<SettingsPageId, readonly string[]>>> = {
   import: [IMPORT_RUN_SUBPAGE, IMPORT_TEMPLATE_SUBPAGE],
+  "system-health": ["diagnostics", "configuration"],
 };
 
 function answersSubpage(page: SettingsPageId, route: Route) {

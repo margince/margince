@@ -14,7 +14,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -70,16 +69,20 @@ func (s *OwnDomainStore) ReaderAddressesTx(
 	}
 	defer rows.Close()
 	folded := map[string]bool{}
-	if login != "" {
-		folded[strings.ToLower(login)] = true
+	// Every spelling a header may carry, since the queue compares stored addresses.
+	keep := func(address string) {
+		for _, spelling := range mailidentity.AddressSpellings(address) {
+			folded[spelling] = true
+		}
 	}
+	keep(login)
 	for rows.Next() {
 		var label, source string
 		if err := rows.Scan(&label, &source); err != nil {
 			return nil, err
 		}
 		if address := ownReaderAddress(label, source); address != "" {
-			folded[address] = true
+			keep(address)
 		}
 	}
 	if err := rows.Err(); err != nil {

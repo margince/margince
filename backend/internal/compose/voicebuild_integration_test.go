@@ -283,6 +283,37 @@ func TestVoiceBuildFailsWhenTheCorpusChangedSinceQueueing(t *testing.T) {
 	}
 }
 
+// The profile read carries the newest build in every status. A page opened
+// after the build ended elsewhere still learns that it failed and why.
+func TestVoiceProfileViewCarriesTheNewestBuild(t *testing.T) {
+	env, build := seedVoiceBuild(t, "A quote for the view.", 6)
+	queued, err := env.store.ProfileView(env.owner, env.profile.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if queued.LatestBuild == nil || queued.LatestBuild.ID != build.ID || queued.LatestBuild.Status != "queued" {
+		t.Fatalf("latest build while queued = %+v, want build %s queued", queued.LatestBuild, build.ID)
+	}
+	if queued.CandidateVersion != nil {
+		t.Fatalf("candidate before any build finished = %d, want none", *queued.CandidateVersion)
+	}
+	if _, _, _, err := env.store.IngestSource(env.owner, env.profile.ID, ai.IngestSourceInput{
+		Kind: "other", SourceLabel: "late addition", Content: "text arriving after the snapshot was taken",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := env.store.ClaimBuild(env.workerCtx(t), env.profile.ID, build.ID, time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	failed, err := env.store.ProfileView(env.owner, env.profile.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if failed.LatestBuild == nil || failed.LatestBuild.Status != "failed" || failed.LatestBuild.StatusDetail == nil {
+		t.Fatalf("latest build after a failed claim = %+v, want failed with its detail", failed.LatestBuild)
+	}
+}
+
 func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	env, build := seedVoiceBuild(t, "Deferred quote.", 6)
 	ctx := env.workerCtx(t)

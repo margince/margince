@@ -82,7 +82,7 @@ func (s *Service) WithReceiptDetails(d ReceiptDetails) *Service {
 
 // HandledForYou is what was done, newest first, from the page `cursor` names.
 func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontracts.HandledForYou, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
 	position, err := decodeHandledCursor(cursor)
@@ -201,6 +201,7 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 		CloseDateChange: receipt.CloseDateChange,
 		Kind:            receipt.Kind,
 		Summary:         receipt.Summary,
+		SummaryParts:    receipt.SummaryParts,
 		OccurredAt:      receipt.OccurredAt,
 	}
 	// The record it was about, where the act named one. Not every approval is

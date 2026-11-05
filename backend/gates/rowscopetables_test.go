@@ -75,7 +75,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"PassingSubset":      {argument: 2},
 	// The link target's table is the caller's to name in its own allowlist;
 	// this clause renders over the alias it is given.
-	"LinkTargetVisibleClause": {table: anyTable},
+	"LinkTargetVisibleClause":  {table: anyTable},
+	"LinkTargetReadableClause": {table: anyTable},
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},
@@ -605,5 +606,30 @@ const (
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
 	// promotion; several ids leave the lead untouched. No id reaches a caller.
-	modulesTierUnscopedCeiling = 144
+	//
+	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
+	// audit unsupported signature numbers. Its caller requires the system actor;
+	// the workspace repair returns a count, never contacts to a reader.
+	//
+	// 147-148: activities.lockMeetingFacts and readPreparations read a meeting's
+	// participant contact ids only to hash them into the guest-list fingerprint
+	// of the preparation revision. The meeting itself is content-gated first.
+	// No id is returned.
+	//
+	// 149: forecasting.attachOpenDeals reads the deal ids of frozen contribution
+	// rows for the forecast evaluation, which only a system principal may run.
+	// Each id joins a deal to its outcome and is dropped from the dataset.
+	//
+	// 150: contacts.fileLinkedInTwins finds every live contact holding the
+	// LinkedIn profile a write just set. The lane searches the whole workspace
+	// by design, as the address-variant lane does. The ids become review rows
+	// inside the write, and none is returned to its caller.
+	//
+	// 151: deals.StuckAfter returns the won-deal stage pace keyed by stage id.
+	// A stage is configuration every member reads, and the pace is a duration.
+	//
+	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
+	// guests onto the meeting that stays, under a system job or a calendar sync.
+	// The contacts move between two rows of one meeting, and nothing is returned.
+	modulesTierUnscopedCeiling = 152
 )

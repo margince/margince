@@ -13,7 +13,12 @@ import { FieldGrid } from "../../../design-system/fieldgrid";
 import { UTC_ZONE } from "../../../format/timezone";
 import { type Locale, LocaleProvider, translate } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { closeWords, DealRecordRows, DealSubtitle } from "./dealheaderfacts";
+import {
+  closeWords,
+  type DealIdentity,
+  DealRecordRows,
+  DealSubtitle,
+} from "./dealheaderfacts";
 
 // The facts a rep checks first, on the record's head: value, stage, owner —
 // the same three questions DealIdentityLine's dot-joined sentence answered,
@@ -206,6 +211,49 @@ describe("the details rows say where a deal stands and how it closed", () => {
     expect(
       screen.getByText("Budget frozen until next year"),
     ).toBeInTheDocument();
+  });
+
+  it("names a loss by its reason's label, a retired one too, with the note", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: [
+            {
+              id: "r-1",
+              key: "timing",
+              label: "Bad timing",
+              active: false,
+              sort_order: 10,
+              system: true,
+              version: 1,
+              created_at: "2026-10-01T08:00:00Z",
+              updated_at: "2026-10-01T08:00:00Z",
+            },
+          ],
+        }),
+      ),
+    );
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "lost",
+            lost_reason_code: "timing",
+            lost_reason: "Back next year",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
+    );
+    expect(
+      await screen.findByText("Bad timing — Back next year"),
+    ).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 
   it("asks nothing about a loss on a deal that is not lost", () => {
@@ -472,5 +520,47 @@ describe("a deal an import wrote", () => {
     imported(null);
 
     expect(screen.queryByText(/Imported/)).toBeNull();
+  });
+});
+
+// captured_by names only the agent's passport. The create audit row behind
+// `created_by` is what knows the colleague and the tool.
+describe("a deal an agent created", () => {
+  const AGENT = "agent:0b9f3c2a-6d7e-4c1b-9a8f-1e2d3c4b5a69";
+  const created = (createdBy: DealIdentity["created_by"]) =>
+    show(
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            captured_by: AGENT,
+            source: "manual",
+            created_by: createdBy,
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
+    );
+
+  it("names the colleague the agent worked for and the tool", () => {
+    created({
+      actor_type: "agent",
+      actor_id: AGENT,
+      on_behalf_of_name: "Anna Weber",
+      agent_client: "Claude",
+    });
+
+    expect(
+      screen.getByText("Made by Claude for Anna Weber"),
+    ).toBeInTheDocument();
+  });
+
+  it("says only that an agent made it when the create row is not known", () => {
+    created(undefined);
+
+    expect(screen.getByText("Automated by an agent")).toBeInTheDocument();
   });
 });

@@ -156,6 +156,10 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
 	// spills to disk.
 	//nolint:gosec // G120 wants a bound, and the bound is the chassis's own MaxBytesReader on this route: this argument is the spill threshold, deliberately far below the ceiling.
 	if err := r.ParseMultipartForm(vcardSpillBytes); err != nil {
+		if tooLarge, over := errors.AsType[*http.MaxBytesError](err); over {
+			httperr.WriteMultipartRefusal(w, r, err, tooLarge.Limit)
+			return
+		}
 		httperr.Write(w, r, httperr.Validation("file", "unreadable",
 			"Send the .vcf file as a multipart form field named `file`."))
 		return
@@ -278,10 +282,7 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 		Phone:          req.Phone,
 		ConvertLeadIDs: leadIDsArg(req.ConvertLeadIds),
 	}
-	if req.Email != nil {
-		email := string(*req.Email)
-		in.Email = &email
-	}
+	in.Email = emailArg(req.Email)
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
 	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {
@@ -393,6 +394,16 @@ func (h Handlers) DismissRelationshipNudge(w http.ResponseWriter, r *http.Reques
 	span := nudgeSpanOf(req.Days, req.Permanent)
 	if err := h.store.DismissRelationshipNudges(
 		r.Context(), []ids.ContactID{pathID[ids.ContactKind](id)}, span); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RetractAcquisitionRequest serves POST /contacts/{id}/acquisition-request/retract.
+// Wire-only; the store owns the rules.
+func (h Handlers) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := h.store.RetractAcquisitionRequest(r.Context(), pathID[ids.ContactKind](id)); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

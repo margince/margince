@@ -147,11 +147,11 @@ func worklistStagesSoFar() worklistStageMark {
 	return worklistStageMark{durations: attention.StageTimings(), costs: attention.StageCosts()}
 }
 
-// logWorklistStages prints each stage's mean over the latency step, by read
-// and slowest first. Beside it go its statements, pgx time, pool wait and the
+// logWorklistStages prints each stage's mean over one seat's latency runs, by
+// read and slowest first. Beside it go its statements, pgx time, pool wait and the
 // rest per run. The collector is process-wide, so the reads before the step are
 // subtracted.
-func logWorklistStages(t *testing.T, before worklistStageMark) {
+func logWorklistStages(t *testing.T, seat string, before worklistStageMark) {
 	t.Helper()
 	now := worklistStagesSoFar()
 	// outside_stages has costs and no duration, so its runs come from the costs.
@@ -178,8 +178,8 @@ func logWorklistStages(t *testing.T, before worklistStageMark) {
 		cost := func(read func(attention.StageCost) float64) float64 {
 			return perRun(key, func(m worklistStageMark) float64 { return read(m.costs[key]) })
 		}
-		t.Logf("%-15s stage %-28s mean %8.1f ms over %d | %5.1f statements %8.1f ms pgx %6.1f ms pool %8.1f ms rest per run",
-			key.Read, key.Stage, mean(key)*1000, runs(key),
+		t.Logf("%-8s %-15s stage %-28s mean %8.1f ms over %d | %5.1f statements %8.1f ms pgx %6.1f ms pool %8.1f ms rest per run",
+			seat, key.Read, key.Stage, mean(key)*1000, runs(key),
 			cost(func(c attention.StageCost) float64 { return float64(c.Statements) }),
 			cost(func(c attention.StageCost) float64 { return c.DB.Sum() })*1000,
 			cost(func(c attention.StageCost) float64 { return c.PoolWait.Sum() })*1000,

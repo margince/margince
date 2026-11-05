@@ -12,6 +12,7 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
+import { nameFromEmail } from "../../lib/namefromemail";
 import { unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
@@ -28,23 +29,6 @@ import "./users-admin.css";
 export type Role = components["schemas"]["ChangeUserRoleRequest"]["role"];
 
 export type InvitedMember = Readonly<{ id: string; name: string }>;
-
-/**
- * The name a member is created under when the form asks for none: the part
- * of the address before the @, with the dots and underscores contacts write
- * between their names read as spaces and each word capitalised. It is a
- * starting point the admin can change in Settings → Contacts, and it is what
- * the roster shows until they do — so it has to read as a name, not as an
- * address fragment.
- */
-export function nameFromEmail(email: string): string {
-  const local = email.trim().split("@")[0] ?? "";
-  return local
-    .split(/[._-]+/)
-    .filter((part) => part !== "")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
 
 export function InviteUserForm({
   titleId,

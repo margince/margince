@@ -64,7 +64,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			quiet.At, quiet.AtPrecision = &touch.Since.At, activitywhen.PrecisionOf(*touch.Since)
 		}
 		return dimension(crmcontracts.HealthDimensionRatingAtRisk, crmcontracts.HealthDimensionReasonCodeQuiet,
-			quiet, fmt.Sprintf("No reply and no meeting for %d days.", touch.Days))
+			quiet, fmt.Sprintf("No reply from them and no meeting for %d days.", touch.Days))
 	case touch.Basis == relstrength.InTouchBooked:
 		// The stored time and its precision. The client names an instant's day in
 		// the record's zone, which this read does not hold. A day names its date.

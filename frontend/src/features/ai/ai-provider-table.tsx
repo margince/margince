@@ -12,8 +12,8 @@ import { RowOpen } from "../../design-system/rowopen";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { forReader } from "../../format/collate";
 import { useLocale, useT } from "../../i18n";
+import { providerName } from "../../lib/ai-provider-names";
 import { ProviderCallsLine } from "./ai-call-figures";
-import { providerName } from "./ai-provider-names";
 import {
   type ProviderState,
   type ProviderUsage,

@@ -341,7 +341,7 @@ func runFirstLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus) (work
 		status, body, elapsed := rep.Get(t, rebooted, path)
 		return firstTry{Path: path, Status: status, Body: body, Elapsed: elapsed}
 	}
-	return first("/v1/worklist?scope=mine&filter=all"), first(paletteCall("contract", "contract").Path)
+	return first(worklistDay + "mine"), first(paletteCall("contract", "contract").Path)
 }
 
 // firstLoadRows records one try each, ungated: a single sample has no p95. A

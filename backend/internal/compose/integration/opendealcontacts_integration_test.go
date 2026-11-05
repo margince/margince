@@ -257,7 +257,7 @@ func closeDealForTest(t *testing.T, e *Env, pipeline ids.PipelineID, dealID ids.
 	}
 	reason := "the fixture closes it"
 	if _, err := e.Deals.AdvanceDeal(ctx, dealID, deals.AdvanceDealInput{
-		ToStageID: lost, LostReason: &reason,
+		ToStageID: lost, LostReason: &reason, LostReasonCode: new("other"),
 	}); err != nil {
 		t.Fatalf("closing the deal: %v", err)
 	}

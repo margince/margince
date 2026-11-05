@@ -1,10 +1,23 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
-import { formatHours, formatMoneyCompact } from "../../format/format";
+import {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+} from "../../format/format";
 import { en } from "../../i18n/en";
+import {
+  reportingMetricNames,
+  reportingStoryEvaluation,
+} from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -88,7 +101,7 @@ describe("the Leads view", () => {
   it("reads the lead metrics without a pipeline and splits them by group", async () => {
     const asked = showView("leads", reportingLeadsEvaluation);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     expect(created.getByRole("button", { name: "Website: 12" })).toBeVisible();
     const evaluate = asked.find((url) =>
       url.pathname.endsWith("/analytics/evaluate"),
@@ -112,7 +125,7 @@ describe("the Leads view", () => {
       "?close=fiscal_quarter",
     );
 
-    await panel(titled(en["reporting.leads_created"]));
+    await panel(titled(reportingMetricNames.leads_created));
     const evaluate = asked.find((url) =>
       url.pathname.endsWith("/analytics/evaluate"),
     );
@@ -123,9 +136,9 @@ describe("the Leads view", () => {
     showView("leads", reportingLeadsEvaluation);
 
     // The headline and the metrics table both state it.
-    expect(await screen.findAllByText(formatHours(3.5, "en"))).not.toHaveLength(
-      0,
-    );
+    expect(
+      await screen.findAllByText(formatAnalyticsHours(3.5, "en")),
+    ).not.toHaveLength(0);
     expect(
       screen.getByText(
         new RegExp(en["reporting.outOf"].replace("{total}", "24")),
@@ -137,7 +150,7 @@ describe("the Leads view", () => {
     const user = userEvent.setup({ delay: null });
     const asked = showView("leads", reportingLeadsEvaluation);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     await user.click(created.getByRole("button", { name: "Website: 12" }));
 
     const drawer = within(await screen.findByRole("dialog"));
@@ -164,7 +177,7 @@ describe("the Leads view", () => {
     };
     showView("leads", empty);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     expect(
       created.getByText("No lead came in during this period."),
     ).toBeVisible();
@@ -185,7 +198,7 @@ describe("the Leads view", () => {
     };
     showView("leads", withheld);
 
-    const created = await panel(titled(en["reporting.leads_created"]));
+    const created = await panel(titled(reportingMetricNames.leads_created));
     expect(created.queryByText(en["reporting.withheld"])).toBeNull();
     expect(screen.getAllByText(en["reporting.withheld"])).toHaveLength(1);
   });
@@ -195,8 +208,8 @@ describe("the Partners view", () => {
   it("names a partner the reader cannot open in words, never by its key", async () => {
     showView("partners", reportingPartnersEvaluation);
 
-    const pipeline = await panel(titled(en["reporting.partner_pipeline"]));
-    const amount = formatMoneyCompact(500_000, "EUR", "en");
+    const pipeline = await panel(titled(reportingMetricNames.partner_pipeline));
+    const amount = formatAnalyticsMoney(500_000, "EUR", "en");
     expect(
       pipeline.getByRole("button", {
         name: `Partner you cannot see · Sourced: ${amount}`,
@@ -208,13 +221,15 @@ describe("the Partners view", () => {
   it("counts the records behind a money group, and not behind a count", async () => {
     showView("partners", reportingPartnersEvaluation);
 
-    const commission = await panel(titled(en["reporting.partner_commission"]));
+    const commission = await panel(
+      titled(reportingMetricNames.partner_commission),
+    );
     expect(
       commission.getByRole("columnheader", {
         name: en["reporting.recordCount"],
       }),
     ).toBeInTheDocument();
-    const activity = await panel(titled(en["reporting.partner_activity"]));
+    const activity = await panel(titled(reportingMetricNames.partner_activity));
     expect(
       activity.queryByRole("columnheader", {
         name: en["reporting.recordCount"],
@@ -228,6 +243,7 @@ const TAB_LABEL = {
   sdr: "reporting.sdr",
   leads: "reporting.leads",
   partners: "reporting.partners",
+  conversion: "reporting.conversion",
 } as const;
 
 describe("which views a seat reads", () => {
@@ -235,6 +251,7 @@ describe("which views a seat reads", () => {
     metrics: reportingSectionsCatalog.metrics.filter(
       (metric) => metricView(metric.id) !== "leads",
     ),
+    presets: reportingSectionsCatalog.presets,
   };
 
   // The whole screen, because which views are tabs is the screen's to decide.
@@ -286,12 +303,112 @@ describe("which views a seat reads", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers no Sales view to a reader whose catalog publishes no sales preset", async () => {
+    showScreen("#/analytics/performance", {
+      metrics: [
+        {
+          id: "forecast_landing",
+          label: "Forecast landing",
+          version: "1",
+          unit: "money",
+          temporal_basis: "state_at",
+          supports_target: false,
+          definition:
+            "The deal forecast's expected finish for this fiscal quarter.",
+          blocks: ["forecast_support", "metric_reading"],
+        },
+        ...reportingSectionsCatalog.metrics.filter(
+          (metric) => metricView(metric.id) === "leads",
+        ),
+      ],
+      presets: [],
+    });
+
+    expect(
+      await screen.findByRole("button", {
+        name: en["reporting.leads"],
+        pressed: true,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: en["analytics.sectionPerformance"],
+      }),
+    ).toBeNull();
+  });
+
   it("says why there is no view to choose when it reads none", async () => {
-    showScreen("#/analytics/performance", { metrics: [] });
+    showScreen("#/analytics/performance", { metrics: [], presets: [] });
 
     expect(await screen.findByText(en["reporting.noViews"])).toBeVisible();
     expect(
       screen.queryByRole("button", { name: en["reporting.sdr"] }),
     ).toBeNull();
+  });
+});
+
+// The opening request of a preset view is the server's definition from the
+// catalog. The browser adds no metric of its own and drops none.
+describe("the preset views", () => {
+  async function evaluated(asked: URL[]) {
+    let evaluate: URL | undefined;
+    await waitFor(() => {
+      evaluate = asked.find((url) =>
+        url.pathname.endsWith("/analytics/evaluate"),
+      );
+      expect(evaluate).toBeDefined();
+    });
+    return {
+      metrics: evaluate?.searchParams.getAll("metrics"),
+      blocks: evaluate?.searchParams.getAll("blocks"),
+    };
+  }
+
+  it.each(["sales", "sdr"] as const)(
+    "asks the %s preset the catalog publishes",
+    async (view) => {
+      const preset = reportingSectionsCatalog.presets.find(
+        (entry) => entry.id === view,
+      );
+      const asked = showView(view, reportingStoryEvaluation);
+
+      expect(await evaluated(asked)).toEqual({
+        metrics:
+          view === "sdr"
+            ? preset?.metrics.filter(
+                (id) =>
+                  id !== "accepted_opportunities" && id !== "leads_promoted",
+              )
+            : preset?.metrics,
+        blocks: preset?.blocks,
+      });
+    },
+  );
+
+  it("follows a narrower preset rather than every metric of the view", async () => {
+    const narrow: Catalog = {
+      ...reportingSectionsCatalog,
+      presets: [
+        { id: "sales", metrics: ["bookings_won"], blocks: ["bookings_trend"] },
+      ],
+    };
+    const asked = showView("sales", reportingStoryEvaluation, narrow);
+
+    expect(await evaluated(asked)).toEqual({
+      metrics: ["bookings_won"],
+      blocks: ["bookings_trend"],
+    });
+  });
+
+  it("asks nothing for a view whose preset the reader is not offered", async () => {
+    const asked = showView("sdr", reportingStoryEvaluation, {
+      ...reportingSectionsCatalog,
+      presets: [],
+    });
+
+    expect(await screen.findByText(en["reporting.noViews"])).toBeVisible();
+    expect(
+      asked.some((url) => url.pathname.endsWith("/analytics/evaluate")),
+    ).toBe(false);
   });
 });

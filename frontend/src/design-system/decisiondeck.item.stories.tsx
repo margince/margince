@@ -53,6 +53,10 @@ const CARD: DecisionCardLabels = {
   expired: "This ran out of time before anyone answered it.",
   draftSubject: "Subject",
   draftBody: "Message",
+  summaryWords: {
+    field: (name) => name,
+    more: (count) => `${count} more not shown`,
+  },
   showMore: "Show full message",
   showLess: "Show less",
   noContent: "This proposal carries nothing to read.",

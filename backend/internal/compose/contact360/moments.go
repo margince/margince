@@ -58,7 +58,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v5"
+const ruleVersion = "contact-moment-ladder-v7"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -126,20 +126,13 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 // the page stays silent about the thing that just changed. Keyed on the
 // evidence, the dismissal re-arms.
 func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (map[string]string, error) {
-	// A dismissal belongs to a contact's screen, so a call carrying no user has
-	// none to honour. An agent reading through a passport must not consume the
-	// granting human's: it sees every moment. This is a fact about the caller,
-	// not a failure to read.
-	//
-	// The agent arm is the one that needs saying, because a passport carries
-	// its granting human's UserID: a check for a non-zero id admits an agent
-	// and reads the human's dismissals, which is what this paragraph promises
-	// it does not do. auth.RequireHuman is what tells the two apart.
+	// A dismissal belongs to a colleague, shared with their agent, so a call
+	// with neither behind it has none to honour and sees every moment.
 	viewer, ok := principal.Actor(ctx)
 	if !ok || viewer.UserID == (ids.UUID{}) {
 		return map[string]string{}, nil
 	}
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return map[string]string{}, nil
 		}
@@ -200,6 +193,9 @@ func (said momentCopy) deriveMomentPast(
 	dismissed func(crmcontracts.ContactMoment) bool,
 	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
+	if notice, ok := said.noticeDutyMoment(now, page); ok {
+		return notice
+	}
 	for _, plain := range said.ladder() {
 		rung := proposing(plain, propose)
 		moment, ok := rung(ctx, now, page)
@@ -374,13 +370,10 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
+	// The headline and the explanation count from one date, our last message.
 	waiting := occurredday.DaysSince(occurredday.Moment{At: outbound, DateOnly: occurredday.IsStatedDay(page.LastOutboundPrecision)}, now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
-	}
-	quietFor := waiting
-	if page.LastInboundAt != nil {
-		quietFor = occurredday.DaysSince(occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)}, now, said.zone)
 	}
 	evidence := said.outboundEvidence(page, outbound, page.LastOutboundPrecision)
 	return crmcontracts.ContactMoment{
@@ -388,7 +381,7 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		Rule:                crmcontracts.ContactMomentRuleGoneQuiet,
 		RuleVersion:         new(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), quietFor),
+		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), waiting),
 		WhyNow: fmt.Sprintf(said.Say(momentWords.QuietWhy),
 			waiting, goneQuietAfterDays),
 		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,

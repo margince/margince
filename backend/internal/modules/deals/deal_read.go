@@ -85,7 +85,8 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 const dealTaggableType = "deal"
 
 type ListDealsInput struct {
-	IDs []ids.UUID
+	IDs          []ids.UUID
+	WritableOnly bool
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
 	TagIDs      []ids.UUID
@@ -110,11 +111,6 @@ type ListDealsInput struct {
 	// partner is named at all.
 	PartnerAttribution *string
 	Status             *string
-	// ForecastCategory narrows to one of the forecast's named buckets —
-	// commit, best_case, pipeline, omitted. The column the FORECAST reads, so
-	// a tile's number and the list behind it are one answer rather than two
-	// derivations that can disagree.
-	ForecastCategory *string
 	// The three commercial-context filters. Each also admits the sentinel
 	// "unset", which no enum value can express: a caller asking for deals
 	// nobody has classified is asking about the absence, not about a value.
@@ -133,6 +129,10 @@ type ListDealsInput struct {
 	QuietForDays *int
 	// CloseBefore filters calendar dates before the bound, before pagination.
 	CloseBefore *time.Time
+	// AtRisk narrows to the at-risk candidates, quiet or past their close.
+	AtRisk *AtRiskWindow
+	// positions, set by ListDealsPositioned, receives each row's resume cursor.
+	positions *[]string
 	// RangeFilters are the close-day, value, currency and country dials.
 	RangeFilters
 	IncludeArchived bool
@@ -279,7 +279,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 	if err != nil {
 		return nil, nil, err
 	}
-	return pre, where, nil
+	return pre, in.atRiskTerms(pre, where), nil
 }
 
 // scanDealPage drains one list query's rows: each deal plus, under a
@@ -312,6 +312,11 @@ func scanDealPage(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.
 // stalled predicate — into WHERE clauses (the cf_ filters and the keyset
 // cursor, which depends on the validated sort, stay in ListDeals).
 func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	var err error
+	where, err = appendDealWriteScope(ctx, where, in, arg)
+	if err != nil {
+		return nil, err
+	}
 	if len(in.IDs) > 0 {
 		where = append(where, fmt.Sprintf("id = ANY($%d)", arg(in.IDs)))
 	}
@@ -371,13 +376,6 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if in.Status != nil {
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
-	if in.ForecastCategory != nil {
-		// A deal with no category is in no bucket, which the NULL comparison
-		// gives for free: the five tiles partition the CATEGORISED pipeline,
-		// and an uncategorised deal belongs to none of them rather than
-		// quietly joining whichever one is asked for.
-		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
-	}
 	if in.CloseBefore != nil {
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
@@ -422,7 +420,12 @@ func appendIdleFilters(where []string, in ListDealsInput) []string {
 // A role that WITHHOLDS the column is the other half, and it is refused rather
 // than narrowed: the target is one this caller could open, so every arm here
 // would answer, and the answer is the reference masked_fields declined to name.
+// A role holding no read grant on the target type is refused for the same
+// reason, since row scope alone reads every company and project.
 func referenceFilterClause(ctx context.Context, column, table string, id ids.UUID, arg func(any) int) (string, error) {
+	if err := auth.RefuseUnreadableReferenceFilter(ctx, column, table); err != nil {
+		return "", err
+	}
 	if err := auth.RefuseMaskedFilter(ctx, maskObject, column, column); err != nil {
 		return "", err
 	}
@@ -439,55 +442,18 @@ func referenceFilterClause(ctx context.Context, column, table string, id ids.UUI
 		" AND EXISTS (SELECT 1 FROM %s ref WHERE ref.id = $%d AND %s)", table, pos, scope), nil
 }
 
-// partnerAttributionFilterClause narrows to what a partner did for the deal,
-// and carries the partner's OWN visibility with it.
-//
-// Without that second half the filter is an existence oracle for the fact the
-// field mask withholds: a caller whose read of a deal masks both partner
-// columns could still ask for `partner_attribution=sourced` and learn from the
-// row's presence that some partner brought it. The mask and the filter have to
-// withhold the same fact, so this arm answers only for deals whose partner the
-// caller could open.
-func partnerAttributionFilterClause(ctx context.Context, attribution string, arg func(any) int) (string, error) {
-	if err := validPartnerAttribution(attribution); err != nil {
-		return "", err
-	}
-	// The claim travels with the partner, so a role withholding one withholds
-	// both, and this arm answers for the rows a mask already declined to name.
-	if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerAttribution, filterPartnerAttribution); err != nil {
-		return "", err
-	}
-	clause := storekit.SQLf("partner_attribution = $%d", arg(attribution))
-	scope, err := auth.ScopeClauseFor(ctx, "company", "pref", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		return clause, nil
-	}
-	return clause + storekit.SQLf(
-		" AND EXISTS (SELECT 1 FROM company pref WHERE pref.id = partner_company_id AND %s)", scope), nil
-}
-
-func appendPartnerFilters(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
-	if in.PartnerSourced != nil {
-		// Whether a partner is named at all is a reading of partner_company_id,
-		// and the page's membership is the answer the mask declined to give.
-		if err := auth.RefuseMaskedFilter(ctx, maskObject, filterPartnerSourced, filterPartnerCompanyID); err != nil {
+func appendDealWriteScope(ctx context.Context, where []string, in ListDealsInput, arg func(any) int) ([]string, error) {
+	if in.WritableOnly {
+		if err := auth.Require(ctx, dealListEntity, principal.ActionUpdate); err != nil {
 			return nil, err
 		}
-		if *in.PartnerSourced {
-			where = append(where, PartnerSourcedSQL(""))
-		} else {
-			where = append(where, "NOT "+PartnerSourcedSQL(""))
-		}
-	}
-	if in.PartnerAttribution != nil {
-		clause, err := partnerAttributionFilterClause(ctx, *in.PartnerAttribution, arg)
+		clause, err := auth.WriteAuthorityClauseFor(ctx, dealTable, "deal", arg)
 		if err != nil {
 			return nil, err
 		}
-		where = append(where, clause)
+		if clause != "" {
+			where = append(where, clause)
+		}
 	}
 	return where, nil
 }

@@ -58,8 +58,19 @@ func (o *owedEnv) seated(t *testing.T, user ids.UUID) context.Context {
 // page reads the reader's Worklist at the clock's instant.
 func (o *owedEnv) page(reader context.Context, t *testing.T, scope string, now time.Time) crmcontracts.Worklist {
 	t.Helper()
+	return o.read(reader, t, scope, "all", now)
+}
+
+// upcoming reads the reader's Upcoming and backlog section at the clock's instant.
+func (o *owedEnv) upcoming(reader context.Context, t *testing.T, scope string, now time.Time) crmcontracts.Worklist {
+	t.Helper()
+	return o.read(reader, t, scope, string(crmcontracts.WorklistFilterUpcoming), now)
+}
+
+func (o *owedEnv) read(reader context.Context, t *testing.T, scope, filter string, now time.Time) crmcontracts.Worklist {
+	t.Helper()
 	feed := newAttentionService(o.e.Pool, approvals.NewService(o.e.DB()), func() time.Time { return now })
-	page, err := feed.Worklist(reader, scope, "all", ids.Nil, 100, "")
+	page, err := feed.WorklistView(reader, "", scope, filter, ids.Nil, 100, "")
 	if err != nil {
 		t.Fatalf("reading a %s Worklist: %v", scope, err)
 	}
@@ -156,7 +167,7 @@ func TestACapturedRequestIsTheOwnersAndSurvivesAReplay(t *testing.T) {
 		messageID: ids.NewV7().String() + "@customer.example",
 	}
 	message := o.capture(t, mail)
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), message, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
@@ -316,7 +327,10 @@ func TestTheWeekClosingKeepsTheWorkAndItsReaders(t *testing.T) {
 	friday := dayNow.AddDate(0, 0, 2).Add(5 * time.Hour)
 	task := o.taskFor(readers.rep1, t, "Send the pricing sheet", friday)
 
-	open, ok := rowOf(o.page(readers.rep1, t, "mine", dayNow), task)
+	if _, due := rowOf(o.page(readers.rep1, t, "mine", dayNow), task); due {
+		t.Fatal("a task due later this week sits among today's due work")
+	}
+	open, ok := rowOf(o.upcoming(readers.rep1, t, "mine", dayNow), task)
 	if !ok || open.DueGroup == nil ||
 		*open.DueGroup != crmcontracts.WorklistItemDueGroupWorklistDueGroupThisWeek {
 		t.Fatalf("while the week is open the task reads %s, want this week", dueGroup(open))
@@ -362,7 +376,7 @@ func TestArchivingTheSourceTakesItsDerivedWorkAway(t *testing.T) {
 		body: "Please send the proposal for our integration project.", at: o.now.Add(-time.Hour),
 		messageID: ids.NewV7().String() + "@customer.example",
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), message, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), message, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})
@@ -402,7 +416,7 @@ func TestCorrectedSourceContentLeavesOneRowOfWork(t *testing.T) {
 		from: "buyer@customer.example", to: o.seat, subject: "Proposal for the integration project",
 		body: "Please send the proposal.", at: sent, messageID: id,
 	})
-	if _, err := o.e.Activities.SetCaptureLabel(o.judge(), first, "commitment"); err != nil {
+	if _, err := o.e.LabelCapture(o.judge(), first, "commitment"); err != nil {
 		t.Fatal(err)
 	}
 	runOwedWorker(t, o.e, &owedBrainStub{verdict: activities.OwedVerdictAsksUs, confidence: .99})

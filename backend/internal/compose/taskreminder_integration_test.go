@@ -183,7 +183,7 @@ func TestTheTaskCountCountsEachDueReminderOnce(t *testing.T) {
 
 	tasks := attentionTasks{store: e.Activities}
 	until := r.now.Add(time.Hour)
-	total, err := tasks.CountOpenForViewer(r.rep1, r.now, until, attention.TasksMine, ids.Nil)
+	total, err := tasks.CountOpenForViewer(r.rep1, r.now, until, attention.TasksMine, ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func TestEveryDueReminderReachesTheWorklist(t *testing.T) {
 			t.Error("the task lane says more are available when it lists every reminder")
 		}
 	}
-	total, err := attentionTasks{store: r.e.Activities}.CountOpenForViewer(r.rep1, r.now, r.now.Add(time.Hour), attention.TasksMine, ids.Nil)
+	total, err := attentionTasks{store: r.e.Activities}.CountOpenForViewer(r.rep1, r.now, r.now.Add(time.Hour), attention.TasksMine, ids.Nil, nil)
 	if err != nil || total != len(want) {
 		t.Errorf("the lane counts %d (err %v), want the %d it lists", total, err, len(want))
 	}

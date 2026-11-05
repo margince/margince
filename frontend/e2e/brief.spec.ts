@@ -53,6 +53,21 @@ async function openBrief(page: Page): Promise<Worklist> {
   return response.json();
 }
 
+/** A day the glance sums up in its agenda sentence: every focus row read. */
+function completeFocus(day: Worklist): boolean {
+  return Boolean(
+    day.focus &&
+      day.focus.total > 0 &&
+      day.focus.total <= day.focus.items.length &&
+      !day.scope_truncated &&
+      !day.readings?.more_available &&
+      !day.counts.some((count) => count.more_available) &&
+      !day.sources_unavailable.some(
+        (source) => source.contributes_rows !== false,
+      ),
+  );
+}
+
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
   await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
@@ -174,16 +189,34 @@ test.describe("the Brief — page shape", () => {
   test("keeps the greeting and date above the work, with an optional factual agenda", async ({
     page,
   }) => {
-    await openBrief(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const day = await openBrief(page);
     await expectShellRendered(page);
 
     const heading = await topOf(page.locator("main h1"));
     const date = await topOf(page.locator(`${GLANCE} time`));
     const work = await topOf(page.locator(FOCUS));
-    expect(heading).toBeLessThan(work);
+    expect(heading).toBeLessThan(date);
     expect(date).toBeLessThan(work);
+    // Above 640px the facts are one line: the date opens it, the dial ends it.
+    const firstLine = (el: Element) => {
+      const box = el.getClientRects().item(0);
+      if (!box) throw new Error("the fact draws no line box");
+      return { x: box.x, top: box.top, bottom: box.bottom };
+    };
+    const at = await page.locator(`${GLANCE} time`).evaluate(firstLine);
+    const dial = await page
+      .getByRole("group", { name: copy("brief.view.label") })
+      .evaluate(firstLine);
+    expect(dial.top).toBeLessThan(at.bottom);
+    expect(dial.bottom).toBeGreaterThan(at.top);
     const agenda = page.getByTestId("glance-sentence");
-    if (await agenda.count()) expect(date).toBeLessThan(await topOf(agenda));
+    await expect(agenda).toHaveCount(completeFocus(day) ? 1 : 0);
+    if (completeFocus(day)) {
+      const words = await agenda.evaluate(firstLine);
+      expect(Math.abs(at.top - words.top)).toBeLessThan(2);
+      expect(at.x).toBeLessThan(words.x);
+    }
   });
 
   test("summarizes only complete positive focus, in an unclipped paragraph", async ({
@@ -192,26 +225,22 @@ test.describe("the Brief — page shape", () => {
     const day = await openBrief(page);
     await expectShellRendered(page);
 
-    const complete =
-      day.focus &&
-      day.focus.total > 0 &&
-      day.focus.total <= day.focus.items.length &&
-      !day.scope_truncated &&
-      !day.readings?.more_available &&
-      !day.counts.some((count) => count.more_available) &&
-      !day.sources_unavailable.some(
-        (source) => source.contributes_rows !== false,
-      );
+    const complete = completeFocus(day);
     await expect(page.getByTestId("glance-sentence")).toHaveCount(
       complete ? 1 : 0,
     );
     await expect(page.locator(`${GLANCE} p.glance-sentence`)).toHaveCount(
       complete ? 1 : 0,
     );
+    // The clamp holds the whole facts line, or the sentence alone on a phone.
     if (complete) {
       const clipped = await page
-        .getByTestId("glance-sentence")
-        .evaluate((el) => el.scrollHeight > el.clientHeight);
+        .locator(`${GLANCE} .glance-facts`)
+        .evaluate((facts) =>
+          [facts, ...facts.querySelectorAll(".glance-sentence")].some(
+            (el) => el.scrollHeight > el.clientHeight,
+          ),
+        );
       expect(clipped).toBe(false);
     }
   });
@@ -244,13 +273,48 @@ test.describe("the Brief — page shape", () => {
     await expectShellRendered(page);
 
     await expect(page.locator(".brief-rail")).toHaveCount(0);
-    const review = await page.locator("#brief-weekly").boundingBox();
-    const header = await page.locator(".brief-head").boundingBox();
-    if (!review || !header) {
-      throw new Error("the weekly view drew no review to measure");
+    const fill = await page
+      .locator(".page-pane.brief-weekly-page > .brief-report")
+      .evaluate((report) => {
+        const pane = report.parentElement;
+        if (!pane) throw new Error("the weekly report stands on no pane");
+        const style = getComputedStyle(pane);
+        const inset =
+          Number.parseFloat(style.paddingLeft) +
+          Number.parseFloat(style.paddingRight);
+        return {
+          inset,
+          report: report.getBoundingClientRect().width,
+          inner: pane.clientWidth - inset,
+        };
+      });
+    expect(fill.inset).toBeGreaterThan(0);
+    expect(Math.abs(fill.report - fill.inner)).toBeLessThan(1);
+    const pane = await page.locator(".brief-weekly-page").boundingBox();
+    const header = await page.locator(GLANCE).boundingBox();
+    if (!pane || !header) {
+      throw new Error("the weekly view drew no pane to measure");
     }
-    // The review fills the same content width as the page header.
-    expect(review.width).toBeGreaterThan(header.width * 0.9);
+    expect(Math.abs(pane.width - header.width)).toBeLessThan(1);
+  });
+
+  // The head stands over the panes in both views, so pressing the dial does
+  // not move it from under the pointer.
+  test("keeps the dial in place when the view changes", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openBrief(page);
+    await expectShellRendered(page);
+    const dial = page.getByRole("group", { name: copy("brief.view.label") });
+    const before = await dial.boundingBox();
+
+    await page.getByRole("button", { name: copy("brief.view.weekly") }).click();
+    await expect(page.locator("#brief-weekly")).toBeVisible();
+    const after = await dial.boundingBox();
+    if (!before || !after) throw new Error("the view dial has no box");
+    expect(
+      Math.abs(after.x + after.width - before.x - before.width),
+    ).toBeLessThan(2);
+    expect(Math.abs(after.y - before.y)).toBeLessThan(2);
   });
 
   // The weekly is a dial away, not a section further down the morning.
@@ -301,11 +365,11 @@ test.describe("the Brief — page shape", () => {
     await expectShellRendered(page);
 
     const focus = await page.locator(FOCUS).boundingBox();
-    const header = await page.locator(".brief-head").boundingBox();
-    if (!focus || !header) {
+    const column = await page.locator(".brief-main").boundingBox();
+    if (!focus || !column) {
       throw new Error("the morning drew no focus panel to measure");
     }
-    expect(focus.width).toBeGreaterThan(header.width * 0.9);
+    expect(focus.width).toBeGreaterThan(column.width * 0.9);
   });
 });
 

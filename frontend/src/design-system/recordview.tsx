@@ -2,12 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowLeft } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
+import { AppLink } from "./applink";
 import { Avatar } from "./atoms";
+import { EditableValue } from "./editablevalue";
+import { useFieldEditor } from "./fieldeditdialog";
 import { Heading } from "./heading";
+import { NameDialog } from "./namedialog";
 import { RecordStory } from "./recordstory";
 import type { TimelineEntry, TimelineGroup } from "./timelineentry";
+import "./pagepane.css";
 import "./recordview.css";
 
 /** The way back to where the reader opened a record from, drawn over its head. */
@@ -17,19 +23,34 @@ export function RecordBack({
 }: Readonly<{ href: string; label: string }>) {
   return (
     <div className="record-back">
-      <a className="link-button" href={href}>
+      <AppLink className="link-button" href={href}>
         <ArrowLeft aria-hidden="true" />
         {label}
-      </a>
+      </AppLink>
     </div>
   );
 }
+
+/** Renames the record from its name, in a dialog like any details value. */
+export type RecordRename = Readonly<{
+  // The field's own name ("Full name"), which the edit verb reads out.
+  label: string;
+  // The stored name. It may be blank where `name` draws a stand-in.
+  value: string;
+  canEdit: boolean;
+  readOnlyReason?: string;
+  onSave: (next: string) => Promise<void>;
+  onEditingChange?: (editing: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+}>;
 
 export type RecordViewProps = Readonly<{
   // A `RecordBack` over the head, or a component that may draw one. Absent
   // or null when the reader arrived any way that has no place to return to.
   back?: ReactNode;
   name: string;
+  // Absent keeps the name as plain text.
+  rename?: RecordRename;
   // The record's own image for the mark, a company's resolved logo. Null or
   // absent draws the deterministic monogram, which is the floor for every
   // record type that has no image at all.
@@ -112,7 +133,7 @@ export function RecordView({
     <div className="record-split">
       {back}
       <div className="record-split-row">
-        <div className="record-split-details">
+        <div className="page-pane page-pane-sticky record-split-details">
           <RecordHead {...head} />
           {aside && (
             <aside className="record-aside" aria-label={t("record.context")}>
@@ -120,7 +141,7 @@ export function RecordView({
             </aside>
           )}
         </div>
-        <div className="record-split-sheet">
+        <div className="page-pane record-split-sheet">
           {tabs && (
             <div className="record-split-tabs" data-testid="record-tabs">
               {tabs}
@@ -150,6 +171,7 @@ export function RecordView({
 
 function RecordHead({
   name,
+  rename,
   avatarSrc,
   nameBadge,
   subtitle,
@@ -161,6 +183,7 @@ function RecordHead({
 }: Pick<
   RecordViewProps,
   | "name"
+  | "rename"
   | "avatarSrc"
   | "nameBadge"
   | "subtitle"
@@ -174,14 +197,11 @@ function RecordHead({
     <header className="record-split-head">
       <div className="record-split-identity">
         <Avatar name={name} identity={identity} src={avatarSrc} size="md" />
-        <Heading
-          size="large"
-          as="h1"
-          className="record-split-name"
-          title={name}
-        >
-          {name}
-        </Heading>
+        {rename ? (
+          <RecordName name={name} rename={rename} />
+        ) : (
+          <RecordTitle name={name}>{name}</RecordTitle>
+        )}
       </div>
       {nameBadge && <div className="record-split-lines">{nameBadge}</div>}
       {subtitle && <div className="record-split-lines">{subtitle}</div>}
@@ -190,5 +210,87 @@ function RecordHead({
       {actions && <div className="record-split-verbs">{actions}</div>}
       {badges}
     </header>
+  );
+}
+
+function RecordTitle({
+  name,
+  children,
+}: Readonly<{ name: string; children: ReactNode }>) {
+  return (
+    <Heading
+      size="large"
+      as="h1"
+      className="record-split-name"
+      title={name}
+      aria-label={name}
+    >
+      {children}
+    </Heading>
+  );
+}
+
+// The h1 holds the name's edit pill and is named by the record, not by the
+// pill's verb.
+function RecordName({
+  name,
+  rename,
+}: Readonly<{ name: string; rename: RecordRename }>) {
+  const t = useT();
+  const { open, editing } = useFieldEditor(
+    rename.canEdit,
+    rename.onEditingChange,
+  );
+  const [pending, setPending] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const save = async (next: string) => {
+    setPending(true);
+    setProblem(null);
+    try {
+      await rename.onSave(next);
+      editing(false);
+    } catch (err) {
+      setProblem(problemMessageOf(err, t));
+    } finally {
+      setPending(false);
+    }
+  };
+  return (
+    <>
+      {rename.canEdit ? (
+        <div className="record-split-rename">
+          <RecordTitle name={name}>
+            <EditableValue
+              editLabel={t("inlineChoice.change", { field: rename.label })}
+              placeholder={
+                <span className="record-split-name-text">{name}</span>
+              }
+              onEdit={() => {
+                setProblem(null);
+                editing(true);
+              }}
+            >
+              {rename.value && (
+                <span className="record-split-name-text">{rename.value}</span>
+              )}
+            </EditableValue>
+          </RecordTitle>
+        </div>
+      ) : (
+        <RecordTitle name={name}>{name}</RecordTitle>
+      )}
+      <NameDialog
+        open={open}
+        onClose={() => editing(false)}
+        title={rename.label}
+        label={rename.label}
+        initial={rename.value}
+        confirmLabel={t("record.save")}
+        pending={pending}
+        problem={problem}
+        onDirtyChange={rename.onDirtyChange}
+        onSave={(next) => void save(next)}
+      />
+    </>
   );
 }

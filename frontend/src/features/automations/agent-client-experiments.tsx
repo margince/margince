@@ -13,8 +13,7 @@ import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
-import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useSaveClientMethods } from "./agent-clients.queries";
+import { useAgentClients, useSaveClientMethods } from "./agent-clients.queries";
 
 function AboutThisExperiment() {
   const t = useT();
@@ -65,22 +64,23 @@ function AboutThisExperiment() {
 export function AgentClientExperimentsCard() {
   const t = useT();
   const canManage = useCanWrite("agent_client", "update");
-  const settings = useInstallationSettings(canManage);
+  const clients = useAgentClients(canManage);
   const save = useSaveClientMethods();
   if (!canManage) {
     return null;
   }
+  const clientCheck = clients.data?.pages[0]?.client_check;
   return (
     <Panel title={t("agentClients.experiments.title")}>
       <PanelBody>
         <PanelIntro>{t("agentClients.experiments.sub")}</PanelIntro>
-        {settings.error && (
+        {clients.error && (
           <Callout
             tone="danger"
             kind="outcome"
             title={t("agentClients.experiments.loadFailed")}
           >
-            {problemMessageOf(settings.error, t)}
+            {problemMessageOf(clients.error, t)}
           </Callout>
         )}
         {save.error && (
@@ -106,9 +106,9 @@ export function AgentClientExperimentsCard() {
             <Switch
               label={t("agentClients.experiments.clientCheck")}
               labelHidden
-              checked={settings.data?.mcp_client_check ?? false}
+              checked={clientCheck ?? false}
               pending={save.isPending}
-              disabled={settings.data === undefined}
+              disabled={clientCheck === undefined}
               onChange={(next) => save.mutate({ mcp_client_check: next })}
             />
           }

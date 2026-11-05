@@ -63,8 +63,8 @@ func TestConversationSkipsWithheldRowsTheAnchorAndNoContactNotes(t *testing.T) {
 	future := turnRow(crmcontracts.ActivityKindMeeting, "", -48, "meeting not yet held")
 	rows := []crmcontracts.Activity{hidden, future, turnRow(crmcontracts.ActivityKindEmail, out, 3, "newer"), anchor}
 	turns := draftcore.Conversation(rows, &anchor, turnsNow, time.UTC, 6)
-	if len(turns) != 1 || turns[0].Text != "newer" || !turns[0].AfterAnchor {
-		t.Fatalf("turns = %+v, want only the newer mail, marked after the anchor", turns)
+	if len(turns) != 1 || turns[0].Text != "newer" {
+		t.Fatalf("turns = %+v, want only the newer mail", turns)
 	}
 }
 

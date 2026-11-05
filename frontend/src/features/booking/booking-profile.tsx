@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { AppLink } from "../../design-system/applink";
 import { Button, TextInput } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -159,7 +160,9 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
           <ErrorLine error={save.error} />
         </ConfirmModal>
       </Panel>
-      <a href="#/settings/meetings">{t("scheduling.openSettings")}</a>
+      <AppLink href="#/settings/meetings">
+        {t("scheduling.openSettings")}
+      </AppLink>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
+import { useRailRename } from "../../components/railfield";
 import { useOwnerPicker } from "../../components/recordowners";
 import { RecordTeam } from "../../components/recordteam";
 import {
@@ -31,7 +32,6 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
@@ -66,8 +66,10 @@ import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
+import { useProjectEdit } from "./projectedit";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn as two
 // cards. On the left, what the project is; on the right, the next task, how it
@@ -106,7 +108,7 @@ type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
 
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const project = view.project;
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
@@ -136,12 +138,18 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // that drawer and the gate both verbs read.
   const activity = useActivityGate();
   const [logDrawer, setLogDrawer] = useState<LogDrawer>(null);
+  const rename = useRailRename(
+    useProjectEdit(project),
+    "name",
+    t("project.name"),
+  );
   return (
     <RecordView
       aside={<ProjectDetails view={view} />}
       name={project.name}
+      rename={rename}
       identity={project.id}
-      zone={recordZone}
+      zone={readerZone}
       nameBadge={<ProjectSubtitle view={view} />}
       pulse={
         <>
@@ -182,13 +190,15 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         ) : undefined
       }
     >
-      <ProjectLatestInbound projectId={project.id} />
-      <ProjectNext view={view} onOpenTask={setOpenTask} {...nextVerbs} />
+      <ProjectLatestInbound projectId={project.id}>
+        <ProjectNext view={view} onOpenTask={setOpenTask} {...nextVerbs} />
+      </ProjectLatestInbound>
       <ProjectStanding
         view={view}
         refusedReasonId={readOnly ? readOnlyReasonId : undefined}
         onMove={setMoveTo}
         onOpenDocuments={() => setDrawer("documents")}
+        onOpenHistory={() => setDrawer("history")}
       />
       <ProjectCards
         view={view}
@@ -290,13 +300,13 @@ function useNextTaskVerbs(
   update: ReturnType<typeof useTaskUpdate>,
   enabled: boolean,
 ) {
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const next = nextCommitment(view);
   const task = useActivity(next?.activityId, enabled).data;
   if (!next || !task) {
     return {};
   }
-  const nextDue = snoozedDueAt(next.dueAt, zone);
+  const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
@@ -313,7 +323,7 @@ function useNextTaskVerbs(
             update.mutate({
               id: next.activityId,
               version: task.version,
-              body: { due_at: nextDue },
+              body: nextDue,
             }),
           pending: update.isPending && update.variables?.id === next.activityId,
         }

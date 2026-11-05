@@ -265,7 +265,7 @@ func importMaskField(object, field, display string) string {
 		case fieldEmail:
 			mask = previewFieldEmails
 		case fieldPhone:
-			mask = "phones"
+			mask = previewFieldPhones
 		case fieldLinkedIn:
 			mask = previewFieldSocial
 		}

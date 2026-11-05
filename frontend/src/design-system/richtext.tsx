@@ -2,15 +2,40 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
-import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
+import {
+  type ClipboardEvent,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
-import { plainTextOf, safeEditorHTML } from "./richtext-html";
+import { escapeHtml } from "../format/html";
+import { isImeCommit } from "../lib/imecommit";
+import { AiPending } from "./aipending";
+import { useAiReveal } from "./aireveal";
+import { isParagraphCommit } from "./fieldeditdialog";
+import { LinkDialog } from "./linkdialog";
+import {
+  dropRefusedHrefs,
+  endOf,
+  insertMarkup,
+  linkAround,
+  plainTextOf,
+  replaceUndoably,
+  safeEditorHTML,
+  selectionIn,
+} from "./richtext-html";
 import {
   editorHTMLFromMarkdown,
   markdownOf,
   pastedMarkup,
 } from "./richtext-markdown";
 import "./richtext.css";
+
+// The palette's key too: in the editor it opens the link instead.
+const LINK_KEY = "k";
 
 export { paragraphsFrom, plainTextOf, safeEditorHTML } from "./richtext-html";
 
@@ -68,6 +93,10 @@ export function RichText({
   id,
   disabled = false,
   footIn,
+  revealText,
+  thinking,
+  onSubmit,
+  undoableRevision,
 }: Readonly<{
   /**
    * The markup to show, or the markdown in markdown mode. Read on mount and
@@ -87,7 +116,6 @@ export function RichText({
     bulletList: string;
     numberList: string;
     link: string;
-    linkPrompt: string;
     /** Shown in markdown mode only, which is the mode that keeps headings. */
     heading?: string;
   }>;
@@ -137,28 +165,56 @@ export function RichText({
    * mounted yet; absent draws the footer in the frame.
    */
   footIn?: Element | null;
+  /**
+   * The text a model just wrote into the surface. It arrives the way every
+   * machine-written answer does (`AiReveal`): once, the first time it is on
+   * screen. Unset for text a reader typed.
+   */
+  revealText?: string | null;
+  /**
+   * What a model is writing into the surface right now, as the sentence
+   * `AiPending` shows. While the surface is empty its speck rows stand where
+   * the words will land; the first key a reader types takes them away.
+   */
+  thinking?: string | null;
+  /** Cmd/Ctrl+Enter in the surface: the host's own send. */
+  onSubmit?: () => void;
+  /** A new number with a new `value` marks a replacement the reader may undo,
+   * such as a model's draft. Absent, no outside value is undoable. */
+  undoableRevision?: number;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
   const hintId = `${fieldId}-hint`;
   const editor = useRef<HTMLDivElement>(null);
+  useAiReveal(editor, revealText);
   // What we last handed the caller, or last wrote into the node. Comparing
   // against it tells an outside change (a draft arriving) from the echo of our
-  // own keystroke.
-  //
-  // It starts EMPTY rather than at `value`, and that is the whole point: seeded
-  // with `value`, the effect below saw no difference on mount and never wrote
-  // the node — so a composer reopened with a message in state rendered blank
-  // while Send still carried the invisible text.
+  // own keystroke. It starts empty, so a value already in state is written on
+  // mount: a body reopened from state never renders blank.
   const [ours, setOurs] = useState("");
   const markdown = format === "markdown";
   // The markup the surface held when we last wrote or reported it. A blur with
   // no edit since then reports nothing, so opening and leaving an unedited
   // body never rewrites it in the editor's own spelling.
   const reported = useRef("");
+  const seenRevision = useRef(undoableRevision);
+  // While our own command writes a value from outside, its input event is no
+  // edit of the reader's.
+  const replacing = useRef(false);
+  const [linking, setLinking] = useState<{
+    href: string;
+    range: Range;
+  } | null>(null);
 
   useEffect(() => {
     const node = editor.current;
+    // Only the host knows which values the reader may undo: undoing a switch of
+    // conversation or a reset would put one message's words into another.
+    const undoable =
+      undoableRevision !== undefined &&
+      undoableRevision !== seenRevision.current;
+    seenRevision.current = undoableRevision;
     if (!node || value === ours) {
       return;
     }
@@ -168,18 +224,27 @@ export function RichText({
     // which is a different trust boundary with a different victim.
     // A markdown body is rebuilt from the parser's closed tree, so it holds
     // only elements this file names.
-    node.innerHTML = markdown
+    const markup = markdown
       ? editorHTMLFromMarkdown(value)
       : safeEditorHTML(value);
+    if (
+      node.innerHTML !== markup &&
+      !(undoable && replaceUndoably(node, markup, replacing))
+    ) {
+      node.innerHTML = markup;
+    }
     reported.current = node.innerHTML;
-    setOurs(markdown ? value : node.innerHTML);
-  }, [value, ours, markdown]);
+    setOurs(value);
+    // A link asked for over words that are gone would land at the top.
+    setLinking(null);
+  }, [value, ours, markdown, undoableRevision]);
 
   const report = () => {
     const node = editor.current;
-    if (!node) {
+    if (!node || replacing.current) {
       return;
     }
+    dropRefusedHrefs(node);
     const html = node.innerHTML;
     if (html === reported.current) {
       return;
@@ -225,23 +290,74 @@ export function RichText({
       document.queryCommandValue("formatBlock") === "h2" ? "p" : "h2",
     );
 
-  const addLink = () => {
-    if (disabled) {
+  const openLink = () => {
+    const node = editor.current;
+    if (disabled || !node) {
       return;
     }
-    const href = window.prompt(labels.linkPrompt);
-    if (href === null) {
-      return;
+    const range = selectionIn(node) ?? endOf(node);
+    const anchor = linkAround(node, range);
+    setLinking({ href: anchor?.getAttribute("href") ?? "", range });
+  };
+
+  // The dialog took the caret; the words it was on get it back. A caret in a
+  // link stands for the whole link when the link is what changes.
+  const backToText = (wholeLink: boolean) => {
+    const node = editor.current;
+    if (!node || !linking) {
+      return null;
     }
-    editor.current?.focus();
-    // An empty answer REMOVES the link, which is the only way to undo one from
-    // a toolbar with no unlink button.
-    document.execCommand(
-      href.trim() === "" ? "unlink" : "createLink",
-      false,
-      href.trim(),
-    );
+    node.focus();
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(linking.range);
+    const anchor = linkAround(node, linking.range);
+    if (wholeLink && anchor && linking.range.collapsed) {
+      selection?.selectAllChildren(anchor);
+    }
+    return { node, anchor, collapsed: linking.range.collapsed };
+  };
+
+  const closeLink = () => {
+    backToText(false);
+    setLinking(null);
+  };
+
+  const applyLink = (href: string) => {
+    const back = backToText(true);
+    setLinking(null);
+    if (back && !back.anchor && back.collapsed) {
+      const words = escapeHtml(href.replace(/^mailto:/i, ""));
+      insertMarkup(back.node, `<a href="${escapeHtml(href)}">${words}</a>`);
+    } else if (back) {
+      document.execCommand("createLink", false, href);
+    }
     report();
+  };
+
+  const removeLink = () => {
+    backToText(true);
+    setLinking(null);
+    document.execCommand("unlink");
+    report();
+  };
+
+  const keyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (isImeCommit(event)) {
+      return;
+    }
+    if (
+      (event.metaKey || event.ctrlKey) &&
+      event.key.toLowerCase() === LINK_KEY
+    ) {
+      // Stopped here, the palette's listener on the window never hears it.
+      event.preventDefault();
+      event.stopPropagation();
+      openLink();
+    } else if (onSubmit && isParagraphCommit(event)) {
+      event.preventDefault();
+      onSubmit();
+    }
   };
 
   const foot = (
@@ -290,7 +406,7 @@ export function RichText({
           <ListOrdered size={14} aria-hidden="true" />
         </RichTextButton>
         <RichTextButton
-          onClick={addLink}
+          onClick={openLink}
           title={labels.link}
           disabled={disabled}
         >
@@ -302,7 +418,7 @@ export function RichText({
   );
   return (
     <div
-      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`}
+      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}${thinking ? " is-thinking" : ""}`}
     >
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
@@ -332,17 +448,24 @@ export function RichText({
         onInput={report}
         onBlur={report}
         onPaste={paste}
+        onKeyDown={keyDown}
       />
-      {/* UNDER the words, and quiet. The toolbar led the control for a while —
-          a filled band above the box, before a reader had written anything to
-          format — which made four glyphs the first thing on a surface whose
-          subject is the message. Bold and italic are marks everybody already
-          knows; they do not need to announce themselves, and putting them at the
-          end of the line the hint occupies costs the field no height at all.
-
-          The buttons keep their names for a screen reader and their tooltips
-          for a pointer: quieter is about ink, never about who can use it. */}
+      {thinking && (
+        <div className="richtext-thinking">
+          <AiPending label={thinking} lines={3} />
+        </div>
+      )}
+      {/* Under the words and quiet, so the message comes first; the buttons
+          keep their names and tooltips, since quieter is about ink only. */}
       {footIn === undefined ? foot : footIn && createPortal(foot, footIn)}
+      <LinkDialog
+        open={linking !== null}
+        href={linking?.href ?? ""}
+        onApply={applyLink}
+        onRemove={linking?.href ? removeLink : undefined}
+        onClose={closeLink}
+        returnFocusTo={() => editor.current}
+      />
     </div>
   );
 }
@@ -373,45 +496,4 @@ function RichTextButton({
       {children}
     </button>
   );
-}
-
-/**
- * Put sanitised markup at the caret, replacing the selection.
- *
- * `insertHTML` first, because it keeps the paste on the browser's undo stack.
- * An engine without it gets the same markup through the selection's range.
- */
-function insertMarkup(editor: HTMLElement, markup: string): void {
-  editor.focus();
-  // The type says execCommand always exists; a test engine (happy-dom) has
-  // none, and the range path is the one that works there.
-  if (
-    typeof document.execCommand === "function" &&
-    document.execCommand("insertHTML", false, markup)
-  ) {
-    return;
-  }
-  const selection = window.getSelection();
-  const current = selection?.rangeCount ? selection.getRangeAt(0) : null;
-  const range =
-    current && editor.contains(current.commonAncestorContainer)
-      ? current
-      : endOf(editor);
-  range.deleteContents();
-  const fragment = range.createContextualFragment(markup);
-  const last = fragment.lastChild;
-  range.insertNode(fragment);
-  if (last) {
-    range.setStartAfter(last);
-    range.collapse(true);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  }
-}
-
-function endOf(node: HTMLElement): Range {
-  const range = document.createRange();
-  range.selectNodeContents(node);
-  range.collapse(false);
-  return range;
 }

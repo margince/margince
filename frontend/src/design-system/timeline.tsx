@@ -12,12 +12,13 @@ import "./composed.css";
 import {
   AutomaticFlag,
   CommitmentReviewFlag,
-  directionClass,
   dotClass,
   entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   noteClass,
+  sideClass,
+  sideOf,
   TaskStateFlag,
   TIMELINE_ICON,
   TIMELINE_KIND_LABEL,
@@ -25,7 +26,7 @@ import {
   type TimelineGroup,
   TimelineWhen,
 } from "./timelineentry";
-import { TimelineText } from "./timelinetext";
+import { TimelineBody } from "./timelinetext";
 import { ThreadRow } from "./timelinethread";
 
 export function TimelineList({
@@ -92,8 +93,8 @@ export function GroupedTimelineList({
   );
 }
 
-// BulkGroupRow is one send to several contacts, folded. While closed, the
-// newest copy stands for the send. Opening it lists every copy through the
+// BulkGroupRow is one send to several contacts, or a run of newsletters the
+// team received, folded. While closed, the newest message stands for the group. Opening it lists every copy through the
 // ordinary row. A thread is not drawn here: it is a conversation, and
 // ThreadRow draws it open, as one card of messages.
 function BulkGroupRow({
@@ -112,7 +113,7 @@ function BulkGroupRow({
   }
   const Icon = TIMELINE_ICON[newest.kind];
   return (
-    <li className={directionClass(newest.direction)}>
+    <li className={sideClass(newest)}>
       {/* A group sits on the same three columns a single row does (date,
           rail, what happened), because it is a row of the chronology. One
           that stepped out of the axis read as a different list wedged into
@@ -125,9 +126,9 @@ function BulkGroupRow({
         </span>
       </span>
       <div className="tl-body">
-        {/* What the send is, while it is closed. No whose-move flag: a bulk
-            group is one outbound send with no reply expected, so it carries
-            no claim.
+        {/* What the group is, while it is closed. No whose-move flag: a
+            mailing expects no reply, whichever way it went, so it carries no
+            claim.
 
             The newest copy stands for the send, and that copy is drawn by
             the SAME component a lone one is — subject, who, the preview the
@@ -155,7 +156,7 @@ function BulkGroupRow({
             {/* Never for a withheld entry: a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText text={newest.body} entry={newest} />
+              <TimelineBody body={newest.body} entry={newest} />
             )}
           </>
         )}
@@ -199,15 +200,14 @@ function directionPhrase(
   t: ReturnType<typeof useT>,
 ): string {
   const who = entry.counterparts;
+  const side = sideOf(entry);
   if (!who) {
-    return entry.direction === "outbound"
-      ? t("timeline.sent")
-      : t("timeline.received");
+    return side === "ours" ? t("timeline.sent") : t("timeline.received");
   }
-  if (entry.direction === "outbound") {
+  if (side === "ours") {
     return t("timeline.sentTo", { who });
   }
-  if (entry.direction === "inbound") {
+  if (side === "theirs") {
     return t("timeline.receivedFrom", { who });
   }
   // A meeting or a note has no side. It still has contacts in it, and naming
@@ -250,7 +250,7 @@ export function TimelineRow({
   // A note is the rep's own words about the record, not an exchange with it.
   // The row says so: its body sits on a plate of its own instead of running
   // in the message rhythm around it.
-  const rowClass = [directionClass(entry.direction), noteClass(entry)]
+  const rowClass = [sideClass(entry), noteClass(entry)]
     .filter(Boolean)
     .join(" ");
   // An email draws the canonical row, the one reading of a message in the
@@ -372,7 +372,7 @@ export function TimelineRow({
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} entry={entry} />
+          <TimelineBody entry={entry} body={entry.body} />
         )}
         {entry.detail}
         <span className="tl-meta">

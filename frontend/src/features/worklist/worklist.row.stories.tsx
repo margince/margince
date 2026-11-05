@@ -132,36 +132,85 @@ export const ANoticeSettling: Story = {
 // Dated deliberately far enough out that the story is stable whenever it is
 // looked at — a fixture pinned to "today" renders differently every day and the
 // snapshot argues with itself.
+const meetingStillToConfirm: WorklistItem = {
+  occurred_precision: "instant",
+  id: "m1",
+  source: "meeting",
+  category: "meetings",
+  level: 1,
+  consequence: "meeting_unprepared",
+  title: "Quarterly review with Turbinenbau",
+  kind: "unprepared",
+  due_at: "2026-09-02T13:00:00Z",
+  because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
+  actions: [],
+  // The way into the brief, in the shape the server sends it. The subject is
+  // the activity, and the contact rides separately: the brief opens as
+  // `?prep=<activity>` on somebody's record. Without `with_contact`, moveHref
+  // returns nothing and the story would draw no control at all.
+  subject: { type: "activity", id: "m1" },
+  with_contact: "0199f5c0-0000-7000-8000-0000000009a1",
+  move: {
+    action: "open_meeting_brief",
+    activity_id: "m1",
+    arguments: { contact_id: "0199f5c0-0000-7000-8000-0000000009a1" },
+  },
+  preparation: {
+    activity_id: "m1",
+    state: "needs_review",
+    revision: "rev-1",
+    changed: [],
+  },
+};
+
 export const AMeetingWithItsStartTime: Story = {
   args: {
     ...baseArgs,
+    item: meetingStillToConfirm,
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// The same meeting once the reader said they are ready. It stays a reminder
+// with its start time and a Ready mark, and has no button left to press.
+export const AMeetingTheReaderIsReadyFor: Story = {
+  args: {
+    ...baseArgs,
     item: {
-      occurred_precision: "instant",
-      id: "m1",
-      source: "meeting",
-      category: "meetings",
-      level: 1,
-      consequence: "meeting_unprepared",
-      title: "Quarterly review with Turbinenbau",
-      kind: "unprepared",
-      due_at: "2026-09-02T13:00:00Z",
-      because: [{ kind: "meeting_soon" }, { kind: "meeting_unprepared" }],
-      actions: [],
-      // The way into the brief, in the shape the server actually sends it.
-      //
-      // The subject stays the ACTIVITY — the row is about the appointment —
-      // and the contact rides separately, because the brief is not a page of
-      // its own: it opens as `?prep=<activity>` on somebody's record. Writing
-      // this fixture with a contact SUBJECT instead would draw no control at
-      // all, since moveHref reads `with_contact` and returns nothing without
-      // it, and the story would look identical to its sibling below while
-      // claiming to show the opposite.
-      subject: { type: "activity", id: "m1" },
-      with_contact: "0199f5c0-0000-7000-8000-0000000009a1",
-      move: {
-        action: "open_meeting_brief",
+      ...meetingStillToConfirm,
+      level: 4,
+      consequence: "none",
+      kind: "prepared",
+      because: [{ kind: "meeting_soon" }],
+      preparation: {
         activity_id: "m1",
-        arguments: { contact_id: "0199f5c0-0000-7000-8000-0000000009a1" },
+        state: "ready",
+        revision: "rev-1",
+        changed: [],
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A meeting the reader was ready for until the organizer moved it and changed
+// the invite: the row asks again and names what changed.
+export const AMeetingThatChangedSinceTheReaderWasReady: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...meetingStillToConfirm,
+      preparation: {
+        activity_id: "m1",
+        state: "needs_review",
+        revision: "rev-2",
+        changed: ["start_time", "agenda"],
       },
     },
   },
@@ -199,6 +248,12 @@ export const AMeetingWithNobodyToBriefAgainst: Story = {
       because: [{ kind: "meeting_soon" }],
       actions: [],
       subject: { type: "activity", id: "m2" },
+      preparation: {
+        activity_id: "m2",
+        state: "needs_review",
+        revision: "rev-1",
+        changed: [],
+      },
     },
   },
   render: (args) => {
@@ -597,7 +652,8 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
       title: "Quarterly review with Turbinenbau",
       occurred_at: "2026-09-02T09:00:00Z",
       because: [{ kind: "outcome_unrecorded" }],
-      actions: [],
+      // The seat may answer it, so the row draws Held, Add notes and Cancel.
+      actions: ["decide", "cancel"],
       subject: { type: "activity", id: "11111111-1111-7111-8111-111111111111" },
     },
   },
@@ -809,6 +865,34 @@ export const TheRowInHand: Story = {
 // the FOLD, holding the reasons past the third together with why this row beat
 // the one below it — one press for a reader who disagrees with the order, and
 // no line of height for the many who do not.
+// One open customer-support review: its task and the deal's quiet row fold
+// into this one row, which stays while the review is open.
+export const ADealUnderReview: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "01a05500-0000-7000-8000-0000000000db",
+      source: "deal_review",
+      category: "deals_at_risk",
+      level: 4,
+      consequence: "deal_drifts",
+      title: "Turbinenbau retrofit",
+      because: [{ kind: "quiet_days", value: { kind: "days", days: 196 } }],
+      actions: ["open"],
+      subject: {
+        type: "deal",
+        id: "01a05500-0000-7000-8000-0000000000da",
+        label: "Turbinenbau retrofit",
+      },
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
 export const ADealAtRiskWithItsFigures: Story = {
   args: {
     ...baseArgs,

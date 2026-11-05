@@ -3,6 +3,7 @@
 // company, so the company has to be readable and sortable, and a long name in
 // front of it can no longer push it off the row.
 import type { components } from "../../api/schema";
+import type { CreateFieldOption } from "../../components/create.fields";
 import {
   createdColumn,
   lastActivityColumn,
@@ -17,6 +18,7 @@ import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
 import { LeadCompanyName } from "./leadcompany";
 import { openTaskCountLabel } from "./leadopentasks";
+import { leadPartnerName } from "./leadpartner";
 import {
   SlaBadge,
   StatusBadge,
@@ -34,6 +36,7 @@ export function leadColumns(
   locale: Locale,
   recordZone: string,
   origins: readonly LeadOrigin[] | undefined,
+  partners?: readonly CreateFieldOption[],
 ): ListColumn<Lead>[] {
   return [
     {
@@ -126,8 +129,35 @@ export function leadColumns(
         <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
       ),
     },
+    ...partnerColumns(t, partners),
     tagsColumn<Lead>(t),
     ownerColumn<Lead>(t),
     createdColumn<Lead>(t, locale, recordZone),
+  ];
+}
+
+// The referring partner, once the installation has one. A referral still
+// waiting for a partner manager says so, because that is the queue they work.
+function partnerColumns(
+  t: Translate,
+  partners: readonly CreateFieldOption[] | undefined,
+): ListColumn<Lead>[] {
+  if (!partners?.length) return [];
+  return [
+    {
+      key: "partner",
+      header: t("lead.partner"),
+      cell: (lead: Lead) =>
+        lead.partner_company_id ? (
+          <CellStrip>
+            <span>{leadPartnerName(partners, lead.partner_company_id)}</span>
+            {!lead.partner_accepted_at && (
+              <Badge tone="warning">{t("lead.partnerAwaiting")}</Badge>
+            )}
+          </CellStrip>
+        ) : (
+          <span>{t("lead.partnerNone")}</span>
+        ),
+    },
   ];
 }

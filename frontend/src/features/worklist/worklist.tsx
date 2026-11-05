@@ -1,7 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemCodeOf } from "../../lib/problem";
@@ -33,6 +32,7 @@ import "./worklist.css";
 // it — a reading in the Brief. One spelling of the parameter, two ways in.
 export { WORKLIST_FILTER_PARAM };
 
+import { useViewerZone } from "../../lib/viewerzone";
 import { WorklistBody } from "./worklist.body";
 import { accumulatedDay } from "./worklist.reads";
 
@@ -51,26 +51,32 @@ export function WorklistScreen({
   opensOn?: string;
   embedded?: boolean;
 }> = {}) {
+  const readerZone = useViewerZone();
   const t = useT();
   const {
     scope,
+    view,
     filter,
     owner,
     selectedId,
     setScope,
+    setView,
     setFilter,
     setOwner,
     setSelectedId,
   } = useWorklistAddress(opensOn, embedded);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
+  const day = useWorklist(
+    scope,
+    filter,
+    owner === "" ? undefined : owner,
+    true,
+    view,
+  );
   const refreshWalk = useRefreshWalk();
   const queryClient = useQueryClient();
-  // A failed LOAD MORE is not a failed page. `isError` covers both, and
-  // treating them alike would replace a screen of rows the reader is working
-  // through with an error panel because one extra page did not arrive. The
-  // rows already loaded are still true, so the surface stays ready and the
-  // control below says the request failed.
+  // A failed next batch is not a failed page. The rows already loaded stay,
+  // and the scroll sentinel below them says the batch failed.
   const lostTheDay = day.isError && day.data === undefined;
   // A refusal is not a failure. A named owner this reader has no reach over
   // answers 403, and "did not load. Retry" invites a retry that can only
@@ -126,17 +132,19 @@ export function WorklistScreen({
             onRefresh={refreshWalk}
             queue={queue}
             scope={scope}
+            view={view}
             filter={filter}
             owner={owner}
             selectedId={selectedId}
             onScope={setScope}
+            onView={setView}
             onFilter={setFilter}
             onOwner={setOwner}
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
-            hasMore={day.hasNextPage}
+            cursor={day.data?.pages.at(-1)?.next_cursor ?? undefined}
             loadingMore={day.isFetchingNextPage}
-            moreFailed={day.isError && day.data !== undefined}
+            moreFailed={day.isFetchNextPageError}
             onMore={() => void day.fetchNextPage()}
           />
         )}
@@ -151,7 +159,7 @@ export function WorklistScreen({
           rather than reset: the walk stays where the reader had paged it. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
         onReplySent={() =>
           void queryClient.invalidateQueries({ queryKey: worklistKey })

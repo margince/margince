@@ -1,12 +1,12 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { NextTaskSlot } from "../../components/nexttaskslot";
+import { RecordNextBar } from "../../components/latestinbound";
+import { taskLine, useTaskHolder } from "../../components/taskassignee";
 import { TaskCallAction } from "../../components/tasknextsteps";
-import { Button } from "../../design-system/atoms";
+import { Button, type ButtonVariant } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { NextBar } from "../../design-system/nextbar";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
   type Locale,
@@ -16,13 +16,14 @@ import {
   useT,
 } from "../../i18n";
 import { useSourceOpener } from "../../lib/opensource";
-import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
+import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
 // The one thing next on a contact, as the bar at the top of its Overview. It is the
@@ -48,17 +49,20 @@ export function ContactToday({
   onAction,
   onOpenTasks,
   onOpenEmail,
+  onAddTask,
 }: Readonly<{
   moment?: ContactMoment;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
   onOpenTasks?: () => void;
   onOpenEmail?: (activityId: string) => void;
+  // Opens the task form on this contact; absent where the reader may not log.
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const move = moment && actionableMoment(moment) ? moment : undefined;
   const named = recordsTheMoveNames(move);
   const tasks = (view.next_steps?.data ?? []).filter(
@@ -100,10 +104,23 @@ export function ContactToday({
   if (task) {
     return <TaskBar task={task} view={view} more={more(rest)} />;
   }
-  return <AnswerBar moment={moment} view={view} onAction={onAction} />;
+  return (
+    <AnswerBar
+      moment={moment}
+      view={view}
+      onAction={onAction}
+      onAddTask={onAddTask}
+    />
+  );
 }
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
+
+const URGENT_RULES: ReadonlySet<ContactMoment["rule"]> = new Set([
+  "privacy_notice_due",
+  "meeting_prep",
+  "overdue_promise",
+]);
 
 // The server's `why_now` is the only reason: one moment gives one reason, and
 // the facts in it are the part a rep judges.
@@ -129,7 +146,11 @@ function MomentBar({
     <TaskCallAction task={task} pageContact={view.contact} />
   );
   return (
-    <NextBar
+    <RecordNextBar
+      // A meeting about to happen, or a promise past its date, outranks what
+      // just came in; the item then sits above the bar.
+      urgent={URGENT_RULES.has(moment.rule) || undefined}
+      about={moment.evidence.map((item) => item.id)}
       title={moment.headline}
       late={lateness(owedDue(moment, view), view, t, locale)}
       sub={moment.why_now}
@@ -163,12 +184,11 @@ function MomentBar({
       // The may-be-done verbs carry their own "Not yet", which is this same
       // dismissal, so a snooze beside them would offer one act twice.
       snooze={
-        moment.may_be_done
+        moment.may_be_done || moment.rule === "privacy_notice_due"
           ? undefined
           : { onSnooze: defer.onDefer, pending: defer.pending }
       }
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }
@@ -204,7 +224,12 @@ function MomentSource({
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
-      <Button variant="link" className="btn-valuelabel" onClick={open}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={open}
+      >
         {item.label}
       </Button>
     </>
@@ -217,18 +242,22 @@ function TaskBar({
   more,
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
+  const holder = useTaskHolder(task.assignee_id);
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
-    <NextBar
+    <RecordNextBar
       title={task.subject ?? t("task.untitled")}
       late={lateness(task.due_at, view, t, locale)}
       detail={taskDetail(task)}
-      sub={
+      sub={taskLine([
+        holder,
         task.due_at
-          ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
-          : t("co.next.undated")
-      }
+          ? t("co.next.due", {
+              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+            })
+          : t("co.next.undated"),
+      ])}
       action={
         <>
           <TaskCallAction task={task} pageContact={view.contact} />
@@ -239,22 +268,24 @@ function TaskBar({
         </>
       }
       more={more}
-      onward={<NextTaskSlot />}
     />
   );
 }
 
-// No move and no task. A quiet rung has the basis to say nothing is due. An
-// unread reading, a withheld source and a relationship with nothing recorded
-// do not, so each says what it does know instead.
+// No move and no task. A quiet rung on a record whose tasks the reader saw in
+// full says no follow-up task is recorded, and no more: it does not claim that
+// nothing is left to do. An unread reading, a withheld source and a
+// relationship with nothing recorded say what they do know instead.
 function AnswerBar({
   moment,
   view,
   onAction,
+  onAddTask,
 }: Readonly<{
   moment: ContactMoment | undefined;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const omitted = new Set(view.sections_omitted);
@@ -264,28 +295,39 @@ function AnswerBar({
   ];
   if (withheld.length > 0) {
     return (
-      <NextBar
+      <RecordNextBar
         title={t("today.withheld", { sections: withheld.join(", ") })}
-        onward={<NextTaskSlot />}
       />
     );
   }
   if (!moment) {
-    return <NextBar title={t("record.notShown")} onward={<NextTaskSlot />} />;
+    return <RecordNextBar title={t("record.notShown")} />;
   }
   if (moment.rule === "thin_relationship") {
     return (
-      <NextBar
+      <RecordNextBar
         title={moment.headline}
         sub={t("contact.overview.coverage")}
         action={
           <ActionVerb action={moment.recommended_action} onAction={onAction} />
         }
-        onward={<NextTaskSlot />}
       />
     );
   }
-  return <NextBar onward={<NextTaskSlot />} />;
+  return (
+    <RecordNextBar
+      // "What was said" already shows the last exchange, of every kind.
+      lastExchange={false}
+      empty={t("standing.next.noTask")}
+      action={
+        onAddTask && (
+          <Button variant="ghost" onClick={onAddTask}>
+            {t("standing.next.addTask")}
+          </Button>
+        )
+      }
+    />
+  );
 }
 
 // What the move says is owed, in the order both readers below take it: the
@@ -321,6 +363,11 @@ function momentTask(
 
 // The due date of what the move says is owed: a claim's or a listed task's.
 function owedDue(moment: ContactMoment, view: Contact360): string | undefined {
+  if (moment.rule === "privacy_notice_due") {
+    return view.privacy_notice_duties?.find(
+      (duty) => duty.id === moment.recommended_action.destination?.entity_id,
+    )?.due_at;
+  }
   for (const { id } of owedRecords(moment)) {
     const due =
       view.claims?.find((claim) => claim.id === id)?.due_at ??
@@ -366,7 +413,12 @@ function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
   );
 }
 
-// One verb: the button, and under it what will happen when it is pressed.
+// The bar has one filled verb, its lead; indigo when the model writes it.
+function verbVariant(drafts: boolean, lead: boolean): ButtonVariant {
+  if (lead) return drafts ? "ai" : "primary";
+  return drafts ? "aiQuiet" : "ghost";
+}
+
 function ActionVerb({
   action,
   primary,
@@ -378,9 +430,10 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // The ladder is a rule, not a model, so the lead verb is the plain filled
-  // button; indigo would claim an agent wrote it.
-  const variant = primary ? "primary" : "ghost";
+  // A rule ladder picks the verb, not a model. Only the bar's lead verb is
+  // filled; a press that has the model write the mail carries the ✦.
+  const drafts = momentDrafts(action);
+  const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`
@@ -393,7 +446,7 @@ function ActionVerb({
         onClick={() => onAction(action)}
         reason={blocked ? blockedReason(action, t) : undefined}
       >
-        {actionIcon(action.kind)}
+        {!drafts && actionIcon(action.kind)}
         {action.label}
       </Button>
     </span>

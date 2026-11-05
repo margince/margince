@@ -128,7 +128,10 @@ func (s *Service) optionalLanes(
 		{
 			name: "meetings", bound: s.meetings != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
-				booked, err := s.meetingsAhead(ctx, asOf, until)
+				booked, more, err := s.meetingsAhead(ctx, asOf, until)
+				if err == nil {
+					out.MeetingsMoreAvailable = &more
+				}
 				return renderEach(booked, meetingItem), err
 			},
 			into: &out.Meetings, count: &out.Counts.Meetings,
@@ -202,7 +205,7 @@ func (s *Service) optionalLanes(
 			into: &out.NoticeCases, count: &out.Counts.NoticeCases,
 		},
 		{
-			name: "relationship_decay", bound: s.decay != nil,
+			name: "relationship_decay", bound: s.decay != nil && !s.omitDecay,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, more, err := s.decay.Lapsed(ctx, s.taskScope, s.taskOwner)
 				if err == nil {

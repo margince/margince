@@ -7,7 +7,7 @@ import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { authorName } from "./messagevoice";
+import { authorName, correspondenceSide } from "./messagevoice";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -57,13 +57,12 @@ export function activityMarks(
     )
     .map((row): TimelineMark => {
       const what = t(KIND_WORD[row.kind]);
-      const direction = row.email_summary?.direction ?? row.direction;
       return {
         key: row.id,
         at: row.occurred_at,
         precision: row.occurred_precision,
         kind: row.kind,
-        direction: direction ?? undefined,
+        side: sideOf(row),
         what,
         title: (row.subject ?? row.email_summary?.subject)?.trim() || what,
         detail: messageDetail(row, t),
@@ -79,10 +78,19 @@ export function activityMarks(
     });
 }
 
+// sideOf is which side wrote the row: known authorship first, then the
+// transport direction the summary or the row records.
+function sideOf(row: Activity): "ours" | "theirs" | undefined {
+  return correspondenceSide({
+    ...row,
+    direction: row.email_summary?.direction ?? row.direction,
+  });
+}
+
 /**
- * Which way a message went, and with whom when the row says ("From Dana
- * Reyes", "Sent"). Calls and meetings carry no named far side on a list row,
- * so they carry no detail.
+ * Who wrote a message, and with whom when the row says ("From Dana Reyes",
+ * "Sent"). Calls and meetings carry no named far side on a list row, so they
+ * carry no detail.
  */
 export function messageDetail(
   row: Activity,
@@ -91,12 +99,12 @@ export function messageDetail(
   if (row.kind !== "email" && row.kind !== "message") {
     return undefined;
   }
-  const direction = row.email_summary?.direction ?? row.direction;
+  const side = sideOf(row);
   const who = row.email_summary?.counterparty;
-  if (direction === "outbound") {
+  if (side === "ours") {
     return who ? t("timeline.sentTo", { who }) : t("timeline.sent");
   }
-  if (direction === "inbound") {
+  if (side === "theirs") {
     // The sender is the recorded author when the row names no counterparty.
     const from = who ?? authorName(row);
     return from

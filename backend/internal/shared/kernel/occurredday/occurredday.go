@@ -222,6 +222,12 @@ func StartSQL(alias string) string {
 	return StartAtSQL(alias+".occurred_at", alias+".occurred_precision")
 }
 
+// IsAnchorSQL is "at could be a date's Anchor": noon UTC to the microsecond. A day entry
+// is always stored there, so any other instant is a time of day.
+func IsAnchorSQL(at string) string {
+	return `((` + at + ` AT TIME ZONE 'UTC')::time = TIME '12:00:00')`
+}
+
 // StartAtSQL is StartSQL for an activity time held elsewhere than its own
 // row: at is the instant stored the way occurred_at is, precision its kind.
 func StartAtSQL(at, precision string) string {

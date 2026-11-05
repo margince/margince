@@ -28,8 +28,8 @@ func seedAcquisition(t *testing.T, e *channelConsentEnv, kind string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
-		INSERT INTO contact_acquisition_evidence (contact_id, kind, captured_by)
-		VALUES ($1, $2, 'test') RETURNING id`, e.contact, kind).Scan(&id); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
+        VALUES (@contact, @kind, @at, 'test') RETURNING id`, pgx.NamedArgs{"contact": e.contact, "kind": kind, "at": time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC)}).Scan(&id); err != nil {
 		t.Fatalf("seeding the acquisition: %v", err)
 	}
 	return id

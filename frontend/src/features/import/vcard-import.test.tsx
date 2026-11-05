@@ -85,7 +85,7 @@ describe("VCardImport", () => {
     render(<VCardImportAction />);
     expect(screen.getByRole("link", { name: "Import vCards" })).toHaveAttribute(
       "href",
-      "#/contacts/import",
+      "/#/contacts/import",
     );
   });
 
@@ -97,7 +97,7 @@ describe("VCardImport", () => {
     expect(title).toHaveFocus();
     expect(
       screen.getByRole("link", { name: "Back to contacts" }),
-    ).toHaveAttribute("href", "#/contacts");
+    ).toHaveAttribute("href", "/#/contacts");
   });
 
   // Leaving does not stop the write, so the guard holds exactly the window in

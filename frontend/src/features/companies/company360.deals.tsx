@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -12,8 +13,8 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Company360 } from "./company360";
 import "./company360.css";
 
@@ -41,7 +42,7 @@ export function DealsCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const deals = view?.deals;
   const won = deals?.won_lifetime;
   const state = sectionState(
@@ -67,7 +68,7 @@ export function DealsCard({
                 the way into them, and it opens that set. It narrows by `status`
                 and not by a lost stage: no single closed-lost stage id exists
                 across pipelines, while the deals endpoint reads `status`. */}
-            <a
+            <AppLink
               className="link-button"
               href={dealsFilteredBy("company_id", view.company.id, {
                 status: "lost",
@@ -76,7 +77,7 @@ export function DealsCard({
               {t("co.deals.lostCount", {
                 count: formatNumber(deals.lost_count, locale),
               })}
-            </a>
+            </AppLink>
           </p>
         )
       }

@@ -4,17 +4,18 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch } from "../../api/version";
+import { AppLink } from "../../design-system/applink";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatAnalyticsNumber, INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { throwProblem } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import type { ReportingReport } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
 
@@ -125,17 +126,17 @@ export function ReportingScheduleDialog({
         {ready && retentionDays !== undefined && (
           <p className="t-caption">
             {plural("reporting.editionRetention", retentionDays, {
-              count: formatNumber(retentionDays, locale),
+              count: formatAnalyticsNumber(retentionDays, locale),
             })}
           </p>
         )}
         {readiness.isSuccess && !ready && canRetention && (
-          <Button
-            variant="link"
-            onClick={() => navigate({ screen: "settings", id: "retention" })}
+          <AppLink
+            className="btn btn-link"
+            href={routeHash({ screen: "settings", id: "retention" })}
           >
             {t("reporting.retentionSettings")}
-          </Button>
+          </AppLink>
         )}
         <ErrorLine error={readiness.error} />
         {definition.report_revision !== report.revision && (

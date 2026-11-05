@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Fragment, type ReactNode } from "react";
-
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { ActivityWhenFormatter } from "../format/activitywhen";
@@ -10,6 +9,7 @@ import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { ENTITY } from "../lib/entity";
 import { routeHash } from "../lib/router";
+import { AppLink } from "./applink";
 import { FileChip } from "./filechip";
 import { relayMemberFor, relayProvenance } from "./provenanceof";
 import type { Provenance } from "./trust";
@@ -112,7 +112,7 @@ function PartyName({ party }: Readonly<{ party: EmailParty }>) {
     return <>{name}</>;
   }
   return (
-    <a
+    <AppLink
       className="entity-link"
       href={routeHash(ENTITY.contact.route(party.contact_id))}
       // `rel` travels with `target`, never behind it: a blank target without
@@ -121,7 +121,7 @@ function PartyName({ party }: Readonly<{ party: EmailParty }>) {
       rel="noopener noreferrer"
     >
       {name}
-    </a>
+    </AppLink>
   );
 }
 

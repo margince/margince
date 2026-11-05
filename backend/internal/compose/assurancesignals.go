@@ -30,7 +30,22 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`SELECT s.id::text, coalesce(c.owner_id::text, ''), c.id::text,
+	query := assuranceSignalSubjectsQuery(now, arg)
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading unlinked buying signals: %w", err)
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.SignalSubject, error) {
+		var subject assurance.SignalSubject
+		err := row.Scan(&subject.SignalID, &subject.Owner, &subject.CompanyID, &subject.SuggestionID, &subject.OccurredAt, &subject.Historical, &subject.BuyerVerified)
+		return subject, err
+	})
+}
+
+// assuranceSignalSubjectsQuery is the statement AssuranceSignalSubjects runs.
+// Rendered apart so a test can read which tables the check reads.
+func assuranceSignalSubjectsQuery(now time.Time, arg func(any) int) string {
+	return fmt.Sprintf(`SELECT s.id::text, coalesce(c.owner_id::text, ''), c.id::text,
   coalesce(covered.id::text, ''), source.occurred_at, source.occurred_at < $%[1]d, %[3]s -- occurred_at raw: a signal's cited time is placed already
  FROM signal s JOIN company c ON c.id = s.resolved_company_id
  CROSS JOIN LATERAL (SELECT `+storekit.CitedActivityTime("s.evidence")+` AS occurred_at) source
@@ -49,13 +64,4 @@ func AssuranceSignalSubjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]a
    WHERE ca.id = `+storekit.CitedActivityID("cite")+` AND `+workspaceEvidence("ca")+`))
  AND `+unlinkedCommercialMatter("s")+`
  ORDER BY s.id`, arg(now.Add(-dealScoutWindow)), arg(now), scoutBuyerSignal("s"))
-	rows, err := tx.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading unlinked buying signals: %w", err)
-	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (assurance.SignalSubject, error) {
-		var subject assurance.SignalSubject
-		err := row.Scan(&subject.SignalID, &subject.Owner, &subject.CompanyID, &subject.SuggestionID, &subject.OccurredAt, &subject.Historical, &subject.BuyerVerified)
-		return subject, err
-	})
 }

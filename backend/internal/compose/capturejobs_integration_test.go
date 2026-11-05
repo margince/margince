@@ -17,12 +17,12 @@ import (
 	"log/slog"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -60,13 +60,7 @@ func TestBackfillCompletionBuildsTheDigest(t *testing.T) {
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}()
+	defer integration.StartedJobRunner(t, runner)()
 
 	// Drain the boot digest so the next one cannot be it — nor deduped by it.
 	awaitKindCompleted(t, sub, CaptureDigestArgs{}.Kind())
@@ -172,13 +166,7 @@ func TestCaptureOvernightJobsRegisterAndRun(t *testing.T) {
 	if err := runner.Start(ctx); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			t.Errorf("Stop: %v", err)
-		}
-	}()
+	defer integration.StartedJobRunner(t, runner)()
 
 	// Awaited as a SET, not a sequence. All three are RunOnStart, so River
 	// enqueues them together and finishes them in whatever order the queues

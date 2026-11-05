@@ -31,6 +31,7 @@ Also called: upload a file to a contact, add an attachment to a contact, store a
 ### Which email did a file come from?
 To see which email a file came from in Margince, open the contact's or the company's **Documents** tab. A file that arrived with a captured email shows that email under its name: "From {who} · {subject}". Click the line to open the email.
 - The line shows only when you may read the email. A file from an email kept to a smaller audience is not listed for anyone outside that audience.
+- A calendar invitation's file, such as `invite.ics`, is not listed on any **Documents** tab or in a deal room. Small images in a signature are not listed either. Both stay on the email in **History**.
 - An uploaded file has no such line.
 Also called: email attachment sender, where a document came from.
 

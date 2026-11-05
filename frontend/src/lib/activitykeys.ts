@@ -19,6 +19,24 @@ export const timelineBaseKey = (
   entityId: string,
 ): QueryKey => ["activities", entityType, entityId];
 
+/**
+ * Whether a key is a record's timeline read, under any filters or page.
+ *
+ * Every row a timeline serves carries whether the reader may change it, and
+ * that answer includes record grants, which expire and are revoked elsewhere.
+ * A cached page therefore keeps enabling an edit the server now refuses, or
+ * keeps one disabled after a grant arrives.
+ */
+export function isTimelineRead(key: QueryKey): boolean {
+  return (
+    Array.isArray(key) &&
+    key.length >= 3 &&
+    key[0] === "activities" &&
+    typeof key[1] === "string" &&
+    typeof key[2] === "string"
+  );
+}
+
 export function entityTimelineKeys(
   entityType: EntityKind,
   entityId: string,

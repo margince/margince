@@ -55,6 +55,18 @@ func firstResponseStamp(now, created time.Time) time.Time {
 	return now.UTC()
 }
 
+// arrivalOwnerColumn is the owner at the instant COALESCE(routed_at, created_at).
+// Each write that stamps routed_at sets it too, as do both lead inserts. A later
+// reassignment therefore keeps the lead's arrival with its first owner.
+const arrivalOwnerColumn = "arrival_owner_id"
+
+// stampArrival starts the response clock for a lead's first owner. It records
+// that owner as the one the lead arrived with.
+func stampArrival(p *storekit.Patch, owner ids.UserID, at time.Time) {
+	p.Set("routed_at", nil, at)
+	p.Set(arrivalOwnerColumn, nil, owner)
+}
+
 // leadStatusSetByColumn records who placed the lead on its current step.
 const leadStatusSetByColumn = "status_set_by"
 
@@ -94,7 +106,7 @@ func startLeadResponseClockTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 	// it clears only the breach earned while the row was nobody's, never one a
 	// rep earned on a clock that had already started.
 	if _, err := tx.Exec(ctx,
-		`UPDATE lead SET routed_at = $2, sla_breached_at = NULL
+		`UPDATE lead SET routed_at = $2, sla_breached_at = NULL, `+arrivalOwnerColumn+` = owner_id
 		  WHERE id = $1 AND routed_at IS NULL AND archived_at IS NULL`,
 		id, leadSLAClock().UTC()); err != nil {
 		return fmt.Errorf("contacts: starting the lead response clock: %w", err)

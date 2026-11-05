@@ -21,9 +21,14 @@ import {
   useLocale,
   useT,
 } from "../../../i18n";
+import {
+  type LossReason,
+  lostReasonParts,
+  useLossReasons,
+} from "../../../lib/lossreasons.queries";
 import { dealRoleLabel } from "../../../lib/recordlabels";
-import { useRecordZone } from "../../../lib/recordzone";
 import { routeHash } from "../../../lib/router";
+import { useViewerZone } from "../../../lib/viewerzone";
 import { DealStageLadder } from "../deals.stepper";
 import { DealFigures, DealTimeline } from "./dealfigures";
 import { closeWords } from "./dealheaderfacts";
@@ -65,7 +70,7 @@ export function DealHowItStands({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const { deal, stages, ladder } = inputs;
   const subs = useStageSubs(inputs);
   const closed = deal.status !== "open";
@@ -74,7 +79,8 @@ export function DealHowItStands({
     locale,
     zone,
   });
-  const verdict = closedVerdict(deal, { t, locale, zone }) ?? open;
+  const reasons = useLossReasons(deal.status === "lost").data;
+  const verdict = closedVerdict(deal, { t, locale, zone }, reasons) ?? open;
   // A closed deal, or a fact that replaced the card's call, is read off the
   // record now, not off the card's last read.
   const fromRecords = closed || open !== head.verdict;
@@ -113,26 +119,30 @@ export function DealHowItStands({
 /**
  * Won and lost are final, so a closed deal heads the card with its outcome and
  * the day it came. That holds whatever the last reading of the open deal said.
- * A lost deal says why under it. An open deal has no outcome to head with.
+ * A lost deal names its reason beside the day, and its note goes under both as
+ * the rep wrote it. An open deal has no outcome to head with.
  */
 export function closedVerdict(
-  deal: Pick<Deal, "status" | "closed_at" | "lost_reason">,
+  deal: Pick<Deal, "status" | "closed_at" | "lost_reason" | "lost_reason_code">,
   { t, locale, zone }: Words,
+  reasons?: readonly LossReason[],
 ): StandingVerdict | undefined {
   if (deal.status === "open") {
     return undefined;
   }
+  const why = deal.status === "lost" ? lostReasonParts(deal, reasons) : {};
   const lines = [
     deal.closed_at
       ? t("deal.standing.closedOn", {
           date: formatDayMonth(deal.closed_at, locale, zone),
         })
       : undefined,
-    deal.status === "lost" ? deal.lost_reason?.trim() : undefined,
+    why.label,
   ].filter(Boolean);
   return {
     word: t(deal.status === "won" ? "deals.statusWon" : "deals.statusLost"),
     sentence: lines.length > 0 ? lines.join(" · ") : undefined,
+    ...(why.note ? { note: why.note } : {}),
     tone: deal.status === "won" ? "success" : "neutral",
   };
 }

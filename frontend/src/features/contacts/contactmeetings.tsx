@@ -35,6 +35,7 @@ import {
   useMeetingProposals,
   WaitingSection,
 } from "./contactmeetings.waiting";
+import { momentDrafts } from "./contactpage.drawers";
 import "./contact360.css";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -65,9 +66,9 @@ export function MeetingBriefAction({
 }: Readonly<{
   activity: Pick<Activity, "id" | "kind" | "content_state"> | undefined;
   onBriefMeeting?: (activityId: string) => void;
-  // Indigo for the next meeting, where a reader is about to walk in and the
-  // verb is the card's own lead; the default ghost for a meeting already
-  // held, where the brief is one of several equal ways to look back.
+  // Filled for the next meeting: a reader is about to walk in, and the verb is
+  // the card's lead. `aiQuiet` for a meeting already held, where the brief is
+  // one of several equal ways to look back.
   variant?: ButtonVariant;
 }>) {
   const t = useT();
@@ -101,8 +102,10 @@ function MeetingMomentAction({
     return null;
   }
   const blocked = action.state === "blocked";
+  const drafts = momentDrafts(action);
   return (
     <Button
+      variant={drafts ? "aiQuiet" : "ghost"}
       onClick={() => onAction(action)}
       reason={
         blocked
@@ -219,7 +222,7 @@ export function ContactMeetingsTab({
     (next ? 1 : 0) + ahead.length,
     loading,
   );
-  // An AI verb among equals on every row: the quiet indigo, where the next
+  // An AI verb among equals on every row: outlined with its ✦, where the next
   // meeting leads with the filled one.
   const briefOf = (activity: Activity) => (
     <MeetingBriefAction

@@ -13,8 +13,11 @@ import (
 )
 
 type (
-	contactCaseKey       struct{}
-	contactCaseAdmission struct{ members, grantees []ids.UUID }
+	mergeAdmissionKey struct{}
+	mergeAdmission    struct {
+		table             string
+		members, grantees []ids.UUID
+	}
 )
 
 // WithContactCaseAdmission lets a delegated case merge change the selected
@@ -27,14 +30,36 @@ func WithContactCaseAdmission(ctx context.Context, members, grantees []ids.UUID)
 	if len(members) < 2 || len(grantees) == 0 {
 		return ctx, errors.New("auth: a case admission names at least two contacts and one owner")
 	}
-	return context.WithValue(ctx, contactCaseKey{}, contactCaseAdmission{
-		members: slices.Clone(members), grantees: slices.Clone(grantees),
-	}), nil
+	return withMergeAdmission(ctx, mergeAdmission{
+		table: tableContact, members: slices.Clone(members), grantees: slices.Clone(grantees),
+	})
+}
+
+// WithDuplicatePairAdmission lets the merge of one filed duplicate pair change
+// both of its records. It widens write authority over those two rows and
+// nothing else: no read, no other row, no assignee. The caller has already
+// found the pair filed and the actor able to change one end of it.
+//
+// Held by: TestAPairAdmissionWritesOnlyItsTwoRecords (backend/internal/platform/auth/contactcaseadmission_test.go)
+func WithDuplicatePairAdmission(ctx context.Context, table string, left, right ids.UUID) (context.Context, error) {
+	if !shareableTables[table] || left.IsZero() || right.IsZero() || left == right {
+		return ctx, errors.New("auth: a pair admission names two different records of one shareable table")
+	}
+	return withMergeAdmission(ctx, mergeAdmission{table: table, members: []ids.UUID{left, right}})
+}
+
+// withMergeAdmission refuses to stack admissions, because a second one would
+// replace the first and silently narrow a merge already under way.
+func withMergeAdmission(ctx context.Context, admission mergeAdmission) (context.Context, error) {
+	if _, held := ctx.Value(mergeAdmissionKey{}).(mergeAdmission); held {
+		return ctx, errors.New("auth: a merge admission is already in force for this request")
+	}
+	return context.WithValue(ctx, mergeAdmissionKey{}, admission), nil
 }
 
 func admittedCaseMember(ctx context.Context, table string, id ids.UUID) bool {
-	admission, ok := ctx.Value(contactCaseKey{}).(contactCaseAdmission)
-	return ok && table == "contact" && slices.Contains(admission.members, id)
+	admission, ok := ctx.Value(mergeAdmissionKey{}).(mergeAdmission)
+	return ok && table == admission.table && slices.Contains(admission.members, id)
 }
 
 // admittedCaseMemberFor is admittedCaseMember for one of several principals a
@@ -45,6 +70,6 @@ func admittedCaseMemberFor(ctx context.Context, p principal.Principal, table str
 }
 
 func admittedCaseGrantee(ctx context.Context, dest ids.UUID) bool {
-	admission, ok := ctx.Value(contactCaseKey{}).(contactCaseAdmission)
+	admission, ok := ctx.Value(mergeAdmissionKey{}).(mergeAdmission)
 	return ok && slices.Contains(admission.grantees, dest)
 }

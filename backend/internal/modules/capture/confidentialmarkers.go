@@ -57,9 +57,9 @@ var confidentialMarkers = regexp.MustCompile(
 	`(?i)(\bvertraulich(e|en|em|er|es)?\b|\bvertraulichkeitsvereinbarung\b|` +
 		`\bconfidential\b|\bprivileged\b)`)
 
-// explicitlyConfidential answers whether a subject line carries a marker its
+// ExplicitlyConfidential answers whether a subject line carries a marker its
 // sender meant as one.
-func explicitlyConfidential(subject string) bool {
+func ExplicitlyConfidential(subject string) bool {
 	if strings.TrimSpace(subject) == "" {
 		return false
 	}

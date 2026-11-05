@@ -79,9 +79,9 @@ const (
 	// createTaskResult (tasksdispatch.go) — which is how the specification's
 	// "MUST NOT set resultType to task on other result types" is kept.
 	//
-	// "input_required" is answered only by the opt-in check_client tool, for a
-	// client that declared form elicitation. A 🟡 tool stages through the
-	// approvals engine, which a human visits, not a round trip to the client.
+	// "input_required" is answered only by inputRequiredResult, when a tool asks
+	// the user a question the client could settle by itself (inputrequired.go).
+	// A 🟡 tool still stages through the approvals engine, which a human visits.
 	fieldResultType    = "resultType"
 	resultTypeComplete = "complete"
 	fieldMeta          = "_meta"
@@ -151,9 +151,10 @@ type framing struct {
 	// there is a document to prefetch and sandbox, and a host that cannot enter
 	// the negotiation has nowhere to put it.
 	apps bool
-	// elicitation, capabilities and clientInfo are read only by a tool that
-	// measures the protocol (check_client); no other tool varies on them.
-	elicitation  elicitationMode
+	// elicit reports whether this request's client can show the user a form,
+	// which is what lets a tool ask in the chat (inputrequired.go).
+	elicit bool
+	// capabilities and clientInfo reach only a ProtocolOnly tool, which reports them.
 	capabilities json.RawMessage
 	clientInfo   json.RawMessage
 }
@@ -251,13 +252,12 @@ func modernPrecheck(params json.RawMessage, transportVersion string) (framing, *
 // client can retry rather than guess.
 //
 // -32021 MissingRequiredClientCapability is never emitted from HERE, and the
-// reason is narrower than it looks. No TOOL on this surface requires sampling,
-// elicitation or roots, so no capability's absence can stop a tools/call.
-// The opt-in check_client tool reports an absent elicitation as data.
-//
-// The tasks methods are the exception and raise it themselves. Their whole
-// contract is the extension. A request that did not declare it asks for a
-// method that, for that caller, does not exist.
+// reason is narrower than it looks. No TOOL on this surface needs sampling,
+// elicitation or roots, so no capability's absence can stop a tools/call, and a
+// server that demanded one it never uses would refuse callers for nothing. The
+// tasks methods are the exception and raise it themselves: their whole contract
+// is the extension, so a request that did not declare it is asking for a method
+// that, for that caller, does not exist.
 func modernPreconditions(meta modernMeta) (framing, *rpcError) {
 	fr := framing{modern: true}
 	version, malformed := declaredVersion(meta.version)
@@ -274,7 +274,7 @@ func modernPreconditions(meta modernMeta) (framing, *rpcError) {
 	}
 	fr.tasks = declaresTasks(meta.capabilities)
 	fr.apps = declaresUI(meta.capabilities)
-	fr.elicitation = declaredElicitation(meta.capabilities)
+	fr.elicit = declaresFormElicitation(meta.capabilities)
 	fr.capabilities, fr.clientInfo = meta.capabilities, meta.clientInfo
 	if !servesAsModern(fr.version) {
 		return fr, unsupportedProtocolVersion(fr.version)

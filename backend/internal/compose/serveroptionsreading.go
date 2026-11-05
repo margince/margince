@@ -13,8 +13,6 @@ package compose
 
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // WithColdStart enables the cold-start read-back over the given fetch
@@ -38,7 +36,7 @@ func WithScrape(fetch PageFetcher, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.scrapeHandlers = scrapeHandlers{engine: &scrapeEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
-			contacts:  contacts.NewStore(InstallationDB(pool)),
+			contacts:  newContactsStore(InstallationDB(pool)),
 			approvals: NewApprovalsService(InstallationDB(pool)),
 			pool:      pool,
 		}}

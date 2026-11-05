@@ -12,8 +12,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestAContactCreateNamingBothAnIDAndANameIsRefused(t *testing.T) {
@@ -83,27 +81,4 @@ func refusalOf(err error) (field, code string) {
 		return refused.Fields[0].Field, refused.Fields[0].Code
 	}
 	return "", ""
-}
-
-func TestAnAgentContactCreatePreviewNamesNoEmployer(t *testing.T) {
-	reader := principal.WithActor(t.Context(), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:rep",
-		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{contactEntity: {Create: true, Read: true}},
-			RowScope: principal.RowScopeAll,
-		},
-	})
-	agent := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:tools"}
-	picked := ids.From[ids.CompanyKind](ids.NewV7())
-	for field, choice := range map[string]EmployerChoice{
-		endCompanyColumn: {CompanyID: &picked},
-		fieldCompanyName: {CompanyName: new("Side Effect GmbH")},
-	} {
-		_, err := (&Store{}).PreviewContactCreationForActor(reader,
-			CreateContactInput{FullName: "Agent Proposed", Source: "agent", Employer: choice}, agent)
-		refused, ok := errors.AsType[*values.ParseError](err)
-		if !ok || refused.Field != field || refused.Code != "employer_needs_a_human" {
-			t.Errorf("agent naming %s: err = %v, want employer_needs_a_human on %s", field, err, field)
-		}
-	}
 }

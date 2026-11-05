@@ -90,11 +90,21 @@ export const renderHome = (): SettingsRender =>
 
 // Both halves, for a claim that spans them: the tab is in the nav AND its cards
 // are on the page.
-export const renderSettings = (tab?: string): SettingsRender =>
+export const renderSettings = (tab?: string, view?: string): SettingsRender =>
   render(
     <>
       {railFor(tab)}
-      <SettingsScreen route={settingsAddress(tab ?? DEFAULT_TAB)} />
+      <SettingsScreen
+        route={
+          view === undefined
+            ? settingsAddress(tab ?? DEFAULT_TAB)
+            : {
+                ...settingsAddress(tab ?? DEFAULT_TAB),
+                id: tab ?? DEFAULT_TAB,
+                id2: view,
+              }
+        }
+      />
     </>,
   );
 
@@ -343,7 +353,9 @@ export function offeredPages(): string[] {
   const seen = new Set(
     screen
       .getAllByRole("link")
-      .map((link) => link.getAttribute("href") ?? "")
+      .map(
+        (link) => new URL(link.getAttribute("href") ?? "", location.href).hash,
+      )
       .filter((href) => href.startsWith("#/settings/"))
       .map((href) => href.slice("#/settings/".length)),
   );

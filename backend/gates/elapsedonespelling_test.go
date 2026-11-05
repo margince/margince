@@ -30,7 +30,7 @@ func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 		"internal/modules/deals/health.go:daysBetween":                            "Fractional elapsed days feed the health decay curve; rounding to calendar boundaries would change the score discontinuously.",
 		"internal/modules/contacts/leadscore.go:ScoreLeadDetail":                  "Fractional elapsed days feed behavioral decay; a local midnight cannot change the age of a signal abruptly.",
 		"internal/modules/search/graphtrust.go:rankScore":                         "Search freshness is continuous exponential decay rather than a displayed calendar age.",
-		"internal/shared/kernel/relstrength/relstrength.go:Compute":               "Relationship strength decays with elapsed time, so a calendar boundary cannot change its score abruptly.",
+		"internal/shared/kernel/relstrength/relstrength.go:recency":               "Relationship strength decays with elapsed time, so a calendar boundary cannot change its score abruptly.",
 	})
 	defer waivers.AssertAllMatched(t)
 	files := (gatekit.Scope{

@@ -91,6 +91,9 @@ func (s *Scanner) Preview(ctx context.Context, now time.Time) (Preview, error) {
 		if _, err := s.askSignals(ctx, tx, now, &pass); err != nil {
 			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
 		}
+		if err := s.askCalls(ctx, tx, now, &pass); err != nil {
+			return fmt.Errorf("%w: %w", errSubjectsUnreadable, err)
+		}
 		out.EligibleDeals = pass.eligible
 		out.Counts = countByType(pass.findings())
 		out.Readiness = Readiness(out.Coverage, pass.findings(), s.cfg)
@@ -172,9 +175,22 @@ func (s *Store) EverRun(ctx context.Context) (bool, error) {
 	}
 	var ever bool
 	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM assurance_run)`).Scan(&ever)
+		var err error
+		ever, err = s.EverRunTx(ctx, tx)
+		return err
 	})
-	if err != nil {
+	return ever, err
+}
+
+// EverRunTx is EverRun in the caller's transaction. A pass over one deal is
+// not an enrolment, so only a pass over every deal counts.
+func (s *Store) EverRunTx(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
+		return false, err
+	}
+	var ever bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM assurance_run WHERE subject_deal_id IS NULL)`).Scan(&ever); err != nil {
 		return false, fmt.Errorf("assurance: reading whether this workspace has been checked: %w", err)
 	}
 	return ever, nil

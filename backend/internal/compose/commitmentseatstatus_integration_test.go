@@ -141,6 +141,7 @@ func TestAnUnsurePromiseIsProposedToItsColleagueAlone(t *testing.T) {
 func seedMailedPromise(t *testing.T, status string) (*integration.Env, string) {
 	t.Helper()
 	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep2, "rep")
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)

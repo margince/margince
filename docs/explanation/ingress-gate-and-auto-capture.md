@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go -->
+<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
 # The ingress gate, auto-capture, and the verdict engine
 
 What happens to a message **after** a connector pulled it from an outside provider, and before it
@@ -192,12 +192,11 @@ Notes on some tiers:
 - **T1 only trusts proof that *we* sent the mail.** It does not look at the `From` header, which
   someone can forge. An outbound message whose text says no (`not interested`, `unsubscribe`,
   `kein Interesse`) is no evidence of intent at all.
-- **T1 needs two-way mail**, and a single send is not that. Writing to someone shows intent, and intent
-  many times gets no answer. The owner of a new company mails 40 companies about an event, and 6
-  write back. So the ladder creates a contact at once only in two cases. They wrote back on a thread we
-  wrote on, or we wrote to them on two separate threads, which nobody does without meaning to. A single send
-  is not refused: it falls to T4, and the verdict engine reads the message and decides on what it
-  says.
+- **An attested send records an outside recipient.** The provider must prove that the
+  capturing seat sent it, or Margince must hold a sent delivery receipt. A draft,
+  failed delivery or untrusted direction field is no proof. To and Cc share this rule;
+  Bcc is never admitted. A live lead stays a lead. Without a trusted send or an eligible
+  meeting, a sender still passes through the other tiers.
 - **Mail to a list is no reply.** An address we wrote to once that then sends a newsletter has
   added us to a list; it has not answered us.
 - **T1 also wins over an old verdict.** A reply to a sender we once marked as noise returns
@@ -333,6 +332,23 @@ mailbox owner alone:
   colleague which companies this user is going after. The record opens up on its own the first time that address replies.
 - **The thread is on a privacy hold.** A contact visible to the whole workspace, created from mail on
   hold, would show the counterparty that the hold exists to keep private.
+
+A privacy hold on a contact ends when nothing holds it any more. That happens when the thread
+verdict answers `ordinary` or the owner shares the thread. The same contact then opens to the workspace,
+with its ID and its mail. Every check that kept it private is asked again first:
+
+- Every live message with any of the contact's addresses must have stopped holding it. That covers a
+  colleague's mailbox, a legal hold and a marked subject. It also covers a held conversation that
+  started after the sender was judged.
+- Every address of the contact must have been judged a business contact, and nothing else. A
+  sender question still open, an erased address or any other answer keeps the contact private.
+- A contact a user made private stays private, and so does a contact with no record of why it is
+  private.
+- Mail the owner wrote to an address that never answered keeps the contact private for that reason
+  instead. It opens up when the address replies, as above.
+
+The engine checks this when a thread clears, and its next pass checks what that missed. A background
+data task checks the contacts held before this check existed.
 
 Marking the domain is a separate step from hiding the mail. A newsletter company has a real web
 site. Without the mark, the company check would create it the next time someone from that company

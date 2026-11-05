@@ -19,9 +19,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/webforms"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -34,15 +34,19 @@ const publicFormsPrefix = "/v1/public/forms/"
 // newWebFormHandlers builds the forms surface over the real lead and activity
 // writers. The secret store arrives later, through WithKeyvault.
 func newWebFormHandlers(pool *pgxpool.Pool, log *slog.Logger) webforms.Handlers {
-	store := webforms.NewStore(InstallationDB(pool), log)
+	db := InstallationDB(pool)
+	store := webforms.NewStore(db, log)
+	return webforms.NewHandlers(store, webforms.NewIntake(store, newWebFormLander(db, pool, log)), time.Now)
+}
+
+// newWebFormLander is the lead and activity writers a submission lands through.
+func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) webFormLeads {
 	catalog := customfields.NewService(pool, nil)
-	lander := webFormLeads{
-		leads: contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog).
-			WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), log)),
-		activities: activities.NewStore(InstallationDB(pool)),
+	return webFormLeads{
+		leads:      newContactsStore(db).WithFieldCatalog(catalog).WithLeadArrivals(newLeadWorkTasks(db, log)),
+		activities: activities.NewStore(db),
 		catalog:    catalog,
 	}
-	return webforms.NewHandlers(store, webforms.NewIntake(store, lander), time.Now)
 }
 
 // publicFormLimiters brake the anonymous intake. Per IP stops one source

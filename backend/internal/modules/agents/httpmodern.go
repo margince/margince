@@ -54,10 +54,8 @@ type mirroredName func(json.RawMessage) string
 
 // modernNamedMethods maps each method whose body carries a name to that reader.
 //
-// It lists the name-carrying methods THIS server answers. The specification
-// also names prompts/get; this server has no prompts and answers that -32601,
-// and demanding a header for a method that does not exist would refuse the
-// caller for the wrong reason.
+// It lists the name-carrying methods this server answers. prompts/get carries
+// its name in the same member tools/call does, so it shares that reader.
 // The three task methods mirror their taskId, which the Tasks extension makes
 // a MUST for a different reason than the two above: an intermediary routing on
 // Mcp-Name can send a poll to the instance holding that task's state. This
@@ -66,6 +64,7 @@ type mirroredName func(json.RawMessage) string
 // let a gateway route on one task while it read another.
 var modernNamedMethods = map[string]mirroredName{
 	methodToolsCall:     calledToolName,
+	methodPromptsGet:    calledToolName,
 	methodResourcesRead: readResourceURI,
 	methodTasksGet:      taskIDName,
 	methodTasksUpdate:   taskIDName,
