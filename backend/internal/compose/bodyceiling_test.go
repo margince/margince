@@ -6,8 +6,12 @@ package compose
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -40,8 +44,14 @@ func ceilingFor(t *testing.T, method, path, contentType string) int64 {
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	return bodyCeilingFor(uploadCeilings(testLimits))(req)
+	return bodyCeilingFor(uploadCeilings(testLimits), contractRoutes())(req)
 }
+
+// contractRoutes is the real generated router, built once: the ceiling resolves a
+// path through it, and a stand-in would prove a resolution production never runs.
+var contractRoutes = sync.OnceValue(func() chi.Router {
+	return contractRouter(crmcontracts.Unimplemented{})
+})
 
 func TestEachUploadRouteRidesItsOwnConfiguredCeiling(t *testing.T) {
 	for path, want := range map[string]int64{
