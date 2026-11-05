@@ -87,8 +87,8 @@ func TestALinkMovesTheClockForwardWithoutFoldingTheHistory(t *testing.T) {
 }
 
 // A contact's current employer counts only what was sent while they worked
-// there, so a new link advances that clock by the rule a refold reads. A note
-// filed on the account itself carries no such bound.
+// there. A new link advances that clock by the rule a refold reads. A note filed
+// on the account itself carries no such bound.
 func TestALinkAdvancesAnEmployerOnlyInsideTheEmployment(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Newco", nil)

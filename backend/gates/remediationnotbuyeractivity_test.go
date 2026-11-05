@@ -166,8 +166,8 @@ func extractFunctionBody(sql, name string) (string, bool) {
 	return "", false
 }
 
-// The census and the body reader take any spelling SQL does, so a replacement
-// written in lower case or across lines still counts as the live body.
+// The census and the body reader take any spelling SQL does. A replacement in
+// lower case or across lines still counts as the live body.
 func TestTheRecencyCensusReadsEverySpelling(t *testing.T) {
 	t.Parallel()
 	for _, sql := range []string{

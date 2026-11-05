@@ -86,9 +86,9 @@ func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 }
 
 // last_activity_of_company is a third spelling of the employment arm, in SQL
-// because a trigger folds it, and last_activity_of_company_activity is the same
-// arm for one new link. Their bound is the walk's own rendered text, so a
-// company's stored clock and its timeline count the same mail.
+// because a trigger folds it. last_activity_of_company_activity is that arm for
+// one new link. Their bound is the walk's own rendered text, so a company's
+// stored clock and its timeline count the same mail.
 func TestTheStoredCompanyClockBoundsEmploymentLikeTheWalk(t *testing.T) {
 	t.Parallel()
 	bodies := currentRecencyBodies(t)
