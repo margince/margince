@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 47 |
 | Resources | 13 |
-| Tool catalog | 208.6 KB |
+| Tool catalog | 208.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54710 |
+| Approx. wire tokens | 54684 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.3 KB | 23% | Yes, every step |
-| Input schemas | 102.1 KB | 48% | Yes, every step |
+| Input schemas | 102.0 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **150.4 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **150.3 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -1693,7 +1693,7 @@ call themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, change_attention with action=raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
       "type": "object"
     },
     "row_id": {
@@ -8196,7 +8196,6 @@ fields.
         "tag_suggestion",
         "team_board",
         "team_exceptions",
-        "team_weekly_review",
         "teammate_weekly_plan",
         "weekly_plan",
         "weekly_reviews",
@@ -8401,7 +8400,7 @@ fields.
       "type": "string"
     },
     "team": {
-      "description": "team_board, team_weekly_review only",
+      "description": "team_board only",
       "format": "uuid",
       "type": "string"
     },
@@ -8423,7 +8422,7 @@ fields.
       "type": "boolean"
     },
     "week": {
-      "description": "latest_weekly_review, team_weekly_review only",
+      "description": "latest_weekly_review only",
       "format": "date",
       "type": "string"
     }
