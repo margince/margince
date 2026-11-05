@@ -79,8 +79,10 @@ func TestAnOfferFromTheDealRefusesItsOwnLines(t *testing.T) {
 	if _, ok := errors.AsType[*OfferLinesFromDealError](err); !ok {
 		t.Fatalf("a typed line on the deal's offer answered %v, want offer_lines_from_deal", err)
 	}
-	_, err = e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual",
-		LineItems: []OfferLineInputRow{{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))}}})
+	_, err = e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []OfferLineInputRow{{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))}},
+	})
 	if _, ok := errors.AsType[*LineOwnedValueError](err); !ok {
 		t.Fatalf("a typed offer on a lines deal answered %v, want deal_has_lines", err)
 	}

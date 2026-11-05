@@ -131,12 +131,12 @@ func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *dealFilingContext
 		return err
 	}
 	for _, link := range in.links {
-		if link.EntityType == "deal" || link.EntityType == "project" || link.EntityType == "lead" {
+		if link.EntityType == linkEntityDeal || link.EntityType == linkEntityProject || link.EntityType == linkEntityLead {
 			return nil
 		}
 	}
 	if in.choice != nil && in.choice.DealId != nil {
-		in.links = append(slices.Clone(in.links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*in.choice.DealId)})
+		in.links = append(slices.Clone(in.links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*in.choice.DealId)})
 		return nil
 	}
 	if in.choice != nil && in.choice.Skip != nil && *in.choice.Skip {
@@ -147,7 +147,7 @@ func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *dealFilingContext
 		return err
 	}
 	if options.SuggestedDealId != nil {
-		in.links = append(slices.Clone(in.links), ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(*options.SuggestedDealId)})
+		in.links = append(slices.Clone(in.links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*options.SuggestedDealId)})
 	}
 	return nil
 }

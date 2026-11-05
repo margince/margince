@@ -259,7 +259,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		return QualifyingEvent{}, false, fmt.Errorf("read the inbound qualifying message: %w", err)
 	}
 	event.Kind = "inbound_message"
-	event.SourceEntityType = "activity"
+	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
@@ -342,7 +342,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		return QualifyingEvent{}, false, fmt.Errorf("read the qualifying meeting: %w", err)
 	}
 	event.Kind = KindMeeting
-	event.SourceEntityType = "activity"
+	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
 }

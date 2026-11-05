@@ -359,8 +359,10 @@ func verdictAfterTheOwnerLeft(t *testing.T, revoke, wantOutcome string) {
 		t.Fatal(err)
 	}
 	v.WsExec(t, revoke, v.Rep1)
-	amount := deals.VerdictChange{Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000,
-		Evidence: map[string]any{"cited_activity_ids": []string{v.note}}}
+	amount := deals.VerdictChange{
+		Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000,
+		Evidence: map[string]any{"cited_activity_ids": []string{v.note}},
+	}
 	outcomes, _, err := v.pass.applyAsOwner(ctx, c, read, []deals.VerdictChange{amount})
 	if err != nil {
 		t.Fatal(err)

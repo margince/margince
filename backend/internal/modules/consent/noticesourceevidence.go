@@ -30,7 +30,7 @@ type SourceEvidenceReference struct {
 }
 
 func (r SourceEvidenceReference) valid() bool {
-	return r.Kind == sourceEvidenceAcquisition || r.Kind == "activity"
+	return r.Kind == sourceEvidenceAcquisition || r.Kind == entityActivity
 }
 
 // SourceEvidence carries only what this reader may see about a source.
@@ -77,8 +77,10 @@ type sourceEvidenceCursor struct {
 	ID ids.UUID  `json:"id"`
 }
 
-const sourceEvidencePageSize = 20
-const sourceEvidenceAcquisition = "acquisition"
+const (
+	sourceEvidencePageSize    = 20
+	sourceEvidenceAcquisition = "acquisition"
+)
 
 func sourceContactReadable(ctx context.Context, tx pgx.Tx, current NoticeCase) error {
 	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
@@ -100,10 +102,12 @@ func resolveSourceEvidenceTx(ctx context.Context, tx pgx.Tx, current NoticeCase,
 			return SourceEvidence{}, apperrors.ErrNotFound
 		}
 		a := current.Acquisition
-		return SourceEvidence{Reference: ref, Kind: sourceEvidenceAcquisition, OccurredAt: a.OccurredAt, OccurredPrecision: "instant", RecordedAt: a.CapturedAt,
-			CapturedBy: a.CapturedBy, CapturedByName: a.CapturedByName, RecordType: entityContact, RecordID: current.ContactID.UUID}, nil
+		return SourceEvidence{
+			Reference: ref, Kind: sourceEvidenceAcquisition, OccurredAt: a.OccurredAt, OccurredPrecision: "instant", RecordedAt: a.CapturedAt,
+			CapturedBy: a.CapturedBy, CapturedByName: a.CapturedByName, RecordType: entityContact, RecordID: current.ContactID.UUID,
+		}, nil
 	}
-	if ref.Kind != "activity" || ref.ID.IsZero() {
+	if ref.Kind != entityActivity || ref.ID.IsZero() {
 		return SourceEvidence{}, apperrors.ErrNotFound
 	}
 	rows, err := readSourceActivitiesTx(ctx, tx, current, &ref.ID, sourceEvidenceCursor{}, 1)
@@ -121,16 +125,12 @@ func (s *Store) GetNoticeSourceEvidence(ctx context.Context, id ids.UUID, cursor
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
 		return SourceEvidencePage{}, err
 	}
-	var after sourceEvidenceCursor
-	if cursor != "" {
-		decoded, err := storekit.DecodeOpaque[sourceEvidenceCursor](cursor)
-		if err != nil || decoded.At.IsZero() || decoded.ID.IsZero() {
-			return SourceEvidencePage{}, &storekit.MalformedCursorError{}
-		}
-		after = decoded
+	after, err := decodeSourceEvidenceCursor(cursor)
+	if err != nil {
+		return SourceEvidencePage{}, err
 	}
 	out := SourceEvidencePage{Items: []SourceEvidence{}}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		current, err := readSourceCaseTx(ctx, tx, id)
 		if err != nil {
 			return err
@@ -148,7 +148,7 @@ func (s *Store) GetNoticeSourceEvidence(ctx context.Context, id ids.UUID, cursor
 		if err := attachSelectedSourceTx(ctx, tx, current, &out); err != nil {
 			return err
 		}
-		if err := auth.Require(ctx, "activity", principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
+		if err := auth.Require(ctx, entityActivity, principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil
 		} else if err != nil {
 			return err
@@ -169,6 +169,18 @@ func (s *Store) GetNoticeSourceEvidence(ctx context.Context, id ids.UUID, cursor
 	})
 	redactSourceAttribution(ctx, &out)
 	return out, err
+}
+
+// decodeSourceEvidenceCursor reads the page cursor. An empty one is the first page.
+func decodeSourceEvidenceCursor(cursor string) (sourceEvidenceCursor, error) {
+	if cursor == "" {
+		return sourceEvidenceCursor{}, nil
+	}
+	decoded, err := storekit.DecodeOpaque[sourceEvidenceCursor](cursor)
+	if err != nil || decoded.At.IsZero() || decoded.ID.IsZero() {
+		return sourceEvidenceCursor{}, &storekit.MalformedCursorError{}
+	}
+	return decoded, nil
 }
 
 func redactSourceAttribution(ctx context.Context, out *SourceEvidencePage) {
@@ -220,7 +232,7 @@ func attachOriginalSourceActivityTx(ctx context.Context, tx pgx.Tx, current Noti
 }
 
 func readSourceActivitiesTx(ctx context.Context, tx pgx.Tx, current NoticeCase, wanted *ids.UUID, cursor sourceEvidenceCursor, limit int) ([]SourceEvidence, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, entityActivity, principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var args []any
@@ -255,7 +267,7 @@ func readSourceActivitiesTx(ctx context.Context, tx pgx.Tx, current NoticeCase, 
 	defer rows.Close()
 	out := []SourceEvidence{}
 	for rows.Next() {
-		e := SourceEvidence{RecordType: "activity", Reference: SourceEvidenceReference{Kind: "activity"}}
+		e := SourceEvidence{RecordType: entityActivity, Reference: SourceEvidenceReference{Kind: "activity"}}
 		if err := rows.Scan(&e.Reference.ID, &e.Kind, &e.Title, &e.OccurredAt, &e.OccurredPrecision, &e.RecordedAt, &e.CapturedBy, &e.CapturedByName, &e.body, &e.updatedAt); err != nil {
 			return nil, err
 		}
