@@ -17934,7 +17934,8 @@ export interface paths {
          *     It has no login: there is no password and nobody can sign in as it. It has a full seat
          *     type but is free of the licence seat limit: it is not counted, and declaring one never
          *     fails on the seat limit. It holds one role, `service_ingest`,
-         *     which can create and update activities, contacts and companies and nothing else.
+         *     which can create and update activities, contacts, companies and deals, and file a task for a
+         *     colleague, and nothing else.
          *
          *     The member serves the one extension named in `extension`. Any other extension asking
          *     to act as it is refused, so a member declared for one feed cannot be borrowed by
