@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { standardViews } from "../../components/recordlist";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
@@ -219,9 +219,13 @@ export const LeadScoreSourcesNamed: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: /^3 activities$/ }),
-    );
+    const sources = await canvas.findByRole("button", {
+      name: "3 activities",
+    });
+    await waitFor(() => expect(sources).toBeVisible());
+    await userEvent.click(sources);
+    const source = await screen.findByText("Re: pricing for the pilot");
+    await waitFor(() => expect(source).toBeVisible());
   },
 };
 

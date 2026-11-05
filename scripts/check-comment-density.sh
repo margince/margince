@@ -30,8 +30,7 @@ TOLERANCE_PER_MILLE=1
 # xargs may split the list across several awk runs, each printing its own totals,
 # so the sums are added up here — taking only the first would count part of the
 # tree and report a smaller ratio as a pass.
-# That also makes the batches independent, so they run one per core: one awk
-# over the whole tree was most of this gate's time.
+# That also makes the batches independent, so they run one per core.
 jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
 files=$(find backend -name '*.go' ! -name '*_gen.go' ! -name '*.gen.go' | wc -l | tr -d ' ')
 if (( files < 1000 )); then

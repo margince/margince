@@ -26,14 +26,19 @@ usage() {
 # content counts as clean.
 save() {
 	git -C "$top" ls-files -s -z | perl -0 -MTime::HiRes=stat -e '
-		my %dirty = map { $_ => 1 } split /\0/, `git -C "$ARGV[0]" diff --name-only -z`;
+		open my $diff, "-|", "git", "-C", $ARGV[0], "diff", "--name-only", "-z"
+			or die "keep-unchanged-mtimes: cannot run git diff: $!\n";
+		my %dirty = map { $_ => 1 } split /\0/, do { local $/; <$diff> // "" };
+		# A git diff that failed lists no dirty file, and every edit would count as clean.
+		close $diff or die "keep-unchanged-mtimes: git diff failed\n";
 		chdir $ARGV[0] or die "keep-unchanged-mtimes: cannot enter $ARGV[0]: $!\n";
 		while (my $row = <STDIN>) {
 			chomp $row;
 			my ($meta, $path) = split /\t/, $row, 2;
 			my ($mode, $blob) = split / /, $meta;
-			# --stdin-paths reads one path per line, so a path holding a newline is left as written.
-			next if $mode eq "120000" || $mode eq "160000" || $dirty{$path} || $path =~ /\n/;
+			# --stdin-paths reads one path per line and C-unquotes one that opens with a
+			# quote, so such a path is left as written.
+			next if $mode eq "120000" || $mode eq "160000" || $dirty{$path} || $path =~ /\n|^"/;
 			my @st = stat $path or next;
 			# One fixed spelling, compared as text: a float printed plainly keeps 15
 			# digits, fewer than a nanosecond mtime has, and every file would look moved.
@@ -59,7 +64,7 @@ restore() {
 			chomp(my $mtime = <$in>);
 			my @st = stat $path or next;
 			next if sprintf("%.9f", $st[9]) eq $mtime;
-			print "$path\n$blob\n$mtime\n$st[8]\n";
+			printf "%s\n%s\n%s\n%.9f\n", $path, $blob, $mtime, $st[8];
 		}
 	' "$top" "$snapshot" >"$moved"
 	# The paths go to git from a file, not a pipe it answers on, so a long list

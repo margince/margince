@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
+<!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/pace.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh scripts/pace-workflow.sh -->
 # CI pipeline
 
 The merge gate as GitHub Actions. The workflow is
@@ -304,14 +304,12 @@ time of a PR. And `deterministic-gates` itself still catches a broken build.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**. A part picked per test reaches nearly every package, so a shard that
-compiled its own part would compile nearly the whole lane. The `integration build` job links the test
-binary of every package, with the flags the shards use. Each shard fetches the binaries and runs its
-part from them, each in its package directory, as `go test` runs it. A compile error fails the build
-job, and then no shard starts. The build job runs before the shards, so its time adds to the lane.
+compiled its own part would compile nearly the whole lane. The `integration build` job links each
+package's test binary with the shards' flags. Each shard runs its part from them in the package
+directory, as `go test` does. A compile error fails the build job, and no shard starts.
 
 Each shard pays a fixed cost: start-up, the fetch and its own migrated template. A wider matrix gives a
-smaller part of the tests for one more copy of that cost. At this size the slowest package gets about
-`330s` of tests on each shard, well under its time limit. Change the size only against a new measure.
+smaller part of the tests for one more copy of that cost. Size it from `scripts/integration-test-timing.txt`.
 
 
 
@@ -386,7 +384,8 @@ dependency builds under them are shared:
 
 `ci.yml` only ever **loads** the cache. The writing lives in
 [`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml). It runs on `main` every
-three hours, plus `workflow_dispatch`, and **gates nothing**. A red or cancelled run there costs time on
+three hours, plus `workflow_dispatch`, and **gates nothing**. GitHub drops some cron runs, so `pace.yml`
+also starts one from a push to `main` once the newest run is three hours old. A red or cancelled run there costs time on
 the next lane, and nothing else.
 
 Three limits shaped that, and each rules out a choice that looks less hard:
@@ -398,7 +397,8 @@ Three limits shaped that, and each rules out a choice that looks less hard:
   on `main`.
 - **The writer cannot run on each push.** Seeding a kind is a side effect of compiling. The `plain` job
   runs a full `make check-backend`, and the `integration` job builds the test binaries and runs a shard from them against a live Postgres. At
-  about 80 merges a day, that pair would run about 80 times and mostly cancel itself.
+  about 80 merges a day, that pair would run about 80 times and mostly cancel itself. Paced to one run
+  in three hours, pushes start at most 8 a day.
 - **A stale entry is not a wrong entry.** Go's build cache is keyed by content, and the key falls back
   twice: `…-<deps-hash>-<sha>` → `…-<deps-hash>-` → `…-`. The last step drops the dependency hash,
   because a stale load only misses the entries whose inputs changed. A cache three hours old is mostly

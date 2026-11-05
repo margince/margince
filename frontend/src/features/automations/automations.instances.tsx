@@ -23,7 +23,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
-import { RulePausedReason } from "./automations.lists";
+import { RulePausedReason, RuleSetByAgent } from "./automations.lists";
 import { recipeSentence } from "./automations.recipe";
 import "./automations.css";
 
@@ -420,6 +420,7 @@ function AutomationStatus({
           {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
         </Badge>
       )}
+      <RuleSetByAgent automation={automation} />
       <RulePausedReason automation={automation} />
       {/* A refused flip moves nothing on screen, so this line is its only report. */}
       {flip.isError && <ErrorLine>{problemMessageOf(flip.error, t)}</ErrorLine>}

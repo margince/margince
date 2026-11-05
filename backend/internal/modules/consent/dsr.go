@@ -253,6 +253,11 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 	}
 	var out dsrRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var found bool
+		var err error
+		if out, found, err = agentsOpenCase(ctx, tx, in); err != nil || found {
+			return err
+		}
 		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
 		if err != nil {
 			return err

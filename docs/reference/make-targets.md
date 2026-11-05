@@ -222,7 +222,7 @@ The wrapper both lint lanes run through resolves every reported path and quarant
 
 Every green `make check` ends with a table of its phases, so whoever optimizes it next starts from a measurement on their own machine. Both halves report: the backend's four phases and the gate fan-out, and the frontend's composed typecheck, core suite and unit screens.
 
-The time is not spread evenly. The frontend core suite is the largest phase, and `fe-unit` is most of it: vitest runs every test file on every run. In the backend, the `gates` package is the slowest leg. `UNCACHED_TEST_PKGS` in `backend/Makefile` keeps it out of the test cache, and says why.
+The time is not spread evenly. The frontend core suite is the largest phase, and `fe-unit` is most of it: vitest runs every test file on every run. In the backend, the `gates` package is the slowest leg. `UNCACHED_TEST_PKGS` in `backend/Makefile` keeps it and `internal/modules/ai` out of the test cache, and says why.
 
 Every other Go package replays from the test cache when nothing it reads has changed. Go checks a file a test opened by its size, mode and mtime. `drift` regenerates every committed generated file. It runs `scripts/keep-unchanged-mtimes.sh` before and after the generators, so a file written back with the same bytes gets its old mtime again.
 

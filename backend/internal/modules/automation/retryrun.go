@@ -136,7 +136,7 @@ func (e *WorkflowEngine) RetryRun(ctx context.Context, runID ids.UUID) (RetryOut
 	runCtx := principal.WithWorkspaceID(ctx, candidate.event.WorkspaceID)
 	runCtx = principal.SystemActing(runCtx, systemActor)
 	runCtx = principal.WithCausationEvent(runCtx, candidate.event.ID)
-	stop, err := e.stopIfSetterRevoked(runCtx, candidate.event)
+	stop, err := e.stopIfSetterLapsed(runCtx, candidate.event)
 	if err != nil {
 		return RetryOutcome{}, err
 	}

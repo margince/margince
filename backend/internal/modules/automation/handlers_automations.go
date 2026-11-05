@@ -367,6 +367,14 @@ func writeAutomationErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
+func wireSetter(setter *ids.UUID) *openapi_types.UUID {
+	if setter == nil {
+		return nil
+	}
+	id := openapi_types.UUID(*setter)
+	return &id
+}
+
 func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 	status := crmcontracts.AutomationStatus("paused")
 	if a.Enabled {
@@ -385,16 +393,17 @@ func wireAutomation(a Automation) (crmcontracts.Automation, error) {
 		paused = &reason
 	}
 	wire := crmcontracts.Automation{
-		PausedReason: paused,
-		Id:           openapi_types.UUID(a.ID.UUID),
-		Key:          a.Key,
-		Name:         a.Name,
-		Status:       status,
-		Params:       params,
-		OwnerId:      wireOwner(a.OwnerID),
-		Version:      &version,
-		CreatedAt:    a.CreatedAt,
-		UpdatedAt:    a.UpdatedAt,
+		PausedReason:     paused,
+		SetterPassportId: wireSetter(a.SetterPassportID),
+		Id:               openapi_types.UUID(a.ID.UUID),
+		Key:              a.Key,
+		Name:             a.Name,
+		Status:           status,
+		Params:           params,
+		OwnerId:          wireOwner(a.OwnerID),
+		Version:          &version,
+		CreatedAt:        a.CreatedAt,
+		UpdatedAt:        a.UpdatedAt,
 	}
 	if a.Runs != nil {
 		wire.LastRunAt = a.Runs.LastRunAt

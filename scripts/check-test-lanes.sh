@@ -36,7 +36,7 @@ real='sql\.Open\("(postgres|pgx)"|pgxpool\.New|pgx\.Connect|os\.Getenv\("MARGINC
 STRIP_AWK="$(dirname "$0")/lib-strip-go-comments.awk"
 
 # lane_report prints one file's violation report, or nothing when the file is
-# clean. A report is printed in one write, so parallel workers never interleave.
+# clean.
 lane_report() {
   local f="$1" code lines ln
   # Skip files already in a non-unit lane. Build constraints sit anywhere
@@ -60,19 +60,24 @@ lane_report() {
 export -f lane_report
 export real STRIP_AWK
 
-# One file at a time cost four processes per test file, run one after another;
-# the files are independent, so they are checked one batch per core.
+# Each file is independent, so workers check one batch each, side by side. A
+# batch writes to its own file: one report can outgrow an atomic pipe write.
 jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
+reports="$(mktemp -d)"
+trap 'rm -rf "$reports"' EXIT
+export reports
 # Search roots: the backend hand-written Go tree, and nothing else is in scope.
-report="$(find backend -name '*_test.go' -print0 2>/dev/null | sort -z \
-  | xargs -0 -P "$jobs" -n 64 bash -c 'set -uo pipefail; rc=0; for f; do lane_report "$f" || rc=$?; done; exit "$rc"' lane_report)"
-violations=0
+status=0
+find backend -name '*_test.go' -print0 2>/dev/null | sort -z \
+  | xargs -0 -P "$jobs" -n 64 bash -c 'set -uo pipefail; rc=0
+      out="$reports/${1//\//_}"
+      for f; do lane_report "$f" >>"$out" || rc=$?; done; exit "$rc"' lane_report || status=$?
+report="$(find "$reports" -type f | sort | xargs cat)"
 if [[ -n "$report" ]]; then
   printf '%s\n' "$report"
-  violations=1
 fi
 
-if [[ "$violations" -ne 0 ]]; then
+if [[ -n "$report" || "$status" -ne 0 ]]; then
   echo "FAIL: test-lanes — real-infra tests must carry //go:build integration."
   exit 1
 fi
