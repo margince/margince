@@ -32,8 +32,10 @@ function fieldList(kinds: readonly (string | undefined)[], t: Translator) {
       ),
     ),
   ];
-  return names.reduce((first, second) =>
-    t("changes.fieldJoin", { first, second }),
+  return names.reduce(
+    (first, second) =>
+      first ? t("changes.fieldJoin", { first, second }) : second,
+    "",
   );
 }
 
