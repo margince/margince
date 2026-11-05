@@ -7247,7 +7247,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.relatedDeal": "Thuộc deal: {name}",
   "compose.aboutDeal": "Deal mà thư theo dõi này nói về",
   "compose.aboutDealNone": "Không có deal",
-  "compose.aboutDealKept": "Deal mà thư đã được lưu dưới",
+  "compose.aboutDealUnavailable":
+    "Không tải được các deal của liên hệ. Hãy viết từ trang của deal.",
+  "compose.aboutDealPartial":
+    "Không phải mọi deal đều có ở đây. Nếu thiếu deal của bạn, hãy viết từ trang của deal.",
   "compose.draftNeedsRecipient":
     "Để soạn bằng AI, hãy thêm một liên hệ của công ty này vào ô Đến.",
   "compose.project": "Dự án",

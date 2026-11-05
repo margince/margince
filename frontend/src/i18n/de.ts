@@ -7417,7 +7417,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal, um den es geht",
   "compose.aboutDealNone": "Kein Deal",
-  "compose.aboutDealKept": "Der Deal, unter dem sie abgelegt war",
+  "compose.aboutDealUnavailable":
+    "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
+  "compose.aboutDealPartial":
+    "Hier stehen nicht alle Deals. Fehlt deiner, schreib von der Seite des Deals.",
   "compose.draftNeedsRecipient":
     "Für einen KI-Entwurf füge unter „An“ einen Kontakt dieses Unternehmens hinzu.",
   "compose.project": "Projekt",

@@ -28343,6 +28343,9 @@ components:
           type: string
           enum: [open, won, lost]
           description: "The deal's status, so a reader can tell an open opportunity from one that has closed."
+        seat_current:
+          type: boolean
+          description: "False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it."
         role:
           type: string
           description: "The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title."

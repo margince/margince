@@ -306,7 +306,7 @@ export function ComposeWindow({
       entityType,
       replying: !newMessage,
       recipientId: account.recipientId,
-      dealId: fields.account.dealId,
+      dealId: dealChoice.dealId,
       projectId,
     }),
     projectId,

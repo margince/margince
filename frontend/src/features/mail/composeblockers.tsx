@@ -122,7 +122,6 @@ export function ComposeBlockers({
       />
       <ComposeDeal
         choice={dealChoice}
-        dealId={fields.account.dealId}
         onDealChange={fields.account.setDealId}
         flagged={send.flagged}
       />

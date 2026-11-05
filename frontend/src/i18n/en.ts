@@ -7432,7 +7432,10 @@ export const en = {
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal this follow-up is about",
   "compose.aboutDealNone": "No deal",
-  "compose.aboutDealKept": "The deal it was filed under",
+  "compose.aboutDealUnavailable":
+    "The contact’s deals could not be loaded. Write from the deal’s page instead.",
+  "compose.aboutDealPartial":
+    "Not every deal is listed here. If yours is missing, write from the deal’s page.",
   "compose.draftNeedsRecipient":
     "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",

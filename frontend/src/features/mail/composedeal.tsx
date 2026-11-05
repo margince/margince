@@ -15,12 +15,14 @@ type DealSeat = components["schemas"]["Contact360DealRole"];
 /** One open deal a message to a contact can be about. */
 export type DealChoice = Readonly<{ id: string; name: string }>;
 
-// The contact's open deals, once each. A seat on a closed deal is history, and
-// a deal with two seats for one contact is still one deal.
+// The deals a follow-up to this contact can rest on, once each: an open deal
+// on which the contact's seat has not ended. That is the engine's own live
+// stakeholder rule (consent liveStakeholderSQL), so a deal offered here is one
+// the check can read. A deal with two seats for one contact is still one deal.
 export function dealChoicesOf(seats: readonly DealSeat[]): DealChoice[] {
   const choices: DealChoice[] = [];
   for (const seat of seats) {
-    if (seat.deal_status !== "open") continue;
+    if (seat.deal_status !== "open" || seat.seat_current !== true) continue;
     if (choices.some((choice) => choice.id === seat.deal_id)) continue;
     choices.push({ id: seat.deal_id, name: seat.deal_title ?? "" });
   }
@@ -46,9 +48,19 @@ export function offersDealChoice(where: {
 }
 
 /**
- * The deal choice of one composer: whether it shows, what it offers, and
- * whether Send waits for it. Send waits only where an Active deal claim has a
- * deal to choose and none is chosen.
+ * Why the list of deals may be incomplete. `loading` and `unavailable` know
+ * nothing yet; `partial` lists the first page of seats and not the rest.
+ */
+export type DealListGap = "loading" | "unavailable" | "partial" | null;
+
+/**
+ * The deal choice of one composer: whether it shows, what it offers, the deal
+ * the message files under, and whether Send waits for it.
+ *
+ * On a contact's composer the deal travels only while it is among the deals
+ * offered. A restored deal the contact no longer sits on is dropped, and the
+ * rep chooses again. A list that is not known yet holds Send on an Active deal
+ * claim, because an unknown list is not an empty one.
  */
 export function useDealChoice(where: {
   open: boolean;
@@ -61,13 +73,29 @@ export function useDealChoice(where: {
   const offered = offersDealChoice(where);
   // The contact page's own read, so the composer costs no request there.
   const view = useContact360(where.entityId, where.open && offered);
-  const choices = dealChoicesOf(view.data?.deal_roles?.data ?? []);
+  const seats = view.data?.deal_roles;
+  const choices = dealChoicesOf(seats?.data ?? []);
+  const gap = dealListGap(view, seats?.page.has_more === true);
+  const dealId =
+    where.entityType !== "contact" ||
+    choices.some((deal) => deal.id === where.dealId)
+      ? where.dealId
+      : "";
   const needsChoice =
     offered &&
     where.context === "active_deal_followup" &&
-    where.dealId === "" &&
-    choices.length > 0;
-  return { offered, choices, needsChoice };
+    dealId === "" &&
+    (choices.length > 0 || gap !== null);
+  return { offered, choices, gap, dealId, needsChoice };
+}
+
+function dealListGap(
+  view: { isPending: boolean; isError: boolean },
+  hasMore: boolean,
+): DealListGap {
+  if (view.isError) return "unavailable";
+  if (view.isPending) return "loading";
+  return hasMore ? "partial" : null;
 }
 
 export type DealChoiceState = ReturnType<typeof useDealChoice>;
@@ -77,31 +105,23 @@ export type DealChoiceState = ReturnType<typeof useDealChoice>;
 // sends.
 export function ComposeDeal({
   choice,
-  dealId,
   onDealChange,
   flagged,
 }: Readonly<{
   choice: DealChoiceState;
-  dealId: string;
   onDealChange: (next: string) => void;
   flagged: ReadonlySet<MissingField>;
 }>) {
   const t = useT();
-  if (!choice.offered || (choice.choices.length === 0 && dealId === "")) {
+  if (!choice.offered || (choice.choices.length === 0 && choice.gap === null)) {
     return null;
   }
-  // A restored deal the contact no longer sits on is still named, so the rep
-  // sees what the message is filed under before choosing another.
-  const kept = choice.choices.some((deal) => deal.id === dealId);
   const options = [
     { value: "", label: t("compose.aboutDealNone") },
     ...choice.choices.map((deal) => ({
       value: deal.id,
       label: t("compose.relatedDeal", { name: deal.name }),
     })),
-    ...(dealId !== "" && !kept
-      ? [{ value: dealId, label: t("compose.aboutDealKept") }]
-      : []),
   ];
   return (
     <div className="compose-strip">
@@ -110,17 +130,28 @@ export function ComposeDeal({
         className="compose-strip-field"
         label={t("compose.aboutDeal")}
         labelHidden
+        hint={gapHint(choice.gap, t)}
         error={flagged.has("deal") ? t("compose.missingDeal") : undefined}
       >
         {(control) => (
           <Select
             {...control}
             options={options}
-            value={dealId}
+            value={choice.dealId}
+            disabled={choice.gap === "loading"}
             onChange={onDealChange}
           />
         )}
       </Field>
     </div>
   );
+}
+
+function gapHint(
+  gap: DealListGap,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (gap === "unavailable") return t("compose.aboutDealUnavailable");
+  if (gap === "partial") return t("compose.aboutDealPartial");
+  return undefined;
 }

@@ -239,8 +239,8 @@ func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T)
 	}
 }
 
-// A deal seat says whether its deal is still open, so the composer can offer
-// only an open deal as the one a follow-up is about.
+// A deal seat says whether its deal is still open and whether the seat itself
+// has ended, so the composer offers only a deal a follow-up can rest on.
 func TestADealSeatSaysWhetherItsDealIsOpen(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
@@ -248,16 +248,21 @@ func TestADealSeatSaysWhetherItsDealIsOpen(t *testing.T) {
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	live := e.SeedDeal(t, "Still talking", pipeline, open, &e.Rep1)
 	closed := e.SeedDeal(t, "Went elsewhere", pipeline, open, &e.Rep1)
+	left := e.SeedDeal(t, "They moved on", pipeline, open, &e.Rep1)
 	reason, reasonCode := "Went with a competitor", "competitor"
 	if _, err := e.Deals.AdvanceDeal(e.Admin(), ids.From[ids.DealKind](closed), deals.AdvanceDealInput{
 		ToStageID: lostStageOf(t, e), LostReason: &reason, LostReasonCode: &reasonCode,
 	}); err != nil {
 		t.Fatalf("losing the deal: %v", err)
 	}
-	for _, deal := range []ids.UUID{live, closed} {
+	for _, deal := range []ids.UUID{live, closed, left} {
+		var ended *time.Time
+		if deal == left {
+			ended = &roomFixedNow
+		}
 		if _, err := owner.Exec(context.Background(),
-			`INSERT INTO relationship (kind, contact_id, deal_id, source, captured_by)
-			 VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, mine, deal); err != nil {
+			`INSERT INTO relationship (kind, contact_id, deal_id, ended_at, source, captured_by)
+			 VALUES ('deal_stakeholder', $1, $2, $3, 'manual', 'human:x')`, mine, deal, ended); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -278,10 +283,15 @@ func TestADealSeatSaysWhetherItsDealIsOpen(t *testing.T) {
 	}
 	want := map[ids.UUID]crmcontracts.Contact360DealRoleDealStatus{
 		live: crmcontracts.Contact360DealRoleDealStatusOpen, closed: crmcontracts.Contact360DealRoleDealStatusLost,
+		left: crmcontracts.Contact360DealRoleDealStatusOpen,
 	}
 	for _, seat := range page.DealRoles.Data {
-		if seat.DealStatus == nil || *seat.DealStatus != want[ids.UUID(seat.DealId)] {
-			t.Errorf("deal %s: status %v, want %q", seat.DealId, seat.DealStatus, want[ids.UUID(seat.DealId)])
+		deal := ids.UUID(seat.DealId)
+		if seat.DealStatus == nil || *seat.DealStatus != want[deal] {
+			t.Errorf("deal %s: status %v, want %q", deal, seat.DealStatus, want[deal])
+		}
+		if seat.SeatCurrent == nil || *seat.SeatCurrent != (deal != left) {
+			t.Errorf("deal %s: seat_current %v, want %v", deal, seat.SeatCurrent, deal != left)
 		}
 	}
 	if len(page.DealRoles.Data) != len(want) {
