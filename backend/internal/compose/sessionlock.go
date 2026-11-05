@@ -28,19 +28,27 @@ const sessionUnlockWait = 5 * time.Second
 // cleanup. It never waits: a queued run would wake to work already done.
 // Advisory keys are one namespace for the database, so each caller names its own.
 func holdSessionLock(ctx context.Context, pool *pgxpool.Pool, key string, log *slog.Logger) (release func(), held bool, err error) {
+	releaseSlot, err := takeSessionSlot(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	conn, err := pool.Acquire(ctx)
 	if err != nil {
+		releaseSlot()
 		return nil, false, fmt.Errorf("taking a connection for the %s lock: %w", key, err)
 	}
 	if err := conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(hashtextextended($1, 0))`, key).Scan(&held); err != nil {
 		conn.Release()
+		releaseSlot()
 		return nil, false, fmt.Errorf("taking the %s lock: %w", key, err)
 	}
 	if !held {
 		conn.Release()
+		releaseSlot()
 		return nil, false, nil
 	}
 	return func() {
+		defer releaseSlot()
 		unlockCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), sessionUnlockWait)
 		defer cancel()
 		var unlocked bool

@@ -12,6 +12,7 @@ package compose
 // module's own pass River-agnostic.
 
 import (
+	"errors"
 	"log/slog"
 	"slices"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -358,20 +360,16 @@ type JobRunnerConfig struct {
 // which is why they read as one list rather than as a schedule hidden inside
 // each block. They are leader-elected, so replicas never double-dispatch.
 func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobs.Runner, error) {
+	if pool != nil && database.WorkerSessionCapacity(pool.Config().MaxConns) == 0 {
+		return nil, errors.New("worker pool needs at least four pooled connections for session-locked work")
+	}
 	reg, periodic := wireJobs(pool, log, cfg)
 
-	// A kind this role would work but api/jobs.yaml does not declare has no
-	// timeout, no attempt cap and no queue anyone chose — it would run at
-	// River's silent one-minute default. Refusing the boot is the point: an
-	// undeclared kind is indistinguishable from the default this contract
-	// exists to remove, and a process that started anyway would hide it.
+	// An undeclared kind would otherwise inherit River's scheduling defaults.
 	if err := jobs.MustBeTotal(reg.kinds); err != nil {
 		return nil, err
 	}
-	// Totality says every kind this role works is declared; it does not say
-	// each is worked by the args type its declaration names. A Kind() that
-	// returns another declared kind's string passes the check above and runs
-	// under that kind's timeout, queue and attempt cap.
+	// A kind name alone cannot catch an args type that impersonates another declaration.
 	if err := reg.everyKindIsRegisteredWithItsDeclaredType(); err != nil {
 		return nil, err
 	}
@@ -392,6 +390,10 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 // nothing to do with a database.
 func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRegistry, []*river.PeriodicJob) {
 	reg := newJobRegistry()
+	if pool != nil {
+		reg.sessionSlots = make(chan struct{}, database.WorkerSessionCapacity(pool.Config().MaxConns))
+	}
+
 	// The workers, in the groups their gating and their concern make: each
 	// helper registers its own and states what an absent dependency costs
 	// them. The schedules that drive them are the list below, because a

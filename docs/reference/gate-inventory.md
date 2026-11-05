@@ -550,7 +550,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audiencelockorder_test.go` | H2 | Several activity audiences are recomputed in one agreed order, or two transactions deadlock. |
 | `authzmetriclabels_test.go` | H2 | The outbound decision counter labels only closed vocabularies, and never the recipient. |
 | `automationtarget_test.go` | H2 | An automation action targets the record its trigger fired on. |
-| `backfillledgerlock_test.go` | H2 | A transaction that writes the backfill creation ledger locks the run row first. |
+| `backfillledgerlock_test.go` | H2 | Credits for one run are serialized before inserting ledger evidence. |
 | `bare5xx_test.go` | H2 | A 5xx the api sends carries a problem body, or it says which surface it is on. |
 | `bindableidentityonce_test.go` | H2 | Who may bind an arrival to the activity already holding its identity is decided in one place: activities.bindableIdentityUnder, which both exported entry points delegate to. |
 | `calendarday_test.go` | H2 | A calendar day is one derivation, and this is the census that keeps it one. |

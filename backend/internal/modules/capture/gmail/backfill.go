@@ -128,7 +128,7 @@ func (w *pageWalk) walk() error {
 	}
 	return inOrder(w.ctx, len(keep),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getRaw(ctx, keep[i]) })
+			return w.getRaw(ctx, keep[i])
 		},
 		func(i int, msg Message, err error) error {
 			msgCtx, message := capturemetrics.BeginMessage(w.ctx)
@@ -142,7 +142,7 @@ func (w *pageWalk) walk() error {
 			}
 			captured, err := captureOne(msgCtx, msg, w.sink, w.c.bounces, w.owner)
 			return w.settleMessage(message, keep[i], captured, err)
-		})
+		}, w.c.rawMemory, rawFetchReservation)
 }
 
 // judgeHeaders reads every message's headers and answers the ids that still
@@ -154,7 +154,7 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 	keep := make([]string, 0, len(w.ids))
 	err := inOrder(w.ctx, len(w.ids),
 		func(ctx context.Context, i int) (Message, error) {
-			return rateLimited(ctx, w.gate, func() (Message, error) { return w.getHeaders(ctx, headers, w.ids[i]) })
+			return w.getHeaders(ctx, headers, w.ids[i])
 		},
 		func(i int, msg Message, err error) error {
 			id := w.ids[i]
@@ -180,7 +180,7 @@ func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJ
 				return nil //nolint:nilerr // the full path decides and reports for itself
 			}
 			return w.settleMessage(message, id, false, nil)
-		})
+		}, w.c.rawMemory, headerFetchReservation)
 	return keep, err
 }
 
@@ -283,9 +283,9 @@ func (a *httpAPI) EstimateAfter(ctx context.Context, accessToken, query string) 
 // ListAfter returns one page of message ids matching the query.
 func (a *httpAPI) ListAfter(ctx context.Context, accessToken, query, pageToken string, pageSize int) ([]string, string, error) {
 	var out struct {
-		Messages []struct {
+		Messages boundedJSONList[struct {
 			ID string `json:"id"`
-		} `json:"messages"`
+		}] `json:"messages"`
 		NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google names this field
 	}
 	q := url.Values{"q": {query}, paramMaxResults: {strconv.Itoa(pageSize)}, includeSpamTrash: {"false"}}

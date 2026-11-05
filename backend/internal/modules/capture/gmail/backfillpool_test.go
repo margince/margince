@@ -3,9 +3,7 @@
 
 package gmail
 
-// The pooled page walk: headers first, a few fetches at once, captures in the
-// page's own order, a rate limit waited out inside the page, and the provider's
-// wait read from its error message when it sends no header.
+// The pooled page walk keeps captures in page order while bounded fetches run concurrently.
 
 import (
 	"context"
@@ -17,6 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/sync/semaphore"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -121,7 +122,7 @@ func TestBackfillPageSkipsColleagueMailWithoutDownloadingIt(t *testing.T) {
 	c := New(fakeOAuth{access: "access-1"}, api)
 	sink := &judgingSink{dropDomain: "myco.com"}
 
-	res, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", sink)
+	res, err := c.BackfillPage(context.Background(), authBytes(t), clocktest.Now(t), "", sink)
 	if err != nil {
 		t.Fatalf("page: %v", err)
 	}
@@ -166,8 +167,9 @@ func TestBackfillPageCapturesInListingOrderWhateverFinishesFirst(t *testing.T) {
 		api.raws[id] = rawMsg(id, "alice@acme.com")
 	}
 	c := New(fakeOAuth{access: "access-1"}, api)
+	c.rawMemory = semaphore.NewWeighted(backfillFetchWorkers * rawFetchReservation)
 	sink := &recordingSink{}
-	if _, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", sink); err != nil {
+	if _, err := c.BackfillPage(context.Background(), authBytes(t), clocktest.Now(t), "", sink); err != nil {
 		t.Fatalf("page: %v", err)
 	}
 	if len(sink.recs) != len(ids) {
@@ -180,15 +182,22 @@ func TestBackfillPageCapturesInListingOrderWhateverFinishesFirst(t *testing.T) {
 	}
 }
 
-func TestBackfillPageWaitsOutAShortRateLimitInsideThePage(t *testing.T) {
+func TestBackfillRawRateLimitYieldsItsMemoryBeforeRetry(t *testing.T) {
 	api := pageOf("m1@mail.gmail.com", "m2@mail.gmail.com")
 	api.raws["m1@mail.gmail.com"] = rawMsg("m1@mail.gmail.com", "alice@acme.com")
 	api.raws["m2@mail.gmail.com"] = rawMsg("m2@mail.gmail.com", "bob@acme.com")
 	api.limitedOnce = map[string]bool{"m2@mail.gmail.com": true}
 	c := New(fakeOAuth{access: "access-1"}, api)
-	res, err := c.BackfillPage(context.Background(), authBytes(t), time.Now(), "", &recordingSink{})
+	if _, err := c.BackfillPage(context.Background(), authBytes(t), clocktest.Now(t), "", &recordingSink{}); !errors.Is(err, connector.ErrRateLimited) {
+		t.Fatalf("raw rate limit did not yield to the resumable engine: %v", err)
+	}
+	if !processRawMemory.TryAcquire(rawProcessBudget) {
+		t.Fatal("rate-limited page held download memory")
+	}
+	processRawMemory.Release(rawProcessBudget)
+	res, err := c.BackfillPage(context.Background(), authBytes(t), clocktest.Now(t), "", &recordingSink{})
 	if err != nil {
-		t.Fatalf("a short rate limit ended the page instead of being waited out: %v", err)
+		t.Fatal(err)
 	}
 	if res.Captured != 2 || api.fullReads["m2@mail.gmail.com"] != 2 {
 		t.Fatalf("page = %+v, reads of m2 = %d; want both captured after one retry", res, api.fullReads["m2@mail.gmail.com"])

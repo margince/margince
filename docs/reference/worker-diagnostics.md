@@ -77,6 +77,41 @@ offline fake model. A binding is stored through Settings → AI, or on a fresh i
 time scan always run. Shutdown is clean: subscriber handlers already running end their ack before
 the process stops.
 
+## Worker database budget
+
+The worker has its own connection and statement cache limits in
+[configuration](configuration.md). Its boot log reports the limits it uses. The lower of the
+worker budget, the DSN limit and job count wins. A larger DSN cannot raise the worker budget.
+The budget includes the River listener, which leaves the pool after it connects. The API keeps its
+own pool settings.
+
+Count every process when sizing the database. For example, two API processes with a limit of
+16 and two workers with a limit of 12 may open 56 connections together. Leave room for migrations,
+operators and other database clients too. A per-process limit is no installation-wide limit.
+
+Jobs that hold a connection for a session lock share a slot budget. The slots limit how many
+connections can be pinned; two connections stay outside that limit. Other jobs and event work
+share the remaining connections, so a free slot does not promise a free connection.
+
+A job with no slot yields through River before taking a connection. Long holders can delay other
+lock jobs. Read `margince_worker_pinned_sessions` and
+`margince_worker_session_budget_snoozes_total` with the pool wait metrics when sizing this limit.
+Those connections have no separate pool; other short work may use them too.
+
+The statement cache setting bounds entries, not bytes. It also bounds the `description` cache.
+A smaller cache may cause repeated `Prepare` calls. Measure with
+`TestWorkerCacheReportsHistoryPreparationCost` before reducing it. `work_mem` is per query
+operation; it does not bound all memory of one connection. Use the pool metrics and database memory
+together when sizing the installation.
+
+## Upgrading worker limits
+
+The worker now has a hard budget even when the DSN asks for more connections. An old DSN with
+fewer than four pooled connections is refused at boot. Check the new settings before replacing
+workers, and size every process together. Raise the worker budget explicitly if the installation
+needs more connections. Keep the API pool settings separate. Smaller statement caches can cause
+more `Prepare` calls; check that cost with the test above.
+
 ## Stopping the worker
 
 `SIGTERM` (or `SIGINT`) stops the worker in this order. The times add up to the budget a supervisor
@@ -106,3 +141,28 @@ spec:
 Some jobs often run longer than the window, such as a long crawl or an import of many records.
 They are stopped at every rollout, and run again on another replica. That is safe (River retries them) but wastes work.
 So size the window, and the grace time with it, to the jobs this installation runs.
+
+## Mail import test size
+
+`MARGINCE_IMPORT_BENCH_MESSAGES` sets the message count for
+`TestHistoryImportReportsItsDatabaseWork`. The test checks its range before writing data.
+See [measure a mail import](../how-to/measure-mail-import.md) for the command and what it measures.
+
+## Mail import memory
+
+The Gmail history reader shares a byte budget across its pages. It takes room before fetching
+each message and keeps the message in that budget until capture ends. A later message cannot take
+the room needed by the first fetch that has not ended. The header pass shares the budget with a smaller
+share. Failed or cancelled pages return all of their room.
+
+The limits are in
+[`rawmemory.go`](../../backend/internal/modules/capture/gmail/rawmemory.go).
+A response that states its size can use less room before the body is read; the reader enforces
+that size too. A response with no size keeps all of its room until the fetch ends. A provider rate
+limit ends the page and returns its room before the job waits, with its saved page kept for retry.
+Live sync and sent mail use their own paths.
+
+The byte budget counts input, not all process memory. The parser and Go runtime need room too,
+and the runtime may keep freed bytes before returning them to the system. Use
+[the mail import profile](../how-to/profile-mail-import.md) with the pool and other jobs running
+before changing how many imports run together.

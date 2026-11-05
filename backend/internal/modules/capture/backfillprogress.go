@@ -127,42 +127,8 @@ func (c *pageProgress) Observed(ctx context.Context, scanned, captured, skipped 
 	}
 }
 
-// counted records ONE counterparty creation on the run, immediately, in the
-// committed columns.
-//
-// Per creation and not per page, because a page's total is a batch and a batch
-// is something to lose. Whatever writes it can fail, and nothing can rebuild it
-// afterwards: capture is idempotent, so a replayed message never reaches the
-// resolver again and no retry re-offers these rows to anybody. Counting each row
-// as it appears leaves no batch anywhere to be dropped, double-credited, or
-// fenced off.
-//
-// A LEDGER ROW, not an increment, and that is what makes the reported number a
-// count rather than a floor.
-//
-// It used to be `SET col = col + 1` in a transaction of its own, after the row
-// it was counting had already committed elsewhere. That addition can fail and
-// nothing replays it — capture is idempotent, so no retry ever re-offers the
-// message to the resolver — so a database fault spanning a page lost one count
-// for every creation inside it, permanently. The columns were a floor, and
-// nothing downstream said so: they drive a progress display and divide into the
-// cost estimator's ratios, where a floor understates cost.
-//
-// The ledger is keyed on WHAT WAS CREATED — a contact's row id, or the domain a
-// verdict was opened on — so writing the same creation twice writes it once.
-// That is what makes the write RETRYABLE, and the retry is what shrinks the
-// loss window from "any failure" to "a failure that outlives it".
-//
-// The columns are then a projection of the ledger, recomputed in the same
-// transaction, so calling this twice for one creation reports the same number
-// as calling it once.
-//
-// Unfenced on the run's liveness and on the connection's generation. The row
-// exists; a cancelled run and a rebound connection do not un-create it, and
-// refusing the count would only misreport it.
-//
-// Detached, because a creation that lands as the job's context expires must
-// still be counted, and that context is the commonest thing to die here.
+// Credit evidence and counters commit together. A creation survives cancellation
+// and rebind, so its retry is not fenced by the page's current ownership.
 func (c *pageProgress) counted(ctx context.Context, outcome EnsureOutcome) {
 	if c == nil {
 		return
@@ -233,65 +199,66 @@ func createdSubjects(outcome EnsureOutcome) []createdSubject {
 	return out
 }
 
-// recordCreations writes the ledger rows and refreshes the run's columns from
-// it, in one transaction.
-//
-// Refreshed rather than incremented: the columns are then a PROJECTION of the
-// ledger, so a second call for the same creation — which the retry above can
-// produce — leaves them where they were, and a count read off the run row is
-// the number of rows behind it.
-//
-// Never DOWN, though, and that is not a hedge against the ledger. A run still
-// paging while this ships is walked by the old binary, which counts in the
-// column and writes no ledger row; the migration seeds the ledger from a
-// snapshot taken before those increments, so the first recompute after the
-// rollout would otherwise discard them. `greatest` costs nothing in steady
-// state — the ledger only grows, so the projection alone never lowers the
-// number — and it is what makes the deploy window safe without draining every
-// backfill first.
-//
-// The run row is LOCKED first, and the lock is what makes the projection safe
-// under concurrency. A page may walk its messages in parallel — nothing in the
-// connector contract forbids it — and at READ COMMITTED two recomputes running
-// at once each count a snapshot without the other's uncommitted row, so the
-// later committer writes a total that is missing the earlier one. An increment
-// could not lose that; a projection can, and no later creation repairs it once
-// the run has no creations left to make. Taken BEFORE the inserts, so the whole
-// write is one queue rather than a race between the insert and the count.
+// Ledger insertion and its counter delta commit together; retries credit only new rows.
 func (c *pageProgress) recordCreations(ctx context.Context, created []createdSubject) error {
 	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
 		return recordCreationsTx(ctx, tx, c.backfillID, created)
 	})
 }
 
-// recordCreationsTx writes what a run made and refreshes the run's columns
-// from the ledger, on the caller's transaction. A page and a later verdict
-// both credit a run through it, so the two count alike.
 func recordCreationsTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID, created []createdSubject) error {
 	if _, err := tx.Exec(ctx,
 		`SELECT 1 FROM capture_backfill WHERE id = $1 FOR UPDATE`, backfillID); err != nil {
 		return err
 	}
+	kinds := make([]string, 0, len(created))
+	subjects := make([]string, 0, len(created))
 	for _, made := range created {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
-			VALUES ($1, $2, $3)
-			ON CONFLICT (backfill_id, kind, subject) DO NOTHING`,
-			backfillID, made.kind, made.subject); err != nil {
-			return err
-		}
+		kinds = append(kinds, made.kind)
+		subjects = append(subjects, made.subject)
 	}
-	_, err := tx.Exec(ctx, `
-		UPDATE capture_backfill b
-		SET contacts_created = greatest(counted.contacts, b.contacts_created),
-		    companies_created = greatest(counted.companies, b.companies_created)
-		FROM (
-			SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
-			       count(*) FILTER (WHERE kind = 'company_queued') AS companies
-			  FROM capture_backfill_creation
-			 WHERE backfill_id = $1
-		) counted
-		WHERE b.id = $1`, backfillID)
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	run := arg(backfillID)
+	query := fmt.Sprintf(`
+  WITH credited AS (
+   INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
+   SELECT $%d, kind, subject FROM unnest($%d::text[], $%d::text[]) AS c(kind, subject)
+   ON CONFLICT (backfill_id, kind, subject) DO NOTHING
+   RETURNING kind
+  )
+  UPDATE capture_backfill b
+  SET contacts_created = b.contacts_created + counted.contacts,
+      companies_created = b.companies_created + counted.companies
+  FROM (
+   SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
+          count(*) FILTER (WHERE kind = 'company_queued') AS companies
+   FROM credited
+  ) counted
+  WHERE b.id = $%d`, run, arg(kinds), arg(subjects), run)
+	_, err := tx.Exec(ctx, query, args...)
+	return err
+}
+
+// Completion repairs drift once without lowering credits absent from the ledger.
+func reconcileBackfillCreationsTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
+	args := []any{backfillID}
+	run := len(args)
+	lock := fmt.Sprintf(`SELECT 1 FROM capture_backfill WHERE id = $%d FOR UPDATE`, run)
+	if _, err := tx.Exec(ctx, lock, args...); err != nil {
+		return err
+	}
+	query := fmt.Sprintf(`
+  UPDATE capture_backfill b
+  SET contacts_created = greatest(counted.contacts, b.contacts_created),
+      companies_created = greatest(counted.companies, b.companies_created)
+  FROM (
+   SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
+          count(*) FILTER (WHERE kind = 'company_queued') AS companies
+   FROM capture_backfill_creation WHERE backfill_id = $%[1]d
+  ) counted
+  WHERE b.id = $%[1]d`, run)
+	_, err := tx.Exec(ctx, query, args...)
 	return err
 }
 

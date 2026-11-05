@@ -327,6 +327,9 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		}
 		rowsAffected = tag.RowsAffected()
 		if rowsAffected > 0 {
+			if finishing {
+				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
+			}
 			return nil
 		}
 		// Zero rows is either a run someone already ended (a no-op below) or a

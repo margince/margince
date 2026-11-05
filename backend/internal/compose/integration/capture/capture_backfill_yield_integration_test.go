@@ -12,6 +12,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -35,8 +36,9 @@ import (
 // production mailmap → Sink path — so the counterparties the run yields are the
 // ones the real resolver creates, not seeded rows standing in for them.
 type mailPageConnector struct {
-	raws [][]byte
-	sent map[string]bool // Message-IDs the provider filed as the owner's own sent mail
+	nextToken string
+	raws      [][]byte
+	sent      map[string]bool // Message-IDs the provider filed as the owner's own sent mail
 	// afterMessage hands control to the test once a message has been captured
 	// and its counterparties resolved, so the live tally is observable MID-page.
 	afterMessage func()
@@ -86,7 +88,7 @@ func (m *mailPageConnector) BackfillPage(ctx context.Context, _ connector.Auth, 
 	if m.parallel {
 		return m.walkAtOnce(ctx, sink)
 	}
-	res := connector.BackfillPageResult{}
+	res := connector.BackfillPageResult{NextToken: m.nextToken}
 	for _, raw := range m.raws {
 		msg, err := mailmap.Parse(raw, captureOwner)
 		if err != nil {
@@ -123,7 +125,7 @@ func (m *mailPageConnector) BackfillPage(ctx context.Context, _ connector.Auth, 
 func (m *mailPageConnector) walkAtOnce(ctx context.Context, sink connector.Sink) (connector.BackfillPageResult, error) {
 	var mu sync.Mutex
 	var walking sync.WaitGroup
-	res := connector.BackfillPageResult{}
+	res := connector.BackfillPageResult{NextToken: m.nextToken}
 	var failed error
 	for _, raw := range m.raws {
 		walking.Go(func() {
@@ -535,18 +537,7 @@ func seedBackfillFailuresAtCeiling(t *testing.T, e *integration.SearchEnv, id id
 	}
 }
 
-// TestTheReachIsACountRatherThanAnAccumulation holds what the ledger buys.
-//
-// The reported reach used to be `SET col = col + 1` per creation, in a
-// transaction of its own, after the row it counted had already committed
-// elsewhere. Nothing replays a lost one — capture is idempotent, so no retry
-// re-offers the message to the resolver — so the number was a FLOOR, and it
-// divides into the cost estimator's ratios where a floor understates cost.
-//
-// Two properties make it a count, and they are the two asserted here: what the
-// run created is on the ledger row by row, and the reported number is that
-// ledger's size rather than a running total that can drift from it.
-func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
+func TestRetriedCreationCreditsCountOnce(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
@@ -556,6 +547,7 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 			email("alice@globex.example", "Alice", captureOwner, "l1r@globex.example", "l1@myco.example"),
 			email(captureOwner, "", "dave@globex.example", "l2@myco.example", ""),
 			email("dave@globex.example", "Dave", captureOwner, "l2r@globex.example", "l2@myco.example"),
+			email("pending@review.example", "Pending", captureOwner, "pending-credit@review.example", ""),
 		},
 		sent: map[string]bool{"l1@myco.example": true, "l2@myco.example": true},
 	})
@@ -580,14 +572,13 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 	}
 	if contacts != ledgeredContacts || companies != ledgeredCompanies {
 		t.Errorf("the run reports %d contacts and %d company questions; the ledger holds %d and %d — the "+
-			"reported numbers are a projection of the ledger, so the two cannot disagree",
+			"each new credit must reach both the ledger and the counters",
 			contacts, companies, ledgeredContacts, ledgeredCompanies)
 	}
 
 	// The write is idempotent, which is what lets it be retried. Replaying the
 	// whole ledger must leave both the rows and the reported numbers where they
-	// are: a retry that double-counted would be the old accumulation with more
-	// steps.
+	// are: retries must not apply the same credit twice.
 	replayCreationLedger(t, e, run.ID)
 	afterContacts, afterCompanies := readBackfillYieldColumns(t, e, run.ID)
 	nowContacts, nowCompanies := readCreationLedger(t, e, run.ID)
@@ -596,21 +587,48 @@ func TestTheReachIsACountRatherThanAnAccumulation(t *testing.T) {
 			"twice must write it once, or the retry is not safe to take",
 			contacts, companies, afterContacts, afterCompanies)
 	}
+	rollback := errors.New("rollback credit")
+	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		disposition, err := creditDispositionTx(e.Admin(), tx, run.ID)
+		if err != nil {
+			return err
+		}
+		outcome := capture.EnsureOutcome{ContactCreated: true, ContactID: ids.NewV7()}
+		if err := capture.CreditBackfillRunTx(e.Admin(), tx, disposition, outcome); err != nil {
+			return err
+		}
+		return rollback
+	})
+	if !errors.Is(err, rollback) {
+		t.Fatalf("credit rollback: %v", err)
+	}
+	finalContacts, finalCompanies := readBackfillYieldColumns(t, e, run.ID)
+	finalLedgerContacts, finalLedgerCompanies := readCreationLedger(t, e, run.ID)
+	if finalContacts != contacts || finalCompanies != companies || finalLedgerContacts != ledgeredContacts || finalLedgerCompanies != ledgeredCompanies {
+		t.Fatalf("rolled-back credit changed counters or ledger: counters=%d/%d ledger=%d/%d", finalContacts, finalCompanies, finalLedgerContacts, finalLedgerCompanies)
+	}
+
+	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(e.Admin(), `UPDATE capture_backfill SET contacts_created = contacts_created + 100 WHERE id = $1`, run.ID); err != nil {
+			return err
+		}
+		disposition, err := creditDispositionTx(e.Admin(), tx, run.ID)
+		if err != nil {
+			return err
+		}
+		return capture.CreditBackfillRunTx(e.Admin(), tx, disposition, capture.EnsureOutcome{ContactCreated: true, ContactID: ids.NewV7()})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyContacts, _ := readBackfillYieldColumns(t, e, run.ID)
+	if legacyContacts != contacts+101 {
+		t.Fatalf("legacy floor plus credit=%d want=%d", legacyContacts, contacts+101)
+	}
 }
 
-// TestALostCountIsRecoveredByTheNextCreation is the ticket's own defect,
-// inverted.
-//
-// A count used to be lost permanently: the row was created in one transaction
-// and counted in another, nothing replayed the second, and capture's
-// idempotency means no later attempt ever re-offers that message. So a fault
-// between the two lowered the run's reported reach for good.
-//
-// With the columns a PROJECTION of the ledger, the next creation recomputes
-// them from every row the ledger holds — so a creation that reached the ledger
-// and lost its column update heals itself. Under an accumulation it cannot: an
-// increment missed is an increment gone.
-func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
+// A completed run repairs drift left by legacy counter writers.
+func TestACompletedImportReconcilesItsCreationLedger(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
@@ -624,8 +642,7 @@ func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
 		sent: map[string]bool{"h1@myco.example": true, "h2@myco.example": true},
 	}
 	// After the first message's counterparty is created and counted, take its
-	// count away without touching the ledger — the state a failed column update
-	// leaves behind. The second message is then the "next creation".
+	// count away without touching the ledger. Completion must repair it.
 	var run capture.BackfillRun
 	captured := 0
 	conn.afterMessage = func() {
@@ -656,9 +673,8 @@ func TestALostCountIsRecoveredByTheNextCreation(t *testing.T) {
 		t.Fatalf("the fixture created %d contacts, so there was no lost count to recover", ledgered)
 	}
 	if contacts != ledgered {
-		t.Errorf("after the next creation the run reports %d contacts and its ledger holds %d — the reach "+
-			"is recomputed from the ledger, so an update lost between the two heals rather than "+
-			"lowering the run's reported reach for good", contacts, ledgered)
+		t.Errorf("after completion the run reports %d contacts and its ledger holds %d — the reach "+
+			"is reconciled at completion, so legacy drift must not lower the reported reach", contacts, ledgered)
 	}
 }
 
@@ -674,7 +690,7 @@ func loseTheCount(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 }
 
 // readCreationLedger returns how many contacts and how many queued companies
-// the run's ledger holds — the rows the reported reach is a projection of.
+// the run's ledger holds.
 func readCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) (int, int) {
 	t.Helper()
 	var contacts, companies int
@@ -690,46 +706,49 @@ func readCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) (in
 	return contacts, companies
 }
 
-// replayCreationLedger writes every creation the ledger already holds a second
-// time AND recomputes the run's columns, which is both halves of what a retried
-// page does. Replaying only the rows would assert nothing: the insert is a
-// no-op by the primary key, and a projection that double-counted would never
-// be asked to.
+func creditDispositionTx(ctx context.Context, tx pgx.Tx, run ids.UUID) (ids.UUID, error) {
+	var disposition ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM capture_pending_counterparty
+  WHERE backfill_id = $1 ORDER BY created_at, id LIMIT 1`, run).Scan(&disposition)
+	return disposition, err
+}
+
 func replayCreationLedger(t *testing.T, e *integration.SearchEnv, id ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(e.Admin(), `
-			INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
-			SELECT backfill_id, kind, subject FROM capture_backfill_creation WHERE backfill_id = $1
-			ON CONFLICT (backfill_id, kind, subject) DO NOTHING`, id); err != nil {
+		disposition, err := creditDispositionTx(e.Admin(), tx, id)
+		if err != nil {
 			return err
 		}
-		_, err := tx.Exec(e.Admin(), `
-			UPDATE capture_backfill b
-			SET contacts_created = greatest(counted.contacts, b.contacts_created),
-			    companies_created = greatest(counted.companies, b.companies_created)
-			FROM (
-				SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
-				       count(*) FILTER (WHERE kind = 'company_queued') AS companies
-				  FROM capture_backfill_creation
-				 WHERE backfill_id = $1
-			) counted
-			WHERE b.id = $1`, id)
-		return err
+		rows, err := tx.Query(e.Admin(), `SELECT kind, subject FROM capture_backfill_creation WHERE backfill_id = $1`, id)
+		if err != nil {
+			return err
+		}
+		outcomes, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (capture.EnsureOutcome, error) {
+			var kind, subject string
+			if err := row.Scan(&kind, &subject); err != nil {
+				return capture.EnsureOutcome{}, err
+			}
+			if kind == "company_queued" {
+				return capture.EnsureOutcome{CompanyQueued: true, QueuedDomain: subject}, nil
+			}
+			contact, err := ids.Parse(subject)
+			return capture.EnsureOutcome{ContactCreated: true, ContactID: contact}, err
+		})
+		if err != nil {
+			return err
+		}
+		for _, outcome := range outcomes {
+			if err := capture.CreditBackfillRunTx(e.Admin(), tx, disposition, outcome); err != nil {
+				return err
+			}
+		}
+		return nil
 	}); err != nil {
-		t.Fatalf("replaying the creation ledger: %v", err)
+		t.Fatal(err)
 	}
 }
 
-// TestConcurrentCreationsAreAllCounted walks one page's messages at once.
-//
-// The reported reach is a projection of the ledger, recomputed per creation.
-// Two recomputes running at once at READ COMMITTED each count a snapshot
-// without the other's uncommitted row, so the later committer would write a
-// total that is missing the earlier one — a lost update the accumulation this
-// replaced could not have had, and one no later creation repairs once the run
-// has no creations left to make. What stops it is the run row's lock, taken
-// before the ledger rows are written.
 func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
@@ -743,7 +762,7 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 		sent[msgID] = true
 		raws = append(raws, email(captureOwner, "", addr, msgID, ""))
 	}
-	registry.Register(&mailPageConnector{raws: raws, sent: sent, parallel: true})
+	registry.Register(&mailPageConnector{raws: raws, sent: sent, parallel: true, nextToken: "next"})
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
@@ -772,14 +791,7 @@ func TestConcurrentCreationsAreAllCounted(t *testing.T) {
 	}
 }
 
-// TestACountTheLedgerCannotSeeIsKept is the migration window.
-//
-// The migration seeds the ledger from a SNAPSHOT of the counted columns. A run
-// still walked by the old binary keeps incrementing the column after that
-// snapshot with no ledger row to show for it, so a recompute that took the
-// ledger's count alone would discard exactly those increments — the reach too
-// low again, in the one window where nothing repairs it. The projection takes
-// greatest(ledger, column), and this is the direction that guard exists for.
+// New credits add to legacy counts even when no ledger evidence remains for them.
 func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
@@ -793,14 +805,6 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 		},
 		sent: map[string]bool{"w1@myco.example": true, "w2@myco.example": true},
 	}
-	// Three creations the old binary counted and the seed did not see, added
-	// after the first EXCHANGE so the second one is the recompute that would
-	// have thrown them away.
-	//
-	// After the second message, not the first: an exchange is a send and its
-	// reply, and the send alone creates nobody — so a hook on message one would
-	// fire before any creation had happened and there would be nothing for the
-	// recompute to threaten.
 	const unledgered = 3
 	var run capture.BackfillRun
 	captured := 0
@@ -831,14 +835,8 @@ func TestACountTheLedgerCannotSeeIsKept(t *testing.T) {
 	if ledgered != 2 {
 		t.Fatalf("the fixture ledgered %d creations, so the column never sat above the ledger", ledgered)
 	}
-	// The guard is a FLOOR, not an addition: the column stood at 1+3 when the
-	// second creation recomputed, the ledger said 2, and what must survive is
-	// the 4. Adding the two would double-count the creation the column and the
-	// ledger both already hold.
-	if want := 1 + unledgered; contacts != want {
-		t.Errorf("the run reports %d contacts and the ledger holds %d, but %d had already been "+
-			"reported when the recompute ran — a recompute keeps the higher of the two, or the "+
-			"migration window loses every count the seed's snapshot missed", contacts, ledgered, want)
+	if want := ledgered + unledgered; contacts != want {
+		t.Errorf("reported contacts=%d want=%d: ledger=%d legacy=%d", contacts, want, ledgered, unledgered)
 	}
 }
 

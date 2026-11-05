@@ -115,6 +115,10 @@ contacts:
 data_tasks:
   pace: 1s
 
+database:
+  worker_max_connections: 12
+  worker_statement_cache_capacity: 256
+
 deals:
   legal_review_enabled: true
   maintenance_writes_enabled: true

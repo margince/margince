@@ -86,3 +86,12 @@ func jobQueues() map[string]river.QueueConfig {
 		accountingReadQueue: {MaxWorkers: accountingReadMaxWorkers},
 	}
 }
+
+// WorkerQueueConcurrency derives process job demand from the declared queue limits.
+func WorkerQueueConcurrency() int {
+	total := 0
+	for _, queue := range jobQueues() {
+		total += queue.MaxWorkers
+	}
+	return total
+}

@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -82,15 +81,12 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
-	pool, err := database.NewPool(ctx, cfg.dsn)
+	pool, err := openWorkerPool(ctx, cfg, logger)
 	if err != nil {
 		return err
 	}
 	// Registered before the lanes' join below, so LIFO closes the pool after it.
 	defer pool.Close()
-	if err := assertMayWorkAgainst(ctx, pool, logger); err != nil {
-		return err
-	}
 	resolveVault := workerVault(ctx, pool, cfg.settings)
 	if handled, err := runDatabaseSubcommand(ctx, pool, resolveVault, cfg.settings, args, stdout); handled {
 		return err

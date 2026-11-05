@@ -830,6 +830,31 @@
         }
       }
     },
+    "database": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "worker_max_connections": {
+          "description": "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 12
+        },
+        "worker_statement_cache_capacity": {
+          "description": "Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN default_query_exec_mode.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 256
+        }
+      }
+    },
     "deals": {
       "type": [
         "object",

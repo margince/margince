@@ -55,21 +55,33 @@ func RecordMailReferencesTx(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 func MailNeighboursTx(
 	ctx context.Context, tx pgx.Tx, self ids.ActivityID, messageID string, referenced []string,
 ) ([]ids.ActivityID, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT a.id
-		  FROM activity a
-		 WHERE a.id <> $1
-		   AND a.archived_at IS NULL
-		   AND a.thread_key IS NOT NULL
-		   AND (a.id IN (SELECT activity_id FROM activity_identity
-		                  WHERE identity_kind = $4 AND identity_key = ANY($3::text[]))
-		        -- A message sent from here is filed under its minted Message-ID
-		        -- as its natural key and claims no identity row, so a reply to
-		        -- it is found by that key.
-		        OR (a.source_system = $5 AND a.source_id = ANY($3::text[]))
-		        OR ($2 <> '' AND a.id IN (SELECT activity_id FROM activity_mail_reference
-		                                   WHERE referenced_id = $2)))`,
-		self, messageID, referenced, IdentityKindMail, connector.EmailSourceSystem)
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	selfPos, messagePos, referencesPos := arg(self), arg(messageID), arg(referenced)
+	identityPos, sourcePos := arg(IdentityKindMail), arg(connector.EmailSourceSystem)
+	// Keep candidate lookups indexed even before newly populated reference tables have statistics.
+	query := fmt.Sprintf(`
+  WITH candidates AS (
+   SELECT activity_id AS id FROM activity_identity
+   WHERE identity_kind = $%[1]d AND identity_key = ANY($%[2]d::text[])
+   UNION
+   -- Sent mail may claim only its natural Message-ID key, without an identity row.
+   SELECT matched.id FROM unnest($%[4]d::text[]) AS reference(key)
+   JOIN LATERAL (
+    SELECT id FROM activity WHERE source_system = $%[3]d AND source_id = reference.key
+    OFFSET 0
+   ) matched ON true
+   UNION
+   SELECT activity_id FROM activity_mail_reference WHERE $%[5]d <> '' AND referenced_id = $%[6]d
+  )
+  SELECT a.id FROM candidates c
+  JOIN LATERAL (
+   SELECT id FROM activity WHERE id = c.id
+    AND id <> $%[7]d AND archived_at IS NULL AND thread_key IS NOT NULL
+   OFFSET 0
+  ) a ON true`,
+		identityPos, referencesPos, sourcePos, referencesPos, messagePos, messagePos, selfPos)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the messages a reply links: %w", err)
 	}

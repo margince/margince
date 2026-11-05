@@ -12,6 +12,7 @@ package gmail
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -37,18 +38,21 @@ var _ HeaderFetcher = (*httpAPI)(nil)
 // GetHeaders reads one message's headers and labels.
 func (a *httpAPI) GetHeaders(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		LabelIDs []string `json:"labelIds"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		LabelIDs messageLabels `json:"labelIds"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 		Payload  struct {
-			Headers []struct {
+			Headers boundedJSONList[struct {
 				Name  string `json:"name"`
 				Value string `json:"value"`
-			} `json:"headers"`
+			}] `json:"headers"`
 		} `json:"payload"`
 	}
 	q := url.Values{"format": {"metadata"}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxJSONResponseBytes)
 	if status == http.StatusNotFound {
 		return Message{}, ErrMessageGone
+	}
+	if errors.Is(err, errResponseArrayLimit) {
+		return Message{}, errMetadataNeedsRaw
 	}
 	if err != nil {
 		return Message{}, err

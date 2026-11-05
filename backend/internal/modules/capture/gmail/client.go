@@ -238,9 +238,9 @@ func (a *httpAPI) Profile(ctx context.Context, accessToken string) (string, stri
 
 func (a *httpAPI) ListRecent(ctx context.Context, accessToken string, maxResults int) ([]string, error) {
 	var out struct {
-		Messages []struct {
+		Messages boundedJSONList[struct {
 			ID string `json:"id"`
-		} `json:"messages"`
+		}] `json:"messages"`
 	}
 	q := url.Values{"maxResults": {strconv.Itoa(maxResults)}, includeSpamTrash: {"false"}}
 	if _, err := a.get(ctx, accessToken, "/messages", q, &out, maxJSONResponseBytes); err != nil {
@@ -255,22 +255,22 @@ func (a *httpAPI) ListRecent(ctx context.Context, accessToken string, maxResults
 
 // historyPage is one page of users.history.list.
 type historyPage struct {
-	History []struct {
-		MessagesAdded []struct {
+	History boundedJSONList[struct {
+		MessagesAdded boundedJSONList[struct {
 			Message struct {
 				ID string `json:"id"`
 			} `json:"message"`
-		} `json:"messagesAdded"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		}] `json:"messagesAdded"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 		// MessagesDeleted is the mailbox owner getting rid of their own copy.
 		// It names the message and nothing else — there is nothing to fetch for
 		// one, which is why it travels beside the added ids rather than among
 		// them.
-		MessagesDeleted []struct {
+		MessagesDeleted boundedJSONList[struct {
 			Message struct {
 				ID string `json:"id"`
 			} `json:"message"`
-		} `json:"messagesDeleted"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
-	} `json:"history"`
+		}] `json:"messagesDeleted"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+	}] `json:"history"`
 	HistoryID     string `json:"historyId"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 }
@@ -323,9 +323,9 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 
 func (a *httpAPI) GetRaw(ctx context.Context, accessToken, msgID string) (Message, error) {
 	var out struct {
-		Raw          string   `json:"raw"`
-		LabelIDs     []string `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
-		InternalDate string   `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		Raw          string        `json:"raw"`
+		LabelIDs     messageLabels `json:"labelIds"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		InternalDate string        `json:"internalDate"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}
 	q := url.Values{"format": {"RAW"}}
 	status, err := a.get(ctx, accessToken, "/messages/"+url.PathEscape(msgID), q, &out, maxRawMessageBytes)
@@ -445,56 +445,4 @@ func classifyStatus(resp *http.Response, op string, body []byte) error {
 		}
 	}
 	return nil
-}
-
-// Read caps for the Gmail JSON responses. The metadata calls (profile, id
-// lists, history deltas) are a few KB; a single messages.get?format=RAW is
-// the whole RFC822 message base64url-encoded inside JSON. Gmail (Workspace)
-// receives messages up to ~50 MiB, and base64 inflates ~1.37×, so a RAW
-// response can exceed 68 MiB — the cap has to clear that or a large but
-// ordinary email (a phone photo) truncates the body, the JSON decode fails,
-// and the whole pull aborts on ErrUnreachable, wedging the mailbox. 96 MiB
-// leaves headroom above the provider ceiling; the metadata cap stays tight.
-const (
-	maxJSONResponseBytes = 8 << 20  // 8 MiB — metadata responses
-	maxRawMessageBytes   = 96 << 20 // 96 MiB — a full-size RAW message
-)
-
-// getOnce performs an authorized GET and JSON-decodes into out. It returns the
-// HTTP status (so History can special-case 404) alongside the failure
-// classifyStatus assigns, each carrying Google's own reason code. Google's raw
-// body is never surfaced to the caller.
-//
-//craft:ignore naked-any out is the caller-supplied JSON decode target — its concrete type varies per endpoint
-func (a *httpAPI) getOnce(ctx context.Context, accessToken, path string, q url.Values, out any, maxBytes int64) (int, error) {
-	u := a.base + path
-	if len(q) > 0 {
-		u += "?" + q.Encode()
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return 0, fmt.Errorf("gmail: building request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("gmail: %s: %w", path, ErrUnreachable)
-	}
-	//craft:ignore swallowed-errors best-effort close of the response body — the decoded result/status is what matters
-	defer func() { _ = resp.Body.Close() }()
-	// A read fault mid-body is a real reachability failure, distinct from the
-	// size cap (LimitReader signals the cap with EOF, not an error). Surface it
-	// as such rather than letting a truncated body fail the decode with a
-	// misleading "decoding" error.
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes))
-	if err != nil {
-		return resp.StatusCode, fmt.Errorf("gmail: reading %s: %w", path, ErrUnreachable)
-	}
-	if err := classifyStatus(resp, path, body); err != nil {
-		return resp.StatusCode, err
-	}
-	if err := json.Unmarshal(body, out); err != nil {
-		return resp.StatusCode, fmt.Errorf("gmail: decoding %s: %w", path, ErrUnreachable)
-	}
-	return resp.StatusCode, nil
 }

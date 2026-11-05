@@ -74,7 +74,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	// the contact themselves granted, so the provider knows the grant, the app
 	// it was granted to, and the account it was granted on.
 	"internal/modules/capture/gmail/client.go:func watchOnce":       "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/client.go:func getOnce":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/responseget.go:func getOnce":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/gmail/send.go:func postJSONOnce":      "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",

@@ -230,9 +230,9 @@ func (a *httpAPI) Send(ctx context.Context, accessToken, rawBase64URL string) (s
 // never sent.
 func (a *httpAPI) FindByMessageID(ctx context.Context, accessToken, id string) (string, bool, error) {
 	var out struct {
-		Messages []struct {
+		Messages boundedJSONList[struct {
 			ID string `json:"id"`
-		} `json:"messages"`
+		}] `json:"messages"`
 	}
 	q := url.Values{"q": {"rfc822msgid:" + id}}
 	if _, err := a.get(ctx, accessToken, "/messages", q, &out, maxJSONResponseBytes); err != nil {

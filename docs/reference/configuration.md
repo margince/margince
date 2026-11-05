@@ -348,6 +348,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `data_tasks.pace` | `MARGINCE_DATA_TASKS_PACE` | `--data-tasks-pace` | `duration` | `1s` | worker | Delay between saved batches of data tasks. |
 
+### `database`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `database.worker_max_connections` | `MARGINCE_WORKER_MAX_CONNECTIONS` | `--worker-max-connections` | `int` | `12` | worker | Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation. |
+| `database.worker_statement_cache_capacity` | `MARGINCE_WORKER_STATEMENT_CACHE_CAPACITY` | `--worker-statement-cache-capacity` | `int` | `256` | worker | Limit on cached statements and result types per worker connection. The DSN may lower it. Zero needs a compatible DSN `default_query_exec_mode`. |
+
 ### `deals`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
