@@ -4187,6 +4187,48 @@ export const en = {
   "deal.products.alreadyListed": "Already listed",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
+  "deal.lines.empty":
+    "No products yet. Add a product or a custom item to price this deal.",
+  "deal.lines.edit": "Edit products",
+  "deal.lines.start": "Price from products",
+  "deal.lines.notWritable": "You cannot change this deal’s products.",
+  "deal.lines.withheld": "Your role does not show this deal’s value.",
+  "deal.lines.committedNet": "Net value: {amount}, without tax",
+  "deal.lines.incomplete":
+    "Pricing incomplete. Known so far: {known}. Still missing: {missing}.",
+  "deal.lines.missing.lines": "a product",
+  "deal.lines.missing.quantity": "a quantity",
+  "deal.lines.missing.unitPrice": "a price",
+  "deal.lines.missing.billing": "one-time or recurring",
+  "deal.lines.missing.term": "the number of periods",
+  "deal.lines.missing.taxRate": "a tax rate",
+  "deal.lines.description": "Description",
+  "deal.lines.quantity": "Quantity",
+  "deal.lines.price": "Selling price",
+  "deal.lines.remove": "Remove {name}",
+  "deal.lines.editTitle": "Products and services",
+  "deal.lines.save": "Save products",
+  "deal.lines.intro":
+    "The deal’s value is the net of these lines, without tax. An offer copies them later.",
+  "deal.lines.replacesEstimate":
+    "Saving replaces the typed value of {amount}. The old value stays in the history.",
+  "deal.lines.partlySaved":
+    "{saved} of {total} changes were saved. The next one failed: {reason}",
+  "deal.lines.addProduct": "Add a product",
+  "deal.lines.customItem": "Custom item",
+  "deal.lines.addCustom": "Add item",
+  "deal.offerNeedsCompleteLines":
+    "Give every product a quantity and a price first. An offer copies the deal’s products.",
+  "offer.moneyWithheld":
+    "Your role does not show this deal’s value, so the offer’s prices are hidden.",
+  "offer.fromDeal.title": "Made from the deal’s products",
+  "offer.fromDeal.stale": "The deal changed since this offer was created",
+  "offer.fromDeal.body":
+    "Change the products on the deal. The offer’s lines follow only when you refresh the draft.",
+  "offer.fromDeal.revise":
+    "A sent offer stays as it was. Regenerate a revision to offer the new terms.",
+  "offer.fromDeal.editDeal": "Edit deal products",
+  "offer.fromDeal.refresh": "Refresh from deal",
   "deal.commitments.title": "Customer commitments",
   "deal.commitments.empty":
     "The customer has no open commitments on this deal.",

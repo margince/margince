@@ -386,6 +386,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"company_fact.company_id":              "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
 	"company_fact_revision.company_id":     "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
 	"offer.deal_id":                        "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
+	"deal_line_item.deal_id":               "gated: every line write takes the deal from the path, locks it and asks auth.EnsureWritable in deals.openDealLines before the insert; the body never names a deal",
 	"deal_product.deal_id":                 "gated: auth.EnsureWritableLive on the deal in deals.Store.ReplaceDealProducts, the one caller-supplied door; syncDealProductsFromOffer runs inside the offer accept, whose deal the accept already probed",
 	"offer.buyer_company_id":               "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
 	"signal.resolved_company_id":           "gated: the resolver attributes only to a caller-visible company (visibleCandidates → auth.EnsureLinkTarget)",
