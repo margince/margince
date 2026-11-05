@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../../i18n";
@@ -608,5 +614,97 @@ describe("the overnight question", () => {
         ["overnight_at_risk_sweep", { granted: false }],
       ]),
     );
+  });
+});
+
+// An AI tool is a hint beside mail: the row opens the Settings picker in a
+// drawer, says when one is connected, and is gone where none can connect.
+describe("the AI tool row", () => {
+  const passports = (connected: boolean) => () =>
+    jsonResponse({
+      data: connected
+        ? [
+            {
+              id: "pp-1",
+              label: "Claude",
+              scopes: ["read"],
+              created_at: "2026-11-01T08:00:00Z",
+              revoked_at: null,
+              connection: {
+                client_id: "claude-ai",
+                client_name: "Claude",
+                renewable: true,
+                connected_at: "2026-11-01T08:00:00Z",
+              },
+            },
+          ]
+        : [],
+      api_base_url: "https://crm.example.test/v1",
+      page: { next_cursor: null, has_more: false },
+    });
+  const discovery = (enabled: boolean) => () =>
+    enabled
+      ? jsonResponse({ resource: "https://crm.example.test/mcp" })
+      : jsonResponse({ code: "not_found" }, 404);
+
+  it("opens the same picker as Settings in a drawer", async () => {
+    stub({
+      "GET /connectors": roster(),
+      "GET /.well-known/oauth-protected-resource": discovery(true),
+      "GET /passports": passports(false),
+    });
+    renderConnectAct();
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: en["ob.conv.connect.aiConnect"],
+      }),
+    );
+
+    const drawer = await screen.findByRole("dialog");
+    expect(
+      await within(drawer).findByRole("combobox", {
+        name: en["aiAccess.connect.toolQuestion"],
+      }),
+    ).toBeTruthy();
+  });
+
+  it("says Connected once an AI tool signed in", async () => {
+    stub({
+      "GET /connectors": roster(),
+      "GET /.well-known/oauth-protected-resource": discovery(true),
+      "GET /passports": passports(true),
+    });
+    renderConnectAct();
+
+    expect(
+      await screen.findByText(en["ob.conv.connect.aiConnected"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["ob.conv.connect.aiConnect"] }),
+    ).toBeNull();
+  });
+
+  it("is not offered where AI tools cannot connect", async () => {
+    const asked: string[] = [];
+    stub({
+      "GET /connectors": roster(),
+      "GET /.well-known/oauth-protected-resource": () => {
+        asked.push("discovery");
+        return discovery(false)();
+      },
+      "GET /passports": () => {
+        asked.push("passports");
+        return passports(false)();
+      },
+    });
+    renderConnectAct();
+
+    await waitFor(() => expect(asked).toContain("discovery"));
+    expect(
+      await screen.findByText(en["ob.conv.connect.alsoTitle"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["ob.conv.connect.aiRow"])).toBeNull();
+    // Off means nothing to read: the passports list is never asked for.
+    expect(asked).not.toContain("passports");
   });
 });

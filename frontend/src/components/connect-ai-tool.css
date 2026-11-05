@@ -1,4 +1,4 @@
-/* The picker under "Connect your AI tool": two questions, then one path. */
+/* The picker under "Connect your AI tool": which AI and where, then one path. */
 .aiconnect {
   display: flex;
   flex-direction: column;
@@ -104,5 +104,34 @@
 }
 
 .aiconnect-devhint {
+  margin: 0;
+}
+
+/* Two short questions side by side; they stack on a narrow card. */
+.aiconnect-pickers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  max-width: 44rem;
+}
+
+.aiconnect-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  margin: 0;
+}
+
+.aiconnect-facts dt {
+  font-weight: var(--fontWeightMedium);
+}
+
+.aiconnect-facts dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.aiconnect-path > p {
   margin: 0;
 }

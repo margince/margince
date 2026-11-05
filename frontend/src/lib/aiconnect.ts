@@ -167,46 +167,255 @@ export function connectPath(tool: AiTool, plan: AiPlan): ConnectPath {
   return CONNECT_PATHS[`${tool}-${plan}`];
 }
 
-export type CliId = "claude-code" | "codex" | "antigravity";
+// Tools that run on the reader's own machine: no admin and no plan, and every
+// one is set up by the reader alone.
+export type CliId =
+  | "claude-code"
+  | "codex"
+  | "vscode"
+  | "visual-studio"
+  | "cursor"
+  | "antigravity";
 
 // Product names, typed as the vendor spells them in every language.
 export const CLI_NAMES: Readonly<Record<CliId, string>> = {
   "claude-code": "Claude Code",
   codex: "Codex",
+  vscode: "VS Code",
+  "visual-studio": "Visual Studio",
+  cursor: "Cursor",
   antigravity: "Antigravity",
 };
+
+/** One step, and what it hands the reader to copy: the address, or a command
+ *  or file built from it. */
+export type CliStep = Readonly<{
+  text: MessageKey;
+  copy?: "address" | ((mcpUrl: string) => string);
+}>;
 
 export type CliPath = Readonly<{
   id: CliId;
   help: string;
-  command: (mcpUrl: string) => string;
-  signIn?: string;
-  note?: MessageKey;
+  steps: readonly CliStep[];
 }>;
+
+const ALLOW: CliStep = { text: "aiAccess.step.allow" };
 
 // Gemini CLI is absent: Google replaced it with Antigravity for personal plans.
 export const CLI_PATHS: readonly CliPath[] = [
   {
     id: "claude-code",
     help: "https://code.claude.com/docs/en/mcp",
-    command: (url) => `claude mcp add --transport http margince ${url}`,
-    signIn: "/mcp",
+    steps: [
+      {
+        text: "aiAccess.local.claudeCode.add",
+        // User scope: one setup serves every project and every editor.
+        copy: (url) =>
+          `claude mcp add --transport http --scope user margince ${url}`,
+      },
+      { text: "aiAccess.local.claudeCode.signIn" },
+      ALLOW,
+    ],
   },
   {
     id: "codex",
     help: "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
-    command: (url) => `codex mcp add margince --url ${url}`,
-    signIn: "codex mcp login margince",
+    steps: [
+      {
+        text: "aiAccess.local.codex.add",
+        copy: (url) => `codex mcp add margince --url ${url}`,
+      },
+      { text: "aiAccess.local.codex.signIn" },
+      ALLOW,
+    ],
+  },
+  {
+    id: "vscode",
+    help: "https://code.visualstudio.com/docs/agent-customization/mcp-servers",
+    steps: [
+      { text: "aiAccess.local.vscode.add" },
+      { text: "aiAccess.local.vscode.paste", copy: "address" },
+      { text: "aiAccess.local.vscode.signIn" },
+    ],
+  },
+  {
+    id: "visual-studio",
+    help: "https://learn.microsoft.com/en-us/visualstudio/ide/mcp-servers",
+    steps: [
+      {
+        text: "aiAccess.local.visualStudio.file",
+        copy: (url) => `{ "servers": { "margince": { "url": "${url}" } } }`,
+      },
+      { text: "aiAccess.local.visualStudio.signIn" },
+      { text: "aiAccess.local.visualStudio.tools" },
+    ],
+  },
+  {
+    id: "cursor",
+    help: "https://cursor.com/docs/mcp",
+    steps: [
+      {
+        text: "aiAccess.local.cursor.file",
+        copy: (url) => `{ "mcpServers": { "margince": { "url": "${url}" } } }`,
+      },
+      { text: "aiAccess.local.cursor.signIn" },
+    ],
   },
   {
     id: "antigravity",
     help: "https://antigravity.google/docs/mcp",
-    // Antigravity refuses the `url`/`httpUrl` spellings its siblings accept.
-    command: (url) =>
-      `{ "mcpServers": { "margince": { "serverUrl": "${url}" } } }`,
-    note: "agents.connectAntigravityPath",
+    steps: [
+      {
+        text: "aiAccess.local.antigravity.file",
+        // Antigravity refuses the `url`/`httpUrl` spellings its siblings accept.
+        copy: (url) =>
+          `{ "mcpServers": { "margince": { "serverUrl": "${url}" } } }`,
+      },
+      { text: "aiAccess.local.antigravity.signIn" },
+      ALLOW,
+    ],
   },
 ];
+
+export function cliPath(id: CliId): CliPath {
+  const path = CLI_PATHS.find((candidate) => candidate.id === id);
+  if (path === undefined) {
+    throw new Error(`no command-line path for ${id}`);
+  }
+  return path;
+}
+
+// The reader picks an AI, then where they use it; each pair names one path.
+// The same AI reaches Margince differently in its app and in an editor, and
+// the same editor differently through each AI.
+export const AI_CHOICES = [
+  "claude",
+  "openai",
+  "copilot",
+  "gemini",
+  "cursor",
+  "other",
+] as const;
+export type AiChoice = (typeof AI_CHOICES)[number];
+
+// Product names, typed as the vendor spells them; "other" is translated.
+export const AI_CHOICE_NAMES: Readonly<
+  Record<Exclude<AiChoice, "other">, string>
+> = {
+  claude: "Claude",
+  openai: "ChatGPT / Codex",
+  copilot: "Copilot",
+  gemini: "Gemini",
+  cursor: "Cursor",
+};
+
+export type AiRoute =
+  | Readonly<{ kind: "app"; tool: AiTool }>
+  | Readonly<{
+      kind: "local";
+      cli: CliId;
+      /** Where to type the command, for an editor that hosts a terminal. */
+      runIn?: MessageKey;
+    }>;
+
+export type AiPlace = Readonly<{
+  id: string;
+  /** Absent where the AI has one place, and the second question is not asked. */
+  label?: MessageKey;
+  route: AiRoute;
+  note?: MessageKey;
+}>;
+
+const CLAUDE_IN_COPILOT: MessageKey = "aiAccess.place.claudeInCopilot";
+
+export const AI_PLACES: Readonly<Record<AiChoice, readonly AiPlace[]>> = {
+  claude: [
+    {
+      id: "app",
+      label: "aiAccess.place.claudeApp",
+      route: { kind: "app", tool: "claude" },
+      note: "aiAccess.place.claudeAppNote",
+    },
+    {
+      id: "terminal",
+      label: "aiAccess.place.claudeCodeTerminal",
+      route: { kind: "local", cli: "claude-code" },
+    },
+    {
+      id: "vscode",
+      label: "aiAccess.place.claudeCodeVsCode",
+      route: {
+        kind: "local",
+        cli: "claude-code",
+        runIn: "aiAccess.runIn.vscode",
+      },
+      note: CLAUDE_IN_COPILOT,
+    },
+    {
+      id: "jetbrains",
+      label: "aiAccess.place.claudeCodeJetBrains",
+      route: {
+        kind: "local",
+        cli: "claude-code",
+        runIn: "aiAccess.runIn.jetbrains",
+      },
+    },
+    {
+      id: "visual-studio",
+      label: "aiAccess.place.claudeCodeVisualStudio",
+      route: {
+        kind: "local",
+        cli: "claude-code",
+        runIn: "aiAccess.runIn.visualStudio",
+      },
+      note: CLAUDE_IN_COPILOT,
+    },
+  ],
+  openai: [
+    {
+      id: "app",
+      label: "aiAccess.place.chatgptApp",
+      route: { kind: "app", tool: "chatgpt" },
+    },
+    {
+      id: "codex",
+      label: "aiAccess.place.codex",
+      route: { kind: "local", cli: "codex" },
+    },
+  ],
+  copilot: [
+    {
+      id: "m365",
+      label: "aiAccess.place.m365",
+      route: { kind: "app", tool: "copilot" },
+    },
+    {
+      id: "vscode",
+      label: "aiAccess.place.githubVsCode",
+      route: { kind: "local", cli: "vscode" },
+    },
+    {
+      id: "visual-studio",
+      label: "aiAccess.place.githubVisualStudio",
+      route: { kind: "local", cli: "visual-studio" },
+    },
+  ],
+  gemini: [
+    {
+      id: "app",
+      label: "aiAccess.place.geminiApp",
+      route: { kind: "app", tool: "gemini" },
+    },
+    {
+      id: "antigravity",
+      label: "aiAccess.place.antigravity",
+      route: { kind: "local", cli: "antigravity" },
+    },
+  ],
+  cursor: [{ id: "cursor", route: { kind: "local", cli: "cursor" } }],
+  other: [],
+};
 
 // The day these steps were last compared with each vendor's own guide.
 export const STEPS_CHECKED_ON = "2026-10-19";

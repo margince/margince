@@ -11,9 +11,10 @@ type PassportSummary = components["schemas"]["PassportSummary"];
 // The reader's own Agent Seat Passports. The server lists only the passports
 // minted on the reader's behalf, an administrator included: which agents act
 // for a human is that human's personal data.
-export function usePassports() {
+export function usePassports({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: ["passports"],
+    enabled,
     queryFn: async () => {
       return unwrap(await api.GET("/passports"));
     },
@@ -34,6 +35,16 @@ export function passportName(passport: PassportSummary): string | undefined {
     return name && name !== connection.client_id ? name : undefined;
   }
   return passport.label.trim() || undefined;
+}
+
+// The AI tool a reader connected by signing in. A passport minted by hand is a
+// credential for a script, not a connection, so it never counts.
+export function liveConnection(
+  passports: readonly PassportSummary[],
+): PassportSummary | undefined {
+  return passports.find(
+    (passport) => passport.connection && !passport.revoked_at,
+  );
 }
 
 /**

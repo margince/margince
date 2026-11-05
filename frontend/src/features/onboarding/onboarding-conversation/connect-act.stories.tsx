@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -50,16 +51,45 @@ const ALL_READY: ProviderAvailability[] = [
   { provider: "imap", reason: "ready" },
 ];
 
+// Where AI tools can connect, the extras offer one; "connected" is a reader
+// whose AI tool already signed in.
+type AiWorld = "off" | "on" | "connected";
+
+const AI_CONNECTION = {
+  id: "00000000-0000-4000-8000-000000000021",
+  label: "Claude",
+  scopes: ["read", "draft"],
+  created_at: "2026-11-01T08:00:00Z",
+  revoked_at: null,
+  connection: {
+    client_id: "claude-ai",
+    client_name: "Claude",
+    renewable: true,
+    connected_at: "2026-11-01T08:00:00Z",
+  },
+};
+
 function act(
   conversation: ConversationState,
   route: { outcome?: string; returningProvider?: string } = {},
   locale?: "de",
   providers: ProviderAvailability[] = ALL_READY,
+  ai: AiWorld = "off",
 ) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ channel_connection: ["read", "create"] }),
       "GET /connectors": () => jsonResponse({ data: [], providers }),
+      "GET /.well-known/oauth-protected-resource": () =>
+        ai === "off"
+          ? jsonResponse({ code: "not_found" }, 404)
+          : jsonResponse({ resource: "https://margince.example/mcp" }),
+      "GET /passports": () =>
+        jsonResponse({
+          data: ai === "connected" ? [AI_CONNECTION] : [],
+          api_base_url: "https://margince.example/v1",
+          page: { next_cursor: null, has_more: false },
+        }),
     });
     return (
       <StoryProviders locale={locale}>
@@ -88,6 +118,25 @@ export const AwaitingConsent: Story = { render: act(state("cn.consent")) };
 export const AwaitingConsentDark: Story = {
   render: act(state("cn.consent")),
   globals: { theme: "dark" },
+};
+
+/** Where AI tools can connect: a small row offers the same picker as
+ *  Settings, in a drawer. */
+export const WithAiTool: Story = {
+  render: act(state("cn.consent"), {}, undefined, ALL_READY, "on"),
+};
+
+export const WithAiToolOpen: Story = {
+  render: act(state("cn.consent"), {}, undefined, ALL_READY, "on"),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Connect" }),
+    );
+  },
+};
+
+export const WithAiToolConnected: Story = {
+  render: act(state("cn.consent"), {}, undefined, ALL_READY, "connected"),
 };
 
 /** The German act — the copy that has to hold two different KINDS of offer on

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  AI_CHOICES,
+  AI_PLACES,
   AI_PLANS,
   AI_TOOLS,
   adminGuide,
@@ -72,6 +74,8 @@ describe("AI connect paths", () => {
       "microsoft.com",
       "google.com",
       "antigravity.google",
+      "visualstudio.com",
+      "cursor.com",
     ];
     const links = [
       ...Object.values(CONNECT_PATHS).map((path) => path.help),
@@ -88,17 +92,73 @@ describe("AI connect paths", () => {
     }
   });
 
-  it("builds each command from the address the server states", () => {
+  it("builds each command and file from the address the server states", () => {
+    const copies = CLI_PATHS.map((path) =>
+      path.steps.flatMap((step) =>
+        typeof step.copy === "function" ? [step.copy(URL_FROM_SERVER)] : [],
+      ),
+    );
     expect(CLI_PATHS.map((path) => path.id)).toEqual([
       "claude-code",
       "codex",
+      "vscode",
+      "visual-studio",
+      "cursor",
       "antigravity",
     ]);
-    expect(CLI_PATHS.map((path) => path.command(URL_FROM_SERVER))).toEqual([
-      "claude mcp add --transport http margince https://crm.acme.test/mcp",
-      "codex mcp add margince --url https://crm.acme.test/mcp",
-      '{ "mcpServers": { "margince": { "serverUrl": "https://crm.acme.test/mcp" } } }',
+    expect(copies).toEqual([
+      [
+        "claude mcp add --transport http --scope user margince https://crm.acme.test/mcp",
+      ],
+      ["codex mcp add margince --url https://crm.acme.test/mcp"],
+      [],
+      ['{ "servers": { "margince": { "url": "https://crm.acme.test/mcp" } } }'],
+      [
+        '{ "mcpServers": { "margince": { "url": "https://crm.acme.test/mcp" } } }',
+      ],
+      [
+        '{ "mcpServers": { "margince": { "serverUrl": "https://crm.acme.test/mcp" } } }',
+      ],
     ]);
+  });
+
+  it("gives every local tool something to copy, and one to three steps", () => {
+    for (const path of CLI_PATHS) {
+      expect(path.steps.some((step) => step.copy !== undefined)).toBe(true);
+      expect(path.steps.length).toBeGreaterThanOrEqual(2);
+      expect(path.steps.length).toBeLessThanOrEqual(3);
+    }
+  });
+});
+
+describe("which AI, and where", () => {
+  const routes = Object.values(AI_PLACES).flat();
+
+  it("reaches every app and every local tool from some pair", () => {
+    const apps = routes.flatMap((place) =>
+      place.route.kind === "app" ? [place.route.tool] : [],
+    );
+    const locals = routes.flatMap((place) =>
+      place.route.kind === "local" ? [place.route.cli] : [],
+    );
+    expect([...new Set(apps)].sort()).toEqual([...AI_TOOLS].sort());
+    expect([...new Set(locals)].sort()).toEqual(
+      CLI_PATHS.map((path) => path.id).sort(),
+    );
+  });
+
+  it("names every place where an AI has more than one, and none where it has one", () => {
+    for (const choice of AI_CHOICES) {
+      const places = AI_PLACES[choice];
+      for (const place of places) {
+        expect(place.label !== undefined).toBe(places.length > 1);
+      }
+      expect(new Set(places.map((place) => place.id)).size).toBe(places.length);
+    }
+  });
+
+  it("leaves another tool without places, so it gets the generic steps", () => {
+    expect(AI_PLACES.other).toEqual([]);
   });
 });
 

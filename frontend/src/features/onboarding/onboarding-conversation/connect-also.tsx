@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
+import { ConnectAiTool } from "../../../components/connect-ai-tool";
 import { OvernightGrantChoice } from "../../../components/overnight-grant-choice";
 import { ActionRow } from "../../../design-system/actionrow";
 import {
@@ -17,9 +18,11 @@ import { Panel, PanelBody, PanelIntro } from "../../../design-system/panel";
 import { SettingList, SettingRow } from "../../../design-system/settingrow";
 import { Row } from "../../../design-system/stack";
 import { useT } from "../../../i18n";
+import { useConnectorState } from "../../../lib/connector-state";
+import { liveConnection, usePassports } from "../../../lib/passports.queries";
 
 // What the connect step offers beside the mailbox, in either state: the
-// overnight brief and the LinkedIn profile. Neither gates the step.
+// overnight brief, the LinkedIn profile and an AI tool. None gates the step.
 //
 // LinkedIn is not a connection here. Nothing is authorized and nothing syncs.
 // The member records which profile their imported network is attributed to.
@@ -59,9 +62,55 @@ export function AlsoWorthDoing(props: AlsoWorthDoingProps) {
             failed={props.overnightFailed}
           />
           <LinkedinRow {...props} />
+          <AiToolRow />
         </SettingList>
       </PanelBody>
     </Panel>
+  );
+}
+
+// A hint, not a step: the same picker as Settings, in a drawer, so a reader
+// who uses no AI tool passes it by. Absent where AI tools cannot connect.
+function AiToolRow() {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const titleId = useId();
+  const enabled = useConnectorState().data?.enabled === true;
+  const passports = usePassports({ enabled }).data?.data ?? [];
+  const connected = liveConnection(passports) !== undefined;
+  if (!enabled) {
+    return null;
+  }
+  return (
+    <>
+      <SettingRow
+        label={t("ob.conv.connect.aiRow")}
+        description={t("ob.conv.connect.aiBody")}
+        control={
+          connected ? (
+            <Badge tone="success">{t("ob.conv.connect.aiConnected")}</Badge>
+          ) : (
+            <Button variant="ghost" onClick={() => setOpen(true)}>
+              {t("ob.conv.connect.aiConnect")}
+            </Button>
+          )
+        }
+      />
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="drawer"
+      >
+        <Heading size="large" className="t-h2 modal-title" id={titleId}>
+          {t("aiAccess.connect.title")}
+        </Heading>
+        <div className="form-stack">
+          <p className="t-sub">{t("aiAccess.connect.sub")}</p>
+          <ConnectAiTool />
+        </div>
+      </Modal>
+    </>
   );
 }
 

@@ -9,8 +9,14 @@ import {
   VENDOR_SERVICES,
   vendorOf,
 } from "../format/connectorprovider";
+import { useConnectorState } from "./connector-state";
 import { missingCalendarWriteGrant } from "./connector-status";
 import { type ConnectorsResult, useConnectors } from "./connectors";
+import {
+  liveConnection,
+  passportName,
+  usePassports,
+} from "./passports.queries";
 import { useSchedulingProfile } from "./scheduling-profile-query";
 import type { SettingsPageId, SettingsReach } from "./settingscatalog";
 import { readStored, STORAGE_KEYS, watchStored, writeStored } from "./storage";
@@ -30,8 +36,9 @@ type Provider = CaptureConnection["provider"];
 type Readiness = ConnectorsResult["providers"][number]["reason"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
+type PassportSummary = components["schemas"]["PassportSummary"];
 
-export type SetupStepId = "mail" | "calendar" | "voice" | "booking";
+export type SetupStepId = "mail" | "calendar" | "ai" | "voice" | "booking";
 
 /** Why an unfinished step reads differently from its plain reason. */
 export type SetupStepReason =
@@ -64,6 +71,9 @@ export type SetupStep = Readonly<{
     /** The server's count of words still missing for a first build. */
     wordsRemaining: number | null;
   }> | null;
+  /** The AI tool step's connection, named as the reader approved it, or null
+   *  while none is connected. Absent on every other step. */
+  agent?: Readonly<{ name: string | null }> | null;
 }>;
 
 /** What the reader's reads answered; null where a read was refused or failed.
@@ -74,6 +84,8 @@ export type SetupReads = Readonly<{
   connectors: ConnectorsResult | null;
   voice: Readonly<{ profile: VoiceProfile | null }> | "failed" | null;
   scheduling: SchedulingProfile | null;
+  /** The reader's passports, or null where AI tools cannot connect at all. */
+  passports: readonly PassportSummary[] | null;
 }>;
 
 type Draft = Omit<SetupStep, "state"> & Readonly<{ done: boolean }>;
@@ -210,6 +222,14 @@ function voiceStep(voice: NonNullable<SetupReads["voice"]>): Draft {
   };
 }
 
+function aiStep(passports: readonly PassportSummary[]): Draft {
+  const connection = liveConnection(passports);
+  return {
+    ...draft("ai", "agents", { done: connection !== undefined }),
+    agent: connection ? { name: passportName(connection) ?? null } : null,
+  };
+}
+
 function bookingStep(
   scheduling: SchedulingProfile,
   calendar: Draft | null,
@@ -227,7 +247,7 @@ function bookingStep(
 
 /** The steps this reader is asked to finish, in the order they are shown. */
 export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
-  const { acts, connectors, voice, scheduling } = reads;
+  const { acts, connectors, voice, scheduling, passports } = reads;
   // A role or seat that cannot capture is never asked to connect anything.
   const connections =
     acts.has("connections") &&
@@ -240,6 +260,7 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
   const drafts = [
     connections && mailStep(connections),
     calendar,
+    acts.has("agents") && passports ? aiStep(passports) : null,
     acts.has("voice") && voice ? voiceStep(voice) : null,
     acts.has("meetings") && scheduling
       ? bookingStep(scheduling, calendar)
@@ -287,6 +308,9 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const connectors = useConnectors({ enabled: acts.has("connections") });
   const voice = useVoiceProfile(acts.has("voice"));
   const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
+  const connector = useConnectorState();
+  const aiConnects = acts.has("agents") && connector.data?.enabled === true;
+  const passports = usePassports({ enabled: aiConnects });
   // Every caller reads the one stored flag, so a hide in the top bar holds in
   // the phone account menu. The local flag keeps a hide where storage is refused.
   const hiddenStored = useSyncExternalStore(watchHidden, storedHidden);
@@ -296,6 +320,8 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("connections") && connectors,
     acts.has("voice") && voice,
     acts.has("meetings") && scheduling,
+    acts.has("agents") && connector,
+    aiConnects && passports,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
   // them open. The voice step stays as unknown instead: dropping it could
@@ -305,6 +331,8 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     connectors: connectors.data ?? null,
     voice: voiceRead(voice),
     scheduling: scheduling.data ?? null,
+    // No step where the installation turned AI connections off.
+    passports: aiConnects ? (passports.data?.data ?? null) : null,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

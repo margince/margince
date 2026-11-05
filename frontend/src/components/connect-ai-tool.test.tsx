@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import * as download from "../lib/download";
 import { ConnectAiToolCard } from "./connect-ai-tool";
@@ -64,6 +65,26 @@ async function choose(...names: string[]) {
   return user;
 }
 
+// Picks the AI, and where it is used when the card asks, from the two selects.
+async function pick(
+  user: ReturnType<typeof userEvent.setup>,
+  ai: string,
+  place?: string,
+) {
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Which AI do you use?" }),
+    ai,
+  );
+  if (place !== undefined) {
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Where do you use it?" }),
+      place,
+    );
+  }
+}
+
 const pathBox = () => screen.getByTestId("aiconnect-path");
 const steps = () =>
   within(pathBox())
@@ -74,10 +95,13 @@ describe("ConnectAiToolCard", () => {
   it("opens on Claude for a company plan, with the admin first and no address to paste", async () => {
     renderCard();
     expect(
-      (await screen.findByRole("button", { name: "Claude" })).getAttribute(
-        "aria-pressed",
-      ),
-    ).toBe("true");
+      (await screen.findByRole("combobox", { name: "Which AI do you use?" }))
+        .textContent,
+    ).toContain("Claude");
+    expect(
+      screen.getByRole("combobox", { name: "Where do you use it?" })
+        .textContent,
+    ).toContain("Claude app: web, desktop or phone");
     expect(
       screen
         .getByRole("button", { name: "My company’s" })
@@ -112,14 +136,16 @@ describe("ConnectAiToolCard", () => {
 
   it("says a path cannot connect instead of giving steps, and gives them back", async () => {
     renderCard();
-    await choose("Microsoft Copilot", "My own");
+    const user = userEvent.setup();
+    await pick(user, "Copilot");
+    await user.click(screen.getByRole("button", { name: "My own" }));
     expect(
       screen.getByText(/Copilot outside work cannot connect to other apps/),
     ).toBeTruthy();
     expect(steps()).toEqual([]);
     expect(screen.queryByRole("button", { name: /Download guide/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Help from/ })).toBeNull();
-    await choose("My company’s");
+    await user.click(screen.getByRole("button", { name: "My company’s" }));
     expect(steps()).toHaveLength(3);
     for (const group of screen.getAllByRole("group")) {
       expect(
@@ -161,7 +187,9 @@ describe("ConnectAiToolCard", () => {
   it("copies the address, and says how to copy it by hand when the clipboard is missing", async () => {
     const writeText = vi.fn(async () => undefined);
     renderCard();
-    const user = await choose("Gemini", "My own");
+    const user = userEvent.setup();
+    await pick(user, "Gemini");
+    await user.click(screen.getByRole("button", { name: "My own" }));
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
@@ -176,7 +204,8 @@ describe("ConnectAiToolCard", () => {
       value: undefined,
     });
     // user-event installs its own clipboard on setup, so this case reuses one.
-    await user.click(screen.getByRole("button", { name: "ChatGPT" }));
+    await pick(user, "ChatGPT / Codex");
+    await user.click(screen.getByRole("button", { name: "My own" }));
     await user.click(screen.getByRole("button", { name: "Copy address" }));
     expect(
       await screen.findByText("Select the address and copy it by hand."),
@@ -185,7 +214,9 @@ describe("ConnectAiToolCard", () => {
 
   it("links to the vendor's own guide, and names the admin where the guide is theirs", async () => {
     renderCard();
-    await choose("Gemini", "My own");
+    const user = userEvent.setup();
+    await pick(user, "Gemini");
+    await user.click(screen.getByRole("button", { name: "My own" }));
     const help = screen.getByRole("link", { name: /Help from Google/ });
     expect(help.getAttribute("href")).toBe(
       "https://support.google.com/gemini/answer/17209137",
@@ -193,10 +224,74 @@ describe("ConnectAiToolCard", () => {
     expect(
       screen.getByText("For now only in the US, in English, on the web."),
     ).toBeTruthy();
-    await choose("Microsoft Copilot", "My company’s");
+    await pick(user, "Copilot");
     expect(
       screen.getByRole("link", { name: /Help from Microsoft for your admin/ }),
     ).toBeTruthy();
+  });
+
+  it("gives Claude Code one command wherever it runs, and says where to type it", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await pick(user, "Claude", "Claude Code in Visual Studio");
+    expect(screen.queryByRole("button", { name: "My own" })).toBeNull();
+    expect(
+      screen.getByText(
+        "Run the command in Visual Studio’s terminal: “View”, then “Terminal”.",
+      ),
+    ).toBeTruthy();
+    const command = screen.getByRole("textbox", { name: "Text to copy" });
+    expect(command.textContent).toBe(
+      `claude mcp add --transport http --scope user margince ${MCP_URL}`,
+    );
+    expect(
+      screen.getByText(/Using Claude as the model inside GitHub Copilot/),
+    ).toBeTruthy();
+    await pick(user, "Claude", "Claude Code in a terminal");
+    expect(
+      screen.getByRole("textbox", { name: "Text to copy" }).textContent,
+    ).toBe(command.textContent);
+    expect(screen.queryByText(/terminal: “View”/)).toBeNull();
+  });
+
+  it("sets up GitHub Copilot in Visual Studio through its own file, not Claude Code", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await pick(user, "Copilot", "GitHub Copilot in Visual Studio");
+    expect(
+      screen.getByRole("textbox", { name: "Text to copy" }).textContent,
+    ).toBe(`{ "servers": { "margince": { "url": "${MCP_URL}" } } }`);
+    expect(
+      screen
+        .getByRole("link", { name: /Visual Studio docs/ })
+        .getAttribute("href"),
+    ).toBe("https://learn.microsoft.com/en-us/visualstudio/ide/mcp-servers");
+  });
+
+  it("asks no second question for an AI used in one place", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await pick(user, "Cursor");
+    expect(
+      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("textbox", { name: "Text to copy" }).textContent,
+    ).toBe(`{ "mcpServers": { "margince": { "url": "${MCP_URL}" } } }`);
+  });
+
+  it("gives any other tool the address and how it signs in", async () => {
+    renderCard();
+    const user = userEvent.setup();
+    await pick(user, "Another AI tool");
+    expect(
+      screen.queryByRole("combobox", { name: "Where do you use it?" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("textbox", { name: "Margince address" }).textContent,
+    ).toBe(MCP_URL);
+    expect(screen.getByText(/OAuth in your browser/)).toBeTruthy();
+    expect(screen.getByText(/Authorization: Bearer/)).toBeTruthy();
   });
 
   it("says AI tools cannot connect yet instead of giving steps", async () => {
@@ -204,7 +299,9 @@ describe("ConnectAiToolCard", () => {
     expect(
       await screen.findByText("AI tools cannot connect to Margince yet."),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Claude" })).toBeNull();
+    expect(
+      screen.queryByRole("combobox", { name: "Which AI do you use?" }),
+    ).toBeNull();
     expect(screen.queryByTestId("aiconnect-path")).toBeNull();
   });
 
