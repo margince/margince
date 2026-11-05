@@ -41,6 +41,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bookinginvite_test.go` | H2 | A booking's attendee addresses reach the calendar invitation, and the contract says the booking queues one. |
 | `briefcachemirror_test.go` | H2 | The brief cache's upsert is spelled in two places and they must stay one statement. |
 | `captureledgerstatuses_test.go` | H2 | The disposition ledger's status vocabulary is defined by the column's own constraint, and nowhere else. |
+| `checklanes_test.go` | H3 | `make check` runs every leg its two halves, check-backend and check-fe, run. |
 | `cla_test.go` | H2 | An acceptance of the CLA covers the text it was shown, under the version that text carries. |
 | `coderabbitpathrules_test.go` | H3 | What .coderabbit.yaml tells the reviewer about backend Go, held against what is true. |
 | `companyindustry_test.go` | H3 | The industry list lives in the contract, the vocabulary owner in the contacts module and its wording in the frontend. |

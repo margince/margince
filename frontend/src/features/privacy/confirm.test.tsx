@@ -2,7 +2,12 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -281,7 +286,7 @@ describe("the page speaks the language the mail was sent in", () => {
     expect(
       await screen.findByText("Thông tin của quý khách"),
     ).toBeInTheDocument();
-    expect(document.documentElement.lang).toBe("vi");
+    await waitFor(() => expect(document.documentElement.lang).toBe("vi"));
     // Adopted, never stored as this reader's own pick.
     expect(globalThis.localStorage.getItem("margince.locale")).toBeNull();
   });
@@ -325,7 +330,7 @@ describe("an expired link still speaks the language its mail was sent in", () =>
     render(<ConfirmDetailsScreen token="tok-gone" />);
 
     expect(await screen.findByText(VI_INVALID_LINK)).toBeInTheDocument();
-    expect(document.documentElement.lang).toBe("vi");
+    await waitFor(() => expect(document.documentElement.lang).toBe("vi"));
   });
 });
 
