@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 )
 
 var ourDomains = []string{"acme-sales.example", "Acme-Sales.De"}
@@ -241,18 +242,18 @@ func TestACapturedMeetingSettlesEventHeldDespiteReadingAsSellerAuthored(t *testi
 		t.Fatalf("precondition: a captured meeting reads as %s, so this test no "+
 			"longer covers the case it was written for", side)
 	}
-	if proof := MeetingWasHeld(meetingHeld, false, 1); !proof.Held {
+	if proof := MeetingWasHeld(meetingoutcome.Held, false, 1); !proof.Held {
 		t.Error("a held meeting with the buyer in it did not settle event_held")
 	}
 }
 
-// A transcript cannot exist for a meeting that did not happen, so it settles
-// event_held on its own — including when the participant list records nobody
-// from their side, which a calendar sync often leaves empty.
-func TestATranscriptSettlesEventHeldWithoutAParticipantList(t *testing.T) {
-	proof := MeetingWasHeld("", true, 0)
+// A held meeting with a transcript settles event_held even when the
+// participant list records nobody from their side. A calendar sync often
+// leaves that list empty. The proof says the transcript is what settled it.
+func TestAHeldMeetingWithATranscriptSettlesEventHeldWithoutAParticipantList(t *testing.T) {
+	proof := MeetingWasHeld(meetingoutcome.Held, true, 0)
 	if !proof.Held {
-		t.Fatal("a transcript did not settle event_held")
+		t.Fatal("a held meeting with a transcript did not settle event_held")
 	}
 	if !proof.FromTranscript {
 		t.Error("the proof must say a transcript is what settled it, so the " +
@@ -260,28 +261,25 @@ func TestATranscriptSettlesEventHeldWithoutAParticipantList(t *testing.T) {
 	}
 }
 
-// The status is the meeting's own account of whether it happened, and it wins
-// over every other signal. A transcript on a canceled meeting is a recording
-// of something else.
-func TestACanceledOrNoShowMeetingSettlesNothing(t *testing.T) {
-	for _, status := range []string{meetingCanceled, meetingNoShow} {
+// Only a recorded held outcome makes a meeting held. A meeting awaiting its
+// outcome (no status, or still booked) settles nothing, even with a transcript
+// or buyers on it. A canceled or no-show meeting settles nothing either.
+func TestOnlyARecordedHeldOutcomeSettlesEventHeld(t *testing.T) {
+	for _, status := range []string{"", "booked", "canceled", "no_show"} {
 		if MeetingWasHeld(status, true, 3).Held {
-			t.Errorf("a %s meeting with a transcript settled event_held", status)
+			t.Errorf("a meeting with status %q and a transcript settled event_held", status)
 		}
 		if MeetingWasHeld(status, false, 3).Held {
-			t.Errorf("a %s meeting settled event_held", status)
+			t.Errorf("a meeting with status %q settled event_held", status)
 		}
 	}
 }
 
-// Without a transcript the weaker arm needs BOTH halves: a meeting we marked
-// held but nobody from their side attended is one we held with ourselves.
+// Without a transcript a held meeting also needs somebody from their side. A
+// meeting we marked held that only we attended is one we held with ourselves.
 func TestAMeetingOnlyWeAttendedSettlesNothing(t *testing.T) {
-	if MeetingWasHeld(meetingHeld, false, 0).Held {
+	if MeetingWasHeld(meetingoutcome.Held, false, 0).Held {
 		t.Error("a held meeting with no outside participant settled event_held")
-	}
-	if MeetingWasHeld("booked", false, 2).Held {
-		t.Error("a merely booked meeting settled event_held")
 	}
 }
 

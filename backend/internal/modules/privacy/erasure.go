@@ -182,10 +182,10 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err := redactQuotationsOf(ctx, tx, append(activitiesRedacted, activitiesHeld...), reason); err != nil {
 			return err
 		}
-		// What the subject's name is left standing in inside somebody else's
-		// working record — an automation's run, and a colleague's plan for
-		// their week (erasure_commitments.go).
-		if err := redactWorkingRecords(ctx, tx, subject, emails); err != nil {
+		// Where the subject's name stands inside somebody else's working record:
+		// an automation's run, a colleague's voice sample or weekly plan
+		// (erasure_commitments.go).
+		if err := e.redactWorkingRecords(ctx, tx, subject, keys); err != nil {
 			return err
 		}
 		// Purge the subject's attachment bytes and rows together, inside the

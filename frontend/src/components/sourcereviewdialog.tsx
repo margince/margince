@@ -61,6 +61,9 @@ export function SourceReviewDialog({
   const [note, setNote] = useState("");
   const kind = sourceKindFor(answer, other);
   const unsure = answer === "unsure";
+  // A meeting also records itself as the exchange the communication-context
+  // answer records, so the server needs the day it happened.
+  const met = answer === "met";
   const assessment = useMutation({
     mutationFn: async (vars: {
       id: string;
@@ -68,6 +71,7 @@ export function SourceReviewDialog({
       obtainedAt: string | null;
       note: string;
       timezone: string;
+      metInPerson: boolean;
     }) =>
       unwrap(
         await api.POST("/privacy/notice-case-reviews/{id}/source", {
@@ -77,6 +81,7 @@ export function SourceReviewDialog({
             note: vars.note,
             obtained_at: vars.obtainedAt,
             timezone: vars.timezone,
+            met_in_person: vars.metInPerson,
           },
         }),
       ),
@@ -94,7 +99,9 @@ export function SourceReviewDialog({
       intent="drawer"
       title={t("notice.source.title")}
       confirmLabel={t(unsure ? "notice.source.leave" : "notice.source.confirm")}
-      confirmDisabled={!canWork || (!unsure && (!kind || !note.trim()))}
+      confirmDisabled={
+        !canWork || (!unsure && (!kind || !note.trim() || (met && !date)))
+      }
       pending={assessment.isPending}
       error={assessment.isError ? problemMessageOf(assessment.error, t) : null}
       onConfirm={() => {
@@ -106,6 +113,7 @@ export function SourceReviewDialog({
             obtainedAt: date ? startOfDayInZone(date, zone) : null,
             note,
             timezone: zone,
+            metInPerson: met,
           });
       }}
     >
@@ -137,6 +145,7 @@ export function SourceReviewDialog({
           <Field
             label={t("noticeDuty.obtainedOn")}
             hint={t("notice.source.dateHint")}
+            required={met}
           >
             {(control) => (
               <DateInput
@@ -173,7 +182,9 @@ export function SourceReviewDialog({
               />
             )}
           </Field>
-          <p className="t-caption">{t("notice.source.effect")}</p>
+          <p className="t-caption">
+            {t(met ? "notice.source.metEffect" : "notice.source.effect")}
+          </p>
         </>
       )}
     </ConfirmModal>

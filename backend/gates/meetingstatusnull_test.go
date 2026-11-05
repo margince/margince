@@ -47,23 +47,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// meetingStatusIs matches a positive comparison against the column, and
-// admitsNull matches the clause that lets an unrecorded meeting through. Both
-// read the SQL as text because these are string literals inside Go, which is
-// how every one of them is written.
+// meetingStatusIs matches a positive comparison against the column. The value
+// may be a literal or a joined Booked or Held constant. admitsNull matches the
+// clause that lets an unrecorded meeting through. Both read the SQL as text
+// inside Go string literals.
 var (
 	meetingStatusIs = regexp.MustCompile(
-		`meeting_status\s*(?:=\s*'(?:booked|held)'|IN\s*\([^)]*'(?:booked|held)'[^)]*\))`)
+		`meeting_status\s*(?:=\s*'(?:booked|held)'|=\s*'"\s*\+\s*(?:\w+\.)?(?:Booked|Held)\b|IN\s*\([^)]*'(?:booked|held)'[^)]*\))`)
 	admitsNull = regexp.MustCompile(`meeting_status\s+IS\s+NULL`)
 )
 
-// meetingStatusReadersAdmitted ratifies the two places a positive test is meant
-// to drop an unrecorded meeting. Keyed by FILE AND the line's own text, so a
+// meetingStatusReadersAdmitted ratifies the places a positive test is meant to
+// drop an unrecorded meeting. Keyed by the file and the line's own text, so a
 // waiver covers one reading and not every reading added to that file after it.
 var meetingStatusReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/meetingfollowup.go: return \"(\" + alias + \".meeting_status = 'held' AND \" + occurredday.BegunSQL(alias, now) + \")\"": "the follow-up reminder asks only about a meeting somebody said was held. An unrecorded past meeting is not dropped: it owes an outcome, and the outcome lane asks for that once, so admitting NULL here would raise the same meeting twice",
-	"internal/compose/reportmeetingconversion.go: whereHeldMeeting = \"t.kind = 'meeting' AND t.meeting_status = 'held' AND t.archived_at IS NULL\"":      "the conversion report's subject is what the RECORD SAYS, which its own description states: \"meetings the record says were HELD (a booked one is a plan, and a no-show or a cancellation is a plan that failed)\". It carries no time bound of its own, so admitting NULL would count a meeting still in the future as one that happened — the opposite of the reading everywhere else, where NULL is paired with a past window",
-	"internal/modules/contacts/leadmeetingproof.go: WHEN ` + alias + `.meeting_status = 'held' THEN '` + string(TriggerMeetingHeld) + `'":                 "a CASE arm that CLASSIFIES rather than filters: a meeting the record says was held proves `meeting_held`, and the next arm (relstrength.MeetingCountsSQL) names an unrecorded one `meeting_booked`. Nothing is dropped",
+	"internal/shared/kernel/meetingoutcome/meetingoutcome.go: return \"(\" + alias + \".meeting_status = '\" + Held + \"')\"": "the shared rule for a held meeting, and its subject is what the record says: a meeting nobody reported stays awaiting its outcome. Its callers either ask only about a reported meeting (the follow-up reminder, the conversion report, which has no time bound) or classify with it, where the next CASE arm names an unrecorded meeting booked, so nothing is dropped",
 })
 
 func TestAMeetingWithNoStatusIsNotDroppedFromAPositiveTest(t *testing.T) {

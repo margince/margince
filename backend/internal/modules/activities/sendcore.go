@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -106,6 +107,13 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	if err != nil {
 		return PreparedSend{}, err
 	}
+	// Resolved once, so the sign-off, the footer and the consent decision name
+	// one entity, and staging stores the one this message was composed for.
+	if in.SendingEntity.IsZero() {
+		if in.SendingEntity, err = s.sendingEntity(ctx); err != nil {
+			return PreparedSend{}, err
+		}
+	}
 	provider, err := s.refuseUnsendable(ctx, in, gate, stager)
 	if err != nil {
 		return PreparedSend{}, err
@@ -132,7 +140,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	// the unsubscribe footer. A sign-off below the legal footer reads as part of
 	// it, which is the arrangement every mail client's own "signature before
 	// quoted text" setting exists to avoid.
-	sign, err := s.signOffAs(ctx, in.Body, in.Subject, fromName)
+	sign, err := s.signOffAs(ctx, in.Body, in.Subject, fromName, in.SendingEntity)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -144,7 +152,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 	if err != nil {
 		return PreparedSend{}, err
 	}
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface)
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface, in.SendingEntity)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -254,4 +262,16 @@ func (s *Store) SendPreparedTx(ctx context.Context, tx pgx.Tx, origin SendOrigin
 		return crmcontracts.Activity{}, err
 	}
 	return sent, nil
+}
+
+// sendingEntity is the legal entity the acting sender sends for, by the
+// resolver consent and contacts ask the same question through.
+func (s *Store) sendingEntity(ctx context.Context) (ids.UUID, error) {
+	var entity ids.UUID
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		entity, err = storekit.LegalEntityOf(ctx, tx, storekit.SenderOf(ctx))
+		return err
+	})
+	return entity, err
 }

@@ -24,6 +24,7 @@ func (h Handlers) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id 
 	}
 	updated, err := h.store.AssessNoticeSource(r.Context(), ids.UUID(id), SourceAssessment{
 		Kind: string(req.Kind), ObtainedAt: req.ObtainedAt, Note: req.Note, Timezone: valueOr(req.Timezone), Now: time.Now().UTC(),
+		MetInPerson: req.MetInPerson != nil && *req.MetInPerson,
 	})
 	if err != nil {
 		writeConsentErr(w, r, err)

@@ -47,7 +47,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_decision
 
-29 columns · primary key `(id)` · referenced by 0 foreign keys
+30 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -56,6 +56,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `attempt` | `integer`, default `0` | yes |  |
 | `basis` | `text` |  | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 3 more. |
 | `content_fingerprint` | `bytea` |  |  |
+| `data_protection_country` | `text` |  |  |
 | `decided_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `decision_set_id` | `uuid` | yes |  |
 | `delivery_id` | `uuid` | yes | Points at `comms_outbound.id`. |

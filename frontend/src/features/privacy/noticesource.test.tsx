@@ -103,6 +103,7 @@ it("offers source assessment without claiming a duty or offering a notice", asyn
         note: "Incoming original",
         obtained_at: null,
         timezone: "Asia/Ho_Chi_Minh",
+        met_in_person: false,
       },
     ]),
   );
@@ -181,6 +182,7 @@ it("submits the entered acquisition date in the selected calendar timezone", asy
         note: "Original referral record",
         obtained_at: "2020-01-30T17:00:00.000Z",
         timezone: "Asia/Ho_Chi_Minh",
+        met_in_person: false,
       },
     ]),
   );
@@ -233,7 +235,7 @@ it("says why it asks and what is on record before the question", async () => {
   ).toBeInTheDocument();
 });
 
-it("records a face-to-face meeting as met at an event, which keeps the notice duty", async () => {
+it("records a face-to-face meeting with its day, which supports follow-up mail and owes no notice", async () => {
   vi.spyOn(timezone, "browserZone").mockReturnValue("Europe/Berlin");
   const writes: unknown[] = [];
   stubReview(writes);
@@ -244,22 +246,30 @@ it("records a face-to-face meeting as met at an event, which keeps the notice du
       name: en["notice.source.answer.met"],
     }),
   );
-  expect(dialog.getByText(en["notice.source.effect"])).toBeInTheDocument();
+  expect(dialog.getByText(en["notice.source.metEffect"])).toBeInTheDocument();
   await user.type(
     dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
     "Card from the trade fair",
   );
-  await user.click(
-    dialog.getByRole("button", { name: en["notice.source.confirm"] }),
+  const confirm = dialog.getByRole("button", {
+    name: en["notice.source.confirm"],
+  });
+  expect(confirm).toBeDisabled();
+  await user.type(
+    dialog.getByRole("textbox", { name: en["noticeDuty.obtainedOn"] }),
+    "31/01/2020",
   );
+  await user.tab();
+  await user.click(confirm);
 
   await waitFor(() =>
     expect(writes).toEqual([
       {
-        kind: "event_or_form",
+        kind: "in_person_permission",
         note: "Card from the trade fair",
-        obtained_at: null,
+        obtained_at: "2020-01-30T23:00:00.000Z",
         timezone: "Europe/Berlin",
+        met_in_person: true,
       },
     ]),
   );
@@ -277,7 +287,7 @@ it("offers the remaining kinds behind Another source", async () => {
   const second = dialog.getByRole("group", {
     name: en["notice.source.otherQuestion"],
   });
-  expect(within(second).getAllByRole("radio")).toHaveLength(7);
+  expect(within(second).getAllByRole("radio")).toHaveLength(6);
   await user.click(
     within(second).getByRole("radio", {
       name: en["notice.acq.purchasedOrImported"],

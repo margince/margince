@@ -19,16 +19,17 @@ import (
 )
 
 // redactWorkingRecords clears the subject's name where it survives inside
-// somebody else's working record: an automation run addressed to them, a commitment a
-// colleague wrote about them on their own weekly plan, and an introduction one
-// colleague asked another for about them.
+// somebody else's working record. Two are an automation run addressed to them
+// and a voice sample that names them. The others are a commitment on a
+// colleague's weekly plan and an introduction one colleague asked another for.
 //
-// The three are one step because they answer one question — what does an erasure
-// owe a record that is not the subject's and not about them, but names them in
-// passing — and because EraseContact reads as a sequence of such questions
-// rather than a list of tables.
-func redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID, emails []string) error {
-	if err := redactWorkflowRuns(ctx, tx, emails); err != nil {
+// The four are one step because they answer one question. What does an erasure
+// owe a record that is not the subject's, but names them in passing?
+func (e *Eraser) redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject ids.ContactID, keys subjectKeys) error {
+	if err := redactWorkflowRuns(ctx, tx, keys.emails); err != nil {
+		return err
+	}
+	if err := e.purgeTextNaming(ctx, tx, keys); err != nil {
 		return err
 	}
 	if err := redactCommitmentsNaming(ctx, tx, subject); err != nil {

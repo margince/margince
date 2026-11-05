@@ -306,6 +306,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if replayed, found, err := replayLanding(ctx, tx, in); err != nil || found {
 		return replayed, false, err
 	}
+	if prior, found, err := scheduledRunNoteLanding(ctx, tx, &in); err != nil || found {
+		return prior, false, err
+	}
 	if bound, found, err := recognizedMessage(ctx, tx, in); err != nil || found {
 		return bound, false, err
 	}

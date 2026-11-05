@@ -68,7 +68,7 @@ func newSlippingDoors(t *testing.T) *slippingDoors {
 		return []agents.SlippingDeal{{
 			DealID: deal, Name: "Quiet renewal", Stalled: true, LastActivityAt: &idle, CreatedAt: idle,
 		}}, nil
-	}, nil, deals.StalledThresholdDays)
+	}, nil, deals.StalledThresholdDays, deals.StalledThresholdDays)
 	d.router = crmcontracts.HandlerWithOptions(Server{toolRegistry: d.registry}, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(d.registry, nil, nil, nil, nil, nil, nil, nil, gate)},

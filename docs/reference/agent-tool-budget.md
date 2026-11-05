@@ -52,12 +52,14 @@ window for the goal, the grounding and everything it reads.
 ### `overnight_at_risk_sweep`
 
 ```text
-Sweep this workspace's open deals for risk: deals with no activity in 14+ days, stakeholders gone
-quiet, or missing next steps. First call whats_slipping_this_week: it returns the at-risk deals
-across the whole workspace. A deal the retrieved context mentions is one example, not the sweep, so
-do not read or log on it before that list. Then read each listed deal and log ONE note activity per
-at-risk deal summarizing the risk and the evidence (cite the records you read). Do not advance
-stages, send anything, or archive anything.
+Sweep the open deals your member owns for risk: deals with no activity in 14+ days, stakeholders
+gone quiet, or missing next steps. First call whats_slipping_this_week: in this run it returns only
+the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal
+whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside
+that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or
+log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal
+summarizing the risk and the evidence (cite the records you read). Do not advance stages, send
+anything, or archive anything.
 ```
 
 Attaches 7 tools and pays 6422 tokens on every step (3373 listing, 2457 step schema), leaving

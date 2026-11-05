@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,10 +13,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// fieldObtainedAt is the body field naming when the contact was obtained.
+const fieldObtainedAt = "obtained_at"
 
 // SourceAssessment keeps a human decision separate from the original acquisition evidence.
 type SourceAssessment struct {
@@ -24,6 +30,9 @@ type SourceAssessment struct {
 	ObtainedAt *time.Time
 	Note       string
 	Now        time.Time
+	// MetInPerson says the source was a meeting face to face, which also
+	// records the meeting itself (facetoface.go).
+	MetInPerson bool
 }
 
 func (in SourceAssessment) validate() (NoticeDuty, bool, error) {
@@ -35,7 +44,13 @@ func (in SourceAssessment) validate() (NoticeDuty, bool, error) {
 		return duty, false, &ValidationError{Field: fieldNote, Reason: "give source evidence in 1 to 500 characters"}
 	}
 	if in.ObtainedAt != nil && (in.ObtainedAt.IsZero() || in.ObtainedAt.After(in.Now)) {
-		return duty, false, &ValidationError{Field: "obtained_at", Reason: "give the actual acquisition date, no later than today"}
+		return duty, false, &ValidationError{Field: fieldObtainedAt, Reason: "give the actual acquisition date, no later than today"}
+	}
+	if in.MetInPerson && in.Kind != faceToFaceSource {
+		return duty, false, &ValidationError{Field: auditKeyKind, Reason: "a meeting face to face is confirmed as permission given in person"}
+	}
+	if in.MetInPerson && in.ObtainedAt == nil {
+		return duty, false, &ValidationError{Field: fieldObtainedAt, Reason: "say when you met them"}
 	}
 	return duty, needsCase, nil
 }
@@ -57,11 +72,33 @@ func (s *Store) AssessNoticeSource(ctx context.Context, id ids.UUID, in SourceAs
 	}
 	var out NoticeCase
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if in.MetInPerson {
+			if err := holdReviewedContact(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		var err error
 		out, err = assessNoticeSourceTx(ctx, tx, id, in, duty, needsCase)
-		return err
+		if err != nil || !in.MetInPerson {
+			return err
+		}
+		return s.recordFaceToFaceTx(ctx, tx, out.ContactID, faceToFaceMeeting{note: in.Note, met: *in.ObtainedAt})
 	})
 	return out, err
+}
+
+// holdReviewedContact holds the contact a review is about before any row of
+// theirs is locked. Recording a meeting writes to that contact, and an erasure
+// takes the two in this order.
+func holdReviewedContact(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var contact ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT contact_id FROM privacy_notice_case WHERE id = $1`, id).Scan(&contact); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return fmt.Errorf("consent: reading whom this review is about: %w", err)
+	}
+	return auth.HoldWritableLive(ctx, tx, entityContact, contact)
 }
 
 func assessNoticeSourceTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in SourceAssessment, duty NoticeDuty, needsCase bool) (NoticeCase, error) {
@@ -111,6 +148,9 @@ func assessNoticeSourceTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in Source
 		}
 	} else {
 		ground := "The confirmed source creates no separate notice duty."
+		if in.MetInPerson {
+			ground = faceToFaceSettled
+		}
 		completed, resolution, resolver = &in.Now, &ground, &actor.UserID
 	}
 	out, err = scanNoticeCase(tx.QueryRow(ctx, `UPDATE privacy_notice_case

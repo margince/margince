@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -151,7 +152,7 @@ func (in *dealFilingContext) shouldFile(ctx context.Context) bool {
 	if (imported != nil && *imported) || (in.source != nil && strings.HasPrefix(*in.source, provenance.ReservedSourceSystemPrefix)) {
 		return false
 	}
-	return in.kind != KindMeeting || in.meetingStatus == nil || *in.meetingStatus == string(crmcontracts.ActivityMeetingStatusHeld)
+	return in.kind != KindMeeting || in.meetingStatus == nil || meetingoutcome.IsHeld(*in.meetingStatus)
 }
 
 func (in *dealFilingContext) suggestedDeal(ctx context.Context, tx pgx.Tx) (crmcontracts.ActivityDealFilingOptions, error) {
