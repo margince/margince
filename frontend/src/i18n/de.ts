@@ -18799,7 +18799,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "du hast die letzte Änderung rückgängig gemacht, darum wartet Margince auf Neues",
   "changes.check.why.already_right": "stimmt schon",
   "changes.check.why.accepted_offer": "das angenommene Angebot legt es fest",
-  "changes.check.why.priced_by_products": "die Produkte des Deals legen es fest",
+  "changes.check.why.priced_by_products":
+    "die Produkte des Deals legen es fest",
   "changes.check.why.no_rate": "kein Wechselkurs für die Währung",
   "changes.check.why.no_owner": "das zuständige Mitglied ist gegangen",
   "changes.check.why.stage_rules":

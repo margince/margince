@@ -18324,7 +18324,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.check.why.already_right": "đã đúng",
   "changes.check.why.accepted_offer":
     "báo giá đã được chấp nhận quyết định giá trị này",
-  "changes.check.why.priced_by_products": "các sản phẩm của giao dịch quyết định giá trị này",
+  "changes.check.why.priced_by_products":
+    "các sản phẩm của giao dịch quyết định giá trị này",
   "changes.check.why.no_rate": "không có tỷ giá cho loại tiền này",
   "changes.check.why.no_owner": "thành viên phụ trách đã rời đi",
   "changes.check.why.stage_rules": "tiêu chí rời giai đoạn không cho phép",
