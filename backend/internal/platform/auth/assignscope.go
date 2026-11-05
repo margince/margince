@@ -172,6 +172,9 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	if err != nil || permitted {
 		return err
 	}
+	if !recording(ctx) {
+		return refuseIneligibleAssignee(false)
+	}
 	// A seat that may own the row, outside the caller's scope, is refused by
 	// the scope: the same 422, noted as the gate's refusal.
 	var seatArgs []any

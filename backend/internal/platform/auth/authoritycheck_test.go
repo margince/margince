@@ -18,7 +18,7 @@ import (
 )
 
 func TestACheckReadsBackAsItIsWritten(t *testing.T) {
-	for _, name := range []string{"deal.update", "deal.create|update", "*.create", "admin", "scope:team", "scope-narrower-than:all"} {
+	for _, name := range []string{"deal.update", "deal.create|update", "*.create", "admin", "scope:team", "scope-narrower-than:all", "data_task.read,job_health.read"} {
 		c, err := ParseCheck(name)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
@@ -27,7 +27,7 @@ func TestACheckReadsBackAsItIsWritten(t *testing.T) {
 			t.Errorf("%s reads back as %s", name, c)
 		}
 	}
-	for _, bad := range []string{"", "deal", "deal.", ".read", "deal.archive", "scope:everyone", "scope-narrower-than:everyone", "row:approval"} {
+	for _, bad := range []string{"", "deal", "deal.", ".read", "deal.archive", "scope:everyone", "scope-narrower-than:everyone", "row:approval", "deal.read,", "deal.read,row:approval"} {
 		if _, err := ParseCheck(bad); err == nil {
 			t.Errorf("%q reads as a check", bad)
 		}
@@ -41,6 +41,11 @@ func TestHeldByIsTheGatesDecision(t *testing.T) {
 	admin := rep
 	admin.Permissions.RoleKeys = []string{"rep", roleAdmin}
 	admin.Permissions.RowScope = principal.RowScopeAll
+	// A lead's own agent leads; an agent on no passport of a human does not.
+	unlentLead := rep
+	unlentLead.Permissions.Objects = map[string]principal.ObjectGrant{objTeamLead: {Create: true}}
+	lentLead := unlentLead
+	lentLead.PassportID, lentLead.OnBehalfOf = ids.NewV7(), ids.NewV7()
 	for _, tc := range []struct {
 		check string
 		who   principal.Principal
@@ -59,6 +64,12 @@ func TestHeldByIsTheGatesDecision(t *testing.T) {
 		{"scope-narrower-than:all", admin, false},
 		{"deal.read", principal.Principal{Type: principal.PrincipalBuyer}, false},
 		{"admin", principal.Principal{Type: principal.PrincipalSystem}, true},
+		{"deal.update,admin", rep, true},
+		{"deal.delete,admin", rep, false},
+		{"deal.delete,admin", admin, true},
+		{"team_lead.create", lentLead, true},
+		{"team_lead.create", unlentLead, false},
+		{"team_lead.create", principal.Principal{Type: principal.PrincipalSystem}, false},
 	} {
 		c, err := ParseCheck(tc.check)
 		if err != nil {
@@ -77,6 +88,8 @@ func TestHeldByIsTheGatesDecision(t *testing.T) {
 // gateAdmits asks the gate that decides c.
 func gateAdmits(ctx context.Context, c Check) bool {
 	switch {
+	case len(c.OneOf) > 0:
+		return RequireOneOf(ctx, c.OneOf...) == nil
 	case c.Admin:
 		return RequireAdmin(ctx) == nil
 	case c.RowScope != "":
@@ -85,6 +98,8 @@ func gateAdmits(ctx context.Context, c Check) bool {
 		return RequireRowScopeNarrowerThan(ctx, c.NarrowerThan, apperrors.ErrConflict) == nil
 	case c.Object == anyObject:
 		return RequireAnyObject(ctx, c.Actions[0]) == nil
+	case c.Object == objTeamLead:
+		return RequireCoach(ctx) == nil
 	}
 	return RequireAny(ctx, c.Object, c.Actions...) == nil
 }
@@ -144,5 +159,39 @@ func TestARefusalThatIsNotA403IsRecorded(t *testing.T) {
 	got := slices.Sorted(maps.Keys(rec.refused))
 	if want := []string{"row:approval", "scope-narrower-than:all"}; !slices.Equal(got, want) {
 		t.Errorf("recorded refusals %v, want %v", got, want)
+	}
+}
+
+// A read the call degrades over is asked as Require asks it. Neither it nor the
+// gates under it are recorded as the call's requirement.
+func TestAnUnrecordedReadIsNoRequirement(t *testing.T) {
+	reader := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:reader", Permissions: principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{"installation_settings": {Read: true}},
+	}}
+	rec := &checkRecorder{actor: reader.ID, checks: map[string]bool{}, refused: map[string]bool{}}
+	ctx := context.WithValue(principal.WithActor(context.Background(), reader), checkRecorderKey{}, rec)
+
+	readCtx, err := Unrecorded(ctx, "installation_settings", principal.ActionRead)
+	if err != nil {
+		t.Fatalf("a reader holding the grant was refused: %v", err)
+	}
+	if err := Require(readCtx, "installation_settings", principal.ActionRead); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Unrecorded(ctx, "deal", principal.ActionRead); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader without deal.read was answered %v, want Require's refusal", err)
+	}
+	if got := slices.Sorted(maps.Keys(rec.checks)); len(got) != 0 {
+		t.Errorf("an unrecorded read recorded %v", got)
+	}
+}
+
+// A caller wide enough to be refused is refused even when no refusal was named.
+func TestARowScopeRefusalFailsClosed(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:all", Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+	if err := RequireRowScopeNarrowerThan(ctx, principal.RowScopeAll, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an all-scope caller with no named refusal was answered %v, want permission denied", err)
 	}
 }

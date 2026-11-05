@@ -30,6 +30,8 @@ type Check struct {
 	// NarrowerThan is RequireRowScopeNarrowerThan's question: is the caller's
 	// row scope narrower than this.
 	NarrowerThan principal.RowScope
+	// OneOf is RequireOneOf's question: does the caller hold any one of these.
+	OneOf []Check
 }
 
 const (
@@ -39,12 +41,20 @@ const (
 	narrowerPrefix = "scope-narrower-than:"
 	// rowRefusalPrefix names a row a gate hid from the caller, as HideRow notes it.
 	rowRefusalPrefix = "row:"
+	oneOfSeparator   = ","
 )
 
 // String is the check as the generated tool table stores it: "deal.update",
-// "deal.create|update", "*.create", "admin", "scope:team" or
-// "scope-narrower-than:all".
+// "deal.create|update", "*.create", "admin", "scope:team",
+// "scope-narrower-than:all" or "data_task.read,job_health.read".
 func (c Check) String() string {
+	if len(c.OneOf) > 0 {
+		names := make([]string, len(c.OneOf))
+		for i, alternative := range c.OneOf {
+			names[i] = alternative.String()
+		}
+		return strings.Join(names, oneOfSeparator)
+	}
 	if c.Admin {
 		return adminCheckName
 	}
@@ -63,6 +73,17 @@ func (c Check) String() string {
 
 // ParseCheck reads a check written by String.
 func ParseCheck(s string) (Check, error) {
+	if strings.Contains(s, oneOfSeparator) {
+		var c Check
+		for name := range strings.SplitSeq(s, oneOfSeparator) {
+			alternative, err := ParseCheck(name)
+			if err != nil {
+				return Check{}, err
+			}
+			c.OneOf = append(c.OneOf, alternative)
+		}
+		return c, nil
+	}
 	if s == adminCheckName {
 		return Check{Admin: true}, nil
 	}
@@ -102,11 +123,17 @@ func (c Check) HeldBy(p principal.Principal) bool {
 	switch {
 	case p.Type == principal.PrincipalBuyer:
 		return false
+	case len(c.OneOf) > 0:
+		return slices.ContainsFunc(c.OneOf, func(alternative Check) bool { return alternative.HeldBy(p) })
 	case c.RowScope != "":
 		// Read for the system too, which arrives on its own row scope.
 		return !c.RowScope.Wider(p.Permissions.RowScope)
 	case c.NarrowerThan != "":
 		return c.NarrowerThan.Wider(p.Permissions.RowScope)
+	case c.Object == objTeamLead:
+		// Leading is a human's act, done by them or by their agent. The system,
+		// a connector and passportless work lead nobody.
+		return p.HumanOrItsAgent() && grantsAnyOf(p.Permissions, c.Object, c.Actions)
 	case p.Type == principal.PrincipalSystem:
 		return true
 	case c.Admin:
@@ -153,14 +180,30 @@ func noteRefusal(ctx context.Context, name string) {
 }
 
 func note(ctx context.Context, write func(*checkRecorder)) {
-	rec, ok := ctx.Value(checkRecorderKey{}).(*checkRecorder)
+	rec, ok := recorderOf(ctx)
 	if !ok {
-		return
-	}
-	if p, ok := principal.Actor(ctx); !ok || p.ID != rec.actor {
 		return
 	}
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
 	write(rec)
+}
+
+// recording reports whether a note on ctx would be kept. A gate spends work
+// that only tells a refusal apart for the recorder, never in a shipped binary.
+func recording(ctx context.Context) bool {
+	_, ok := recorderOf(ctx)
+	return ok
+}
+
+// recorderOf is the recorder that keeps notes about ctx's caller.
+func recorderOf(ctx context.Context) (*checkRecorder, bool) {
+	rec, ok := ctx.Value(checkRecorderKey{}).(*checkRecorder)
+	if !ok || rec == nil {
+		return nil, false
+	}
+	if p, ok := principal.Actor(ctx); !ok || p.ID != rec.actor {
+		return nil, false
+	}
+	return rec, true
 }

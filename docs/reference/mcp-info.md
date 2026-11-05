@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 208.6 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54706 |
+| Approx. wire tokens | 54710 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -1644,7 +1644,6 @@ call themselves; requires passport scope "write".)
         "mark_notice_read",
         "mark_rows_done",
         "pin_row",
-        "raise_notice",
         "reopen_rows",
         "restore_company_suggestion",
         "restore_contact_moment",
@@ -1694,7 +1693,7 @@ call themselves; requires passport scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
+      "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, change_attention with action=raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
       "type": "object"
     },
     "row_id": {

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 213568,
+    "tool_catalog_bytes": 213582,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54706,
+    "approx_wire_tokens_total": 54710,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 49449,
-      "input_schema_bytes": 104516,
+      "input_schema_bytes": 104530,
       "output_schema_bytes": 47766,
-      "description_plus_input_schema_bytes": 153965
+      "description_plus_input_schema_bytes": 153979
     }
   },
   "tools": {
@@ -1213,7 +1213,6 @@
                 "mark_notice_read",
                 "mark_rows_done",
                 "pin_row",
-                "raise_notice",
                 "reopen_rows",
                 "restore_company_suggestion",
                 "restore_contact_moment",
@@ -1263,7 +1262,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
+              "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, change_attention with action=raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item only: The request body of acceptDealSuggestion",
               "type": "object"
             },
             "row_id": {

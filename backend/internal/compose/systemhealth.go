@@ -39,6 +39,7 @@ const (
 	healthWorkspace     = crmcontracts.HealthSourceScopeWorkspace
 	healthInstallation  = crmcontracts.HealthSourceScopeInstallation
 	healthReadObject    = "job_health"
+	healthDataTasks     = "data_task"
 	healthSearchID      = string(crmcontracts.HealthActionDestinationSearch)
 )
 
@@ -59,12 +60,12 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	admitted := auth.Allows(ctx, healthReadObject, principal.ActionRead) ||
-		auth.Allows(ctx, "data_task", principal.ActionRead) ||
-		auth.Allows(ctx, "embedding_reindex", principal.ActionRead) ||
-		auth.Allows(ctx, "installation_settings", principal.ActionUpdate)
-	if !admitted {
-		httperr.Write(w, r, apperrors.ErrPermissionDenied)
+	read, update := []principal.Action{principal.ActionRead}, []principal.Action{principal.ActionUpdate}
+	if err := auth.RequireOneOf(ctx,
+		auth.Check{Object: healthReadObject, Actions: read}, auth.Check{Object: healthDataTasks, Actions: read},
+		auth.Check{Object: "embedding_reindex", Actions: read}, auth.Check{Object: "installation_settings", Actions: update},
+	); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	ctx, cancel := context.WithTimeout(ctx, healthReadTimeout)
@@ -182,7 +183,7 @@ func (s Server) healthReads() []healthRead {
 		{"recovery", healthReadObject, s.recoverySummary},
 		{"automatic", healthReadObject, s.automaticSummary},
 		{healthSearchID, "embedding_reindex", s.searchSummary},
-		{"updates", "data_task", s.updatesSummary},
+		{"updates", healthDataTasks, s.updatesSummary},
 		{"providers", "ai_diagnostics", s.providersSummary},
 	}
 }

@@ -446,10 +446,8 @@ func RequireCoach(ctx context.Context) error {
 }
 
 // leads reports whether a human seat holds the team-lead grant for this act.
-// Leading is a human's act, done by them or by their agent. A connector, or
-// passportless work, leads nobody on its own.
 func leads(p principal.Principal, action principal.Action) bool {
-	return p.HumanOrItsAgent() && (Check{Object: objTeamLead, Actions: []principal.Action{action}}).HeldBy(p)
+	return Check{Object: objTeamLead, Actions: []principal.Action{action}}.HeldBy(p)
 }
 
 // RequireAdmin admits only a principal carrying the workspace "admin" role.
