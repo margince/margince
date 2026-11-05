@@ -415,8 +415,8 @@ describe("AnalyticsScreen", () => {
           ),
       ),
     ).toBe(true);
-    expect((await stageTable()).getByText("≈50 EUR")).toBeTruthy();
-    expect(screen.queryByText("≈49 EUR")).toBeNull();
+    expect((await stageTable()).getByText("≈€50")).toBeTruthy();
+    expect(screen.queryByText("≈€49")).toBeNull();
   });
 
   it("switching to Open deals per company groups by company_id and renders a table", async () => {

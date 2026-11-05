@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button, TextInput } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
@@ -82,8 +82,11 @@ export const LeaveDialog: Story = {
       within(canvasElement).getByRole("button", { name: "Go to Contacts" }),
     );
     const dialog = within(canvasElement.ownerDocument.body).getByRole("dialog");
-    await expect(
-      within(dialog).getByRole("button", { name: "Stay" }),
-    ).toBeVisible();
+    // The dialog arrives from opacity 0, so it is visible once it has landed.
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "Stay" }),
+      ).toBeVisible(),
+    );
   },
 };

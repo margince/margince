@@ -51,6 +51,11 @@ name: scheduled
 #                        tests read a recording of the vendor's API, which stays
 #                        green when the vendor changes it.
 #
+#   role sweep         — every MCP tool and action called as every seeded role,
+#                        weekly. It takes longer than a merge-gate shard allows,
+#                        so the per-PR lane holds the committed matrix to the
+#                        registry and the listing, and this re-measures it.
+#
 #   slop trend         — the slop scores and the comment numbers, once a week,
 #                        beside last week's. Not a verdict: the comment checks
 #                        judge only added lines, and this is what shows whether
@@ -92,6 +97,10 @@ on:
         default: false
       trend:
         description: "Also record the slop trend (craft slop and craft stats against last week's run)"
+        type: boolean
+        default: false
+      roles:
+        description: "Also run the MCP role sweep (`make test-roles`, about an hour on a runner)"
         type: boolean
         default: false
 
@@ -1173,12 +1182,47 @@ jobs:
               --title "chore(records): weekly measurements of $day" --body-file "$BODY"
           fi
 
+  # The MCP role sweep, weekly. Every tool and action is called as every seeded
+  # role, and the answers must equal the committed mcp-tool-roles.json and
+  # toolchecks.json. It outgrew a merge-gate shard, so the per-PR lane checks the
+  # committed matrix against the registry and the listing, and this measures it.
+  role-sweep:
+    name: MCP role sweep (weekly)
+    if: >-
+      github.event.schedule == '0 2 * * 1'
+        || (github.event_name == 'workflow_dispatch' && inputs.roles)
+    runs-on: ubuntu-latest
+    # The make target's own go-test timeout is 45 minutes; this leaves room for
+    # the stack to start.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      - name: The role sweep
+        run: make test-roles
+
   # The one job holding `issues: write`, and it runs no build code — the same
   # permission isolation sbom.yml's signing job uses. It must RUN when an upstream
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live]
+    needs: [vuln, quality-gate, renovate-liveness, backend-lane, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mobile, llm-use-cases, records, records-pr, reap-caches, slop-trend, vendor-live, role-sweep]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1237,4 +1281,5 @@ jobs:
           VENDOR_LIVE_RESULT: ${{ needs['vendor-live'].result }}
           VENDOR_LIVE_OUTCOME: ${{ needs['vendor-live'].outputs.outcome }}
           VENDOR_LIVE_DETAIL: ${{ needs['vendor-live'].outputs.detail }}
+          ROLE_SWEEP_RESULT: ${{ needs['role-sweep'].result }}
         run: ./scripts/scheduled-report.sh

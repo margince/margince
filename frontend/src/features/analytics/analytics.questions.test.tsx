@@ -294,7 +294,7 @@ describe("a saved question the reader cannot ask as saved", () => {
     stubServer({ "GET /analytics/runs/run-2": () => jsonResponse(foreign) });
     renderView();
     expect(
-      await screen.findByText("Converted amount is at least 5,000 EUR"),
+      await screen.findByText("Converted amount is at least €5,000"),
     ).toBeTruthy();
   });
 

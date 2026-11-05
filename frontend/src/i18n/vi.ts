@@ -1392,6 +1392,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.industry": "Ngành",
   "reporting.allIndustries": "Tất cả ngành",
   "reporting.valueBasis": "Cơ sở giá trị",
+  "reporting.filtersMore": "Bộ lọc",
+  "reporting.filtersActive": "Bộ lọc · {active}",
   "reporting.basis.all": "Toàn bộ giá trị",
   "reporting.basis.software": "Chỉ phần mềm",
   "reporting.basis.implementation": "Chỉ triển khai",
@@ -7198,7 +7200,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftGoneBody":
     "Bản nháp đã được gửi hoặc xóa ở đó. Khi lưu, nội dung đang hiển thị sẽ thành bản nháp mới.",
   "compose.savedDraftFailed":
-    "Không thể lưu bản nháp. Lưu lại, hoặc đóng lần nữa để bỏ nội dung.",
+    "Không thể lưu bản nháp. Chọn Thử lại, hoặc đóng lần nữa để bỏ nội dung.",
+  "compose.savedDraftAutosaveFailed":
+    "Chưa lưu xong bản nháp. Viết tiếp hoặc kết nối lại mạng để thử lại.",
+  "compose.savedDraftAutosaveRefused":
+    "Không thể lưu bản nháp. Chọn Thử lại, hoặc viết tiếp để thử lại.",
+  "compose.savedDraftFilesUnavailable_one": "{count} tệp không thể khôi phục.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} tệp không thể khôi phục.",
+  "compose.sendWaitsForAddress": "Sửa hoặc xóa phần không phải địa chỉ email.",
+  "compose.notAnAddress_one":
+    "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
+  "compose.notAnAddress_other":
+    "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
@@ -7806,6 +7820,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.deliveryCoversAll":
     "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
+  "analytics.board.rail": "Triển vọng và bước tiếp theo",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionOutOfDate": "đã cũ, đã thay đổi kể từ lần kiểm tra",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
@@ -14271,6 +14286,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
+  "forecast.landingSection": "Điểm kết thúc kỳ này",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",
   "forecast.basis.likely": "Đã chốt + deal khả năng cao",
@@ -14285,6 +14301,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị deal khả năng cao",
   "forecast.callBelowLine": "Thấp hơn {won} đã chốt, hiển thị như đã ghi",
   "forecast.model.quarter": "Kết quả quý theo mô hình",
+  "forecast.model.short": "80% kết quả ở giữa",
   "forecast.model.month": "Kết quả tháng theo mô hình",
   "forecast.model.week": "Kết quả tuần theo mô hình",
   "forecast.model.value": "{low} đến {high}",
@@ -16858,7 +16875,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "richtext.bulletList": "Danh sách dấu đầu dòng",
   "richtext.numberList": "Danh sách đánh số",
   "richtext.link": "Liên kết",
-  "richtext.linkPrompt": "URL liên kết (để trống để gỡ liên kết)",
+  "richtext.linkAdd": "Thêm liên kết",
+  "richtext.linkEdit": "Sửa liên kết",
+  "richtext.linkAddress": "Địa chỉ web hoặc email",
+  "richtext.linkPlaceholder": "example.com hoặc name@example.com",
+  "richtext.linkApply": "Áp dụng",
+  "richtext.linkRemove": "Gỡ liên kết",
+  "richtext.linkRefused":
+    "Đây không phải địa chỉ web hay email. Nhập một địa chỉ như example.com hoặc name@example.com.",
   "contact.composer.intentAgenda": "đề xuất chương trình cho cuộc họp sắp tới",
   "contact.composer.intentReply": "trả lời tin nhắn gần nhất của họ",
   "contact.composer.intentCommitment": "thực hiện một cam kết",
@@ -20028,6 +20052,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.hero.shortfall": "Thiếu hụt dự kiến {amount}",
   "analytics.hero.surplus": "Vượt dự kiến {amount}",
   "analytics.hero.prior": "Cùng thời điểm kỳ trước: {amount}",
+  "analytics.hero.ofTarget": "so với mục tiêu {target}",
+  "analytics.hero.short": "Thiếu {amount} so với mục tiêu",
+  "analytics.hero.over": "Vượt mục tiêu {amount}",
+  "analytics.trajectory.label": "Doanh số đã chốt trong kỳ",
+  "analytics.trajectory.today": "Hôm nay · {date}",
+  "analytics.trajectory.through": "Tính đến {date}",
+  "analytics.trajectory.target": "Mục tiêu {amount}",
+  "analytics.trajectory.projection": "Dự kiến {amount}",
+  "analytics.trajectory.range": "Kết quả mô hình",
   "analytics.overview.more": "Thêm",
   "analytics.outlook.valuedCount": "Định giá {included}/{eligible}",
   "analytics.outlook.periodPipeline": "Pipeline dự kiến chốt trong quý",
@@ -20036,6 +20069,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.outlook.team": "Triển vọng tìm khách hàng của nhóm",
   "analytics.outlook.prospecting": "Triển vọng tìm khách hàng",
   "analytics.outlook.records": "Xem bản ghi liên quan",
+  "analytics.outlook.more": "Đọc toàn bộ triển vọng",
   "analytics.assessment.refresh": "Làm mới đánh giá",
   "analytics.assessment.retry": "Thử lại",
   "analytics.assessment.evidenceTitle": "Đánh giá dựa trên điều gì",

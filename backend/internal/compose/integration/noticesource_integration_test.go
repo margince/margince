@@ -25,8 +25,8 @@ func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) 
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Source Review Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
-	driveNoticeCase(t, e, contact.ID)
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 	var id, state, rule string
 	var due *time.Time
 	var count int
@@ -77,7 +77,7 @@ func TestAnAgentAssessesASourceAndTheTrailNamesIt(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Agent Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 	var id string
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM privacy_notice_case WHERE contact_id = @contact`, pgx.NamedArgs{"contact": contact.ID}).Scan(&id); err != nil {
 		t.Fatal(err)
@@ -111,7 +111,7 @@ func TestDirectSourceAssessmentEndsReviewWithoutInventingADisclosure(t *testing.
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Direct Source Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
-	driveNoticeCase(t, e, contact.ID)
+	apptest.DriveNoticeCase(t, e, contact.ID)
 	var id string
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM privacy_notice_case WHERE contact_id = @contact`, pgx.NamedArgs{"contact": contact.ID}).Scan(&id); err != nil {
 		t.Fatal(err)

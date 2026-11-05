@@ -40093,6 +40093,29 @@ export interface components {
             body?: string;
             /** @description The editor's markup beside the plain body, so reopening restores the formatting. */
             html_body?: string | null;
+            /**
+             * @description The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+             *     whole draft, so omitting this clears the files; a client keeps them by sending back
+             *     the `id` of each entry in the draft's `attachments`.
+             *
+             *     Held to the send's own cap. A file the caller cannot see, or one the send would
+             *     refuse, is left out rather than refused, so a save never loses the words; the answer
+             *     counts it in `attachments_unavailable`.
+             */
+            attachment_ids?: string[];
+            /**
+             * @description The reason for contact the rep chose, checked as the send checks it: a category
+             *     reserved for the installation's own notices is refused 422. Omit it for none.
+             */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /**
+             * Format: date-time
+             * @description The moment the rep picked to send at, checked as the send checks it: with
+             *     `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+             */
+            scheduled_at?: string | null;
+            /** @description The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`. */
+            scheduled_tz?: string | null;
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
@@ -40113,6 +40136,28 @@ export interface components {
             version: number;
             /** @description An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it. */
             agent_drafted: boolean;
+            /**
+             * @description The chosen files the author can still attach, in the order chosen, so the composer
+             *     draws each one without asking again. Resolved only by the draft read and the save
+             *     answer: absent elsewhere, so its absence there does not mean the draft has no files.
+             */
+            attachments?: components["schemas"]["ApprovalPreviewFile"][];
+            /**
+             * @description How many chosen files the send would now refuse: removed, out of the author's sight,
+             *     kept without bytes, or empty. Not named, because a file the author cannot see answers
+             *     404 everywhere else. Absent when every file resolves.
+             */
+            attachments_unavailable?: number;
+            /** @description The reason for contact the author chose. Absent when none was. */
+            communication_context?: components["schemas"]["CommunicationContext"];
+            /**
+             * Format: date-time
+             * @description The moment the author picked to send at, as saved. It may have passed since; the
+             *     draft schedules nothing. Absent when none was picked.
+             */
+            scheduled_at?: string;
+            /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
+            scheduled_tz?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -44936,6 +44981,8 @@ export interface components {
         ForecastMovement: {
             /** @enum {string} */
             reading: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
+            /** @description The currency every amount here is in: the base currency both snapshots converted to. */
+            base_currency: string;
             /** Format: int64 */
             opening_minor: number;
             /** Format: int64 */

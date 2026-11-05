@@ -233,7 +233,8 @@ describe("a signed-in screen reads the reader's clock unless it says why", () =>
         !ZONE_SOURCES_SKIP.test(relative(srcRoot, path).split("\\").join("/")),
     );
     calls = zoneSourceRefs(roots);
-  }, 180_000);
+    // The type checker reads the whole tree: about three minutes on a CI shard.
+  }, 300_000);
   const listed = {
     useCompanyZone: new Set(companyZoneSites.map(({ file }) => file)),
     browserZone: new Set(browserZoneSites.map(({ file }) => file)),

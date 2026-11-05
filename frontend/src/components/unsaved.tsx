@@ -103,7 +103,7 @@ type Leaving = Readonly<{
  * cache. The text is the browser's — every engine has ignored a custom string
  * for a decade — so `preventDefault` is the whole of the API worth using.
  */
-function useBeforeUnload(dirty: boolean): void {
+export function useBeforeUnload(dirty: boolean): void {
   useEffect(() => {
     if (!dirty) {
       return;

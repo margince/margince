@@ -208,7 +208,7 @@ an hour, it cuts the list of commits that may have caused a red to about 12.
 
 ## `scheduled.yml`
 
-Daily on `main`, plus a weekly Monday cron for the two jobs that cost too much to run daily. These
+Daily on `main`, plus a weekly Monday cron for the jobs that cost too much to run daily. These
 checks answer "is `main` still good?", and that answer can change when nothing is merged. `ci.yml`
 asks "is this diff good?", and runs because a diff exists.
 
@@ -224,6 +224,7 @@ asks "is this diff good?", and runs because a diff exists.
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
 | use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to `mcp-tool-roles.json` and `toolchecks.json` | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
 | weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
