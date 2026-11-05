@@ -384,8 +384,9 @@ func coreDigest(root string) (string, error) {
 	}
 	// The instance's go.mod and go.sum decide which unit, at which version, is
 	// composed; a changed require must restale the fast probe too.
-	for _, rel := range []string{instanceDirName + "/go.mod", instanceDirName + "/go.sum"} {
-		if err := h.addFileOrEmpty(rel); err != nil {
+	instanceDir := filepath.Dir(instanceGoMod(root))
+	for _, name := range []string{"go.mod", "go.sum"} {
+		if err := h.addOutsideFileOrEmpty(instanceDirName+"/"+name, filepath.Join(instanceDir, name)); err != nil {
 			return "", err
 		}
 	}

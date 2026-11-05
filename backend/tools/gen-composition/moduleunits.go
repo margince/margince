@@ -50,14 +50,18 @@ type unitSource struct {
 
 // downloadedModule is the part of `go mod download -json` this composer reads.
 type downloadedModule struct {
-	Path  string
-	Dir   string
-	Error string
+	Path   string
+	Dir    string
+	Error  string
+	Origin *struct{ Hash string }
 }
 
 // instanceGoMod is the go.mod that decides what a tree composes. A client's
 // core tree links instance/ to the client's own folder.
 func instanceGoMod(root string) string {
+	if instanceGoModOverride != "" {
+		return instanceGoModOverride
+	}
 	return filepath.Join(root, instanceDirName, "go.mod")
 }
 
@@ -159,7 +163,7 @@ func fetchUnits(root string) error {
 		if err := os.CopyFS(dst, os.DirFS(m.Dir)); err != nil {
 			return fmt.Errorf("%s: %w", m.Path, err)
 		}
-		if err := dropReplaces(filepath.Join(dst, "go.mod")); err != nil {
+		if err := dropReplaces(filepath.Join(dst, "go.mod"), filepath.Join(root, "backend")); err != nil {
 			return fmt.Errorf("%s: %w", m.Path, err)
 		}
 	}
@@ -170,7 +174,13 @@ func fetchUnits(root string) error {
 // never applies a dependency's replace, but the composed workspace would. A
 // path like ../../backend points nowhere from the copy and conflicts with the
 // workspace's own backend.
-func dropReplaces(goModPath string) error {
+//
+// A copy that requires the backend gets ONE replace back: onto the tree's own
+// backend, as a unit under extensions/ has. A released unit requires the
+// backend at whatever version it was cut against (core's own units at the zero
+// pseudo-version), and nothing else in the workspace says that version is the
+// backend member.
+func dropReplaces(goModPath, backendDir string) error {
 	raw, err := os.ReadFile(goModPath) // #nosec G304 -- the go.mod of a copy this run made
 	if err != nil {
 		return err
@@ -183,6 +193,19 @@ func dropReplaces(goModPath string) error {
 		if err := mod.DropReplace(r.Old.Path, r.Old.Version); err != nil {
 			return err
 		}
+	}
+	for _, r := range mod.Require {
+		if r.Mod.Path != backendModule {
+			continue
+		}
+		rel, err := filepath.Rel(filepath.Dir(goModPath), backendDir)
+		if err != nil {
+			return err
+		}
+		if err := mod.AddReplace(backendModule, "", filepath.ToSlash(rel), ""); err != nil {
+			return err
+		}
+		break
 	}
 	out, err := mod.Format()
 	if err != nil {
