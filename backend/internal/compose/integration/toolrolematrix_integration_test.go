@@ -50,6 +50,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	for _, role := range roles {
 		assignRoleTo(t, d.e, toolRoleUser, "admin")
 		clients := passportClients(t, d.e, role.key, 1+len(calls)/toolRoleCallsPerPassport)
+		retireProbedPipelines(t, d.e)
 		pool := seedToolRoleRecords(t, d.e, calls)
 		assignRoleTo(t, d.e, toolRoleUser, role.key)
 		for n, call := range calls {
@@ -377,4 +378,13 @@ func sortedRoles(keys []string) []string {
 	sorted := append([]string{}, keys...)
 	slices.Sort(sorted)
 	return sorted
+}
+
+// retireProbedPipelines drops what the last role's create_pipeline call made, so
+// each role's records file on the one pipeline the seed made.
+func retireProbedPipelines(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	if _, err := e.Owner.Exec(t.Context(), `UPDATE pipeline SET archived_at = now() WHERE NOT is_default AND archived_at IS NULL`); err != nil {
+		t.Fatalf("retiring the probed pipelines: %v", err)
+	}
 }

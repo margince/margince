@@ -188,7 +188,8 @@ func auditImage(f Form) map[string]any {
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
 		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, "field_map": f.FieldMap,
 		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
-		colPrivacyNotice: f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
+		colConsentWording: f.ConsentWording,
+		colPrivacyNotice:  f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
 		colRedirectURL: f.RedirectURL, "state": f.State,
 	}
 }

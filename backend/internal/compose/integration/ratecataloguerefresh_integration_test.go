@@ -255,10 +255,8 @@ func TestSyncPricesRefusesAPrincipalWithoutTheSheet(t *testing.T) {
 	}
 }
 
-// The route is human-only in the contract, the generated policy table and the
-// handler. This drives the first two: an agent's bearer is refused before the
-// handler runs, so the refusal cannot depend on the handler being wired.
-func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
+// A read-only passport is refused before the handler runs.
+func TestRefreshAiModelRatesRefusesAReadOnlyAgentOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var minted struct {
@@ -276,8 +274,8 @@ func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
 	}
 	status := e.Call(t, "POST", "/v1/ai-model-rates/refresh", nil, bearer, &problem)
 
-	if status != http.StatusForbidden || problem.Code != "permission_denied" {
-		t.Errorf("agent POST /ai-model-rates/refresh → %d %q, want 403 permission_denied", status, problem.Code)
+	if status != http.StatusForbidden || problem.Code != "scope_exceeds_grantor" {
+		t.Errorf("a read-only agent POST /ai-model-rates/refresh → %d %q, want 403 scope_exceeds_grantor", status, problem.Code)
 	}
 }
 

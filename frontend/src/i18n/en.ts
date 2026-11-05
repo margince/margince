@@ -12574,6 +12574,8 @@ export const en = {
     "Paused because the list it watches or adds to was archived. Restoring the list does not resume it.",
   "auto.pausedReason.listInvalid":
     "Paused because the filter of the Live List it watches stopped working. Fixing the filter does not resume it.",
+  "auto.pausedReason.passportRevoked":
+    "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it to keep it running with no agent behind it.",
   "auto.pausedReason.listUnavailable":
     "Paused because its owner can no longer find the list it watches.",
   "auto.pausedReason.burst":
@@ -12620,6 +12622,7 @@ export const en = {
   "auto.action.addToShortlist": "add to a Shortlist",
   "auto.pausedShort.listArchived": "Paused · list archived",
   "auto.pausedShort.listInvalid": "Paused · list filter broken",
+  "auto.pausedShort.passportRevoked": "Paused · agent’s passport revoked",
   "auto.pausedShort.listUnavailable": "Paused · list not found",
   "auto.pausedShort.burst": "Paused · too many records",
   "auto.withheld": "Configured automations are hidden for your role.",
@@ -18733,6 +18736,8 @@ export const en = {
     "Nothing to rerun. This run was stopped on purpose, not by an error.",
   "worklist.verb.retryRefusedRepeats":
     "This rule is not allowed to run twice, so a rerun could repeat its actions.",
+  "worklist.verb.retryRefusedPassportRevoked":
+    "The agent that set this rule up had its passport revoked, so the rule is paused. Resume it to keep it running with no agent behind it.",
   "worklist.verb.retryRefusedEventGone":
     "The triggering event no longer exists, so this cannot be rerun. Scheduled rules check again automatically.",
   "worklist.verb.acknowledgeFailed": "Item was not marked as seen. Retry.",

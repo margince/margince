@@ -192,6 +192,10 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 // record one check saw change, so it fans out first.
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
 	if rule, ok := h.(listRule); ok {
+		// Before the fan-out, so a check that moved no records still stops the rule.
+		if stop, err := e.stopIfSetterRevoked(ctx, ev); stop || err != nil {
+			return err
+		}
 		return e.fireListRule(ctx, rule, ev, version)
 	}
 	return e.runOne(ctx, h, ev)
