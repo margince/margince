@@ -18,6 +18,7 @@ import { useT } from "../i18n";
 import {
   type ActivityDraft,
   activityRequestBody,
+  canHaveTranscript,
   draftHoldsWork,
   draftSaysSomething,
   freshDraft,
@@ -115,7 +116,7 @@ export function LogActivityForm({
   const asksAttendees = KINDS_WITH_A_CONTACT.has(draft.kind);
   const needsAttendee = entityType === "company" && asksAttendees;
   // The same test activityRequestBody sends source_system on.
-  const transcript = draft.kind === "meeting" && draft.asTranscript;
+  const transcript = canHaveTranscript(draft.kind) && draft.asTranscript;
   const banded = frame !== undefined;
   const recordOf = useRecordOfMeeting(
     entityType,
@@ -352,7 +353,7 @@ export function LogActivityForm({
           />
         )}
       </Field>
-      {draft.kind === "meeting" && (
+      {canHaveTranscript(draft.kind) && (
         <Checkbox
           label={t("log.asTranscript")}
           checked={draft.asTranscript}

@@ -7020,7 +7020,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.kindCall": "Cuộc gọi",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
-    "Dán từ công cụ họp, ví dụ Teams, Zoom hoặc Meet. Nếu có nhãn người nói, nhãn được giữ nguyên.",
+    "Dán bản chép lời cuộc gọi hoặc cuộc họp. Nhãn người nói được giữ nguyên nếu có.",
   "log.recordOfMeeting": "Đây có phải là ghi chép của {subject}, {time} không?",
   "log.recordOfMeetingUntitled": "cuộc họp",
   "log.recordOfMeetingYes": "Có, lưu vào cuộc họp đó và đánh dấu đã diễn ra",

@@ -7185,7 +7185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.kindCall": "Anruf",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
-    "Aus deinem Videokonferenz-Tool einfügen, etwa Teams, Zoom oder Meet. Vorhandene Sprecherangaben bleiben erhalten.",
+    "Füge ein Transkript eines Anrufs oder Termins ein. Vorhandene Sprecherangaben bleiben erhalten.",
   "log.recordOfMeeting": "Ist das der Eintrag zu {subject}, {time}?",
   "log.recordOfMeetingUntitled": "dem Termin",
   "log.recordOfMeetingYes":

@@ -16,6 +16,10 @@ import type { EntityKind } from "./entity";
 // the draft lives in logactivity.tsx; this is the projection alone, so a test
 // can pin the body the server sees without mounting a component.
 
+export function canHaveTranscript(kind: ActivityDraft["kind"]): boolean {
+  return kind === "call" || kind === "meeting";
+}
+
 /** Whether a value the kind picker handed back is a kind the draft holds. */
 export function isActivityKind(value: string): value is ActivityDraft["kind"] {
   return (
@@ -56,12 +60,7 @@ export type ActivityDraft = {
   // A task's callback time, `HH:MM` on the record's clock, "" for none. It
   // means nothing without a day.
   time: string;
-  // A meeting's body is ordinary notes UNLESS this is explicitly checked —
-  // otherwise "discussed pricing, follow up Tuesday" typed while logging a
-  // meeting would silently carry source_system: transcript, which the
-  // backend documents as meaning pasted/uploaded transcript TEXT and which
-  // the activity/transcript retention scope sweeps on a different schedule
-  // than an ordinary meeting note. Meaningless outside kind: meeting.
+  // Transcript text is opt-in because its processing and retention differ from ordinary notes.
   asTranscript: boolean;
   // Who this task is for, "" for nobody. Meaningless outside kind: task — a
   // note or meeting is not held by a colleague — so it only reaches the wire on
@@ -166,14 +165,7 @@ export function activityRequestBody(
   attendees: MeetingAttendees,
 ) {
   const withAttendees = KINDS_WITH_A_CONTACT.has(input.kind);
-  // source_system: transcript is what routes the body through the
-  // server's ADR-0058 normalizer and what the activity/transcript
-  // retention scope keys its sweep on (see backend logActivity's
-  // `transcript` example) — only when the writer has explicitly marked
-  // this text as one (asTranscript), never inferred from kind: meeting
-  // alone, or ordinary meeting notes would carry a marker meaning
-  // something else and sweep on a different retention schedule.
-  const isTranscript = input.kind === "meeting" && input.asTranscript;
+  const isTranscript = canHaveTranscript(input.kind) && input.asTranscript;
   return {
     kind: input.kind,
     ...callAndMeetingFields(input),

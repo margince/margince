@@ -11,7 +11,7 @@ import {
 import { useLogDealFiling } from "./logactivity.dealfiling";
 
 const meta: Meta = {
-  title: "Patterns/Log activity/Deal filing",
+  title: "Patterns/Log activity deal filing",
   parameters: { layout: "padded" },
 };
 export default meta;

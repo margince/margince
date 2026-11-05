@@ -124,3 +124,48 @@ it("files a company call on its selected deal beside attendee contacts", () => {
     skip: false,
   });
 });
+
+describe("a call's transcript marker", () => {
+  it.each([true, false])(
+    "sends a transcript only when opted in: %s",
+    (asTranscript) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-01-10T09:00:00Z"));
+      const raw = "\nAnna: I will send the offer by Friday.\n";
+      const body = activityRequestBody(
+        { ...freshDraft("UTC", "call"), body: raw, asTranscript },
+        "contact",
+        "p1",
+        "UTC",
+        NO_ATTENDEES,
+      );
+      if (asTranscript) {
+        expect(body.source_system).toBe("transcript");
+        expect(body.body).toBe(raw);
+      } else {
+        expect(body).not.toHaveProperty("source_system");
+        expect(body.body).toBe(raw.trim());
+      }
+    },
+  );
+});
+
+it.each(["note", "task"] satisfies ("note" | "task")[])(
+  "drops a carried transcript marker on %s",
+  (kind) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-10T09:00:00Z"));
+    const body = activityRequestBody(
+      {
+        ...freshDraft("UTC", kind),
+        asTranscript: true,
+        body: "Anna: I will send the offer.",
+      },
+      "contact",
+      "p1",
+      "UTC",
+      NO_ATTENDEES,
+    );
+    expect(body).not.toHaveProperty("source_system");
+  },
+);
