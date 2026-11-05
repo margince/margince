@@ -27,8 +27,7 @@ Someone is either a lead or a contact, never both. Open a deal when an existing 
 
 When a new lead carries an email or LinkedIn profile already held by a contact,
 Margince creates no lead. It opens the contact when you enter the lead by hand.
-An automatic request is filed on the contact. Its owner gets a task to review
-it.
+An automatic request is filed on the contact. Its owner gets a task to review it.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
