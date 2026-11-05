@@ -3774,6 +3774,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.routeIn.bandBadge.unknown": "Đã có liên hệ, chưa rõ nhịp liên lạc",
   "record.context": "Ngữ cảnh",
   "standing.title": "Tình hình · {date}",
+  "standing.noteMore": "Xem thêm",
+  "standing.noteLess": "Thu gọn",
   "standing.sources.records": "Từ dữ liệu CRM",
   "standing.sources.model_one": "Margince · {count} nguồn",
   "standing.sources.model_other": "Margince · {count} nguồn",
