@@ -61,10 +61,11 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		}
 	}
 	seats := roleSeats(t, d.E, roles)
+	listings := operatorListings(t, d, recorded)
 	swept := make([][]sweptCall, len(seats))
 	eachSeat(t, "roles", seats, func(t *testing.T, i int, seat roleSeat) {
 		swept[i] = sweepSeat(t, seat, recorded, calls, elsewhere)
-	})
+	}, listings...)
 	if t.Failed() {
 		return
 	}
@@ -115,6 +116,9 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	if string(committed) != string(rendered) {
 		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity", toolRolesFile)
 	}
+	// The listing reads the checks this binary embeds, which the sweep above
+	// held to what it measured.
+	t.Run("cells", func(t *testing.T) { holdCellsAreOffered(t, d, toolRoleUser) })
 }
 
 // extensionRoleFile holds the verbs that need a composed extension unit. They

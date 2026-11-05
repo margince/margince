@@ -58,14 +58,21 @@ func signedInAs(t *testing.T, admin *apptest.AppEnv, email string) *apptest.AppE
 	return seat
 }
 
-// eachSeat runs pass once per seat at the same time, and waits for all.
-func eachSeat(t *testing.T, name string, seats []roleSeat, pass func(t *testing.T, i int, seat roleSeat)) {
+// eachSeat runs pass once per seat, and each of beside, at the same time, and
+// waits for all.
+func eachSeat(t *testing.T, name string, seats []roleSeat, pass func(t *testing.T, i int, seat roleSeat), beside ...listingPass) {
 	t.Helper()
 	t.Run(name, func(t *testing.T) {
 		for i, seat := range seats {
 			t.Run(seat.role.Key, func(t *testing.T) {
 				t.Parallel()
 				pass(t, i, seat)
+			})
+		}
+		for _, other := range beside {
+			t.Run(other.name, func(t *testing.T) {
+				t.Parallel()
+				other.run(t)
 			})
 		}
 	})

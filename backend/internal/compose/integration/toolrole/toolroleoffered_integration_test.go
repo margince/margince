@@ -21,14 +21,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// A passport is offered a tool or action when, and only when, the gate admits
-// its user to it. The roles are an operator's own. One is a copy of rep that
-// may create tags and may not update deals. One lacks two checks only some
-// paths of a tool ask: a company create, and the installation settings read.
-// The last member holds rep and ops, whose grants merge to the widest.
-func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
-	recorded := newToolCheckRecorder()
-	d := toolRoleApp(t, "tool-role-listing", compose.WithToolChecksRecordedForTest(recorded.note))
+// listingPass is one operator's holding of roles, checked against the gate.
+type listingPass struct {
+	name string
+	run  func(t *testing.T)
+}
+
+// operatorListings hold that a passport is offered a tool or action when, and
+// only when, the gate admits its user to it. They run on the matrix sweep's
+// app beside its roles. The roles are an operator's own. One is a copy of rep
+// that may create tags and may not update deals. One lacks two checks only
+// some paths of a tool ask: a company create, and the installation settings
+// read. The last member holds rep and ops, whose grants merge to the widest.
+func operatorListings(t *testing.T, d *apptest.TwoDoors, recorded *toolCheckRecorder) []listingPass {
+	t.Helper()
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	calls := toolRoleCalls(specs, routeShapes())
 	calls = append(calls, kindVariants(t, calls, seedableKinds(t, d.E))...)
@@ -47,9 +53,9 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 		emails[i] = fmt.Sprintf("tool-role-listing-%d@fable.test", i)
 		seats[i] = signedInAs(t, d.E, emails[i])
 	}
+	passes := make([]listingPass, len(holdings))
 	for i, holding := range holdings {
-		t.Run(strings.Join(holding, "+"), func(t *testing.T) {
-			t.Parallel()
+		passes[i] = listingPass{name: "listing " + strings.Join(holding, "+"), run: func(t *testing.T) {
 			e, email, human := seats[i], emails[i], apptest.SessionUserID(t, seats[i])
 			// A gate refused the call when the recorder saw it refuse and the
 			// call stopped on it.
@@ -83,8 +89,9 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 				t.Error(disagreement)
 			}
 			holdPathDependentTools(t, clients[0], offered, answers)
-		})
+		}}
 	}
+	return passes
 }
 
 // callHolding makes call as the roles held, and answers its arguments too. A
@@ -137,15 +144,15 @@ func publishedAdminAnswers(t *testing.T) map[string]bool {
 	return out
 }
 
-// A passport on each seeded role is offered the cells the published matrix
-// allows that role. No refused call is offered, and no allowed one is hidden. The matrix and the listing's checks come from one sweep, and this
-// holds the listing the binary serves to both.
-func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
-	d := toolRoleApp(t, "tool-role-cells")
+// holdCellsAreOffered holds that a passport on each seeded role is offered the
+// cells the published matrix allows that role. No refused call is offered, and
+// no allowed one is hidden. It runs on the sweep's app once the sweep is done.
+func holdCellsAreOffered(t *testing.T, d *apptest.TwoDoors, email string) {
+	t.Helper()
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	doc := publishedMatrix(t)
 	for _, role := range doc.Roles {
-		apptest.AssignRoleTo(t, d.E, "tool-role-cells@fable.test", role)
+		apptest.AssignRoleTo(t, d.E, email, role)
 		listed := d.MCP.ListedTools(t)
 		offered := offeredCalls(t, listed, specs)
 		for _, disagreement := range cellDisagreements(role, doc.Rows, specs, offered) {
@@ -155,7 +162,7 @@ func TestToolsListOffersEachSeededRoleItsAllowedCells(t *testing.T) {
 			t.Errorf("%s: %s", role, named)
 		}
 	}
-	apptest.AssignRoleTo(t, d.E, "tool-role-cells@fable.test", "admin")
+	apptest.AssignRoleTo(t, d.E, email, "admin")
 }
 
 // cellDisagreements names each published row the listing offers role while
