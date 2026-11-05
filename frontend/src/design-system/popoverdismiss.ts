@@ -5,7 +5,7 @@ import { type RefObject, useEffect } from "react";
 import { coveredByDialog } from "./dialogfocus";
 
 /**
- * Escape, or a press outside both the panel and its anchor, closes the panel,
+ * Escape, or a press outside the panel and its anchor, closes the panel,
  * unless a dialog raised over it owns the key or the press.
  *
  * Shared by `Popover` and `usePeek`, which close the same way.

@@ -353,7 +353,7 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
 });
 
 // A list with nothing to count, or still loading, keeps no empty line under
-// its tabs: the sheet hides an empty count, and an empty count is what draws.
+// its tabs. The sheet hides an empty count, and an empty count is what draws.
 it("draws no count line while there is nothing to count", () => {
   const { container, rerender } = render(
     <ListSurface

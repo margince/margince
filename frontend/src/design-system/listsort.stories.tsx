@@ -11,8 +11,8 @@ import type { SortOption } from "./listsurface.dials";
 import { ListViewMenu } from "./listviewmenu";
 import "./listtable.css";
 
-// The Sort step of a list's View panel: one order at a time, the one in force
-// marked with its direction, and the server's own order last.
+// The Sort step of a list's View panel holds one order at a time. The one in
+// force shows its direction, and the server's own order comes last.
 
 const OPTIONS: readonly SortOption[] = [
   { field: "name", label: "Name" },

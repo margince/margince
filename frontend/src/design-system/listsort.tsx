@@ -41,7 +41,7 @@ export function SortStep({
   );
 }
 
-/** The order in force, in words: a sort also arrives from a saved view, a
+/** The order in force, in words. A sort also arrives from a saved view, a
  * header or an address, so the row names it without being opened. */
 export function sortSummary(
   sort: SortControl,

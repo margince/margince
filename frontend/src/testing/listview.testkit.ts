@@ -6,7 +6,7 @@ import type { UserEvent } from "@testing-library/user-event";
 import { catalogs, type Locale } from "../i18n";
 import { labelled, viewMenuName } from "./listview.names";
 
-// A list's dials are all behind its View button, so a test reaches a dial the
+// A list's dials are all behind its View button. A test reaches a dial the
 // way a reader does: View, then the dial's row, then the step it opens.
 
 /** A `userEvent.setup()` instance, or `userEvent` itself. */

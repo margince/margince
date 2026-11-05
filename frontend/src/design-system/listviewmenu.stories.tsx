@@ -113,7 +113,7 @@ function Surface({
   );
 }
 
-// Two filters apply and the list has left its view: View counts them and
+// Two filters apply and the list has left its view. View counts them and
 // carries the dot, and the filters stand in one row under the search.
 export const AppliedAndChanged: Story = {
   render: () => (

@@ -42,8 +42,8 @@ export function FilterStep({
   // rows leaves focus where the panel put it.
   const stepped = useRef(false);
 
-  // A step takes the focused control with it: going in, focus goes to the way
-  // back; coming back, to the search the attribute was chosen from.
+  // Going in, focus moves to the way back. Coming back, it returns to the
+  // search the attribute was chosen from.
   useEffect(() => {
     if (!stepped.current) {
       return;
@@ -56,8 +56,8 @@ export function FilterStep({
     wrap.current?.querySelector<HTMLButtonElement>(".lt-mback")?.focus();
   }, [attributeKey]);
 
-  // An applied filter stands as its own row under the search (FilterRow), and
-  // is changed there, so this step offers only the attributes not yet applied.
+  // An applied filter is its own row under the search (FilterRow) and changes
+  // there. So this step offers only the attributes not yet applied.
   const addable = chips.filter((chip) => !chosen[chip.key]);
   const attribute = addable.find((chip) => chip.key === attributeKey);
   const words = searchWords(query);

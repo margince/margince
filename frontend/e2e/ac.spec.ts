@@ -587,6 +587,15 @@ test("features/10 §7: Tab closes the language list and carries on", async ({
   await expect(page.locator("body")).not.toBeFocused();
 });
 
+/** Board or Table is a choice in the deals list's View panel. */
+async function showDealsAsTable(page: Page) {
+  await page.getByRole("button", { name: viewMenuName("de") }).click();
+  await page
+    .getByRole("dialog", { name: viewMenuName("de") })
+    .getByRole("button", { name: de["deals.viewTable"], exact: true })
+    .click();
+}
+
 test("AC-pipeline-7: board↔table swaps views preserving the deal set", async ({
   page,
 }) => {
@@ -620,7 +629,7 @@ test("AC-pipeline-7: board↔table swaps views preserving the deal set", async (
   const boardLink = boardCard.getByRole("link", { name: /Fleet retrofit/ });
   await expect(boardLink).toHaveAttribute("href", /#\/deals\/d-fleet/);
   await expect(boardCard).toContainText("Fleet retrofit");
-  await page.getByRole("button", { name: "Tabelle" }).click();
+  await showDealsAsTable(page);
   // The board is gone, so its card locator is the proof the view swapped
   // rather than drew both at once.
   await expect(boardCard).toHaveCount(0);
@@ -1013,7 +1022,7 @@ test("AC-pipeline-11: both views name a deal's owner", async ({ page }) => {
   await mark.click();
   await expect(page).toHaveURL(/#\/deals\/d-fleet$/);
   await page.goto("/#/deals");
-  await page.getByRole("button", { name: "Tabelle" }).click();
+  await showDealsAsTable(page);
   const row = page.getByRole("row", { name: /Fleet retrofit/ });
   await expect(row.getByRole("cell", { name: "Lena Fischer" })).toBeVisible();
 });
@@ -2276,8 +2285,8 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "brief — the command palette open");
   });
 
-  // The View panel is a popover on a desktop and a full-screen sheet at 390px;
-  // the closed toolbar sweeps only its button, never what it opens.
+  // The View panel is a popover on a desktop and a full-screen sheet at 390px.
+  // The closed toolbar sweeps only its button, never what it opens.
   const VIEW_SIZES = [
     { name: "desktop", width: 1280, height: 800 },
     { name: "390px", width: 390, height: 844 },
@@ -2285,7 +2294,9 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   for (const screen of ["contacts", "companies", "deals", "leads"]) {
     for (const size of VIEW_SIZES) {
       for (const step of [null, "sort", "filters"]) {
-        const opened = step ? `the View panel's ${step} step open` : "the View panel open";
+        const opened = step
+          ? `the View panel's ${step} step open`
+          : "the View panel open";
         test(`no AA violations on #/${screen} with ${opened} at ${size.name}`, async ({
           page,
         }) => {

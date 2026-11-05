@@ -143,8 +143,8 @@ export function ListSurface({
 }>) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   useCloseOnOutsideClick(() => setOpenMenu(null));
-  // The View panel and its phone sheet each close on Escape and hand focus
-  // back themselves; a second handler here would land focus inside the sheet.
+  // The View panel and its phone sheet close on Escape and hand focus back
+  // themselves. A second handler here would land focus inside the sheet.
   useCloseOnEscape(openMenu === VIEW_MENU ? null : openMenu, () =>
     setOpenMenu(null),
   );

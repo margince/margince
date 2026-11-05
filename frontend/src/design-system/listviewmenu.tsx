@@ -191,8 +191,8 @@ export function ViewStep({
 }
 
 /**
- * Tab past the panel's last control leaves the popover open over a page the
- * reader has moved on to, so focus landing outside it closes it.
+ * Tab past the panel's last control would leave the popover open over a page
+ * the reader has left. So focus landing outside it closes it.
  */
 function useCloseOnFocusOut(
   open: boolean,
@@ -256,7 +256,7 @@ function ArchivedRow({
 
 /**
  * The trigger's face. The count and the dot are drawn for the eye and said in
- * one hidden line, so the name reads "View, 2 filters, changed" in one piece.
+ * one hidden line. So the name reads "View, 2 filters, changed" in one piece.
  */
 function ViewLabel({
   filterCount,

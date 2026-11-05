@@ -180,8 +180,8 @@ function SaveViewButton({
   );
 }
 
-/** Save view only for a narrowed list, since the default is the All tab; and
- * the named failure of the views read, since an empty rail would claim none. */
+/** Save view only for a narrowed list, since the default is the All tab. A
+ * failed views read shows its error, since an empty rail would claim none. */
 export function SaveViewAction({
   resource,
   query,

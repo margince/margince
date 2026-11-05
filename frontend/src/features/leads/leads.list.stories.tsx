@@ -15,7 +15,7 @@ import { LeadsScreen } from "./leads.list";
 
 type Lead = components["schemas"]["Lead"];
 
-// Which leads a reader opens on follows the role, so a manager and a rep are
+// Which leads a reader opens on follows the role. So a manager and a rep are
 // separate stories with their own `/me`, not one story with a control pressed.
 
 function lead(overrides: Partial<Lead> = {}): Lead {
