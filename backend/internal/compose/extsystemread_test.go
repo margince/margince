@@ -162,6 +162,7 @@ func TestTheBootRefusesASystemReadNoGroupNames(t *testing.T) {
 	}
 	every := []extension.SystemRead{
 		extension.SystemReadDeals, extension.SystemReadAuthority, extension.SystemReadDirectory, extension.SystemReadActivities,
+		extension.SystemReadSetAside,
 	}
 	if err := preflightSystemReads(extension.Extension{Name: "dealmirror", SystemReads: every}); err != nil {
 		t.Errorf("the boot refused every published read: %v", err)
