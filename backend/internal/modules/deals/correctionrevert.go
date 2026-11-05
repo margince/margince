@@ -48,7 +48,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // CorrectionReversalError refuses an undo that cannot be made.
@@ -58,12 +57,10 @@ import (
 // (somebody got there first), and a field a contact has since edited (their work
 // would be overwritten). Both are 409s about the state of a record rather than
 // anything malformed in the request.
-//
-// MovedSince marks the refusal of a stage reversal whose deal moved again
-// after Margince's move. It holds the whole deal, where the others hold one
-// change.
 type CorrectionReversalError struct {
-	Reason     string
+	Reason string
+	// MovedSince marks a stage reversal whose deal moved again after
+	// Margince's move. It holds the whole deal; the others hold one change.
 	MovedSince bool
 }
 
@@ -123,53 +120,6 @@ func (s *Store) RevertCorrectionConfirmed(
 		return err
 	})
 	return out, err
-}
-
-// revertCorrectionTx takes one correction back in the caller's transaction and
-// answers the correction it reversed.
-func (s *Store) revertCorrectionTx(
-	ctx context.Context, tx pgx.Tx, correctionID ids.UUID, ifVersion *int64, evidence map[string]any,
-	active []fieldcatalog.Column, archiveConfirmedFor string,
-) (DealCorrection, error) {
-	// AUTHORITY BEFORE ANY CONFLICT, the module's rule everywhere. The row
-	// is located and locked first because the deal it belongs to is not
-	// known until then — but nothing about its STATE reaches a caller before
-	// the probe: an already-reversed correction on a deal somebody may not
-	// see would otherwise answer "already taken back" where it owes a 404,
-	// and the shape of the refusal would tell them the deal exists.
-	correction, err := lockCorrection(ctx, tx, correctionID)
-	if err != nil {
-		return correction, err
-	}
-	// The deal row lock comes after the correction lock, the order
-	// restoreCorrectedFields already takes, and before the write check.
-	if _, err := storekit.LockRow(ctx, tx, dealTable, correction.DealID.UUID, storekit.LiveOnly); err != nil {
-		return correction, err
-	}
-	if err := auth.EnsureWritable(ctx, tx, dealTable, correction.DealID.UUID); err != nil {
-		return correction, err
-	}
-	if correction.Reversed() {
-		return correction, &CorrectionReversalError{Reason: alreadyTakenBack}
-	}
-	// Under the correction lock, so an Accept and an Undo of one change
-	// cannot both land, whichever route the Undo came through.
-	if correction.AcceptedAt != nil {
-		return correction, &CorrectionReversalError{Reason: AlreadyAccepted}
-	}
-	switch correction.Correction {
-	case CloseLostCorrection:
-		err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, closeMovedSince)
-	case VerdictStageMoveCorrection:
-		err = s.revertStageCorrection(ctx, tx, correction, ifVersion, evidence, active, stageMoveMovedSince)
-	case DealReviveCorrection:
-		err = s.revertDealRevive(ctx, tx, correction, ifVersion, evidence, active, archiveConfirmedFor)
-	case DealOpenCorrection:
-		err = s.revertDealOpen(ctx, tx, correction, ifVersion, archiveConfirmedFor)
-	default:
-		err = s.restoreCorrectedFields(ctx, tx, correction, ifVersion, evidence)
-	}
-	return correction, err
 }
 
 // restoreCorrectedFields puts the deal back and stamps the correction, in the

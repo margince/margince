@@ -2121,6 +2121,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "home.receipt.dateUnconfirmed":
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
   "home.receipt.undated": "Kein Datum",
+  "home.receipt.verdictDate": "Abschlussdatum laut Kunde: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Rückgängig gemacht: Abschlussdatum wieder {before} (zuvor {after})",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
   "home.receipt.forecast": "Abschlusschance geändert",
   "home.task.yours": "Deine Aufgabe: {action}",

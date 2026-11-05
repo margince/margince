@@ -366,7 +366,7 @@ func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T
 }
 
 // bundleLane moves the deal a stage on, then lowers its probability and sets
-// its close date, all citing the note: three changes on one deal in one night.
+// its close date. All three cite the note.
 type bundleLane struct {
 	move *stageMoveLane
 	date string

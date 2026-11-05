@@ -22,20 +22,23 @@ const maxQuotedAmount = 1_000_000_000_000
 const jsSafeMax = 1<<53 - 1
 
 var (
-	quotedNumber   = regexp.MustCompile(`\d{1,3}(?:[.,\x{00a0} ]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?`)
-	quotedCode     = regexp.MustCompile(`\b[A-Z]{3}\b`)
-	currencySymbol = map[string]string{"€": "EUR", "$": "USD", "£": "GBP", "¥": "JPY"}
+	quotedNumber = regexp.MustCompile(`\d{1,3}(?:[.,\x{00a0} ]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?`)
+	quotedCode   = regexp.MustCompile(`\b[A-Z]{3}\b`)
+	// quotedCodeAtEnd and quotedCodeAtStart find a code touching a number.
+	quotedCodeAtEnd   = regexp.MustCompile(`\b[A-Z]{3}$`)
+	quotedCodeAtStart = regexp.MustCompile(`^[A-Z]{3}\b`)
+	currencySymbol    = map[string]string{"€": "EUR", "$": "USD", "£": "GBP", "¥": "JPY"}
 )
 
 // quotedPrice is the one price a quote states, in exact minor units, and its
-// currency. It reports false when the quote holds no number, more than one,
-// or no currency.
+// currency. It reports false when the quote holds no number, or no currency,
+// or more than one currency. It also reports false for several numbers unless
+// only one of them has its currency written next to it.
 func quotedPrice(quote string) (int64, string, bool) {
-	numbers := quotedNumber.FindAllStringIndex(quote, -1)
-	if len(numbers) != 1 {
+	start, end, ok := priceNumber(quote)
+	if !ok {
 		return 0, "", false
 	}
-	start, end := numbers[0][0], numbers[0][1]
 	decimal := plainDecimal(quote[start:end])
 	rest := quote[end:]
 	if strings.HasPrefix(strings.ToLower(rest), "k") {
@@ -51,6 +54,41 @@ func quotedPrice(quote string) (int64, string, bool) {
 		return 0, "", false
 	}
 	return minor, currency, true
+}
+
+// priceNumber is where the price's number stands in the quote. That is its
+// only number, or of several the one a currency touches: "60,000 USD for 2027".
+func priceNumber(quote string) (int, int, bool) {
+	numbers := quotedNumber.FindAllStringIndex(quote, -1)
+	if len(numbers) == 1 {
+		return numbers[0][0], numbers[0][1], true
+	}
+	var priced [][]int
+	for _, number := range numbers {
+		if touchesCurrency(quote[:number[0]], quote[number[1]:]) {
+			priced = append(priced, number)
+		}
+	}
+	if len(priced) != 1 {
+		return 0, 0, false
+	}
+	return priced[0][0], priced[0][1], true
+}
+
+// touchesCurrency reports whether a currency is written right before or right
+// after a number, spaces and a thousands "k" aside.
+func touchesCurrency(before, after string) bool {
+	before = strings.TrimRight(before, " \u00a0")
+	after = strings.TrimLeft(after, " \u00a0")
+	if strings.HasPrefix(strings.ToLower(after), "k") {
+		after = strings.TrimLeft(after[1:], " \u00a0")
+	}
+	for symbol := range currencySymbol {
+		if strings.HasSuffix(before, symbol) || strings.HasPrefix(after, symbol) {
+			return true
+		}
+	}
+	return quotedCodeAtEnd.MatchString(before) || quotedCodeAtStart.MatchString(after)
 }
 
 // plainDecimal turns 50,000 / 50.000 / 50 000 / 49,999.50 / 49.999,50 into a

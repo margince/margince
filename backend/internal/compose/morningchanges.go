@@ -33,8 +33,7 @@ const morningChangeLines = 5
 const morningChangeWindow = 24 * time.Hour
 
 // morningChangesSince is where "last night" starts: when the reader's previous
-// morning went out, so a change after that mail is counted however long ago it
-// was sent.
+// morning went out. A change after that mail is counted, however old the mail.
 func morningChangesSince(previous *time.Time, now time.Time) time.Time {
 	if previous == nil {
 		return now.Add(-morningChangeWindow)

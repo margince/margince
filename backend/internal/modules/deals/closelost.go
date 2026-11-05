@@ -39,7 +39,7 @@ const DealCloseLostKind = "deal_close_lost"
 // decided approval does not.
 func IsCorrectionReceiptKind(kind string) bool {
 	switch kind {
-	case CloseDateCorrectionKind, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
+	case CloseDateCorrectionKind, VerdictCloseDateCorrection, DealCloseLostKind, VerdictAmountCorrection, VerdictProbabilityCorrection,
 		DealStageMoveKind, DealOpenKind, DealReviveKind:
 		return true
 	}

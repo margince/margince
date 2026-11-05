@@ -231,6 +231,39 @@ func TestAQuoteIsReadWithEitherSeparator(t *testing.T) {
 	}
 }
 
+func TestAQuoteWithSeveralNumbersNamesThePriceByItsCurrency(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		quote    string
+		minor    int64
+		currency string
+	}{
+		{"60,000 USD for 2027", 6_000_000, "USD"},
+		{"for 2027 we budget USD 60,000", 6_000_000, "USD"},
+		{"60.000 EUR für 2027", 6_000_000, "EUR"},
+		{"1.234.567,89 EUR ab 2027", 123_456_789, "EUR"},
+		{"1,234,567.89 EUR from 2027", 123_456_789, "EUR"},
+		{"€ 60.000 für 12 Monate", 6_000_000, "EUR"},
+		{"3 years at 60k USD", 6_000_000, "USD"},
+	} {
+		minor, currency, ok := quotedPrice(tc.quote)
+		if !ok || minor != tc.minor || currency != tc.currency {
+			t.Errorf("quotedPrice(%q) = %d %s %v, want %d %s", tc.quote, minor, currency, ok, tc.minor, tc.currency)
+		}
+	}
+	for _, quote := range []string{
+		"60,000 USD in 2027 and 70,000 USD in 2028",
+		"60,000 USD or 55,000 EUR",
+		"60,000 for 2027, billed in USD",
+		"2027 USD 60,000",
+		"60,000 USD for 2027, paid in EUR",
+	} {
+		if minor, currency, ok := quotedPrice(quote); ok {
+			t.Errorf("quotedPrice(%q) = %d %s; want none", quote, minor, currency)
+		}
+	}
+}
+
 // A sender dates their mail; the server dates its arrival. A colleague's edit
 // made after the mail arrived wins, whatever date the mail carries.
 func TestAColleaguesEditOutranksAMailThatArrivedBeforeIt(t *testing.T) {

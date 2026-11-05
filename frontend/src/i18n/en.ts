@@ -2032,6 +2032,10 @@ export const en = {
   "home.receipt.dateUnconfirmed":
     "Estimated close date: {before} → {after} (needs confirmation)",
   "home.receipt.undated": "No date",
+  "home.receipt.verdictDate":
+    "Close date from what the customer said: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Undone: close date back to {before} (was {after})",
   "home.receipt.confidence": "Updated forecast confidence",
   "home.receipt.forecast": "Probability changed",
   "home.task.yours": "Your task: {action}",
