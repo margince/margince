@@ -240,7 +240,7 @@ func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T)
 }
 
 // A deal seat says whether its deal is still open and whether the seat itself
-// has ended, so the composer offers only a deal a follow-up can rest on.
+// has ended. The composer then offers only a deal a follow-up can rest on.
 func TestADealSeatSaysWhetherItsDealIsOpen(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)

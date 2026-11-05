@@ -47,9 +47,10 @@ export function composedLinks(
 }
 
 /**
- * What a new message is about, from whichever page it was opened on: the deal
- * and project the rep chose, and on the account path the contact the draft is
- * for, which only that path picks. A reply has none of its own, because its thread already files it.
+ * What a new message is about, from whichever page it was opened on. That is
+ * the deal and project the rep chose. On the account path it is also the
+ * contact the draft is for, which only that path picks. A reply has none of
+ * its own, because its thread already files it.
  *
  * A chosen deal travels only from a composer that shows it: the account's
  * filing pick and the contact's deal pick. Elsewhere a deal kept by a draft

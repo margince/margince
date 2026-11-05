@@ -4,8 +4,8 @@
 package activities
 
 // What a queued message does when its recipient changes the answer before it
-// is due: a stop holds marketing at once, and a reply pauses a follow-up until
-// the rep has read it. The fire path still re-asks the engine when the message
+// is due. A stop holds marketing at once. A reply pauses a follow-up until the
+// rep has read it. The fire path still re-asks the engine when the message
 // comes due; these hold it earlier, and nothing here sends.
 
 import (
@@ -110,8 +110,8 @@ func stopCovers(purposeKey, marketing, legacy string) bool {
 // follow-up or a quote to them was scheduled.
 //
 // Only an authenticated inbound mail counts, so a forged sender cannot pause a
-// message, and mail a sending system sent (an auto-reply, a bulk mailing) is
-// not a person writing. Its time is when it reached us: the provider's arrival
+// message. Mail a sending system sent (an auto-reply, a bulk mailing) is not a
+// person writing. Its time is when it reached us: the provider's arrival
 // time, or the capture time, never the Date header the sender wrote. A
 // scheduled reply listens on its own thread; a new message has no thread yet,
 // so any new mail from a recipient counts.

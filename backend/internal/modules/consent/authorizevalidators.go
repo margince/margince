@@ -174,8 +174,8 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 // is not.
 //
 // A message filed under a deal names that deal even when no evidence field
-// repeats it, so the refusal says what is missing instead of asking for a deal
-// the message already carries. The links were probed for visibility before
+// repeats it. The refusal then says what is missing, instead of asking for a
+// deal the message already carries. The links were probed for visibility before
 // the gate, and the outcome is unchanged: resolveCategory asked the same links.
 func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	deals := req.Links

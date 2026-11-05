@@ -5,9 +5,9 @@
 
 package integration
 
-// What a queued message does when its recipient answers before it is due: a
-// stop holds marketing at once, and a reply pauses a deal follow-up until the
-// rep has read it. Both go through the real scheduling door, the real fire
+// What a queued message does when its recipient answers before it is due. A
+// stop holds marketing at once. A reply pauses a deal follow-up until the rep
+// has read it. Both go through the real scheduling door, the real fire
 // path and the real consumer.
 
 import (
@@ -150,8 +150,8 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 }
 
 // An address the stopped contact no longer holds is not theirs. After it moved
-// to another contact, a stop on the first holds nothing sent to it, and a stop
-// on the contact who holds it now does.
+// to another contact, a stop on the first holds nothing sent to it. A stop on
+// the contact who holds it now does.
 //
 // Mutation: drop `ce.archived_at IS NULL` from PendingMarketingToContact, and
 // the first stop holds the message.

@@ -12,9 +12,9 @@ import type { EditSeed } from "./schedulededit";
 
 // Which deal a message to a contact is about.
 //
-// An Active deal reason is proved by a deal, so a contact's composer offers
-// the contact's open deals beside it and files the message under the one the
-// rep chose. The preview and the send carry the same links, because the
+// An Active deal reason is proved by a deal. A contact's composer offers the
+// contact's open deals beside it, and files the message under the one the rep
+// chose. The preview and the send carry the same links, because the
 // engine reads the deal from them. These tests assert the request bodies.
 
 const DEAL_PICK = "Deal this follow-up is about";

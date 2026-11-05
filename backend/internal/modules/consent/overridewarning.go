@@ -64,8 +64,8 @@ const overrideWarningTextV1 = "The engine refused this message, and that refusal
 	"alone — the next one to the same recipient is judged from scratch."
 
 // overrideWarnings is every version this build has served, with its words. A
-// version is added and never edited or removed, so a record naming any of them
-// can be read back with what its director was shown. Only the current one is
+// version is added and never edited or removed. A record naming any of them
+// can then be read back with what its director was shown. Only the current one is
 // accepted for a new instruction (servedWarningVersion).
 var overrideWarnings = map[string]string{
 	"override-v1":          overrideWarningTextV1,

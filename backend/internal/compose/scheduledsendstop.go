@@ -6,7 +6,7 @@ package compose
 // The cg:scheduled-send-stop consumer: a stop holds the contact's queued
 // marketing at once, instead of when each message comes due.
 //
-// It lives here because the question crosses two modules: consent owns the
+// It lives here because the question crosses two modules. Consent owns the
 // stop and its event, activities owns the queued message, and neither imports
 // the other.
 //

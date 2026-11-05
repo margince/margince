@@ -100,8 +100,8 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
 /**
  * The reason the record already carries for every recipient, when the claimed
  * one refuses them all. The engine names alternatives only for a recipient it
- * refuses, and a switch changes the reason for the whole message, so a send
- * with an allowed recipient is offered none. An answer still out, or one that
+ * refuses. A switch changes the reason for the whole message, so a send with
+ * an allowed recipient is offered none. An answer still out, or one that
  * failed, offers none either.
  */
 export function alternativeReasonOf(permission: {

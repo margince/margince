@@ -295,8 +295,8 @@ func (w *scheduledSendWorker) holdScope(wsCtx context.Context, scheduler ids.UUI
 	return holdScopeFor(wsCtx, scheduler)
 }
 
-// holdScopeFor is holdScope for any hold the system makes on a rep's message,
-// so the card it raises names the same rep whichever path held it.
+// holdScopeFor is holdScope for any hold the system makes on a rep's message.
+// The card it raises then names the same rep, whichever path held it.
 func holdScopeFor(wsCtx context.Context, scheduler ids.UUID) context.Context {
 	ctx := sendWorkerScope(wsCtx)
 	actor, ok := principal.Actor(ctx)

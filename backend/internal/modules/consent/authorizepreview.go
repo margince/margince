@@ -115,8 +115,8 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 	return set, nil
 }
 
-// switchableClaims are the reasons a sender may switch to in one press: the
-// ones that rest on what the contact asked for, which the record can show.
+// switchableClaims are the reasons a sender may switch to in one press. Each
+// rests on what the contact asked for, which the record can show.
 var switchableClaims = []commsauthz.Category{
 	commsauthz.CategoryRequestedFollowup,
 	commsauthz.CategoryActiveDealFollowup,

@@ -76,7 +76,7 @@ func TestThePreviewMarksTheAddressTheSendWouldFile(t *testing.T) {
 	}
 }
 
-// The reasons the record would carry travel with the refused recipient, and an
+// The reasons the record would carry travel with the refused recipient. An
 // answer with none leaves the field out rather than sending an empty list.
 func TestThePreviewCarriesTheSupportedAlternatives(t *testing.T) {
 	t.Parallel()

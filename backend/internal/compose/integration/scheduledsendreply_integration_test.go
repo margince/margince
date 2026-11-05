@@ -87,9 +87,9 @@ func (p *preflightEnv) mailboxCtx(t *testing.T) context.Context {
 
 // A mailing is not a person writing, so it pauses nothing.
 //
-// Mutation: drop the pursuitPausedByReply call, and the plain reply is sent;
-// compare the Date header instead of the arrival, and the backdated and the
-// future-dated cases flip; drop the bulk test, and the mailing pauses.
+// Mutation: drop the pursuitPausedByReply call, and the plain reply is sent.
+// Compare the Date header instead of the arrival, and the backdated and the
+// future-dated cases flip. Drop the bulk test, and the mailing pauses.
 func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 	dealClaim := AnyMap{"communication_context": "active_deal_followup"}
 	// Each mail is written relative to the moment just after the message was

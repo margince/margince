@@ -521,9 +521,9 @@ func TestAnInternallyCreatedDealIsNoPermission(t *testing.T) {
 	}
 }
 
-// A deal claim on a message filed under the deal reads that deal, so the rep
-// is told the request is missing and not asked to choose a deal the message
-// already carries. The outcome stays the links' own: still not supported.
+// A deal claim on a message filed under the deal reads that deal. The rep is
+// told the request is missing, not asked to choose a deal the message already
+// carries. The outcome stays the links' own: still not supported.
 //
 // Mutation: make validateDealFollowup read only Evidence.DealID again, and the
 // filed case answers no_evidence.

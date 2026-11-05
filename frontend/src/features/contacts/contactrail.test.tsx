@@ -786,7 +786,7 @@ describe("the consent rail's transport row", () => {
   it("stays unanswered when no correspondence purpose is defined", async () => {
     mount(reachable, marketingOnly);
 
-    // Scoped to the row: the phone row reads "Nothing recorded yet" too the moment a
+    // Scoped to the row. The phone row reads "Nothing recorded yet" too once a
     // fixture gains a number, and a column-wide match would pass on it.
     const mail = (await screen.findByText("Business mail")).closest(
       ".factlist-row",

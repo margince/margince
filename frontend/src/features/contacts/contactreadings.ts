@@ -41,10 +41,10 @@ const STOP_REASONS: ReadonlySet<GuardEntry["reason_code"]> = new Set([
   "suppressed",
 ]);
 
-// What an allowed answer has on record, by the reason the engine gave. The
-// reason, not the purpose class: a marketing purpose allowed on the
-// existing-customer route has no marketing permission on file, and saying so
-// would claim a consent nobody gave.
+// What an allowed answer has on record, by the reason the engine gave. It is
+// keyed by reason, not purpose class. A marketing purpose allowed on the
+// existing-customer route has no marketing permission on file. Saying so would
+// claim a consent nobody gave.
 const ALLOWED_FACT: Partial<Record<GuardEntry["reason_code"], MessageKey>> = {
   consent_confirmed: "contact.consent.fact.marketingPermission",
   existing_customer: "contact.consent.fact.existingCustomer",
@@ -54,12 +54,12 @@ const ALLOWED_FACT: Partial<Record<GuardEntry["reason_code"], MessageKey>> = {
 };
 
 /**
- * The fact a contact's record holds for one purpose, in words that cannot be
- * read as permission for every message: "Recent business contact recorded",
- * not "Allowed". Each message is still checked on its own when it is sent.
+ * The fact a contact's record holds for one purpose. The words cannot be read
+ * as permission for every message: "Recent business contact recorded", not
+ * "Allowed". Each message is still checked on its own when it is sent.
  *
- * A reason off a newer server falls to the plain answer for its verdict, so a
- * gap never reads as a recorded stop or a recorded grant.
+ * A reason off a newer server falls to the plain answer for its verdict. A gap
+ * then never reads as a recorded stop or a recorded grant.
  */
 export function scopedConsentWord(
   entry: Pick<GuardEntry, "verdict" | "purpose_class" | "reason_code">,
