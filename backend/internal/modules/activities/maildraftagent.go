@@ -46,16 +46,16 @@ func (s *Store) SaveAgentMailDraft(
 	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalAgent {
 		return MailDraft{}, fmt.Errorf("an agent's draft from a %s caller: %w", actor.Type, apperrors.ErrPermissionDenied)
 	}
-	content = canonicalDraft(content)
-	if err := validateDraft(anchor, content); err != nil {
-		return MailDraft{}, err
-	}
 	for _, ground := range grounding {
 		if checkDraftAnchor(ground) != nil {
 			return MailDraft{}, &InvalidMailDraftError{Field: "grounding", Reason: "names a record a draft cannot be written from"}
 		}
 	}
 	author, err := draftAuthor(ctx)
+	if err != nil {
+		return MailDraft{}, err
+	}
+	content, files, err := s.prepareDraft(ctx, anchor, content)
 	if err != nil {
 		return MailDraft{}, err
 	}
@@ -67,7 +67,11 @@ func (s *Store) SaveAgentMailDraft(
 		out, err = upsertAgentMailDraft(ctx, tx, author, anchor, groundedContent{content: content, grounding: grounding})
 		return err
 	})
-	return out, err
+	if err != nil {
+		return MailDraft{}, err
+	}
+	out.Files = files
+	return out, nil
 }
 
 // groundedContent is what an agent leaves: its words and what they were written from.
@@ -78,23 +82,29 @@ type groundedContent struct {
 
 func upsertAgentMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor MailDraftAnchor, draft groundedContent) (MailDraft, error) {
 	content := draft.content
+	at, tz := draftScheduleColumns(content.Schedule)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := fmt.Sprintf(`
 		INSERT INTO mail_draft (id, author_id, anchor_type, anchor_id, to_addresses, cc_addresses,
-		                        bcc_addresses, subject, body, html_body, agent_drafted, grounding)
-		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, true, $%d::jsonb)
+		                        bcc_addresses, subject, body, html_body, agent_drafted, grounding,
+		                        attachment_ids, communication_context, scheduled_at, scheduled_tz)
+		VALUES ($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, true, $%d::jsonb, $%d, $%d, $%d, $%d)
 		ON CONFLICT (author_id, anchor_type, anchor_id) DO UPDATE
 		   SET to_addresses = EXCLUDED.to_addresses, cc_addresses = EXCLUDED.cc_addresses,
 		       bcc_addresses = EXCLUDED.bcc_addresses, subject = EXCLUDED.subject,
 		       body = EXCLUDED.body, html_body = EXCLUDED.html_body, grounding = EXCLUDED.grounding,
+		       attachment_ids = EXCLUDED.attachment_ids,
+		       communication_context = EXCLUDED.communication_context,
+		       scheduled_at = EXCLUDED.scheduled_at, scheduled_tz = EXCLUDED.scheduled_tz,
 		       version = mail_draft.version + 1, updated_at = now()
 		 WHERE mail_draft.agent_drafted
 		RETURNING `+mailDraftColumns,
 		arg(ids.NewV7()), arg(author), arg(string(anchor.Type)), arg(anchor.ID),
 		arg(addressLine(content.To)), arg(addressLine(content.Cc)), arg(addressLine(content.Bcc)),
 		arg(content.Subject), arg(content.Body), arg(nullableText(content.HTMLBody)),
-		arg(groundingColumn(draft.grounding)))
+		arg(groundingColumn(draft.grounding)), arg(content.AttachmentIDs),
+		arg(nullableText(string(content.Context))), arg(at), arg(tz))
 	row := tx.QueryRow(ctx, query, args...)
 	saved, err := scanMailDraft(row)
 	if errors.Is(err, apperrors.ErrNotFound) {
