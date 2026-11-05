@@ -81,21 +81,13 @@ jobs:
           flavor: plain
       # The gate binaries are NOT covered by the Go caches: setup-go caches
       # ~/go/pkg/mod and ~/.cache/go-build, not the tools installed into ~/go/bin.
-      # cache-warm.yml shipped without these three steps and failed every run on
-      # "golangci-lint not found" before compiling anything, which is the one thing
-      # it existed to do. Same lane, same requirement, so the same three steps.
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Without them `make check-backend` fails on "golangci-lint not found"
+      # before it compiles anything.
+      - name: Gate binaries on PATH
+        uses: ./.github/actions/gate-binaries
         with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          # A dispatch from another branch would save an entry only it can read.
+          save: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && 'true' || 'false' }}
       - name: Backend merge gate (make check-backend)
         working-directory: .
         env:
