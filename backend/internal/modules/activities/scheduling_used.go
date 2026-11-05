@@ -68,24 +68,31 @@ func stampBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, at t
 	if err != nil || used != nil {
 		return err == nil, err
 	}
-	args = schedulingArgs{}
+	return true, writeBookingPageUseTx(ctx, tx, page, at, policy != nil && policy.Enabled)
+}
+
+// writeBookingPageUseTx sets a page's first use, with its audit row and event.
+func writeBookingPageUseTx(ctx context.Context, tx pgx.Tx, page ids.UUID, at time.Time, enabled bool) error {
+	args := schedulingArgs{}
 	if _, err := tx.Exec(ctx, `UPDATE booking_page SET first_used_at=`+args.add(at)+` WHERE id=`+args.add(page), args...); err != nil {
-		return true, err
+		return err
 	}
 	audit, err := storekit.Audit(ctx, tx, "update", "booking_page", page, bookingPageUse{}, bookingPageUse{FirstUsedAt: &at})
 	if err != nil {
-		return true, err
+		return err
 	}
-	return true, storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: policy != nil && policy.Enabled})
+	return storekit.EmitEvent(ctx, tx, audit, page, crmcontracts.InternalEventBookingPageUpdated{Enabled: enabled})
 }
 
 // carryBookingPageUseTx copies the host's first use onto their new page, so
 // replacing a leaked link does not make a used page look unused.
-func carryBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID) error {
+func carryBookingPageUseTx(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID, enabled bool) error {
 	args := schedulingArgs{}
-	_, err := tx.Exec(ctx, `UPDATE booking_page SET first_used_at=(SELECT min(first_used_at) FROM booking_page WHERE host_user_id=`+
-		args.add(host)+`) WHERE id=`+args.add(page), args...)
-	return err
+	var used *time.Time
+	if err := tx.QueryRow(ctx, `SELECT min(first_used_at) FROM booking_page WHERE host_user_id=`+args.add(host), args...).Scan(&used); err != nil || used == nil {
+		return err
+	}
+	return writeBookingPageUseTx(ctx, tx, page, *used, enabled)
 }
 
 // BookingPageConcern answers the acting host's paused booking page, and false

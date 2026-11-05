@@ -116,7 +116,7 @@ func TestTwoRacingHandoversLeaveAWebhookWithTheFirstSuccessor(t *testing.T) {
 	firstDone := make(chan error, 1)
 	go func() {
 		firstDone <- e.DB().Tx(admin, func(tx pgx.Tx) error {
-			if _, err := webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep2)); err != nil {
+			if _, err := webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep2), identity.AdmitMemberHandover); err != nil {
 				return err
 			}
 			close(firstMoved)
@@ -130,7 +130,7 @@ func TestTwoRacingHandoversLeaveAWebhookWithTheFirstSuccessor(t *testing.T) {
 	go func() {
 		secondDone <- e.DB().Tx(admin, func(tx pgx.Tx) error {
 			var err error
-			secondMoved, err = webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep3))
+			secondMoved, err = webhooks.TransferSubscriptionOwnershipTx(admin, tx, from, ids.From[ids.UserKind](e.Rep3), identity.AdmitMemberHandover)
 			return err
 		})
 	}()

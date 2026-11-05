@@ -21,10 +21,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
+// errDealFilingUnconfigured is a store built without its resolver.
+var errDealFilingUnconfigured = errors.New("activity deal filing resolver is not configured")
+
 // DealFilingResolver answers from the deals module which deal an activity's
 // records may file on, in the caller's transaction.
 type DealFilingResolver interface {
 	CompaniesOfRecords(ctx context.Context, tx pgx.Tx, records []ActivityLinkInput) ([]ids.UUID, error)
+	IsOpenDealOfRecords(ctx context.Context, tx pgx.Tx, records []ActivityLinkInput, deal ids.UUID) (bool, error)
 	Resolve(ctx context.Context, tx pgx.Tx, records []ActivityLinkInput) (crmcontracts.ActivityDealFilingOptions, error)
 }
 
@@ -57,7 +61,7 @@ func (s *Store) DealFilingOptions(ctx context.Context, ref crmcontracts.Activity
 		return out, err
 	}
 	if s.dealFilingResolver == nil {
-		return out, errors.New("activity deal filing resolver is not configured")
+		return out, errDealFilingUnconfigured
 	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -99,11 +103,15 @@ func validateDealFiling(kind string, filing *crmcontracts.ActivityDealFiling) er
 }
 
 // applyLoggedDealFiling links a logged call or held meeting to the deal the
-// caller chose or the one open deal its records stand on. An import, and an
-// activity already on a deal, project or lead, stays as it came.
+// caller chose or the one open deal its records stand on. An import nobody
+// named a filing for, and an activity already on a deal, project or lead, stays
+// as it came. A filing named on a meeting not held is refused.
 func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
 	if err := validateDealFiling(in.Kind, in.DealFiling); err != nil {
 		return err
+	}
+	if in.DealFiling != nil && !meetingHeldOrUnset(in) {
+		return httperr.Validation("deal_filing", "meeting_not_held", "A meeting is filed on a deal once it is held. Link the deal directly until then.")
 	}
 	if !dealFilingApplies(ctx, in) {
 		return nil
@@ -115,8 +123,7 @@ func applyLoggedDealFiling(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 		return nil
 	}
 	if in.DealFiling != nil && in.DealFiling.DealId != nil {
-		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*in.DealFiling.DealId)})
-		return nil
+		return fileOnChosenDeal(ctx, tx, in)
 	}
 	if in.DealFiling != nil && in.DealFiling.Skip != nil && *in.DealFiling.Skip {
 		return nil
@@ -130,10 +137,34 @@ func dealFilingApplies(ctx context.Context, in *LogActivityInput) bool {
 		return false
 	}
 	imported, _ := storekit.ImportMark(ctx)
-	if (imported != nil && *imported) || (in.SourceSystem != nil && strings.HasPrefix(*in.SourceSystem, provenance.ReservedSourceSystemPrefix)) {
+	if in.DealFiling == nil && ((imported != nil && *imported) || (in.SourceSystem != nil && strings.HasPrefix(*in.SourceSystem, provenance.ReservedSourceSystemPrefix))) {
 		return false
 	}
+	return meetingHeldOrUnset(in)
+}
+
+// meetingHeldOrUnset is false only for a meeting that states it was not held.
+func meetingHeldOrUnset(in *LogActivityInput) bool {
 	return in.Kind != KindMeeting || in.MeetingStatus == nil || *in.MeetingStatus == string(crmcontracts.ActivityMeetingStatusHeld)
+}
+
+// fileOnChosenDeal links the deal the caller chose, which must be an open deal
+// of the filing's record.
+func fileOnChosenDeal(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	if in.dealFilingResolver == nil {
+		return errDealFilingUnconfigured
+	}
+	chosen := ids.UUID(*in.DealFiling.DealId)
+	record := []ActivityLinkInput{{EntityType: string(in.DealFiling.RecordType), EntityID: ids.UUID(in.DealFiling.RecordId)}}
+	open, err := in.dealFilingResolver.IsOpenDealOfRecords(ctx, tx, record, chosen)
+	if err != nil {
+		return err
+	}
+	if !open {
+		return httperr.Validation("deal_filing", "unrelated_deal", "Choose an open deal of this record's company, or choose none.")
+	}
+	in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: chosen})
+	return nil
 }
 
 // linksFileTheActivity is true when a link already gives the activity a home.
@@ -148,7 +179,7 @@ func linksFileTheActivity(links []ActivityLinkInput) bool {
 func fileOnResolvedDeal(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
 	if in.dealFilingResolver == nil {
 		if in.DealFiling != nil {
-			return errors.New("activity deal filing resolver is not configured")
+			return errDealFilingUnconfigured
 		}
 		return nil
 	}
@@ -166,7 +197,9 @@ func fileOnResolvedDeal(ctx context.Context, tx pgx.Tx, in *LogActivityInput) er
 		}
 		return nil
 	}
-	if options.SuggestedDealId != nil {
+	// An automatic link never spends the caller's link allowance: a request
+	// already at the ceiling stays unfiled rather than refused.
+	if options.SuggestedDealId != nil && len(in.Links) < maxActivityLinks {
 		in.Links = append(slices.Clone(in.Links), ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.UUID(*options.SuggestedDealId)})
 	}
 	return nil

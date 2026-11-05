@@ -4407,6 +4407,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.field.lost_reason": "Lý do thua",
   "approval.field.note": "Ghi chú",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
+  "approval.kind.stage_progression": "Chuyển giai đoạn deal",
   "approval.kind.commitment_task": "Cam kết công việc",
   "approval.kind.fx_rate_proposal": "Cập nhật tỷ giá",
   "approval.kind.disqualify_lead": "Loại lead",

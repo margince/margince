@@ -57,6 +57,16 @@ func (f ActivityDealFiling) Resolve(ctx context.Context, tx pgx.Tx, records []ac
 	return out, nil
 }
 
+// IsOpenDealOfRecords answers whether deal is an open deal of a company the
+// records stand on.
+func (f ActivityDealFiling) IsOpenDealOfRecords(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput, deal ids.UUID) (bool, error) {
+	companies, err := f.CompaniesOfRecords(ctx, tx, records)
+	if err != nil || len(companies) == 0 {
+		return false, err
+	}
+	return f.deals.IsOpenDealOfCompanies(ctx, tx, deal, companies)
+}
+
 // CompaniesOfRecords answers the companies the contacts and companies stand on,
 // after the caller's read gate on each record.
 func (f ActivityDealFiling) CompaniesOfRecords(ctx context.Context, tx pgx.Tx, records []activities.ActivityLinkInput) ([]ids.UUID, error) {

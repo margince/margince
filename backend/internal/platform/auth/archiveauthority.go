@@ -152,6 +152,16 @@ func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []id
 	return ownedArchivable(ctx, tx, r, candidates)
 }
 
+// OwnedArchivableSubset answers EnsureArchivable's rule for a caller without
+// delete, over a page in one statement. It asks no seat or row write gate, so
+// a caller needs to have asked those already.
+func OwnedArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	if !Allows(ctx, r.object, principal.ActionUpdate) {
+		return map[ids.UUID]bool{}, nil
+	}
+	return ownedArchivable(ctx, tx, r, rowIDs)
+}
+
 func ownedArchivable(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {

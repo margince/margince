@@ -18,6 +18,7 @@ func retiredStageCardsDataTask() datatask.Task {
 			Name: "expire_retired_stage_cards", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: approvals.EstimateRetiredStageCards, Batch: approvals.ExpireRetiredStageCardsTx,
+			EmptyWhenDone: true,
 		}},
 	}
 }
