@@ -335,7 +335,7 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 }
 
 // The owner leaves, or loses the deal grant, after Margince bound itself as
-// their agent and before it writes: the write binds them again and refuses.
+// their agent. The write binds them again and refuses.
 func TestAnOwnerWhoLeavesBeforeTheWriteGetsNoChange(t *testing.T) {
 	for name, revoke := range map[string]string{
 		"deactivated":  `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,

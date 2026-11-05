@@ -13,25 +13,50 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auditattribution"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // probabilitySettersSQL reads, per named deal, the member behind the newest
-// audit row that wrote its probability. That is the human who typed it, or the
-// human an agent acted for. A write of the source alone counts: a colleague who
-// confirms Margince's value changes only the source.
+// audit row that chose its probability: who typed it, or whom an agent acted
+// for. An Undo puts back the choice from before the correction it reverses, so
+// its row names whoever made that choice. An archived seat names nobody.
 var probabilitySettersSQL = fmt.Sprintf(`
-	SELECT named.id, COALESCE(actor_user.id, obo.id), COALESCE(actor_user.display_name, obo.display_name)
+	SELECT named.id, setter.id, setter.display_name
 	  FROM unnest($1::uuid[]) AS named(id)
 	  CROSS JOIN LATERAL (
-	    SELECT w.actor_type, w.actor_id, w.on_behalf_of FROM audit_log w
-	     WHERE w.entity_type = 'deal' AND w.entity_id = named.id AND w.after ?| array['%s', '%s']
-	     ORDER BY w.occurred_at DESC, w.id DESC LIMIT 1) a`+auditattribution.ActorNameJoins,
-	winProbabilityOverrideColumn, winProbabilitySetByColumn)
+	    SELECT n.actor_type, n.actor_id, n.on_behalf_of, n.evidence->>'%[1]s' AS reverses FROM audit_log n
+	     WHERE %[2]s ORDER BY n.occurred_at DESC, n.id DESC LIMIT 1) newest
+	  CROSS JOIN LATERAL (
+	    SELECT newest.actor_type, newest.actor_id, newest.on_behalf_of WHERE newest.reverses IS NULL
+	    UNION ALL
+	    (SELECT w.actor_type, w.actor_id, w.on_behalf_of
+	       FROM deal_correction c JOIN audit_log taken ON taken.id = c.audit_log_id
+	       JOIN audit_log w ON %[3]s AND w.evidence->>'%[1]s' IS NULL AND w.occurred_at < taken.occurred_at
+	      WHERE c.id::text = newest.reverses
+	      ORDER BY w.occurred_at DESC, w.id DESC LIMIT 1)) a`+auditattribution.ActorNameJoins+`
+	  JOIN app_user setter ON setter.id = COALESCE(actor_user.id, obo.id) AND %[4]s`,
+	reversesCorrectionEvidenceKey, choseProbabilitySQL("n"), choseProbabilitySQL("w"), workforce.NamedSeatSQL("setter"))
+
+// choseProbabilitySQL is an audit row on the named deal that left a
+// probability a colleague set. It wrote the source as human, or changed only the
+// value. A colleague who confirms Margince's value writes the source alone; a
+// write that clears the probability chooses nothing. alias is a literal.
+func choseProbabilitySQL(alias string) string {
+	return fmt.Sprintf(`%[1]s.entity_type = 'deal' AND %[1]s.entity_id = named.id
+	 AND %[1]s.after ?| array['%[2]s', '%[3]s']
+	 AND CASE WHEN %[1]s.after ? '%[3]s' THEN %[1]s.after->>'%[3]s' = '%[4]s'
+	          ELSE %[1]s.after->>'%[2]s' IS NOT NULL END`,
+		alias, winProbabilityOverrideColumn, winProbabilitySetByColumn, SourceHuman)
+}
 
 // stampProbabilitySetters names who set each deal's own probability where a
-// colleague set it. A deal that follows its stage, or whose probability
-// Margince set, names nobody.
+// colleague set it, for a reader auditattribution.ReaderMayKnowWhoActed
+// admits. A deal that follows its stage, or whose probability Margince set,
+// names nobody.
 func stampProbabilitySetters(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
+	if !auditattribution.ReaderMayKnowWhoActed(ctx) {
+		return nil
+	}
 	var named []ids.UUID
 	for i := range deals {
 		source := deals[i].WinProbabilitySource

@@ -87,3 +87,47 @@ func TestADealNamesTheColleagueWhoSetItsProbability(t *testing.T) {
 		t.Fatalf("a deal back on its stage's probability names %s as the setter, want nobody", id)
 	}
 }
+
+func TestOnlyAHumanReaderIsToldWhoSetTheProbability(t *testing.T) {
+	e := setupConfigEnv(t)
+	deal, _, _ := seedOwnedDeal(t, e)
+	colleagueCtx, colleague := e.asColleague(t)
+	set := 70
+	if _, err := e.store.UpdateDeal(colleagueCtx, deal, UpdateDealInput{WinProbability: &set}); err != nil {
+		t.Fatalf("the colleague setting the probability: %v", err)
+	}
+	agent := principal.WithActor(e.asDealWriter(), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:" + ids.NewV7().String(), UserID: e.admin, OnBehalfOf: e.admin,
+		Scopes: principal.ScopeSet{principal.ScopeRead: struct{}{}},
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll,
+			Objects: map[string]principal.ObjectGrant{"deal": {Read: true}},
+		},
+	})
+	read, err := e.store.GetDeal(agent, deal, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("the agent reading the deal: %v", err)
+	}
+	if read.WinProbabilitySetByUserId != nil || read.WinProbabilitySetByName != nil {
+		t.Fatalf("an agent reader is told %v (%v) set the probability, want nobody named", read.WinProbabilitySetByUserId, read.WinProbabilitySetByName)
+	}
+	if id, _ := setterOf(t, e, deal); id != colleague.String() {
+		t.Fatalf("the human reader is told %q set it, want the colleague %s", id, colleague)
+	}
+}
+
+func TestAnArchivedSetterIsNotNamed(t *testing.T) {
+	e := setupConfigEnv(t)
+	deal, _, _ := seedOwnedDeal(t, e)
+	colleagueCtx, colleague := e.asColleague(t)
+	set := 70
+	if _, err := e.store.UpdateDeal(colleagueCtx, deal, UpdateDealInput{WinProbability: &set}); err != nil {
+		t.Fatalf("the colleague setting the probability: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, colleague); err != nil {
+		t.Fatalf("archiving the colleague: %v", err)
+	}
+	if id, name := setterOf(t, e, deal); id != "" || name != "" {
+		t.Fatalf("an archived setter reads %q (%s), want nobody named", name, id)
+	}
+}
