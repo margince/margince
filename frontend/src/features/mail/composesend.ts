@@ -68,7 +68,7 @@ export function refusalOf(error: unknown): Refusal {
  * `chosen` is null on a reply, whose links belong to its thread.
  */
 export function composedLinks(
-  anchor: { entityType: RelinkKind; entityId: string },
+  anchor: { entityType: RelinkKind; entityId: string; dealId?: string },
   chosen: Grounding | null,
   // The derived filing when the rep chose nothing. Empty means no project.
   derivedProjectId = "",
@@ -85,6 +85,7 @@ export function composedLinks(
     }
     links.push({ entity_type: kind, entity_id: id });
   };
+  add("deal", anchor.dealId ?? "");
   if (!chosen) {
     // An anchored send: the record it started from, plus the filing it states.
     add("project", derivedProjectId);
@@ -272,6 +273,7 @@ export function useComposeSend({
   answering,
   entityType,
   entityId,
+  dealId,
   fields,
   files,
   carriageBlocked,
@@ -287,6 +289,7 @@ export function useComposeSend({
   answering: string | undefined;
   entityType: RelinkKind;
   entityId: string;
+  dealId?: string;
   fields: ComposeFields;
   files: readonly ChosenFile[];
   carriageBlocked: boolean;
@@ -327,7 +330,11 @@ export function useComposeSend({
         return;
       }
       savedDraft.sent();
-      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+      const changed = [
+        ...entityTimelineKeys(entityType, entityId),
+        ...(dealId ? entityTimelineKeys("deal", dealId) : []),
+      ];
+      for (const queryKey of changed) {
         queryClient.invalidateQueries({ queryKey });
       }
       // A scheduled send may need undoing, so the toast opens the queue. An
@@ -367,7 +374,11 @@ export function useComposeSend({
     asksContext: asksWhy(anchorActivity),
   });
   // Spelled once for the send and for the question asked ahead of it.
-  const links = composedLinks({ entityType, entityId }, grounding, projectId);
+  const links = composedLinks(
+    { entityType, entityId, dealId },
+    grounding,
+    projectId,
+  );
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
   const answer = useSendPermission({

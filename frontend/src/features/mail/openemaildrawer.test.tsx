@@ -14,6 +14,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { browserZone } from "../../format/timezone";
+import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
   jsonResponse,
@@ -27,6 +28,7 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 const MESSAGE = "01a05500-0000-7000-8000-0000000000a1";
@@ -337,4 +339,26 @@ describe("the email drawer's verbs", () => {
     );
     expect(messageText("Body")).toContain("Können wir Dienstag kurz sprechen?");
   });
+});
+
+it("books with the sender of an incoming email and carries the message as context", async () => {
+  const user = userEvent.setup();
+  drawer(
+    {
+      ...PRESENTATION,
+      summary: { ...PRESENTATION.summary, direction: "inbound" },
+      from: [{ address: "ana@brandt.example", contact_id: ANA }],
+    },
+    {
+      "GET /me": () =>
+        jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
+    },
+  );
+  await user.click(await screen.findByRole("button", { name: "More actions" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Book a meeting" }),
+  );
+  expect(window.location.hash).toBe(
+    `#/book/contact-${ANA}?activity=${MESSAGE}`,
+  );
 });

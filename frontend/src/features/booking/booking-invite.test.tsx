@@ -21,8 +21,25 @@ import { BookingInviteScreen } from "./booking-invite";
 vi.mock("../mail/compose", () => ({
   ComposeModal: ({
     initialMessage,
-  }: Readonly<{ initialMessage?: { subject: string; body: string } }>) => (
-    <div role="dialog" aria-label="Compose">
+    initialReason,
+    entityType,
+    entityId,
+    initialDealId,
+  }: Readonly<{
+    initialMessage?: { subject: string; body: string };
+    initialReason?: string;
+    entityType?: string;
+    entityId?: string;
+    initialDealId?: string;
+  }>) => (
+    <div
+      role="dialog"
+      aria-label="Compose"
+      data-reason={initialReason}
+      data-entity-type={entityType}
+      data-entity-id={entityId}
+      data-deal-id={initialDealId}
+    >
       {initialMessage?.body}
     </div>
   ),
@@ -42,7 +59,19 @@ function mount(
     primary_email: "nina@brandt.example",
     emails: [{ email: "nina@brandt.example", is_primary: false }],
   },
+  context: {
+    openDealId?: string;
+    replyActivityId?: string;
+    dealId?: string;
+    dealStatus?: string;
+    stakeholder?: boolean;
+    replyContactId?: string;
+  } = {},
 ) {
+  const params = new URLSearchParams();
+  if (context.replyActivityId) params.set("activity", context.replyActivityId);
+  if (context.dealId) params.set("deal", context.dealId);
+  window.location.hash = `#/book/contact-${bookingContact.id}?${params}`;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-09-27T06:00:00Z"));
   const proposals: unknown[] = [];
@@ -75,6 +104,47 @@ function mount(
                 : ["https://www.googleapis.com/auth/calendar.readonly"],
             },
           ],
+        };
+      else if (path.startsWith("/v1/deals/"))
+        body = { id: context.dealId, status: context.dealStatus ?? "open" };
+      else if (path.endsWith("/relationships"))
+        body = {
+          data:
+            context.stakeholder === false
+              ? []
+              : [{ deal_id: context.dealId, contact_id: bookingContact.id }],
+          page: { has_more: false },
+        };
+      else if (path === "/v1/search")
+        body = {
+          data: [{ type: "contact", id: "contact-b", title: "Other buyer" }],
+        };
+      else if (path.endsWith("/360"))
+        body = {
+          contact: bookingContact,
+          sections_omitted: [],
+          commercial: {
+            committee: [],
+            ...(context.openDealId
+              ? {
+                  deal: {
+                    deal_id: context.openDealId,
+                    title: "Open negotiation",
+                  },
+                }
+              : {}),
+          },
+        };
+      else if (path.includes("/activities/"))
+        body = {
+          id: context.replyActivityId,
+          kind: "email",
+          direction: "inbound",
+          email_summary: {
+            counterparty_contact_id:
+              context.replyContactId ?? bookingContact.id,
+          },
+          links: [{ entity_type: "contact", entity_id: bookingContact.id }],
         };
       else if (path.includes("/contacts/"))
         body = { ...bookingContact, ...contactBody };
@@ -368,4 +438,64 @@ it("offers no address when the server names none", async () => {
     }),
   ).toBeTruthy();
   expect(screen.queryByDisplayValue("retired@brandt.example")).toBeNull();
+});
+
+it.each([
+  [{ openDealId: "d-1" }, "active_deal_followup", "contact", bookingContact.id],
+  [{ dealId: "d-2" }, "active_deal_followup", "contact", bookingContact.id],
+  [
+    { replyActivityId: "mail-1" },
+    "requested_followup",
+    "contact",
+    bookingContact.id,
+  ],
+  [{ dealId: "d-2", dealStatus: "lost" }, null, "contact", bookingContact.id],
+  [{ dealId: "d-2", stakeholder: false }, null, "contact", bookingContact.id],
+  [
+    { replyActivityId: "mail-1", replyContactId: "other-contact" },
+    null,
+    "contact",
+    bookingContact.id,
+  ],
+  [{}, null, "contact", bookingContact.id],
+])(
+  "presets the booking composer from %j",
+  async (context, reason, entityType, entityId) => {
+    const user = userEvent.setup();
+    mount(true, 30, () => bookingSlots, bookingHours, {}, context);
+    for (const slot of bookingSlots) {
+      await user.click(
+        await screen.findByRole("button", { name: slotName(slot.start) }),
+      );
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Review email · 2 times" }),
+    );
+    const composer = await screen.findByRole("dialog", { name: "Compose" });
+    expect(composer.getAttribute("data-reason")).toBe(reason);
+    expect(composer.getAttribute("data-entity-type")).toBe(entityType);
+    expect(composer.getAttribute("data-entity-id")).toBe(entityId);
+  },
+);
+
+it("drops the starting deal when the booking contact changes", async () => {
+  const user = userEvent.setup();
+  mount(true, 30, () => bookingSlots, bookingHours, {}, { dealId: "d-2" });
+  await user.type(
+    await screen.findByRole("searchbox", { name: "Who are you meeting?" }),
+    "Other",
+  );
+  await user.click(await screen.findByRole("button", { name: "Other buyer" }));
+  for (const slot of bookingSlots) {
+    await user.click(
+      await screen.findByRole("button", { name: slotName(slot.start) }),
+    );
+  }
+  await user.click(
+    screen.getByRole("button", { name: "Review email · 2 times" }),
+  );
+  const composer = await screen.findByRole("dialog", { name: "Compose" });
+  expect(composer.getAttribute("data-reason")).toBeNull();
+  expect(composer.getAttribute("data-deal-id")).toBeNull();
+  expect(composer.getAttribute("data-entity-id")).toBe("contact-b");
 });

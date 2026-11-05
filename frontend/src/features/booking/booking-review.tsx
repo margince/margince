@@ -25,6 +25,7 @@ import { navigate } from "../../lib/router";
 import { refreshContactMeetings } from "../contacts/contactmeetings.waiting";
 import { ComposeModal } from "../mail/compose";
 import { useBookingIntent } from "./booking-common";
+import { useProposalContext } from "./booking-context";
 import type { BookingMode, BookingSlot } from "./booking-picker";
 
 type Invitation = components["schemas"]["MeetingInvitationRequest"];
@@ -33,6 +34,8 @@ type Proposal = components["schemas"]["MeetingProposalRequest"];
 export type BookingDraft = Readonly<{
   contactId: string;
   contactName?: string;
+  dealId?: string;
+  replyToActivityId?: string;
   attendee: string;
   subject: string;
   location: string;
@@ -205,6 +208,8 @@ export function BookingReview({
               options: mode === "link" ? [] : [...picks],
             }}
             zone={zone}
+            dealId={draft.dealId}
+            replyToActivityId={draft.replyToActivityId}
           />
         )}
         <p className="t-caption">{t(NOTES[mode])}</p>
@@ -338,11 +343,15 @@ function ProposalSend({
   disabled,
   request,
   zone,
+  dealId,
+  replyToActivityId,
 }: Readonly<{
   label: string;
   disabled: boolean;
   request: Proposal;
   zone: string;
+  dealId?: string;
+  replyToActivityId?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -371,11 +380,16 @@ function ProposalSend({
     remedy: t("scheduling.copyFallback"),
   });
   const offered = create.variables ?? request;
+  const { activeDealId, initialReason, contextPending } = useProposalContext(
+    offered.contact_id,
+    dealId,
+    replyToActivityId,
+  );
   return (
     <div className="book-form">
       <Button
         variant="primary"
-        disabled={disabled}
+        disabled={disabled || contextPending}
         pending={create.isPending}
         onClick={() => (current ? setReview(true) : create.mutate(request))}
       >
@@ -398,11 +412,13 @@ function ProposalSend({
         <p className="t-caption">{t("scheduling.linkReplaced")}</p>
       )}
       <ErrorLine error={create.error} />
-      {review && create.data && (
+      {review && create.data && !contextPending && (
         <ComposeModal
           key={create.data.id}
           entityType="contact"
           entityId={offered.contact_id}
+          initialDealId={activeDealId}
+          initialReason={initialReason}
           contactId={offered.contact_id}
           recordAddress={offered.attendee_email}
           initialMessage={{
