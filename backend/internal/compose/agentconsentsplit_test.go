@@ -102,7 +102,7 @@ func TestDirectingARefusedSendAsksFirstAndSpendsSend(t *testing.T) {
 func TestTheActsSecurityKeepsStayClosed(t *testing.T) {
 	closed := map[string]bool{
 		"purgeCaptureExclusion": false, "deleteCorpusDocument": false, "createFilteredExport": false,
-		"updateCaptureSettings": false, "setForecastAssuranceEnforcement": false, "pauseReportingSchedules": false,
+		"updateCaptureSettings": false, "pauseReportingSchedules": false,
 	}
 	for route, pol := range agentPolicies {
 		if _, named := closed[pol.Op]; !named {

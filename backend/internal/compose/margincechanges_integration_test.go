@@ -458,7 +458,7 @@ func TestAChangeKeptForItsOwnReasonKeepsItWhenTheDealIsHeld(t *testing.T) {
 		t.Fatal(err)
 	}
 	var audits []openapi_types.UUID
-	for _, id := range strings.Split(v.WsScalar(t, `SELECT string_agg(audit_log_id::text, ',') FROM deal_correction WHERE deal_id = $1`, v.deal), ",") {
+	for id := range strings.SplitSeq(v.WsScalar(t, `SELECT string_agg(audit_log_id::text, ',') FROM deal_correction WHERE deal_id = $1`, v.deal), ",") {
 		audits = append(audits, openapi_types.UUID(ids.MustParse(id)))
 	}
 	result, err := newMarginceChangeHandlers(v.Pool).undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{

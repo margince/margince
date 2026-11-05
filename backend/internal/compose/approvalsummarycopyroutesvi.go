@@ -269,8 +269,6 @@ var routeVerbsVietnamese = map[string]string{
 	"retry_reporting_execution":          "Chạy lại báo cáo",
 	"start_forecast_assurance_run":       "Bắt đầu kiểm tra dữ liệu dự báo",
 	"resolve_input_check":                "Trả lời phát hiện của bước kiểm tra",
-	"wait_input_check":                   "Ghi ngày khách hàng yêu cầu chờ",
-	"close_lost_input_check":             "Đóng giao dịch thất bại từ bước kiểm tra",
 	"record_forecast_call":               "Ghi nhận nhận định dự báo",
 	"create_forecast_share":              "Chia sẻ dự báo qua liên kết",
 	"revoke_forecast_share":              "Đóng liên kết dự báo",

@@ -48,7 +48,7 @@ export function pillFigure(
 }
 
 // A source that did not load leaves its category short, unless the category
-// kept a `total`: a tail source that fails on a later page leaves the total
+// kept a `total`. A tail source that fails on a later page leaves the total
 // the first page stated, and that total still counts the source's rows.
 function shortOfUnreadRows(
   day: Worklist,

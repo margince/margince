@@ -380,9 +380,9 @@ describe("a follow-up row says why it is there", () => {
   });
 });
 
-// A pinned row shows a pin beside its name. The order alone does not say it:
-// a new pin or a change in the ranking moves the row, and the reader then has
-// to open each row's menu to find which one is pinned.
+// A pinned row shows a pin beside its name. The order alone does not say it.
+// A new pin or a change in the ranking moves the row. The reader would then
+// have to open each row's menu to find which one is pinned.
 describe("a pinned row shows that it is pinned", () => {
   function taskRow(because: WorklistItem["because"]): WorklistItem {
     return {

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 47,
     "resources": 13,
-    "tool_catalog_bytes": 211469,
+    "tool_catalog_bytes": 211445,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 54182,
+    "approx_wire_tokens_total": 54176,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 49397,
+      "description_bytes": 49373,
       "input_schema_bytes": 102801,
       "output_schema_bytes": 47434,
-      "description_plus_input_schema_bytes": 152198
+      "description_plus_input_schema_bytes": 152174
     }
   },
   "tools": {
@@ -2126,7 +2126,7 @@
           "readOnlyHint": false,
           "title": "Work saved reports and the forecast"
         },
-        "description": "Work what the reporting and forecast pages write. draft saves a report's next charts as a draft, or with no report_id creates a new report only its author sees. The others create, update, publish, discard, restore or archive a report, set targets, the framework and schedules, freeze an edition, retry a run, define and launch a sales initiative, make a forecast call, answer an input check and share a forecast by link. record_decision records a decision from a sales review on its deal, with an owner and a review date; record_decision_outcome closes it. A draft is refused on a report that already has one. publish_draft, discard_draft, restore_revision, archive_report, publish_framework, launch_initiative and close_lost_input_check change what colleagues see: ask the user first. Use read_reports to read reports and their metric catalog, run_research for the sales review's assessment or a report set up from a description, and change_state move_deal to move a deal. Keep the report id and draft_revision to preview the draft with read_reports. (Runs immediately; the actions archive_report, discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Work what the reporting and forecast pages write. draft saves a report's next charts as a draft, or with no report_id creates a new report only its author sees. The others create, update, publish, discard, restore or archive a report, set targets, the framework and schedules, freeze an edition, retry a run, define and launch a sales initiative, make a forecast call, answer an input check and share a forecast by link. record_decision records a decision from a sales review on its deal, with an owner and a review date; record_decision_outcome closes it. A draft is refused on a report that already has one. publish_draft, discard_draft, restore_revision, archive_report, publish_framework and launch_initiative change what colleagues see: ask the user first. Use read_reports to read reports and their metric catalog, run_research for the sales review's assessment or a report set up from a description, and change_state move_deal to move a deal. Keep the report id and draft_revision to preview the draft with read_reports. (Runs immediately; the actions archive_report, discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision cannot be undone, so tell the user what the call will change and get their yes before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {

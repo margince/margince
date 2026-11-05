@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 13 |
 | Tool catalog | 206.5 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54182 |
+| Approx. wire tokens | 54176 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -75,7 +75,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 628 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 494 |
-| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1261 |
+| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1255 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 770 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1873 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
@@ -2619,14 +2619,14 @@ discard, restore or archive a report, set targets, the framework and schedules, 
 retry a run, define and launch a sales initiative, make a forecast call, answer an input check and
 share a forecast by link. record_decision records a decision from a sales review on its deal, with
 an owner and a review date; record_decision_outcome closes it. A draft is refused on a report that
-already has one. publish_draft, discard_draft, restore_revision, archive_report, publish_framework,
-launch_initiative and close_lost_input_check change what colleagues see: ask the user first. Use
-read_reports to read reports and their metric catalog, run_research for the sales review's
-assessment or a report set up from a description, and change_state move_deal to move a deal. Keep
-the report id and draft_revision to preview the draft with read_reports. (Runs immediately; the
-actions archive_report, discard_draft, launch_initiative, publish_draft, publish_framework,
-restore_revision cannot be undone, so tell the user what the call will change and get their yes
-before calling, unless they asked for this call themselves; requires passport scope "write".)
+already has one. publish_draft, discard_draft, restore_revision, archive_report, publish_framework
+and launch_initiative change what colleagues see: ask the user first. Use read_reports to read
+reports and their metric catalog, run_research for the sales review's assessment or a report set up
+from a description, and change_state move_deal to move a deal. Keep the report id and draft_revision
+to preview the draft with read_reports. (Runs immediately; the actions archive_report,
+discard_draft, launch_initiative, publish_draft, publish_framework, restore_revision cannot be
+undone, so tell the user what the call will change and get their yes before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>

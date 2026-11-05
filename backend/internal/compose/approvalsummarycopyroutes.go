@@ -279,8 +279,6 @@ var routeVerbsGerman = map[string]string{
 	"retry_reporting_execution":          "Berichtslauf wiederholen",
 	"start_forecast_assurance_run":       "Eingabeprüfung der Prognose starten",
 	"resolve_input_check":                "Befund der Eingabeprüfung beantworten",
-	"wait_input_check":                   "Kundentermin für eine Prüfung festhalten",
-	"close_lost_input_check":             "Deal aus einer Prüfung als verloren schließen",
 	"record_forecast_call":               "Prognoseeinschätzung erfassen",
 	"create_forecast_share":              "Prognose per Link teilen",
 	"revoke_forecast_share":              "Prognose-Link schließen",

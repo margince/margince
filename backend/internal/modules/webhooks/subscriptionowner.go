@@ -23,7 +23,7 @@ import (
 
 // OwnerAdmission admits the caller to make next the owner a subscription runs
 // as. A delivery reaches whatever its owner may see, so naming an owner is
-// acting for them: it takes the authority over that member a handover takes.
+// acting for them. It takes the authority over that member a handover takes.
 type OwnerAdmission func(ctx context.Context, tx pgx.Tx, next ids.UserID) error
 
 // WithOwnerAdmission wires the member-administration check an owner change
@@ -75,9 +75,9 @@ func OwnedLiveSubscriptionsTx(ctx context.Context, tx pgx.Tx, owner ids.UserID) 
 	return n, err
 }
 
-// TransferSubscriptionOwnershipTx moves every live subscription from owns to
-// to, each through the same patch and audit an edit of its owner writes, and
-// answers how many moved. Archived subscriptions stay where they are. The
+// TransferSubscriptionOwnershipTx moves every live subscription from `from` to
+// `to` and answers how many moved. Each goes through the patch and audit an
+// edit of its owner writes. Archived subscriptions stay where they are. The
 // caller runs it inside a handover, which already admitted them for both
 // members.
 func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID) (int, error) {
@@ -107,9 +107,9 @@ func TransferSubscriptionOwnershipTx(ctx context.Context, tx pgx.Tx, from, to id
 }
 
 // reassignSubscription moves one subscription from from to to, and reports
-// whether it did. The owner is judged again under the row lock: a handover
+// whether it did. The owner is judged again under the row lock. A handover
 // that got there first has moved it already, and this one leaves it with that
-// successor rather than overwriting them.
+// successor.
 func reassignSubscription(ctx context.Context, tx pgx.Tx, id ids.UUID, from, to ids.UserID) (bool, error) {
 	lock, err := storekit.LockRow(ctx, tx, "webhook_subscription", id, storekit.LiveOnly)
 	if errors.Is(err, apperrors.ErrNotFound) {
