@@ -122,7 +122,7 @@ func newOutboundClient(provider string) *http.Client {
 	if !ok {
 		// A process that wrapped the default (a test's recorder, a tracing
 		// shim) still gets net/http's own settings, never the wrapper.
-		base = defaultTransport()
+		base = netHTTPDefault
 	}
 	transport := base.Clone()
 	transport.DialContext = (&net.Dialer{
@@ -210,15 +210,15 @@ func effectivePort(u *url.URL) string {
 	return "80"
 }
 
-// defaultTransport is net/http's DefaultTransport as the standard library
-// builds it, for a process whose DefaultTransport was replaced.
-func defaultTransport() *http.Transport {
-	return &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: time.Second,
+// netHTTPDefault is net/http's DefaultTransport as the process began with it,
+// read before any code could replace it.
+var netHTTPDefault = startingDefaultTransport()
+
+func startingDefaultTransport() *http.Transport {
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		//craft:ignore panic-in-domain package initialisation, before any code can replace net/http's own default
+		panic("crmai: net/http's DefaultTransport is not a *http.Transport at start-up")
 	}
+	return transport.Clone()
 }

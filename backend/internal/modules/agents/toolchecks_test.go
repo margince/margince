@@ -143,6 +143,24 @@ func TestAToolIsHiddenOnlyByAMeasuredCheck(t *testing.T) {
 	}
 }
 
+// A scheduled run chooses among what its caller may invoke. A check that hides
+// a tool from the listing never stops a run before its first step.
+func TestARunMayChooseAToolTheListingHides(t *testing.T) {
+	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	measured := targetSpec("measured", principal.ScopeWrite, mcp.TierAutoExecute)
+	measured.Unlisted = false
+	r.Register(&argsTool{spec: measured})
+	r.required = map[string][]auth.Check{"measured": dealCheck(t, "deal.update")}
+
+	ctx := grantedCtx(principal.SeatFull)
+	if _, ok := offeredByName(ctx, r)["measured"]; ok {
+		t.Fatal("measured is listed, and the caller lacks deal.update, so this proves nothing")
+	}
+	if !slices.ContainsFunc(r.Runnable(ctx), func(spec mcp.ToolSpec) bool { return spec.Name == "measured" }) {
+		t.Error("a run may not choose measured, which the gate decides when it is called")
+	}
+}
+
 func TestAReadSeatIsOfferedOnlyReadTools(t *testing.T) {
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
 	write := targetSpec("writes", principal.ScopeWrite, mcp.TierAutoExecute)
@@ -173,38 +191,62 @@ func TestASelfDescribingToolIsOfferedWithoutItsChecks(t *testing.T) {
 	}
 }
 
-// A router narrowed to the caller's actions names no hidden one anywhere in
-// its schema. The argument only a hidden action takes is gone. The united
-// enum, bound note and route enum come from the kept actions. The retry key
-// the surface added stays.
+// A router narrowed to the caller's actions names no hidden one where it is
+// listed: copy, route field wording, schema or result shape. The argument only
+// a hidden action takes is gone. The kept action's argument and the retry key
+// stay. No other tool's description points at the hidden action.
 func TestANarrowedRouterSchemaNamesNoHiddenAction(t *testing.T) {
 	r := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
-	kept := targetSpec("fake_kept", principal.ScopeWrite, mcp.TierAutoExecute)
+	kept := targetSpec("draft_email", principal.ScopeWrite, mcp.TierAutoExecute)
 	kept.InputSchema = json.RawMessage(`{"type":"object","properties":{"x":{"type":"integer"},"mode":{"type":"string","enum":["calm"]}}}`)
-	hidden := targetSpec("fake_hidden", principal.ScopeWrite, mcp.TierAutoExecute)
-	hidden.InputSchema = json.RawMessage(`{"type":"object","properties":{"x":{"type":"integer","maximum":5},` +
-		`"mode":{"type":"string","enum":["secret_mode"]},"secret_knob":{"type":"string"}}}`)
+	kept.OutputSchema = json.RawMessage(`{"type":"object","properties":{"draft_activity_id":{"type":"string"}}}`)
+	hidden := targetSpec("draft_follow_ups_for", principal.ScopeWrite, mcp.TierAutoExecute)
+	hidden.InputSchema = json.RawMessage(`{"type":"object","properties":{"x":{"type":"integer","maximum":5},"segment":{"type":"string"}}}`)
+	hidden.OutputSchema = json.RawMessage(`{"type":"object","properties":{"follow_ups":{"type":"array"}}}`)
+	pointer := targetSpec("points_at_drafts", principal.ScopeRead, mcp.TierAutoExecute)
+	pointer.Unlisted, pointer.Description = false, "Then call draft_follow_ups_for to draft each follow-up."
 	r.Register(&argsTool{spec: kept})
 	r.Register(&argsTool{spec: hidden})
-	r.Register(fakeRouter{name: "narrowed", targets: map[string]string{"plain": "fake_kept", "secret_act": "fake_hidden"},
-		schema: `{"properties":{"secret_knob":{"description":"Only for secret_act."}}}`})
-	r.required = map[string][]auth.Check{"fake_kept": dealCheck(t, "deal.read"), "fake_hidden": dealCheck(t, "deal.update")}
+	r.Register(&argsTool{spec: pointer})
+	r.Register(withView{draftOutbound{}})
+	r.required = map[string][]auth.Check{"draft_email": dealCheck(t, "deal.read"), "draft_follow_ups_for": dealCheck(t, "deal.update")}
 
-	served, ok := r.Spec("narrowed")
-	if !ok || !strings.Contains(string(served.InputSchema), "secret") {
-		t.Fatalf("the registered router does not name its hidden action, so this proves nothing: %s", served.InputSchema)
+	served, ok := r.Spec("draft_outbound")
+	if !ok || !strings.Contains(served.Description+string(served.InputSchema)+string(served.OutputSchema), "follow_ups") ||
+		!strings.Contains(served.Description+string(served.InputSchema), "slipping_deals") {
+		t.Fatalf("the registered router does not name its hidden action, so this proves nothing: %+v", served)
 	}
-	narrowed, ok := offeredByName(grantedCtx(principal.SeatFull), r)["narrowed"]
+	offered := offeredByName(grantedCtx(principal.SeatFull), r)
+	narrowed, ok := offered["draft_outbound"]
 	if !ok {
 		t.Fatal("the router is not offered, and the caller holds one of its actions")
 	}
-	if strings.Contains(string(narrowed.InputSchema), "secret") || strings.Contains(string(narrowed.InputSchema), "at most") {
-		t.Errorf("the narrowed schema still speaks of the hidden action: %s", narrowed.InputSchema)
+	for part, text := range map[string]string{
+		"description": narrowed.Description, "instead": narrowed.Instead,
+		"input schema": string(narrowed.InputSchema), "output schema": string(narrowed.OutputSchema),
+	} {
+		if strings.Contains(text, "slipping_deals") || strings.Contains(text, "segment") || strings.Contains(text, "follow_ups") || strings.Contains(text, "at most") {
+			t.Errorf("the narrowed %s still speaks of the hidden action: %s", part, text)
+		}
 	}
-	if !strings.Contains(string(narrowed.InputSchema), `"calm"`) {
-		t.Errorf("the narrowed schema lost the kept action's argument: %s", narrowed.InputSchema)
+	if !strings.Contains(narrowed.Description, "one_message") || !strings.Contains(string(narrowed.InputSchema), "one_message drafts one email") {
+		t.Errorf("the narrowed router lost the kept action's own wording: %s %s", narrowed.Description, narrowed.InputSchema)
 	}
-	if !strings.Contains(string(narrowed.InputSchema), idempotencyKeyArg) {
-		t.Errorf("the narrowed schema lost the retry key the surface added: %s", narrowed.InputSchema)
+	for _, want := range []string{`"calm"`, idempotencyKeyArg} {
+		if !strings.Contains(string(narrowed.InputSchema), want) {
+			t.Errorf("the narrowed schema lost %s: %s", want, narrowed.InputSchema)
+		}
 	}
+	if text := offered["points_at_drafts"].Description; strings.Contains(text, "slipping_deals") {
+		t.Errorf("another tool's description points at the hidden action: %s", text)
+	}
+}
+
+// withView is a router served with a view, so it carries a result shape.
+type withView struct{ draftOutbound }
+
+func (v withView) Spec() mcp.ToolSpec {
+	spec := v.draftOutbound.Spec()
+	spec.UI = &mcp.ToolUI{ResourceURI: "ui://margince/drafts.html"}
+	return spec
 }

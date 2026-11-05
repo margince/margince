@@ -85,14 +85,25 @@ func (r *Registry) grantedTo(ctx context.Context, spec mcp.ToolSpec) (mcp.ToolSp
 	if len(kept) == 0 {
 		return spec, false
 	}
+	// A router that picks its action by the arguments named has no enum to
+	// narrow. It is offered whole while any action is the caller's.
+	if spec.ActionField == "" {
+		return spec, true
+	}
+	hidden := hiddenActions(spec.Actions, kept)
 	spec.Actions = kept
-	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept)
+	schema, err := r.narrowedRouterSchema(spec.Name, spec.InputSchema, kept, hidden)
 	if err != nil {
 		// Offering the whole schema would advertise actions the caller cannot run.
 		slog.Warn("router schema could not be narrowed, so it is not offered", "tool", spec.Name, "err", err)
 		return spec, false
 	}
 	spec.InputSchema = schema
+	spec.Description = withoutSentencesNaming(spec.Description, hidden)
+	spec.Instead = withoutSentencesNaming(spec.Instead, hidden)
+	if spec.OutputSchema != nil {
+		spec.OutputSchema = targetsOutput(spec.Name, r.actionTargets(kept))
+	}
 	return spec, true
 }
 
@@ -110,14 +121,17 @@ func (r *Registry) holdsChecks(p principal.Principal, verb string) bool {
 // argument only hidden actions take is gone. The route enum, the choices named
 // as taking an argument, a united enum and a bound note name only kept ones.
 // A member the surface added, such as the retry key, stays.
-func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction) (json.RawMessage, error) {
+func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kept []mcp.ToolAction, hidden []string) (json.RawMessage, error) {
 	r.mu.RLock()
 	rt, ok := r.tools[name].(router)
 	r.mu.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("%s is not a registered router", name)
 	}
-	field, _ := routeFieldOf(rt)
+	field, byField := routeFieldOf(rt)
+	if !byField {
+		return nil, fmt.Errorf("%s picks its action by the arguments named, so no enum narrows it", name)
+	}
 	every, err := r.routerSchemaFor(rt, field, slices.Sorted(maps.Keys(rt.routeTargets())))
 	if err != nil {
 		return nil, err
@@ -148,6 +162,9 @@ func (r *Registry) narrowedRouterSchema(name string, served json.RawMessage, kep
 		delete(properties, member)
 	}
 	maps.Copy(properties, narrowed.Properties)
+	if properties[field], err = withoutClausesNaming(properties[field], hidden); err != nil {
+		return nil, err
+	}
 	required = slices.DeleteFunc(required, func(member string) bool { _, derived := every.Properties[member]; return derived })
 	required = append(slices.Clone(narrowed.Required), required...)
 	if doc["properties"], err = json.Marshal(properties); err != nil {

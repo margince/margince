@@ -71,7 +71,7 @@ func TestTheToolRoleMatrixCoversEveryServedAction(t *testing.T) {
 	}
 	for row := range served {
 		if !published[row] {
-			t.Errorf("%s is served and docs/reference/mcp-tool-roles.json has no row for it. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished", row)
+			t.Errorf("%s is served and docs/reference/mcp-tool-roles.json has no row for it. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished", row)
 		}
 	}
 	for row := range published {

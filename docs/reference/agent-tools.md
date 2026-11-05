@@ -203,12 +203,13 @@ The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The
   `backend/internal/modules/agents/toollist.go` drops each tool whose `RequiredScope` the passport
   does not hold, and each tool past the read scope for a read seat. `Registry.grantedTo` in
   `backend/internal/modules/agents/toolchecks.go` then drops each tool, and each router action, whose
-  measured checks the user lacks ([mcp-tool-roles.md](mcp-tool-roles.md#what-each-call-needs)). So an
-  agent made with `["read"]` sees the read tools and nothing else, and a rep's agent is not offered
-  the admin's settings actions.
+  measured checks the user lacks ([mcp-tool-roles.md](mcp-tool-roles.md#what-each-call-needs)). A
+  verb with no measured row stays offered. So an agent made with `["read"]` sees the read tools and
+  nothing else, and a rep's agent is not offered the admin's settings actions.
 
-  The list never shows what the gate refuses on the role alone. Each call still checks the user's grants,
-  row scope and the call's arguments, and they can refuse a call the list showed.
+  This filters the list only. A scheduled run chooses among every tool its passport may invoke
+  (`Registry.Runnable`), and each call still checks the user's grants, row scope and the call's
+  arguments, which can refuse a call the list showed.
 - **Extensions register after core.** `registerComposedTools` runs last in `internal/compose/registry.go`, so an
   extension unit can add verbs, and a name that is the same as a core verb fails boot. Each extension operation
   declares `x-mcp-tool` or `x-agent-access: human-only`, the same closed set of options core operations have. A

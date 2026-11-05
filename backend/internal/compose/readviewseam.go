@@ -254,11 +254,15 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 			Detail string `json:"detail"`
 			Code   string `json:"code"`
 		}
-		if err := json.Unmarshal(body, &problem); err != nil || problem.Detail == "" {
-			return nil, fmt.Errorf("read_view: the route answered %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
-		}
+		detailed := json.Unmarshal(body, &problem) == nil && problem.Detail != ""
 		if res.StatusCode == http.StatusNotImplemented {
+			if !detailed {
+				problem.Detail = http.StatusText(res.StatusCode)
+			}
 			return nil, notOfferedHere(problem.Detail)
+		}
+		if !detailed {
+			return nil, fmt.Errorf("read_view: the route answered %d: %w", res.StatusCode, apperrors.ErrInvalidArgument)
 		}
 		return nil, httperr.Validation("view", problem.Code, problem.Detail)
 	}
