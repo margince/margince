@@ -9110,7 +9110,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Hilfe von {vendor}",
   "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
   "aiAccess.connect.devHint":
-    "Schreibst du eigenen Code? Erstelle unten unter Für die Entwicklung einen API-Schlüssel.",
+    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen API-Schlüssel.",
   "aiAccess.step.allow":
     "Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.claude.openConnectors":
@@ -9215,11 +9215,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.place.geminiApp": "Gemini-App, beruflich oder privat",
   "aiAccess.place.antigravity": "Antigravity, Googles Agent-Editor",
   "aiAccess.runIn.vscode":
-    "Führe den Befehl im Terminal von VS Code aus: „Terminal“, dann „New Terminal“.",
+    "Führe den Befehl im Terminal von VS Code aus: „Terminal“, dann „Neues Terminal“.",
   "aiAccess.runIn.jetbrains":
     "Führe den Befehl im Fenster „Terminal“ der IDE aus.",
   "aiAccess.runIn.visualStudio":
-    "Führe den Befehl im Terminal von Visual Studio aus: „View“, dann „Terminal“.",
+    "Führe den Befehl im Terminal von Visual Studio aus: „Ansicht“, dann „Terminal“.",
   "aiAccess.local.sub":
     "Wird auf deinem eigenen Rechner eingerichtet. Ohne Admin.",
   "aiAccess.local.claudeCode.add":

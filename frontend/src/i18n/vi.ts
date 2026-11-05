@@ -8858,7 +8858,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Trợ giúp từ {vendor}",
   "aiAccess.connect.helpAdmin": "Trợ giúp từ {vendor} cho quản trị viên",
   "aiAccess.connect.devHint":
-    "Bạn tự viết mã? Tạo khóa API trong Dành cho nhà phát triển bên dưới.",
+    "Bạn tự viết mã? Tạo khóa API trong mục Dành cho nhà phát triển bên dưới.",
   "aiAccess.step.allow": "Margince mở ra. Đăng nhập và chọn Cấp quyền. Xong.",
   "aiAccess.claude.openConnectors":
     "Trong Claude, mở “Customize”, rồi “Connectors”.",
@@ -9006,7 +9006,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.other.apiKey":
     "Công cụ không đăng nhập được? Tạo khóa API trong Cài đặt, mục Quyền truy cập AI, Dành cho nhà phát triển, rồi gửi nó trong header “Authorization: Bearer” kèm khóa phía sau.",
   "aiAccess.other.notAllowed":
-    "Nếu khi đăng nhập báo công cụ không được phép, quản trị viên chọn công cụ nào được kết nối trong Cài đặt, mục MCP.",
+    "Nếu khi đăng nhập có thông báo công cụ không được phép, quản trị viên chọn các công cụ được phép kết nối trong Cài đặt, mục MCP.",
   "setup.step.ai": "Kết nối công cụ AI của bạn",
   "setup.caption.ai":
     "Dùng Margince từ Claude, ChatGPT, Copilot hoặc trình soạn thảo của bạn.",

@@ -312,7 +312,10 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
   const connector = useConnectorState({ enabled: acts.has("agents") });
   const aiConnects = acts.has("agents") && connector.data?.enabled === true;
-  const passports = usePassports({ enabled: aiConnects });
+  const passports = usePassports({
+    enabled: aiConnects,
+    refreshOnReturn: true,
+  });
   // Every caller reads the one stored flag, so a hide in the top bar holds in
   // the phone account menu. The local flag keeps a hide where storage is refused.
   const hiddenStored = useSyncExternalStore(watchHidden, storedHidden);

@@ -135,6 +135,11 @@ export const WithAiToolOpen: Story = {
   },
 };
 
+export const WithAiToolOpenDark: Story = {
+  ...WithAiToolOpen,
+  globals: { theme: "dark" },
+};
+
 export const WithAiToolConnected: Story = {
   render: act(state("cn.consent"), {}, undefined, ALL_READY, "connected"),
 };

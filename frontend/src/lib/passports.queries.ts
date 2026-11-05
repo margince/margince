@@ -10,11 +10,16 @@ export type PassportSummary = components["schemas"]["PassportSummary"];
 
 // The reader's own Agent Seat Passports. The server lists only the passports
 // minted on the reader's behalf, an administrator included: which agents act
-// for a human is that human's personal data.
-export function usePassports({ enabled = true }: { enabled?: boolean } = {}) {
+// for a human is that human's personal data. A connection is made in another
+// app, so a screen waiting for one reads again when the reader comes back.
+export function usePassports({
+  enabled = true,
+  refreshOnReturn = false,
+}: Readonly<{ enabled?: boolean; refreshOnReturn?: boolean }> = {}) {
   return useQuery({
     queryKey: ["passports"],
     enabled,
+    refetchOnWindowFocus: refreshOnReturn ? "always" : false,
     queryFn: async () => {
       return unwrap(await api.GET("/passports"));
     },
