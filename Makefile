@@ -1271,7 +1271,8 @@ test-contract-frontend-drift:
 	@./scripts/check-contract-frontend-drift.test.sh
 
 ## migration-versions — a migration this branch adds claims a version no
-## migration on origin/main already claims, and sorts after all of them. Two
+## migration on CHECK_BASE_REF (origin/main by default) already claims, and sorts
+## after all of them. Two
 ## PRs numbering against the same main is how core 0240 (and then 0248) ended
 ## up claimed twice, which the per-tree loader test cannot see.
 migration-versions:

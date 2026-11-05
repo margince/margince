@@ -572,8 +572,10 @@ jobs:
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore only: lint-cache.yml writes the entry after each push, and two
+      # legs saving one key would keep whichever finished first.
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}

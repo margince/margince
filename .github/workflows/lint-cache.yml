@@ -101,7 +101,7 @@ jobs:
           KEEP: ${{ steps.golangci-key.outputs.key }}
           PREFIX: ${{ steps.golangci-key.outputs.restore-keys }}
         run: |
-          entries="$(gh cache list --ref "$GITHUB_REF" --key "$PREFIX" --limit 100 --json key,createdAt)"
+          entries="$(gh cache list --ref "$GITHUB_REF" --key "$PREFIX" --limit 1000 --json key,createdAt)"
           saved="$(jq -r --arg keep "$KEEP" '.[] | select(.key == $keep) | .createdAt' <<<"$entries")"
           if [[ -z "$saved" ]]; then
             echo "the entry just saved is not listed yet, so nothing is deleted"
