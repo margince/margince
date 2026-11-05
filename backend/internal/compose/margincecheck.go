@@ -51,6 +51,7 @@ var checkWhys = map[string]crmcontracts.DealMarginceCheckOutcomeWhy{
 	dealverdict.DroppedUndoHold:         crmcontracts.DealMarginceCheckOutcomeWhyUndoHold,
 	dealverdict.DroppedUnchanged:        crmcontracts.DealMarginceCheckOutcomeWhyAlreadyRight,
 	dealverdict.DroppedOfferFixes:       crmcontracts.DealMarginceCheckOutcomeWhyAcceptedOffer,
+	deals.VerdictDroppedLines:           crmcontracts.DealMarginceCheckOutcomeWhyPricedByProducts,
 	dealverdict.DroppedNoRate:           crmcontracts.DealMarginceCheckOutcomeWhyNoRate,
 	droppedNoOwner:                      crmcontracts.DealMarginceCheckOutcomeWhyNoOwner,
 	dealverdict.DroppedNotForward:       crmcontracts.DealMarginceCheckOutcomeWhyStageRules,

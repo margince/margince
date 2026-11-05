@@ -6,12 +6,11 @@ package compose
 // Reading a deal's world as the contact the deal belongs to.
 //
 // A nightly sweep runs as a system principal, which auth.Require passes
-// unconditionally and which no row scope bounds. That is right for the sweep's
-// own WRITES — nobody asked for them, and the audit trail should say the system
-// did it. It is wrong for anything the sweep reads and then STORES into an
-// approval payload, because that payload is read back later by whoever holds the
-// card's decide grant, and the grant set is narrower than the principal that
-// filled it. A string resolved under the system principal and frozen into a row
+// unconditionally and which no row scope bounds. Its writes to an owned deal
+// run as the owner's agent instead (ownersAgentTx). The system principal is
+// also wrong for anything the sweep reads and then STORES into an approval
+// payload. Whoever holds the card's decide grant reads that payload later, and
+// that grant set is narrower than the principal that filled it. A string resolved under the system principal and frozen into a row
 // is a disclosure no read-side gate can undo.
 //
 // So a producer that puts human-identifying data or message content on a card
