@@ -475,6 +475,10 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
 ### Why some jobs are shaped as they are
 
 - **`deterministic-gates` fetches the full history**, so the gates scoped to the diff have a base ref.
+  It fetches the commits without old file contents (`filter: blob:none`), and so do `backend-lint`,
+  `extension-reference`, `craftsmanship` and `license gate`. A merge base needs only the commits, and git
+  fetches an old file when a gate first reads it. `sonarcloud` fetches every old file, because its scan
+  reads all of them to find who wrote each line.
 - **`craftsmanship` starts beside `deterministic-gates`.** It reads source only, so a red build does
   not change its findings, and both reds show in one round.
 - **`extension-reference` writes its own coverage profile.** Extension units are separate Go modules,
