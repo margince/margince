@@ -37,8 +37,16 @@ const (
 	googleTokenURL = "https://oauth2.googleapis.com/token" //nolint:gosec // G101 false positive: Google's public OAuth token *endpoint URL*, not a credential
 )
 
-// calendarReadonlyScope covers capture and occupancy reads.
-const calendarReadonlyScope = "https://www.googleapis.com/auth/calendar.readonly"
+// ReadScope covers capture and occupancy reads. A grant without it cannot
+// sync, so it is the scope that decides whether a calendar was granted at all.
+const ReadScope = "https://www.googleapis.com/auth/calendar.readonly"
+
+// ConsentScopes are what a calendar consent asks Google for: the read scope,
+// and write access to the events this calendar creates (bookings). A mail
+// consent that connects the calendar on the same screen asks for these too.
+func ConsentScopes() []string {
+	return []string{ReadScope, "https://www.googleapis.com/auth/calendar.events.owned"}
+}
 
 // initialBackfillDays bounds the first sync's window so a long calendar history
 // does not stream unbounded on connect: only events starting within this many
@@ -100,7 +108,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Provider:     connectorName,
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
-		Scopes:       []string{calendarReadonlyScope, "https://www.googleapis.com/auth/calendar.events.owned"},
+		Scopes:       ConsentScopes(),
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
 		// Google needs offline access + a forced consent prompt to return a

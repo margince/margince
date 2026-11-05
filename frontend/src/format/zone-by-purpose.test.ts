@@ -240,7 +240,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Weekday names are generated from fixed Monday-through-Sunday UTC instants; these are locale labels, not event or record dates.",
   },
   {
-    file: "features/automations/connect-ai-tool.test.tsx",
+    file: "components/connect-ai-tool.test.tsx",
     why: "The admin guide dates a calendar day; a viewer at UTC+14 is where a day handled as an instant would print the next one.",
   },
   {

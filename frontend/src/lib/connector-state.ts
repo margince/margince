@@ -34,9 +34,14 @@ export async function fetchConnectorState(): Promise<ConnectorState> {
   return { enabled: true, url: resource };
 }
 
-export function useConnectorState() {
+export function useConnectorState({
+  enabled = true,
+}: {
+  enabled?: boolean;
+} = {}) {
   return useQuery({
     queryKey: ["mcp-connector-state"],
     queryFn: fetchConnectorState,
+    enabled,
   });
 }
