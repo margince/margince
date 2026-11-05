@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -116,20 +117,23 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 	create["company"] = func() string {
 		return post("/v1/companies", owned(integration.AnyMap{"display_name": unique("Role Sweep"), "source": "manual"}))
 	}
+	// A deal or project is filed on one company of the pool's own.
+	// A call takes the record and never its company, which is a kind of its own.
+	parentCompany := sync.OnceValue(func() string { return create["company"]() })
 	create["contact"] = func() string {
 		return post("/v1/contacts", owned(integration.AnyMap{"full_name": "Role Sweep", "source": "manual"}))
 	}
 	create["deal"] = func() string {
 		return post("/v1/deals", owned(integration.AnyMap{
 			"name": "Role Sweep", "amount_minor": 100, "currency": "EUR", "pipeline_id": seeded.PipelineID,
-			"stage_id": seeded.Open, "company_id": create["company"](), "source": "manual",
+			"stage_id": seeded.Open, "company_id": parentCompany(), "source": "manual",
 		}))
 	}
 	create["lead"] = func() string {
 		return post("/v1/leads", owned(integration.AnyMap{"full_name": "Role Sweep", "email": ids.NewV7().String() + "@lead.test", "source": "manual"}))
 	}
 	create["project"] = func() string {
-		return post("/v1/projects", owned(integration.AnyMap{"name": "Role Sweep", "company_id": create["company"](), "source": "manual"}))
+		return post("/v1/projects", owned(integration.AnyMap{"name": "Role Sweep", "company_id": parentCompany(), "source": "manual"}))
 	}
 	create["activity"] = func() string {
 		return post("/v1/activities", integration.AnyMap{"kind": "task", "subject": "Role sweep"})

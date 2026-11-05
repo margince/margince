@@ -27,12 +27,19 @@ type listingPass struct {
 	run  func(t *testing.T)
 }
 
-// operatorListings hold that a passport is offered a tool or action when, and
-// only when, the gate admits its user to it. They run on the matrix sweep's
-// app beside its roles. The roles are an operator's own. One is a copy of rep
+// A passport is offered a tool or action when, and only when, the gate admits
+// its user to it. A test of its own, so the lane can run it on another shard
+// than the matrix sweep. The roles are an operator's own. One is a copy of rep
 // that may create tags and may not update deals. One lacks two checks only
 // some paths of a tool ask: a company create, and the installation settings
 // read. The last member holds rep and ops, whose grants merge to the widest.
+func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
+	recorded := newToolCheckRecorder()
+	d := toolRoleApp(t, "tool-role-listing", compose.WithToolChecksRecordedForTest(recorded.note))
+	eachSeat(t, "listing", nil, nil, operatorListings(t, d, recorded)...)
+}
+
+// operatorListings are the holdings the test above checks, one pass each.
 func operatorListings(t *testing.T, d *apptest.TwoDoors, recorded *toolCheckRecorder) []listingPass {
 	t.Helper()
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()

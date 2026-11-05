@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Prove a tool in the role matrix
 
-Use this page when a new or changed MCP tool or router action turns one of four tests red:
+Use this page when a new or changed MCP tool or router action turns one of five tests red:
 
 - `TestEveryServedVerbHasItsToolChecksRow` in `backend/internal/compose/toolcheckscensus_test.go`. It runs in
   `make check` with no database, and holds `backend/internal/modules/agents/toolchecks.json` to the tools the
@@ -13,8 +13,9 @@ Use this page when a new or changed MCP tool or router action turns one of four 
   tool and action as each seeded role and writes [mcp-tool-roles.json](../reference/mcp-tool-roles.json) and
   `toolchecks.json`.
 - The sweep's `cells` check, after the sweep. It holds each seeded role's `tools/list` to the ✓ cells of the
-  committed matrix: no ✗ call is offered and every ✓ call is. Its `listing` checks run beside the roles and hold
-  an operator's own roles' `tools/list` to the gate.
+  committed matrix: no ✗ call is offered and every ✓ call is.
+- `TestToolsListAgreesWithTheGateForAnOperatorsRoles`, beside the sweep. It holds an operator's own roles'
+  `tools/list` to the gate.
 
 Every cell is a ✓ or a ✗: the call ran for the role, or a gate refused it. A cell that is neither fails the
 sweep. A refusal counts only where a gate in `platform/auth` recorded refusing that role in that call. The gate

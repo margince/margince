@@ -61,11 +61,10 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		}
 	}
 	seats := roleSeats(t, d.E, roles)
-	listings := operatorListings(t, d, recorded)
 	swept := make([][]sweptCall, len(seats))
 	eachSeat(t, "roles", seats, func(t *testing.T, i int, seat roleSeat) {
 		swept[i] = sweepSeat(t, seat, recorded, calls, elsewhere)
-	}, listings...)
+	})
 	if t.Failed() {
 		return
 	}
