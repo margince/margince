@@ -410,7 +410,7 @@ output can be used again as well as a green run's.
 local action through, because the repo versions its own code. That holds for the action's own ref, but
 not for the outside actions it calls. Those would come in with nobody reading them.
 
-### The lint caches are saved on `main` only
+### The lint caches are saved on `main`, and the golangci one on `develop` too
 
 Two smaller caches follow the same rule: `ci.yml` loads them and never saves them. An entry that a PR
 saves can be read by that PR alone. It still counts against the 10 GB cache quota of the repository,
@@ -427,10 +427,11 @@ and there it pushes out the `main` entries that every PR loads.
   restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
-- `lint-cache.yml` also saves the golangci entry on each push. A cold pass costs about 39 minutes of CPU, and
-  `internal/compose` imports every module, so an entry many merges old lints close to cold.
-  It runs `make lint` from the entry of the push before, so it only reads what that push
-  changed. It then deletes the older entries of its branch, so `main` and `develop` hold one each.
+- `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
+  files. A cold pass costs about 39 minutes of CPU. `internal/compose` imports every module, so an entry
+  many merges old lints close to cold. The job runs `make lint` on the pushed tree, from the entry of the
+  push before. golangci loads the whole tree and keeps the result of each package whose inputs did not
+  change. The job then deletes the older entries of its branch, so `main` and `develop` hold one each.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
 
