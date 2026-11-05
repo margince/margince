@@ -42,8 +42,19 @@ func newMailLetterhead(pool *pgxpool.Pool, blob blobstore.Store) mailLetterhead 
 // letterhead with less on it, and says so in the log.
 func (m mailLetterhead) Letterhead(ctx context.Context, language string) (emailview.Letterhead, []connector.InlineImage) {
 	head := emailview.Letterhead{Attribution: mailcopy.For(language).PoweredBy}
+	inline := m.companyLogo(ctx, &head)
+	if head.UsesBrandMark() {
+		head.MarkContentID = emailview.BrandMarkContentID
+		inline = append(inline, connector.InlineImage{ContentID: head.MarkContentID, ContentType: "image/png", Body: emailview.BrandMark()})
+	}
+	return head, inline
+}
+
+// companyLogo names the installation's company on head and returns its logo
+// as an inline part, when one is stored and readable in time.
+func (m mailLetterhead) companyLogo(ctx context.Context, head *emailview.Letterhead) []connector.InlineImage {
 	if m.pool == nil {
-		return head, nil
+		return nil
 	}
 	bounded, cancel := context.WithTimeout(ctx, m.timeout)
 	defer cancel()
@@ -55,22 +66,22 @@ func (m mailLetterhead) Letterhead(ctx context.Context, language string) (emailv
 	})
 	if err != nil {
 		slog.WarnContext(ctx, "mail letterhead: the company could not be read; the mail is headed by Margince", "cause", err)
-		return head, nil
+		return nil
 	}
 	if key == "" {
-		return head, nil
+		return nil
 	}
 	image, ok, err := m.logo.SignatureLogo(bounded, key)
 	if err != nil {
 		slog.WarnContext(ctx, "mail letterhead: the company logo could not be read; the mail is headed by the name", "cause", err)
-		return head, nil
+		return nil
 	}
 	if !ok {
-		return head, nil
+		return nil
 	}
 	image.ContentID = connector.LetterheadLogoContentID
 	head.LogoContentID = image.ContentID
-	return head, []connector.InlineImage{image}
+	return []connector.InlineImage{image}
 }
 
 // letterheadNameTx is the one name system mail speaks as, and the stored logo

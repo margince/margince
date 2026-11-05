@@ -73,6 +73,18 @@
   stroke: var(--accent);
   stroke-width: 3;
 }
+/* The actual total stands on a soft ground of its own colour. */
+.report-chart-area {
+  stroke: none;
+}
+.report-chart-area-top {
+  stop-color: var(--accent);
+  stop-opacity: 0.16;
+}
+.report-chart-area-foot {
+  stop-color: var(--accent);
+  stop-opacity: 0;
+}
 .report-chart-comparison {
   stroke: var(--textSecondary);
   stroke-width: 2;
@@ -141,9 +153,21 @@
   display: grid;
   gap: var(--space-3);
 }
+/* The rows share one set of columns, so every bar is drawn on a track of the
+   same width and two bars compare by length whatever their names run to. */
+.report-chart-rows:has(> li > .report-chart-row) {
+  grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 2fr) max-content;
+  column-gap: var(--space-3);
+}
+.report-chart-rows > li:has(> .report-chart-row) {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
 .report-chart .btn.report-chart-row {
   display: grid;
-  grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 2fr) max-content;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   width: 100%;
   gap: var(--space-3);
   align-items: center;
