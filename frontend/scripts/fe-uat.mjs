@@ -38,6 +38,7 @@ import {
   viewportFor,
 } from "./lib/uat-page.mjs";
 import {
+  baseRefFor,
   changesSince,
   needsStory,
   scopeFor,
@@ -120,13 +121,14 @@ function git(args) {
 }
 
 // Include the working tree because this gate also runs before a commit.
+const baseRef = baseRefFor(process.env);
 let base = null;
 if (scope === "diff") {
   try {
-    base = git("merge-base origin/main HEAD");
+    base = git(`merge-base ${baseRef} HEAD`);
   } catch {
     console.error(
-      "fe-uat: cannot compute merge-base with origin/main (shallow/detached?) — fall back to full-stack UAT",
+      `fe-uat: cannot compute merge-base with ${baseRef} (shallow/detached?) — fall back to full-stack UAT`,
     );
     process.exit(2);
   }

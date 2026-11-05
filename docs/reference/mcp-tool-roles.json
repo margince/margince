@@ -2494,17 +2494,17 @@
       "tool": "change_offers",
       "action": "set_deal_products",
       "verb": "replace_deal_products",
-      "allowed_for": [
+      "allowed_for": [],
+      "refused_for": [
+        "read_only"
+      ],
+      "unproven_for": [
         "admin",
         "management",
         "manager",
         "ops",
         "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ],
-      "unproven_for": []
+      ]
     },
     {
       "tool": "change_offers",

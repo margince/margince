@@ -45629,6 +45629,9 @@ type DraftSteering struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
@@ -51902,6 +51905,9 @@ type MailDraft struct {
 	Cc         []string            `json:"cc"`
 	CreatedAt  time.Time           `json:"created_at"`
 
+	// EditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+	EditorState *MailDraftEditorState `json:"editor_state,omitempty"`
+
 	// Grounding The records this draft was written from, which an agent draft records and a human draft leaves empty. The composer files a sent draft under these, so a draft grounded in a deal reaches that deal's timeline even when it is opened from the contact page.
 	Grounding *[]MailDraftGround `json:"grounding,omitempty"`
 	HtmlBody  *string            `json:"html_body,omitempty"`
@@ -51915,6 +51921,19 @@ type MailDraft struct {
 // MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
 // record a new conversation starts from.
 type MailDraftAnchorType string
+
+// MailDraftEditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+type MailDraftEditorState struct {
+	AiDisclosure *string `json:"ai_disclosure,omitempty"`
+	AiGenerated  *bool   `json:"ai_generated,omitempty"`
+
+	// ContentFingerprint Server binding to the saved words, used only to retire stale editor state.
+	ContentFingerprint  *string `json:"content_fingerprint,omitempty"`
+	Intent              *string `json:"intent,omitempty"`
+	ServedBody          *string `json:"served_body,omitempty"`
+	VoiceDegraded       *bool   `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int    `json:"voice_profile_version,omitempty" minimum:"1"`
+}
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
 type MailDraftGround struct {
@@ -51936,6 +51955,9 @@ type MailDraftInput struct {
 	Bcc        *[]string           `json:"bcc,omitempty"`
 	Body       *string             `json:"body,omitempty"`
 	Cc         *[]string           `json:"cc,omitempty"`
+
+	// EditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+	EditorState *MailDraftEditorState `json:"editor_state,omitempty"`
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
 	HtmlBody *string   `json:"html_body,omitempty"`
@@ -68859,6 +68881,9 @@ type DraftCompanyEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // CreateCompanyFactParams defines parameters for CreateCompanyFact.
@@ -69788,6 +69813,9 @@ type DraftContactEmailJSONBody struct {
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
+
+	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	Subject *string `json:"subject,omitempty"`
 }
 
 // LinkContactEmployerParams defines parameters for LinkContactEmployer.

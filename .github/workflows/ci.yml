@@ -61,7 +61,7 @@ env:
   # The diff-scoped gates (strict lint, comment checks) judge what a pull request
   # adds to the branch it merges into, so one into develop is not held to all of
   # develop's lines. The develop into main pull request judges those.
-  DIFF_BASE: origin/${{ github.base_ref || 'main' }}
+  CHECK_BASE_REF: origin/${{ github.base_ref || 'main' }}
 
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
@@ -508,7 +508,7 @@ jobs:
           - pass: strict
             legs: lint-strict
     # Setup mirrors deterministic-gates, which says why each step is there.
-    # Full history, because the strict lint diffs against DIFF_BASE.
+    # Full history, because the strict lint diffs against CHECK_BASE_REF.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

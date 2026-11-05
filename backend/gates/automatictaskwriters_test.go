@@ -95,20 +95,16 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/provider.go:Create":                               {writesCallerSource},
 	"modules/activities/activity.go:logActivityAndReadTranscript":         {writesForItsCaller},
 	"modules/activities/channelsend.go:SendMessage":                       {writesNoTask},
-	// Builds a LogActivityInput from the stored activity only to ask the
-	// deal-filing rule. It inserts no activity, and the source it carries is
-	// the one already stored on the row.
-	"modules/activities/dealfiling.go:fileUpdatedActivity":         {writesCallerSource},
-	"modules/activities/sendcore.go:SendPreparedTx":                {writesNoTask},
-	"compose/controllermail.go:QueueConfirmationTx":                {writesNoTask},
-	"compose/extractionaccept.go:auditAcceptedFieldsTx":            {writesNoTask},
-	"modules/activities/chatcapture.go:writeChatActivity":          {writesNoTask},
-	"modules/activities/channelsend.go:activity":                   {writesNoTask},
-	"modules/activities/extraction.go:RequestAttachmentAccess":     {writesNoTask},
-	"modules/activities/reviewresponse.go:WriteOutcomeReviewTx":    {writesNoTask},
-	"modules/activities/scheduling_invitation.go:insertInvitation": {writesNoTask},
-	"modules/activities/scheduling_proposal.go:CreateProposal":     {writesNoTask},
-	"modules/activities/outboundmessage.go:activity":               {writesNoTask},
+	"modules/activities/sendcore.go:SendPreparedTx":                       {writesNoTask},
+	"compose/controllermail.go:QueueConfirmationTx":                       {writesNoTask},
+	"compose/extractionaccept.go:auditAcceptedFieldsTx":                   {writesNoTask},
+	"modules/activities/chatcapture.go:writeChatActivity":                 {writesNoTask},
+	"modules/activities/channelsend.go:activity":                          {writesNoTask},
+	"modules/activities/extraction.go:RequestAttachmentAccess":            {writesNoTask},
+	"modules/activities/reviewresponse.go:WriteOutcomeReviewTx":           {writesNoTask},
+	"modules/activities/scheduling_invitation.go:insertInvitation":        {writesNoTask},
+	"modules/activities/scheduling_proposal.go:CreateProposal":            {writesNoTask},
+	"modules/activities/outboundmessage.go:activity":                      {writesNoTask},
 }
 
 // openTaskReadersElsewhere is each reader of open tasks that does not apply

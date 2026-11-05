@@ -8,7 +8,8 @@ A lead is someone you may sell to. A deal is one opportunity with one company, a
 
 > "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it."
 
-A lead needs no origin. Email and LinkedIn address are the fields used to find copies of one lead; a second live lead with the same email is refused.
+A lead needs no origin. Email and LinkedIn address are the fields used to
+find copies of one lead; a second live lead with the same email is refused.
 
 ### How do I create a lead?
 To create a lead in Margince, open **Leads** in the sidebar and choose **New lead**.
@@ -240,10 +241,9 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-
 To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
-From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Click in the search field to see open deals at their current employers; typing searches all open deals, employer deals first, each with its company.
-Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
+
+From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown. Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
 
 ### Can I move a deal to another pipeline?
 No. A deal in Margince stays in the pipeline it was created in, and its stage can only move within that pipeline. The **Pipeline** picker on **Deals** only chooses which pipeline you are looking at. To move the business to another pipeline, create a new deal there and archive the old one.

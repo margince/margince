@@ -78,6 +78,7 @@ export type DraftAsk = Readonly<{
   followUp?: FollowUp;
   intent: string;
   epoch: number;
+  subject?: string;
   body: string;
   html: string;
   // The words as the model last served them, empty before any draft.
@@ -151,18 +152,20 @@ async function draftFromActivity({
   activityId,
   intent,
   rewriteOf,
+  subject,
   t,
 }: Readonly<{
   activityId: string;
   intent: string;
   rewriteOf: string;
+  subject?: string;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
     "/activities/{id}/draft-email",
     {
       params: { path: { id: activityId } },
-      body: steering(intent, rewriteOf),
+      body: steering(intent, rewriteOf, subject),
     },
   );
   return draftAnswer(response, error, data, t, rewriteOf);
@@ -202,9 +205,15 @@ function draftAnswer(
 
 // The caller's steering. An absent `rewrite_of` asks for a first draft, so a
 // blank one is left out.
-function steering(intent: string, rewriteOf: string) {
+export function draftingSubject(subject: string | undefined): string {
+  return stripEveryKeyTag(subject ?? "").trim();
+}
+
+function steering(intent: string, rewriteOf: string, subject?: string) {
+  const written = draftingSubject(subject);
   return {
     ...(intent.trim() ? { intent: intent.trim() } : {}),
+    ...(written ? { subject: written } : {}),
     ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
   };
 }
@@ -246,16 +255,18 @@ async function draftFromLead({
   entityId,
   intent,
   rewriteOf,
+  subject,
   t,
 }: Readonly<{
   entityId: string;
   intent: string;
   rewriteOf: string;
+  subject?: string;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST("/leads/{id}/draft-email", {
     params: { path: { id: entityId } },
-    body: steering(intent, rewriteOf),
+    body: steering(intent, rewriteOf, subject),
   });
   return draftAnswer(response, error, data, t, rewriteOf);
 }
@@ -268,6 +279,7 @@ async function draftFromContact({
   projectId,
   intent,
   rewriteOf,
+  subject,
   t,
 }: Readonly<{
   entityId: string;
@@ -275,6 +287,7 @@ async function draftFromContact({
   projectId: string;
   intent: string;
   rewriteOf: string;
+  subject?: string;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
@@ -284,7 +297,7 @@ async function draftFromContact({
       body: {
         ...followUpBody(followUp),
         ...(projectId ? { project_id: projectId } : {}),
-        ...steering(intent, rewriteOf),
+        ...steering(intent, rewriteOf, subject),
       },
     },
   );
@@ -302,6 +315,7 @@ async function draftFromAccount({
   projectId,
   intent,
   rewriteOf,
+  subject,
   t,
 }: Readonly<{
   entityType: RelinkKind;
@@ -313,10 +327,11 @@ async function draftFromAccount({
   intent: string;
   // The body on screen, so "make it shorter" revises this draft.
   rewriteOf: string;
+  subject?: string;
   t: Translate;
 }>): Promise<DraftResult> {
   if (entityType === "lead") {
-    return draftFromLead({ entityId, intent, rewriteOf, t });
+    return draftFromLead({ entityId, intent, rewriteOf, subject, t });
   }
   if (entityType === "contact") {
     return draftFromContact({
@@ -325,6 +340,7 @@ async function draftFromAccount({
       projectId,
       intent,
       rewriteOf,
+      subject,
       t,
     });
   }
@@ -342,7 +358,7 @@ async function draftFromAccount({
         ...(dealId ? { deal_id: dealId } : {}),
         // The server scopes the grounding read to this project.
         ...(projectId ? { project_id: projectId } : {}),
-        ...steering(intent, rewriteOf),
+        ...steering(intent, rewriteOf, subject),
       },
     },
   );
@@ -394,6 +410,7 @@ export function useDraftMutation({
         followUp: ask.followUp,
         ...grounding,
         intent: intentOf,
+        subject: ask.subject,
         rewriteOf,
         t,
       });

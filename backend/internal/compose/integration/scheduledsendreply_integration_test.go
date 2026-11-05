@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,14 +31,22 @@ type inbound struct {
 	arrived       time.Time // when the provider says it reached the mailbox
 	authenticated bool
 	extraHeaders  []string
+	owner         string
+	mailbox       string
 }
 
 // theyWrite captures one mail from the recipient through the capture sink.
-func (p *preflightEnv) theyWrite(t *testing.T, mail inbound) {
+func (p *preflightEnv) theyWrite(t *testing.T, mail inbound) ids.UUID {
 	t.Helper()
+	mailbox := sendingMailbox
+	owner := *p
+	if mail.owner != "" {
+		owner.user = mail.owner
+		mailbox = mail.mailbox
+	}
 	headers := []string{
 		"From: Consented Buyer <buyer@preflight.test>",
-		"To: " + sendingMailbox,
+		"To: " + mailbox,
 		"Subject: Re: Next steps",
 		"Date: " + mail.dated.UTC().Format(time.RFC1123Z),
 		"Message-ID: <reply-" + mail.dated.Format("20060102150405") + "@preflight.test>",
@@ -49,24 +56,29 @@ func (p *preflightEnv) theyWrite(t *testing.T, mail inbound) {
 		headers = append(headers, "Authentication-Results: mx.google.com; dmarc=pass header.from=preflight.test")
 	}
 	raw := []byte(strings.Join(append(append(headers, mail.extraHeaders...), "", "Thanks, one question first.", ""), "\r\n"))
-	parsed, err := mailmap.Parse(raw, sendingMailbox)
+	parsed, err := mailmap.Parse(raw, mailbox)
 	if err != nil {
 		t.Fatalf("parsing the reply: %v", err)
+	}
+	if _, drop := parsed.SkipReason(); drop {
+		return ids.Nil
 	}
 	rec := parsed.ToRecord("gmail", raw)
 	rec.ProviderReceivedAt = mail.arrived
 	// The mailbox the rep connected is theirs, so capture records which seat it
 	// arrived in, and when.
-	owned := principal.WithActor(p.mailboxCtx(t), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + p.user, UserID: uuidOf(t, p.user),
+	owned := principal.WithActor(owner.mailboxCtx(t), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + owner.user, UserID: uuidOf(t, owner.user),
 		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn},
 	})
-	if _, err := capture.NewOwnerIdentityStore(p.DB()).Add(owned, capture.IdentityKindAddress, sendingMailbox); err != nil {
+	if _, err := capture.NewOwnerIdentityStore(p.DB()).Add(owned, capture.IdentityKindAddress, mailbox); err != nil {
 		t.Fatalf("claiming the rep's mailbox address: %v", err)
 	}
-	if _, err := capture.NewSink(p.DB()).Upsert(p.mailboxCtx(t), rec); err != nil {
+	ref, err := capture.NewSink(p.DB()).Upsert(owner.mailboxCtx(t), rec)
+	if err != nil {
 		t.Fatalf("capturing the reply: %v", err)
 	}
+	return ref.ID
 }
 
 // mailboxCtx is the rep's own mailbox connector, so capture writes the import
@@ -104,6 +116,13 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 		{"a reply after scheduling", dealClaim, func(after time.Time) inbound {
 			return inbound{dated: after, arrived: after, authenticated: true}
 		}, true},
+		{"an automatic reply", dealClaim, func(after time.Time) inbound {
+			return inbound{dated: after, arrived: after, authenticated: true,
+				extraHeaders: []string{"Auto-Submitted: auto-replied"}}
+		}, false},
+		{"a reply to a quote", AnyMap{"communication_context": "precontract_quote"}, func(after time.Time) inbound {
+			return inbound{dated: after, arrived: after, authenticated: true}
+		}, true},
 		{"a reply whose Date header is backdated", dealClaim, func(after time.Time) inbound {
 			return inbound{dated: after.AddDate(-1, 0, 0), arrived: after, authenticated: true}
 		}, true},
@@ -126,7 +145,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 			p.connect(t, gmailReadonlyScope, gmailSendScope)
 			id := p.scheduleClaiming(t, tc.claim)
 
-			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
+			p.theyWrite(t, tc.mail(p.scheduledCreation(t, id).Add(time.Second)))
 			p.makeDue(t, id)
 			p.fire(t, id)
 
@@ -148,6 +167,15 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 // Mutation: drop the thread_key condition from pursuitPausedByReply, and the
 // reply is paused.
 func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
+	for _, sameThread := range []bool{false, true} {
+		t.Run(map[bool]string{false: "other thread", true: "same thread"}[sameThread], func(t *testing.T) {
+			checkScheduledReplyThread(t, sameThread)
+		})
+	}
+}
+
+func checkScheduledReplyThread(t *testing.T, sameThread bool) {
+	t.Helper()
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
@@ -159,12 +187,20 @@ func TestAScheduledReplyListensOnItsOwnThread(t *testing.T) {
 	}
 	id := p.scheduleClaiming(t, AnyMap{"communication_context": "active_deal_followup"})
 
-	after := clocktest.Now(t).UTC().Add(time.Second)
-	p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
+	after := p.scheduledCreation(t, id).Add(time.Second)
+	reply := p.theyWrite(t, inbound{dated: after, arrived: after, authenticated: true})
+	if sameThread {
+		if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
+			_, err := tx.Exec(context.Background(), `UPDATE activity SET thread_key = 'the-quote-thread' WHERE id = $1`, reply)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	p.makeDue(t, id)
 	p.fire(t, id)
 
-	if status, reason := p.scheduledStatus(t, id); reason == activities.HeldRecipientReplied {
-		t.Fatalf("status %q: mail on another thread paused the scheduled reply", status)
+	if status, reason := p.scheduledStatus(t, id); (reason == activities.HeldRecipientReplied) != sameThread {
+		t.Fatalf("same thread %v: status %q, reason %q", sameThread, status, reason)
 	}
 }

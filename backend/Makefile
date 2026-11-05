@@ -606,7 +606,6 @@ perfdoc: ## Re-render docs/reference/performance-budgets.md and benchmark.md fro
 # silently lint at a version CI does not run, which is exactly what the
 # GOLANGCI_LINT_VERSION pin exists to prevent. PATH is the fallback, so a
 # deployment that resolves the pinned binary some other way still works.
-DIFF_BASE ?= origin/main
 GOLANGCI_LINT_BIN := $(shell $(GO) env GOPATH)/bin/golangci-lint
 GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BIN) || command -v golangci-lint 2>/dev/null)
 
@@ -614,8 +613,8 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # baseline (the depguard DAG lives there and must never be diff-scoped);
 # .golangci.strict.yml is the expanded strict set, gated to new
 # code via new-from-merge-base so the pre-existing backlog is not a burn-down.
-# DIFF_BASE is the branch a pull request merges into, so a pull request into
-# develop is judged on its own lines, not on all of develop's.
+# CI sets CHECK_BASE_REF to the branch a pull request merges into, so a pull
+# request into develop is judged on its own lines, not on all of develop's.
 #
 # Both go through ../scripts/run-golangci.sh, the wrapper `make lint-modules`
 # also uses: golangci's analysis cache is machine-wide and content-keyed, so in
@@ -623,6 +622,8 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # issues — with that checkout's path, and therefore without the //nolint: and
 # path-anchored waivers that path carried. This lane is exposed to it exactly
 # as the module lane is, so it is guarded in the same place rather than twice.
+CHECK_BASE_REF ?= origin/main
+
 lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
 
 # Two targets so CI can run the passes on two runners; each loads the whole tree.
@@ -630,10 +631,10 @@ lint-base: composition lint-tool
 	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
 
 lint-strict: composition lint-tool
-	@if git rev-parse --verify -q $(DIFF_BASE) >/dev/null; then \
-		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base=$(DIFF_BASE) ./...; \
+	@if git rev-parse --verify -q "$(CHECK_BASE_REF)" >/dev/null; then \
+		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
 	else \
-		echo "SKIP strict lint: $(DIFF_BASE) not found — fetch it to arm the new-code gate"; \
+		echo "SKIP strict lint: $(CHECK_BASE_REF) not found — fetch it to arm the new-code gate"; \
 	fi
 
 lint-tool:

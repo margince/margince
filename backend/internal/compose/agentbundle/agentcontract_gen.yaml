@@ -34828,6 +34828,10 @@ components:
       description: >-
         What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
       properties:
+        subject:
+          type: [string, 'null']
+          maxLength: 998
+          description: The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
         intent:
           type: [string, 'null']
           maxLength: 400
@@ -35231,6 +35235,18 @@ components:
       properties:
         anchor_type: {$ref: '#/components/schemas/MailDraftAnchorType'}
         anchor_id: {type: string, format: uuid}
+    MailDraftEditorState:
+      type: object
+      description: >-
+        The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
+      properties:
+        content_fingerprint: {type: string, readOnly: true, description: "Server binding to the saved words, used only to retire stale editor state."}
+        intent: {type: string}
+        ai_generated: {type: boolean}
+        ai_disclosure: {type: string}
+        voice_profile_version: {type: integer, minimum: 1}
+        voice_degraded: {type: boolean}
+        served_body: {type: string}
     MailDraftInput:
       type: object
       required: [anchor_type, anchor_id]
@@ -35238,6 +35254,7 @@ components:
         The composer's fields as they stand. Every content field is optional and an omitted
         one saves as empty, because a draft is whatever the rep had typed so far.
       properties:
+        editor_state: {$ref: '#/components/schemas/MailDraftEditorState'}
         anchor_type: {$ref: '#/components/schemas/MailDraftAnchorType'}
         anchor_id: {type: string, format: uuid}
         to: {type: array, maxItems: 100, items: {type: string, maxLength: 320}}
@@ -35254,6 +35271,7 @@ components:
       description: |-
         One rep's unsent message, readable by its author and nobody else. Not an activity.
       properties:
+        editor_state: {$ref: '#/components/schemas/MailDraftEditorState'}
         id: {type: string, format: uuid}
         anchor_type: {$ref: '#/components/schemas/MailDraftAnchorType'}
         anchor_id: {type: string, format: uuid}

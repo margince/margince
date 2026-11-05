@@ -7629,6 +7629,8 @@ export const en = {
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",
   "compose.threadLeave": "New email",
+  "compose.channelDraftUnavailable":
+    "AI drafting is not available for this channel. Write your reply below.",
   "compose.draftKept": "Your edits were kept. Draft again when ready.",
   "compose.threadFailed":
     "The message could not be loaded. Select Retry in the thread.",

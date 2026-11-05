@@ -3449,7 +3449,7 @@ test.describe("calling a contact", () => {
       await expect(opener).toBeFocused();
     });
 
-    test("a task typed by hand offers Draft email and Open contact but no Call", async ({
+    test("a task typed by hand offers Call, Draft email and Open contact", async ({
       page,
     }) => {
       const { dialog } = await openTask(page, typedTask.subject);
@@ -3462,7 +3462,7 @@ test.describe("calling a contact", () => {
           exact: true,
         }),
       ).toBeVisible();
-      await expect(callVerb(dialog)).toHaveCount(0);
+      await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
 });

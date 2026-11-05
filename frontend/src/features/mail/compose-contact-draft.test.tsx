@@ -220,6 +220,7 @@ describe("drafting to a contact", () => {
     expect(rewrite.body).toEqual({
       intent: "Keep the meaning and use fewer words.",
       rewrite_of: CONTACT_DRAFT.body,
+      subject: CONTACT_DRAFT.subject,
     });
   });
 

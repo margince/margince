@@ -38,8 +38,8 @@ fixture() {
 # expect <name> <want-exit> — run the gate in $dir and judge its status.
 expect() {
 	local name="$1" want="$2" got
-	# The fixture repo has only origin/main, so a caller's DIFF_BASE or BASE must not reach the gate.
-	( cd "$dir" && env -u DIFF_BASE -u BASE ./scripts/check-comment-budget.sh ) >/dev/null 2>&1
+	# The fixture repo has only origin/main, so a caller's CHECK_BASE_REF or BASE must not reach the gate.
+	( cd "$dir" && env -u CHECK_BASE_REF -u BASE ./scripts/check-comment-budget.sh ) >/dev/null 2>&1
 	got=$?
 	ran=$((ran + 1))
 	if [[ "$got" != "$want" ]]; then

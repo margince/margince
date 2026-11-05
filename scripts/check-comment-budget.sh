@@ -24,8 +24,8 @@ cd "$lib/.."
 FLOOR="${COMMENT_BUDGET_FLOOR:-10}"
 
 # BASE names the ref to measure against, as `craft-review` spells it. Unset,
-# it is the merge base with DIFF_BASE (origin/main unless set) — what this push adds.
-diff_base="${DIFF_BASE:-origin/main}"
+# it is the merge base with CHECK_BASE_REF (origin/main unless set) — what this push adds.
+diff_base="${CHECK_BASE_REF:-origin/main}"
 base="${BASE:-$(git merge-base HEAD "$diff_base" 2>/dev/null || true)}"
 if [[ -z "$base" ]]; then
 	echo "comment-budget: no $diff_base base — skipping"

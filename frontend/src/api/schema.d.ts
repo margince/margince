@@ -39751,6 +39751,8 @@ export interface components {
         };
         /** @description What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs. */
         DraftSteering: {
+            /** @description The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead. */
+            subject?: string | null;
             /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
             intent?: string | null;
             /**
@@ -40244,11 +40246,23 @@ export interface components {
             /** Format: uuid */
             anchor_id: string;
         };
+        /** @description The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution. */
+        MailDraftEditorState: {
+            /** @description Server binding to the saved words, used only to retire stale editor state. */
+            readonly content_fingerprint?: string;
+            intent?: string;
+            ai_generated?: boolean;
+            ai_disclosure?: string;
+            voice_profile_version?: number;
+            voice_degraded?: boolean;
+            served_body?: string;
+        };
         /**
          * @description The composer's fields as they stand. Every content field is optional and an omitted
          *     one saves as empty, because a draft is whatever the rep had typed so far.
          */
         MailDraftInput: {
+            editor_state?: components["schemas"]["MailDraftEditorState"];
             anchor_type: components["schemas"]["MailDraftAnchorType"];
             /** Format: uuid */
             anchor_id: string;
@@ -40262,6 +40276,7 @@ export interface components {
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
+            editor_state?: components["schemas"]["MailDraftEditorState"];
             /** Format: uuid */
             id: string;
             anchor_type: components["schemas"]["MailDraftAnchorType"];

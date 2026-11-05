@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
 import {
+  baseRefFor,
   changesSince,
   needsStory,
   scopeFor,
@@ -435,4 +436,20 @@ it("includes committed, staged, unstaged and new stories before commit", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+describe("baseRefFor", () => {
+  it("defaults to main and permits an explicit develop PR base", () => {
+    expect(baseRefFor({})).toBe("origin/main");
+    expect(baseRefFor({ FE_UAT_BASE_REF: "origin/develop" })).toBe(
+      "origin/develop",
+    );
+  });
+  it("refuses an empty ref or extra git arguments instead of shortening the census", () => {
+    for (const ref of ["", "origin/develop HEAD", "--all"]) {
+      expect(() => baseRefFor({ FE_UAT_BASE_REF: ref })).toThrow(
+        "must name a git ref",
+      );
+    }
+  });
 });

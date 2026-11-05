@@ -40,12 +40,13 @@ func (h Handlers) SaveMailDraft(w http.ResponseWriter, r *http.Request, _ crmcon
 		Type: req.AnchorType,
 		ID:   ids.UUID(req.AnchorId),
 	}, MailDraftContent{
-		To:       valueOr(req.To),
-		Cc:       valueOr(req.Cc),
-		Bcc:      valueOr(req.Bcc),
-		Subject:  valueOr(req.Subject),
-		Body:     valueOr(req.Body),
-		HTMLBody: valueOr(req.HtmlBody),
+		To:          valueOr(req.To),
+		Cc:          valueOr(req.Cc),
+		Bcc:         valueOr(req.Bcc),
+		Subject:     valueOr(req.Subject),
+		Body:        valueOr(req.Body),
+		HTMLBody:    valueOr(req.HtmlBody),
+		EditorState: valueOr(req.EditorState),
 	}, version)
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -66,6 +67,7 @@ func (h Handlers) DiscardMailDraft(w http.ResponseWriter, r *http.Request, id cr
 func mailDraftResponse(d MailDraft) crmcontracts.MailDraft {
 	out := crmcontracts.MailDraft{
 		Id:           openapi_types.UUID(d.ID),
+		EditorState:  &d.Content.EditorState,
 		AnchorType:   d.Anchor.Type,
 		AnchorId:     openapi_types.UUID(d.Anchor.ID),
 		To:           addressLine(d.Content.To),

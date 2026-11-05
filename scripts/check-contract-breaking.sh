@@ -16,7 +16,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 CRM_YAML="${CRM_YAML:-backend/api/crm.yaml}"
-BASE_REF="${1:-${DIFF_BASE:-origin/main}}"
+BASE_REF="${1:-origin/main}"
 
 # Tool resolution, same order as the backend Makefile's gate binaries:
 # prefer the install from `make tools` (CI restores it from cache — the

@@ -913,6 +913,7 @@ storybook:
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
 ## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
+## FE_UAT_BASE_REF chooses the PR base (origin/main by default).
 ## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
 ## the build registers instead of the diff's (scheduled.yml runs it daily).
 fe-uat:
@@ -953,7 +954,7 @@ fe-edge-padding:
 ## BLOCKER and MAJOR findings both fail it. The code checks judge every
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
-## added since DIFF_BASE (origin/main unless set), so old comments improve as
+## added since CHECK_BASE_REF (origin/main unless set), so old comments improve as
 ## files are touched; with no such ref the gate fails instead of judging nothing. `make check` runs
 ## it locally.
 ##
@@ -962,9 +963,8 @@ fe-edge-padding:
 ## and the fixture is the worked example a unit author copies. The gate is a
 ## pinned binary (scripts/craft-pin.sh), and the paths are written from the
 ## repository root, where it runs.
-DIFF_BASE ?= origin/main
 craft-static: test-craft-pin
-	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base $(DIFF_BASE) \
+	@"$$(./scripts/craft-pin.sh)" static --strict --diff-base "$(CHECK_BASE_REF)" \
 		backend extensions fixtures frontend tools
 
 ## craft-review — the OPT-IN model-driven arm of the craftsmanship gate: send
@@ -1244,11 +1244,12 @@ make-target-parity:
 test-make-target-parity:
 	@./scripts/check-make-target-parity.test.sh
 
-## contract-breaking-check — oasdiff severity gate on backend/api/crm.yaml vs
-## origin/main: a breaking change (removed op, narrowed type…) fails; additive
-## changes pass. A deliberate spec re-sync runs with CONTRACT_STABILITY=pre-live.
+## contract-breaking-check — strict compatibility against CHECK_BASE_REF
+## (origin/main by default). Set origin/develop when that is the target branch.
+## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
+CHECK_BASE_REF ?= origin/main
 contract-breaking-check:
-	@./scripts/check-contract-breaking.sh
+	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
 ## `make gen` covers the Go artifacts and a unit test covers the MCP surface
@@ -1265,11 +1266,11 @@ test-contract-frontend-drift:
 	@./scripts/check-contract-frontend-drift.test.sh
 
 ## migration-versions — a migration this branch adds claims a version no
-## migration on origin/main already claims, and sorts after all of them. Two
+## migration on CHECK_BASE_REF already claims, and sorts after all of them. Two
 ## PRs numbering against the same main is how core 0240 (and then 0248) ended
 ## up claimed twice, which the per-tree loader test cannot see.
 migration-versions:
-	@./scripts/check-migration-versions.sh
+	@MIGRATION_VERSIONS_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(MIGRATION_VERSIONS_REQUIRE_BASE),1)" ./scripts/check-migration-versions.sh "$(CHECK_BASE_REF)"
 
 ## test-migration-versions — prove the version gate fires on each defect it
 ## names and, above all, that a DECLARED baseline reset is admitted only when the
