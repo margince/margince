@@ -102,7 +102,7 @@ To complete a task in Margince, press **Done** on its Worklist row, or on the ta
 3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick
    a day under **Move to**.
 
-**Snooze 1 day** adds a day to the task's own due date, so a task with no date does not show it. If
+**Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### How do I mark a meeting ready?
@@ -115,7 +115,7 @@ When the start time, the guests or the invite's agenda change, the row asks agai
 ### What can I do from a task?
 A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
 
-It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**.
+It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
