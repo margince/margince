@@ -35,7 +35,9 @@ import {
 } from "./listqueryparams";
 
 export {
+  isNarrowed,
   LIST_PAGE_SIZES,
+  type ListOpening,
   type ListQuery,
   listFetchLimit,
   listPageOf,
@@ -304,6 +306,8 @@ export function useListQuery<Row>({
     rows,
     query,
     setQuery,
+    initialSort: opening.sort,
+    initialFilters: opening.filters,
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
@@ -322,6 +326,10 @@ export type ListState<Row> = Readonly<{
   rows: Row[];
   query: ListQuery;
   setQuery: Dispatch<SetStateAction<ListQuery>>;
+  /** The order the list opens on; absent, the server's own. */
+  initialSort?: string;
+  /** The filters the screen opens the list with. */
+  initialFilters?: Readonly<Record<string, string>>;
   /**
    * The address prefix this list's dials carry, so the surface addresses the
    * rendered page under the same name the rest of the dials go by. Undefined for

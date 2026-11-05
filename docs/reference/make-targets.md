@@ -241,7 +241,7 @@ Each lane writes its output to `.tmp/check-lanes/<lane>.log`, because make 3.81 
 
 Every green `make check` ends with a table of its phases, so whoever optimizes it next starts from a measurement on their own machine. Each row names its lane. The first line gives the wall time of the run next to the total of its phases: the lanes overlap, so the total is larger.
 
-The time is not spread evenly. The frontend core suite is the largest phase, and `fe-unit` is most of it: vitest runs every test file on every run. In the backend, the `gates` package is the slowest leg. `UNCACHED_TEST_PKGS` in `backend/Makefile` keeps it out of the test cache, and says why.
+The time is not spread evenly. The frontend core suite is the largest phase, and `fe-unit` is most of it: vitest runs every test file on every run. In the backend, the `gates` package is the slowest leg. `UNCACHED_TEST_PKGS` in `backend/Makefile` keeps it and `internal/modules/ai` out of the test cache, and says why.
 
 Every other Go package replays from the test cache when nothing it reads has changed. Go checks a file a test opened by its size, mode and mtime. `drift` regenerates every committed generated file. It runs `scripts/keep-unchanged-mtimes.sh` before and after the generators, so a file written back with the same bytes gets its old mtime again.
 

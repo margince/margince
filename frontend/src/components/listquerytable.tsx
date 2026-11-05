@@ -5,6 +5,7 @@ import {
   type ListColumn,
   type ListSelection,
   ListTable as ListSurface,
+  type ViewRow,
 } from "../design-system/listtable";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
@@ -62,12 +63,16 @@ export function ListTable<Row>({
   searchable = true,
   showArchivedToggle = true,
   tools,
+  layout,
+  viewRows,
   saveView,
+  notice,
   emptyNote,
   scopeKey,
   body,
   bodyOwnsPaging = false,
   bodyCount,
+  countScope,
   selection,
   hideShortChrome,
 }: Readonly<{
@@ -92,6 +97,8 @@ export function ListTable<Row>({
   bodyOwnsPaging?: boolean;
   /** The count for a body that pages itself; see the design-system table. */
   bodyCount?: ReactNode;
+  /** What the table's count names its rows as part of (the deals pipeline). */
+  countScope?: string;
   /** See the design-system table's own `hideShortChrome`. */
   hideShortChrome?: boolean;
   /**
@@ -128,14 +135,16 @@ export function ListTable<Row>({
   /** False for a list whose GET has no `q` param, e.g. /partners. */
   searchable?: boolean;
   showArchivedToggle?: boolean;
-  /** Passed through to the surface's own tools slot, after the Display menu.
-   * For a screen whose board and table views share a dial that lives beside
-   * them, e.g. deals' pipeline picker. */
+  /** A verb that is not a dial, at the toolbar's end; see `ListSurface`. */
   tools?: ReactNode;
-  /** The screen's Save view, in the surface's own last slot; see
-   * `ListSurface`. A slot rather than the tail of `tools`, so the row's order
-   * is the surface's to keep and not each screen's to remember. */
+  /** Table or Board, at the top of the View panel; see `ListSurface`. */
+  layout?: ReactNode;
+  /** The screen's own dials in the View panel (a pipeline); see `ListSurface`. */
+  viewRows?: readonly ViewRow[];
+  /** Save view and Manage views, in the View panel's footer. */
   saveView?: ReactNode;
+  /** A line under the search; see `ListSurface`. */
+  notice?: ReactNode;
   /**
    * What the empty table says under its generic line, when this screen knows
    * why it is empty. Example: a "Mine" view for a reader who owns nothing,
@@ -201,6 +210,8 @@ export function ListTable<Row>({
     ...dataViews,
   ];
   const [view, pickView] = useActiveView(railViews, query);
+  // No tab lit means the list departs from every view this rail offers.
+  const changed = railViews.length > 0 && view < 0;
   // Keyed on the values, not on the arrays that carry them. The table treats a
   // new `chosen` object as the reader narrowing the list and resets to page 1.
   // So an object rebuilt every render resets on every render. Pressing Next
@@ -370,7 +381,11 @@ export function ListTable<Row>({
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
+      layout={layout}
+      viewRows={viewRows}
+      changed={changed}
       saveView={saveView}
+      notice={notice}
       search={
         searchable
           ? {
@@ -386,6 +401,7 @@ export function ListTable<Row>({
       sort={{
         value: query.sort,
         onChange: (next) => setQuery((prev) => ({ ...prev, sort: next })),
+        initial: state.initialSort,
       }}
       chips={allChips}
       chosen={chosen}
@@ -426,6 +442,7 @@ export function ListTable<Row>({
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
       bodyCount={bodyCount}
+      countScope={countScope}
       selection={selection}
       pending={isPending}
       problem={problem}
