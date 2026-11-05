@@ -100,7 +100,7 @@ func TestCallbackRefusesARoleThatCannotCaptureBeforeExchangingTheCode(t *testing
 
 	h.ConnectorOAuthCallback(rec, req, "gmail", crmcontracts.ConnectorOAuthCallbackParams{State: state, Code: &code})
 
-	if oauth.exchanged {
+	if oauth.exchanges > 0 {
 		t.Error("the code was spent for a member whose role cannot capture")
 	}
 	if got, want := rec.Header().Get("Location"), "https://app.test/#/onboarding/connect/role_cannot_capture/gmail"; rec.Code != http.StatusFound || got != want {

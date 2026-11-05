@@ -8689,7 +8689,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passport.noneOption": "Kein Passport",
   "settings.passportUseAi": "In einem Skript oder einem anderen KI-Tool",
   "settings.passportUseAiDetail":
-    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex und Antigravity brauchen keinen Passport; sie melden sich unter Coding-Agenten selbst an.",
+    "Installiere den Margince-Skill in einem Tool, das sich nicht selbst anmelden kann, und gib ihm dann deinen Passport. Claude Code, Codex, Cursor und die Editoren brauchen keinen Passport; sie melden sich unter „Verbinde dein KI-Tool“ selbst an.",
   "settings.skillDownload": "Skill herunterladen",
   "settings.skillDownloadFailed": "Skill nicht heruntergeladen",
   "settings.passportUseCode": "In deinem eigenen Code",
@@ -8990,8 +8990,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agents.colConnected": "Verbunden",
   "agents.disconnectConfirm":
     "Damit endet die gesamte Verbindung, nicht nur ein Satz Zugangsdaten. Der Agent verliert den Zugriff beim nächsten Aufruf und kann ihn nicht erneuern. Für eine neue Verbindung muss der Zugriff erneut freigegeben werden.",
-  "agents.connectAntigravityPath":
-    "Antigravity hat keinen Befehl zum Hinzufügen. Füge den Block unten in ~/.gemini/config/mcp_config.json ein, öffne dann die Agent-Einstellungen, „Customizations“, und wähle „Authenticate“ neben margince.",
   "agents.connectorOff":
     "KI-Tools können sich noch nicht mit Margince verbinden.",
   "agents.connectorOffDetail":
@@ -9115,7 +9113,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.connect.help": "Hilfe von {vendor}",
   "aiAccess.connect.helpAdmin": "Hilfe von {vendor} für deine Admins",
   "aiAccess.connect.devHint":
-    "Nutzt du ein Kommandozeilen-Tool oder eigenen Code? Siehe Für die Entwicklung unten.",
+    "Schreibst du eigenen Code? Erstelle unten im Bereich Für die Entwicklung einen API-Schlüssel.",
   "aiAccess.step.allow":
     "Margince öffnet sich. Melde dich an und wähle Autorisieren. Fertig.",
   "aiAccess.claude.openConnectors":
@@ -9196,14 +9194,86 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.guide.checked": "Diese Schritte wurden am {date} geprüft.",
   "aiAccess.dev.title": "Für die Entwicklung",
   "aiAccess.dev.sub":
-    "API-Schlüssel für eigenen Code, Coding-Agenten und was Agenten ohne dich tun dürfen.",
+    "API-Schlüssel für eigenen Code und was Agenten ohne dich tun dürfen.",
   "aiAccess.dev.tab.passports": "API-Schlüssel",
-  "aiAccess.dev.tab.agents": "Coding-Agenten",
   "aiAccess.dev.tab.rules": "Regeln für Agenten",
-  "aiAccess.cli.title": "Coding-Agenten",
-  "aiAccess.cli.sub":
-    "Einmal verbinden, dann im Browser anmelden. Kein Passport nötig.",
-  "aiAccess.cli.then": "Führe dann {command} aus.",
+  "aiAccess.connect.placeQuestion": "Wo nutzt du sie?",
+  "aiAccess.connect.copy": "Kopieren",
+  "aiAccess.connect.command": "Text zum Kopieren",
+  "aiAccess.choice.other": "Ein anderes KI-Tool",
+  "aiAccess.place.claudeApp": "Claude-App: Web, Desktop oder Handy",
+  "aiAccess.place.claudeAppNote":
+    "Eine Verbindung gilt für Claude im Web, in der Desktop-App und auf dem Handy. Claude Code richtest du separat ein.",
+  "aiAccess.place.claudeCodeTerminal": "Claude Code im Terminal",
+  "aiAccess.place.claudeCodeVsCode": "Claude Code in VS Code",
+  "aiAccess.place.claudeCodeJetBrains": "Claude Code in JetBrains",
+  "aiAccess.place.claudeCodeVisualStudio": "Claude Code in Visual Studio",
+  "aiAccess.place.claudeInCopilot":
+    "Nutzt du Claude als Modell in GitHub Copilot? Wähle oben Copilot.",
+  "aiAccess.place.chatgptApp": "ChatGPT-App: Web, Desktop oder Handy",
+  "aiAccess.place.codex": "Codex im Terminal oder Editor",
+  "aiAccess.place.m365": "Microsoft 365 Copilot oder Teams",
+  "aiAccess.place.githubVsCode": "GitHub Copilot in VS Code",
+  "aiAccess.place.githubVisualStudio": "GitHub Copilot in Visual Studio",
+  "aiAccess.place.geminiApp": "Gemini-App, beruflich oder privat",
+  "aiAccess.place.antigravity": "Antigravity, Googles Agent-Editor",
+  "aiAccess.runIn.vscode":
+    "Führe den Befehl im Terminal von VS Code aus: „Terminal“, dann „Neues Terminal“.",
+  "aiAccess.runIn.jetbrains":
+    "Führe den Befehl im Fenster „Terminal“ der IDE aus.",
+  "aiAccess.runIn.visualStudio":
+    "Führe den Befehl im Terminal von Visual Studio aus: „Ansicht“, dann „Terminal“.",
+  "aiAccess.local.sub":
+    "Wird auf deinem eigenen Rechner eingerichtet. Ohne Admin.",
+  "aiAccess.local.claudeCode.add":
+    "Führe das einmal aus. Danach ist Margince in jedem Projekt und Editor da.",
+  "aiAccess.local.claudeCode.signIn":
+    "Tippe in Claude Code /mcp, wähle margince und melde dich an.",
+  "aiAccess.local.codex.add": "Führe das einmal im Terminal aus.",
+  "aiAccess.local.codex.signIn": "Führe dann „codex mcp login margince“ aus.",
+  "aiAccess.local.vscode.add":
+    "Führe in der Befehlspalette „MCP: Add Server“ aus und wähle „HTTP“.",
+  "aiAccess.local.vscode.paste":
+    "Füge die Adresse ein, gib margince als Server-ID ein und wähle „Global“.",
+  "aiAccess.local.vscode.signIn":
+    "Bestätige die Anmeldeabfrage von VS Code. Margince öffnet sich: Melde dich an und wähle Autorisieren.",
+  "aiAccess.local.visualStudio.file":
+    "Lege in Visual Studio die Datei %USERPROFILE%\\.mcp.json an oder öffne sie, füge diesen Text ein und speichere sie. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
+  "aiAccess.local.visualStudio.signIn":
+    "Wähle in der Datei über margince „Authentication Required“ und dann „Authenticate“. Melde dich an und wähle Autorisieren.",
+  "aiAccess.local.visualStudio.tools":
+    "Wechsle im Copilot Chat in den Agent-Modus und schalte die margince-Tools ein.",
+  "aiAccess.local.cursor.file":
+    "Öffne ~/.cursor/mcp.json oder lege die Datei an, füge diesen Text ein und speichere. Starte Cursor dann neu. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
+  "aiAccess.local.cursor.signIn":
+    "Folge der Anmeldeabfrage von Cursor für margince. Margince öffnet sich: Melde dich an und wähle Autorisieren.",
+  "aiAccess.local.antigravity.file":
+    "Füge diesen Text in ~/.gemini/config/mcp_config.json ein. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
+  "aiAccess.local.antigravity.signIn":
+    "Öffne die Agent-Einstellungen, dann „Customizations“, und wähle „Authenticate“ neben margince.",
+  "aiAccess.other.sub":
+    "Margince funktioniert mit jedem KI-Tool, das einen entfernten MCP-Server hinzufügen kann. Suche in seinen Einstellungen nach „MCP“, „Connectors“ oder „Tools“.",
+  "aiAccess.other.typeLabel": "Typ",
+  "aiAccess.other.type":
+    "Entfernter Server über HTTP, manchmal „Streamable HTTP“ genannt",
+  "aiAccess.other.signInLabel": "Anmeldung",
+  "aiAccess.other.signIn":
+    "OAuth im Browser. Die meisten Tools starten sie bei der ersten Verbindung.",
+  "aiAccess.other.apiKey":
+    "Kein Anmelden im Tool möglich? Erstelle in den Einstellungen unter KI-Zugang, Für die Entwicklung, einen API-Schlüssel und sende ihn als Header „Authorization: Bearer“ mit dem Schlüssel dahinter.",
+  "aiAccess.other.notAllowed":
+    "Meldet die Anmeldung, dass das Tool nicht erlaubt ist, legt ein Admin in den Einstellungen unter MCP fest, welche Tools sich verbinden dürfen.",
+  "setup.step.ai": "KI-Tool verbinden",
+  "setup.caption.ai":
+    "Nutze Margince aus Claude, ChatGPT, Copilot oder deinem Editor.",
+  "setup.action.ai": "Verbinden",
+  "setup.step.aiDone": "{name} ist verbunden.",
+  "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
+  "ob.conv.connect.aiRow": "Dein KI-Tool",
+  "ob.conv.connect.aiBody":
+    "Frag Claude, ChatGPT, Copilot oder deinen Editor nach deinen Deals und lass ihn Margince für dich aktualisieren.",
+  "ob.conv.connect.aiConnect": "Verbinden",
+  "ob.conv.connect.aiConnected": "Verbunden",
   "aiAccess.cli.docs": "{tool}-Doku",
   "settings.token": "Zugangsdaten",
   "settings.autonomy": "Autonomiestufen",
@@ -15112,7 +15182,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.importAndContinue": "{period} importieren und weiter",
   "ob.conv.connect.alsoTitle": "Jetzt auch sinnvoll",
   "ob.conv.connect.alsoSub":
-    "Optional. Beides kannst du später in den Einstellungen ändern.",
+    "Optional. All das kannst du später in den Einstellungen ändern.",
   "ob.conv.connect.linkedinRow": "Dein LinkedIn-Profil",
   "ob.conv.connect.linkedinAdd": "Profil hinzufügen",
   "setup.reminder.trigger": "Einrichtung abschließen",
