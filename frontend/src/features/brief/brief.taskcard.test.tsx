@@ -67,24 +67,37 @@ it("offers no tick on a row the reader may not complete", () => {
   expect(within(card).queryAllByRole("button")).toHaveLength(1);
 });
 
-it("says what to do from the row's reason, and nothing when it has none", () => {
+it("says what to do from the row's reason, then its detail, then nothing", () => {
   stubApi({});
-  const reasoned = {
+  const detailed = {
     ...taskRow("task-1", "Send the sheet"),
     detail: "Sonya asked for the new prices.",
+  };
+  const reasoned: WorklistItem = {
+    ...detailed,
+    id: "task-3",
+    because: [{ kind: "buyer_wrote_last" }],
   };
   const bare = taskRow("task-2", "Call Lumen");
   const { container } = render(
     <BriefFeed
-      day={readingsDay({}, [taskRow("task-0", "Call Weber"), reasoned, bare])}
+      day={readingsDay({}, [
+        taskRow("task-0", "Call Weber"),
+        reasoned,
+        detailed,
+        bare,
+      ])}
       state="ready"
     />,
   );
-  const [first, second] = waitingCards(container);
-  expect(first.querySelector(".brief-task-line")?.textContent).toBe(
+  const [byReason, byDetail, none] = waitingCards(container);
+  expect(byReason.querySelector(".brief-task-line")?.textContent).toMatch(
+    /wrote last$/,
+  );
+  expect(byDetail.querySelector(".brief-task-line")?.textContent).toBe(
     "Sonya asked for the new prices.",
   );
-  expect(second.querySelector(".brief-task-line")).toBeNull();
+  expect(none.querySelector(".brief-task-line")).toBeNull();
 });
 
 it("draws no clock on an undated task, and the due day on a dated one", () => {
@@ -106,6 +119,7 @@ it("draws no clock on an undated task, and the due day on a dated one", () => {
   );
   const [late, undated] = waitingCards(container);
   expect(late.querySelector(".badge-danger")).toBeTruthy();
+  expect(late.textContent).toContain("10 Sept");
   expect(undated.querySelector(".badge")).toBeNull();
   expect(screen.queryByText(en["brief.task.undated"])).toBeNull();
 });

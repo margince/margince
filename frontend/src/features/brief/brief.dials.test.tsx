@@ -191,6 +191,9 @@ describe("the Brief's dials", () => {
       document.querySelectorAll(".page-zones-aside .brief-section"),
     ).toHaveLength(0);
     expect(document.querySelector("#brief-quiet")).toBeNull();
+    expect(
+      document.querySelector(".brief-weekly-page .brief-rail"),
+    ).not.toBeNull();
   });
 
   // THE READINGS AND THE LINE UNDER THEM BELONG TO THE MORNING TOO.

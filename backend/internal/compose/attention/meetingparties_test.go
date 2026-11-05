@@ -142,7 +142,7 @@ func TestEveryRowWithAContactSaysWhereItWorks(t *testing.T) {
 	if rows[2].Contact.Employer == nil || rows[2].Contact.Employer.CompanyName != "Acme" {
 		t.Errorf("a waiting row employer = %+v, want Acme", rows[2].Contact.Employer)
 	}
-	if len(asked) != 3 {
+	if !sameMembers(asked, []ids.UUID{known, withheld, sender}) {
 		t.Errorf("the employer read was asked about %v, want the three contacts once each", asked)
 	}
 }
@@ -176,4 +176,21 @@ func TestAFailedEmployerReadKeepsTheRowsAndSaysSo(t *testing.T) {
 			}
 		})
 	}
+}
+
+// sameMembers holds when got names each wanted id exactly once, in any order.
+func sameMembers(got, want []ids.UUID) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	seen := map[ids.UUID]int{}
+	for _, id := range got {
+		seen[id]++
+	}
+	for _, id := range want {
+		if seen[id] != 1 {
+			return false
+		}
+	}
+	return true
 }

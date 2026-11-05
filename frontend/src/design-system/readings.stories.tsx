@@ -145,7 +145,7 @@ export const RecordChips: Story = {
       </Chip>
       <Chip
         dense
-        appHref="/companies/company-kessler"
+        appHref="#/companies/company-kessler"
         lead={<Avatar name="Kessler Retail" identity="company-kessler" />}
       >
         Kessler Retail

@@ -289,8 +289,8 @@ function TaskRecords({
   item,
   link,
 }: Readonly<{ item: WorklistItem; link?: (href: string) => string }>) {
-  // A brief item's open card is headed by its record, so no chip repeats it.
-  const headed = link !== undefined && briefSubjectLabel(item) !== undefined;
+  // A brief item's card is named by its record (taskName), so no chip repeats it.
+  const headed = briefSubjectLabel(item) !== undefined;
   const named = namedOn(item).filter(
     (who, index, all) =>
       all.findIndex((other) => other.id === who.id) === index &&

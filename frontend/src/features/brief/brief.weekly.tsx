@@ -224,7 +224,8 @@ function reportSections(
       key: "movement",
       icon: TrendingUp,
       title: "brief.report.chapter.movement",
-      aside: <MovedCount count={moved.length} />,
+      // The lines are capped for reading; the frozen count is complete.
+      aside: <MovedCount count={review.counts.deals_moved} />,
       body: <MovedDeals deals={moved} />,
     }),
     ...(days
@@ -337,7 +338,8 @@ function ClosedTotal({ review }: Readonly<{ review: WeeklyReview }>) {
   const pipeline = review.pipeline;
   if (!pipeline) return null;
   return (
-    <Badge tone="success" dot>
+    // Green only for a week with no loss; a mixed result reads neutral.
+    <Badge tone={pipeline.lost_minor === 0 ? "success" : undefined} dot>
       {t("brief.report.closedTotal", {
         won: formatMoney(pipeline.won_minor, pipeline.currency, locale),
         lost: formatMoney(pipeline.lost_minor, pipeline.currency, locale),

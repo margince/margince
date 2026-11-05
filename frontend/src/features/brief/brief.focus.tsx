@@ -63,8 +63,10 @@ export function Triage({
   const taskRead = useActivity(lead.id, isTask);
   const task = taskRead.data;
   const taskPending = isTask && taskRead.isPending;
-  // The drafted mail is the card's one filled verb, so Done steps back.
-  const drafts = Boolean(task?.email_target && writeTo);
+  // The drafted mail is the card's one filled verb, so Done steps back. A
+  // refused draft still draws its AI button, with the reason under it.
+  const target = task?.email_target;
+  const drafts = Boolean(target && (writeTo || target.refusal));
   const cardVerbs =
     onContext || task || taskPending ? (
       <>

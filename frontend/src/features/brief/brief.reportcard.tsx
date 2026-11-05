@@ -4,6 +4,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Panel } from "../../design-system/panel";
+import "./brief.reportcard.css";
 
 /** A report section's name, led by the mark of what it counts. */
 export function ReportTitle({

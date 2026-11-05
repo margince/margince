@@ -22,8 +22,9 @@ report's parts are:
   lost.
 - **Pipeline movement**: the deals that changed stage, and the stage each reached.
 - **Activity this week**: what you did on each day, as columns: emails you sent, calls you logged
-  and meetings you held. Emails you received do not count. A weekend day shows only when you worked
-  on it. Reports written before this chart existed do not have it.
+  and meetings credited to you, as host or as a guest who took part. Emails you received do not
+  count. A weekend day shows only when you worked on it. Reports written before this chart existed
+  do not have it, and neither does a reader who may not see activities.
 - **Forecast**: one table of the forecast for the week, month and quarter.
 - **Figures**: every figure beside the week before, and the scorecard. The columns name the weeks
   by number, such as **Week 27** and **Week 26**. Under the table, each other reading has a row of

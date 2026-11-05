@@ -50,8 +50,8 @@ export function WorklistWhy({
             </ol>
           )}
           {detail &&
-            // Only a promise carries the contact's own words; every other
-            // detail is the product's explanation, so it is not drawn as a quote.
+            // Only a promise's detail is verbatim source evidence, quoted from a
+            // message; every other detail is the product's explanation.
             (item.source === QUOTED_SOURCE ? (
               <figure className="worklist-why-quote">
                 <figcaption className="t-caption">

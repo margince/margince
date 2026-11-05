@@ -209,9 +209,8 @@ describe("the verbs the row can and cannot take a reader to", () => {
   });
 });
 
-// A row waiting one day said "waiting 1 days". quiet_days carries the exact
-// same day-count value shape through the exact same reasonText path, so it
-// gets the exact same fix rather than a patch on one string.
+// A reason names the contact it is about, and falls back to a pronoun only
+// when no name is known.
 describe("reasonText — the other side by name", () => {
   const wroteLast: WorklistReason = { kind: "buyer_wrote_last" };
 
@@ -241,6 +240,9 @@ describe("reasonText — the other side by name", () => {
   });
 });
 
+// A row waiting one day said "waiting 1 days". quiet_days carries the exact
+// same day-count value shape through the exact same reasonText path, so it
+// gets the exact same fix rather than a patch on one string.
 describe("reasonText — day-count plural", () => {
   it("uses the singular day form for a one-day wait", () => {
     const reason: WorklistReason = {

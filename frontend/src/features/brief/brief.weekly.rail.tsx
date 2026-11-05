@@ -46,7 +46,13 @@ export function WeeklyRail({
   const now = useNow(HOUR_MS);
   // A week with no report still lists the weeks that have one, since the
   // stepper has nowhere to go from it.
-  if (review === null) return <WeeksPanel weeks={weeks ?? []} shown={asked} />;
+  if (review === null)
+    return (
+      <>
+        <WeeksPanel weeks={weeks ?? []} shown={asked} />
+        {constraints}
+      </>
+    );
   const numeric = weeklyNumericStatus(review.numeric_summary);
   return (
     <>

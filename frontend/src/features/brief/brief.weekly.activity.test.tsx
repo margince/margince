@@ -19,8 +19,7 @@ const week = [
 ];
 
 function keyTotal(label: string): string | null | undefined {
-  return screen.getByText(label).closest("li")?.querySelector("b")
-    ?.textContent;
+  return screen.getByText(label).closest("li")?.querySelector("b")?.textContent;
 }
 
 describe("the week's activity chart", () => {
