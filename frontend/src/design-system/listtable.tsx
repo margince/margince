@@ -1,12 +1,11 @@
-import { type ComponentProps, type ReactNode, useRef } from "react";
+import { type ReactNode, useRef } from "react";
 import { AnsweredSearch } from "./answeredsearch";
 import { EmptyState, useScrollRegion } from "./atoms";
 import {
-  CountLine,
-  countSays,
   type ListChip,
   ListSurface,
   type ListView,
+  rangeLine,
   type SortControl,
   type ViewRow,
 } from "./listsurface";
@@ -72,14 +71,13 @@ function BulkBar<Row>({
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
-/** The table's range line, or none while it is pending or has nothing to say. */
-function rangeLine(
+// A narrowed list with no rows may get its count back with the next answer.
+function holdsCount(
   pending: boolean,
-  line: ComponentProps<typeof CountLine>,
-): ReactNode {
-  return !pending && countSays(line.total, line.sortedBy) ? (
-    <CountLine {...line} />
-  ) : undefined;
+  narrowed: boolean,
+  rows: number,
+): boolean {
+  return pending || (narrowed && rows === 0);
 }
 
 export function ListTable<Row>({
@@ -417,7 +415,9 @@ export function ListTable<Row>({
               sortedBy: sortedColumn(columns, sort)?.header,
             })
       }
-      countPending={!bodyOwnsPaging && pending}
+      holdCount={
+        !bodyOwnsPaging && holdsCount(pending, narrowedBy(dials), rows.length)
+      }
       action={action}
       caption={caption}
       search={search}

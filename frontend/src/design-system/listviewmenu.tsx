@@ -171,7 +171,7 @@ export function ValueRow({
       type="button"
       className="lt-mi lt-vrow"
       {...marker}
-      // The visible words in order, with commas between the name and value.
+      // Commas give a screen reader the pause the gap between the columns gives.
       aria-label={name}
       onClick={onClick}
     >
@@ -209,7 +209,6 @@ export function ViewStep({
 /**
  * Focus for a level whose rows give way to a step. Entering moves it to the
  * step's Back, and leaving returns it to the row that opened the step.
- * Returns what a row's press calls before it opens its step.
  */
 export function useStepFocus(
   root: RefObject<HTMLElement | null>,
@@ -299,8 +298,8 @@ export function ToggleRow({ toggle }: Readonly<{ toggle: ViewToggle }>) {
   );
 }
 
-/** The trigger's face: the count and dot are hidden from a screen reader,
- * and one hidden line names it "View, 2 filters, changed". */
+/** What View shows: the count and dot are hidden from a screen reader, and
+ * one hidden line names the button "View, 2 filters, changed". */
 function ViewLabel({
   filterCount,
   changed,

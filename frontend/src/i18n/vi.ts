@@ -3385,6 +3385,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Lưu chế độ xem này",
   "views.name": "Tên",
   "views.rail": "Chế độ xem đã lưu",
+  "views.loadFailed": "Không thể tải các chế độ xem đã lưu.",
   "views.manage": "Quản lý chế độ xem",
   "views.none": "Chưa có chế độ xem đã lưu",
   "views.rename": "Đổi tên",

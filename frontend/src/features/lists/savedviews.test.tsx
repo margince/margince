@@ -264,19 +264,15 @@ describe("saved views", () => {
     // An empty rail claims the reader has saved nothing. A failed read knows
     // no such thing, and the retry is what makes it a failure rather than an
     // absence.
-    const failed = await screen.findByText("This section did not load.");
-    expect(failed).toBeTruthy();
-    // And it says which section: on the toolbar beside the search and View, an
-    // unnamed "this section" could be either.
-    expect(
-      screen.getByRole("region", { name: "Saved views" }).contains(failed),
-    ).toBe(true);
+    // It names what failed, since on the toolbar it stands beside other dials,
+    // and it is one line with no heading of its own.
+    const failed = await screen.findByRole("alert");
+    expect(failed.textContent).toBe("Saved views did not load.Retry");
+    expect(screen.queryByRole("heading")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    await waitFor(() =>
-      expect(screen.queryByText("This section did not load.")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   it("carries the search a view was saved with", async () => {

@@ -159,7 +159,9 @@ export const TheRailFailedToLoad: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const failed = await canvas.findByRole("region", { name: "Saved views" });
+    const failed = await canvas.findByRole("alert");
+    await expect(failed).toHaveTextContent("Saved views did not load.");
+    await expect(canvas.queryByRole("heading")).toBeNull();
     await expect(failed.closest(".lt-tools")).not.toBeNull();
     await expect(
       within(failed).getByRole("button", { name: "Retry" }),

@@ -3433,6 +3433,7 @@ export const en = {
   // lands beside the list's own tools, and "this section did not load" under a
   // toolbar says nothing about WHICH section.
   "views.rail": "Saved views",
+  "views.loadFailed": "Saved views did not load.",
   "views.manage": "Manage views",
   "views.none": "No saved views",
   "views.rename": "Rename",

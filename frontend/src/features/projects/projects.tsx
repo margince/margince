@@ -157,11 +157,8 @@ export function ProjectsScreen() {
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
   const createAction = !state.isPending && <NewProjectAction />;
-  // The first-run plate: nothing exists yet, and nothing narrows the list. A
-  // filtered-empty list is the table's own case, and a typed search must not be
-  // told the product has no projects. A saved view is reachable only from the
-  // rail, so the plate waits until the views read confirms there is none. An
-  // unanswered or failed read keeps the table, where SavedViewsFailure says why.
+  // First run: nothing exists and nothing narrows the list. It waits for the
+  // views read, since a saved view is reachable only from the rail.
   const firstRun =
     !state.isPending &&
     !state.isError &&

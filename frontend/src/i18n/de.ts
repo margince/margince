@@ -3489,6 +3489,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.saveTitle": "Diese Ansicht speichern",
   "views.name": "Name",
   "views.rail": "Gespeicherte Ansichten",
+  "views.loadFailed":
+    "Die gespeicherten Ansichten konnten nicht geladen werden.",
   "views.manage": "Ansichten verwalten",
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",

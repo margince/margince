@@ -253,9 +253,8 @@
   gap: var(--space-2);
 }
 
-/* THE VIEW PANEL: menu rows, in a popover above the fold and a drawer below it.
-   The panel sets only the block padding and each band its own inline padding,
-   so the rule between two bands spans the panel's whole width. */
+/* THE VIEW PANEL. Each band sets its own inline padding and the panel none, so
+   the rule between two bands spans the panel's whole width. */
 .popover-panel.lt-vpopover {
   --vpanel-inset: var(--controlGap);
   inline-size: 20rem;

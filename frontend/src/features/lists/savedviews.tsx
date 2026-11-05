@@ -7,8 +7,9 @@ import {
   type ListQuery,
   type SavedViewTab,
 } from "../../components/listquery";
+import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { NamePrompt } from "../../design-system/nameprompt";
-import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { ViewResource } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
@@ -123,7 +124,7 @@ function listStateFrom(query: ListQuery): Record<string, unknown> {
  * `/views` has re-ordered the rail around a rename.
  *
  * A failed read answers with no tabs, which is indistinguishable from a reader
- * who has saved none. `SaveViewAction` says which it was, because a hook can
+ * who has saved none. `SavedViewsFailure` says which it was, because a hook can
  * only answer with tabs.
  */
 export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
@@ -198,17 +199,19 @@ export function SavedViewsFailure({
     return null;
   }
   return (
-    <SurfaceState
-      loadingLabel={t("views.rail")}
-      state="failed"
-      label={t("views.rail")}
-      // Read by the `empty` arm alone, which this call never reaches. A failed
-      // read has no answer to what there is none of.
-      emptyLabel={t("common.empty")}
-      detail={{ onRetry: () => void views.refetch() }}
+    <ErrorLine
+      actions={
+        <Button
+          variant="link"
+          pending={views.isFetching}
+          onClick={() => void views.refetch()}
+        >
+          {t("common.retry")}
+        </Button>
+      }
     >
-      {null}
-    </SurfaceState>
+      {t("views.loadFailed")}
+    </ErrorLine>
   );
 }
 

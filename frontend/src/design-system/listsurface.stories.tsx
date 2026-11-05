@@ -137,13 +137,16 @@ export const GermanCountPhone: Story = {
   play: async ({ canvasElement }) => nothingPushedOut(canvasElement),
 };
 
-// A list whose count comes back with each search. The surface's caller answers
-// a search only when the story's own button says so, so a play can measure the
-// pending moment.
+// A list whose count comes back with each search. The story's own buttons
+// answer it, so a play can measure the pending moment.
 function SearchedSurface() {
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState(true);
   const [rows, setRows] = useState(0);
+  const answer = (found: number) => {
+    setRows(found);
+    setPending(false);
+  };
   return (
     <>
       <ListSurface
@@ -154,7 +157,7 @@ function SearchedSurface() {
             <CountLine unit="Leads" first={1} last={rows} total={rows} />
           )
         }
-        countPending={pending}
+        holdCount={pending || (query !== "" && rows === 0)}
         action={<Button>Neuer Lead</Button>}
         search={{
           value: query,
@@ -166,14 +169,8 @@ function SearchedSurface() {
       >
         <p>Zeilen</p>
       </ListSurface>
-      <Button
-        onClick={() => {
-          setRows(query.includes("nichts") ? 0 : 25);
-          setPending(false);
-        }}
-      >
-        Antworten
-      </Button>
+      <Button onClick={() => answer(25)}>25 Zeilen</Button>
+      <Button onClick={() => answer(0)}>Keine Zeilen</Button>
     </>
   );
 }
@@ -186,9 +183,8 @@ function toolbarTop(canvasElement: HTMLElement): number {
   return tools.getBoundingClientRect().top;
 }
 
-// The count has its own line on a phone. While a search is pending that line
-// keeps its place, so the toolbar under it never moves. A settled list with
-// nothing to count draws no line at all.
+// On a phone the count has its own line. A search, even one narrowed to no
+// rows, keeps that line; only a list with nothing at all drops it.
 export const CountHoldsItsLinePhone: Story = {
   name: "Count holds its line, phone",
   globals: { viewport: { value: "phone" } },
@@ -197,23 +193,35 @@ export const CountHoldsItsLinePhone: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Alle" });
-    const answer = canvas.getByRole("button", { name: "Antworten" });
+    const some = canvas.getByRole("button", { name: "25 Zeilen" });
+    const none = canvas.getByRole("button", { name: "Keine Zeilen" });
+    const search = canvas.getByRole("searchbox");
     const loading = toolbarTop(canvasElement);
-    await userEvent.click(answer);
+    await userEvent.click(some);
     await canvas.findByText("Leads 1 bis 25 von 25");
     await expect(toolbarTop(canvasElement)).toBe(loading);
 
-    await userEvent.type(canvas.getByRole("searchbox"), "a");
+    await userEvent.type(search, "a");
     await waitFor(() =>
       expect(canvasElement.querySelector(".lt-count")).toBeEmptyDOMElement(),
     );
     await expect(toolbarTop(canvasElement)).toBe(loading);
-    await userEvent.click(answer);
+    await userEvent.click(some);
     await canvas.findByText("Leads 1 bis 25 von 25");
     await expect(toolbarTop(canvasElement)).toBe(loading);
 
-    await userEvent.type(canvas.getByRole("searchbox"), " nichts");
-    await userEvent.click(answer);
+    await userEvent.type(search, "zzqx");
+    await userEvent.click(none);
+    await expect(
+      canvasElement.querySelector(".lt-count"),
+    ).toBeEmptyDOMElement();
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+    await userEvent.type(search, "y");
+    await userEvent.click(none);
+    await expect(toolbarTop(canvasElement)).toBe(loading);
+
+    await userEvent.clear(search);
+    await userEvent.click(none);
     await waitFor(() =>
       expect(canvasElement.querySelector(".lt-count")).toBeNull(),
     );

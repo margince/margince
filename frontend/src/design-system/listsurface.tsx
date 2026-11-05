@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -54,7 +60,7 @@ export function ListSurface({
   activeView = 0,
   onViewChange,
   count,
-  countPending = false,
+  holdCount = false,
   action,
   caption,
   search,
@@ -102,8 +108,11 @@ export function ListSurface({
    * Omitted when the list has nothing to say, and then no line is drawn.
    */
   count?: ReactNode;
-  /** A count is on its way: its line stays as it last settled. */
-  countPending?: boolean;
+  /**
+   * The count's line stays as it last settled while it may be refilled: a count
+   * is loading, or a narrowed list has no rows yet.
+   */
+  holdCount?: boolean;
   /** The one primary action for this surface, e.g. "New contact". */
   action?: ReactNode;
   /**
@@ -221,9 +230,7 @@ export function ListSurface({
             </div>
           )}
           <div className="lt-head-end">
-            {!chromeless && (
-              <HeadCount pending={countPending}>{count}</HeadCount>
-            )}
+            {!chromeless && <HeadCount hold={holdCount}>{count}</HeadCount>}
             <HeadActions>{action}</HeadActions>
           </div>
         </div>
@@ -304,20 +311,20 @@ function HeadActions({ children }: Readonly<{ children: ReactNode }>) {
  * arrives as a node, so the truncation tip reads the words the node rendered.
  */
 function HeadCount({
-  pending,
+  hold,
   children,
-}: Readonly<{ pending: boolean; children: ReactNode }>) {
+}: Readonly<{ hold: boolean; children: ReactNode }>) {
   const says =
     children !== undefined && children !== null && children !== false;
   // A first load holds the line, since most lists have rows to count.
   const [held, setHeld] = useState(true);
-  if (!pending && held !== says) {
+  if (!hold && held !== says) {
     setHeld(says);
   }
   const [text, setText] = useState("");
   const tip = useTruncationTooltip<HTMLSpanElement>(text);
   useEffect(() => setText(tip.ref.current?.textContent ?? ""));
-  if (!(pending ? held : says)) {
+  if (!says && !(hold && held)) {
     return null;
   }
   return (
@@ -326,6 +333,16 @@ function HeadCount({
       {tip.tip}
     </span>
   );
+}
+
+/** The table's range line, or none while it is pending or has nothing to say. */
+export function rangeLine(
+  pending: boolean,
+  line: ComponentProps<typeof CountLine>,
+): ReactNode {
+  return !pending && countSays(line.total, line.sortedBy) ? (
+    <CountLine {...line} />
+  ) : undefined;
 }
 
 /** Whether `CountLine` has words: rows to count, or an order to name. */

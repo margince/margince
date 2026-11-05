@@ -1501,7 +1501,11 @@ span.error-line {
    Nothing is lost by removing it. The palette clears its box on Escape and on
    every reopen, and the results field is a form a reader retypes into. */
 .input[type="search"]::-webkit-search-cancel-button,
-.input[type="search"]::-webkit-search-decoration {
+.input[type="search"]::-webkit-search-decoration,
+.lt-search-input::-webkit-search-cancel-button,
+.lt-search-input::-webkit-search-decoration,
+.lt-fsearch-input::-webkit-search-cancel-button,
+.lt-fsearch-input::-webkit-search-decoration {
   appearance: none;
 }
 

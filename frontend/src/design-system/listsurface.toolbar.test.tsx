@@ -357,11 +357,7 @@ it("keeps the whole count sentence, read before the header's verbs", () => {
 it("draws the count line as it last settled while a count is pending", () => {
   const surface = (count: ReactNode, pending: boolean) => (
     <LocaleProvider initial="en">
-      <ListSurface
-        views={[{ label: "All" }]}
-        count={count}
-        countPending={pending}
-      >
+      <ListSurface views={[{ label: "All" }]} count={count} holdCount={pending}>
         <p>rows</p>
       </ListSurface>
     </LocaleProvider>

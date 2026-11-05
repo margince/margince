@@ -606,3 +606,29 @@ describe("phone card layout hooks", () => {
     expect(region.getAttribute("data-label")).toBe("Region");
   });
 });
+
+// A search narrowed to no rows may get rows back with the next keystroke, so
+// its count line stays. A list with nothing to narrow and no rows drops it.
+describe("the count line", () => {
+  const table = (search: string, rows: number) => (
+    <ListTable
+      rows={testRows(rows)}
+      columns={columns}
+      rowKey={(row) => row.id}
+      unit="rows"
+      search={{ value: search, answered: search, onChange: () => undefined }}
+    />
+  );
+
+  it("holds its line for a narrowed list with no rows, and only then", () => {
+    const { container, rerender } = render(table("", 3));
+    const line = () => container.querySelector(".lt-count");
+    expect(line()).toHaveTextContent("1 to 3 of 3 rows");
+
+    rerender(<LocaleProvider initial="en">{table("zzqx", 0)}</LocaleProvider>);
+    expect(line()).toBeEmptyDOMElement();
+
+    rerender(<LocaleProvider initial="en">{table("", 0)}</LocaleProvider>);
+    expect(line()).toBeNull();
+  });
+});
