@@ -7370,8 +7370,11 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Record this reason",
-  "compose.reasonRecordFor": "Record this reason: {reason}, for {address}",
+  "compose.reasonRecord": "Keep as a standing reason",
+  "compose.reasonStanding":
+    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
+  "compose.reasonRecordFor":
+    "Keep as a standing reason: {reason}, for {address}",
   "compose.reasonLabel": "Why you may write to {address}",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
@@ -7430,6 +7433,12 @@ export const en = {
   "compose.relatedTo": "Related to",
   "compose.relatedToNone": "Nothing specific",
   "compose.relatedDeal": "Deal: {name}",
+  "compose.aboutDeal": "Deal this follow-up is about",
+  "compose.aboutDealNone": "No deal",
+  "compose.aboutDealUnavailable":
+    "The contact’s deals could not be loaded. Write from the deal’s page instead.",
+  "compose.aboutDealPartial":
+    "Not every deal is listed here. If yours is missing, write from the deal’s page.",
   "compose.draftNeedsRecipient":
     "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",
@@ -7638,6 +7647,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.sent": "Sent as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -7700,6 +7710,10 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
+  "compose.reasonSwitchText":
+    "The record already shows another reason for this message.",
+  "compose.reasonSwitch": "Use “{reason}” instead",
+  "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
@@ -17067,6 +17081,19 @@ export const en = {
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
+  "contact.consent.fact.existingCustomer":
+    "Existing customer, marketing allowed",
+  "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
+  "contact.consent.fact.businessContact": "Recent business contact recorded",
+  "contact.consent.fact.serviceMessages": "Service messages allowed",
+  "contact.consent.fact.marketingPermission": "Marketing permission recorded",
+  "contact.consent.fact.bounced": "Address does not accept mail",
+  "contact.consent.fact.marketingOptOut": "Marketing opt-out recorded",
+  "contact.consent.fact.stopped": "Stop recorded",
+  "contact.consent.fact.noMarketingPermission":
+    "No marketing permission recorded",
+  "contact.consent.fact.notAllowed": "Not allowed for this purpose",
+  "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
   "contact.consent.allowedWord": "Allowed",
   "contact.consent.blockedWord": "Blocked",
   "contact.consent.unknownWord": "Unknown",
@@ -17971,6 +17998,10 @@ export const en = {
     "The request was answered or completed after scheduling. Review whether this follow-up is still needed.",
   "sched.held.meetingCanceled":
     "The meeting was canceled after scheduling. Review this message before sending it.",
+  "sched.held.recipientStopped":
+    "A recipient stopped marketing after you scheduled this. It will not send to them.",
+  "sched.held.recipientReplied":
+    "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",

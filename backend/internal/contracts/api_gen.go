@@ -7462,6 +7462,27 @@ func (e Contact360SectionsOmitted) Valid() bool {
 	}
 }
 
+// Defines values for Contact360DealRoleDealStatus.
+const (
+	Contact360DealRoleDealStatusLost Contact360DealRoleDealStatus = "lost"
+	Contact360DealRoleDealStatusOpen Contact360DealRoleDealStatus = "open"
+	Contact360DealRoleDealStatusWon  Contact360DealRoleDealStatus = "won"
+)
+
+// Valid indicates whether the value is a known member of the Contact360DealRoleDealStatus enum.
+func (e Contact360DealRoleDealStatus) Valid() bool {
+	switch e {
+	case Contact360DealRoleDealStatusLost:
+		return true
+	case Contact360DealRoleDealStatusOpen:
+		return true
+	case Contact360DealRoleDealStatusWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Contact360EmploymentEmploymentStatus.
 const (
 	Contact360EmploymentEmploymentStatusCurrent Contact360EmploymentEmploymentStatus = "current"
@@ -20723,6 +20744,8 @@ const (
 	ScheduledSendHeldReasonMeetingCanceled  ScheduledSendHeldReason = "meeting_canceled"
 	ScheduledSendHeldReasonMissedWindow     ScheduledSendHeldReason = "missed_window"
 	ScheduledSendHeldReasonPassportRevoked  ScheduledSendHeldReason = "passport_revoked"
+	ScheduledSendHeldReasonRecipientReplied ScheduledSendHeldReason = "recipient_replied"
+	ScheduledSendHeldReasonRecipientStopped ScheduledSendHeldReason = "recipient_stopped"
 	ScheduledSendHeldReasonSendRefused      ScheduledSendHeldReason = "send_refused"
 	ScheduledSendHeldReasonSenderInactive   ScheduledSendHeldReason = "sender_inactive"
 	ScheduledSendHeldReasonTimerExhausted   ScheduledSendHeldReason = "timer_exhausted"
@@ -20740,6 +20763,10 @@ func (e ScheduledSendHeldReason) Valid() bool {
 	case ScheduledSendHeldReasonMissedWindow:
 		return true
 	case ScheduledSendHeldReasonPassportRevoked:
+		return true
+	case ScheduledSendHeldReasonRecipientReplied:
+		return true
+	case ScheduledSendHeldReasonRecipientStopped:
 		return true
 	case ScheduledSendHeldReasonSendRefused:
 		return true
@@ -40798,14 +40825,23 @@ type Contact360CommitteeMember struct {
 
 // Contact360DealRole One stakeholder seat this contact holds on a deal.
 type Contact360DealRole struct {
-	DealId         openapi_types.UUID `json:"deal_id"`
-	DealStage      *string            `json:"deal_stage,omitempty"`
-	DealTitle      *string            `json:"deal_title,omitempty"`
-	RelationshipId openapi_types.UUID `json:"relationship_id"`
+	DealId    openapi_types.UUID `json:"deal_id"`
+	DealStage *string            `json:"deal_stage,omitempty"`
+
+	// DealStatus The deal's status, so a reader can tell an open opportunity from one that has closed.
+	DealStatus     *Contact360DealRoleDealStatus `json:"deal_status,omitempty"`
+	DealTitle      *string                       `json:"deal_title,omitempty"`
+	RelationshipId openapi_types.UUID            `json:"relationship_id"`
 
 	// Role The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title.
 	Role string `json:"role"`
+
+	// SeatCurrent False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it.
+	SeatCurrent *bool `json:"seat_current,omitempty"`
 }
+
+// Contact360DealRoleDealStatus The deal's status, so a reader can tell an open opportunity from one that has closed.
+type Contact360DealRoleDealStatus string
 
 // Contact360Employment One employment edge, current primary first.
 type Contact360Employment struct {
@@ -58903,6 +58939,8 @@ type ScheduledSend struct {
 	// `passport_revoked` — the agent credential was revoked.
 	// `followup_settled` — the recorded request was answered or completed after scheduling.
 	// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+	// `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+	// `recipient_replied` — new mail came in from a recipient after a deal follow-up or quote was scheduled: on its own thread for a scheduled reply, from any thread for a new message.
 	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
 
 	// HtmlBody The frozen markup beside `body`, so an edit keeps the formatting. Absent on a plain message.
@@ -58966,6 +59004,8 @@ type ScheduledSend struct {
 // `passport_revoked` — the agent credential was revoked.
 // `followup_settled` — the recorded request was answered or completed after scheduling.
 // `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+// `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+// `recipient_replied` — new mail came in from a recipient after a deal follow-up or quote was scheduled: on its own thread for a scheduled reply, from any thread for a new message.
 type ScheduledSendHeldReason string
 
 // ScheduledSendStatus `scheduled`: waiting; the rep may move or cancel it.
@@ -59555,6 +59595,12 @@ type SendAuthorizationPreviewRecipient struct {
 
 	// ResolvedCategory What the engine worked out this message is, which may differ from the claim.
 	ResolvedCategory *CommunicationContext `json:"resolved_category,omitempty"`
+
+	// SupportedAlternatives When the claimed reason does not allow the message, the other reasons the record would
+	// carry for this recipient, each one checked the way a send under it would be. Empty or
+	// absent when there are none, and never offered for a marketing claim. Nothing is switched
+	// for the sender: picking one asks the preview again.
+	SupportedAlternatives *[]CommunicationContext `json:"supported_alternatives,omitempty"`
 
 	// Verdict `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
 	// the record does not carry this message on its own and names what is missing.

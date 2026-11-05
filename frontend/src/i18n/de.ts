@@ -7352,8 +7352,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
-  "compose.reasonRecord": "Diesen Grund erfassen",
-  "compose.reasonRecordFor": "Diesen Grund erfassen: {reason}, für {address}",
+  "compose.reasonRecord": "Als dauerhaften Grund festhalten",
+  "compose.reasonStanding":
+    "Ein dauerhafter Grund gilt für diese Art von Nachricht an {address} aus deinem Unternehmen, bis ihn jemand widerruft. Er ist deine Angabe, keine Einwilligung.",
+  "compose.reasonRecordFor":
+    "Als dauerhaften Grund festhalten: {reason}, für {address}",
   "compose.reasonLabel": "Warum du an {address} schreiben darfst",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
@@ -7415,6 +7418,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedTo": "Bezug",
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
+  "compose.aboutDeal": "Deal, um den es geht",
+  "compose.aboutDealNone": "Kein Deal",
+  "compose.aboutDealUnavailable":
+    "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
+  "compose.aboutDealPartial":
+    "Hier stehen nicht alle Deals. Fehlt deiner, schreib von der Seite des Deals.",
   "compose.draftNeedsRecipient":
     "Für einen KI-Entwurf füge unter „An“ einen Kontakt dieses Unternehmens hinzu.",
   "compose.project": "Projekt",
@@ -7623,6 +7632,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
+  "directSend.sent": "Als festgehaltene Ausnahme gesendet.",
   "directSend.opening": "Wird geöffnet…",
   "directSend.alreadySettled":
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
@@ -7688,6 +7698,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Gib einen Betreff ein.",
   "compose.missingBody": "Gib vor dem Senden eine Nachricht ein.",
   "compose.missingWhy": "Wähle den Kontaktgrund aus.",
+  "compose.reasonSwitchText":
+    "Für diese Nachricht steht schon ein anderer Grund im Datensatz.",
+  "compose.reasonSwitch": "Stattdessen „{reason}“ verwenden",
+  "compose.missingDeal": "Wähle den Deal, um den es in diesem Follow-up geht.",
   "compose.actionFailed":
     "Die Anfrage ist fehlgeschlagen. Bitte versuche es erneut.",
 
@@ -17218,6 +17232,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strip.today": "Heute",
   "contact.strip.yesterday": "Gestern",
   "contact.strip.days": "{count} Tage",
+  "contact.consent.fact.existingCustomer": "Bestandskunde, Werbung erlaubt",
+  "contact.consent.fact.saidWeMayWrite": "Erlaubnis zu schreiben erfasst",
+  "contact.consent.fact.businessContact": "Aktueller Geschäftskontakt erfasst",
+  "contact.consent.fact.serviceMessages": "Servicenachrichten erlaubt",
+  "contact.consent.fact.marketingPermission": "Werbeerlaubnis erfasst",
+  "contact.consent.fact.bounced": "Adresse nimmt keine Mail an",
+  "contact.consent.fact.marketingOptOut": "Werbewiderspruch erfasst",
+  "contact.consent.fact.stopped": "Hat um Stopp gebeten",
+  "contact.consent.fact.noMarketingPermission": "Keine Werbeerlaubnis erfasst",
+  "contact.consent.fact.notAllowed": "Für diesen Zweck nicht erlaubt",
+  "contact.consent.fact.nothingRecorded": "Noch nichts erfasst",
   "contact.consent.allowedWord": "Erlaubt",
   "contact.consent.blockedWord": "Blockiert",
   "contact.consent.unknownWord": "Unbekannt",
@@ -18107,6 +18132,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Anfrage wurde nach der Planung beantwortet oder erledigt. Prüfe, ob diese Nachfrage noch nötig ist.",
   "sched.held.meetingCanceled":
     "Der Termin wurde nach der Planung abgesagt. Prüfe diese Nachricht vor dem Versand.",
+  "sched.held.recipientStopped":
+    "Jemand unter den Empfangenden hat nach der Planung Werbung gestoppt. An diese Adresse wird sie nicht gesendet.",
+  "sched.held.recipientReplied":
+    "Nach der Planung kam neue Mail von jemandem unter den Empfangenden. Lies sie, bevor du dieses Follow-up sendest.",
   "sched.held.sendRefused":
     "Eine Prüfung hat die Nachricht bei Fälligkeit blockiert. Es wurde nichts gesendet.",
   "sched.inZone": "in {zone}",

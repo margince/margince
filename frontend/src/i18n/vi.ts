@@ -7183,8 +7183,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
-  "compose.reasonRecord": "Ghi lý do này",
-  "compose.reasonRecordFor": "Ghi lý do này: {reason}, cho {address}",
+  "compose.reasonRecord": "Giữ làm lý do lâu dài",
+  "compose.reasonStanding":
+    "Lý do lâu dài áp dụng cho loại thư này gửi {address} từ công ty của bạn cho đến khi có ai thu hồi. Đây là lời xác nhận của bạn, không phải sự đồng ý của họ.",
+  "compose.reasonRecordFor": "Giữ làm lý do lâu dài: {reason}, cho {address}",
   "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
@@ -7245,6 +7247,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.relatedTo": "Liên quan đến",
   "compose.relatedToNone": "Không cụ thể",
   "compose.relatedDeal": "Thuộc deal: {name}",
+  "compose.aboutDeal": "Deal mà thư theo dõi này nói về",
+  "compose.aboutDealNone": "Không có deal",
+  "compose.aboutDealUnavailable":
+    "Không tải được các deal của liên hệ. Hãy viết từ trang của deal.",
+  "compose.aboutDealPartial":
+    "Không phải mọi deal đều có ở đây. Nếu thiếu deal của bạn, hãy viết từ trang của deal.",
   "compose.draftNeedsRecipient":
     "Để soạn bằng AI, hãy thêm một liên hệ của công ty này vào ô Đến.",
   "compose.project": "Dự án",
@@ -7442,6 +7450,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
+  "directSend.sent": "Đã gửi như một ngoại lệ có ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
     "Đã có quyết định cho mục này. Mở phần xem lại để xem kết quả.",
@@ -7502,6 +7511,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.missingSubject": "Nhập tiêu đề.",
   "compose.missingBody": "Nhập nội dung trước khi gửi.",
   "compose.missingWhy": "Chọn lý do liên hệ.",
+  "compose.reasonSwitchText": "Hồ sơ đã có một lý do khác cho thư này.",
+  "compose.reasonSwitch": "Dùng “{reason}” thay thế",
+  "compose.missingDeal": "Chọn deal mà thư theo dõi này nói về.",
   "compose.actionFailed": "Yêu cầu không thành công. Thử lại.",
 
   "tasks.complete": "Xong",
@@ -16762,6 +16774,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strip.today": "Hôm nay",
   "contact.strip.yesterday": "Hôm qua",
   "contact.strip.days": "{count} ngày",
+  "contact.consent.fact.existingCustomer": "Khách hàng hiện có, được tiếp thị",
+  "contact.consent.fact.saidWeMayWrite": "Đã ghi nhận cho phép viết thư",
+  "contact.consent.fact.businessContact":
+    "Đã ghi nhận liên lạc kinh doanh gần đây",
+  "contact.consent.fact.serviceMessages": "Được gửi thư dịch vụ",
+  "contact.consent.fact.marketingPermission": "Đã ghi nhận cho phép tiếp thị",
+  "contact.consent.fact.bounced": "Địa chỉ không nhận thư",
+  "contact.consent.fact.marketingOptOut": "Đã ghi nhận từ chối tiếp thị",
+  "contact.consent.fact.stopped": "Đã yêu cầu dừng",
+  "contact.consent.fact.noMarketingPermission":
+    "Chưa ghi nhận cho phép tiếp thị",
+  "contact.consent.fact.notAllowed": "Không được phép cho mục đích này",
+  "contact.consent.fact.nothingRecorded": "Chưa có gì được ghi nhận",
   "contact.consent.allowedWord": "Được phép",
   "contact.consent.blockedWord": "Bị chặn",
   "contact.consent.unknownWord": "Chưa rõ",
@@ -17651,6 +17676,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Yêu cầu đã được trả lời hoặc hoàn thành sau khi lên lịch. Hãy xem còn cần thư theo dõi này không.",
   "sched.held.meetingCanceled":
     "Cuộc họp đã bị hủy sau khi lên lịch. Hãy xem lại thư trước khi gửi.",
+  "sched.held.recipientStopped":
+    "Một địa chỉ nhận đã dừng nhận tiếp thị sau khi bạn lên lịch. Thư sẽ không gửi đến địa chỉ đó.",
+  "sched.held.recipientReplied":
+    "Có thư mới từ bên nhận sau khi bạn lên lịch thư theo dõi này. Hãy đọc thư đó trước khi gửi.",
   "sched.held.sendRefused":
     "Một bước kiểm tra đã chặn tin nhắn này khi đến giờ gửi. Không có gì được gửi.",
   "sched.inZone": "theo giờ {zone}",

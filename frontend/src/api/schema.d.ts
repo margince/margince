@@ -32899,6 +32899,13 @@ export interface components {
             deal_id: string;
             deal_title?: string | null;
             deal_stage?: string | null;
+            /**
+             * @description The deal's status, so a reader can tell an open opportunity from one that has closed.
+             * @enum {string}
+             */
+            deal_status?: "open" | "won" | "lost";
+            /** @description False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it. */
+            seat_current?: boolean;
             /** @description The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title. */
             role: string;
         };
@@ -40134,9 +40141,11 @@ export interface components {
              *     `passport_revoked` — the agent credential was revoked.
              *     `followup_settled` — the recorded request was answered or completed after scheduling.
              *     `meeting_canceled` — the meeting named as follow-up evidence was canceled.
+             *     `recipient_stopped` — a recipient stopped marketing after a marketing message was scheduled.
+             *     `recipient_replied` — new mail came in from a recipient after a deal follow-up or quote was scheduled: on its own thread for a scheduled reply, from any thread for a new message.
              * @enum {string|null}
              */
-            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | null;
+            held_reason?: "consent_withdrawn" | "sender_inactive" | "passport_revoked" | "missed_window" | "timer_exhausted" | "send_refused" | "followup_settled" | "meeting_canceled" | "recipient_stopped" | "recipient_replied" | null;
             /**
              * Format: uuid
              * @description The review this message's refusal opened, when one stands. Null on every message
@@ -40334,6 +40343,13 @@ export interface components {
              *     close: a refused `active_deal_followup` claim asks for the deal, not for consent.
              */
             requested_category?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description When the claimed reason does not allow the message, the other reasons the record would
+             *     carry for this recipient, each one checked the way a send under it would be. Empty or
+             *     absent when there are none, and never offered for a marketing claim. Nothing is switched
+             *     for the sender: picking one asks the preview again.
+             */
+            supported_alternatives?: components["schemas"]["CommunicationContext"][];
             /**
              * @description No contact or lead holds this address yet. Sending makes a contact for it, owned by
              *     the sender, before the message is checked, and this answer is the one that new
