@@ -34,16 +34,18 @@ const (
 	SystemReadAuthority SystemRead = "authority"
 	// SystemReadDirectory admits Directory().Emails.
 	SystemReadDirectory SystemRead = "directory"
+	// SystemReadActivities admits Activities().Mail.
+	SystemReadActivities SystemRead = "activities"
 )
 
 // Validate refuses a value that names no group of system reads.
 func (r SystemRead) Validate() error {
 	switch r {
-	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory:
+	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities:
 		return nil
 	}
-	return fmt.Errorf("extension: %q is not a system read; declare %q, %q or %q",
-		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory)
+	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q or %q",
+		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities)
 }
 
 // MaxResponsible bounds what Deals().Responsible answers and how many users one
@@ -128,4 +130,42 @@ type Directory interface {
 	// MaxResponsible users, or an id that is not a canonical UUID, answers
 	// ErrInvalid.
 	Emails(ctx context.Context, users []UserID) (map[UserID]string, error)
+}
+
+// MailSummary is one email on a deal as a background reader sees it.
+//
+// It is not the contract's Activity, which answers per caller (masked_fields,
+// writable). It holds no subject, body, address or attachment, so a unit that
+// needs the words reads them as a person with their own rights.
+type MailSummary struct {
+	ID string
+	// Direction is inbound or outbound.
+	Direction  string
+	OccurredAt time.Time
+	// AutomaticKind says what sent an email no human wrote: product, calendar
+	// or sending_system. Empty when a human wrote it.
+	AutomaticKind string
+	DealID        string
+}
+
+// MailQuery pages the emails of one deal, newest first.
+type MailQuery struct {
+	ReadPage
+	// IncludeArchived adds the emails that were archived. They are left out
+	// unless asked for.
+	IncludeArchived bool
+}
+
+// Activities reads the emails linked to a deal for a job tick or a bus delivery.
+type Activities interface {
+	// Mail answers the emails of one deal that the deal's team may read. An
+	// email private to its participants is left out, and so is one held back
+	// from reading. A reply that sits only in a private mailbox is therefore
+	// invisible here: a unit that decides "no reply yet" from this read is
+	// reminding a person to check, and must not act on it alone, such as by
+	// sending a message.
+	//
+	// A deal that does not exist answers ErrNotFound; an id that is not a
+	// canonical UUID, ErrInvalid. A page holds at most MaxReadPage emails.
+	Mail(ctx context.Context, dealID string, q MailQuery) (Page[MailSummary], error)
 }
