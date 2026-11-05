@@ -1,8 +1,9 @@
-# Support period (CRA Article 13(8) to 13(10) and 13(19))
+# Support period (CRA Article 13(8) to 13(11) and 13(19))
 
 Margince fixes vulnerabilities in the latest release only. Every user can upgrade to the latest release
 free of charge, and the upgrade needs no new hardware. Each version placed on the market declares a
-support period of at least five years, and its end date is published with the release.
+support period of at least five years. Its end date belongs in the release notes, which do not carry it
+yet.
 
 This page holds the rule and the reasons for it. The vulnerability process is in
 [SECURITY.md](../../../SECURITY.md), and the reporting duty is in [README.md](README.md).
@@ -36,11 +37,12 @@ that ships often:
 
 | Duty | How |
 | --- | --- |
-| Latest release only (13(10)) | Fixes go to `main` and ship in the next `v*` release. No release branch gets a backport. The dist service lane in `release.yml` can release from an `lts/YYYY` branch; no such branch exists |
+| Latest release only (13(10)) | Fixes go to `main` and ship in the next `v*` release. No release branch gets a backport. This holds only while the next release adds no cost, as the row below says. The dist service lane in `release.yml` can release from an `lts/YYYY` branch; no such branch exists |
 | Free upgrade | A license token is not tied to a release: every build checks the same license generation, so a token that starts one release starts the next, and an upgrade costs no license fee. A build that checks a new generation would end this. Legal still has to confirm this against the license terms |
 | No added cost | A release does not raise the hardware a node needs past [system-requirements.md](../../reference/system-requirements.md) without a new substantially modified version and its own support period. Postgres and Redis upgrades inside the supported range are dependency upgrades |
 | Upgrade path | The api applies migrations at start, so an upgrade is three new images or one new server bundle: [deploy-margince.md](../../how-to/deploy-margince.md#roll-out-in-this-order), [install-on-a-server.md](../../how-to/install-on-a-server.md#upgrade-to-a-new-release) |
 | Updates stay available (13(9)) | Not settled. Each `v*` release puts its images on `ghcr.io` and its server bundles on its GitHub release page. No rule yet keeps them there for 10 years |
+| Archive notice (13(11)) | Not built. The GitHub release page of an earlier release does not say that it gets no more fixes, or what running it risks |
 | End date (13(19)) | Not built. The release notes, which are the GitHub release page, do not yet state the end date |
 | End notice (13(19)) | Not built. The app does not yet show that support has ended |
 
@@ -63,5 +65,7 @@ any case (Article 69(3)).
 - [ ] Legal confirms that the license terms meet "free of charge" in Article 13(10).
 - [ ] The expected use time is written down, and the period is confirmed at five years or set longer.
 - [ ] Each release, its images and its server bundles stay downloadable for 10 years.
+- [ ] The page of each release that gets no more fixes, because a newer release replaced it or its end date
+  has passed, says so and states the risk of running it (Article 13(11)).
 - [ ] The release notes carry the end date.
 - [ ] The app tells an admin when support for its version has ended.
