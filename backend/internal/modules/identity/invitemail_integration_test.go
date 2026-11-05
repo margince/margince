@@ -286,6 +286,21 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 	}
 }
 
+// A read that fails before the send leaves the mail unsent, and the admin was
+// already told it went out. The link says so, which is what offers the resend.
+func TestAnInvitationThatNeverReachedTheRelayIsRecordedAsFailed(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-unread")
+	h, done := mailingHandlers(e, stalledMail{release: make(chan struct{})})
+	h.sendBudget = time.Nanosecond
+
+	inviteThrough(t, e, h, "unread@acme.test")
+	<-done
+	if row := rosterRow(t, e, h, "unread@acme.test"); !mailState(row, inviteMailFailed) || !offersResend(row) {
+		t.Fatalf("after the read before the send failed the roster shows %v %v, want failed and a resend",
+			row.InviteEmailState, row.AllowedActions)
+	}
+}
+
 // A relay that holds the mail past the send's budget fails it. The refusal
 // still lands on the link, although the send's own context is spent.
 func TestARelayTimeoutStillRecordsTheMailAsFailed(t *testing.T) {
