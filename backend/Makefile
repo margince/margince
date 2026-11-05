@@ -658,7 +658,9 @@ lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code stri
 lint-base: composition lint-tool
 	$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" ../scripts/run-golangci.sh run ./...
 
-lint-strict: composition lint-tool
+# One golangci pass peaks near 10 GB on a cold cache, so when one make runs
+# both, the strict pass waits for the baseline. CI's strict leg runs it alone.
+lint-strict: composition lint-tool $(if $(filter lint lint-base,$(MAKECMDGOALS)),lint-base)
 	@if git rev-parse --verify -q "$(CHECK_BASE_REF)" >/dev/null; then \
 		$(GOWORK_COMPOSED) GOLANGCI_LINT="$(GOLANGCI_LINT)" GOLANGCI_CACHE_PASS=strict ../scripts/run-golangci.sh run --config .golangci.strict.yml --new-from-merge-base="$(CHECK_BASE_REF)" ./...; \
 	elif [ "$(origin CHECK_BASE_REF)" = "file" ]; then \
