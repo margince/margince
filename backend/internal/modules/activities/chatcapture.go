@@ -81,8 +81,10 @@ func refuseUnaskableQuestion(ctx context.Context, tx pgx.Tx, attachmentID ids.UU
 		return nil
 	case ExtractionQuestionChatCapture:
 	default:
-		return &ChatCaptureError{Field: "question", Code: "unknown_question",
-			Message: fmt.Sprintf("%q is not a question a file can be read for", question)}
+		return &ChatCaptureError{
+			Field: "question", Code: "unknown_question",
+			Message: fmt.Sprintf("%q is not a question a file can be read for", question),
+		}
 	}
 	var contentType *string
 	if err := tx.QueryRow(ctx, `SELECT content_type FROM attachment WHERE id = $1`, attachmentID).
@@ -90,8 +92,10 @@ func refuseUnaskableQuestion(ctx context.Context, tx pgx.Tx, attachmentID ids.UU
 		return fmt.Errorf("activities: reading a file's type: %w", err)
 	}
 	if contentType == nil || !slices.Contains(ChatImageMIMEs(), bareMediaType(*contentType)) {
-		return &ChatCaptureError{Field: "question", Code: "not_an_image",
-			Message: "a chat is read from a JPEG, PNG, GIF or WebP screenshot; this file is none of them"}
+		return &ChatCaptureError{
+			Field: "question", Code: "not_an_image",
+			Message: "a chat is read from a JPEG, PNG, GIF or WebP screenshot; this file is none of them",
+		}
 	}
 	return nil
 }
@@ -110,8 +114,10 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 		return ids.UUID{}, err
 	}
 	if utf8.RuneCountInString(in.Body) > MaxChatText {
-		return ids.UUID{}, &ChatCaptureError{Field: "body", Code: "too_long",
-			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText)}
+		return ids.UUID{}, &ChatCaptureError{
+			Field: "body", Code: "too_long",
+			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText),
+		}
 	}
 	var filed ids.UUID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -129,8 +135,10 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 			return err
 		}
 		if parentType != linkEntityContact {
-			return &ChatCaptureError{Code: "unsupported_entity_type",
-				Message: "a chat is filed from a screenshot on a contact; this file hangs on a " + parentType}
+			return &ChatCaptureError{
+				Code:    "unsupported_entity_type",
+				Message: "a chat is filed from a screenshot on a contact; this file hangs on a " + parentType,
+			}
 		}
 		read, err := requireChatReading(ctx, tx, in)
 		if err != nil {
@@ -164,12 +172,16 @@ func requireChatReading(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (E
 		return read, fmt.Errorf("activities: reading the chat reading: %w", err)
 	}
 	if read.Question != ExtractionQuestionChatCapture {
-		return read, &ChatCaptureError{Field: "extraction_id", Code: "not_a_chat_reading",
-			Message: "this reading looked for deal facts, not for a chat"}
+		return read, &ChatCaptureError{
+			Field: "extraction_id", Code: "not_a_chat_reading",
+			Message: "this reading looked for deal facts, not for a chat",
+		}
 	}
 	if read.Live() {
-		return read, &ChatCaptureError{Field: "extraction_id", Code: "reading_not_finished",
-			Message: "the screenshot is still being read; file it when the reading finishes"}
+		return read, &ChatCaptureError{
+			Field: "extraction_id", Code: "reading_not_finished",
+			Message: "the screenshot is still being read; file it when the reading finishes",
+		}
 	}
 	return read, nil
 }
@@ -201,8 +213,10 @@ func requireRegisteredChannel(ctx context.Context, tx pgx.Tx, channel string) er
 		return fmt.Errorf("activities: reading the channel registry: %w", err)
 	}
 	if !registered {
-		return &ChatCaptureError{Field: "channel_provider", Code: "provider_not_registered",
-			Message: fmt.Sprintf("%q is not a channel this installation knows; pick one from the list", channel)}
+		return &ChatCaptureError{
+			Field: "channel_provider", Code: "provider_not_registered",
+			Message: fmt.Sprintf("%q is not a channel this installation knows; pick one from the list", channel),
+		}
 	}
 	return nil
 }
@@ -248,8 +262,10 @@ func refiledChat(ctx context.Context, tx pgx.Tx, in ChatCaptureFiling) (ids.UUID
 		 WHERE at.id = $1 AND a.source_system = $2 AND a.source_id = $3`,
 		in.AttachmentID, ChatCaptureSourceSystem, in.ReadingID.String()).Scan(&filed)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, &ChatCaptureError{Code: "unsupported_entity_type",
-			Message: "this file is already filed on an activity"}
+		return ids.UUID{}, &ChatCaptureError{
+			Code:    "unsupported_entity_type",
+			Message: "this file is already filed on an activity",
+		}
 	}
 	return filed, err
 }

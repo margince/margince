@@ -20,10 +20,14 @@ func TestContactAttachRightsGateBookingAndLoggingButLeaveExistingTasksAlone(t *t
 				Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceBooking},
 			},
 			SecondaryActions: &[]crmcontracts.ContactMomentAction{
-				{Kind: crmcontracts.ContactMomentActionKindLogActivity, State: crmcontracts.ContactMomentActionStateAvailable,
-					Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceActivityLog}},
-				{Kind: crmcontracts.ContactMomentActionKindCompleteTask, State: crmcontracts.ContactMomentActionStateAvailable,
-					Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceTask}},
+				{
+					Kind: crmcontracts.ContactMomentActionKindLogActivity, State: crmcontracts.ContactMomentActionStateAvailable,
+					Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceActivityLog},
+				},
+				{
+					Kind: crmcontracts.ContactMomentActionKindCompleteTask, State: crmcontracts.ContactMomentActionStateAvailable,
+					Destination: &crmcontracts.ContactMomentDestination{Surface: crmcontracts.ContactMomentDestinationSurfaceTask},
+				},
 			},
 		}
 		WithholdContact(ctx, "en", &moment, attachable)

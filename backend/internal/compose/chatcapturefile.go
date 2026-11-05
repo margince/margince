@@ -41,7 +41,8 @@ func (c *ChatCaptureFile) File(
 	readID := ids.UUID(req.ExtractionId)
 	if readID == (ids.UUID{}) {
 		return crmcontracts.FiledChatCapture{}, &activities.ChatCaptureError{
-			Field: "extraction_id", Code: "required", Message: "name the reading the chat was read by"}
+			Field: "extraction_id", Code: "required", Message: "name the reading the chat was read by",
+		}
 	}
 	read, err := c.attachments.GetExtractionRead(ctx, attachmentID, readID)
 	if err != nil {

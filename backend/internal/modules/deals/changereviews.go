@@ -48,8 +48,10 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	// The close-date kinds are named, so a kind with no review shape reads as none.
-	closeDatePos := arg([]string{string(CloseDateActionAutoApply), string(CloseDateActionProvisionalConfirm),
-		string(CloseDateActionDowngradeAndReview), VerdictCloseDateCorrection})
+	closeDatePos := arg([]string{
+		string(CloseDateActionAutoApply), string(CloseDateActionProvisionalConfirm),
+		string(CloseDateActionDowngradeAndReview), VerdictCloseDateCorrection,
+	})
 	dealsPos, changesPos := arg(dealIDs), arg(changeIDs)
 	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {

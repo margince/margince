@@ -75,15 +75,15 @@ func TestAnOfferFromTheDealRefusesItsOwnLines(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the offer from the deal: %v", err)
 	}
-	var fromDeal *OfferLinesFromDealError
 	_, err = e.store.AddOfferLineItem(e.productCtx(), ids.From[ids.OfferKind](ids.UUID(offer.Id)), OfferLineInputRow{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))})
-	if !errors.As(err, &fromDeal) {
+	if _, ok := errors.AsType[*OfferLinesFromDealError](err); !ok {
 		t.Fatalf("a typed line on the deal's offer answered %v, want offer_lines_from_deal", err)
 	}
-	var owned *LineOwnedValueError
-	_, err = e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual",
-		LineItems: []OfferLineInputRow{{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))}}})
-	if !errors.As(err, &owned) {
+	_, err = e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []OfferLineInputRow{{Description: new("Extra"), Quantity: "1", UnitPriceMinor: new(int64(5))}},
+	})
+	if _, ok := errors.AsType[*LineOwnedValueError](err); !ok {
 		t.Fatalf("a typed offer on a lines deal answered %v, want deal_has_lines", err)
 	}
 	var required *RequiredFieldError
@@ -122,13 +122,14 @@ func TestAcceptingAnOlderSnapshotLeavesTheDealsValue(t *testing.T) {
 func TestADealWithoutLinesKeepsItsOfferBehaviour(t *testing.T) {
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
-	var none *DealHasNoLinesError
 	_, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual", FromDealRevision: new(int64(0))})
-	if !errors.As(err, &none) {
+	if _, ok := errors.AsType[*DealHasNoLinesError](err); !ok {
 		t.Fatalf("copying lines from a deal without any answered %v, want deal_has_no_lines", err)
 	}
-	offer, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{Currency: "EUR", Source: "manual",
-		LineItems: []OfferLineInputRow{{Description: new("Consulting"), Quantity: "2", UnitPriceMinor: new(int64(10_000)), TaxRate: new("19.00")}}})
+	offer, err := e.store.CreateOffer(e.productCtx(), dealID, CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []OfferLineInputRow{{Description: new("Consulting"), Quantity: "2", UnitPriceMinor: new(int64(10_000)), TaxRate: new("19.00")}},
+	})
 	if err != nil {
 		t.Fatalf("creating a typed offer: %v", err)
 	}

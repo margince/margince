@@ -171,8 +171,10 @@ func (s *Store) fileUpdatedActivity(ctx context.Context, tx pgx.Tx, current crmc
 	if in.DealFiling == nil && in.MeetingStatus == nil && in.CallOutcome == nil {
 		return current, nil
 	}
-	filing := LogActivityInput{Kind: string(current.Kind), DealFiling: in.DealFiling,
-		SourceSystem: current.SourceSystem, dealFilingResolver: s.dealFilingResolver}
+	filing := LogActivityInput{
+		Kind: string(current.Kind), DealFiling: in.DealFiling,
+		SourceSystem: current.SourceSystem, dealFilingResolver: s.dealFilingResolver,
+	}
 	if current.MeetingStatus != nil {
 		filing.MeetingStatus = new(string(*current.MeetingStatus))
 	}

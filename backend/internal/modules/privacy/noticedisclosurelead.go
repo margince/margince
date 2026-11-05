@@ -36,8 +36,13 @@ func readLeadNotice(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, out *Noti
 		return nil, fmt.Errorf("privacy: reading which kinds of data this lead holds: %w", err)
 	}
 	out.Categories = held([]heldKind{
-		{"name", kinds[0]}, {"job_title", kinds[1]}, {"employer", kinds[2]}, {"email", kinds[3]},
-		{"phone", kinds[4]}, {"social_profile", kinds[5]}, {"correspondence", kinds[6]},
+		{"name", kinds[0]},
+		{"job_title", kinds[1]},
+		{"employer", kinds[2]},
+		{"email", kinds[3]},
+		{"phone", kinds[4]},
+		{"social_profile", kinds[5]},
+		{"correspondence", kinds[6]},
 	})
 	var pkg SARPackage
 	for _, section := range sarCommunicationSections(&pkg, nil, []ids.UUID{leadID.UUID}, []ids.UUID{}) {

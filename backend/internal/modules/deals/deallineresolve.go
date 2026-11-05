@@ -209,10 +209,16 @@ func columnValues(pairs ...columnValue) (cols, holders string, args []any) {
 // dealLineValues are the columns a seller can change on a line.
 func dealLineValues(line dealLineRow) []columnValue {
 	return []columnValue{
-		{descriptionColumn, line.Description}, {"unit", line.Unit}, {"quantity", line.Quantity},
-		{"unit_price_minor", line.UnitPriceMinor}, {"discount_pct", line.DiscountPct}, {"tax_rate", line.TaxRate},
-		{taxCategoryField, line.TaxCategory}, {"billing_model", line.BillingModel},
-		{billingIntervalColumn, line.IntervalMonths}, {intervalCountField, line.IntervalCount},
+		{descriptionColumn, line.Description},
+		{"unit", line.Unit},
+		{"quantity", line.Quantity},
+		{"unit_price_minor", line.UnitPriceMinor},
+		{"discount_pct", line.DiscountPct},
+		{"tax_rate", line.TaxRate},
+		{taxCategoryField, line.TaxCategory},
+		{"billing_model", line.BillingModel},
+		{billingIntervalColumn, line.IntervalMonths},
+		{intervalCountField, line.IntervalCount},
 	}
 }
 

@@ -384,10 +384,14 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 		return model.Response{}, err
 	}
 	answer.Actions = append(answer.Actions,
-		map[string]any{"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": "", "probability": 5,
-			"cited_activity_ids": []string{l.move.note}, "reason": "They hesitate", "confidence": 0.9},
-		map[string]any{"kind": "set_close_date", "date": l.date, "amount": 0, "currency": "", "quoted_words": "", "probability": 0,
-			"cited_activity_ids": []string{l.move.note}, "reason": standInReason, "confidence": 0.9})
+		map[string]any{
+			"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": "", "probability": 5,
+			"cited_activity_ids": []string{l.move.note}, "reason": "They hesitate", "confidence": 0.9,
+		},
+		map[string]any{
+			"kind": "set_close_date", "date": l.date, "amount": 0, "currency": "", "quoted_words": "", "probability": 0,
+			"cited_activity_ids": []string{l.move.note}, "reason": standInReason, "confidence": 0.9,
+		})
 	text, err := json.Marshal(answer)
 	return model.Response{Text: string(text)}, err
 }

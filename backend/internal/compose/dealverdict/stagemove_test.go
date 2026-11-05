@@ -36,12 +36,18 @@ func moveInput() Input {
 		{ID: demoHeldID, StagePosition: 2, Stage: "Negotiation", Label: "Demo held", Kind: "event_held"},
 	}
 	in.Activities = append(in.Activities,
-		Activity{ID: oursID, Kind: "email", Direction: "outbound", OccurredAt: today.AddDate(0, 0, -2),
-			ArrivedAt: today.AddDate(0, 0, -2), Body: "They asked us for the contract draft."},
-		Activity{ID: callID, Kind: callID, OccurredAt: today.AddDate(0, 0, -1),
-			ArrivedAt: today.AddDate(0, 0, -1), Body: "We talked it through."},
-		Activity{ID: demoID, Kind: "meeting", OccurredAt: today.AddDate(0, 0, -1),
-			ArrivedAt: today.AddDate(0, 0, -1), Body: "Demo with the buyer went well."},
+		Activity{
+			ID: oursID, Kind: "email", Direction: "outbound", OccurredAt: today.AddDate(0, 0, -2),
+			ArrivedAt: today.AddDate(0, 0, -2), Body: "They asked us for the contract draft.",
+		},
+		Activity{
+			ID: callID, Kind: callID, OccurredAt: today.AddDate(0, 0, -1),
+			ArrivedAt: today.AddDate(0, 0, -1), Body: "We talked it through.",
+		},
+		Activity{
+			ID: demoID, Kind: "meeting", OccurredAt: today.AddDate(0, 0, -1),
+			ArrivedAt: today.AddDate(0, 0, -1), Body: "Demo with the buyer went well.",
+		},
 	)
 	in.Activities[0].ID = mailID
 	in.Activities[0].Body += " Please send us the contract draft."

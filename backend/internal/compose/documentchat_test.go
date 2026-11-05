@@ -33,8 +33,10 @@ func chatSource(t *testing.T) documentSource {
 }
 
 func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
-	store := &fakeReadStore{meta: pngAttachment(), body: string(cardPNG(t)),
-		question: activities.ExtractionQuestionChatCapture}
+	store := &fakeReadStore{
+		meta: pngAttachment(), body: string(cardPNG(t)),
+		question: activities.ExtractionQuestionChatCapture,
+	}
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(chatReply()), carriage: carriesImagesOnly}
 
 	if err := runReading(t, store, brain); err != nil {
@@ -62,8 +64,10 @@ func TestAChatScreenshotIsReadForItsMessagesAndItsHeader(t *testing.T) {
 }
 
 func TestAChatScreenshotShowingNoChatSaysWhyNothingIsOffered(t *testing.T) {
-	store := &fakeReadStore{meta: pngAttachment(), body: string(cardPNG(t)),
-		question: activities.ExtractionQuestionChatCapture}
+	store := &fakeReadStore{
+		meta: pngAttachment(), body: string(cardPNG(t)),
+		question: activities.ExtractionQuestionChatCapture,
+	}
 	empty := reply(notStated(chatFieldText), notStated(chatFieldName), notStated(chatFieldPhone))
 	brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(empty), carriage: carriesImagesOnly}
 

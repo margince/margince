@@ -29,8 +29,10 @@ func rate(units int64, exp int32) deals.FXRate {
 
 func guardInput() Input {
 	return Input{Today: today, ReadAt: today.Add(time.Hour), Probability: 40, StageProbability: 60, Activities: []Activity{
-		{ID: "mail", Kind: "email", Direction: "inbound", OccurredAt: today.AddDate(0, 0, -3), ArrivedAt: today.AddDate(0, 0, -3),
-			Subject: "Order", Body: "We can sign for 50,000 USD for the first year, start in March. In pounds 40,000 GBP. The pilot is 1,000 EUR."},
+		{
+			ID: "mail", Kind: "email", Direction: "inbound", OccurredAt: today.AddDate(0, 0, -3), ArrivedAt: today.AddDate(0, 0, -3),
+			Subject: "Order", Body: "We can sign for 50,000 USD for the first year, start in March. In pounds 40,000 GBP. The pilot is 1,000 EUR.",
+		},
 	}}
 }
 
@@ -47,8 +49,10 @@ func dateAction(date string) Action {
 }
 
 func amountAction(amount int64, currency, quote string) Action {
-	return Action{Kind: KindSetAmount, Amount: amount, Currency: currency, QuotedWords: quote,
-		Cited: []string{"mail"}, Confidence: 0.9, Reason: "r"}
+	return Action{
+		Kind: KindSetAmount, Amount: amount, Currency: currency, QuotedWords: quote,
+		Cited: []string{"mail"}, Confidence: 0.9, Reason: "r",
+	}
 }
 
 func probabilityAction(pct int) Action {

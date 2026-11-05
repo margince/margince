@@ -14,8 +14,8 @@ func NormalizedPurposeKey(key string) string {
 // CanonicalPurpose is the one purpose key a message is judged, unsubscribed
 // and stored under. A legacy key and a marketing purpose that name two
 // different purposes are one message claiming two things, and it answers
-// false. Every reader of a message's purpose asks this, so a queued message
-// and the engine cannot disagree about which purpose it is for.
+// false. A reader of a message's purpose asks this, so a queued message and the
+// engine name one purpose.
 func (r Request) CanonicalPurpose() (Request, bool) {
 	switch {
 	case r.MarketingPurpose == "":

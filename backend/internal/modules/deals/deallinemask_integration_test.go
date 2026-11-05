@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -115,8 +114,7 @@ func TestNoPatchWritesTheMoneyOfALinesDeal(t *testing.T) {
 		p.Set(amountField, int64(20_000), int64(1))
 		return applyDealPatchLocked(e.productCtx(), tx, p, lock)
 	})
-	var owned *LineOwnedValueError
-	if !errors.As(err, &owned) {
+	if _, ok := errors.AsType[*LineOwnedValueError](err); !ok {
 		t.Fatalf("a locked patch of the amount answered %v, want deal_has_lines", err)
 	}
 	wantDealAmount(t, e, dealID, 20_000)

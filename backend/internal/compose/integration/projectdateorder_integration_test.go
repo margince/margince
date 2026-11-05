@@ -26,8 +26,10 @@ func TestATargetEndBeforeTheStartIsRefusedOnEveryDoor(t *testing.T) {
 	refused := d.restStatus(t, "POST", "/v1/projects",
 		project(map[string]any{"started_at": "2026-12-01", "target_end_date": "2026-01-01"}), http.StatusUnprocessableEntity)
 	assertDateOrderRefusal(t, "create", string(refused), "target_end_date")
-	if refusal := d.toolRefused(t, "create_record", map[string]any{"record_type": "project",
-		"fields": project(map[string]any{"started_at": "2026-12-01", "target_end_date": "2026-01-01"})}); !strings.Contains(refusal, "target_end_date") {
+	if refusal := d.toolRefused(t, "create_record", map[string]any{
+		"record_type": "project",
+		"fields":      project(map[string]any{"started_at": "2026-12-01", "target_end_date": "2026-01-01"}),
+	}); !strings.Contains(refusal, "target_end_date") {
 		t.Errorf("the tool refused an inverted pair as %q, want it to name target_end_date", refusal)
 	}
 
@@ -39,8 +41,10 @@ func TestATargetEndBeforeTheStartIsRefusedOnEveryDoor(t *testing.T) {
 	refused = d.restStatus(t, "PATCH", "/v1/projects/"+id,
 		map[string]any{"started_at": "2026-07-01"}, http.StatusUnprocessableEntity)
 	assertDateOrderRefusal(t, "a start moved past the stored target end", string(refused), "started_at")
-	if refusal := d.toolRefused(t, "update_record", map[string]any{"record_type": "project", "id": id,
-		"fields": map[string]any{"target_end_date": "2026-02-01"}}); !strings.Contains(refusal, "target_end_date") {
+	if refusal := d.toolRefused(t, "update_record", map[string]any{
+		"record_type": "project", "id": id,
+		"fields": map[string]any{"target_end_date": "2026-02-01"},
+	}); !strings.Contains(refusal, "target_end_date") {
 		t.Errorf("the tool refused a target end before the start as %q, want it to name target_end_date", refusal)
 	}
 

@@ -189,9 +189,10 @@ var replayableOperations = map[string]replayTarget{
 			{table: tableDeal, idPath: dealIDField},
 		},
 	},
-	"POST /v1/companies":            {object: tableCompany, table: tableCompany, idPath: "id"},
-	"PATCH /v1/companies/{id}":      {object: tableCompany, table: tableCompany, idPath: "id"},
-	"POST /v1/companies/{id}/merge": {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies":                     {object: tableCompany, table: tableCompany, idPath: "id"},
+	"PATCH /v1/companies/{id}":               {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies/{id}/merge":          {object: tableCompany, table: tableCompany, idPath: "id"},
+	"POST /v1/companies/{id}/share-contacts": {object: tableCompany, table: tableCompany, pathParam: "id"},
 	"POST /v1/companies/{id}/link-contacts": {
 		object: tableCompany, table: tableCompany, pathParam: "id",
 		companions: []companionRef{

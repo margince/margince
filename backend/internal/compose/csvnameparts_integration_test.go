@@ -23,12 +23,18 @@ func TestAReimportedNameFollowsTheStoreRule(t *testing.T) {
 		name, storedFull, wantFull string
 		row                        map[string]any
 	}{
-		{"a plain join follows the new parts", "Jonh Doe", "John Doe",
-			map[string]any{"first_name": "John", "last_name": "Doe"}},
-		{"a hand-typed display name stays", "Dr. Jonh Doe", "Dr. Jonh Doe",
-			map[string]any{"first_name": "John", "last_name": "Doe"}},
-		{"a disagreeing full name cell is not sent", "Dr. Jonh Doe", "Dr. Jonh Doe",
-			map[string]any{fieldFullName: "Signing-Noreply", "first_name": "John", "last_name": "Doe"}},
+		{
+			"a plain join follows the new parts", "Jonh Doe", "John Doe",
+			map[string]any{"first_name": "John", "last_name": "Doe"},
+		},
+		{
+			"a hand-typed display name stays", "Dr. Jonh Doe", "Dr. Jonh Doe",
+			map[string]any{"first_name": "John", "last_name": "Doe"},
+		},
+		{
+			"a disagreeing full name cell is not sent", "Dr. Jonh Doe", "Dr. Jonh Doe",
+			map[string]any{fieldFullName: "Signing-Noreply", "first_name": "John", "last_name": "Doe"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
