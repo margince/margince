@@ -39,8 +39,6 @@ type fakeReadStore struct {
 	openErr   error
 	meta      crmcontracts.Attachment
 	body      string
-	// question is what the claimed reading asks; empty asks for the deal facts.
-	question string
 
 	outcome  *activities.ExtractionReadOutcome
 	released bool
@@ -54,11 +52,7 @@ func (f *fakeReadStore) BeginExtractionRead(
 		return activities.ExtractionRead{}, f.beginErr
 	}
 	at := f.claimedAt
-	question := f.question
-	if question == "" {
-		question = activities.ExtractionQuestionDealFacts
-	}
-	return activities.ExtractionRead{Question: question, Status: activities.ExtractionReadRunning, StartedAt: &at}, nil
+	return activities.ExtractionRead{Status: activities.ExtractionReadRunning, StartedAt: &at}, nil
 }
 
 func (f *fakeReadStore) FinishExtractionRead(

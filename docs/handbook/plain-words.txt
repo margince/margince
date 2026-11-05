@@ -219,6 +219,7 @@ cloudflare
 coach
 code
 cold
+collaborate
 collapse
 colleague
 collection
@@ -1046,7 +1047,6 @@ score
 scorecard
 scrape
 screen
-screenshot
 script
 seal
 search

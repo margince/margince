@@ -117,29 +117,8 @@ func LetterheadName(name string) string {
 // role class, so the dark sheet leaves it white and a dark logo stays legible.
 // The name is the image's alt text, for a client that blocks images.
 func letterheadLogo(name, contentID string) string {
-	return logoPlateOpen(contentID) + html.EscapeString(name) + logoPlateClose
-}
-
-const logoPlateClose = `" width="150" style="display:block;max-width:150px;height:auto;border:0"></div>`
-
-func logoPlateOpen(contentID string) string {
 	return `<div style="display:inline-block;background:#ffffff;border-radius:6px;padding:8px">` +
-		`<img src="cid:` + html.EscapeString(contentID) + `" alt="`
-}
-
-// WithoutLetterheadLogo turns the logo letterhead in markup back into the name
-// tile, for a mail staged with a logo that can no longer be read. The name is
-// the logo's alt text; markup with no logo letterhead comes back unchanged.
-func WithoutLetterheadLogo(markup, contentID string) string {
-	before, rest, found := strings.Cut(markup, logoPlateOpen(contentID))
-	if !found {
-		return markup
-	}
-	name, after, found := strings.Cut(rest, logoPlateClose)
-	if !found {
-		return markup
-	}
-	return before + LetterheadName(html.UnescapeString(name)) + after
+		`<img src="cid:` + html.EscapeString(contentID) + `" alt="` + html.EscapeString(name) + `" width="150" style="display:block;max-width:150px;height:auto;border:0"></div>`
 }
 
 func titleRow(title, main string) string {

@@ -39,49 +39,28 @@ type OverrideWarning struct {
 // MOVE IT WHENEVER THE TEXT BELOW CHANGES, in the same commit. An instruction
 // naming a version whose words have since been edited is a record of an
 // acknowledgement nobody made.
-const OverrideWarningVersion = "override-v2"
+const OverrideWarningVersion = "override-v1"
 
-// overrideWarningText is what a human is shown, beside the specific reason
-// the check gave.
+// overrideWarningText is what a human is shown.
 //
 // It says three things, and each is there because leaving it out would let
 // somebody acknowledge something untrue:
 //
-//   - the refusal STANDS. An exception is not a correction of the check and
-//     not a grant of consent.
-//   - it covers THIS message only, and no later one.
-//   - the record is KEPT: their name, their explanation and the message, in a
-//     record nobody can edit.
-const overrideWarningText = "The send check still blocks this message. " +
-	"This sends only this message. Your name, your explanation and the message are kept " +
-	"in a record that cannot be edited. It does not grant consent or permission for future messages."
-
-// overrideWarningTextV1 is the text override-v1 named. Kept word for word,
-// because an instruction recorded under it says somebody read these words.
-const overrideWarningTextV1 = "The engine refused this message, and that refusal stands: " +
+//   - the refusal STANDS. Directing a send is not a correction of the engine
+//     and not a grant of consent; the record will still say this message was
+//     refused.
+//   - the DECISION IS THEIRS, by name. The instruction records who they are and
+//     what they said, and it cannot be edited afterwards.
+//   - it covers THIS message only. The next one to the same contact is refused
+//     again, so this is not a door being opened.
+const overrideWarningText = "The engine refused this message, and that refusal stands: " +
 	"sending it now records an exception, never consent. Your name, your reason and the exact " +
 	"message are written to a record that cannot be edited afterwards. This covers this message " +
 	"alone — the next one to the same recipient is judged from scratch."
-
-// overrideWarnings is every version this build has served, with its words. A
-// version is added and never edited or removed. A record naming any of them
-// can then be read back with what its director was shown. Only the current one is
-// accepted for a new instruction (servedWarningVersion).
-var overrideWarnings = map[string]string{
-	"override-v1":          overrideWarningTextV1,
-	OverrideWarningVersion: overrideWarningText,
-}
-
-// OverrideWarningFor answers the words a version named, and false for a
-// version this build never served.
-func OverrideWarningFor(version string) (OverrideWarning, bool) {
-	text, known := overrideWarnings[version]
-	return OverrideWarning{Version: version, Text: text}, known
-}
 
 // TheOverrideWarning answers the caution and its version together, because a
 // surface that could get one without the other would show words while naming a
 // different version.
 func TheOverrideWarning() OverrideWarning {
-	return OverrideWarning{Version: OverrideWarningVersion, Text: overrideWarnings[OverrideWarningVersion]}
+	return OverrideWarning{Version: OverrideWarningVersion, Text: overrideWarningText}
 }

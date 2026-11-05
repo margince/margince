@@ -299,9 +299,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// a second store over the same pool would be a second answer to "what is
 		// still open".
 		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
-		// The reader's own booking page, once it was used and while it takes
-		// no bookings.
-		WithBookingHealth(newAttentionBookingHealth(pool, db)).
 		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
 		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
 		// The figures behind a deal a row names but does not carry — the
@@ -339,7 +336,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// unconditionally: unbound, that reader is refused, so a seam that
 		// dropped this would present as a Team Lead unable to open their own
 		// rep's day rather than as one able to open a stranger's.
-		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
+		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithDealReviews(attentionDealReviews{pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
 		// How many promises each teammate has already missed, for the team
 		// board. Counted rather than listed, because the task lane above stops
 		// at a dozen and a board built from it would call every loaded rep

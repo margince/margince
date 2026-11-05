@@ -79,10 +79,12 @@ func (a SendNotificationEmailArgs) WorkspaceID() ids.UUID { return a.Workspace }
 // notificationMailJobAttempts is the ladder one notice's mail rides, and the
 // enqueue site owns it because api/jobs.yaml declares this kind caller-owned.
 //
-// The rungs ride out a job failing before the claim, such as a pool blip or a
-// rollout. They also ride out a relay that never took the message, whose
-// claims are released for the next rung. Ten rungs on River's attempt⁴ backoff span about five hours, so a
-// relay down for minutes costs a few minutes of delay and no message.
+// The rungs are for reaching the WORKER, not for retrying the send: the claim
+// is spent before the relay is dialled, so an attempt that got that far sends
+// once whatever River does afterwards. What they ride out is the job failing
+// before the claim — a pool blip, a rollout mid-flight — and ten rungs on
+// River's attempt⁴ backoff span about five hours, which is longer than a
+// decision is worth announcing.
 const notificationMailJobAttempts = 10
 
 // notificationMailBudget bounds ONE colleague's send.
@@ -153,9 +155,9 @@ func addNotificationMailJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunner
 //
 // WHAT IT RETURNS is decided by the claim. Above it, a failure is returned and
 // River retries — nothing was spent, and a later attempt can still deliver.
-// Below it, answerRelayFailure decides. A relay that never took the message is
-// retried. Any other failure is recorded on the row and cancels the job, so
-// job health counts it. api/jobs.yaml carries this as the kind's declaration.
+// Below it, a failure is recorded on the row and the job finishes green: the
+// attempt is gone either way, and a retry could only produce a second message.
+// api/jobs.yaml carries that second half as this kind's fault declaration.
 func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNotificationEmailArgs]) error {
 	noticeID, err := ids.Parse(job.Args.NoticeID)
 	if err != nil {
@@ -198,7 +200,8 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 		// the same thing here: do not send.
 		return nil
 	}
-	return jobs.FaultContext(sysCtx, w.deliver(sysCtx, attempt, job.Attempt >= job.MaxAttempts))
+	w.deliver(sysCtx, attempt)
+	return nil
 }
 
 // deliver renders one claimed notice and hands it to the relay.
@@ -206,39 +209,37 @@ func (w *notificationMailWorker) Work(ctx context.Context, job *river.Job[SendNo
 // Split from Work because Work is about the JOB — parsing it, binding it,
 // claiming — and this is about the message. The claim is already spent when
 // this is called, which is the one thing a reader has to hold while reading it.
-// lastRung says River has no attempt left after this one.
-func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.EmailAttempt, lastRung bool) error {
-	claimed := attempt
+func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.EmailAttempt) {
 	address, wanted, err := w.recipient(ctx, attempt)
 	if err != nil {
 		w.log.WarnContext(ctx, "the notice was not mailed: its recipient could not be resolved",
 			"notice", attempt.Notice.ID, "cause", err)
 		w.recordMailFailure(ctx, attempt.Notice.ID, err.Error())
-		return nil
+		return
 	}
 	if !wanted || address == "" {
 		// A SKIP rather than a failure, and the two are kept apart deliberately.
 		// A seat who moved the class to the screen, or one who has left, is the
 		// product declining to send rather than failing to — and recording a
 		// cause would bury the relay failures that column exists for.
-		return nil
+		return
 	}
 
 	seatCtx, live, scopeErr := seatContext(ctx, identity.NewService(w.pool), noticeWorkspace(ctx), attempt.Recipient.UUID)
 	if scopeErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "recipient authority could not be read")
-		return nil
+		return
 	}
 	if !live {
-		return nil
+		return
 	}
 	attempt, facts, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now), forSingleEmail)
 	if readErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "approval could not be read")
-		return nil
+		return
 	}
 	if !current {
-		return nil
+		return
 	}
 	words := recipientMailCopy(seatCtx, w.pool)
 	sent := []approvalMailItem{{attempt: attempt, facts: facts}}
@@ -246,7 +247,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		sent = append(sent, w.approvalBurst(ctx, seatCtx, attempt)...)
 	}
 	if sent = w.reserveApprovalMail(ctx, seatCtx, sent, words); len(sent) == 0 {
-		return nil
+		return
 	}
 
 	// Bounded like the two digests' sends are: the wall clock the kind declares
@@ -257,9 +258,14 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	subject, message := approvalMailMessage(sent, w.mail.PublicBaseURL, words)
 	message.AppendContent(routineFooterContent(w.mail.PublicBaseURL, words))
 	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, subject, message); err != nil {
-		return w.answerRelayFailure(ctx, claimed, sent, err, lastRung)
+		// Logged and recorded, never retried. The attempts are spent; what is
+		// left to do is make the absence answerable on every notice it carried.
+		w.log.WarnContext(ctx, "the notice was attempted and did not go out",
+			"notice", attempt.Notice.ID, "carried", len(sent), "cause", err)
+		for _, item := range sent {
+			w.recordMailFailure(ctx, item.attempt.Notice.ID, err.Error())
+		}
 	}
-	return nil
 }
 
 // recipient answers where this notice goes, and whether it should go at all.

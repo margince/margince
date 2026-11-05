@@ -37,12 +37,11 @@ type bulkWriters struct {
 // admitVerb refuses a verb the caller may not use at all, sets the store its
 // rows are written through, and answers what the verb asks of each record.
 func (e *bulkEngine) admitVerb(ctx context.Context, change *bulkChange) (principal.Action, error) {
-	rule, ownerArchives := ownerArchiveRules[change.recordType]
 	switch {
-	case change.verb == crmcontracts.BulkVerbArchive && ownerArchives && change.undo == nil:
-		// Each row's archive asks the record's archive rule, which admits an
-		// owner without the delete grant. Bringing one back still asks delete.
-		return principal.ActionRead, auth.RequireArchiveGrant(ctx, rule)
+	case change.verb == crmcontracts.BulkVerbArchive && change.recordType == crmcontracts.BulkRecordTypeDeal && change.undo == nil:
+		// Each row's archive asks the deal archive rule, which admits an owner
+		// without the delete grant. Bringing one back still asks delete.
+		return principal.ActionRead, auth.RequireArchiveGrant(ctx, auth.DealArchive)
 	case change.verb == crmcontracts.BulkVerbArchive:
 		return principal.ActionDelete, nil
 	case isListVerb(change.verb):
@@ -60,14 +59,6 @@ func (e *bulkEngine) admitVerb(ctx context.Context, change *bulkChange) (princip
 		return principal.ActionRead, admitTaskVerb(ctx, *change)
 	}
 	return principal.ActionUpdate, nil
-}
-
-// ownerArchiveRules are the record types whose owner may archive them without
-// the delete grant, each by its own rule.
-var ownerArchiveRules = map[crmcontracts.BulkRecordType]auth.ArchiveRule{
-	crmcontracts.BulkRecordTypeDeal:    auth.DealArchive,
-	crmcontracts.BulkRecordTypeContact: auth.ContactArchive,
-	crmcontracts.BulkRecordTypeCompany: auth.CompanyArchive,
 }
 
 // isTagVerb says the verb puts a tag on the record or takes it off.

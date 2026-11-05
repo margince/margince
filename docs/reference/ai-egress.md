@@ -44,7 +44,6 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `cold_start` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `corpus_ask` | `premium` | no | no | no | none | shipped |
 | `deal_health` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
-| `deal_verdict` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `document_extract` | `premium` | no | yes | no | none | shipped |
 | `draft_reply` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `enrich` | `local_small` → `cheap_cloud` | no | no | no | none | shipped |

@@ -24,9 +24,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,7 +41,23 @@ import (
 // setting is one rep's answer about their own deals, and the sweep is a system
 // pass with no seat of its own.
 type closeDatePolicy struct {
+	svc   *approvals.Service
 	owner dealOwnerAuthority
+}
+
+// LowersWinProbability is false while the qualified forecast is enforced,
+// read fresh before each downgrade so a switch made mid-pass holds at once.
+func (p closeDatePolicy) LowersWinProbability(ctx context.Context) (bool, error) {
+	var enforced bool
+	err := database.WithWorkspaceTx(ctx, p.owner.db.Pool(), func(tx pgx.Tx) error {
+		var err error
+		enforced, err = config.StoredApplyTx(ctx, tx, config.Bound(), assurance.QualifiedForecastEnforced)
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether the qualified forecast is enforced: %w", err)
+	}
+	return !enforced, nil
 }
 
 // LikelyThreshold is the installation's Likely threshold, which every
@@ -58,25 +76,35 @@ func (p closeDatePolicy) LikelyThreshold(ctx context.Context) (int, error) {
 }
 
 // CorrectsWithoutAsking reports whether this owner has left close-date hygiene
-// to the sweep. It reads in the write's transaction, so a switch turned off
-// before the write holds.
+// to the sweep.
 //
 // Compared against ModeAuto rather than "not manual", because there is a third
 // rung: a rep on `veto` has asked to see a change before it lands, and reading
 // the setting as a two-way switch would take that as consent.
-func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, tx pgx.Tx, owner ids.UUID) (bool, error) {
-	mode, err := approvals.AutoApplyModeTx(ctx, tx, owner, deals.CloseDateCorrectionKind)
+//
+// An owner who no longer holds a seat — suspended, archived, removed — answers
+// FALSE. Their deals still exist and still drift, but nobody has said the sweep
+// may write them unasked, and a missing authority is not consent.
+func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error) {
+	if owner == ids.Nil {
+		// An unowned deal has nobody to ask and nobody to leave alone. The
+		// sweep corrects it: a date nobody maintains is exactly the one that
+		// goes stale, and there is no rep whose morning it would surprise.
+		return true, nil
+	}
+	ownerCtx, err := p.owner.asOwner(ctx, owner)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	mode, err := p.svc.AutoApplyMode(ownerCtx, deals.CloseDateCorrectionKind)
 	if err != nil {
 		return false, err
 	}
 	return mode == approvals.ModeAuto, nil
-}
-
-// ActForOwner binds Margince acting for the deal's owner, as the four other
-// deal writers do. An owner who no longer holds a seat answers
-// apperrors.ErrNotFound, and the sweep leaves their deal alone.
-func (p closeDatePolicy) ActForOwner(owner ids.UUID) deals.OwnerAuthorityTx {
-	return ownersAgentTx(p.owner.users, owner, marginceActorID)
 }
 
 // quietReviewReader adapts the deals module's QuietReviewReader seam: read one
@@ -166,7 +194,7 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 	db := InstallationDB(pool)
 	owner := dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}
 	return deals.NewCloseDateCorrector(db,
-		closeDatePolicy{owner: owner},
+		closeDatePolicy{svc: NewApprovalsService(db), owner: owner},
 		quietReviewReader{db: db, owner: owner},
 		log, DealsInstallation()).WithBaseLanguage(installationLanguage(pool))
 }

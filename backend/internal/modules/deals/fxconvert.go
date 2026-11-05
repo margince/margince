@@ -251,42 +251,6 @@ func ConvertToBase(amountMinor int64, rate pgtype.Numeric, from, base string) (i
 	return product.Int64(), nil
 }
 
-// ConvertBetween takes a minor-unit amount in from into to, through the base
-// currency both rates convert into: amount × fromRate ÷ toRate. It applies
-// both currencies' minor-unit scales as one exact fraction and rounds once,
-// half away from zero, like ConvertToBase.
-func ConvertBetween(amountMinor int64, fromRate, toRate pgtype.Numeric, from, to string) (int64, error) {
-	for _, rate := range []pgtype.Numeric{fromRate, toRate} {
-		if !rate.Valid || rate.NaN || rate.InfinityModifier != pgtype.Finite {
-			return 0, ErrRateNotFinite
-		}
-	}
-	if toRate.Int.Sign() <= 0 {
-		return 0, ErrRateNotFinite
-	}
-	numerator := new(big.Int).Mul(big.NewInt(amountMinor), fromRate.Int)
-	denominator := new(big.Int).Set(toRate.Int)
-	scaleBy(numerator, denominator, fromRate.Exp)
-	scaleBy(denominator, numerator, toRate.Exp)
-	numerator.Mul(numerator, Pow10(int64(values.MinorUnitDigits(to))))
-	denominator.Mul(denominator, Pow10(int64(values.MinorUnitDigits(from))))
-	product := DivRoundHalfAwayFromZero(numerator, denominator)
-	if !product.IsInt64() {
-		return 0, ErrAmountOutOfRange
-	}
-	return product.Int64(), nil
-}
-
-// scaleBy multiplies by 10^exp: side when exp is positive, other when it is
-// negative, so the fraction stays exact.
-func scaleBy(side, other *big.Int, exp int32) {
-	if exp >= 0 {
-		side.Mul(side, Pow10(int64(exp)))
-		return
-	}
-	other.Mul(other, Pow10(int64(-exp)))
-}
-
 // DivRoundHalfAwayFromZero is numerator/denominator with the quotient rounded
 // half away from zero. denominator is always a positive power of ten here.
 func DivRoundHalfAwayFromZero(numerator, denominator *big.Int) *big.Int {
@@ -307,11 +271,4 @@ func DivRoundHalfAwayFromZero(numerator, denominator *big.Int) *big.Int {
 // always small and never negative here.
 func Pow10(exp int64) *big.Int {
 	return new(big.Int).Exp(big.NewInt(10), big.NewInt(exp), nil)
-}
-
-// RateStoredSinceSQL is true when a rate was stored after the instant the SQL
-// expression since names. A conversion dropped for a missing rate is worth
-// trying again then.
-func RateStoredSinceSQL(since string) string {
-	return "EXISTS (SELECT 1 FROM fx_rate stored_rate WHERE stored_rate.created_at > " + since + ")"
 }

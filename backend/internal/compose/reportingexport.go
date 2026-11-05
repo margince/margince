@@ -154,6 +154,11 @@ func targetComparisonCSV(comparison crmcontracts.ReportingTargetComparison, unit
 	add("remaining", unit, status, comparison.Remaining)
 	add("open_pipeline", unit, status, comparison.OpenPipeline)
 	add("coverage", "ratio", status, comparison.Coverage)
+	if qualified := comparison.Qualified; qualified != nil {
+		out = append(out, comparisonFigure{label: "qualified_status", context: reportingTargetComparisonBlock, status: string(qualified.Status)})
+		add("qualified_open_pipeline", unit, string(qualified.Status), qualified.OpenPipeline)
+		add("qualified_coverage", "ratio", string(qualified.Status), qualified.Coverage)
+	}
 	return out
 }
 

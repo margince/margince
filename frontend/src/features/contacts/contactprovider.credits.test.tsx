@@ -67,8 +67,6 @@ describe("the details that cost credits", () => {
         full_name: "Dana Ruiz",
         emails: [],
         phones: [],
-        // The server's own per-row answer; this reader may edit the contact.
-        writable: true,
         ...contact,
       },
       sections_omitted: [],

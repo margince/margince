@@ -20,7 +20,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -39,9 +38,6 @@ import (
 type sendRefs struct {
 	ownTasks, teamTasks, approvals []ids.UUID
 	records                        []notices.Target
-	// changesSince is where the Margince changes a morning counts start; nil
-	// when it counts none.
-	changesSince *time.Time
 }
 
 func (r *sendRefs) canonical() {
@@ -81,10 +77,6 @@ type basisRow struct {
 // commitment proposal rests on.
 const commitmentAdmissionTable = "activity_commitment_admission"
 
-// marginceChangesBasis names the seat's counted Margince changes. Its version
-// is their fingerprint and its key the window's start.
-const marginceChangesBasis = "deal_correction"
-
 // sendBasis is the payload's rows and the recipient they are authorised for.
 // excluded names the shown items that no longer qualify; a payload is read
 // again without them rather than sent with them.
@@ -117,14 +109,6 @@ func readSendBasis(ctx context.Context, tx pgx.Tx, seat ids.UUID, team *ids.UUID
 	ctx, live, err := basisAuthorityAndRecords(ctx, tx, seat, refs, shown, &basis)
 	if err != nil || !live {
 		return basis, err
-	}
-	if refs.changesSince != nil {
-		fingerprint, err := deals.PendingChangesFingerprintTx(ctx, tx, seat, *refs.changesSince, false)
-		if err != nil {
-			return basis, err
-		}
-		basis.rows = append(basis.rows, basisRow{table: marginceChangesBasis, id: seat,
-			key: refs.changesSince.Format(time.RFC3339Nano), version: fingerprint})
 	}
 	read, err := readShownItems(ctx, tx, seat, team, refs, now)
 	if err != nil {
@@ -457,20 +441,6 @@ func holdBasisRows(ctx context.Context, tx pgx.Tx, basis []basisRow) error {
 		}
 	}
 	for _, row := range basis {
-		if row.table == marginceChangesBasis {
-			since, err := time.Parse(time.RFC3339Nano, row.key)
-			if err != nil {
-				return err
-			}
-			fingerprint, err := deals.PendingChangesFingerprintTx(ctx, tx, row.id, since, true)
-			if err != nil {
-				return err
-			}
-			if fingerprint != row.version {
-				return errSendBasisChanged
-			}
-			continue
-		}
 		if row.table != commitmentAdmissionTable {
 			continue
 		}

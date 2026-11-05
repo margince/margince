@@ -24,9 +24,7 @@
 // Whole days ELAPSED, not calendar days crossed — a promise due at 23:00 and
 // read at 01:00 has crossed a calendar day and is two hours late, which is not
 // "a day late". Counting the days a reader would name needs the zone they keep
-// them in, which calendarLateness below takes.
-
-import { calendarDaysBetween } from "./format.dates";
+// them in; that is format/calendarday's question and it takes one.
 
 const MS_PER_DAY = 86_400_000;
 
@@ -49,25 +47,4 @@ export function daysPast(dueMs: number, nowMs: number): Lateness {
     return { days: 0, late: false };
   }
   return { days: Math.floor((nowMs - dueMs) / MS_PER_DAY), late: true };
-}
-
-/**
- * How late an owed promise is, as a reader names it: the verdict of
- * `daysPast`, and the count in calendar days of the reader's zone. A promise
- * due at 23:00 and read at 01:00 is one day late here, because the reader's
- * calendar says it was due yesterday. Every screen that puts a late promise's
- * day count in a badge or a sentence reads this one, so they agree.
- */
-export function calendarLateness(
-  dueAt: string,
-  asOf: string,
-  zone: string,
-): Lateness {
-  const dueMs = Date.parse(dueAt);
-  const nowMs = Date.parse(asOf);
-  if (!daysPast(dueMs, nowMs).late) {
-    return { days: 0, late: false };
-  }
-  const days = calendarDaysBetween(new Date(dueMs), new Date(nowMs), zone);
-  return { days: Math.max(0, days), late: true };
 }

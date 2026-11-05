@@ -42,6 +42,7 @@ var leavesByItsOwnVerb = map[crmcontracts.WorklistItemSource][]crmcontracts.Atte
 var leavesElsewhere = map[crmcontracts.WorklistItemSource]string{
 	crmcontracts.WorklistItemSourceWeeklyCommitment: "the plan row is settled through the weekly plan's own state endpoint",
 	crmcontracts.WorklistItemSourceFailedApproval:   "the reader acknowledges the failure on the row, which clears it for them alone",
+	crmcontracts.WorklistItemSourceDealReview:       "the review is answered on the deal, which closes it and with it the row",
 }
 
 // Every row kind the contract declares has a way off the reader's list. That is

@@ -62,14 +62,18 @@ func certifyErasure(ctx context.Context, tx *tallyTx, subject ids.ContactID, rea
 	return account, tombstoneContactErasure(ctx, tx, subject, reason, counts, account)
 }
 
-// The eraser's arms that destroy something outside the database. The rows that
-// named it are counted; the objects are not. An arm is named in an account
-// only when it destroyed at least one thing (tallyTx.uncounted). A store that
-// is wired but held nothing for the subject destroyed nothing.
-const (
-	armAttachmentObject = "attachment_object"
-	armDeliveryPayload  = "controller_delivery_payload"
-)
+// uncountedArms are the eraser's seams that destroy something outside the
+// database. The rows that named it are counted; the objects are not.
+func (e *Eraser) uncountedArms() []string {
+	arms := []string{}
+	if e.blob != nil {
+		arms = append(arms, "attachment_object")
+	}
+	if e.payloads != nil {
+		arms = append(arms, "controller_delivery_payload")
+	}
+	return arms
+}
 
 // tombstoneContactErasure closes the cascade with action=erase and counts only —
 // proof without PII. The counts are evidence ABOUT the scrub, so they ride the

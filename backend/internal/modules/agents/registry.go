@@ -57,8 +57,6 @@ type Registry struct {
 	// typedArgs[tool] is the JSON type its schema declares for each top-level
 	// argument, read off the schema once at registration.
 	typedArgs map[string][]typedArg
-	// uniqueArgs[tool] names its list arguments whose schema declares uniqueItems.
-	uniqueArgs map[string][]string
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
@@ -125,7 +123,6 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
 		typedArgs:    map[string][]typedArg{},
-		uniqueArgs:   map[string][]string{},
 		unitOwned:    map[string]bool{},
 		routeServed:  map[string]bool{},
 		routeActions: map[string]map[string]string{},

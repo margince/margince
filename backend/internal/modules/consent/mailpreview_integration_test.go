@@ -86,12 +86,7 @@ func TestThePageALinkOpensAsksInTheLanguageItsMailWasWrittenIn(t *testing.T) {
 	if rec := confirmRequestWith(e, h, `{"language":"de"}`); rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body.String())
 	}
-	token, _ := sealedConfirmToken(vault.sealed)
-	// The link carries the language too, so an expired link that the server
-	// answers with nothing still opens a German page.
-	if !strings.HasSuffix(vault.sealed, "#/confirm/"+token+"?lang=de") {
-		t.Errorf("the sealed link %q does not carry the mail's language", vault.sealed)
-	}
+	_, token, _ := strings.Cut(vault.sealed, "#/confirm/")
 
 	rec := httptest.NewRecorder()
 	h.GetConfirmDetails(rec, httptest.NewRequest(http.MethodGet, "/public/confirm/x", nil).WithContext(e.ctx), token)

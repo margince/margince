@@ -136,13 +136,6 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 	if err != nil {
 		return zero, err
 	}
-	// Only a deal-facts reading holds values a deal can take.
-	if read.Question != activities.ExtractionQuestionDealFacts {
-		return zero, &ExtractionAcceptError{
-			Field: "extraction_id", Code: "not_deal_facts",
-			Message: "extraction_id names a reading that was not read for deal facts",
-		}
-	}
 	accepted, patch, err := buildExtractionAcceptPatch(req, groundedExtractionFields(read.Fields))
 	if err != nil {
 		return zero, err

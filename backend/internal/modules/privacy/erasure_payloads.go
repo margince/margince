@@ -76,7 +76,6 @@ func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, paylo
 			return fmt.Errorf("privacy: destroying the subject's link material: %w", err)
 		}
 	}
-	destroyedOutside(tx, armDeliveryPayload)
 	if _, err := tx.Exec(ctx, `
 		UPDATE comms_outbound SET payload_ref = NULL
 		 WHERE activity_id = ANY(`+bound+`) AND payload_ref IS NOT NULL`, args...); err != nil {

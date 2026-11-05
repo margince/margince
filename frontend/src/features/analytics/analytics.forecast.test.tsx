@@ -466,6 +466,68 @@ it("keeps an unread source visible even when there are no findings or readiness 
   expect(warning.closest("details")).toBeNull();
 });
 
+// The qualified figure sits under the baseline. An unjudged deal is said apart
+// from a left-out one, because folding them would blame the pipeline for a
+// mailbox nobody read.
+it("states the qualified figure and keeps unknown deals apart from left-out ones", async () => {
+  vi.stubGlobal(
+    "fetch",
+    forecastStub({
+      readings: readings({
+        qualified: {
+          evidence_minor: 20_000,
+          weighted_minor: 25_000,
+          excluded_minor: 100_000,
+          unknown_minor: 7_000,
+          excluded_count: 3,
+          unknown_count: 1,
+          unsupported_minor: 0,
+          unsupported_count: 0,
+        },
+      }),
+    }),
+  );
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  const answer = await screen.findByText(/the customer still supports/i);
+  expect(answer.textContent).toContain("600 EUR");
+  expect(
+    (await screen.findByText(/while their reviews are open/i)).textContent,
+  ).toContain("3 deals (");
+  expect(
+    (await screen.findByText(/could not judge it/i)).textContent,
+  ).toContain("1 deal (");
+});
+
+// A deal left out with no review is said apart from one under review. The rep
+// fixes it on the deal, and no review will ask.
+it("says apart deals left out for a weak date or no next step", async () => {
+  vi.stubGlobal(
+    "fetch",
+    forecastStub({
+      readings: readings({
+        qualified: {
+          evidence_minor: 20_000,
+          weighted_minor: 25_000,
+          excluded_minor: 100_000,
+          unknown_minor: 0,
+          excluded_count: 3,
+          unknown_count: 0,
+          unsupported_minor: 40_000,
+          unsupported_count: 1,
+        },
+      }),
+    }),
+  );
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  expect(
+    (await screen.findByText(/while their reviews are open/i)).textContent,
+  ).toContain("2 deals (600 EUR)");
+  expect(
+    (await screen.findByText(/no confirmed close date or no next step/i))
+      .textContent,
+  ).toContain("1 deal (400 EUR)");
+});
+
 // Likely is counted in full above the installation's threshold; Weighted
 // takes every open deal at its probability, split by where it comes from.
 it("states Likely at its threshold and Weighted by source, with no best case", async () => {
@@ -496,6 +558,15 @@ it("states Likely at its threshold and Weighted by source, with no best case", a
     ),
   ).toBeTruthy();
   expect(screen.queryByText(/best case/i)).toBeNull();
+});
+
+// While enforcement is off the server sends no qualified block, and the screen
+// must not invent one from the baseline.
+it("says nothing about qualification when the server sends none", async () => {
+  vi.stubGlobal("fetch", forecastStub());
+  render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+  await screen.findByText(/Won plus Likely deals/i);
+  expect(screen.queryByText(/the customer still supports/i)).toBeNull();
 });
 
 // A share states its landing and modelled finish. A snapshot frozen before the

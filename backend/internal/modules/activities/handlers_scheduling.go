@@ -60,15 +60,6 @@ func (h Handlers) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, profile)
 }
 
-// MarkBookingPageShared records that the caller copied their booking link.
-func (h Handlers) MarkBookingPageShared(w http.ResponseWriter, r *http.Request) {
-	if err := h.store.MarkBookingPageShared(r.Context()); err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-
 // CreateMeetingInvitation queues delivery through the shared booking engine.
 func (h Handlers) CreateMeetingInvitation(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateMeetingInvitationParams) {
 	var req crmcontracts.MeetingInvitationRequest

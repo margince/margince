@@ -1,14 +1,10 @@
 /** @vitest-environment happy-dom */
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { ExtensionDescriptor } from "@composition/extensions";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { rulesIn } from "../testing/css";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { ExtensionEntries } from "./extensionentries";
 
@@ -75,30 +71,6 @@ describe("ExtensionEntries", () => {
     expect(globalThis.location.hash).toBe(
       "#/ext/visits/report?record_id=c-1&record_type=contact",
     );
-  });
-
-  it("cuts a long label at its end in a verb tile and keeps all of it in the tip", () => {
-    renderEntries(
-      { ext_visits_report: ["read"] },
-      { slot: "record_header.contact", registry: [VISITS] },
-    );
-    const button = screen.getByTestId("ext-entry-visits");
-    const label = button.querySelector(".verb-label");
-    expect(label?.textContent).toBeTruthy();
-    expect(button.getAttribute("title")).toBe(label?.textContent);
-    const sheet = readFileSync(
-      join(
-        dirname(fileURLToPath(import.meta.url)),
-        "../design-system/recordview.css",
-      ),
-      "utf8",
-    );
-    const tile = rulesIn(sheet).find((rule) =>
-      rule.selector.includes(".verb-label"),
-    );
-    expect(tile?.selector).toContain(".record-split-verbs");
-    expect(tile?.body).toMatch(/text-overflow:\s*ellipsis/);
-    expect(tile?.body).toMatch(/overflow:\s*hidden/);
   });
 
   it("shows only the entries declared for its own slot", () => {

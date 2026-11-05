@@ -13,7 +13,6 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
-import { problemFieldErrorsOf } from "../lib/problem";
 import { ActionRow } from "./actionrow";
 import { Button } from "./atoms";
 import { ErrorLine } from "./errorline";
@@ -31,11 +30,6 @@ export type SaveDraft = Readonly<{
   offer?: string;
   /** Writes the draft; a rejection keeps it and is shown on the bar. */
   save: () => Promise<unknown>;
-  /**
-   * The fields this card shows a refused save beside. A refusal naming only
-   * these leaves the bar short, so it never covers the sentence it repeats.
-   */
-  placed?: readonly string[];
   /** Puts the card back to what was last saved. */
   discard: () => void;
 }>;
@@ -49,8 +43,6 @@ export type SavePage = Readonly<{
   invalid: boolean;
   pending: boolean;
   error: unknown;
-  /** The refusal is shown at the fields it names. */
-  errorPlaced: boolean;
   /** Resolves true once every waiting draft is written. */
   save: () => Promise<boolean>;
   discard: () => void;
@@ -70,14 +62,6 @@ type Registry = Readonly<{
 
 const SavePageContext = createContext<Registry | null>(null);
 
-// Whether every field a refusal names is one its card shows it beside.
-function placedAt(reason: unknown, placed: readonly string[] = []): boolean {
-  const faults = problemFieldErrorsOf(reason);
-  return (
-    faults.length > 0 && faults.every((fault) => placed.includes(fault.field))
-  );
-}
-
 /**
  * Collects every card's draft on one page so a single bar saves them together.
  * The drafts' callbacks live in a ref. Inline closures change on every render,
@@ -90,7 +74,6 @@ export function SavePageProvider({
   const [marks, setMarks] = useState<ReadonlyMap<string, Mark>>(new Map());
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const [errorPlaced, setErrorPlaced] = useState(false);
 
   const register = useCallback((token: string, draft: SaveDraft) => {
     drafts.current.set(token, draft);
@@ -126,11 +109,9 @@ export function SavePageProvider({
     // Settled rather than all: one refused card must not stop the others.
     const results = await Promise.allSettled(due.map((draft) => draft.save()));
     setPending(false);
-    const at = results.findIndex((result) => result.status === "rejected");
-    const refused = results[at];
-    if (refused?.status === "rejected") {
+    const refused = results.find((result) => result.status === "rejected");
+    if (refused) {
       setError(refused.reason);
-      setErrorPlaced(placedAt(refused.reason, due[at]?.placed));
       return false;
     }
     return true;
@@ -153,16 +134,7 @@ export function SavePageProvider({
 
   const registry = useMemo<Registry>(
     () => ({
-      page: {
-        dirty,
-        open,
-        invalid,
-        pending,
-        error,
-        errorPlaced: error !== null && errorPlaced,
-        save,
-        discard,
-      },
+      page: { dirty, open, invalid, pending, error, save, discard },
       register,
       mark,
       release,
@@ -173,7 +145,6 @@ export function SavePageProvider({
       invalid,
       pending,
       error,
-      errorPlaced,
       save,
       discard,
       register,
@@ -231,14 +202,6 @@ export function useSavePage(): SavePage | null {
   return useContext(SavePageContext)?.page ?? null;
 }
 
-// The bar is pinned over the foot of the view, so a refused field below the
-// fold would sit under it. Centring it keeps it clear of the bar.
-function showFirstRefused() {
-  const field = document.querySelector<HTMLElement>('[aria-invalid="true"]');
-  field?.scrollIntoView?.({ block: "center" });
-  field?.focus({ preventScroll: true });
-}
-
 /**
  * The one Save of a settings page, pinned to the foot of the view. It is drawn
  * only while some card on the page holds a draft.
@@ -256,9 +219,7 @@ export function PageSaveBar() {
             pending={page.pending}
             reason={page.invalid ? t("saveBar.invalid") : undefined}
             onClick={() => {
-              void page.save().then((saved) => {
-                if (!saved) globalThis.requestAnimationFrame(showFirstRefused);
-              });
+              void page.save();
             }}
           >
             {t("saveBar.save")}
@@ -271,11 +232,7 @@ export function PageSaveBar() {
           {t("saveBar.discard")}
         </Button>
       </ActionRow>
-      {page.errorPlaced ? (
-        <ErrorLine>{t("saveBar.invalid")}</ErrorLine>
-      ) : (
-        <ErrorLine error={page.error} />
-      )}
+      <ErrorLine error={page.error} />
     </SaveBar>
   );
 }
