@@ -108,10 +108,7 @@ afterEach(() => {
 // it from another field tells a reader two things about one file.
 describe("a file that came with a mail", () => {
   it.each([
-    [
-      "the contact's Documents tab",
-      () => <ContactFilesTab contactId="p-1" contactName="Dana Buyer" />,
-    ],
+    ["the contact's Documents tab", () => <ContactFilesTab contactId="p-1" />],
     [
       "the company's Documents card",
       () => <CompanyDocumentsCard companyId="co-1" />,

@@ -40,9 +40,11 @@ export function MagicApproval({
     (value) => formatDate(middayInstant(value, zone), locale, zone),
     zone,
   );
-  const commercialStage = ["advance_deal", "progress_deal"].includes(
-    line.approval_kind ?? "",
-  );
+  const commercialStage = [
+    "advance_deal",
+    "progress_deal",
+    "stage_progression",
+  ].includes(line.approval_kind ?? "");
   const fields = display.filter((field) => {
     if (!commercialStage) return field.value !== null;
     if (field.field === "reviewer_reason" || field.field === "preview_status")

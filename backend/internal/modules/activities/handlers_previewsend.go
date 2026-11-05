@@ -122,13 +122,6 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			requested := crmcontracts.CommunicationContext(d.Requested)
 			entry.RequestedCategory = &requested
 		}
-		if len(d.SupportedAlternatives) > 0 {
-			alternatives := make([]crmcontracts.CommunicationContext, 0, len(d.SupportedAlternatives))
-			for _, c := range d.SupportedAlternatives {
-				alternatives = append(alternatives, crmcontracts.CommunicationContext(c))
-			}
-			entry.SupportedAlternatives = &alternatives
-		}
 		if preview.NewContacts[correspondence.Fold(d.Recipient.Email)] {
 			newContact := true
 			entry.NewContact = &newContact

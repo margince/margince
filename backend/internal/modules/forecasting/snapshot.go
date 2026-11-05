@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // Why a snapshot was taken. Each is a real cause with different rules: only
@@ -70,6 +71,9 @@ type NewSnapshot struct {
 	// ForwardMeasure is the measure the installation was set to build its
 	// landing from when this was taken. Empty stores NULL: not recorded.
 	ForwardMeasure ForwardMeasure
+	// QualifiedPolicyVersion is the viability policy the qualified readings
+	// applied, empty while qualification was off.
+	QualifiedPolicyVersion string
 	// SelfCorrecting, EvidenceCutoff and RiskSignalsVersion are the basis the
 	// chances stood on. A nil SelfCorrecting stores NULL: not recorded.
 	SelfCorrecting     *bool
@@ -181,8 +185,9 @@ func (s *Store) writeContributions(
 			"base_minor", "fx_rate", "fx_date", "effective_close_date",
 			"close_provisional", "probability_source", "stage_probability", "stage_id", "weighted_minor",
 			"in_won", "in_evidence", "in_open", "in_lost", "exclusion_reason",
-			"audit_id", "approval_id", "captured_by",
+			"qualification", "audit_id", "approval_id", "captured_by",
 			"typed_probability", "evidence_n", "risk_signals", "risk_signal_facts", "risk_effect",
+			"qualified_policy_version", "viability_assessed_at", "viability_disposition", "qualification_complete",
 		},
 		pgx.CopyFromSlice(len(rows), func(i int) ([]any, error) {
 			row := rows[i]
@@ -214,15 +219,17 @@ func (s *Store) writeContributions(
 			if err != nil {
 				return nil, fmt.Errorf("forecasting: contribution %d: %w", i, err)
 			}
+			policy, assessed, disposition, complete := basisColumns(row.Basis)
 			return []any{
 				snapshotID, dealID, nullableID(row.Owner), row.AmountMinor,
 				currency, row.BaseMinor, nil, nil,
 				row.EffectiveClose, row.CloseProvisional, nullIfEmpty(string(row.Source)),
 				nullableInt(row.StageProbability), nullableID(row.StageID), weighted,
 				row.InWon, row.InEvidence, row.InOpen, row.InLost,
-				nullIfEmpty(row.ExclusionReason),
+				nullIfEmpty(row.ExclusionReason), nullIfEmpty(string(row.Qualification)),
 				row.AuditID, row.ApprovalID, capturedBy,
 				row.TypedProbability, row.EvidenceN, SignalCodes(row.Signals), facts, row.Effect,
+				policy, assessed, disposition, complete,
 			}, nil
 		}))
 	if err != nil {
@@ -339,13 +346,13 @@ func (s *Store) SnapshotSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (snaps
 func snapshotHeader(ctx context.Context, tx pgx.Tx, id ids.UUID) (snapshotSide, Scope, error) {
 	out := snapshotSide{ID: id}
 	var scope Scope
-	var population, fingerprint *string
+	var population, fingerprint, policy *string
 	err := tx.QueryRow(ctx,
 		`SELECT definition_version, period_start, period_end, scope_kind, scope_id, pipeline_id, base_currency,
-		        taken_at, population_fingerprint, input_fingerprint
+		        taken_at, population_fingerprint, input_fingerprint, qualified_policy_version
 		 FROM forecast_snapshot WHERE id = $1`, id).
 		Scan(&out.DefinitionVersion, &out.PeriodStart, &out.PeriodEnd, &scope.Kind, &scope.ID,
-			&out.PipelineID, &out.BaseCurrency, &out.TakenAt, &population, &fingerprint)
+			&out.PipelineID, &out.BaseCurrency, &out.TakenAt, &population, &fingerprint, &policy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return snapshotSide{}, Scope{}, apperrors.ErrNotFound
 	}
@@ -354,6 +361,7 @@ func snapshotHeader(ctx context.Context, tx pgx.Tx, id ids.UUID) (snapshotSide, 
 	}
 	out.PopulationFingerprint = derefString(population)
 	out.InputFingerprint = derefString(fingerprint)
+	out.QualifiedPolicy = derefString(policy)
 	return out, scope, nil
 }
 
@@ -433,8 +441,9 @@ func sameID(a, b *ids.UUID) bool {
 const ContributionSelect = `SELECT c.deal_id, c.owner_id, c.amount_minor, c.currency, c.base_minor,
 		c.effective_close_date, c.close_provisional, c.probability_source, c.stage_probability,
 		c.weighted_minor, c.in_won, c.in_evidence, c.in_open, c.in_lost,
-		c.exclusion_reason, c.audit_id, c.approval_id,
-		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect
+		c.exclusion_reason, c.qualification, c.audit_id, c.approval_id,
+		c.stage_id, c.typed_probability, c.evidence_n, c.risk_signal_facts, c.risk_effect,
+		c.qualified_policy_version, c.viability_assessed_at, c.viability_disposition, c.qualification_complete
 		FROM forecast_contribution c`
 
 // CollectContribution scans one row read with ContributionSelect.
@@ -442,16 +451,19 @@ func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	var c Contribution
 	var dealID ids.UUID
 	var owner *ids.UUID
-	var currency, source, exclusion *string
+	var currency, source, exclusion, qualification *string
 	var probability *int
 	var weighted *int64
 	var stage *ids.UUID
 	var facts []byte
+	var basis frozenBasis
 	err := row.Scan(&dealID, &owner, &c.AmountMinor, &currency, &c.BaseMinor,
 		&c.EffectiveClose, &c.CloseProvisional, &source, &probability,
 		&weighted, &c.InWon, &c.InEvidence, &c.InOpen, &c.InLost,
-		&exclusion, &c.AuditID, &c.ApprovalID,
-		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect)
+		&exclusion, &qualification, &c.AuditID, &c.ApprovalID,
+		&stage, &c.TypedProbability, &c.EvidenceN, &facts, &c.Effect,
+		&basis.policy, &basis.assessed, &basis.disposition, &basis.complete)
+	c.Basis = basis.read()
 	if err == nil && facts != nil {
 		err = json.Unmarshal(facts, &c.Signals)
 	}
@@ -474,6 +486,7 @@ func CollectContribution(row pgx.CollectableRow) (Contribution, error) {
 	if probability != nil {
 		c.StageProbability = *probability
 	}
+	c.Qualification = viability.Qualification(derefString(qualification))
 	if weighted != nil {
 		c.WeightedMinor = *weighted
 	}

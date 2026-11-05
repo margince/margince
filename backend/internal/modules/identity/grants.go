@@ -161,11 +161,6 @@ func (s *Service) refuseMalformedGrant(ctx context.Context, in CreateGrantInput)
 	if err := httperr.RequireBodyID("record_id", in.RecordID); err != nil {
 		return err
 	}
-	return s.ValidateRecordGrantFields(ctx, in)
-}
-
-// ValidateRecordGrantFields checks a share before its target records are selected.
-func (s *Service) ValidateRecordGrantFields(ctx context.Context, in CreateGrantInput) error {
 	if err := httperr.RequireBodyID("subject_id", in.SubjectID); err != nil {
 		return err
 	}
@@ -193,10 +188,19 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	if err := auth.EnsureLinkTarget(ctx, tx, in.RecordType, in.RecordID); err != nil {
 		return grantRow{}, err
 	}
-	if err := grantRecipientExists(ctx, tx, in); err != nil {
+	subjectTable := "app_user"
+	if in.SubjectType == grantSubjectTeam {
+		subjectTable = grantSubjectTeam
+	}
+	var subjectExists bool
+	if err := tx.QueryRow(ctx,
+		storekit.SQLf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1)`, subjectTable),
+		in.SubjectID).Scan(&subjectExists); err != nil {
 		return grantRow{}, err
 	}
-
+	if !subjectExists {
+		return grantRow{}, apperrors.ErrNotFound
+	}
 	// Two rules bind a grant, and they judge different seats.
 	//
 	// Scope-intersection (ADR-0039) judges the grantor at every access level.

@@ -26,6 +26,11 @@ type Resolution = {
   id: string;
   answer: ResolveAnswer;
   dealId?: string;
+  // A customer review's wait and lost answers also write the deal, through
+  // their own routes.
+  review?: boolean;
+  // The reason a review closed lost is lost for, from the loss reason list.
+  lostReasonCode?: string;
 };
 
 // The findings, and the one sheet that answers whichever was picked.
@@ -129,9 +134,18 @@ export function CheckTable({
         error={resolve.error}
         labels={sheetLabels(t)}
         returnFocusTo={focusAfterClose}
-        onSubmit={(given, dealId) => {
+        onSubmit={(given, dealId, lostReasonCode) => {
           if (sheet !== null) {
-            resolve.mutate({ id: sheet.id, answer: given, dealId });
+            const review =
+              checks.find((check) => check.id === sheet.id)?.type ===
+              "deal_viability";
+            resolve.mutate({
+              id: sheet.id,
+              answer: given,
+              dealId,
+              review,
+              lostReasonCode,
+            });
           }
         }}
         onClose={close}
@@ -220,7 +234,34 @@ function checkColumns(
 function useResolveCheck(onResolved: (id: string) => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, answer, dealId }: Resolution) => {
+    mutationFn: async ({
+      id,
+      answer,
+      dealId,
+      review,
+      lostReasonCode,
+    }: Resolution) => {
+      if (review && answer.outcome === "remind_later") {
+        unwrap(
+          await api.POST("/forecast/assurance/exceptions/{id}/wait", {
+            params: { path: { id } },
+            body: { until: answer.remindAt ?? "" },
+          }),
+        );
+        return;
+      }
+      if (review && answer.outcome === "not_relevant") {
+        unwrap(
+          await api.POST("/forecast/assurance/exceptions/{id}/close-lost", {
+            params: { path: { id } },
+            body: {
+              lost_reason: answer.reason ?? "",
+              lost_reason_code: lostReasonCode,
+            },
+          }),
+        );
+        return;
+      }
       unwrap(
         await api.POST("/forecast/assurance/exceptions/{id}/resolve", {
           params: { path: { id } },

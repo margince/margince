@@ -44,7 +44,7 @@ func (h aiRoutingHandlers) ReplaceAiTaskOverrides(w http.ResponseWriter, r *http
 		return
 	}
 	var req crmcontracts.AiTaskOverrides
-	if !httperr.DecodeJudged(w, r, &req, taskOverrideBoundIsOwned) {
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	next, err := ai.TaskOverridesFromWire(req, sentTask(r))
@@ -75,7 +75,7 @@ func (h aiRoutingHandlers) PreviewAiTaskOverrides(w http.ResponseWriter, r *http
 		return
 	}
 	var req crmcontracts.AiTaskOverrides
-	if !httperr.DecodeJudged(w, r, &req, taskOverrideBoundIsOwned) {
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	// A field the transport refuses is one more problem in the preview's list.

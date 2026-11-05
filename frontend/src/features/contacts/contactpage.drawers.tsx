@@ -106,12 +106,7 @@ export function runContactMomentAction(
       }
       return;
     case "booking":
-      navigate(
-        { screen: "book", id: `contact-${handlers.contactId}` },
-        destination.entity_type === "activity" && destination.entity_id
-          ? new Map([["activity", destination.entity_id]])
-          : undefined,
-      );
+      navigate({ screen: "book", id: `contact-${handlers.contactId}` });
       return;
     case "composer":
       handlers.openComposer(composerIntentOf(destination.prefill, t), true);

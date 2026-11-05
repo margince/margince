@@ -111,6 +111,15 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			quiet:    func(s Subject) Subject { s.HasEconomicBuyer, s.Likely = false, false; return s },
 		},
 		{
+			ruleType: TypeDealViability,
+			fires:    func(s Subject) Subject { s.Viability = reviewRequired(); return s },
+			// A wait the customer asked for is judged, and it is not a review.
+			quiet: func(s Subject) Subject {
+				s.Viability = &SubjectViability{Outcome: viability.OutcomeWaiting}
+				return s
+			},
+		},
+		{
 			ruleType: TypeCommitUnpriced,
 			fires: func(s Subject) Subject {
 				s.AmountMinor, s.Currency = nil, ""
@@ -276,22 +285,5 @@ func reviewRequired() *SubjectViability {
 		Outcome:    viability.OutcomeReviewRequired,
 		Reasons:    []viability.Reason{viability.ReasonCustomerSilent, viability.ReasonCloseDateUnsupported},
 		SilentDays: 196,
-	}
-}
-
-// A retired type keeps its stored findings and no rule raises it again, even
-// on a deal the customer stopped answering.
-func TestNoRuleRaisesARetiredType(t *testing.T) {
-	t.Parallel()
-	silent := healthy()
-	silent.Viability = reviewRequired()
-	for _, rule := range Rules() {
-		if rule.Type == TypeDealViability || rule.Type == TypeBuyerSilent {
-			t.Errorf("rule %s asks a retired question", rule.Type)
-		}
-		if found := rule.Ask(at(time.May, 14), silent, DefaultConfig()); found != nil &&
-			(found.Type == TypeDealViability || found.Type == TypeBuyerSilent) {
-			t.Errorf("rule %s raised a retired %s finding", rule.Type, found.Type)
-		}
 	}
 }

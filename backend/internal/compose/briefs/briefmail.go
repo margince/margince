@@ -165,30 +165,6 @@ func (e *BriefEngine) MailFailed(ctx context.Context, runID ids.UUID, cause stri
 	})
 }
 
-// LastMailedBefore is when the reader's latest morning edition before now
-// was claimed for the relay, or nil when none was. A recorded failure does not
-// count. The claim is the last mark of a send the row keeps.
-func (e *BriefEngine) LastMailedBefore(ctx context.Context, now time.Time) (*time.Time, error) {
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	userID, err := briefUser(ctx)
-	if err != nil {
-		return nil, err
-	}
-	var at *time.Time
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT max(mail_attempted_at) FROM brief_run
-			 WHERE user_id = $1 AND mail_error IS NULL AND mail_attempted_at < $2`,
-			userID, now.UTC()).Scan(&at)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("brief: reading the last morning mail: %w", err)
-	}
-	return at, nil
-}
-
 // RunsAwaitingMail lists this local day's runs that have not spent their mail
 // attempt, oldest rep first so one morning reads the same way twice.
 //

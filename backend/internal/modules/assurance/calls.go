@@ -48,8 +48,9 @@ type CallSubject struct {
 	DealIDs []string
 	// Net is each reading's change since the call, keyed by reading. The
 	// readings are different measures and are never added up.
-	Net                map[string]int64
-	BaselineSnapshotID string
+	Net                  map[string]int64
+	QualificationChanges int
+	BaselineSnapshotID   string
 }
 
 // CallSubjectsFunc reads the standing calls and compares each with its
@@ -108,6 +109,7 @@ func callFinding(c CallSubject) *Finding {
 	// the list on the way out (compose/assurancecallread.go).
 	observed := map[string]any{
 		"comparison": "moved", "changed_deals": len(c.DealIDs), "deal_ids": c.DealIDs,
+		"qualification_changes": c.QualificationChanges,
 	}
 	for reading, net := range c.Net {
 		observed[reading+"_change_minor"] = net

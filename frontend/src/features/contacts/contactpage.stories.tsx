@@ -41,14 +41,6 @@ import {
 const meta: Meta = {
   title: "Records/Contact 360/Page",
   parameters: { layout: "padded" },
-  decorators: [
-    (Story) => {
-      installFetchStub({
-        "GET /me": meRoute({ activity: ["read", "create"] }),
-      });
-      return <Story />;
-    },
-  ],
 };
 export default meta;
 
@@ -377,7 +369,6 @@ function Page({
     // fixture below grants, which is not what a permitted reader sees.
     "GET /me": meRoute({ contact: ["read", "update"] }),
     "GET /installation/settings": callMessengersRoute(),
-    "GET /contacts/p-1": () => jsonResponse(view.contact),
     "GET /contacts/p-1/360": () => jsonResponse(view),
     "GET /contacts/p-1/brief": () =>
       jsonResponse({

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -152,28 +152,6 @@ A field the file names but not clearly enough is left out and labelled
 "omitted (stated, but not clearly enough to accept)". A field the file does not
 name at all is labelled "omitted (not stated in this file)". Margince does
 not guess a missing value.
-
-## A chat on a contact
-
-### How do I save a chat from WhatsApp on a contact?
-To save a chat from a messaging app on a contact in Margince, open the contact's **Documents** tab and click **Capture a chat**.
-1. Take a screenshot of the chat and paste it, drop it on **Screenshot**, or click to choose it.
-2. AI reads the messages into **What was said**, marked "Copied from the screenshot by AI". Check the text and change it if needed.
-3. Pick the **Chat app** and click **File on this contact**.
-Nothing is saved on the contact's history until you click **File on this contact**. **Discard** removes the screenshot again.
-Also called: save a WhatsApp chat, log a Telegram message, add a chat screenshot.
-
-The chat is saved as one message on the contact, with the screenshot
-attached to it. When the chat's header shows a name or number that is
-not this contact's, the panel says so. Tick the box to save it here all the same. When AI cannot read the screenshot, or no AI model is set up,
-the panel says why and **What was said** stays empty. You can type the text
-yourself or save the screenshot alone.
-
-A message whose text you left as AI read it is recorded as written by AI for
-you. A text you typed or changed is recorded as yours.
-
-The screenshot and the text are part of the contact's data. Deleting the
-contact's data on request removes both.
 
 ## Files on a deal
 

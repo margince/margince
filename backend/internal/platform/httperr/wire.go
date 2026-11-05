@@ -136,7 +136,7 @@ func readBody(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string) bool, closed bool) error {
 	if datasource.HasCustomFieldMap(into) {
-		return decodeCustomFieldBody(r, raw, into, owned)
+		return decodeCustomFieldBody(r, raw, into)
 	}
 	// A key that only case-folds onto a contract field, or is unknown, is refused
 	// rather than matched by encoding/json. The provider seam applies the same gate.
@@ -160,8 +160,8 @@ func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string
 	if dec.More() {
 		return Validation("body", "malformed_json", "trailing content after the JSON value")
 	}
-	if refused := DecodedValueRefusal(into, raw, owned); refused != nil {
-		return refused
+	if outOfRange := datasource.RejectOutOfRangeTimes(into); outOfRange != nil {
+		return Validation(outOfRange.Field, "out_of_range", outOfRange.Error())
 	}
 	stashPresentFields(r, raw)
 	return nil

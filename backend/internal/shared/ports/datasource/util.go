@@ -138,34 +138,8 @@ func StrictDecode(raw json.RawMessage, into any) error {
 		}
 		return &FieldDecodeError{Cause: err}
 	}
-	if refused := RefuseDecodedValue(into, raw, nil); refused != nil {
-		return &FieldDecodeError{Cause: refused}
-	}
-	return nil
-}
-
-// DecodedValueError refuses a decoded value under a rule the JSON decode cannot
-// see. Code is the wire code every door answers it with. So the provider seam
-// and the REST decode name one field with one code.
-type DecodedValueError struct {
-	*FieldShapeError
-	Code string
-}
-
-// RefuseDecodedValue names the first decoded value outside its date-time range,
-// its number bounds or its no-repeats rule. owned names the paths whose number
-// bounds a later layer judges.
-//
-//craft:ignore naked-any mirror of StrictDecode's seam target
-func RefuseDecodedValue(decoded any, raw json.RawMessage, owned func(path string) bool) *DecodedValueError {
-	if outOfRange := RejectOutOfRangeTimes(decoded); outOfRange != nil {
-		return &DecodedValueError{FieldShapeError: outOfRange, Code: "out_of_range"}
-	}
-	if outOfBounds := RejectOutOfBoundsNumbers(decoded, raw, owned); outOfBounds != nil {
-		return &DecodedValueError{FieldShapeError: outOfBounds, Code: "out_of_range"}
-	}
-	if repeated := RejectRepeatedItems(decoded); repeated != nil {
-		return &DecodedValueError{FieldShapeError: repeated, Code: "duplicate"}
+	if outOfRange := RejectOutOfRangeTimes(into); outOfRange != nil {
+		return &FieldDecodeError{Cause: outOfRange}
 	}
 	return nil
 }

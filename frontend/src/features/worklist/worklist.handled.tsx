@@ -21,7 +21,6 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
-import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
@@ -32,20 +31,18 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { usePendingMarginceChanges } from "../../lib/marginchanges";
-import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
+import { receiptBasis, receiptSummary } from "./worklist.receiptcopy";
 
 export function HandledForYouPanel() {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const handled = useHandledForYou();
-  const pendingChanges = usePendingMarginceChanges().data;
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
   // days — the contract says so — and a state read from `isPending`/`isError`
@@ -99,12 +96,6 @@ export function HandledForYouPanel() {
               would take the page down with a type error, and calling it a quiet
               day would report a clear receipt over an answer nobody could
               read. */}
-          {pendingChanges?.bundles && pendingChanges.bundles.length > 0 && (
-            <BundleUndo
-              bundles={pendingChanges.bundles}
-              label={t("changes.undoAll")}
-            />
-          )}
           {receipts && (
             <Disclosure summary={t("worklist.handled.showHistory")}>
               <DataTable

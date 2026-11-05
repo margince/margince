@@ -216,7 +216,7 @@ func TestProductionAccountRoomAndPrivacyPreviews(t *testing.T) {
 				t.Fatal(err)
 			}
 			rendered = consent.CompleteControllerMessage(rendered, "Northstar GmbH", []string{"Northstar GmbH\nBeispielstraße 12\n10115 Berlin", "privacy@example.test"})
-			markup := consent.RenderControllerPresentation(rendered, "Northstar GmbH", "")
+			markup := consent.RenderControllerPresentation(rendered, "Northstar GmbH")
 			if language == "de" && (strings.Contains(markup, "deine Daten") || strings.Contains(markup, "Erfahre,")) {
 				t.Fatal("privacy preview and body use different address registers")
 			}

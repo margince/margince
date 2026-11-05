@@ -478,9 +478,3 @@ func capitalizeParts(lower string) string {
 	}
 	return out.String()
 }
-
-// JoinNameParts is the display name the split columns spell: the nonblank
-// parts, first then last, one space apart. Both blank join to "".
-func JoinNameParts(first, last string) string {
-	return strings.TrimSpace(strings.TrimSpace(first) + " " + strings.TrimSpace(last))
-}

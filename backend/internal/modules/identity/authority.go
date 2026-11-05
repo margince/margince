@@ -211,16 +211,8 @@ func liveSeatType(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (string, err
 	return seatType, err
 }
 
-// EffectiveAuthorityTx resolves live authority inside a composed mutation's
-// transaction. It holds that authority until the transaction ends, so no role,
-// assignment, team or seat change commits in between. Call it before the write
-// locks any row of its own.
+// EffectiveAuthorityTx resolves live authority inside a composed mutation's transaction.
 func (*Service) EffectiveAuthorityTx(ctx context.Context, tx pgx.Tx, humanID ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	// The order every authorization change takes too: the authorization lock,
-	// then app_user, then records. A change that moves deals cannot deadlock it.
-	if err := lockAuthorizationShared(ctx, tx); err != nil {
-		return authz.RBAC{}, "", err
-	}
 	if _, err := storekit.LockRow(ctx, tx, "app_user", humanID, storekit.LiveOnly); err != nil {
 		return authz.RBAC{}, "", err
 	}

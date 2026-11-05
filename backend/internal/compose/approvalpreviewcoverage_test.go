@@ -70,6 +70,7 @@ func TestCommercialPreviewAccountsForEveryGovernedKind(t *testing.T) {
 		"send_email":            `{"to":["buyer@example.test"],"body":"Delivery Friday"}`,
 		"send_company_email":    `{"to":["buyer@example.test"],"body":"Delivery Friday"}`,
 		"advance_project_phase": `{"to_phase":"closed","reason":"Delivered"}`,
+		"stage_progression":     `{"to_stage_id":"stage"}`,
 		"advance_deal":          `{"to_stage_id":"stage"}`,
 		"progress_deal":         `{"to_stage_id":"stage"}`,
 		"update_record":         `{"fields":{"owner_id":null}}`,

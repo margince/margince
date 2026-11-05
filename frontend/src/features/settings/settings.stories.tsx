@@ -660,6 +660,7 @@ export const TeamsPage: Story = catalogPage("teams");
 export const RolesPage: Story = catalogPage("roles");
 export const SeatsPage: Story = catalogPage("seats");
 export const PipelinesPage: Story = catalogPage("pipelines");
+export const StageautomationPage: Story = catalogPage("stageautomation");
 export const LeadsPage: Story = catalogPage("leads");
 export const AcquisitionPage: Story = catalogPage("acquisition");
 export const LossreasonsPage: Story = catalogPage("lossreasons");

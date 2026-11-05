@@ -212,11 +212,11 @@ type attemptTarget struct {
 	claim         *time.Time
 	headers       []storedHeader
 	priorAttempts int
-	// entityType, entityID and ownerID are what every attempt is re-checked
-	// against right before its POST. They are the owner the enqueue authorized
-	// and the record they had to see. The answer can change between the two.
-	// entityType is empty on a row written before those columns existed, and
-	// an empty subject is refused rather than sent.
+	// entityType, entityID and ownerID are what a RE-attempt needs and a first
+	// attempt does not: the enqueue path has already asked whether this owner
+	// may see this record, and a retry has to ask again because the answer can
+	// have changed. entityType is empty on a row written before those columns
+	// existed, and an empty subject is refused rather than sent.
 	entityType string
 	entityID   ids.UUID
 	ownerID    ids.UUID
@@ -289,15 +289,6 @@ func (s *Store) claimDueRetry(ctx context.Context, now time.Time) (ids.UUID, tim
 // loadTarget rehydrates a delivery into an attemptTarget for retry/replay:
 // the stored body plus the subscription's current target URL and sealed
 // secret (so a rotation between attempts takes effect).
-// subscriptionOwner is the owner a subscription runs under now.
-func (s *Store) subscriptionOwner(ctx context.Context, subID ids.UUID) (ids.UUID, error) {
-	var owner ids.UUID
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT owner_id FROM webhook_subscription WHERE id = $1`, subID).Scan(&owner)
-	})
-	return owner, err
-}
-
 func (s *Store) loadTarget(ctx context.Context, deliveryID ids.UUID) (attemptTarget, error) {
 	var t attemptTarget
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {

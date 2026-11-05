@@ -37,7 +37,7 @@ func TestABootSetFollowUpWindowBindsTheWorklistAndRefusesAChange(t *testing.T) {
 	h := NewHandlers(db).WithSettings(locked)
 	for body, want := range map[string]int{
 		`{"follow_up_after_days": 9}`:  http.StatusConflict,
-		`{"follow_up_after_days": 45}`: http.StatusUnprocessableEntity,
+		`{"follow_up_after_days": 45}`: http.StatusConflict,
 		`{"follow_up_after_days": 4}`:  http.StatusOK,
 	} {
 		if code, _ := followUpCall(admin, t, h, http.MethodPatch, body); code != want {

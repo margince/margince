@@ -39,7 +39,6 @@ var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
 	crmcontracts.WorklistItemSourceAutomationRun:       true,
 	crmcontracts.WorklistItemSourceAiWorkHealth:        true,
 	crmcontracts.WorklistItemSourceCaptureHealth:       true,
-	crmcontracts.WorklistItemSourceBookingHealth:       true,
 	crmcontracts.WorklistItemSourceBounce:              true,
 	crmcontracts.WorklistItemSourceUndelivered:         true,
 	crmcontracts.WorklistItemSourceDsr:                 true,

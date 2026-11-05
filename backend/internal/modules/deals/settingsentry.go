@@ -16,18 +16,26 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// StageAutopilotEnabled is the installation's switch for Margince moving
-// deals to a later stage by itself. On by default, like each owner's own
-// switch: an admin's stored "off" stays off, and stops every move.
+// StageAutopilotEnabled is the installation-wide answer to whether a stage
+// transition may ever move a deal without asking.
 //
-// Read inside the transaction that moves the deal, so turning it off stops
-// the next move rather than the one after.
+// DEFAULT FALSE, and that is the whole point of having it. Every other control
+// on this feature is per-transition and earned: a pipeline's rule turns on only
+// once the measured rates clear their thresholds. This one is neither earned
+// nor per-transition — it is the switch an admin reaches for when something is
+// wrong and they do not yet know which transition caused it, and a switch that
+// defaulted to on would have to be found before it could be used.
+//
+// It is read INSIDE the transaction that decides an automatic apply, alongside
+// the pipeline's rule and the rates, so flipping it off stops the next apply
+// rather than the one after. Read at staging instead, it would authorize a
+// move hours before that move happened.
 var StageAutopilotEnabled = config.DefineStored(config.Spec[bool]{
 	Key:     "deals.stage_autopilot_enabled",
 	Env:     "MARGINCE_DEALS_STAGE_AUTOPILOT_ENABLED",
 	Type:    config.Bool,
-	Default: config.Some(true),
-	Doc:     "Let Margince move a deal to a later stage when the evidence on the deal shows it reached that stage; off stops every automatic move.",
+	Default: config.Some(false),
+	Doc:     "Let a deal move to the next stage by itself where the rule of its stage allows it; off stops every automatic move.",
 }, config.Store{
 	RBACObject: stageAutomationObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the apply path reads it; no request carries it

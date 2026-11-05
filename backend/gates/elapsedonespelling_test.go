@@ -26,6 +26,7 @@ func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 		"internal/modules/activities/waitinghorizon.go:derivedWaitingHorizonDays": "The horizon is learned from elapsed reply latencies; calendar rounding would distort the measured distribution.",
 		"internal/modules/activities/scheduledsend.go:validateSchedule":           "The label names a fixed scheduling duration limit, not an activity age or a date difference.",
 		"internal/modules/consent/reviewcontext.go:refuseAnExchangeTooOldToCount": "The refusal names a configured duration window; it does not count dates since the exchange.",
+		"internal/modules/deals/stageprogressionreport.go:observationDays":        "Qualification requires complete observation periods; crossing midnight must not satisfy the minimum evidence window early.",
 		"internal/modules/deals/health.go:daysBetween":                            "Fractional elapsed days feed the health decay curve; rounding to calendar boundaries would change the score discontinuously.",
 		"internal/modules/contacts/leadscore.go:ScoreLeadDetail":                  "Fractional elapsed days feed behavioral decay; a local midnight cannot change the age of a signal abruptly.",
 		"internal/modules/search/graphtrust.go:rankScore":                         "Search freshness is continuous exponential decay rather than a displayed calendar age.",
@@ -36,7 +37,7 @@ func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 		Roots:   []string{"internal"},
 		Subject: func(_ string, file *ast.File) bool { return len(durationDayFunctions(file)) > 0 },
 	}).Files(t)
-	if len(files) < 9 {
+	if len(files) < 10 {
 		t.Fatalf("duration census found only %d source files", len(files))
 	}
 	for _, file := range files {

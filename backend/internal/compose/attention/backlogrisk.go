@@ -77,7 +77,7 @@ func (s *Service) moreRisk(ctx context.Context, page tailPage, walk tailWindow, 
 	for i, deal := range read {
 		batch.rows[i] = tailRow{
 			row: rows[i], at: deal.Row.ExpectedCloseDate, after: deal.After,
-			elsewhere: elsewhere[deal.Row.DealID],
+			elsewhere: elsewhere[deal.Row.DealID] || s.reviews.foldsRisk(rows[i]),
 		}
 	}
 	return batch, nil

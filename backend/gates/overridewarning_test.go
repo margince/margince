@@ -49,7 +49,6 @@ const overrideWarningFile = "internal/modules/consent/overridewarning.go"
 // data, not a cost
 var warningDigests = map[string]string{
 	"override-v1": "de2de8c051f8eed3177d2583e13ef5f72d77d0db20d4f32b27ddea0e6d494379",
-	"override-v2": "8807f8c1106d22c1445c92a2d5247b0cdf02a8eb1346f93847a55e6588e052e4",
 }
 
 func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {
@@ -71,13 +70,6 @@ func TestTheOverrideWarningTextMatchesItsVersion(t *testing.T) {
 			"moved — the old version stays valid for the records that name it.\n\n"+
 			"\twas:  %s\n\tnow:  %s",
 			version, pinned, got)
-	}
-
-	// A retired version keeps its words, so a record naming it can be read
-	// back with what its director was shown.
-	if got := digestOf(retiredWarning(t)); got != warningDigests["override-v1"] {
-		t.Errorf("the words override-v1 named changed: every instruction naming it now claims "+
-			"somebody read text nobody was shown.\n\n\twas:  %s\n\tnow:  %s", warningDigests["override-v1"], got)
 	}
 
 	// The text is asserted to be real before its digest is believed: an empty
@@ -135,29 +127,6 @@ func servedWarning(t *testing.T) (version, text string) {
 		t.Fatalf("%s declares no overrideWarningText this gate could read", overrideWarningFile)
 	}
 	return version, text
-}
-
-// retiredWarning reads the override-v1 text out of the source.
-func retiredWarning(t *testing.T) string {
-	t.Helper()
-	parsed, err := gatekit.ParseFile(overrideWarningFile, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("reading %s: %v", overrideWarningFile, err)
-	}
-	for _, decl := range parsed.Decls {
-		general, ok := decl.(*ast.GenDecl)
-		if !ok || general.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range general.Specs {
-			value, ok := spec.(*ast.ValueSpec)
-			if ok && len(value.Names) == 1 && len(value.Values) == 1 && value.Names[0].Name == "overrideWarningTextV1" {
-				return constantString(t, value.Values[0])
-			}
-		}
-	}
-	t.Fatalf("%s declares no overrideWarningTextV1, so a v1 record cannot be read back", overrideWarningFile)
-	return ""
 }
 
 // constantString evaluates a string constant expression the way the compiler

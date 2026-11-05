@@ -40,8 +40,9 @@ var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	// The composer sends through POST /emails, which is a side service rather
 	// than a record write and asks nothing of `activity.create`.
 	crmcontracts.ContactMomentActionKindDraftReply: false,
-	// Booking creates a meeting through the scheduling endpoint.
-	crmcontracts.ContactMomentActionKindScheduleMeeting: true,
+	// Blocked wherever it is minted: nothing in the destination vocabulary
+	// opens a scheduler yet.
+	crmcontracts.ContactMomentActionKindScheduleMeeting: false,
 	// Reads. They navigate; they write nothing.
 	crmcontracts.ContactMomentActionKindOpenRecord:       false,
 	crmcontracts.ContactMomentActionKindOpenMeetingBrief: false,
@@ -84,7 +85,9 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 		if action.State == crmcontracts.ContactMomentActionStateBlocked {
 			return
 		}
-		blockAction(action, reason)
+		action.State = crmcontracts.ContactMomentActionStateBlocked
+		action.BlockedReason = &reason
+		action.Destination = nil
 	}
 	block(&moment.RecommendedAction)
 	if moment.SecondaryActions == nil {
@@ -107,11 +110,7 @@ func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontract
 		return
 	}
 	done := &moment.RecommendedAction
-	blockAction(done, reason)
-}
-
-func blockAction(action *crmcontracts.ContactMomentAction, reason string) {
-	action.State = crmcontracts.ContactMomentActionStateBlocked
-	action.BlockedReason = &reason
-	action.Destination = nil
+	done.State = crmcontracts.ContactMomentActionStateBlocked
+	done.BlockedReason = &reason
+	done.Destination = nil
 }

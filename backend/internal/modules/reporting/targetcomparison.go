@@ -31,6 +31,8 @@ type ForecastOperands struct {
 	LandingMinor int64
 	WonMinor     int64
 	OpenMinor    int64
+	// QualifiedOpenMinor is nil while the qualified forecast is switched off.
+	QualifiedOpenMinor *int64
 	// FxMissing marks totals that a deal with no exchange rate left short.
 	FxMissing bool
 	// CallOverPipeline marks a manager-call installation read for one
@@ -141,11 +143,23 @@ func measure(out *crmcontracts.ReportingTargetComparison, ops ForecastOperands, 
 	out.TargetId, out.TargetRevision = &target.Id, &target.Revision
 	out.Target, out.Landing, out.Won = money(value), money(ops.LandingMinor), money(ops.WonMinor)
 	out.Gap, out.Remaining, out.OpenPipeline = money(value-ops.LandingMinor), money(remaining), money(ops.OpenMinor)
+	qualified := crmcontracts.ReportingQualifiedCoverage{Status: crmcontracts.ReportingQualifiedCoverageStatusNotEnforced}
+	if ops.QualifiedOpenMinor != nil {
+		qualified.OpenPipeline = money(*ops.QualifiedOpenMinor)
+	}
 	out.Status = crmcontracts.ReportingTargetComparisonStatusTargetReached
 	if remaining > 0 {
 		out.Status = crmcontracts.ReportingTargetComparisonStatusCompared
 		out.Coverage = ratio(ops.OpenMinor, remaining)
 	}
+	if ops.QualifiedOpenMinor != nil {
+		qualified.Status = crmcontracts.ReportingQualifiedCoverageStatusTargetReached
+		if remaining > 0 {
+			qualified.Status = crmcontracts.ReportingQualifiedCoverageStatusCompared
+			qualified.Coverage = ratio(*ops.QualifiedOpenMinor, remaining)
+		}
+	}
+	out.Qualified = &qualified
 }
 
 func incompatible(out *crmcontracts.ReportingTargetComparison, why crmcontracts.ReportingTargetComparisonIncompatibility, supported *crmcontracts.ReportingSelection) *crmcontracts.ReportingTargetComparison {

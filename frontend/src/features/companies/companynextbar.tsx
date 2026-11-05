@@ -1,8 +1,11 @@
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
-import { formatDueCompact } from "../../format/format.dates";
-import { useLocale, usePlural, useT, type Words } from "../../i18n";
-import { type LatePromise, latePromise } from "../../lib/latepromise";
+import { formatNumber } from "../../format/format";
+import {
+  calendarDaysBetween,
+  formatDueCompact,
+} from "../../format/format.dates";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -44,19 +47,17 @@ export function nextBarTask(view: Company360): NextStep | undefined {
     : view.next_steps?.data[0];
 }
 
-/**
- * How late the bar's task is, or nothing when it is on time. "How it stands"
- * reads it too, so the card's sentence and the bar's badge give one count.
- */
-export function nextBarLateness(
-  view: Company360,
+/** Whole days a task is past its date at `as_of`, or nothing when it is not. */
+export function daysLate(
+  step: NextStep,
+  asOf: string,
   zone: string,
-  words: Words,
-): LatePromise | undefined {
-  const task = nextBarTask(view);
-  return task?.due_at
-    ? latePromise(task.due_at, view.as_of, zone, "task", words)
-    : undefined;
+): number | undefined {
+  if (!step.overdue || !step.due_at) {
+    return undefined;
+  }
+  const days = calendarDaysBetween(new Date(step.due_at), new Date(asOf), zone);
+  return days > 0 ? days : undefined;
 }
 
 /**
@@ -112,9 +113,17 @@ export function CompanyNextBar({
       ? view.moment
       : undefined;
   const task = nextBarTask(view);
-  const said = nextBarLateness(view, zone, { t, plural, locale });
-  const lateTag = said && { label: said.badge, tone: "danger" as const };
+  const late = task && daysLate(task, view.as_of, zone);
   const count = otherTasks(view, task);
+  const lateTag =
+    late === undefined
+      ? undefined
+      : {
+          label: plural("co.next.daysLate", late, {
+            days: formatNumber(late, locale),
+          }),
+          tone: "danger" as const,
+        };
   const others = (view.next_steps?.data ?? []).filter(
     (step) => step.activity_id !== task?.activity_id,
   );
@@ -148,7 +157,7 @@ export function CompanyNextBar({
         title={task?.subject ?? moment.headline}
         late={lateTag}
         detail={task && taskDetail(task)}
-        sub={said?.sentence ?? moment.why_now}
+        sub={moment.why_now}
         insight={momentBasis(moment)}
         action={
           moment.may_be_done ? (
