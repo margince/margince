@@ -56,9 +56,32 @@ const overrideWarningText = "The send check still blocks this message. " +
 	"This sends only this message. Your name, your explanation and the message are kept " +
 	"in a record that cannot be edited. It does not grant consent or permission for future messages."
 
+// overrideWarningTextV1 is the text override-v1 named. Kept word for word,
+// because an instruction recorded under it says somebody read these words.
+const overrideWarningTextV1 = "The engine refused this message, and that refusal stands: " +
+	"sending it now records an exception, never consent. Your name, your reason and the exact " +
+	"message are written to a record that cannot be edited afterwards. This covers this message " +
+	"alone — the next one to the same recipient is judged from scratch."
+
+// overrideWarnings is every version this build has served, with its words. A
+// version is added and never edited or removed, so a record naming any of them
+// can be read back with what its director was shown. Only the current one is
+// accepted for a new instruction (servedWarningVersion).
+var overrideWarnings = map[string]string{
+	"override-v1":          overrideWarningTextV1,
+	OverrideWarningVersion: overrideWarningText,
+}
+
+// OverrideWarningFor answers the words a version named, and false for a
+// version this build never served.
+func OverrideWarningFor(version string) (OverrideWarning, bool) {
+	text, known := overrideWarnings[version]
+	return OverrideWarning{Version: version, Text: text}, known
+}
+
 // TheOverrideWarning answers the caution and its version together, because a
 // surface that could get one without the other would show words while naming a
 // different version.
 func TheOverrideWarning() OverrideWarning {
-	return OverrideWarning{Version: OverrideWarningVersion, Text: overrideWarningText}
+	return OverrideWarning{Version: OverrideWarningVersion, Text: overrideWarnings[OverrideWarningVersion]}
 }

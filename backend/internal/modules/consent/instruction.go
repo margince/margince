@@ -455,8 +455,9 @@ func isDuplicateInstruction(err error) bool {
 	return ok && strings.Contains(constraint, "review_id")
 }
 
-// servedWarningVersion reports whether this build published the wording a
-// caller says they were shown.
+// servedWarningVersion reports whether a new instruction may name this
+// version: only the one this build serves now. A retired version still reads
+// back through OverrideWarningFor, for the records that name it.
 func servedWarningVersion(version string) bool {
 	return strings.TrimSpace(version) == OverrideWarningVersion
 }
