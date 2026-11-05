@@ -269,7 +269,11 @@
 /* The whole cell is the door, and the label keeps the cell's full width: the
    door's word stays its accessible name, and only its arrow shows, in the
    corner, while the cell is pointed at or holds focus. */
-.stat-strip[data-density="plate"] .stat-card-foot {
+.stat-strip[data-density="plate"] .stat-card > .stat-card-foot {
+  /* A folded cell places its foot in a named area at the start edge. An
+     absolute box placed so shrinks to its content, which here is none. */
+  grid-area: auto;
+  justify-self: stretch;
   position: absolute;
   inset: 0;
   margin: 0;
