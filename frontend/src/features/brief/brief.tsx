@@ -44,7 +44,7 @@ import { BriefFeed } from "./brief.feed";
 import {
   dayRows,
   FOCUS_PARAM,
-  focusKey,
+  identity,
   rowByKey,
   useStaleFocusCleared,
 } from "./brief.focuslink";
@@ -219,13 +219,17 @@ function PersonalMorning({
   // A row named by the address opens as a click on it does; mail links there.
   const linkedFocus = params.get(FOCUS_PARAM);
   const context = rowByKey(rows, linkedFocus || selected);
-  useStaleFocusCleared(linkedFocus, context, query.isSuccess);
+  useStaleFocusCleared(
+    linkedFocus,
+    context,
+    query.isSuccess && !query.isFetching,
+  );
   // A task named by the address, as a reminder notification opens it. It
   // opens whether or not the day lists it, and writes only where a row the
   // reader holds offers `complete`.
   const linkedTask = context ? undefined : params.get(TASK_PARAM);
   const linkedRow = linkedTask
-    ? rowByKey(rows, focusKey({ source: "task", id: linkedTask }))
+    ? rowByKey(rows, identity({ source: "task", id: linkedTask }))
     : undefined;
   const state = query.isPending
     ? "loading"
@@ -258,7 +262,7 @@ function PersonalMorning({
           <>
             <BriefFeed
               day={day}
-              onContext={(item) => setSelected(focusKey(item))}
+              onContext={(item) => setSelected(identity(item))}
               state={state}
               changed={changedSinceBrief(day)}
               refreshFailed={query.isRefetchError}

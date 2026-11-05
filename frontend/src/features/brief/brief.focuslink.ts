@@ -11,8 +11,8 @@ import type { Worklist, WorklistItem } from "../../lib/worklisttypes";
  */
 export const FOCUS_PARAM = "focus";
 
-/** One row's key: its lane and id, since ids repeat across lanes. */
-export function focusKey(item: Pick<WorklistItem, "source" | "id">): string {
+/** One row's identity: its lane and id, since ids repeat across lanes. */
+export function identity(item: Pick<WorklistItem, "source" | "id">): string {
   return `${item.source}-${item.id}`;
 }
 
@@ -32,7 +32,7 @@ export function rowByKey(
   rows: readonly WorklistItem[],
   key: string | undefined,
 ): WorklistItem | undefined {
-  return key ? rows.find((item) => focusKey(item) === key) : undefined;
+  return key ? rows.find((item) => identity(item) === key) : undefined;
 }
 
 /**

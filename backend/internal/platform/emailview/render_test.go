@@ -167,8 +167,9 @@ func TestEveryColourIsWrittenInTheFormGmailReads(t *testing.T) {
 	if len(colours) == 0 {
 		t.Fatal("the mail writes no colour function; this check can no longer see its subject")
 	}
+	commaForm := regexp.MustCompile(`^rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(,\s*[\d.]+%?\s*)?\)$`)
 	for _, colour := range colours {
-		if strings.Contains(colour, "/") || !strings.Contains(colour, ",") {
+		if !commaForm.MatchString(colour) {
 			t.Errorf("%s is not in comma form, so Gmail drops the style that holds it", colour)
 		}
 	}
