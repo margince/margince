@@ -10,6 +10,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"os"
 	"slices"
 	"strings"
@@ -262,6 +263,9 @@ func TestAHeldFileNowHiddenStaysOutOfTheRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if stored := e.storedDraftFiles(t, again.ID); !slices.Equal(stored, []ids.UUID{kept, hidden}) {
+		t.Errorf("the draft stores files %v, want both it held, %s and %s", stored, kept, hidden)
+	}
 	if got := attachedIDs(read.Files); !slices.Equal(got, []ids.UUID{kept}) || !slices.Equal(attachedIDs(again.Files), []ids.UUID{kept}) {
 		t.Errorf("the draft reads files %v and answered %v, want only %s", got, attachedIDs(again.Files), kept)
 	}
@@ -308,6 +312,12 @@ func TestNewWordsKeepTheFilesASaveMeanwhileLeft(t *testing.T) {
 		defer close(returned)
 		_, regenerated = store.SaveAgentMailDraft(agent, anchor, agentDraft("Shorter"), nil)
 	}()
+	t.Cleanup(func() {
+		if err := meanwhile.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the held row: %v", err)
+		}
+		<-returned
+	})
 	testdb.AwaitQueuedBehind(t, e.owner, pid, 1, returned, "the new words")
 	if err := meanwhile.Commit(context.Background()); err != nil {
 		t.Fatal(err)

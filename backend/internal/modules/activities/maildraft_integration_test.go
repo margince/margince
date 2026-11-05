@@ -503,6 +503,12 @@ func TestTheRetentionSweepLeavesADraftSavedWhileItWaited(t *testing.T) {
 		defer close(returned)
 		purged, swept = draftStore(e).PurgeStaleMailDrafts(system, 10)
 	}()
+	t.Cleanup(func() {
+		if err := save.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the held row: %v", err)
+		}
+		<-returned
+	})
 	testdb.AwaitQueuedBehind(t, e.owner, pid, 1, returned, "the sweep")
 	if err := save.Commit(context.Background()); err != nil {
 		t.Fatal(err)
