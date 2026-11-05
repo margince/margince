@@ -102,7 +102,7 @@ func toContractRefreshReport(report RateRefreshReport) crmcontracts.AiModelRateR
 		out.Providers = append(out.Providers, crmcontracts.AiModelRateProviderRefresh{
 			Provider: p.Provider, Outcome: string(p.Outcome),
 			Updated: p.Updated, Unchanged: p.Unchanged, Added: p.Added, Kept: p.Kept,
-			Models: p.Models, Unlisted: p.Unlisted,
+			Models: p.Models, Unlisted: p.Unlisted, Review: &p.Review,
 		})
 	}
 	return out

@@ -46,6 +46,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  tableOrder: {
+    prefix: "margince.table.order.",
+    area: "local",
+    lifetime: "device",
+  },
   faultsSeen: {
     name: "margince.agent.faults-seen",
     area: "local",

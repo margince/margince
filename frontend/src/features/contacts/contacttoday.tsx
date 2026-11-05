@@ -12,7 +12,7 @@ import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
   type Locale,
@@ -22,7 +22,6 @@ import {
   useT,
 } from "../../i18n";
 import { useSourceOpener } from "../../lib/opensource";
-import { useRecordZone } from "../../lib/recordzone";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
@@ -30,6 +29,7 @@ import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
 import { momentDrafts } from "./contactpage.drawers";
 import "../records/record360/record360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { openContactTab } from "../worklist/worklist.return";
 
 // The one thing next on a contact, as the bar at the top of its Overview. It is the
@@ -55,17 +55,20 @@ export function ContactToday({
   onAction,
   onOpenTasks,
   onOpenEmail,
+  onAddTask,
 }: Readonly<{
   moment?: ContactMoment;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
   onOpenTasks?: () => void;
   onOpenEmail?: (activityId: string) => void;
+  // Opens the task form on this contact; absent where the reader may not log.
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const move = moment && actionableMoment(moment) ? moment : undefined;
   const named = recordsTheMoveNames(move);
   const tasks = (view.next_steps?.data ?? []).filter(
@@ -107,7 +110,14 @@ export function ContactToday({
   if (task) {
     return <TaskBar task={task} view={view} more={more(rest)} />;
   }
-  return <AnswerBar moment={moment} view={view} onAction={onAction} />;
+  return (
+    <AnswerBar
+      moment={moment}
+      view={view}
+      onAction={onAction}
+      onAddTask={onAddTask}
+    />
+  );
 }
 
 type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
@@ -234,7 +244,7 @@ function TaskBar({
 }: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <RecordNextBar
       title={task.subject ?? t("task.untitled")}
@@ -242,7 +252,9 @@ function TaskBar({
       detail={taskDetail(task)}
       sub={
         task.due_at
-          ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
+          ? t("co.next.due", {
+              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+            })
           : t("co.next.undated")
       }
       action={
@@ -259,17 +271,20 @@ function TaskBar({
   );
 }
 
-// No move and no task. A quiet rung has the basis to say nothing is due. An
-// unread reading, a withheld source and a relationship with nothing recorded
-// do not, so each says what it does know instead.
+// No move and no task. A quiet rung on a record whose tasks the reader saw in
+// full says no follow-up task is recorded, and no more: it does not claim that
+// nothing is left to do. An unread reading, a withheld source and a
+// relationship with nothing recorded say what they do know instead.
 function AnswerBar({
   moment,
   view,
   onAction,
+  onAddTask,
 }: Readonly<{
   moment: ContactMoment | undefined;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
+  onAddTask?: () => void;
 }>) {
   const t = useT();
   const omitted = new Set(view.sections_omitted);
@@ -298,7 +313,20 @@ function AnswerBar({
       />
     );
   }
-  return <RecordNextBar />;
+  return (
+    <RecordNextBar
+      // "What was said" already shows the last exchange, of every kind.
+      lastExchange={false}
+      empty={t("standing.next.noTask")}
+      action={
+        onAddTask && (
+          <Button variant="ghost" onClick={onAddTask}>
+            {t("standing.next.addTask")}
+          </Button>
+        )
+      }
+    />
+  );
 }
 
 // What the move says is owed, in the order both readers below take it: the

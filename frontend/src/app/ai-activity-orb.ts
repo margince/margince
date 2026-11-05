@@ -73,6 +73,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   growth_fit: "working",
   morning_brief: "working",
   nl_search: "working",
+  reader_rendering: "working",
   offer_draft: "working",
   overnight_at_risk_sweep: "working",
   summarize: "working",

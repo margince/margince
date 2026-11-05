@@ -1761,6 +1761,23 @@ kinds:
       and a pass cut short resumes where the checkpoints say.
 
 
+  project_health_scan:
+    role: worker
+    fleet: true
+    go_type: ProjectHealthScanArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Daily, because its inputs move by the day: the quiet rule counts thirty
+      days without a filed activity, and a task is overdue once its due date
+      has passed. An hourly pass would find the same answer twenty-three times
+      out of twenty-four. One pass is two indexed reads per in-flight project
+      and calls no model, so ten minutes covers every workspace of an
+      installation with room to spare.
+
+
   deal_scout:
     role: worker
     fleet: true

@@ -25,8 +25,8 @@ import {
   type OccurredPrecision,
 } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { ComposeThread } from "./composeanchor";
 import type { Conversation, ThreadRead } from "./composethread";
 import "./composethread.css";
@@ -339,7 +339,7 @@ function ThreadRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const others =
     card.selected && !thread.pending && !thread.failed
       ? thread.messages.filter((message) => message.id !== answering)
@@ -422,7 +422,7 @@ function ThreadMessage({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const summary = message.email_summary;
   if (!summary) {
     return activityTimeline([message], viewerUserId, undefined, {

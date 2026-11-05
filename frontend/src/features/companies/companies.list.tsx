@@ -46,10 +46,10 @@ import {
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
+import { useViewerZone } from "../../lib/viewerzone";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import type { Company } from "./companies";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
@@ -89,7 +89,7 @@ export function CompaniesScreen() {
   const queryClient = useQueryClient();
   const pageName = usePageName("companies");
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
@@ -297,8 +297,8 @@ export function CompaniesScreen() {
               ) : null,
           },
           ownerColumn<Company>(t),
-          lastActivityColumn<Company>(t, locale, recordZone),
-          createdColumn<Company>(t, locale, recordZone),
+          lastActivityColumn<Company>(t, locale, readerZone),
+          createdColumn<Company>(t, locale, readerZone),
         ]}
         saveView={<SaveViewAction resource="companies" query={state.query} />}
         rowKey={(company) => company.id}

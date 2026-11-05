@@ -8,9 +8,9 @@ import { QueryGate } from "../../design-system/querystates";
 import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import {
   currentParams,
@@ -32,9 +32,15 @@ import type { ReportingSelection } from "./reporting.model";
 import {
   useReportingCatalog,
   useReportingEvaluation,
+  useReportingFramework,
 } from "./reporting.queries";
 import { SaveReportingDialog } from "./reporting.save";
-import { type ReportingView, VIEW_SHAPE, viewRequest } from "./reporting.views";
+import {
+  type ReportingView,
+  VIEW_SHAPE,
+  viewRequest,
+  workflowMetrics,
+} from "./reporting.views";
 
 type Catalog = components["schemas"]["ReportingCatalog"];
 
@@ -219,7 +225,7 @@ function OverviewBody({
   pipelines: readonly components["schemas"]["Pipeline"][];
 }>) {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const { locale } = useLocale();
   const {
     start,
@@ -241,7 +247,21 @@ function OverviewBody({
   const [saving, setSaving] = useState(false);
   const [customizing, setCustomizing] = useState(false);
   const shape = VIEW_SHAPE[view];
-  const { metrics, blocks } = viewRequest(view, catalog, period);
+  const framework = useReportingFramework(view === "sdr");
+  const [params] = useUrlParams();
+  const requested = viewRequest(view, catalog, period);
+  const metrics = defaultDetailMetrics(
+    view,
+    requested.metrics,
+    framework.data?.definition.template,
+    params.has("metrics"),
+  );
+  const blocks = requested.blocks.filter((block) =>
+    catalog.metrics.some(
+      (definition) =>
+        metrics.includes(definition.id) && definition.blocks.includes(block),
+    ),
+  );
   const selection: ReportingSelection = {
     scope: { kind: scope.kind, id: scope.id ?? undefined, label: scope.label },
     pipeline_id: shape.dealFilters ? pipelineId || undefined : undefined,
@@ -257,7 +277,13 @@ function OverviewBody({
   };
   const validDates = validDateRange(period, start, end);
   // A seat whose catalog holds none of the view's metrics has nothing to ask.
-  const validPeriod = validDates && metrics.length > 0;
+  const validPeriod = canEvaluateDetail(
+    validDates,
+    metrics.length,
+    view,
+    framework.isPending,
+    framework.isError,
+  );
   const query = useReportingEvaluation(selection, validPeriod);
   const contextKey = JSON.stringify(selection);
   const { evidence, openEvidence, closeEvidence } =
@@ -266,6 +292,7 @@ function OverviewBody({
     problemCodeOf(query.error) === "reporting_interval_invalid";
   return (
     <>
+      <FrameworkRetry view={view} query={framework} />
       <FilterBar
         label={t("analytics.filters")}
         actions={
@@ -417,4 +444,55 @@ export function validDateRange(
   end: string,
 ): boolean {
   return period !== "custom" || !!(start && end);
+}
+
+function defaultDetailMetrics(
+  view: ReportingView,
+  metrics: ReportingSelection["metrics"],
+  template: string | undefined,
+  explicit: boolean,
+) {
+  if (view !== "sdr" || !template || explicit) return metrics;
+  return workflowMetrics(metrics, template).filter(
+    (id) => id !== "leads_promoted" && id !== "leads_awaiting_response",
+  );
+}
+
+function detailFrameworkReady(
+  view: ReportingView,
+  pending: boolean,
+  failed: boolean,
+): boolean {
+  return view !== "sdr" || (!pending && !failed);
+}
+
+function canEvaluateDetail(
+  valid: boolean,
+  count: number,
+  view: ReportingView,
+  pending: boolean,
+  failed: boolean,
+) {
+  return valid && count > 0 && detailFrameworkReady(view, pending, failed);
+}
+
+function FrameworkRetry({
+  view,
+  query,
+}: Readonly<{
+  view: ReportingView;
+  query: ReturnType<typeof useReportingFramework>;
+}>) {
+  const t = useT();
+  if (view !== "sdr" || !query.isError) return null;
+  return (
+    <ErrorLine
+      error={query.error}
+      actions={
+        <Button onClick={() => void query.refetch()}>
+          {t("common.retry")}
+        </Button>
+      }
+    />
+  );
 }

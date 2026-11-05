@@ -87,6 +87,8 @@ type userRow struct {
 	// Assignable is whether the caller may make this member a record's owner;
 	// nil when the read did not ask.
 	Assignable *bool
+	// ConnectedMailboxes counts live capture connections; nil when not read.
+	ConnectedMailboxes *int
 }
 
 // roleKeys aggregates the member's assigned role keys, sorted so a member
@@ -288,26 +290,13 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 			return err
 		}
 		withholdActivity(ctx, in.Actor, rows, grants)
+		if err := s.markConnectedMailboxesTx(ctx, tx, rows); err != nil {
+			return err
+		}
 		actions, err = s.allowedMemberActions(ctx, tx, *in.Actor, rows, grants)
 		return err
 	})
 	return RosterPage{Users: rows, Page: page, Management: true, Actions: actions}, err
-}
-
-// markAssignable answers, per row, the owner-change check the write would run
-// for this caller, so a picker offers the owners the write accepts.
-func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		eligible, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))
-		if err != nil {
-			return err
-		}
-		for i := range rows {
-			assignable := eligible[rows[i].ID]
-			rows[i].Assignable = &assignable
-		}
-		return nil
-	})
 }
 
 // withholdActivity clears last-active wherever the caller could not list the member's sessions:

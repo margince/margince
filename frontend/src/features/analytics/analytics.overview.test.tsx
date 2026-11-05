@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -37,7 +37,7 @@ describe("where Analytics opens", () => {
     const tabs = within(row).getAllByRole("button");
     expect(tabs[0]).toHaveTextContent("Overview");
     expect(tabs[0]).toHaveAttribute("aria-pressed", "true");
-    expect(await screen.findByText("Won + confirmed commit")).toBeVisible();
+    expect(await screen.findByText("Won + Likely deals")).toBeVisible();
   });
 
   it.each([
@@ -104,11 +104,11 @@ describe("Sales review", () => {
     const hero = within(
       screen.getByRole("region", { name: "Opening readings" }),
     );
-    expect(hero.getByText("€420k")).toBeVisible();
-    expect(strip.getByText("€420k")).toBeVisible();
-    expect(strip.getByText("€760k")).toBeVisible();
+    expect(hero.getByText("420,000 EUR")).toBeVisible();
+    expect(strip.getByText("420,000 EUR")).toBeVisible();
+    expect(strip.getByText("760,000 EUR")).toBeVisible();
     // The shortfall stands beside target progress, not as a reading.
-    expect(hero.getByText("Projected shortfall €40k")).toBeVisible();
+    expect(hero.getByText("Projected shortfall 40,000 EUR")).toBeVisible();
     expect(strip.getByText("Pipeline due this quarter")).toBeVisible();
 
     expect(screen.queryByRole("region", { name: "Summary" })).toBeNull();
@@ -362,6 +362,6 @@ describe("Sales review gap", () => {
       hero.queryByText("The comparison came back without a gap."),
     ).toBeNull();
     expect(hero.queryByText(/Projected/)).toBeNull();
-    expect(strip.queryByText("€0")).toBeNull();
+    expect(strip.queryByText("0 EUR")).toBeNull();
   });
 });

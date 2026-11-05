@@ -50,7 +50,7 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "origin")
 	case reportingLeadsPromoted, reportingLeadsQualified:
 		fields = append(fields, "qualified_deal_id", "promoted_at")
-	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse:
+	case reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow:
 		fields = append(fields, "routed_at", "first_response_at")
 	case reportingLeadCohortOutcomes:
 		fields = append(fields, "routed_at")
@@ -236,11 +236,19 @@ func readReportingLeadFirstResponse(ctx context.Context, tx pgx.Tx, frame crmcon
 // cohort that still owe a first reply when the reading is taken. Each wrote
 // in by email, nobody has answered it, and the lead is still open.
 func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	return readUnansweredLeads(ctx, tx, frame, reportingLeadsAwaitingResponse)
+}
+
+func readReportingCurrentUnanswered(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	return readUnansweredLeads(ctx, tx, frame, reportingLeadsAwaitingResponseNow)
+}
+
+func readUnansweredLeads(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil
 	}
 	var b reportingBindings
-	scope, withheld, err := leadMetricScope(ctx, tx, frame, reportingLeadsAwaitingResponse, &b)
+	scope, withheld, err := leadMetricScope(ctx, tx, frame, metric, &b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -250,11 +258,15 @@ func readReportingLeadsAwaitingResponse(ctx context.Context, tx pgx.Tx, frame cr
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
+	arrived := countedLeadSQL + " AND " + leadArrivalSQL + "<" + at
+	if metric != reportingLeadsAwaitingResponseNow {
+		arrived = leadArrivedSQL(frame, &b, at)
+	}
 	query := `SELECT l.id::text,l.id,` + label + `,l.owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,1::float8,'lead_awaiting_response','',''
  FROM lead l LEFT JOIN app_user u ON u.id=l.owner_id
- WHERE ` + leadArrivedSQL(frame, &b, at) + ` AND ` + leadAwaitingBySQL(at) + ` AND ` + scope + `
+ WHERE ` + arrived + ` AND ` + leadAwaitingBySQL(at) + ` AND ` + scope + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
-	return readGroupedFacts(ctx, tx, frame, reportingLeadsAwaitingResponse, string(recordTypeLead), query, b, withheld)
+	return readGroupedFacts(ctx, tx, frame, metric, string(recordTypeLead), query, b, withheld)
 }
 
 // readGroupedFacts scans a reader's rows of key, source, label, owner, owner
@@ -281,6 +293,13 @@ func readGroupedFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 	}
 	if len(facts) > reportingFactLimit {
 		return nil, crmcontracts.ReportingCoverage{}, fmt.Errorf("narrow the reporting population before evaluating: %w", apperrors.ErrInvalidArgument)
+	}
+	if metric == reportingLeadsAwaitingResponseNow {
+		for i := range facts {
+			facts[i].ContextID = reportingState
+			facts[i].SetEvidenceDate(facts[i].Row.OccurredAt)
+		}
+		return facts, crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}, nil
 	}
 	return reportingCohorts(frame, facts), crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}, nil
 }

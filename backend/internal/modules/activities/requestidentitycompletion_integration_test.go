@@ -55,7 +55,7 @@ func TestCompletingOneSourceRequestPreservesOtherDocumentsAndRecipients(t *testi
 			if _, _, done, _ := taskFor(t, e, second); done {
 				t.Fatal("completion crossed a document or recipient boundary")
 			}
-			summaries, err := store.EmailSummariesByID(ctx, []ids.UUID{first, second})
+			summaries, err := readingAtRequest(store).EmailSummariesByID(ctx, []ids.UUID{first, second})
 			if err != nil {
 				t.Fatal(err)
 			}

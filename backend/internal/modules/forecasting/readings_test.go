@@ -35,6 +35,9 @@ func day(t *testing.T, m time.Month, d int) *time.Time {
 // testYear is the year every fixture below sits in.
 const testYear = 2026
 
+// testRules is the shipped default: Likely from 90%.
+var testRules = Rules{LikelyThreshold: 90}
+
 // A deal in the period, priced, converted, confirmed and committed — the shape
 // every case below varies ONE field of, so what a case proves is that field.
 func healthyDeal(t *testing.T) Deal {
@@ -46,7 +49,8 @@ func healthyDeal(t *testing.T) Deal {
 		Currency:          "EUR",
 		BaseMinor:         new(int64(100_000)),
 		ExpectedCloseDate: day(t, time.May, 20),
-		Category:          CategoryCommit,
+		WinProbability:    90,
+		Source:            SourceStage,
 		StageProbability:  50,
 	}
 }
@@ -54,9 +58,8 @@ func healthyDeal(t *testing.T) Deal {
 func TestAProvisionalDateStaysOutOfTheEvidenceReading(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
-	confirmed, err := Compute(period, asOf, []Deal{healthyDeal(t)})
+	confirmed, err := Compute(period, []Deal{healthyDeal(t)}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -66,7 +69,7 @@ func TestAProvisionalDateStaysOutOfTheEvidenceReading(t *testing.T) {
 
 	guessed := healthyDeal(t)
 	guessed.CloseProvisional = true
-	got, err := Compute(period, asOf, []Deal{guessed})
+	got, err := Compute(period, []Deal{guessed}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -87,14 +90,13 @@ func TestAProvisionalDateStaysOutOfTheEvidenceReading(t *testing.T) {
 func TestAnUnpricedDealIsCountedAndContributesNothing(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	unpriced := healthyDeal(t)
 	unpriced.AmountMinor = nil
 	unpriced.BaseMinor = nil
 	unpriced.Currency = ""
 
-	got, err := Compute(period, asOf, []Deal{unpriced})
+	got, err := Compute(period, []Deal{unpriced}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -120,13 +122,12 @@ func TestAnUnpricedDealIsCountedAndContributesNothing(t *testing.T) {
 func TestAMissingRateIsTypedRatherThanZero(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	unconverted := healthyDeal(t)
 	unconverted.Currency = "VND"
 	unconverted.BaseMinor = nil
 
-	got, err := Compute(period, asOf, []Deal{unconverted})
+	got, err := Compute(period, []Deal{unconverted}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -147,13 +148,12 @@ func TestAMissingRateIsTypedRatherThanZero(t *testing.T) {
 func TestWonFollowsTheCloseInstantNotTheExpectedDate(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	closedInside := healthyDeal(t)
 	closedInside.Won = true
 	closedInside.ClosedAt = day(t, time.May, 30)
 
-	got, err := Compute(period, asOf, []Deal{closedInside})
+	got, err := Compute(period, []Deal{closedInside}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestWonFollowsTheCloseInstantNotTheExpectedDate(t *testing.T) {
 	closedAfter := healthyDeal(t)
 	closedAfter.Won = true
 	closedAfter.ClosedAt = day(t, time.July, 2)
-	after, err := Compute(period, asOf, []Deal{closedAfter})
+	after, err := Compute(period, []Deal{closedAfter}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -181,36 +181,17 @@ func TestWonFollowsTheCloseInstantNotTheExpectedDate(t *testing.T) {
 func TestADealOutsideThePeriodIsInNoReading(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	elsewhere := healthyDeal(t)
 	elsewhere.ExpectedCloseDate = day(t, time.September, 3)
 
-	got, err := Compute(period, asOf, []Deal{elsewhere})
+	got, err := Compute(period, []Deal{elsewhere}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
-	if got.OpenMinor != 0 || got.EvidenceMinor != 0 || got.BestCaseMinor != 0 || got.WonMinor != 0 {
-		t.Errorf("a deal expected outside the period reached a reading: open %d evidence %d best %d won %d",
-			got.OpenMinor, got.EvidenceMinor, got.BestCaseMinor, got.WonMinor)
-	}
-}
-
-func TestSlippedIsJudgedAgainstTodayNotThePeriodStart(t *testing.T) {
-	t.Parallel()
-
-	// Expected next week, in a quarter that opened six weeks ago. Healthy —
-	// and the case a comparison against the PERIOD start would wrongly call
-	// slipped for most of every quarter.
-	upcoming := healthyDeal(t)
-	upcoming.ExpectedCloseDate = day(t, time.May, 20)
-	if got := EffectiveCategory(*day(t, time.May, 14), upcoming); got != CategoryCommit {
-		t.Errorf("a deal expected next week reads as %q — it has not slipped", got)
-	}
-
-	// The same deal, read a month later, after its date went by.
-	if got := EffectiveCategory(*day(t, time.June, 14), upcoming); got != CategorySlipped {
-		t.Errorf("a deal whose date has passed reads as %q, want %q", got, CategorySlipped)
+	if got.OpenMinor != 0 || got.EvidenceMinor != 0 || got.WonMinor != 0 {
+		t.Errorf("a deal expected outside the period reached a reading: open %d likely %d won %d",
+			got.OpenMinor, got.EvidenceMinor, got.WonMinor)
 	}
 }
 
@@ -223,7 +204,6 @@ func TestSlippedIsJudgedAgainstTodayNotThePeriodStart(t *testing.T) {
 func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 	rng := rand.New(rand.NewSource(20260903))
 
 	for run := range 200 {
@@ -242,7 +222,8 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 			deal.StageProbability = rng.Intn(101)
 			switch rng.Intn(4) {
 			case 0:
-				deal.Category = CategoryBestCase
+				deal.WinProbability = rng.Intn(90)
+				deal.Source = SourceHuman
 			case 1:
 				deal.CloseProvisional = true
 			case 2:
@@ -252,12 +233,12 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 			population = append(population, deal)
 		}
 
-		got, err := Compute(period, asOf, population)
+		got, err := Compute(period, population, testRules)
 		if err != nil {
 			t.Fatalf("run %d: computing: %v", run, err)
 		}
 
-		var won, evidence, best, open, weighted int64
+		var won, evidence, open, weighted int64
 		for _, c := range got.Contributions {
 			base := int64(0)
 			if c.BaseMinor != nil {
@@ -268,9 +249,6 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 			}
 			if c.InEvidence {
 				evidence += base
-			}
-			if c.InBestCase {
-				best += base
 			}
 			if c.InOpen {
 				open += base
@@ -283,7 +261,6 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 		}{
 			{"won", got.WonMinor, won},
 			{"evidence", got.EvidenceMinor, evidence},
-			{"best case", got.BestCaseMinor, best},
 			{"open", got.OpenMinor, open},
 			{"weighted", got.WeightedMinor, weighted},
 		} {
@@ -296,38 +273,12 @@ func TestEveryHeadlineIsTheSumOfItsStoredContributions(t *testing.T) {
 	}
 }
 
-// A deal due TODAY has not slipped, and the Go side must agree with the SQL
-// about that. The SQL compares calendar dates in the installation zone; a Go
-// side comparing instants calls the same deal slipped from noon onward, so the
-// forecast screen and the report engine disagree for one day per deal — on the
-// day the deal is actually due, which is the day anyone is looking at it.
-func TestADealDueTodayHasNotSlippedAtAnyHour(t *testing.T) {
-	t.Parallel()
-	zone := berlin(t)
-	due := healthyDeal(t)
-	due.ExpectedCloseDate = day(t, time.May, 14)
-
-	for _, hour := range []int{0, 12, 23} {
-		asOf := time.Date(testYear, time.May, 14, hour, 30, 0, 0, zone)
-		if got := EffectiveCategory(asOf, due); got != CategoryCommit {
-			t.Errorf("read at %02d:30 on the day it is due, the deal reads as %q — "+
-				"the report engine says %q at every hour of that day",
-				hour, got, CategoryCommit)
-		}
-	}
-	// The admitting case: the day after, it really has slipped.
-	if got := EffectiveCategory(time.Date(testYear, time.May, 15, 0, 30, 0, 0, zone), due); got != CategorySlipped {
-		t.Errorf("the day after it was due, the deal reads as %q, want %q", got, CategorySlipped)
-	}
-}
-
 // A headline that wrapped still looks like money. It would disagree silently
 // with the contributions it claims to be the sum of, which is the one property
 // this whole module promises.
 func TestAHeadlineRefusesToWrapRatherThanReportANumber(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	huge := int64(math.MaxInt64)
 	population := make([]Deal, 3)
@@ -341,14 +292,14 @@ func TestAHeadlineRefusesToWrapRatherThanReportANumber(t *testing.T) {
 		population[i] = deal
 	}
 
-	if _, err := Compute(period, asOf, population); !errors.Is(err, ErrReadingOutOfRange) {
+	if _, err := Compute(period, population, testRules); !errors.Is(err, ErrReadingOutOfRange) {
 		t.Errorf("three maximal won deals totalled to err=%v — a sum that cannot be "+
 			"represented must refuse, never wrap into a plausible-looking figure", err)
 	}
 
 	// The admitting case. Without it, an accumulator that refused EVERY total
 	// would pass the assertion above.
-	if _, err := Compute(period, asOf, []Deal{healthyDeal(t)}); err != nil {
+	if _, err := Compute(period, []Deal{healthyDeal(t)}, testRules); err != nil {
 		t.Errorf("an ordinary population was refused: %v", err)
 	}
 }
@@ -387,7 +338,6 @@ func TestAPeriodWhoseHalvesDisagreeIsNotConsistent(t *testing.T) {
 func TestTheCoverageNoteNamesWhatTheMoneyLeftOut(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	unpriced := healthyDeal(t)
 	unpriced.ID = "d2"
@@ -433,7 +383,7 @@ func TestTheCoverageNoteNamesWhatTheMoneyLeftOut(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.what, func(t *testing.T) {
 			t.Parallel()
-			readings, err := Compute(period, asOf, tc.deals)
+			readings, err := Compute(period, tc.deals, testRules)
 			if err != nil {
 				t.Fatalf("computing: %v", err)
 			}
@@ -483,7 +433,6 @@ func assertCoverageFractionIsTheMoneysOwn(t *testing.T, readings Readings, note 
 func TestTheCoverageNoteAgreesWithACountAboveOne(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 
 	deals := []Deal{healthyDeal(t)}
 	for i := range 4 {
@@ -493,7 +442,7 @@ func TestTheCoverageNoteAgreesWithACountAboveOne(t *testing.T) {
 		gap.BaseMinor = nil
 		deals = append(deals, gap)
 	}
-	readings, err := Compute(period, asOf, deals)
+	readings, err := Compute(period, deals, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
@@ -507,17 +456,16 @@ func TestTheCoverageNoteAgreesWithACountAboveOne(t *testing.T) {
 func TestALostDealIsNotPipelineInAnyReadingOrCount(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 	lost := healthyDeal(t)
 	lost.Lost = true
 
-	got, err := Compute(period, asOf, []Deal{healthyDeal(t), lost})
+	got, err := Compute(period, []Deal{healthyDeal(t), lost}, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
-	if got.OpenMinor != 100_000 || got.EvidenceMinor != 100_000 || got.BestCaseMinor != 100_000 || got.WeightedMinor != 50_000 {
-		t.Errorf("readings = open %d evidence %d best %d weighted %d, want the lost deal in none of them",
-			got.OpenMinor, got.EvidenceMinor, got.BestCaseMinor, got.WeightedMinor)
+	if got.OpenMinor != 100_000 || got.EvidenceMinor != 100_000 || got.WeightedMinor != 50_000 {
+		t.Errorf("readings = open %d likely %d weighted %d, want the lost deal in none of them",
+			got.OpenMinor, got.EvidenceMinor, got.WeightedMinor)
 	}
 	if got.EligibleCount != 1 || got.PricedCount != 1 || got.ConfirmedDateCount != 1 {
 		t.Errorf("counts = eligible %d priced %d confirmed %d, want 1 each", got.EligibleCount, got.PricedCount, got.ConfirmedDateCount)
@@ -533,27 +481,88 @@ func TestALostDealIsNotPipelineInAnyReadingOrCount(t *testing.T) {
 func TestTheContributionsDoNotDependOnTheOrderTheDealsArrive(t *testing.T) {
 	t.Parallel()
 	period := testPeriod(t)
-	asOf := *day(t, time.May, 14)
 	population := make([]Deal, 0, 6)
-	for i, category := range []string{CategoryCommit, CategoryBestCase, "", CategoryCommit, CategoryBestCase, CategoryCommit} {
+	for i, probability := range []int{90, 60, 0, 95, 50, 100} {
 		deal := healthyDeal(t)
 		deal.ID = fmt.Sprintf("deal-%d", i)
-		deal.Category = category
+		deal.WinProbability = probability
 		deal.AmountMinor = new(int64(10_000 * (i + 1)))
 		deal.BaseMinor = deal.AmountMinor
 		population = append(population, deal)
 	}
-	stored, err := Compute(period, asOf, population)
+	stored, err := Compute(period, population, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
 	reversed := slices.Clone(population)
 	slices.Reverse(reversed)
-	reread, err := Compute(period, asOf, reversed)
+	reread, err := Compute(period, reversed, testRules)
 	if err != nil {
 		t.Fatalf("computing: %v", err)
 	}
 	if !reflect.DeepEqual(reread, stored) {
 		t.Fatalf("the same deals in another order gave other readings:\n%+v\n%+v", reread.Contributions, stored.Contributions)
+	}
+}
+
+// Likely holds an open deal at or above the threshold with a confirmed close
+// date, counted in full. A provisional date or one point under keeps it out.
+func TestLikelyHoldsDealsAtTheThresholdWithAConfirmedDate(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name        string
+		probability int
+		provisional bool
+		want        bool
+	}{
+		{"at the threshold", 90, false, true},
+		{"one point under", 89, false, false},
+		{"certain", 100, false, true},
+		{"at the threshold with a guessed date", 90, true, false},
+	} {
+		deal := healthyDeal(t)
+		deal.WinProbability, deal.CloseProvisional = c.probability, c.provisional
+		got, err := Compute(testPeriod(t), []Deal{deal}, testRules)
+		if err != nil {
+			t.Fatalf("%s: computing: %v", c.name, err)
+		}
+		if got.Contributions[0].InEvidence != c.want || (got.EvidenceMinor == 100_000) != c.want {
+			t.Errorf("%s: in Likely = %v (%d), want %v", c.name, got.Contributions[0].InEvidence, got.EvidenceMinor, c.want)
+		}
+		if got.LikelyThreshold != 90 {
+			t.Errorf("%s: the readings say they used %d%%, want 90%%", c.name, got.LikelyThreshold)
+		}
+	}
+}
+
+// The per-source totals split the open and weighted readings and add up to
+// them to the cent.
+func TestTheSourceTotalsAddUpToTheOpenAndWeightedReadings(t *testing.T) {
+	t.Parallel()
+	population := make([]Deal, 0, 3)
+	for i, source := range []ProbabilitySource{SourceStage, SourceHuman, SourceMargince} {
+		deal := healthyDeal(t)
+		deal.ID = fmt.Sprintf("deal-%d", i)
+		deal.Source = source
+		deal.AmountMinor = new(int64(10_001 * (i + 1)))
+		deal.BaseMinor = deal.AmountMinor
+		deal.StageProbability = 33
+		population = append(population, deal)
+	}
+	got, err := Compute(testPeriod(t), population, testRules)
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	var open, weighted int64
+	for _, source := range ProbabilitySources() {
+		total := got.BySource[source]
+		if total.OpenMinor == 0 {
+			t.Errorf("the %s deal is missing from its source's total", source)
+		}
+		open += total.OpenMinor
+		weighted += total.WeightedMinor
+	}
+	if open != got.OpenMinor || weighted != got.WeightedMinor {
+		t.Errorf("by source adds to open %d weighted %d, want %d and %d", open, weighted, got.OpenMinor, got.WeightedMinor)
 	}
 }

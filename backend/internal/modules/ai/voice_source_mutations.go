@@ -209,7 +209,7 @@ func (s *VoiceStore) DeleteSource(ctx context.Context, profileID, sourceID ids.U
 		now := s.now().UTC()
 		removed, err = scanVoiceSource(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_corpus_source SET
-			  content = NULL, content_erased_at = $3, archived_at = $3,
+			  content = NULL, content_erased_at = $3, archived_at = $3, `+sentMailScrubSQL+`,
 			  excluded = true, exclusion_reason = 'owner_removed',
 			  version = version + 1, updated_at = $3
 			WHERE id = $1 AND voice_profile_id = $2 AND version = $4
@@ -278,7 +278,7 @@ func (s *VoiceStore) ClearCorpus(ctx context.Context, profileID ids.UUID, ifVers
 		}
 		now := s.now().UTC()
 		if _, err := tx.Exec(ctx, `
-			UPDATE voice_corpus_source SET content = NULL, content_erased_at = $2,
+			UPDATE voice_corpus_source SET content = NULL, content_erased_at = $2, `+sentMailScrubSQL+`,
 			  archived_at = coalesce(archived_at, $2), excluded = true,
 			  exclusion_reason = coalesce(exclusion_reason, 'corpus_cleared'),
 			  version = version + 1, updated_at = $2

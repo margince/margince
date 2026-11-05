@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   installFetchStub,
@@ -28,7 +28,7 @@ function member(index: number, name: string, onTeam: boolean): TeamUser {
     id: `u-${index}`,
     email: `member${index}@acme.test`,
     display_name: name,
-    timezone: viewerZone(),
+    timezone: browserZone(),
     status: "active",
     is_agent: false,
     team_ids: onTeam ? ["t-1"] : [],

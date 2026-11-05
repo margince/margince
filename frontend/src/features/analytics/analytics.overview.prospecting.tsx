@@ -5,6 +5,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
+import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -13,14 +14,14 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { AssessmentPanel } from "./analytics.assessment";
 import { scopeKey } from "./analytics.context";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
-import { outboundDials } from "./analytics.overview.context";
 import { DoNext } from "./analytics.overview.donext";
 import { MonthlyTargets } from "./analytics.overview.monthly";
+import { useOverviewNavigation } from "./analytics.overview.navigation";
 import {
   ProspectingReadings,
   ProspectingResults,
@@ -34,10 +35,7 @@ import {
   HandoffCohort,
   UpcomingMeetings,
 } from "./analytics.overview.prospectingwork";
-import {
-  OverviewLinks,
-  OverviewSaveActions,
-} from "./analytics.overview.readings";
+import { OverviewSaveActions } from "./analytics.overview.readings";
 import { periodCaption } from "./analytics.period";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -94,7 +92,7 @@ export function MyProspecting({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const self = context.allowed_scopes.find((scope) => scope.kind === "owner");
   const filters = useOverviewFilters([], "this_week");
   const readsLeads = useCan("lead", "read");
@@ -120,6 +118,10 @@ export function MyProspecting({
   };
   const validDates = validDateRange(filters.period, filters.start, filters.end);
   const workflow = workflowOf(framework, summary);
+  useOverviewNavigation("prospecting", selection, {
+    start: filters.start,
+    end: filters.end,
+  });
   const query = useReportingEvaluation(
     selection,
     !!self?.id && validDates && metrics.length > 0 && workflow !== "pending",
@@ -250,6 +252,8 @@ export function MyProspecting({
           !query.isError && (
             <AssessmentPanel
               view="prospecting"
+              work={summary.data}
+              workPending={summary.isLoading}
               selection={query.data.selection}
               evaluation={query.data}
               onEvidence={openFrom}
@@ -265,19 +269,6 @@ export function MyProspecting({
           onClose={closeEvidence}
         />
       )}
-      <OverviewLinks
-        dials={outboundDials("prospecting", {
-          // The reader's own work, never a colleague's or a team's.
-          scope: scopeKey(self),
-          period: filters.period,
-          from: filters.period === "custom" ? filters.start : undefined,
-          through: filters.period === "custom" ? filters.end : undefined,
-        })}
-        sections={[
-          { section: "sdr", label: t("reporting.sdr") },
-          { section: "leads", label: t("reporting.leads") },
-        ]}
-      />
     </>
   );
 }
@@ -319,7 +310,9 @@ function ProspectingWork({
       {workflow === "qualification" && <QualificationNote />}
       {week && (
         <div className="analytics-pair">
-          <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          <Disclosure summary={t("analytics.prospect.historyTitle")}>
+            <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+          </Disclosure>
           {workflow === "handoff" && (
             <HandoffCohort self={self} evaluation={week} />
           )}
@@ -368,29 +361,25 @@ function Waiting({
   );
 }
 
-{
-  /* Without SDR handoffs the page says why it counts qualified leads, and shows */
-}
-{
-  /* the one who can change that where the setting is. */
-}
 export function QualificationNote() {
   const t = useT();
   const canEdit = useCanWrite("reporting_framework", "update");
   return (
-    <p className="t-caption">
-      {t("analytics.overview.noHandoffs")}{" "}
-      {canEdit ? (
-        <AppLink
-          className="btn btn-link"
-          href={analyticsSectionHref("definitions", new Map())}
-        >
-          {t("analytics.overview.changeWorkflow")}
-        </AppLink>
-      ) : (
-        t("analytics.overview.workflowWho")
-      )}
-    </p>
+    <Disclosure summary={t("reporting.definitions")}>
+      <p className="t-caption">
+        {t("analytics.overview.noHandoffs")}{" "}
+        {canEdit ? (
+          <AppLink
+            className="btn btn-link"
+            href={analyticsSectionHref("definitions", new Map())}
+          >
+            {t("analytics.overview.changeWorkflow")}
+          </AppLink>
+        ) : (
+          t("analytics.overview.workflowWho")
+        )}
+      </p>
+    </Disclosure>
   );
 }
 

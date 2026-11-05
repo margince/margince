@@ -17,7 +17,6 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   type BriefSentence,
   type OpenReceipt,
@@ -29,6 +28,7 @@ import {
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
@@ -123,7 +123,7 @@ export function GrowthFitPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
@@ -171,7 +171,7 @@ export function GrowthFitPanel({
           {readable && (
             <span className="t-caption">
               {t("co.brief.generatedAt", {
-                when: formatDateTime(readable.generated_at, locale, recordZone),
+                when: formatDateTime(readable.generated_at, locale, readerZone),
               })}
             </span>
           )}

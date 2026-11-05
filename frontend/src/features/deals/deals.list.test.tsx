@@ -536,7 +536,7 @@ describe("DealsScreen", () => {
   });
 
   it("sends the board's active filters to the deals-by-stage totals request", async () => {
-    window.location.hash = "#/deals?forecast_category=commit";
+    window.location.hash = "#/deals?win_probability=60..89";
     let sentBody: unknown;
     vi.stubGlobal(
       "fetch",
@@ -551,7 +551,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     expect(sentBody).toMatchObject({
-      filters: { forecast_category: "commit" },
+      filters: { win_probability_band: "60_89" },
       group_by: ["stage_id"],
       aggregates: [
         { fn: "count", as: "deals" },

@@ -271,19 +271,19 @@ the reports behind it whole. You can retire a source instead of deleting it.
 Deals that already name it still read "(retired)" instead of going empty. A deal
 that names none reads "Not set".
 
-## Forecast category
+## Win probability
 
-A deal's forecast category is separate from its stage, and is your call. You set it when you edit the deal, to **Commit**, **Best case**,
-**Pipeline** or **Omitted**.
-
-Two more appear in reports, but nobody chooses them: **Slipped** and **No
-category**. Margince marks a Commit or Best case deal Slipped when its close date
-has passed, is missing, or is still only a guess. Nobody sets it; it is what the
-dates say.
+A deal's **Probability**, from 0 to 100%, starts as its stage's. Set the deal's
+own when you edit it; it then reads "set by hand", with the stage's value beside
+it. Empty the field to use the stage's again. A stage move sets it back to the
+new stage's and says so: "Probability set to 75% by the stage Negotiating". A
+won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
+it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
+close date counts as **Likely**.
 
 ## Close dates Margince sets
 
-Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its future date, and its forecast category drops one step. The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
+Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%). The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks, and is at least 7 days away. Stage moves that an import brought in are left out, and with fewer than 20 won deals Margince leaves the date as it is.
 
 A date Margince set is a guess, marked "provisional close date, not confirmed by a human", and reports count it as not confirmed. It asks you to confirm or change the forecast; it is not a customer promise. Each change shows under **Waiting for your word** on **Home**, to accept or undo; see [Your day](your-day.md#waiting-for-your-word). To stop these changes on your deals, see [Approvals](approvals.md).
 
@@ -302,7 +302,7 @@ They are held back too when the owner filter names someone whose numbers you may
 Every deal report has an **Explain this number** control that shows the rows the
 number was built from. If a number looks wrong, open it.
 
-The deal reports are **Open deals by stage**, **Forecast categories**, **Open
+The deal reports are **Open deals by stage**, **Forecast by probability**, **Open
 deals per company**, and the sales and time-in-stage reports in **Performance**. They
 live under **Analytics**; see [Analytics and forecasting](analytics.md).
 

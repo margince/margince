@@ -17,12 +17,12 @@ import { CountLine } from "../../design-system/listsurface";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   ADMISSION_LABEL,
   BLANK_DECISION,
@@ -58,6 +58,7 @@ const DECIDER_LABEL: Partial<Record<BlockedDomain["source"], MessageKey>> = {
   verdict: "blockedDomains.source.verdict",
   heuristic: "blockedDomains.source.heuristic",
   human: "blockedDomains.source.human",
+  agent: "blockedDomains.source.agent",
 };
 
 // Why the domain stands where it does, in the reader's language. `stated`
@@ -138,7 +139,7 @@ export function BlockedDomainsCard() {
   // time on their own wall clock, the same choice the audit trail makes — a
   // fixed installation zone would put the moment they are correlating against
   // an hour they were not working.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const canManage = useCanWrite("company", "update");
   const query = useBlockedDomains();
   const set = useSetBlockedDomain();

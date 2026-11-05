@@ -8,8 +8,12 @@
 // are about when not to ask — a tree mid-edit is not worth a round trip, and a
 // vocabulary is worth exactly one per record type.
 
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
+import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 import { historyFieldLabelKey } from "./historyfieldlabels";
@@ -30,14 +34,14 @@ export type FilterResource = FilterVocabulary["resource"];
 
 /**
  * The page this screen asks for, sent on every request rather than left absent.
+ * The generated body type makes `limit` required: openapi-typescript reads a
+ * schema `default` as "always present".
  *
- * The server defaults an absent limit to the same number, but the generated body
- * type makes `limit` required — openapi-typescript treats a schema `default` as
- * "always present", which is right for a response and wrong for a request. That
- * is established here (`max_messages` on the connector body generates the same
- * way), so this follows the house rather than reshaping the contract to dodge it.
+ * The contract's ceiling, and a whole multiple of every size the table's dial
+ * offers (`PAGE_SIZES` in `listtable.paging.ts`), so a rendered page never
+ * straddles two fetches.
  */
-export const PREVIEW_PAGE = 25;
+export const PREVIEW_PAGE = 100;
 
 export function vocabularyQueryKey(resource: FilterResource) {
   return ["filter-vocabulary", resource] as const;
@@ -70,7 +74,9 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
 }
 
 /**
- * The match count and first page for a tree nobody has saved.
+ * The match count and every page fetched so far for a tree nobody has saved.
+ * `data` reads as one answer: the count and columns of the first page, and the
+ * rows of every page in order. `fetchNextPage` asks for the page after them.
  *
  * Two things this deliberately does not do.
  *
@@ -86,28 +92,49 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
  * nothing) reuse one cached answer instead of spending a request to learn the
  * count did not move.
  */
-export function useFilterPreview(
-  resource: FilterResource,
-  tree: Node,
-  limit: number = PREVIEW_PAGE,
-) {
+export function useFilterPreview(resource: FilterResource, tree: Node) {
   const askable = isComplete(tree);
   const filter = encode(tree);
-  return useQuery<FilterPreview>({
-    queryKey: ["filter-preview", resource, filter, limit],
+  const query = useInfiniteQuery({
+    queryKey: ["filter-preview", resource, filter],
     enabled: askable,
     // A count that flickers to a spinner on every keystroke is harder to read
     // than one that lags: the previous answer stays on screen while the next is
     // in flight, and the caller shows staleness rather than absence.
-    placeholderData: (previous) => previous,
-    queryFn: async () => {
+    placeholderData: keepPreviousData,
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }): Promise<FilterPreview> => {
       return unwrap(
         await api.POST("/filters/preview", {
-          body: { resource, filter, limit },
+          body: {
+            resource,
+            filter,
+            limit: PREVIEW_PAGE,
+            ...(pageParam === null ? {} : { cursor: pageParam }),
+          },
         }),
       );
     },
+    getNextPageParam: (last) => last.next_cursor ?? null,
   });
+  return { ...query, data: joinedPages(query.data?.pages) };
+}
+
+/** The pages of one preview read as one answer, the last page saying what follows. */
+function joinedPages(
+  pages: readonly FilterPreview[] | undefined,
+): FilterPreview | undefined {
+  const first = pages?.[0];
+  const last = pages?.at(-1);
+  if (!pages || !first || !last) {
+    return undefined;
+  }
+  return {
+    ...first,
+    rows: pages.flatMap((page) => page.rows),
+    truncated: last.truncated,
+    next_cursor: last.next_cursor,
+  };
 }
 
 /**

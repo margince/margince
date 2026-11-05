@@ -3,8 +3,9 @@ import { useLayoutEffect, useMemo, useState } from "react";
 import { splitEmailBody } from "../format/emailtext";
 import { useT } from "../i18n";
 import { writtenAsMarkdown } from "./activitytimeline";
-import { Markdown } from "./markdown";
+import { NoteMarkdown } from "./markdown";
 import { URL_PATTERN } from "./markdown-autolink";
+import { ReaderRendering } from "./readerrendering";
 import "./composed.css";
 
 import type { TimelineEntry } from "./timelineentry";
@@ -105,11 +106,7 @@ export function TimelineText({
   return (
     <Block className="tl-text">
       <Block ref={setEl} className={open ? "tl-text-full" : "tl-text-clamp"}>
-        {Block === "div" ? (
-          <Markdown source={trimmed} autolink />
-        ) : (
-          linkify(trimmed)
-        )}
+        {Block === "div" ? <NoteMarkdown source={trimmed} /> : linkify(trimmed)}
       </Block>
       {(clipped || open) && (
         <button
@@ -138,5 +135,39 @@ export function TimelineText({
         </>
       )}
     </Block>
+  );
+}
+
+/** The kinds a member writes words into, which the reader may ask to see in their language. */
+const RENDERED_KINDS: ReadonlySet<TimelineEntry["kind"]> = new Set([
+  "email",
+  "note",
+  "meeting",
+  "call",
+]);
+
+/**
+ * A row's text with the press that shows it in the reader's own language, for
+ * the kinds a member writes words into. Every other row draws TimelineText alone.
+ */
+export function TimelineBody({
+  body,
+  entry,
+}: Readonly<{
+  body: string;
+  entry: Pick<TimelineEntry, "id" | "kind" | "transcript" | "language">;
+}>) {
+  const text = <TimelineText text={body} entry={entry} />;
+  if (!RENDERED_KINDS.has(entry.kind)) {
+    return text;
+  }
+  return (
+    <ReaderRendering
+      activityId={entry.id}
+      language={entry.language}
+      note={writtenAsMarkdown(entry)}
+    >
+      {text}
+    </ReaderRendering>
   );
 }

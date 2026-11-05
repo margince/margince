@@ -29,7 +29,7 @@ func sampleQuarter() (crmcontracts.ReportingEvaluation, *ForecastOperands, heldT
 		Context:   crmcontracts.ReportingContext{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Currency: "EUR", Interval: crmcontracts.ReportingWindow{StartAt: quarter.StartAt, EndAt: quarter.StartAt.AddDate(0, 1, 15)}, TargetInterval: &quarter},
 		Selection: crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "workspace"}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{forecastLanding}},
 	}
-	ops := &ForecastOperands{Quarter: comparisonQuarter, Measure: "commit_evidence", LandingMinor: 76_000_000, WonMinor: 42_000_000, OpenMinor: 136_000_000}
+	ops := &ForecastOperands{Quarter: comparisonQuarter, Measure: "likely", LandingMinor: 76_000_000, WonMinor: 42_000_000, OpenMinor: 136_000_000}
 	held := heldTargets{keyFor(evaluation.Context.Scope, comparedMetric): {Id: openapi_types.UUID(ids.NewV7()), Revision: 3, Unit: "EUR", Definition: crmcontracts.ReportingTargetInput{Metric: comparedMetric, Value: 80_000_000}}}
 	return evaluation, ops, held
 }
@@ -211,7 +211,7 @@ func TestTheShortfallFollowsTheLandingAndWhatIsLeftToWinDoesNot(t *testing.T) {
 	for _, tc := range []struct {
 		measure crmcontracts.ReportingTargetComparisonBasis
 		landing int64
-	}{{"commit_evidence", 140}, {"weighted", 170}, {"manager_call", 190}} {
+	}{{"likely", 140}, {"weighted", 170}, {"manager_call", 190}} {
 		evaluation, ops, held := sampleQuarter()
 		ops.Measure, ops.WonMinor, ops.LandingMinor, ops.OpenMinor = tc.measure, 100, tc.landing, 110
 		held[keyFor(evaluation.Context.Scope, comparedMetric)] = crmcontracts.ReportingTarget{Unit: "EUR", Definition: crmcontracts.ReportingTargetInput{Metric: comparedMetric, Value: 200}}

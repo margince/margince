@@ -18,8 +18,8 @@ import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ENTITY, isEntityKind } from "../../../lib/entity";
 import { problemMessageOf, problemStatus, unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
 import { navigate } from "../../../lib/router";
+import { useViewerZone } from "../../../lib/viewerzone";
 import type { MeetingFacts, PreparedFor } from "./header";
 import { type BriefViewState, MeetingBriefView } from "./view";
 
@@ -68,7 +68,7 @@ export function ContactMeetingBrief({
   // The brief's days are formatted here, not by the page that opened the
   // drawer: the locale and the record zone are this tier's to know. A caller's
   // pre-formatted string would be a second formatter.
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   // The project the reader chose to prepare for. It belongs to ONE meeting:
   // the same drawer is reused for the next meeting on the page, and a scope
   // chosen for a room about the ERP rollout must not narrow the brief for a

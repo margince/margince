@@ -5,7 +5,12 @@ import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import { formatAge, formatDate, formatMoney } from "../../format/format";
+import {
+  formatAge,
+  formatDate,
+  formatMoney,
+  formatPercent,
+} from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
@@ -188,6 +193,19 @@ export function dealColumns(
       numeric: true,
       sort: "amount_minor",
       cell: (deal) => <AmountCell deal={deal} locale={locale} />,
+    },
+    {
+      // The deal's own probability where one is set, else its stage's: the
+      // chance the forecast weights the amount beside it by.
+      key: "probability",
+      header: t("deal.winProbability"),
+      numeric: true,
+      cell: (deal) =>
+        deal.win_probability == null ? null : (
+          <span className="t-num">
+            {formatPercent(deal.win_probability / 100, locale)}
+          </span>
+        ),
     },
     {
       key: "close",

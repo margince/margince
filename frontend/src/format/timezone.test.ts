@@ -4,11 +4,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDate } from "./format";
 import {
-  FALLBACK_RECORD_ZONE,
+  browserZone,
+  FALLBACK_COMPANY_ZONE,
   sameWallClockOnDay,
   startOfDayInZone,
   timezoneOptions,
-  viewerZone,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
@@ -17,7 +17,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The zone a runtime reports for itself, as viewerZone() asks for it.
+// The zone a runtime reports for itself, as browserZone() asks for it.
 function pretendReportedZone(timeZone: string): void {
   const real = Intl.DateTimeFormat().resolvedOptions();
   vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
@@ -26,10 +26,10 @@ function pretendReportedZone(timeZone: string): void {
   });
 }
 
-describe("viewerZone", () => {
+describe("browserZone", () => {
   it("answers with the zone the runtime reports", () => {
     pretendReportedZone("America/Los_Angeles");
-    expect(viewerZone()).toBe("America/Los_Angeles");
+    expect(browserZone()).toBe("America/Los_Angeles");
   });
 
   it("falls back to UTC when the runtime reports no zone at all", () => {
@@ -37,23 +37,23 @@ describe("viewerZone", () => {
     // string is not a zone Intl accepts — a caller handed it renders nothing
     // and throws mid-paint instead.
     pretendReportedZone("");
-    expect(viewerZone()).toBe("UTC");
+    expect(browserZone()).toBe("UTC");
     expect(() =>
-      formatDate("2026-07-02T00:30:00Z", "en", viewerZone()),
+      formatDate("2026-07-02T00:30:00Z", "en", browserZone()),
     ).not.toThrow();
   });
 
   it("answers freshly, so a reader who has moved is not read from a stale import", () => {
     pretendReportedZone("Asia/Tokyo");
-    const first = viewerZone();
+    const first = browserZone();
     vi.restoreAllMocks();
     pretendReportedZone("America/Los_Angeles");
     expect(first).toBe("Asia/Tokyo");
-    expect(viewerZone()).toBe("America/Los_Angeles");
+    expect(browserZone()).toBe("America/Los_Angeles");
   });
 });
 
-describe("FALLBACK_RECORD_ZONE", () => {
+describe("FALLBACK_COMPANY_ZONE", () => {
   it("is a zone the formatters accept", () => {
     // format.ts refuses a fixed offset ("+01:00", "Etc/GMT-1") because those
     // freeze the DST rules. The fallback has to pass that door — it is what
@@ -61,7 +61,7 @@ describe("FALLBACK_RECORD_ZONE", () => {
     // itself threw would turn a recoverable disagreement between two zone
     // databases into a blank page.
     expect(() =>
-      formatDate("2026-07-02T00:30:00Z", "en", FALLBACK_RECORD_ZONE),
+      formatDate("2026-07-02T00:30:00Z", "en", FALLBACK_COMPANY_ZONE),
     ).not.toThrow();
   });
 });
@@ -80,7 +80,7 @@ describe("a record's clock against the reader's", () => {
     pretendReportedZone("America/Los_Angeles");
     const instant = "2026-07-02T00:30:00Z";
     expect(formatDate(instant, "en", "Europe/Berlin")).toBe("02/07/2026");
-    expect(formatDate(instant, "en", viewerZone())).toBe("01/07/2026");
+    expect(formatDate(instant, "en", browserZone())).toBe("01/07/2026");
   });
 });
 

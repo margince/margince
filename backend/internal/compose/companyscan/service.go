@@ -358,10 +358,10 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, languag
 	return in, fingerprint, nil
 }
 
-// caller is the human the scan belongs to. A scan is a reading aid for a
-// contact; an agent holding a passport has the records themselves.
+// caller is the human the scan belongs to, asking for it themselves or
+// through their agent. Automatic work with no passport has the records.
 func (s *Service) caller(ctx context.Context) (ids.UserID, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return ids.UserID{}, err
 	}
 	p, ok := principal.Actor(ctx)

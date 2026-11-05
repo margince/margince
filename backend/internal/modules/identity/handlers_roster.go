@@ -140,6 +140,7 @@ func wireUserWithRoles(u userRow) crmcontracts.User {
 	}
 	wire.LastActiveAt = u.LastActiveAt
 	wire.ServiceExtension = u.ServiceExtension
+	wire.ConnectedMailboxes = u.ConnectedMailboxes
 	if u.InviteMailState != nil {
 		state := crmcontracts.UserInviteEmailState(*u.InviteMailState)
 		wire.InviteEmailState = &state
