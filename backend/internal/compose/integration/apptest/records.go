@@ -71,6 +71,7 @@ type employmentCreate struct {
 	Kind      string `json:"kind"`
 	ContactID string `json:"contact_id"`
 	CompanyID string `json:"company_id"`
+	Source    string `json:"source"`
 }
 
 // BriefItem is one item of a seat's brief as the route answers it.
@@ -99,7 +100,7 @@ func SeedScoutedNamed(t *testing.T, e *AppEnv, companyName, contactName string) 
 	}
 	contactID := contact.ID.String()
 	if status := e.Call(t, "POST", "/v1/relationships", employmentCreate{
-		Kind: "employment", ContactID: contactID, CompanyID: companyID,
+		Kind: "employment", ContactID: contactID, CompanyID: companyID, Source: provenance.RecordSourceManual,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create employment = %d", status)
 	}
