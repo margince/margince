@@ -8982,17 +8982,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAccess.local.vscode.signIn":
     "Chấp nhận lời nhắc đăng nhập của VS Code. Margince mở ra: đăng nhập và chọn Cấp quyền.",
   "aiAccess.local.visualStudio.file":
-    "Trong Visual Studio, tạo tệp %USERPROFILE%\\.mcp.json với nội dung này và lưu lại.",
+    "Trong Visual Studio, tạo hoặc mở tệp %USERPROFILE%\\.mcp.json, thêm nội dung này và lưu lại. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.visualStudio.signIn":
     "Trong tệp, phía trên margince, chọn “Authentication Required”, rồi “Authenticate”. Đăng nhập và chọn Cấp quyền.",
   "aiAccess.local.visualStudio.tools":
     "Trong Copilot Chat, chuyển sang chế độ Agent và bật các công cụ margince.",
   "aiAccess.local.cursor.file":
-    "Mở ~/.cursor/mcp.json, hoặc tạo tệp này, thêm nội dung này và lưu. Sau đó khởi động lại Cursor.",
+    "Mở ~/.cursor/mcp.json, hoặc tạo tệp này, thêm nội dung này và lưu. Sau đó khởi động lại Cursor. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.cursor.signIn":
     "Làm theo lời nhắc đăng nhập của Cursor cho margince. Margince mở ra: đăng nhập và chọn Cấp quyền.",
   "aiAccess.local.antigravity.file":
-    "Thêm nội dung này vào ~/.gemini/config/mcp_config.json.",
+    "Thêm nội dung này vào ~/.gemini/config/mcp_config.json. Nếu tệp đã có máy chủ khác, chỉ thêm mục margince bên cạnh chúng.",
   "aiAccess.local.antigravity.signIn":
     "Mở cài đặt agent, rồi “Customizations”, và chọn “Authenticate” bên cạnh margince.",
   "aiAccess.other.sub":

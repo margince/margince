@@ -9235,17 +9235,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAccess.local.vscode.signIn":
     "Bestätige die Anmeldeabfrage von VS Code. Margince öffnet sich: Melde dich an und wähle Autorisieren.",
   "aiAccess.local.visualStudio.file":
-    "Lege in Visual Studio die Datei %USERPROFILE%\\.mcp.json mit diesem Text an und speichere sie.",
+    "Lege in Visual Studio die Datei %USERPROFILE%\\.mcp.json an oder öffne sie, füge diesen Text ein und speichere sie. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
   "aiAccess.local.visualStudio.signIn":
     "Wähle in der Datei über margince „Authentication Required“ und dann „Authenticate“. Melde dich an und wähle Autorisieren.",
   "aiAccess.local.visualStudio.tools":
     "Wechsle im Copilot Chat in den Agent-Modus und schalte die margince-Tools ein.",
   "aiAccess.local.cursor.file":
-    "Öffne ~/.cursor/mcp.json oder lege die Datei an, füge diesen Text ein und speichere. Starte Cursor dann neu.",
+    "Öffne ~/.cursor/mcp.json oder lege die Datei an, füge diesen Text ein und speichere. Starte Cursor dann neu. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
   "aiAccess.local.cursor.signIn":
     "Folge der Anmeldeabfrage von Cursor für margince. Margince öffnet sich: Melde dich an und wähle Autorisieren.",
   "aiAccess.local.antigravity.file":
-    "Füge diesen Text in ~/.gemini/config/mcp_config.json ein.",
+    "Füge diesen Text in ~/.gemini/config/mcp_config.json ein. Stehen in der Datei schon Server, füge nur den Eintrag margince daneben ein.",
   "aiAccess.local.antigravity.signIn":
     "Öffne die Agent-Einstellungen, dann „Customizations“, und wähle „Authenticate“ neben margince.",
   "aiAccess.other.sub":

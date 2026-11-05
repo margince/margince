@@ -57,12 +57,13 @@ function renderCard(status = 200) {
   );
 }
 
-async function choose(...names: string[]) {
-  const user = userEvent.setup();
+async function choose(
+  user: ReturnType<typeof userEvent.setup>,
+  ...names: string[]
+) {
   for (const name of names) {
     await user.click(await screen.findByRole("button", { name }));
   }
-  return user;
 }
 
 // Picks the AI, and where it is used when the card asks, from the two selects.
@@ -124,7 +125,7 @@ describe("ConnectAiToolCard", () => {
 
   it("shows the address inside the step that asks the reader to paste it", async () => {
     renderCard();
-    await choose("My own");
+    await choose(userEvent.setup(), "My own");
     const address = screen.getByRole("textbox", { name: "Margince address" });
     expect(address.textContent).toBe(MCP_URL);
     const items = within(pathBox()).getAllByRole("listitem");
@@ -161,7 +162,7 @@ describe("ConnectAiToolCard", () => {
       .spyOn(download, "downloadBytes")
       .mockImplementation(() => undefined);
     renderCard();
-    await choose("Download guide for your admin");
+    await choose(userEvent.setup(), "Download guide for your admin");
     expect(save).toHaveBeenCalledTimes(1);
     const [markdown, filename, type] = save.mock.calls[0];
     expect(filename).toBe("margince-setup-claude.md");
@@ -180,7 +181,7 @@ describe("ConnectAiToolCard", () => {
       .spyOn(download, "downloadBytes")
       .mockImplementation(() => undefined);
     renderCard();
-    await choose("Download guide for your admin");
+    await choose(userEvent.setup(), "Download guide for your admin");
     expect(String(save.mock.calls[0][0])).toMatch(/checked on 19\D10\D2026/);
   });
 

@@ -653,8 +653,9 @@ describe("the AI tool row", () => {
       "GET /.well-known/oauth-protected-resource": discovery(true),
       "GET /passports": passports(false),
     });
+    const user = userEvent.setup();
     renderConnectAct();
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", {
         name: en["ob.conv.connect.aiConnect"],
       }),

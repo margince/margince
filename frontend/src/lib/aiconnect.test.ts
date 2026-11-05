@@ -147,6 +147,29 @@ describe("which AI, and where", () => {
     );
   });
 
+  it("sends each AI only to its own vendor's app and tools", () => {
+    const routesOf = (choice: (typeof AI_CHOICES)[number]) =>
+      AI_PLACES[choice].map(({ route }) =>
+        route.kind === "app" ? `app:${route.tool}` : `local:${route.cli}`,
+      );
+    expect(Object.fromEntries(AI_CHOICES.map((c) => [c, routesOf(c)]))).toEqual(
+      {
+        claude: [
+          "app:claude",
+          "local:claude-code",
+          "local:claude-code",
+          "local:claude-code",
+          "local:claude-code",
+        ],
+        openai: ["app:chatgpt", "local:codex"],
+        copilot: ["app:copilot", "local:vscode", "local:visual-studio"],
+        gemini: ["app:gemini", "local:antigravity"],
+        cursor: ["local:cursor"],
+        other: [],
+      },
+    );
+  });
+
   it("names every place where an AI has more than one, and none where it has one", () => {
     for (const choice of AI_CHOICES) {
       const places = AI_PLACES[choice];

@@ -86,6 +86,8 @@ export type SetupReads = Readonly<{
   scheduling: SchedulingProfile | null;
   /** The reader's passports, or null where AI tools cannot connect at all. */
   passports: readonly PassportSummary[] | null;
+  /** When the passports were read, so a connection expired by then has ended. */
+  now: number;
 }>;
 
 type Draft = Omit<SetupStep, "state"> & Readonly<{ done: boolean }>;
@@ -222,8 +224,8 @@ function voiceStep(voice: NonNullable<SetupReads["voice"]>): Draft {
   };
 }
 
-function aiStep(passports: readonly PassportSummary[]): Draft {
-  const connection = liveConnection(passports);
+function aiStep(passports: readonly PassportSummary[], now: number): Draft {
+  const connection = liveConnection(passports, now);
   return {
     ...draft("ai", "agents", { done: connection !== undefined }),
     agent: connection ? { name: passportName(connection) ?? null } : null,
@@ -247,7 +249,7 @@ function bookingStep(
 
 /** The steps this reader is asked to finish, in the order they are shown. */
 export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
-  const { acts, connectors, voice, scheduling, passports } = reads;
+  const { acts, connectors, voice, scheduling, passports, now } = reads;
   // A role or seat that cannot capture is never asked to connect anything.
   const connections =
     acts.has("connections") &&
@@ -260,7 +262,7 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
   const drafts = [
     connections && mailStep(connections),
     calendar,
-    acts.has("agents") && passports ? aiStep(passports) : null,
+    acts.has("agents") && passports ? aiStep(passports, now) : null,
     acts.has("voice") && voice ? voiceStep(voice) : null,
     acts.has("meetings") && scheduling
       ? bookingStep(scheduling, calendar)
@@ -308,7 +310,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const connectors = useConnectors({ enabled: acts.has("connections") });
   const voice = useVoiceProfile(acts.has("voice"));
   const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
-  const connector = useConnectorState();
+  const connector = useConnectorState({ enabled: acts.has("agents") });
   const aiConnects = acts.has("agents") && connector.data?.enabled === true;
   const passports = usePassports({ enabled: aiConnects });
   // Every caller reads the one stored flag, so a hide in the top bar holds in
@@ -333,6 +335,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     scheduling: scheduling.data ?? null,
     // No step where the installation turned AI connections off.
     passports: aiConnects ? (passports.data?.data ?? null) : null,
+    now: passports.dataUpdatedAt,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

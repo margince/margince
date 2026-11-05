@@ -17,12 +17,12 @@ There is one rule under everything here:
 ## Connecting and controlling agents
 
 ### How do I connect my AI tool to Margince?
-To connect your AI tool to Margince, open **Settings → AI access** and answer the questions on the **Connect your AI tool** card. The card shows only the steps for your AI and where you use it, including Claude Code, Codex, GitHub Copilot in VS Code or Visual Studio, Cursor and Antigravity. Onboarding offers the same card under **Also worth doing now**, and **Finish setup** lists **Connect your AI tool** until one is connected. Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
+To connect your AI tool to Margince, open **Settings → AI access** and answer the questions on the **Connect your AI tool** card. It shows only the steps for your AI and where you use it, such as Claude Code, Codex, Cursor or Visual Studio. Where AI tools can connect, onboarding offers the same card, and **Finish setup** lists it until a tool signs in. Microsoft Copilot on a personal account cannot connect; the card says so. Gemini through work or school needs [an admin to register it first](settings.md#how-do-i-let-gemini-through-work-or-school-connect). If the card says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 1. Open the account menu, choose **Settings**, then **AI access**.
 2. Under **Which AI do you use?**, choose your AI. For a tool not listed, choose **Another AI tool**: the card gives the address and how it signs in.
-3. Under **Where do you use it?**, choose the app, editor or terminal. An AI used in one place only is not asked.
+3. If the card asks **Where do you use it?**, choose the app, editor or terminal.
 4. For a chat app, under **Whose plan is it?**, choose **My company’s** or **My own**. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
-5. If the card shows your Margince address or a command, choose **Copy address** or **Copy** and paste it where the steps say.
+5. To paste the address, a command or text for a file, choose **Copy address** or **Copy**.
 6. Follow the numbered steps the card shows for that one case.
 7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
 To refuse, choose **Deny access**.
@@ -66,7 +66,7 @@ Also called: REST API, API key, script, access token, integration.
 
 ### How do I connect a coding agent to Margince?
 For Claude Code, Codex, GitHub Copilot in an editor, Cursor or Antigravity, use the **Connect your AI tool** card in **Settings → AI access**. Choose the AI, then where you use it, for example **Claude Code in Visual Studio**.
-Do what the card shows: run the command, or add the text to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**. You need no passport for this.
+Do what the card shows: run the command, or add the text to the file it names. Then sign in in the browser and choose **Authorize** on **Authorize access**; no passport is needed.
 If the page says AI tools "cannot connect to Margince yet", an administrator or operations user must turn it on first.
 Also called: MCP client, MCP server, command line, AI assistant integration.
 

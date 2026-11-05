@@ -133,6 +133,7 @@ function scheduling(enabled: boolean): SchedulingProfile {
 function passport(
   clientName: string | null,
   revokedAt: string | null = null,
+  expiry: { at: string; renewable: boolean } | null = null,
 ): PassportSummary {
   return {
     id: `00000000-0000-4000-8000-0000000000c${clientName ? 1 : 2}`,
@@ -140,13 +141,13 @@ function passport(
     scopes: ["read"],
     created_at: "2026-11-01T08:00:00Z",
     last_used_at: null,
-    expires_at: null,
+    expires_at: expiry?.at ?? null,
     revoked_at: revokedAt,
     ...(clientName && {
       connection: {
         client_id: "client-1",
         client_name: clientName,
-        renewable: true,
+        renewable: expiry?.renewable ?? true,
         connected_at: "2026-11-01T08:00:00Z",
       },
     }),
@@ -164,6 +165,7 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     voice: { profile: null },
     scheduling: scheduling(false),
     passports: null,
+    now: Date.parse("2026-11-05T12:00:00Z"),
     ...overrides,
   };
 }
@@ -449,7 +451,7 @@ describe("deriveSetupSteps", () => {
     ]);
   });
 
-  it("counts an AI tool done only when it signed in and is not revoked", () => {
+  it("counts an AI tool done only while its signed-in connection lasts", () => {
     const aiStep = (passports: readonly PassportSummary[]) =>
       deriveSetupSteps(reads({ passports })).find((s) => s.id === "ai");
 
@@ -457,6 +459,12 @@ describe("deriveSetupSteps", () => {
     expect(
       aiStep([passport("Claude", "2026-11-02T08:00:00Z")])?.state,
     ).not.toBe("done");
+    // Past its expiry, a connection that cannot renew has ended; one that can
+    // is only between credentials.
+    const expired = (renewable: boolean) =>
+      passport("Claude", null, { at: "2026-11-04T12:00:00Z", renewable });
+    expect(aiStep([expired(false)])?.state).not.toBe("done");
+    expect(aiStep([expired(true)])?.state).toBe("done");
     expect(aiStep([passport(null), passport("Claude")])).toMatchObject({
       state: "done",
       agent: { name: "Claude" },

@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
 
-type PassportSummary = components["schemas"]["PassportSummary"];
+export type PassportSummary = components["schemas"]["PassportSummary"];
 
 // The reader's own Agent Seat Passports. The server lists only the passports
 // minted on the reader's behalf, an administrator included: which agents act
@@ -37,13 +37,42 @@ export function passportName(passport: PassportSummary): string | undefined {
   return passport.label.trim() || undefined;
 }
 
-// The AI tool a reader connected by signing in. A passport minted by hand is a
-// credential for a script, not a connection, so it never counts.
+// A connection ends when revoked, or when its credential runs out and its grant
+// cannot renew. A renewable one past its expiry is only between credentials.
+export type ConnectionState = Readonly<{
+  revoked: boolean;
+  renewing: boolean;
+  lapsed: boolean;
+  ended: boolean;
+}>;
+
+export function connectionStateOf(
+  passport: PassportSummary & {
+    connection: NonNullable<PassportSummary["connection"]>;
+  },
+  now: number,
+): ConnectionState {
+  const revoked = passport.revoked_at != null;
+  const expired =
+    !revoked &&
+    passport.expires_at != null &&
+    Date.parse(passport.expires_at) <= now;
+  // Renewing, not ended: the client repairs this itself on its next call.
+  const renewing = expired && passport.connection.renewable;
+  const lapsed = expired && !passport.connection.renewable;
+  return { revoked, renewing, lapsed, ended: revoked || lapsed };
+}
+
+// The AI tool a reader connected by signing in, while it has not ended. A
+// passport minted by hand is a credential for a script, so it never counts.
 export function liveConnection(
   passports: readonly PassportSummary[],
+  now: number,
 ): PassportSummary | undefined {
   return passports.find(
-    (passport) => passport.connection && !passport.revoked_at,
+    ({ connection, ...passport }) =>
+      connection !== undefined &&
+      !connectionStateOf({ ...passport, connection }, now).ended,
   );
 }
 

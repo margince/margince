@@ -91,9 +91,11 @@ function serve(world: World = {}) {
   };
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
+    // The connector discovery read asks by URL string, the API client by Request.
+    vi.fn(async (request: Request | string) => {
       await world.answersAfter;
-      const path = new URL(request.url).pathname;
+      const url = typeof request === "string" ? request : request.url;
+      const path = new URL(url, "https://crm.test").pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
     }),

@@ -9249,17 +9249,17 @@ export const en = {
   "aiAccess.local.vscode.signIn":
     "Accept VS Code’s sign-in prompt. Margince opens: sign in and choose Authorize.",
   "aiAccess.local.visualStudio.file":
-    "In Visual Studio, create the file %USERPROFILE%\\.mcp.json with this text and save it.",
+    "In Visual Studio, create or open the file %USERPROFILE%\\.mcp.json, add this text and save it. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.visualStudio.signIn":
     "Above margince in the file, choose “Authentication Required”, then “Authenticate”. Sign in and choose Authorize.",
   "aiAccess.local.visualStudio.tools":
     "In Copilot Chat, switch to Agent mode and turn on the margince tools.",
   "aiAccess.local.cursor.file":
-    "Open ~/.cursor/mcp.json, or create it, add this text and save. Then restart Cursor.",
+    "Open ~/.cursor/mcp.json, or create it, add this text and save. Then restart Cursor. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.cursor.signIn":
     "Follow Cursor’s sign-in prompt for margince. Margince opens: sign in and choose Authorize.",
   "aiAccess.local.antigravity.file":
-    "Put this text in ~/.gemini/config/mcp_config.json.",
+    "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.antigravity.signIn":
     "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
   "aiAccess.other.sub":

@@ -76,8 +76,10 @@ function AiToolRow() {
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const enabled = useConnectorState().data?.enabled === true;
-  const passports = usePassports({ enabled }).data?.data ?? [];
-  const connected = liveConnection(passports) !== undefined;
+  const passports = usePassports({ enabled });
+  const connected =
+    liveConnection(passports.data?.data ?? [], passports.dataUpdatedAt) !==
+    undefined;
   if (!enabled) {
     return null;
   }
