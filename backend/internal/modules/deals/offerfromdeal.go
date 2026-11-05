@@ -220,14 +220,7 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM offer_line_item WHERE offer_id = $1`, offerID); err != nil {
-			return fmt.Errorf("clear the draft's lines: %w", err)
-		}
-		basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
-		if err := insertOfferLines(ctx, tx, offerID, current.Currency, languageOf(current.Language), basis, rows); err != nil {
-			return err
-		}
-		if err := bindOfferLinesToDeal(ctx, tx, offerID, sources); err != nil {
+		if err := s.replaceDraftLines(ctx, tx, current, rows, sources); err != nil {
 			return err
 		}
 		bound := storekit.NewPatch()
@@ -250,6 +243,20 @@ func (s *Store) RefreshOfferFromDeal(ctx context.Context, offerID ids.OfferID, e
 		return err
 	})
 	return out, err
+}
+
+// replaceDraftLines swaps the draft's lines for rows and names the deal line
+// each came from.
+func (s *Store) replaceDraftLines(ctx context.Context, tx pgx.Tx, current crmcontracts.Offer, rows []OfferLineInputRow, sources []ids.UUID) error {
+	offerID := ids.From[ids.OfferKind](ids.UUID(current.Id))
+	if _, err := tx.Exec(ctx, `DELETE FROM offer_line_item WHERE offer_id = $1`, offerID); err != nil {
+		return fmt.Errorf("clear the draft's lines: %w", err)
+	}
+	basis := s.draftTaxBasis(ctx, tx, legalEntityIDOf(current))
+	if err := insertOfferLines(ctx, tx, offerID, current.Currency, languageOf(current.Language), basis, rows); err != nil {
+		return err
+	}
+	return bindOfferLinesToDeal(ctx, tx, offerID, sources)
 }
 
 // ensureLinesPricedToWin refuses to win a deal priced from lines that are not

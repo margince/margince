@@ -143,15 +143,8 @@ func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealI
 	// The evidence is held first. The time checks below then read rows that
 	// nobody can change before the write.
 	evidence := citedEvidence(current)
-	if held, err := in.EvidenceHolds(ctx, tx, evidence); err != nil || !held {
+	if stands, err := s.suggestionStands(ctx, tx, current, in, evidence); err != nil || !stands {
 		return Suggestion{}, ids.Nil, false, err
-	}
-	for _, superseded := range []func(context.Context, pgx.Tx, Suggestion) (bool, error){
-		supersedeIfEvidenceChanged, s.supersedeIfBuyerChanged, supersedeIfCompanyTaken,
-	} {
-		if gone, err := superseded(ctx, tx, current); err != nil || gone {
-			return Suggestion{}, ids.Nil, false, err
-		}
 	}
 	if _, err := storekit.LockRow(ctx, tx, dealTable, in.DealID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -167,14 +160,35 @@ func (s *Store) revivableDeal(ctx context.Context, tx pgx.Tx, in ReviveLostDealI
 	if err != nil || !ok {
 		return Suggestion{}, ids.Nil, false, err
 	}
-	// Evidence from before the loss was about the deal that was lost, and
-	// evidence from before an Undo is what the owner already turned down.
-	// Either retires the suggestion, so newer evidence can raise its own.
-	if !arrived.Earliest.After(lost.closedAt) || (lost.undoneAt != nil && !arrived.Latest.After(*lost.undoneAt)) {
+	if arrivedTooEarly(arrived, lost) {
 		return Suggestion{}, ids.Nil, false, supersedeTx(ctx, tx, current.ID, map[string]any{"arrived_before": "the deal's loss or its reopen's Undo"})
 	}
 	on, err := in.SwitchOn(ctx, tx)
 	return current, lost.pipeline, on, err
+}
+
+// suggestionStands holds the cited evidence and asks whether the suggestion
+// still rests on it. A change retires the suggestion and answers false.
+func (s *Store) suggestionStands(ctx context.Context, tx pgx.Tx, current Suggestion, in ReviveLostDealInput, evidence []SuggestionEvidence) (bool, error) {
+	if held, err := in.EvidenceHolds(ctx, tx, evidence); err != nil || !held {
+		return false, err
+	}
+	for _, superseded := range []func(context.Context, pgx.Tx, Suggestion) (bool, error){
+		supersedeIfEvidenceChanged, s.supersedeIfBuyerChanged, supersedeIfCompanyTaken,
+	} {
+		if gone, err := superseded(ctx, tx, current); err != nil || gone {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// arrivedTooEarly asks whether evidence predates the decision to reopen.
+// Evidence from before the loss was about the deal that was lost, and evidence
+// from before an Undo is what the owner already turned down. Either retires
+// the suggestion, so newer evidence can raise its own.
+func arrivedTooEarly(arrived EvidenceArrival, lost lostDeal) bool {
+	return !arrived.Earliest.After(lost.closedAt) || (lost.undoneAt != nil && !arrived.Latest.After(*lost.undoneAt))
 }
 
 // lostDeal is what a reopen reads of the locked deal.
