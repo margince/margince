@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"golang.org/x/mod/modfile"
@@ -106,7 +107,7 @@ func prepareInstanceTree(instanceDir, treeDir string) (string, error) {
 	if err := os.RemoveAll(treeDir); err != nil {
 		return "", err
 	}
-	layout := append(requiredCoreModules[:len(requiredCoreModules):len(requiredCoreModules)], struct{ path, dir string }{compositionModule, "composition"})
+	layout := append(slices.Clip(requiredCoreModules), struct{ path, dir string }{compositionModule, "composition"})
 	for _, m := range layout {
 		if err := os.CopyFS(filepath.Join(treeDir, m.dir), os.DirFS(dirs[m.path])); err != nil {
 			return "", fmt.Errorf("%s: %w", m.path, err)
