@@ -8,10 +8,12 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { interactionIcon } from "../../components/interactionchrome";
 import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { SourceLink } from "../../design-system/sourcelink";
 import { formatDue, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
 import {
@@ -230,9 +232,9 @@ function MomentSource({
   return (
     <>
       <span>{t("co.suggest.basedOn")}</span>{" "}
-      <Button variant="link" className="btn-valuelabel" onClick={open}>
+      <SourceLink icon={interactionIcon(activity?.kind)} onOpen={open}>
         {item.label}
-      </Button>
+      </SourceLink>
     </>
   );
 }
