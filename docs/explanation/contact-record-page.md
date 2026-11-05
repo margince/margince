@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/features/contacts/contactcaseentry.tsx frontend/src/design-system/timelineentry.tsx frontend/src/design-system/verbvolume.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
@@ -48,7 +48,7 @@ Focus chooses and orders entries the normal way, with no pin controls and no sto
 
 The Next bar stays about this contact. With no move, no task and nothing just in, it says whose turn it is. It reads that from `last_exchange` in `GET /activities/latest-inbound`, the contact's newest call, meeting or message. `activities.WhoseMove` decides it, the same function the company page's strip uses, so the two cannot disagree.
 
-A move whose action opens the composer drafts the message on the press and is drawn in the AI indigo. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. A move that only opens a form or a record keeps the accent.
+A move whose action opens the composer drafts the message on the press and carries the AI ✦. `momentDrafts` in `contactpage.drawers.tsx` decides both, so the bar, the **Meetings** tab and the press cannot disagree. Only the bar's first move is filled: indigo when it drafts, green when it only opens a form or a record. Every other move has no fill.
 
 The Next bar shows open privacy notice work before relationship suggestions. It reads the same
 contact-scoped queue as Home, with the same grants and row scope. **Review privacy duty** opens the

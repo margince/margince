@@ -914,7 +914,7 @@ export const FlatHead: Story = {
   render: () => (
     <Panel
       flatHead
-      title="Also on your list"
+      title="Other open tasks"
       titleAction={<Button variant="link">All tasks</Button>}
     >
       <PanelBody>Rows sit inside the card's own padding.</PanelBody>
@@ -922,7 +922,7 @@ export const FlatHead: Story = {
   ),
   play: async ({ canvasElement }) => {
     const region = within(canvasElement).getByRole("region", {
-      name: "Also on your list",
+      name: "Other open tasks",
     });
     await expect(region.querySelector(".panel-head-flat")).not.toBeNull();
   },

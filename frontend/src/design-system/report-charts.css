@@ -243,6 +243,7 @@
   width: fit-content;
 }
 .report-chart-table-scroll {
+  position: relative;
   overflow-x: auto;
   margin-top: var(--space-3);
 }

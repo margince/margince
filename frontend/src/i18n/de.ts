@@ -3711,7 +3711,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.strip.nextMeeting": "Nächster Termin",
   "co.strip.next.none": "Kein Termin geplant",
   "co.360.fullHistory": "Vollständiger Verlauf",
-  "co.overview.alsoOnList": "Außerdem offen",
+  "co.overview.otherOpen": "Weitere offene Aufgaben",
   "record.allTasks": "Alle Aufgaben",
   "co.overview.latest": "Zuletzt",
   "co.overview.nothingOpen": "Sonst ist nichts offen",
@@ -6963,6 +6963,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Abschnitt konnte nicht geladen werden. Der Rest der Seite ist nicht betroffen.",
   "today.quiet": "Gerade besteht kein Handlungsbedarf.",
   "task.untitled": "Aufgabe ohne Titel",
+  "task.assigneeYou": "Du",
   "task.next.openContact": "Kontakt öffnen",
   "task.next.draftEmail": "E-Mail entwerfen",
   "task.next.draftIntent": "zu dieser Aufgabe schreiben",
@@ -15215,8 +15216,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.voice": "Beispiele hinzufügen",
   "setup.action.booking": "Einschalten",
   "settings.home.setup.title": "Deine Einrichtung",
-  "settings.home.setup.complete": "Die Einrichtung ist abgeschlossen",
-  "settings.home.setup.show": "Schritte anzeigen",
   "connectors.tile.notSetUp": "Nicht eingerichtet",
   "connectors.tile.askAdmin": "Ein Admin schaltet {vendor} unter {page} frei.",
   "connectors.tile.registerApp":
@@ -17180,6 +17179,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verknüpfung zum Unternehmen entfernen?",
   "contact.rail.removeEmploymentBody":
     "Die Verknüpfung zu {company} und ihr Verlauf werden dauerhaft gelöscht. {company} selbst bleibt erhalten. Wenn der Kontakt das Unternehmen verlassen hat, markiere die Rolle stattdessen als beendet.",
+  "contact.employer.changeTitle": "Arbeitgeber ändern",
+  "contact.employer.none": "Kein aktueller Arbeitgeber",
+  "contact.employer.fateQuestion": "Was ist mit {company}?",
+  "contact.employer.fateLeft": "Hat {company} verlassen",
+  "contact.employer.fateLeftHint":
+    "Die Anstellung bleibt als frühere Anstellung erhalten und endet heute.",
+  "contact.employer.fateWrong": "{company} war nie der Arbeitgeber",
+  "contact.employer.fateWrongHint":
+    "Die Verknüpfung und ihr Verlauf werden gelöscht. {company} selbst bleibt erhalten.",
   "contact.proposal.title": "Aus {source}: {company}",
   "contact.proposal.ask": "Dieses Unternehmen verknüpfen oder erstellen?",
   "contact.proposal.link": "Verknüpfen",
