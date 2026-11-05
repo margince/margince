@@ -2554,6 +2554,8 @@ export const en = {
   "history.field.meeting_documents_added":
     "Meeting notes linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
+  "history.field.meeting_guests_removed":
+    "Guests returned to the meeting they came from",
   "history.field.guest_answers_changed":
     "Guest answers updated from the calendar",
   "history.field.guests_left_out": "Guests not listed",

@@ -20,6 +20,18 @@ import (
 // meetingCopyReason is the archive reason a retired meeting copy records.
 const meetingCopyReason = "meeting_duplicate"
 
+// meetingCopySurvivorKey names, in the archive evidence, the row the copy
+// folded into.
+const meetingCopySurvivorKey = "survivor"
+
+// meetingCopyCarriedGuestsKey lists, in the archive evidence, the guest rows
+// the fold added to the survivor.
+const meetingCopyCarriedGuestsKey = "carried_guests"
+
+// meetingCopyFoldedFromKey names, in the survivor's audit evidence, the copy
+// whose document links it gained.
+const meetingCopyFoldedFromKey = "folded_from"
+
 // RetireMeetingCopyTx archives a meeting stored twice and moves its identities
 // to the row that stays. The caller has proved the two rows are one meeting
 // and that retiring the copy loses nothing. Only a system job or a calendar
@@ -33,7 +45,8 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := TransferIdentities(ctx, tx, duplicate, survivor); err != nil {
 		return err
 	}
-	if err := carryMissingParticipantsTx(ctx, tx, duplicate, survivor); err != nil {
+	carried, err := carryMissingParticipantsTx(ctx, tx, duplicate, survivor)
+	if err != nil {
 		return err
 	}
 	if err := carryMeetingDocumentLinksTx(ctx, tx, duplicate, survivor); err != nil {
@@ -48,7 +61,9 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		return fmt.Errorf("activities: archiving a meeting copy: %w", err)
 	}
-	evidence := map[string]any{archiveReasonKey: meetingCopyReason, "survivor": survivor.String()}
+	evidence := map[string]any{
+		archiveReasonKey: meetingCopyReason, meetingCopySurvivorKey: survivor.String(), meetingCopyCarriedGuestsKey: carried,
+	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "activity", duplicate.UUID, p.Before(), p.After(), evidence)
 	if err != nil {
 		return err
@@ -97,7 +112,7 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 	// The survivor gained documents: announced on it, as a later sync that
 	// finds new notes announces them.
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "activity", survivor.UUID,
-		map[string]any{"meeting_documents_added": len(moved)}, map[string]any{"folded_from": duplicate.String()})
+		map[string]any{"meeting_documents_added": len(moved)}, map[string]any{meetingCopyFoldedFromKey: duplicate.String()})
 	if err != nil {
 		return fmt.Errorf("activities: auditing the documents a meeting copy handed on: %w", err)
 	}
@@ -107,8 +122,8 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 // carryMissingParticipantsTx copies onto the survivor each party of the copy
 // it does not list yet. A party is matched by address, else seat, else contact.
 // The survivor's guest list and the seats it holds busy stay whole.
-func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
-	if _, err := tx.Exec(ctx, `
+func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
 		                                  role, display_name, roster_seat, response, past_party_cap)
 		SELECT $2, d.user_id, d.contact_id, d.address, d.address_domain_folded, d.channel_user_id,
@@ -120,10 +135,16 @@ func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survi
 		         WHEN d.user_id IS NOT NULL THEN s.user_id = d.user_id
 		         WHEN d.contact_id IS NOT NULL THEN s.contact_id = d.contact_id
 		         ELSE s.channel_user_id = d.channel_user_id END)
-		ON CONFLICT DO NOTHING`, duplicate, survivor); err != nil {
-		return fmt.Errorf("activities: carrying a meeting copy's guests: %w", err)
+		ON CONFLICT DO NOTHING
+		RETURNING id`, duplicate, survivor)
+	if err != nil {
+		return nil, fmt.Errorf("activities: carrying a meeting copy's guests: %w", err)
 	}
-	return nil
+	carried, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: carrying a meeting copy's guests: %w", err)
+	}
+	return carried, nil
 }
 
 // IsMeetingCopyArchive reports whether an archive's audit evidence records a

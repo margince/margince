@@ -243,6 +243,12 @@ func ParticipantsOf(raw []byte, owner string) (connector.Parties, error) {
 	return meetingmap.ParticipantsOf(raw, owner, decodeEvent)
 }
 
+// SeriesIdentityOf reads the identity of one stored occurrence of a series
+// (meetingmap.SeriesIdentityOf).
+func SeriesIdentityOf(raw []byte) (connector.CrossDoorIdentity, bool, error) {
+	return meetingmap.SeriesIdentityOf(raw, decodeEvent)
+}
+
 // RecordOf maps one stored event resource to the record live capture writes
 // for owner, refusing with connector.ErrSkip what live capture drops.
 func RecordOf(raw []byte, owner string) (connector.NormalizedRecord, error) {

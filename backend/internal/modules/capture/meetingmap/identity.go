@@ -14,3 +14,18 @@ func (m Meeting) crossDoorIdentity() connector.CrossDoorIdentity {
 	}
 	return connector.CrossDoorIdentity{Series: m.icalUID, Occurrence: occurrence, AllDay: m.allDay}
 }
+
+// SeriesIdentityOf reads the identity of one stored occurrence of a series,
+// and reports false for an event that names no slot in one. A slot is the
+// same in every version a calendar delivers. So a stored original states it
+// even when the occurrence moved after it was stored. A one-off's start does
+// not: the original may predate a reschedule.
+func SeriesIdentityOf(raw []byte, decode Decode) (connector.CrossDoorIdentity, bool, error) {
+	ev, err := decode(raw, "")
+	if err != nil {
+		return connector.CrossDoorIdentity{}, false, err
+	}
+	m := Classify(ev, "")
+	identity := m.crossDoorIdentity()
+	return identity, !m.seriesSlot.IsZero() && identity.Stated(), nil
+}

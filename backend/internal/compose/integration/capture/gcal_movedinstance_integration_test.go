@@ -106,3 +106,25 @@ func TestInstancesMovedOntoOneSlotStayTheirOwnMeetings(t *testing.T) {
 		})
 	}
 }
+
+// A replay of a moved instance still filed under its start key re-keys it by
+// its slot, and the start key no longer names it.
+func TestAReplayRetiresAMovedInstancesStartKey(t *testing.T) {
+	p := newPairEnv(t)
+	slot := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
+	moved := instance{slot, slot.Add(26 * time.Hour)}
+	p.bookSeries(moved)
+	p.sync(t, "a")
+	startKey := activities.MeetingIdentityKey(crossSeatUID, moved.start.UTC().Format(time.RFC3339))
+	slotKey := activities.MeetingIdentityKey(crossSeatUID, slot.UTC().Format(time.RFC3339))
+	p.exec(t, `UPDATE activity_identity SET identity_key = $1 WHERE identity_key = $2`, startKey, slotKey)
+
+	p.sync(t, "a")
+
+	if got := countRows(t, p.env.e, `SELECT count(*) FROM activity_identity WHERE identity_key = '`+startKey+`'`); got != 0 {
+		t.Error("the moved instance still holds the key of its start")
+	}
+	if got := countRows(t, p.env.e, `SELECT count(*) FROM activity_identity WHERE identity_key = '`+slotKey+`'`); got != 1 {
+		t.Errorf("%d rows hold the instance's slot key, want 1", got)
+	}
+}

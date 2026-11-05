@@ -2661,6 +2661,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.meeting_documents_added":
     "Besprechungsnotizen aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
+  "history.field.meeting_guests_removed":
+    "Gäste an ihre eigene Besprechung zurückgegeben",
   "history.field.guest_answers_changed":
     "Antworten der Gäste aus dem Kalender aktualisiert",
   "history.field.guests_left_out": "Nicht aufgeführte Gäste",

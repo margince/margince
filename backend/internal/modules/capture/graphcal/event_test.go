@@ -312,3 +312,58 @@ func TestAMovedOccurrenceIsKnownByItsOriginalStart(t *testing.T) {
 		})
 	}
 }
+
+// A moved all-day occurrence is known by the date of its slot. Graph states
+// the slot as local midnight in UTC, which east of UTC is the day before.
+func TestAMovedAllDayOccurrenceIsKnownByItsSlotDate(t *testing.T) {
+	for name, tc := range map[string]struct {
+		originalStart, zone string
+	}{
+		"east of UTC, the instant on the day before":     {"2026-09-22T22:00:00Z", "Europe/Berlin"},
+		"west of UTC, the instant on the same day":       {"2026-09-23T04:00:00.0000000Z", "America/New_York"},
+		"a slot stated in UTC":                           {"2026-09-23T00:00:00Z", "UTC"},
+		"fourteen hours east, past the nearest midnight": {"2026-09-22T10:00:00Z", "Pacific/Kiritimati"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			raw := eventJSONWith(t, map[string]any{
+				"id": "graph-allday-occ", "iCalUId": "series-allday", "subject": "Offsite", "isAllDay": true,
+				"start":                 map[string]string{"dateTime": "2026-09-25T00:00:00.0000000", "timeZone": "UTC"},
+				"end":                   map[string]string{"dateTime": "2026-09-26T00:00:00.0000000", "timeZone": "UTC"},
+				"originalStart":         tc.originalStart,
+				"originalStartTimeZone": tc.zone,
+				"organizer":             actorJSON("pat@counterparty.example"),
+				"attendees":             attendeesJSON(owner),
+			})
+			ev, err := decodeEvent(raw, owner)
+			if err != nil {
+				t.Fatalf("decodeEvent: %v", err)
+			}
+			identity := meetingmap.Classify(ev, owner).ToRecord(connectorName, raw).CrossDoorIdentity
+			if got := identity.Occurrence.UTC().Format(time.DateOnly); got != "2026-09-23" || !identity.AllDay {
+				t.Fatalf("identity occurrence = %s (all day %v), want the slot date 2026-09-23", got, identity.AllDay)
+			}
+		})
+	}
+}
+
+// An all-day slot in a zone the system cannot load names no date. The
+// occurrence keeps the key of its start rather than a guessed date.
+func TestAnAllDaySlotInAnUnloadableZoneKeepsTheStartKey(t *testing.T) {
+	raw := eventJSONWith(t, map[string]any{
+		"id": "graph-allday-occ", "iCalUId": "series-allday", "subject": "Offsite", "isAllDay": true,
+		"start":                 map[string]string{"dateTime": "2026-09-25T00:00:00.0000000", "timeZone": "UTC"},
+		"end":                   map[string]string{"dateTime": "2026-09-26T00:00:00.0000000", "timeZone": "UTC"},
+		"originalStart":         "2026-09-22T10:00:00Z",
+		"originalStartTimeZone": "Line Islands Standard Time",
+		"organizer":             actorJSON("pat@counterparty.example"),
+		"attendees":             attendeesJSON(owner),
+	})
+	ev, err := decodeEvent(raw, owner)
+	if err != nil {
+		t.Fatalf("decodeEvent: %v", err)
+	}
+	identity := meetingmap.Classify(ev, owner).ToRecord(connectorName, raw).CrossDoorIdentity
+	if got := identity.Occurrence.UTC().Format(time.DateOnly); got != "2026-09-25" {
+		t.Fatalf("identity occurrence = %s, want the start date 2026-09-25", got)
+	}
+}
