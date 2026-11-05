@@ -312,6 +312,20 @@
     );
   border-block-start: 0;
 }
+/* Where two cells no longer fit, a lead plate stacks like any other row of
+   readings, its lead first. */
+@container (max-width: 40rem) {
+  .stat-strip[data-density="plate"][data-lead] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* A plate keeps its cells' column shape when they fold, so the figure
+     stays under its name rather than flying to the trailing edge. */
+  .stat-strip[data-density="plate"]
+    :is(.stat-card-narrow-row, .stat-card-narrow-stack)
+    > .stat-card-value {
+    text-align: start;
+  }
+}
 /* A lead plate's cells are narrow, so the receipt keeps its word for the
    screen reader and shows a small mark in its place. */
 .stat-strip[data-lead] .stat-card-basis {

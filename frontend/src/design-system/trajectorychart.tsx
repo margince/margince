@@ -66,7 +66,10 @@ export function TrajectoryChart({
   useEffect(() => {
     const node = plot.current;
     if (!node || typeof ResizeObserver === "undefined") return;
-    const measure = () => setWidth(Math.max(280, node.clientWidth));
+    // The plot's own width, unclamped: the marks are placed in pixels over
+    // the drawing, so the drawing must be drawn at the width it shows at.
+    const measure = () =>
+      setWidth(Math.max(LEFT + RIGHT + 1, node.clientWidth));
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(node);
@@ -185,6 +188,7 @@ export function TrajectoryChart({
           </text>
           <FinishMarks
             scale={{ x, y }}
+            narrow={narrow}
             now={now}
             target={target}
             range={range}
@@ -275,19 +279,22 @@ function AheadPaths({ scale: { x, y }, now, range, projection }: Ahead) {
 // the gap to the target when the projection falls short of it.
 function FinishMarks({
   scale: { x, y },
+  narrow,
   now,
   target,
   range,
   projection,
   shortfall,
-}: Ahead) {
+}: Ahead & Readonly<{ narrow: boolean }>) {
   const endX = x(1);
   // The words sit under the band's lower edge, clear of the line and the cone.
   const under = y(range ? range.low : (projection?.value ?? 0));
   const short = projection && target && projection.value < target.value;
   return (
     <>
-      {range && (
+      {/* On a phone the band's name would sit on today's; the plate above
+          already names the modelled finish. */}
+      {range && !narrow && (
         <text
           className="trajectory-chart-range-label"
           x={x(now.at + (1 - now.at) * 0.6)}

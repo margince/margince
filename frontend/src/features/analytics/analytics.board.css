@@ -74,9 +74,3 @@
 .analytics-board-rail .stat-strip[data-density="plate"] > * + * {
   border-block-start: 1px solid var(--groundEdge);
 }
-.analytics-board-rail
-  .stat-strip[data-density="plate"]
-  .stat-card
-  .stat-card-value {
-  text-align: start;
-}
