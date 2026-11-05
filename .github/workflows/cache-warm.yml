@@ -152,6 +152,13 @@ jobs:
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
         run: make check-backend
+      # Saved even when a gate failed: the lint passes still analyzed the tree.
+      - name: Save the golangci-lint analysis cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: ${{ steps.golangci-key.outputs.key }}
       # The entry about to be saved replays test results, and a replay is only
       # honest if the cache can see every input the test read. Go never rechecks
       # a file outside the test's module, so each such read must go through its
@@ -160,13 +167,6 @@ jobs:
       # an undeclared read withholds the entry, leaving readers on the last one
       # that was honest. A PR's backend-lint job runs the same census, so a read
       # is caught before it merges rather than here.
-      # Saved even when a gate failed: the lint passes still analyzed the tree.
-      - name: Save the golangci-lint analysis cache
-        if: ${{ !cancelled() }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/golangci-lint
-          key: ${{ steps.golangci-key.outputs.key }}
       - name: Census the test cache's inputs (make test-input-census)
         id: census
         if: ${{ !cancelled() }}

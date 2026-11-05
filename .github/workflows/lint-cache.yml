@@ -38,6 +38,8 @@ jobs:
   warm:
     name: warm golangci
     timeout-minutes: 30
+    # A dispatch from any other branch would save an entry no pull request reads.
+    if: github.event_name == 'push' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -81,15 +83,17 @@ jobs:
       - name: Lint the pushed tree (make lint)
         run: make -j2 lint
       - name: Save the golangci-lint analysis cache
+        id: save
         if: ${{ !cancelled() }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
       # A restore takes the newest entry, so the older ones on this branch only
-      # take room under the repository's cache limit.
+      # take room under the repository's cache limit. Only entries saved before
+      # this one go, so a newer entry from cache-warm stays.
       - name: Delete this branch's older golangci entries
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.save.outcome == 'success' }}
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
@@ -97,9 +101,13 @@ jobs:
           KEEP: ${{ steps.golangci-key.outputs.key }}
           PREFIX: ${{ steps.golangci-key.outputs.restore-keys }}
         run: |
-          gh cache list --ref "$GITHUB_REF" --key "$PREFIX" --limit 100 --json key --jq '.[].key' |
+          entries="$(gh cache list --ref "$GITHUB_REF" --key "$PREFIX" --limit 100 --json key,createdAt)"
+          saved="$(jq -r --arg keep "$KEEP" '.[] | select(.key == $keep) | .createdAt' <<<"$entries")"
+          if [[ -z "$saved" ]]; then
+            echo "the entry just saved is not listed yet, so nothing is deleted"
+            exit 0
+          fi
+          jq -r --arg saved "$saved" '.[] | select(.createdAt < $saved) | .key' <<<"$entries" |
             while read -r key; do
-              if [[ "$key" != "$KEEP" ]]; then
-                gh cache delete "$key" --ref "$GITHUB_REF"
-              fi
+              gh cache delete "$key" --ref "$GITHUB_REF"
             done

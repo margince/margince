@@ -406,6 +406,10 @@ they meant to seed. `cache-warm.yml` runs one job per kind, and takes
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
 output can be used again as well as a green run's.
 
+`scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
+local action through, because the repo versions its own code. That holds for the action's own ref, but
+not for the outside actions it calls. Those would come in with nobody reading them.
+
 ### The lint cache is also written on each push
 
 The cache of `golangci-lint` is the exception to "not on each push". A cold pass costs about 39 minutes of
@@ -416,10 +420,6 @@ read all of it again. So a `backend-lint` that restores an entry many merges old
 `develop` that touches Go. It starts from the entry of the push before, so it only reads what that push
 changed. Each entry is about 30 MB, so the job deletes the older entries of its branch once the new one is
 saved. `cache-warm.yml` still restores and saves the same entry, also with `!cancelled()`.
-
-`scripts/check-image-pins.sh` scans `.github/actions/` beside the workflows. The `./path` allowance lets a
-local action through, because the repo versions its own code. That holds for the action's own ref, but
-not for the outside actions it calls. Those would come in with nobody reading them.
 
 ### Test results replay only on a stable mtime
 
