@@ -4880,6 +4880,21 @@
     },
     {
       "tool": "read_details",
+      "action": "contact_stops",
+      "verb": "list_contact_stops",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": [],
+      "unproven_for": []
+    },
+    {
+      "tool": "read_details",
       "action": "contract",
       "verb": "get_contract",
       "allowed_for": [],

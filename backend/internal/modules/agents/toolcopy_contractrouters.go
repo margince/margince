@@ -71,7 +71,7 @@ var changeComplianceCopy = toolCopy{
 		"said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, " +
 		"releasing a restricted record, restoring a change and retention policy are done in the app.",
 	Instead: "Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, " +
-		"read_details contact_consent or contact_consent_guard to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and " +
+		"read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and " +
 		"restricted_records to read the queues, and read_workspace topic record_history for one record's trail.",
 }
 

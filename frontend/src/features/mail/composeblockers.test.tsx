@@ -9,13 +9,14 @@ import {
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { MailSendNotices } from "./compose.parts";
 import {
   activity202,
   jsonResponse,
   render,
   stubRoutes,
 } from "./compose.testkit";
-import { reasonTargetOf } from "./composeblockers";
+import { newContactsOf, reasonTargetOf } from "./composeblockers";
 
 afterEach(() => {
   cleanup();
@@ -289,5 +290,40 @@ describe("recording a reason to write where the refusal is read", () => {
     expect(
       sent.some((call) => call.key === "POST /contacts/c-1/consent/allow"),
     ).toBe(false);
+  });
+});
+
+// An address no record holds is not a refusal: the send files it as the rep's
+// contact. The composer says so once the engine's answer is in, and names no
+// address while that answer is still out.
+describe("a new address", () => {
+  const preview = allowedPreview(["new@prospect.test", "known@customer.test"]);
+  preview.recipients[0] = { ...preview.recipients[0], new_contact: true };
+
+  it("is named from the settled answer only", () => {
+    expect(newContactsOf(settled(preview))).toEqual(["new@prospect.test"]);
+    expect(newContactsOf({ ...settled(preview), asking: true })).toEqual([]);
+    expect(newContactsOf({ ...settled(preview), unanswered: true })).toEqual(
+      [],
+    );
+  });
+
+  it("says the send adds it as the rep's contact", () => {
+    render(
+      <MailSendNotices
+        to={["new@prospect.test", "known@customer.test"]}
+        cc={[]}
+        context={undefined}
+        newContacts={newContactsOf(settled(preview))}
+      />,
+    );
+    expect(
+      screen.getByText(
+        "new@prospect.test is on no record yet. Sending adds it as your contact.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/known@customer\.test is on no record/),
+    ).toBeNull();
   });
 });

@@ -12,10 +12,10 @@
   "search": "semantic",
   "self_judged": false,
   "usage": {
-    "input_tokens": 76747,
-    "output_tokens": 4477,
+    "input_tokens": 59818,
+    "output_tokens": 4179,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 788608,
+    "cache_read_input_tokens": 711808,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null

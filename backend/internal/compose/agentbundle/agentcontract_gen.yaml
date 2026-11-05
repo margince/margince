@@ -15331,7 +15331,7 @@ paths:
                     Which stop this is. `subject_request` is "stop contacting me" and reaches every
                     category but the three the controller owes anyway. `marketing_objection` is
                     Art. 21(2), reaches marketing only, and is recorded at the subject's own
-                    authority so no seat can lift it.
+                    authority, so only an admin correcting a mistake can lift it.
                 reason:
                   type: string
                   maxLength: 500
@@ -15386,6 +15386,31 @@ paths:
                     change most worth being able to explain later.
       responses:
         '204': {description: Lifted.}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /contacts/{id}/consent/stops:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: listContactStops
+      security: [{bearerAuth: []}]
+      summary: List the stops that stand on this contact, and which ones you may take back.
+      description: |-
+        Every live suppression the send check reads for this contact: the contact's own stops and
+        the stops held on one of its live addresses. Newest first.
+      responses:
+        '200':
+          description: The stops that stand.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stops]
+                properties:
+                  stops: {type: array, items: {$ref: '#/components/schemas/ContactStop'}}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -26013,6 +26038,11 @@ components:
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        acquisition_request:
+          readOnly: true
+          allOf: [{$ref: '#/components/schemas/ContactAcquisitionRequest'}]
+          description: >-
+            The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -29061,6 +29091,7 @@ components:
             - consent_withdrawn
             - no_consent_exception_not_offered
             - no_consent
+            - existing_customer
         reason_at:
           type: [string, 'null']
           format: date-time
@@ -29077,6 +29108,12 @@ components:
         6(1)(f) balancing accountable rather than merely asserted.
       required: [kind, occurred_at]
       properties:
+        id:
+          type: string
+          format: uuid
+          description: |-
+            Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`),
+            the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back.
         kind:
           type: string
           enum: [inbound_message, inquiry, active_deal, in_person, meeting, requested_by_subject]
@@ -35209,6 +35246,12 @@ components:
             The reason for contact the sender claimed. An unproven claim never becomes
             `resolved_category`, so a composer reads this one to name the gap the sender can
             close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+        new_contact:
+          type: boolean
+          description: |-
+            No contact or lead holds this address yet. Sending makes a contact for it, owned by
+            the sender, before the message is checked, and this answer is the one that new
+            contact gets. Absent or false for an address a record already holds.
         basis:
           type: string
           description: The lawful ground an allow would rest on.
@@ -43381,6 +43424,10 @@ components:
         key: {type: string, description: 'Stable machine key (e.g. transactional, marketing_email, profiling).'}
         label: {type: string}
         requires_double_opt_in: {type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).'}
+        class:
+          type: string
+          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         created_at: {type: string, format: date-time}
     RetentionScope:
       type: string
@@ -45168,6 +45215,71 @@ components:
       type: object
       properties:
         reason: {type: [string, 'null'], description: Optional buyer-given decline reason (rides offer.rejected).}
+    ContactAcquisitionRequest:
+      type: object
+      description: A request to hear from us that the contact's acquisition records.
+      required: [kinds]
+      properties:
+        kinds:
+          type: array
+          minItems: 1
+          items: {type: string, enum: [requested_quote_or_meeting, in_person_permission]}
+          description: Which requests stand. Taking the request back withdraws all of them.
+        occurred_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the earliest of them happened. Null when nobody recorded the time.
+    ContactStop:
+      type: object
+      description: One live stop on a contact, and whether the caller may take it back.
+      required: [id, kind, authority, recorded_at, recorded_by_colleague, may_lift, correction]
+      properties:
+        id: {type: string, format: uuid, description: The stop. `liftSuppression` takes this id.}
+        kind:
+          type: string
+          description: |-
+            `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`. A
+            kind from a newer server is shown as a stop of unknown kind.
+        authority:
+          type: string
+          enum: [machine, user, admin, subject]
+          description: Whose decision the stop is. `subject` is the contact's own, whoever typed it.
+        purpose_key:
+          type: [string, 'null']
+          description: The one purpose a narrow stop binds. Null for a stop on every purpose of its kind.
+        address:
+          type: [string, 'null']
+          description: The address a stop is held on. Null for a stop on the contact.
+        reason:
+          type: [string, 'null']
+          maxLength: 500
+          description: What the colleague or the contact wrote when the stop was recorded. Null when nothing was written.
+        recorded_at: {type: string, format: date-time}
+        recorded_by_colleague:
+          type: boolean
+          description: |-
+            A colleague recorded the stop. False when the contact recorded it on a link in a mail or
+            Margince recorded it, for example for a bounce.
+        recorded_by_name:
+          type: [string, 'null']
+          description: The colleague's current name. Null when no colleague recorded it, or their seat is gone.
+        may_lift:
+          type: boolean
+          description: This caller may take the stop back now, with a reason.
+        correction:
+          type: boolean
+          description: |-
+            Taking it back corrects a stop a colleague recorded by mistake: a marketing objection,
+            which only an admin may correct. The audit row records the correction.
+        lift_blocked_by:
+          type: [string, 'null']
+          enum: [address, restriction, subject_decision, level, permission, null]
+          description: |-
+            Why `may_lift` is false. `permission`: you may not change this contact, or you are not
+            signed in to a seat. `address`: a stop on an address clears when mail to it works
+            again. `restriction`: lifting it owes the contact notice first, which Margince cannot
+            send yet. `subject_decision`: the contact set it and only they change it. `level`: it
+            was recorded at your level or above. Null when `may_lift` is true.
     RecordedOverride:
       type: object
       description: >-
@@ -45542,6 +45654,12 @@ components:
           description: |-
             True when coverage is at risk against a named basis: under 8000 basis points of what
             the basis needs. Never true without a basis.
+        call_needs_review:
+          type: boolean
+          description: |-
+            True when the standing call this coverage reads has an open input-check finding
+            because the pipeline moved since it was made. Present only beside the `manager_call`
+            basis.
     TeamWeeklyStaleDeal:
       type: object
       additionalProperties: false

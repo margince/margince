@@ -33,6 +33,16 @@ func reasonDefect(access, reason string, security *[]map[string][]string) string
 	return ""
 }
 
+// audienceDefect refuses an x-settings-audience the parity catalog cannot read. The
+// two words mirror audienceMember and audienceAdmin in backend/gates/mcpparity_test.go.
+// This module cannot import a gate, so that gate refuses any other word too.
+func audienceDefect(audience string) string {
+	if audience == "" || audience == "member" || audience == "admin" {
+		return ""
+	}
+	return fmt.Sprintf("x-settings-audience is %q; say member or admin", audience)
+}
+
 // reachedWithASession reports whether a signed-in user's cookie admits the
 // operation. Absent security inherits the document's, which admits it.
 func reachedWithASession(security *[]map[string][]string) bool {
