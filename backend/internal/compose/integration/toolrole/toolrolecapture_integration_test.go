@@ -35,11 +35,11 @@ var captureFixtures = map[string]func(p *recordPool) map[string]any{
 	"add_counterparty_hold": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"kind": "domain", "value": uniqueDomain()}}
 	},
-	"lift_counterparty_hold": byID("counterparty_hold"),
+	"lift_counterparty_hold": byID("agent_counterparty_hold"),
 	"add_capture_exclusion": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"scope": "user", "kind": "domain", "value": uniqueDomain()}}
 	},
-	"lift_capture_exclusion": byID("capture_exclusion"),
+	"lift_capture_exclusion": byID("agent_capture_exclusion"),
 	"add_owner_identity": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"kind": "address", "value": uniqueEmail()}}
 	},
@@ -107,11 +107,13 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 		"consumer_mail_domain": func() string {
 			return s.post("/v1/capture/consumer-mail-domains", integration.AnyMap{"domain": uniqueDomain(), "kind": "extra"})
 		},
-		"counterparty_hold": func() string {
-			return s.post("/v1/capture/counterparty-holds", integration.AnyMap{"kind": "domain", "value": uniqueDomain()})
+		// An agent lifts only what an agent added, so each is added as the call's own
+		// passport, as it is taken.
+		"agent_counterparty_hold": func() string {
+			return s.asCallerWhereItMay("POST", "/v1/capture/counterparty-holds", integration.AnyMap{"kind": "domain", "value": uniqueDomain()})
 		},
-		"capture_exclusion": func() string {
-			return s.post("/v1/capture/exclusions", integration.AnyMap{"scope": "user", "kind": "domain", "value": uniqueDomain()})
+		"agent_capture_exclusion": func() string {
+			return s.asCallerWhereItMay("POST", "/v1/capture/exclusions", integration.AnyMap{"scope": "user", "kind": "domain", "value": uniqueDomain()})
 		},
 		"owner_identity": func() string {
 			return s.post("/v1/capture/owner-identities", integration.AnyMap{"kind": "address", "value": uniqueEmail()})

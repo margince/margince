@@ -157,7 +157,7 @@ plant "$CLEAN" 'const gap = "var(--space-3)";'
 
 # judge runs one gate against both fixtures. Each gate walks the whole of
 # frontend/src on every run, so the cases run side by side; each writes its
-# findings to its own file, and the count is taken once all have finished.
+# findings and messages to its own files, read once all have finished.
 judge() {
   local gate="$1" violation="$2" dirty="$TMP/${1%.sh}" out="$TMP/${1%.sh}.out" rel
   plant "$dirty" "$violation"
@@ -185,7 +185,8 @@ judge() {
 
 pids=()
 for entry in "${CASES[@]}"; do
-  judge "${entry%%|*}" "${entry#*|}" &
+  gate="${entry%%|*}"
+  judge "$gate" "${entry#*|}" 2>"$TMP/${gate%.sh}.log" &
   pids+=("$!")
 done
 for pid in "${pids[@]}"; do
@@ -194,6 +195,7 @@ done
 # A case that died before writing its count is not a pass, so it counts as one.
 for entry in "${CASES[@]}"; do
   gate="${entry%%|*}"
+  cat "$TMP/${gate%.sh}.log" >&2
   if [[ -f "$TMP/${gate%.sh}.failures" ]]; then
     FAILURES=$((FAILURES + $(<"$TMP/${gate%.sh}.failures")))
   else

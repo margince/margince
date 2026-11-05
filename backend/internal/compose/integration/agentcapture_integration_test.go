@@ -29,6 +29,43 @@ func answerID(t *testing.T, raw json.RawMessage) string {
 	return got.ID
 }
 
+// A rule or hold the user made stays theirs, so their agent lifts only what an agent
+// added. The user adding it again makes the decision theirs.
+func TestAnAgentLiftsNoCaptureRuleOrHoldTheUserDecided(t *testing.T) {
+	d := newTwoDoors(t, "agent-capture-decided", "read", "write")
+	for _, list := range []struct {
+		path, add, lift string
+		body            AnyMap
+	}{
+		{"/v1/capture/exclusions", "add_exclusion", "lift_exclusion", AnyMap{"scope": "user", "kind": "domain", "value": "kept.test"}},
+		{"/v1/capture/counterparty-holds", "add_counterparty_hold", "lift_counterparty_hold", AnyMap{"kind": "domain", "value": "kept.test"}},
+	} {
+		t.Run(list.add, func(t *testing.T) {
+			agentAdded := answerID(t, captureAct(t, d, list.add, map[string]any{"request_body": list.body}))
+			var added struct {
+				ID string `json:"id"`
+			}
+			if status := d.e.Call(t, "POST", list.path, list.body, nil, &added); status >= http.StatusBadRequest || added.ID != agentAdded {
+				t.Fatalf("the user adding it again → %d, id %s, want %s", status, added.ID, agentAdded)
+			}
+			refusal := d.toolRefused(t, "change_capture", map[string]any{"action": list.lift, "id": agentAdded})
+			if !strings.Contains(refusal, "the user already decided") {
+				t.Errorf("the agent lifting the user's decision answered %q", refusal)
+			}
+			var problem struct {
+				Detail string `json:"detail"`
+			}
+			status := d.e.Call(t, "DELETE", list.path+"/"+agentAdded, nil, d.bearer, &problem)
+			if status != http.StatusConflict || !strings.HasPrefix(problem.Detail, "the user already decided about this ") || !strings.HasSuffix(problem.Detail, "so the user changes it") {
+				t.Errorf("the route answered %d %q, want 409 and the plain sentence alone", status, problem.Detail)
+			}
+			if status := d.e.Call(t, "DELETE", list.path+"/"+agentAdded, nil, nil, nil); status != http.StatusNoContent {
+				t.Errorf("the user lifting it → %d", status)
+			}
+		})
+	}
+}
+
 // The user's own capture lists, written and read back through the agent.
 func TestAnAgentKeepsTheUsersCaptureLists(t *testing.T) {
 	d := newTwoDoors(t, "agent-capture-lists", "read", "write")

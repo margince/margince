@@ -126,6 +126,8 @@ var routeVerbsVietnamese = map[string]string{
 	"request_ownership_transfer":         "Xin chuyển quyền sở hữu bản ghi",
 	"reschedule_scheduled_send":          "Dời lịch gửi",
 	"resend_deal_room_invitation":        "Gửi lại lời mời vào phòng giao dịch",
+	"open_deal_room_thread":              "Mở chủ đề trong phòng giao dịch",
+	"reply_deal_room_thread":             "Trả lời chủ đề trong phòng giao dịch",
 	"resolve_deal_room_thread":           "Đóng chủ đề trong phòng giao dịch",
 	"restore_company_suggestion":         "Hiện lại đề xuất đã bỏ qua",
 	"restore_contact_moment":             "Hiện lại gợi ý đã ẩn",

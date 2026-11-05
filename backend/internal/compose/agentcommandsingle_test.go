@@ -112,8 +112,6 @@ var contractBodies = map[string]string{
 	"createOffer":               `{"currency":"EUR","source":"manual"}`,
 	"addOfferLineItem":          `{"quantity":2}`,
 	"updateOfferLineItem":       `{"quantity":3}`,
-	"openDealRoomThread":        `{"body":"can we revisit the delivery date?"}`,
-	"replyDealRoomThread":       `{"body":"yes — moving it a week."}`,
 	"createCompanyFact":         `{"category":"company","field":"headcount","value":"240"}`,
 	"updateCompanyFact":         `{"value":"260"}`,
 	"updateCompanyProfileField": `{"value":"Acme GmbH"}`,
