@@ -9,13 +9,13 @@ package compose
 // and nothing a write replaces is left behind.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -59,13 +59,13 @@ func (f avatarFixture) upload(t *testing.T, ctx context.Context, content []byte)
 	return rec
 }
 
-func (f avatarFixture) stream(ctx context.Context, user ids.UUID, etag string) *httptest.ResponseRecorder {
+func (f avatarFixture) stream(ctx context.Context, user ids.UUID, revision, etag string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodGet, "/v1/users/"+user.String()+"/avatar", nil).WithContext(ctx)
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}
 	rec := httptest.NewRecorder()
-	f.h.GetUserAvatar(rec, req, crmcontracts.Id(user), crmcontracts.GetUserAvatarParams{})
+	f.h.GetUserAvatar(rec, req, crmcontracts.Id(user), crmcontracts.GetUserAvatarParams{V: &revision})
 	return rec
 }
 
@@ -114,7 +114,8 @@ func TestAColleagueStreamsTheUploadedPictureUnderItsRevision(t *testing.T) {
 		t.Fatal("the upload's answer carries no avatar_url")
 	}
 
-	got := f.stream(f.other, f.e.Rep1, "")
+	_, revision, _ := strings.Cut(*url, "?v=")
+	got := f.stream(f.other, f.e.Rep1, revision, "")
 	if got.Code != http.StatusOK || got.Header().Get("Content-Type") != "image/png" {
 		t.Fatalf("a colleague streaming the picture = %d %s", got.Code, got.Header().Get("Content-Type"))
 	}
@@ -122,10 +123,15 @@ func TestAColleagueStreamsTheUploadedPictureUnderItsRevision(t *testing.T) {
 	if got.Header().Get("Cache-Control") != "private, max-age=86400, immutable" || etag == "" {
 		t.Errorf("headers: Cache-Control %q, ETag %q", got.Header().Get("Cache-Control"), etag)
 	}
-	if !bytes.Contains([]byte(*url), []byte(etag[1:len(etag)-1])) {
+	if `"`+revision+`"` != etag {
 		t.Errorf("avatar_url %s does not carry the revision its stream names, %s", *url, etag)
 	}
-	if again := f.stream(f.other, f.e.Rep1, etag); again.Code != http.StatusNotModified {
+	stale := f.stream(f.other, f.e.Rep1, "an-older-revision", "")
+	if stale.Code != http.StatusOK || stale.Header().Get("Cache-Control") != "private, no-cache" {
+		t.Errorf("a stale revision = %d under %q, want the current picture uncached",
+			stale.Code, stale.Header().Get("Cache-Control"))
+	}
+	if again := f.stream(f.other, f.e.Rep1, revision, etag); again.Code != http.StatusNotModified {
 		t.Errorf("revalidating the same revision = %d, want 304", again.Code)
 	}
 }
@@ -149,12 +155,12 @@ func TestAReplacedOrDeletedPictureLeavesNoBytesBehind(t *testing.T) {
 	if f.objectExists(t, second) {
 		t.Error("the deleted picture's bytes are still stored")
 	}
-	if got := f.stream(f.other, f.e.Rep1, ""); got.Code != http.StatusNotFound {
+	if got := f.stream(f.other, f.e.Rep1, "", ""); got.Code != http.StatusNotFound {
 		t.Errorf("streaming a deleted picture = %d, want 404", got.Code)
 	}
 }
 
-func TestTheUploadRefusesWhatIsNotAPersonsOwnPicture(t *testing.T) {
+func TestTheUploadRefusesWhatIsNotTheSeatsOwnPicture(t *testing.T) {
 	f := newAvatarFixture(t)
 	gifBytes := encodedPicture(t, gifOf, halvesImage(20, 20))
 	if rec := f.upload(t, f.me, gifBytes); rec.Code != http.StatusUnsupportedMediaType {
@@ -176,11 +182,11 @@ func TestTheStreamIsForMembersAndHidesWhichSeatsExist(t *testing.T) {
 	f.upload(t, f.me, encodedPicture(t, pngOf, halvesImage(20, 20)))
 	buyer := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS),
 		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
-	if rec := f.stream(buyer, f.e.Rep1, ""); rec.Code != http.StatusForbidden {
+	if rec := f.stream(buyer, f.e.Rep1, "", ""); rec.Code != http.StatusForbidden {
 		t.Errorf("a Deal Room buyer streaming a picture = %d, want 403", rec.Code)
 	}
 	for name, seat := range map[string]ids.UUID{"no picture": f.e.Rep2, "unknown seat": ids.NewV7()} {
-		if rec := f.stream(f.me, seat, ""); rec.Code != http.StatusNotFound {
+		if rec := f.stream(f.me, seat, "", ""); rec.Code != http.StatusNotFound {
 			t.Errorf("%s = %d, want 404", name, rec.Code)
 		}
 	}

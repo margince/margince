@@ -28,8 +28,7 @@ func StreamOwnImage(w http.ResponseWriter, r *http.Request, img OwnImage, logLab
 		w.Header().Set("ETag", img.ETag)
 	}
 	StreamObject(w, r, StreamedObject{
-		Download: Download{ContentType: img.ContentType, Inline: true, Size: img.Size},
-		Body:     img.Body,
+		ContentType: img.ContentType, Inline: true, Size: img.Size, Body: img.Body,
 	}, logLabel)
 }
 

@@ -26773,13 +26773,15 @@ paths:
         404 when the seat has no picture, is archived, or does not exist; a client draws
         initials for all three alike. 501 when the deployment has no object store configured.
 
-        The URL names one revision of the picture, so the answer may be cached for a day
-        without asking again; `If-None-Match` with the `ETag` answers 304.
+        When `v` names the revision served, the answer may be cached for a day without
+        asking again. Any other `v`, or none, is answered with the current picture under
+        `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
+        `ETag` answers 304.
       parameters:
         - name: v
           in: query
           required: false
-          description: The revision token `avatar_url` carries. The server ignores it; it keeps a browser cache from serving a replaced picture.
+          description: The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
           schema: { type: string, maxLength: 64 }
       responses:
         '200':

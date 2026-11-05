@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package assetrev names a stored image revision on the wire. The URL's token and the
-// stream's ETag are one digest, so they cannot disagree about which bytes they mean.
+// Package assetrev names a stored image revision on the wire: the URL's token and the
+// stream's ETag are one digest of the object key.
 package assetrev
 
 import (

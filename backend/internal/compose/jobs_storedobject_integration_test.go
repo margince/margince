@@ -391,7 +391,7 @@ func TestEachWriterDeclaresItsOwnKind(t *testing.T) {
 		}},
 		{storedobjects.KindAvatar, func(key string) error {
 			return newAvatarPictures(db, blobstore.NewMemory(), nil, slog.New(slog.DiscardHandler)).
-				store(ctx, key, []byte("picture"))
+				putPicture(ctx, key, []byte("picture"))
 		}},
 	} {
 		t.Run(string(c.kind), func(t *testing.T) {

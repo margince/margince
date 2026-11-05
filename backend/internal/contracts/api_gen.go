@@ -73214,7 +73214,7 @@ type NameSeatsParams struct {
 
 // GetUserAvatarParams defines parameters for GetUserAvatar.
 type GetUserAvatarParams struct {
-	// V The revision token `avatar_url` carries. The server ignores it; it keeps a browser cache from serving a replaced picture.
+	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
 	V *string `form:"v,omitempty" json:"v,omitempty"`
 }
 

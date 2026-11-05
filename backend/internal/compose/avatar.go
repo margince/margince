@@ -98,9 +98,9 @@ func avatarKey(ws ids.WorkspaceID, user ids.UserID, attempt string) string {
 	return blobstore.WorkspaceKey(ws, avatarKind, user.String()+"/"+attempt+".png")
 }
 
-// store declares the key provisional, then puts the bytes. A failed put leaves
+// putPicture declares the key provisional, then puts the bytes. A failed put leaves
 // the intent for the sweep, which deletes whatever partial object it left.
-func (p *avatarPictures) store(ctx context.Context, key string, png []byte) error {
+func (p *avatarPictures) putPicture(ctx context.Context, key string, png []byte) error {
 	if err := p.ledger.Record(ctx, storedobjects.KindAvatar, key); err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (h avatarHandlers) UploadMyAvatar(w http.ResponseWriter, r *http.Request) {
 	}
 	user := ids.From[ids.UserKind](actor.UserID)
 	key := avatarKey(ids.From[ids.WorkspaceKind](workspace), user, ids.NewV7().String())
-	if err := p.store(r.Context(), key, png); err != nil {
+	if err := p.putPicture(r.Context(), key, png); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -172,9 +172,9 @@ func (h avatarHandlers) DeleteMyAvatar(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, identity.SeatUser(seat))
 }
 
-// GetUserAvatar implements GET /users/{id}/avatar. The URL names the revision,
-// so a matching If-None-Match answers before the object store is touched.
-func (h avatarHandlers) GetUserAvatar(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetUserAvatarParams) {
+// GetUserAvatar implements GET /users/{id}/avatar. A matching If-None-Match answers
+// before the object store is touched.
+func (h avatarHandlers) GetUserAvatar(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.GetUserAvatarParams) {
 	p := h.pictures
 	if p == nil || p.blob == nil {
 		httperr.NotImplemented(w, r, "getUserAvatar")
@@ -185,9 +185,11 @@ func (h avatarHandlers) GetUserAvatar(w http.ResponseWriter, r *http.Request, id
 		httperr.Write(w, r, err)
 		return
 	}
-	etag := `"` + identity.AvatarETag(key) + `"`
+	revision := identity.AvatarETag(key)
+	etag := `"` + revision + `"`
+	cacheControl := avatarCacheControl(params.V, revision)
 	if httperr.IfNoneMatchHit(r, etag) {
-		httperr.WriteNotModified(w, etag, assetrev.CacheControl)
+		httperr.WriteNotModified(w, etag, cacheControl)
 		return
 	}
 	body, object, err := p.blob.Get(r.Context(), key)
@@ -200,7 +202,16 @@ func (h avatarHandlers) GetUserAvatar(w http.ResponseWriter, r *http.Request, id
 		return
 	}
 	httperr.StreamOwnImage(w, r, httperr.OwnImage{
-		ContentType: imagenorm.ContentType, ETag: etag, CacheControl: assetrev.CacheControl,
+		ContentType: imagenorm.ContentType, ETag: etag, CacheControl: cacheControl,
 		Size: object.Size, Body: body,
 	}, "seat picture "+id.String())
+}
+
+// avatarCacheControl is immutable only for the URL that names these bytes. A stale
+// token cached for a day would show the replaced picture at that URL long after.
+func avatarCacheControl(asked *string, revision string) string {
+	if asked != nil && *asked == revision {
+		return assetrev.CacheControl
+	}
+	return "private, no-cache"
 }

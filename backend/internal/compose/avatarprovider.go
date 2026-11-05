@@ -34,7 +34,7 @@ func installAvatarPictures(s *Server, pool *pgxpool.Pool, log *slog.Logger) {
 	s.avatarHandlers = avatarHandlers{pictures: pictures}
 	if s.blob != nil {
 		s.authHandlers = s.WithProviderPictureFill(pictures.FillFromPictureURL)
-		s.connectorHandlers.picture = newConnectPicture(pictures.users, pictures.FillFromPictureURL)
+		s.picture = newConnectPicture(pictures.users, pictures.FillFromPictureURL)
 	}
 }
 
@@ -68,7 +68,7 @@ func (p *avatarPictures) FillFromPictureURL(ctx context.Context, user ids.UserID
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		return err
 	}
-	if err := p.store(ctx, key, png); err != nil {
+	if err := p.putPicture(ctx, key, png); err != nil {
 		return err
 	}
 	written, superseded, err := p.users.FillAvatarFromProvider(ctx, user, key)
@@ -82,19 +82,15 @@ func (p *avatarPictures) FillFromPictureURL(ctx context.Context, user ids.UserID
 	return nil
 }
 
-// fillContext binds what a write needs and a sign-in callback lacks: the
-// workspace, the system principal the fill is admitted as, and a correlation id.
+// fillContext binds what a write needs and a sign-in callback lacks. That is the workspace,
+// and the system principal the fill is admitted as.
 func (p *avatarPictures) fillContext(ctx context.Context) (context.Context, ids.WorkspaceID, error) {
 	ws, err := p.db.Workspace(ctx)
 	if err != nil {
 		return ctx, ids.WorkspaceID{}, err
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:provider-picture"})
-	if _, traced := principal.CorrelationID(ctx); !traced {
-		ctx = principal.WithCorrelationID(ctx, ids.NewV7())
-	}
-	return ctx, ws, nil
+	return principal.SystemActing(ctx, "system:provider-picture"), ws, nil
 }
 
 // googlePictureURL refuses anything but an https URL on a Google picture host.
