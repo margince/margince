@@ -171,14 +171,14 @@ export function TaskMeta({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  // The due day is the server's bucket, on the company's clock.
+  const recordZone = useCompanyZone();
   const readerZone = useViewerZone();
-  // The due day is the server's bucket, counted on the company's clock.
-  const companyZone = useCompanyZone();
   const when = cardWhen(
     item,
     { t, plural, locale },
     readerZone,
-    companyZone,
+    recordZone,
     new Date(),
   );
   // The open card's title already carries the late badge.

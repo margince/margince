@@ -16,7 +16,7 @@ Margince Settings puts its pages in these groups:
 - **You**: Account, Meetings, Writing voice, AI access, Notifications, Connections, Capture activity.
 - **Company**: Company profile, Sign-in and apps.
 - **People**: Members, Teams, Roles and permissions, Seats and license.
-- **Sales**: Pipelines, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
+- **Sales**: Pipelines, Stage automation, Lead handling, Acquisition sources, Outcome reviews, Responsibility roles, Fields, Tags, Products and offers.
 - **Data**: Capture rules, Integrations, Website forms, Knowledge, Data import.
 - **AI**: AI usage, AI models, MCP, AI call log, Automations.
 - **Governance**: Privacy and retention, Audit log, System health, [Configuration](configuration.md), Extensions, Reset data.
@@ -203,6 +203,7 @@ The same card holds **Held threads reviewed per run**. A mailbox set to *Held un
 The Sales group in Settings has one page per subject. There are the fields a record carries, the stages it moves through, and the lists of choices it picks from. And there are the priced things that go on an offer.
 
 - **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
+- **Stage automation**: the record of how each stage move has gone, before Margince moves deals by itself. See [The pipeline](the-pipeline.md#stage-automation-the-evidence-before-trusting-a-move).
 - **Lead handling**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
 - **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
 - **Partners**: the partner stages and what each one means. See [Partners and commission](partners.md#how-do-i-change-the-partner-stages).

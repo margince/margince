@@ -4,9 +4,8 @@
 package ai
 
 // The voice-profile transport slice (B-E07.4/.5a): compose embeds
-// Handlers so the generated stubs are shadowed. Mutations are
-// contract-annotated human-only; the store re-gates on the
-// `voice_profile` RBAC object and the row-scope clause.
+// Handlers so the generated stubs are shadowed. The store gates each
+// mutation on the `voice_profile` RBAC object and the row-scope clause.
 
 import (
 	"context"
@@ -259,14 +258,14 @@ func (h Handlers) PreviewVoiceCorpusSource(w http.ResponseWriter, r *http.Reques
 	}
 	speakers := make([]struct {
 		Label string `json:"label"`
-		Turns int    `json:"turns" minimum:"0"`
-		Words int    `json:"words" minimum:"0"`
+		Turns int    `json:"turns"`
+		Words int    `json:"words"`
 	}, 0, len(preview.Speakers))
 	for _, speaker := range preview.Speakers {
 		speakers = append(speakers, struct {
 			Label string `json:"label"`
-			Turns int    `json:"turns" minimum:"0"`
-			Words int    `json:"words" minimum:"0"`
+			Turns int    `json:"turns"`
+			Words int    `json:"words"`
 		}{Label: speaker.Label, Turns: speaker.Turns, Words: speaker.Words})
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VoiceCorpusPreviewResult{

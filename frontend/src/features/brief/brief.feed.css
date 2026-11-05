@@ -402,3 +402,10 @@
 .brief-triage-lead .worklist-row-title .btn-link {
   color: var(--textPrimary);
 }
+
+/* A phone gives the lead card the same inset as every other card. */
+@media (max-width: 700px) {
+  .brief-triage-lead {
+    padding: var(--padCard);
+  }
+}

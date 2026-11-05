@@ -116,7 +116,6 @@ var emailRenderers = map[string]bool{
 // These are the ones that never mount anything: builders, mappers and the
 // surfaces whose only act is to suppress their own title in favour of the row.
 var emailPassthroughs = gatekit.Waive(map[string]string{
-	"features/booking/booking-context.ts":          "reads the inbound counterparty id to choose a booking email reason; it renders no message content",
 	"design-system/activitytimeline.tsx":           "maps an Activity onto a TimelineEntry, email_summary included, for timeline.tsx to draw; it builds the entry and renders nothing",
 	"design-system/timelineentry.tsx":              "declares the TimelineEntry shape, its emailSummary field included, and small row parts that read no message; timeline.tsx and timelinethread.tsx draw the message",
 	"lib/openemail.ts":                             "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",

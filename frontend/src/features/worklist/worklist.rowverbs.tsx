@@ -11,9 +11,15 @@ import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { faceClass } from "../../design-system/button";
 import { ErrorLine } from "../../design-system/errorline";
 import { useToast } from "../../design-system/toast";
 import { useTooltip } from "../../design-system/tooltip";
+import {
+  atRegionVolume,
+  QuietVerbs,
+  useQuietVerbs,
+} from "../../design-system/verbvolume";
 import { useT } from "../../i18n";
 import { useCurrentMove } from "../../lib/currentmove";
 import { opensElsewhere } from "../../lib/linkclick";
@@ -31,7 +37,6 @@ import {
   useRowPutDown,
 } from "./worklist.dispositions";
 import { ReassignForm } from "./worklist.manager";
-import { isPinned } from "./worklist.pinmark";
 import { usePinRow, type WorklistItem } from "./worklist.queries";
 import { replyIsTheMove } from "./worklist.reply";
 import { TakeVerb } from "./worklist.take";
@@ -157,12 +162,15 @@ export function RowActs({
           <HandBackLines write={write} />
         </OverflowMenu>
       )}
+      {/* An open form is the panel in hand, so its confirm keeps the fill. */}
       {handingOff && (
-        <ReassignForm
-          item={item}
-          owner={owner}
-          onClose={() => setHandingOff(false)}
-        />
+        <QuietVerbs quiet={false}>
+          <ReassignForm
+            item={item}
+            owner={owner}
+            onClose={() => setHandingOff(false)}
+          />
+        </QuietVerbs>
       )}
     </div>
   );
@@ -253,6 +261,7 @@ function PreparedMove({
   onOpenEmail,
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
+  const quiet = useQuietVerbs();
   const check = useCurrentMove<{ activityId: string } | { href: string }>(
     (target) => {
       if ("activityId" in target) {
@@ -295,7 +304,7 @@ function PreparedMove({
   return (
     <>
       <AppLink
-        className={modelWrites ? PREPARED_VERB : NAVIGATING_VERB}
+        className={modelWrites ? preparedVerb(quiet) : NAVIGATING_VERB}
         href={move}
         aria-busy={check.isPending}
         aria-disabled={check.isPending}
@@ -345,9 +354,12 @@ function verbDestination(
 // The alternative is a second spelling of the ghost button in worklist.css.
 // `features/settings/client.tsx` reaches the same conclusion the same way.
 const NAVIGATING_VERB = "btn btn-ghost";
-// The move the product worked out, as an anchor in the agent's own chrome:
-// the same `ai` face `Button` draws, for the reason given where it is drawn.
-const PREPARED_VERB = "btn btn-ai";
+// The move the product worked out, as an anchor in the agent's own chrome. It
+// takes the face `Button` draws for `ai` at the region's volume: filled in the
+// card in hand, outlined in a list.
+function preparedVerb(quiet: boolean): string {
+  return `btn ${faceClass(atRegionVolume("ai", quiet))}`;
+}
 
 // Where each verb lives. A total map over the ones this page can route, so a
 // verb the contract adds either gets a destination here or is not drawn —
@@ -435,15 +447,15 @@ function PinLine({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const toast = useToast();
   const pin = usePinRow();
-  const pinned = isPinned(item);
+  const pinned = (item.because ?? []).some((why) => why.kind === "pinned");
   // What the word cannot say: whose order it changes and for how long. Per
   // state, so Unpin never describes itself as keeping the row on top.
   const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(
     t(pinned ? "worklist.verb.unpinHint" : "worklist.verb.pinHint"),
   );
   return (
-    // A verb rather than a switch, so the menu closes on it. The row shows
-    // the pin beside its name (`PinnedMark`).
+    // A verb rather than a switch, so the menu closes on it. The row says
+    // "pinned by you" in its own captions.
     <Button
       variant="ghost"
       ref={ref}

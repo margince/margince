@@ -74,18 +74,3 @@ export const OutlookCalendarDark: Story = {
   ...OutlookCalendar,
   globals: { theme: "dark" },
 };
-
-export const ReadShare: Story = {
-  render: bookingFrame(
-    () => <BookingInviteScreen contactId={bookingContact.id} />,
-    {
-      [`GET /contacts/${bookingContact.id}`]: () =>
-        jsonResponse({ ...bookingContact, attachable: false }),
-    },
-  ),
-};
-
-export const ReadShareDark: Story = {
-  ...ReadShare,
-  globals: { theme: "dark" },
-};

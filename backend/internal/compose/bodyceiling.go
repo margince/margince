@@ -77,7 +77,8 @@ func jsonCeilings() map[string]int64 {
 	return map[string]int64{"/mcp": agents.MaxMCPRequestBytes}
 }
 
-// bodyCeilingFor is the chassis's BodyCeiling for this composition.
+// bodyCeilingFor is the chassis's BodyCeiling for this composition, and the bound
+// a tool's in-process call rides (viewDoor.bodyCeiling).
 //
 // THREE conditions, all required, because each closes a different door: the
 // method, so a GET cannot carry a wide body; the route, so only a declared

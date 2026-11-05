@@ -16,11 +16,12 @@ const review: components["schemas"]["CommunicationReview"] = {
   reason_code: "no_marketing_consent",
   refusals: [],
   warning: {
-    version: "override-v2",
+    version: "override-v1",
     text:
-      "The send check still blocks this message. This sends only this message. Your name, your " +
-      "explanation and the message are kept in a record that cannot be edited. It does not grant " +
-      "consent or permission for future messages.",
+      "The engine refused this message, and that refusal stands: sending it now records an " +
+      "exception, never consent. Your name, your reason and the exact message are written to a " +
+      "record that cannot be edited afterwards. This covers this message alone — the next one to " +
+      "the same recipient is judged from scratch.",
   },
 };
 

@@ -131,7 +131,7 @@ func (s *Service) leadingDealSeat(ctx context.Context, tx pgx.Tx, contactID ids.
 		JOIN deal d ON d.id = r.deal_id AND d.status = 'open' AND d.archived_at IS NULL
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $%[1]d
-		  AND r.archived_at IS NULL AND r.ended_at IS NULL AND (%[2]s) AND (%[3]s)
+		  AND r.archived_at IS NULL AND (%[2]s) AND (%[3]s)
 		ORDER BY d.expected_close_date NULLS LAST, d.id
 		LIMIT 1`, contactPos, edgeBound, dealScope, amountSQL), args...).
 		Scan(&seat.dealID, &seat.role, &seat.deal.Title, &stage, &amount, &currency, &closeDate)
@@ -177,7 +177,7 @@ func (s *Service) committeeFor(ctx context.Context, tx pgx.Tx, contactID ids.Con
 		FROM relationship r
 		JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $%d
-		  AND r.contact_id <> $%d AND r.archived_at IS NULL AND r.ended_at IS NULL AND (%s) AND (%s)
+		  AND r.contact_id <> $%d AND r.archived_at IS NULL AND (%s) AND (%s)
 		ORDER BY p.full_name, p.id
 		LIMIT %d`, dealPos, contactPos, edgeBound, contactScope, committeeCap), args...)
 	if err != nil {

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // daysInWeek is how many local days the review charts, Monday first.
@@ -50,7 +51,7 @@ func countWeekDays(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		 WHERE a.archived_at IS NULL
 		   AND `+occurredday.WithinSQL("a", startAt, endAt)+`
 		   AND (`+orUnbounded(scope)+`)
-		   AND ((a.kind = 'email' AND a.direction = 'outbound' AND `+authored+`)
+		   AND ((a.kind = 'email' AND `+relstrength.WeWroteSQL("a")+` AND `+authored+`)
 		     OR (a.kind = 'call' AND `+authored+`)
 		     OR (a.kind = 'meeting' AND (a.meeting_status IS NULL OR a.meeting_status = 'held') AND `+credited+`))
 		 GROUP BY 1`, args...)

@@ -198,6 +198,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         refusedReasonId={readOnly ? readOnlyReasonId : undefined}
         onMove={setMoveTo}
         onOpenDocuments={() => setDrawer("documents")}
+        onOpenHistory={() => setDrawer("history")}
       />
       <ProjectCards
         view={view}
@@ -305,6 +306,7 @@ function useNextTaskVerbs(
   if (!next || !task) {
     return {};
   }
+  const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
@@ -315,17 +317,14 @@ function useNextTaskVerbs(
         update={update}
       />
     ),
-    snooze: next.dueAt
+    snooze: nextDue
       ? {
-          onSnooze: () => {
-            const nextDue = snoozedDueAt(next.dueAt, task.due_has_time, zone);
-            if (nextDue)
-              update.mutate({
-                id: next.activityId,
-                version: task.version,
-                body: nextDue,
-              });
-          },
+          onSnooze: () =>
+            update.mutate({
+              id: next.activityId,
+              version: task.version,
+              body: nextDue,
+            }),
           pending: update.isPending && update.variables?.id === next.activityId,
         }
       : undefined,

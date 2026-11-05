@@ -120,10 +120,6 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
-    file: "features/booking/meeting-availability.refusal.test.tsx",
-    why: "Feeds the working-hours card the zone a host stores with their hours: the API sends that zone as data, so the fixture carries a real stored value.",
-  },
-  {
     file: "components/bulktask.test.tsx",
     why: "Proves the bulk writer mints the day's end on the RECORD's clock: only a named record zone that differs from the runner's and the fallback's tells that apart from the viewer's zone.",
   },
@@ -214,14 +210,6 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/brief/brief.taskcard.words.test.ts",
     why: "A task card counts the days a task is late in the zone it is given; the fixture pins UTC so the count does not move with the test machine.",
-  },
-  {
-    file: "features/companies/companynextbar.late.test.tsx",
-    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the badge and the sentence must both say two.",
-  },
-  {
-    file: "features/contacts/contacttoday.late.test.tsx",
-    why: "A promise 35 hours late is one elapsed day and two midnights only in a named zone; the contact's badge and sentence must both say two.",
   },
   {
     file: "features/deals/deals.columns.test.tsx",

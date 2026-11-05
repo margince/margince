@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -35,6 +36,9 @@ type viewQuery = agents.ViewQuery
 // registry is built first, so the seam reaches the router through this.
 type viewDoor struct {
 	api http.Handler
+	// ceiling is the body bound the chassis gives a route. The chassis does not
+	// stand in front of an in-process call, so serveInProcess applies it.
+	ceiling httpserver.BodyCeiling
 }
 
 // admittedByTheToolKey marks a request a tool runs in process, holding the one
@@ -150,8 +154,16 @@ type inProcessCall struct {
 	Body            json.RawMessage
 	Version         string
 	IdempotencyKey  string
+	// Upload is a multipart body, sent in place of Body.
+	Upload *uploadForm
 	// FileLimit lets a file answer past maxViewAnswerBytes, up to this many bytes.
 	FileLimit int
+}
+
+// uploadForm is a multipart body and the content type that names its boundary.
+type uploadForm struct {
+	contentType string
+	body        []byte
 }
 
 // serveInProcess runs one call through the contract router as the caller,
@@ -166,12 +178,16 @@ func (door *viewDoor) serveInProcess(ctx context.Context, call inProcessCall) *c
 	}
 	inner := context.WithValue(context.WithValue(ctx, admittedByTheToolKey{}, call.Method+" "+call.Pattern), chi.RouteCtxKey, (*chi.Context)(nil))
 	var body io.Reader
-	if call.Body != nil {
-		body = bytes.NewReader(call.Body)
+	contentType := ""
+	switch {
+	case call.Upload != nil:
+		body, contentType = bytes.NewReader(call.Upload.body), call.Upload.contentType
+	case call.Body != nil:
+		body, contentType = bytes.NewReader(call.Body), mcpClaimContentType
 	}
 	req := httptest.NewRequestWithContext(inner, call.Method, target, body)
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 	if call.Version != "" {
 		req.Header.Set("If-Match", call.Version)
@@ -180,8 +196,20 @@ func (door *viewDoor) serveInProcess(ctx context.Context, call inProcessCall) *c
 		req.Header.Set("Idempotency-Key", call.IdempotencyKey)
 	}
 	rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: call.FileLimit}
+	req.Body = http.MaxBytesReader(rec, req.Body, door.bodyCeiling(req, call.Pattern))
 	door.api.ServeHTTP(rec, req)
 	return rec
+}
+
+// bodyCeiling asks the chassis's question of the route the tool declared. The
+// ceilings name a route by its pattern, which a resolved path no longer spells.
+func (door *viewDoor) bodyCeiling(req *http.Request, pattern string) int64 {
+	if door.ceiling == nil {
+		return httperr.MaxBodyBytes
+	}
+	declared := req.Clone(req.Context())
+	declared.URL.Path = pattern
+	return door.ceiling(declared)
 }
 
 // maxViewAnswerBytes bounds what one view may hold in memory. An answer past
@@ -259,7 +287,7 @@ func viewAnswer(res *http.Response) (json.RawMessage, error) {
 		}
 		return nil, httperr.Validation("view", problem.Code, problem.Detail)
 	}
-	if strings.HasPrefix(res.Header.Get("Content-Type"), "application/json") && len(body) > 0 {
+	if strings.Contains(res.Header.Get("Content-Type"), "json") && len(body) > 0 {
 		if body[0] == '[' {
 			return json.Marshal(map[string]json.RawMessage{"items": body})
 		}

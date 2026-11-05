@@ -7,7 +7,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -48,24 +47,4 @@ func markupFor(del Delivery, inline []connector.InlineImage) string {
 		return del.HTMLBody
 	}
 	return strings.ReplaceAll(del.HTMLBody, connector.SignatureLogoTag, "")
-}
-
-// letterheadFor is the company logo a controller delivery's letterhead shows,
-// under the content id that letterhead names.
-func (d *Dispatcher) letterheadFor(ctx context.Context, del Delivery) ([]connector.InlineImage, error) {
-	inline, err := d.inlineFor(ctx, del)
-	if err != nil || len(inline) == 0 {
-		return nil, err
-	}
-	inline[0].ContentID = connector.LetterheadLogoContentID
-	return inline, nil
-}
-
-// letterheadMarkupFor is markupFor for a controller delivery: a staged logo the
-// workspace has since removed leaves the company's name at the head.
-func letterheadMarkupFor(del Delivery, markup string, inline []connector.InlineImage) string {
-	if del.InlineLogoKey == "" || len(inline) > 0 {
-		return markup
-	}
-	return emailview.WithoutLetterheadLogo(markup, connector.LetterheadLogoContentID)
 }

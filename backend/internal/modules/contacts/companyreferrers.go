@@ -29,29 +29,14 @@ func (e *StillReferencedError) Is(target error) bool { return target == apperror
 // archive's own transaction. An archived deal does not count, and archiving a
 // contact retires its employment edges, so a live edge is a live contact.
 func refuseIfReferenced(ctx context.Context, tx pgx.Tx, id ids.CompanyID) error {
-	return refuseIfNamedBy(ctx, tx, id, false)
-}
-
-// refuseIfReferencedByOthers is refuseIfReferenced over the records someone
-// other than the company's owner owns. An owner archiving their own company
-// without the delete grant would otherwise hide it from those owners' deals
-// and retire their contacts' employment with it.
-func refuseIfReferencedByOthers(ctx context.Context, tx pgx.Tx, id ids.CompanyID) error {
-	return refuseIfNamedBy(ctx, tx, id, true)
-}
-
-func refuseIfNamedBy(ctx context.Context, tx pgx.Tx, id ids.CompanyID, othersOnly bool) error {
 	var e StillReferencedError
 	err := tx.QueryRow(ctx, `
 		SELECT
 		  (SELECT count(*) FROM deal d
-		    WHERE d.archived_at IS NULL AND $1 IN (d.company_id, d.partner_company_id)
-		      AND (NOT $2 OR d.owner_id IS DISTINCT FROM (SELECT c.owner_id FROM company c WHERE c.id = $1))),
+		    WHERE d.archived_at IS NULL AND $1 IN (d.company_id, d.partner_company_id)),
 		  (SELECT count(DISTINCT r.contact_id) FROM relationship r
-		     JOIN contact ct ON ct.id = r.contact_id
-		    WHERE r.kind = 'employment' AND r.company_id = $1 AND r.archived_at IS NULL
-		      AND (NOT $2 OR ct.owner_id IS DISTINCT FROM (SELECT c.owner_id FROM company c WHERE c.id = $1)))`,
-		id.UUID, othersOnly).Scan(&e.Deals, &e.Contacts)
+		    WHERE r.kind = 'employment' AND r.company_id = $1 AND r.archived_at IS NULL)`,
+		id.UUID).Scan(&e.Deals, &e.Contacts)
 	if err != nil {
 		return fmt.Errorf("contacts: counting the live records that name company %s: %w", id, err)
 	}

@@ -45,28 +45,12 @@ const dealTable = "deal"
 func applyDealPatchGuarded(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	p *storekit.Patch, ifVersion *int64,
 ) error {
-	if err := refuseTypedMoneyOnLines(ctx, tx, id, p); err != nil {
-		return err
-	}
 	return p.ApplyGuarded(ctx, tx, dealTable, id.UUID, ifVersion)
 }
 
 // applyDealPatchLocked is the internal-flow write: the caller took the row lock
 // before the reads that decided this patch, so the decision cannot have gone
 // stale under it.
-//
-// A deal priced from its lines refuses every money column here, whichever
-// flow built the patch. applyDealLineValueLocked below writes them for the lines.
 func applyDealPatchLocked(ctx context.Context, tx pgx.Tx, p *storekit.Patch, lock storekit.RowLock) error {
-	if err := refuseTypedMoneyOnLines(ctx, tx, ids.From[ids.DealKind](lock.ID()), p); err != nil {
-		return err
-	}
-	return p.ApplyLocked(ctx, tx, lock)
-}
-
-// applyDealLineValueLocked writes the value a deal's lines add up to. It is
-// the only seam past the money refusal above, and only settleDealLines and
-// leaveLinesMode call it.
-func applyDealLineValueLocked(ctx context.Context, tx pgx.Tx, p *storekit.Patch, lock storekit.RowLock) error {
 	return p.ApplyLocked(ctx, tx, lock)
 }

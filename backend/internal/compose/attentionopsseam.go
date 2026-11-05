@@ -13,11 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/compose/attention"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -119,34 +115,6 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 	return out, nil
 }
 
-// attentionBookingHealth binds the booking-health lane to the activities
-// store's own per-host read.
-type attentionBookingHealth struct{ store *activities.Store }
-
-// newAttentionBookingHealth reads the blocker from the stored calendar grant,
-// through the bare registry every health lane reads. The credential check the
-// settings screen adds needs the capture connectors and the vault, which this
-// constructor does not have.
-func newAttentionBookingHealth(pool *pgxpool.Pool, db *database.DB) attentionBookingHealth {
-	calendar := bookingGrantCalendar{newSchedulingCalendar(pool, captureHealthRegistry(db))}
-	return attentionBookingHealth{store: activities.NewStore(db).WithSchedulingCalendar(calendar)}
-}
-
-// bookingGrantCalendar answers Blocker from the stored grant alone.
-type bookingGrantCalendar struct{ schedulingCalendar }
-
-func (c bookingGrantCalendar) Blocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
-	return c.grantBlocker(ctx, host, provider)
-}
-
-func (b attentionBookingHealth) BookingConcerns(ctx context.Context) ([]attention.BookingConcern, error) {
-	concern, paused, err := b.store.BookingPageConcern(ctx)
-	if err != nil || !paused {
-		return nil, err
-	}
-	return []attention.BookingConcern{{PageID: concern.PageID, Blocker: string(concern.Blocker)}}, nil
-}
-
 // attentionAIWork binds the AI-work-health lane to the same projection the
 // activity rail reads; the contact-only refusal lives in the store's read.
 type attentionAIWork struct{ store *aiactivity.Store }
@@ -237,7 +205,6 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 			AutomationID: run.AutomationID,
 			Name:         run.Name,
 			Outcome:      run.Outcome,
-			ReasonCode:   run.ReasonCode,
 			OccurredAt:   run.CreatedAt,
 		}
 		if run.Reason != nil {

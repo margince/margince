@@ -115,10 +115,7 @@ const SAID_BY_THE_WHEN_LINE = new Set<string>([
   "meeting_soon",
 ]);
 
-/**
- * The reasons a row says in its phrase line: all but those said elsewhere.
- * The Worklist row shows `pinned` as a pin beside its name.
- */
+/** The reasons a row says in its phrase line: all but those said elsewhere. */
 export function phrasedReasons(
   item: WorklistItem,
   whenDrawn: boolean,

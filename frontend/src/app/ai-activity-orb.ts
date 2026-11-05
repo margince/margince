@@ -64,7 +64,6 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   // the workspace captured hours ago and reaches a judgement about it. Nothing
   // arrives when it runs.
   request_settlement: "working",
-  deal_verdict: "working",
   // The retrieval is settled before this task is reached — the passages have
   // already cleared the grounding floor — so what the model does here is write
   // the answer from evidence the workspace already holds.

@@ -26,6 +26,7 @@ import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
+import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
@@ -60,7 +61,13 @@ import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
 
-const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
+const DEAL_TABS = [
+  "overview",
+  "history",
+  "room",
+  "legal",
+  "files",
+] as const satisfies readonly RecordTabId[];
 
 type DealTab = (typeof DEAL_TABS)[number];
 
@@ -226,15 +233,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
   });
   const createOffer = useMutation({
-    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
+    mutationFn: async (currency: string) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
           params: { path: { id } },
-          body: {
-            currency: input.currency,
-            source: "manual",
-            from_deal_revision: input.fromRevision,
-          },
+          body: { currency, source: "manual" },
         }),
       );
     },
@@ -359,6 +362,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       stages,
                       asOf,
                       activities: threadQuery.activities,
+                      history: threadQuery,
                       offers: offersQuery.data?.data,
                       coverage: coverageRead,
                       card: statusQuery.data,
@@ -383,9 +387,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     }
                     creatingOffer={createOffer.isPending}
                     locale={locale}
-                    onCreateOffer={(currency, fromRevision) =>
-                      createOffer.mutate({ currency, fromRevision })
-                    }
+                    onCreateOffer={(currency) => createOffer.mutate(currency)}
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}
                     dealApprovals={dealApprovals}

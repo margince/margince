@@ -143,6 +143,15 @@ func EnsureNewRecordOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	return ensureAssigneeWith(ctx, tx, dest, newRecordOwnerSQL)
 }
 
+// EnsureRoutedLeadOwner is EnsureNewRecordOwner for the owner a website form
+// hands every new lead to. The installation writes those leads, never the one
+// who set up the form, so their row scope is not asked; the seat half is.
+func EnsureRoutedLeadOwner(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
+	return ensureAssigneeWith(ctx, tx, dest, func(p principal.Principal, alias string, arg func(any) int) string {
+		return newRecordOwnerSQL(consentedAssigner(p), alias, arg)
+	})
+}
+
 func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	eligible func(principal.Principal, string, func(any) int) string,
 ) error {

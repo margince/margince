@@ -105,12 +105,6 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 	if err != nil {
 		return false, err
 	}
-	return c.closeAs(ownerCtx, decision, now)
-}
-
-// closeAs closes as an owner's agent bound before the write. The owner may
-// leave or lose the deal grant in between, so the close binds them again.
-func (c silentDealCloser) closeAs(ownerCtx context.Context, decision closeDecision, now time.Time) (bool, error) {
 	return c.deals.CloseAsLost(ownerCtx, deals.CloseLostInput{
 		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
@@ -124,7 +118,6 @@ func (c silentDealCloser) closeAs(ownerCtx context.Context, decision closeDecisi
 		Record: func(ctx context.Context, tx pgx.Tx, _ ids.UUID) error {
 			return c.recordOnTimeline(ctx, tx, decision)
 		},
-		AsOwner: ownersAgentTx(c.users, decision.owner, marginceActorID),
 	})
 }
 

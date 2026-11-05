@@ -3,7 +3,6 @@
 
 import { useId } from "react";
 import { EntityRef } from "../../components/entityref";
-import { ChangeSummaryRow } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
@@ -18,14 +17,10 @@ import {
 } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { useHandledForYou } from "../../lib/handled";
-import {
-  CHANGE_SUMMARY_FLOOR,
-  usePendingMarginceChanges,
-} from "../../lib/marginchanges";
-import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { isReviewableReceipt } from "../../lib/receiptreview";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
+import { receiptBasis, receiptSummary } from "../worklist/worklist.receiptcopy";
 
 // The changes made for the reader that they can still accept or take back, in
 // Home's rail. Drawn only when there is one: a heading over "none" would be a
@@ -36,20 +31,10 @@ export function BriefChanges() {
   const readerZone = useViewerZone();
   const query = useHandledForYou();
   const titleId = useId();
-  const pending = usePendingMarginceChanges().data;
-  // Enough changed deals become one row; their receipts leave the list so no
-  // change is shown twice.
-  const grouped =
-    pending && pending.deals >= CHANGE_SUMMARY_FLOOR ? pending : undefined;
-  const inSummary = new Set(
-    grouped?.bundles.flatMap((bundle) => bundle.audit_log_ids),
-  );
-  const receipts = query.data?.receipts
-    ?.filter(isReviewableReceipt)
-    .filter((receipt) => !inSummary.has(receipt.undo?.audit_log_id ?? ""));
+  const receipts = query.data?.receipts?.filter(isReviewableReceipt);
   const asOf = query.data?.as_of;
   const state = listReadState(query, receipts);
-  if (state === "loading" || (state === "empty" && !grouped)) {
+  if (state === "loading" || state === "empty") {
     return null;
   }
   return (
@@ -61,53 +46,50 @@ export function BriefChanges() {
         {t("brief.changes.title")}
       </Eyebrow>
       <PanelBody>
-        {grouped && <ChangeSummaryRow summary={grouped} />}
-        {state !== "empty" && (
-          <SurfaceState
-            state={state}
-            emptyLabel=""
-            loadingLabel={t("worklist.handled.loading")}
-            detail={{ onRetry: () => void query.refetch() }}
-          >
-            <ul className="magic-lines" aria-label={t("brief.changes.title")}>
-              {receipts?.map((receipt) => (
-                // The receipt's own row, with no mark: the mark's colour is a
-                // claim about who acted, and the detail names that in words.
-                <li className="magic-line" key={receipt.id}>
-                  <p className="magic-line-text">
-                    {receiptSummary(receipt, t, locale, readerZone)}{" "}
-                    {receipt.subject?.type === "deal" && (
-                      <span className="magic-line-subject">
-                        <EntityRef kind="deal" id={receipt.subject.id} />
-                      </span>
-                    )}
-                    {receiptBasis(receipt, t, locale) && (
-                      <span className="t-caption magic-line-basis">
-                        {receiptBasis(receipt, t, locale)}
-                      </span>
-                    )}
-                  </p>
-                  <ReceiptDetail receipt={receipt} />
-                  <div className="magic-line-controls">
-                    <ReceiptReview receipt={receipt} />
-                  </div>
-                  <time
-                    className="t-caption magic-line-when"
-                    dateTime={receipt.occurred_at}
-                    title={formatDateTime(
-                      receipt.occurred_at,
-                      locale,
-                      readerZone,
-                    )}
-                  >
-                    {changeWhen(receipt.occurred_at, asOf, locale, readerZone)}
-                  </time>
-                </li>
-              ))}
-            </ul>
-            <ReceiptsMore handled={query} />
-          </SurfaceState>
-        )}
+        <SurfaceState
+          state={state}
+          emptyLabel=""
+          loadingLabel={t("worklist.handled.loading")}
+          detail={{ onRetry: () => void query.refetch() }}
+        >
+          <ul className="magic-lines" aria-label={t("brief.changes.title")}>
+            {receipts?.map((receipt) => (
+              // The receipt's own row, with no mark: the mark's colour is a
+              // claim about who acted, and the detail names that in words.
+              <li className="magic-line" key={receipt.id}>
+                <p className="magic-line-text">
+                  {receiptSummary(receipt, t, locale, readerZone)}{" "}
+                  {receipt.subject?.type === "deal" && (
+                    <span className="magic-line-subject">
+                      <EntityRef kind="deal" id={receipt.subject.id} />
+                    </span>
+                  )}
+                  {receiptBasis(receipt, t, locale) && (
+                    <span className="t-caption magic-line-basis">
+                      {receiptBasis(receipt, t, locale)}
+                    </span>
+                  )}
+                </p>
+                <div className="magic-line-controls">
+                  <ReceiptReview receipt={receipt} />
+                </div>
+                <time
+                  className="t-caption magic-line-when"
+                  dateTime={receipt.occurred_at}
+                  title={formatDateTime(
+                    receipt.occurred_at,
+                    locale,
+                    readerZone,
+                  )}
+                >
+                  {changeWhen(receipt.occurred_at, asOf, locale, readerZone)}
+                </time>
+                <ReceiptDetail receipt={receipt} />
+              </li>
+            ))}
+          </ul>
+          <ReceiptsMore handled={query} />
+        </SurfaceState>
       </PanelBody>
     </section>
   );

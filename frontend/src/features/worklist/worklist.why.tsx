@@ -14,7 +14,6 @@ import { partyName, reasonText } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
-import { codedDetail } from "./worklist.reader";
 import { rowAnswer } from "./worklist.row.answer";
 
 import "./worklist.why.css";
@@ -33,7 +32,6 @@ export function WorklistWhy({
   const t = useT();
   const { locale } = useLocale();
   const reasons = whyReasons(item, t, locale, readerZone);
-  const detail = codedDetail(item, t);
   return (
     <Panel title={t("worklist.why.title")} tone="accent">
       <PanelBody>
@@ -49,7 +47,7 @@ export function WorklistWhy({
               ))}
             </ol>
           )}
-          {detail &&
+          {item.detail &&
             // Only a promise's detail is verbatim source evidence, quoted from a
             // message; every other detail is the product's explanation.
             (item.source === QUOTED_SOURCE ? (
@@ -57,10 +55,10 @@ export function WorklistWhy({
                 <figcaption className="t-caption">
                   {t("worklist.why.detail")}
                 </figcaption>
-                <blockquote>{detail}</blockquote>
+                <blockquote>{item.detail}</blockquote>
               </figure>
             ) : (
-              <p>{detail}</p>
+              <p>{item.detail}</p>
             ))}
           {item.consequence !== "none" && (
             <p className="worklist-why-if">

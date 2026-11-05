@@ -19,13 +19,13 @@ import { formatActivityWhen } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
-import { dueTimeOf, startOfDayInZone } from "../format/timezone";
+import { dueTimeOf } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
-import { EntityRef } from "./entityref";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { TaskAssignee } from "./taskassignee";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
@@ -57,18 +57,39 @@ export { useTaskDone, useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
 
-/** Keep the agreed wall time while moving at least as far as tomorrow. */
+/**
+ * The due fields one snooze away, or null for a task that has no date to
+ * move. A task with a time of day keeps that time on the next day, so one
+ * snooze does not drop the hour the rep agreed; a task due by a day stays a
+ * day.
+ *
+ * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
+ * adding twenty-four hours. A local day is not always that long: on Europe's
+ * spring-forward day, adding a day to the 28th at 23:59:59 lands at 00:59:59
+ * on the 30th, so a rep pressing "tomorrow" skips the 29th entirely. The
+ * accept path warns about exactly this arithmetic where it stamps a deadline;
+ * this writer was doing it.
+ *
+ * Read and re-minted through the calendar helpers, in the zone the deadline
+ * belongs to, so a snooze lands on the day it names for every colleague.
+ */
 export function snoozedDueAt(
   dueAt: string | null | undefined,
   hasTime: boolean | undefined,
   zone: string,
-  now = new Date(),
 ): { due_at: string; due_has_time: boolean } | null {
-  if (!dueAt) return null;
-  const dueDay = calendarDay(new Date(dueAt), zone);
-  const today = calendarDay(now, zone);
-  const base = dueDay > today ? dueDay : today;
-  const next = calendarDay(new Date(startOfDayInZone(base, zone, 1)), zone);
+  if (!dueAt) {
+    return null;
+  }
+  const today = calendarDay(new Date(dueAt), zone);
+  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = today
+    .split("-")
+    .map(Number);
+  // Through UTC parts, which is a pure calendar step: no zone reading happens
+  // here, so no DST transition can shorten or lengthen the day being counted.
+  const next = new Date(Date.UTC(year, month - 1, day + 1))
+    .toISOString()
+    .slice(0, "yyyy-mm-dd".length);
   return taskDueFields(next, dueTimeOf(dueAt, hasTime, zone), zone);
 }
 
@@ -134,6 +155,7 @@ export function TaskQuickActions({
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
+  const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
   const pending = update.isPending && update.variables?.id === activityId;
   const complete = useCompleteTask(update);
   return (
@@ -147,14 +169,16 @@ export function TaskQuickActions({
           {t("tasks.complete")}
         </Button>
       )}
-      {dueAt && (
+      {nextDue && (
         <Button
           disabled={pending}
-          onClick={() => {
-            const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
-            if (nextDue)
-              update.mutate({ id: activityId, version, body: nextDue });
-          }}
+          onClick={() =>
+            update.mutate({
+              id: activityId,
+              version,
+              body: nextDue,
+            })
+          }
         >
           {t("tasks.snooze")}
         </Button>
@@ -172,7 +196,15 @@ export function TaskQuickActions({
   );
 }
 
-// The picker also dates tasks that have no deadline to snooze.
+// Moving a task to a day the reader names.
+//
+// Beside the snooze, not instead of it. Snooze adds a day to the task's own due
+// date, so a task three days overdue only moves to two days overdue.
+//
+// It is offered on an UNDATED task too, where the snooze is not. A task with no
+// day has nothing to move but is exactly the one a rep wants to put a date on,
+// and the button above is hidden for it — snoozedDueAt returns null, because
+// one day after nothing is nothing.
 function TaskDueDatePick({
   activityId,
   version,
@@ -346,9 +378,7 @@ export function TaskDetailDialog({
                 {task.is_done && (
                   <Badge tone="success">{t("tasks.isDone")}</Badge>
                 )}
-                {task.assignee_id && (
-                  <EntityRef kind="user" id={task.assignee_id} />
-                )}
+                <TaskAssignee id={task.assignee_id} />
                 {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
                 {provenanceOf(task.captured_by).kind === "agent" && (

@@ -219,6 +219,7 @@ cloudflare
 coach
 code
 cold
+collaborate
 collapse
 colleague
 collection
@@ -811,7 +812,6 @@ owner
 owner's
 owners
 ownership
-owner’s
 package
 page
 paid
@@ -1046,7 +1046,6 @@ score
 scorecard
 scrape
 screen
-screenshot
 script
 seal
 search

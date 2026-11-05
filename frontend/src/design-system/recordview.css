@@ -174,9 +174,8 @@
   color: var(--textPrimary);
 }
 /* One short word under the glyph, on one line in every language; the full
-   verb is the control's name and its tip. A verb that shows its own label
-   (`.verb-label`, an extension's entry) is cut at its end the same way. */
-.record-split-verbs :is(.verb-word, .verb-label) {
+   verb is the control's name and its tip. */
+.record-split-verbs .verb-word {
   display: block;
   max-inline-size: 100%;
   overflow: hidden;
@@ -362,5 +361,15 @@
   }
   .record-split-details .recorddetails > .recorddetails-toggle {
     justify-self: start;
+  }
+}
+/* The first tab stands over the feed's first card, so the two insets move
+   together. */
+@media (max-width: 700px) {
+  .record-split-tabs {
+    padding-inline: var(--padPane);
+  }
+  .record-split-feed {
+    padding: var(--padPane);
   }
 }

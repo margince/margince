@@ -23,23 +23,20 @@ type ArchiveRule struct {
 	writable func(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 }
 
-// liveWrites is the row write gate an owned record's archive asks, over a
-// page: the rows the caller may write that are not archived already.
-func liveWrites(table string) func(context.Context, pgx.Tx, principal.Principal, []ids.UUID) (map[ids.UUID]bool, error) {
-	return func(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
-		writable, err := rowWriteSubset(ctx, tx, p, table, rowIDs)
-		if err != nil {
-			return nil, err
-		}
-		archived, err := archivedAmong(ctx, tx, table, writable)
-		if err != nil {
-			return nil, err
-		}
-		for id := range archived {
-			delete(writable, id)
-		}
-		return writable, nil
+// liveDealWrites is the row write gate the deal archive asks, over a page.
+func liveDealWrites(ctx context.Context, tx pgx.Tx, p principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
+	writable, err := rowWriteSubset(ctx, tx, p, tableDeal, rowIDs)
+	if err != nil {
+		return nil, err
 	}
+	archived, err := archivedAmong(ctx, tx, tableDeal, writable)
+	if err != nil {
+		return nil, err
+	}
+	for id := range archived {
+		delete(writable, id)
+	}
+	return writable, nil
 }
 
 func activityWrites(ctx context.Context, tx pgx.Tx, _ principal.Principal, rowIDs []ids.UUID) (map[ids.UUID]bool, error) {
@@ -53,47 +50,20 @@ var ActivityArchive = ArchiveRule{object: "activity", table: "activity", writabl
 		alias, arg(provenance.RecordSourceManual), ActivityAuthorSQL(alias, me, arg))
 }}
 
-// ownerArchive admits a record's owner, unless the owner took the record
+// DealArchive admits the deal's owner, unless the owner took the deal
 // themselves. A write share lets its holder name themselves owner, so without
 // that arm the share would carry the archive the decision keeps from it.
-// table is a compile-time literal, formatted in as a name.
-func ownerArchive(table string) ArchiveRule {
-	return ArchiveRule{object: table, table: table, writable: liveWrites(table), own: func(alias string, me int, _ func(any) int) string {
-		return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) AND NOT EXISTS (
+var DealArchive = ArchiveRule{object: tableDeal, table: tableDeal, writable: liveDealWrites, own: func(alias string, me int, _ func(any) int) string {
+	return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) AND NOT EXISTS (
 	   SELECT 1 FROM (SELECT made.action, made.actor_id, made.on_behalf_of FROM audit_log made
-	     WHERE made.entity_type = '%[4]s' AND made.entity_id = %[1]s.id
+	     WHERE made.entity_type = 'deal' AND made.entity_id = %[1]s.id
 	       AND made.before->'owner_id' IS DISTINCT FROM made.after->'owner_id' AND made.after ? 'owner_id'
 	     ORDER BY made.occurred_at DESC, made.id DESC LIMIT 1) handed
 	   WHERE handed.action <> 'create' AND (handed.on_behalf_of IN (%[2]s)
 	      OR (split_part(handed.actor_id, ':', 1) = '%[3]s'
 	          AND split_part(handed.actor_id, ':', 2) IN (SELECT taker.id::text FROM (%[2]s) taker)))))`,
-			alias, memberIdentitySQL(me), principal.PrincipalHuman, table)
-	}}
-}
-
-// DealArchive admits the deal's owner; ContactArchive and CompanyArchive the
-// contact's and the company's, by the same rule.
-var (
-	DealArchive    = ownerArchive(tableDeal)
-	ContactArchive = ownerArchive(tableContact)
-	CompanyArchive = ownerArchive(tableCompany)
-)
-
-// ArchiveRuleFor answers the archive rule for a record type, and whether that
-// type has one. A type without one is archived with the delete grant alone.
-func ArchiveRuleFor(table string) (ArchiveRule, bool) {
-	switch table {
-	case ActivityArchive.table:
-		return ActivityArchive, true
-	case tableDeal:
-		return DealArchive, true
-	case tableContact:
-		return ContactArchive, true
-	case tableCompany:
-		return CompanyArchive, true
-	}
-	return ArchiveRule{}, false
-}
+		alias, memberIdentitySQL(me), principal.PrincipalHuman)
+}}
 
 // RequireArchiveGrant is the up-front half of EnsureArchivable: it refuses a
 // caller who could archive no row of the table at all, before a transaction.

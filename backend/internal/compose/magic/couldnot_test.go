@@ -39,22 +39,3 @@ func TestATroubledRunNamesItsRule(t *testing.T) {
 		t.Errorf("label = %v, want the rule's own name", line.Entity.Label)
 	}
 }
-
-// The sentence carries the reason's code, so a reader in any language is told
-// why the rule stopped rather than shown a status word.
-func TestATroubledRunSaysWhyInACodeAReaderCanTranslate(t *testing.T) {
-	t.Parallel()
-
-	line := troubledLine(automation.TroubledAutomationRun{
-		ID:         ids.NewV7(),
-		Name:       "Route new lead to a task",
-		Outcome:    "failed",
-		ReasonCode: automation.RunReasonTargetMissing,
-	})
-	if line.Summary.Values == nil {
-		t.Fatal("the sentence has no values to say why")
-	}
-	if got := (*line.Summary.Values)["reason_code"]; got != automation.RunReasonTargetMissing {
-		t.Errorf("reason_code = %q, want %q", got, automation.RunReasonTargetMissing)
-	}
-}

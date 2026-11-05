@@ -95,21 +95,18 @@ func (s *Store) DecideLegalReview(
 	return out, err
 }
 
-// legalReviewOutcomeField is the request field a refused answer names.
-const legalReviewOutcomeField = "outcome"
-
 // refuseOwnSide keeps the deal's own side from answering: neither the
 // colleague who asked nor the deal's owner is a second pair of eyes.
 func refuseOwnSide(current reviewHead, decider ids.UUID) error {
 	if current.requestedBy != nil && *current.requestedBy == decider {
 		return &values.ParseError{
-			Field: legalReviewOutcomeField, Code: "own_request",
+			Field: progressionOutcomeKey, Code: "own_request",
 			Message: "a legal review is answered by someone other than the colleague who asked for it",
 		}
 	}
 	if current.dealOwner != nil && *current.dealOwner == decider {
 		return &values.ParseError{
-			Field: legalReviewOutcomeField, Code: "own_deal",
+			Field: progressionOutcomeKey, Code: "own_deal",
 			Message: "a legal review is answered by someone other than the deal's owner",
 		}
 	}

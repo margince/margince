@@ -466,25 +466,6 @@ export const WithPlate: Story = {
   },
 };
 
-// An instructional empty state (a title, a sentence and its verb) directly in
-// a body. It is a card of its own, so it keeps its padding: the one-line empty
-// state's flush rule does not reach it.
-export const WithInstructionalEmptyState: Story = {
-  args: {
-    title: "Surfe",
-    children: (
-      <PanelBody>
-        <EmptyState
-          title="No data purchased for this contact"
-          action={<Button>Look up contact · free</Button>}
-        >
-          A lookup asks Surfe for the details this connection buys.
-        </EmptyState>
-      </PanelBody>
-    ),
-  },
-};
-
 // Two groups under one head: each named by a PanelGroupHead one level in from
 // the pane's title, its verb on the same line, and an empty group as a plate
 // rather than a sentence. The verb keeps its place whether the group has rows
@@ -914,7 +895,7 @@ export const FlatHead: Story = {
   render: () => (
     <Panel
       flatHead
-      title="Also on your list"
+      title="Other open tasks"
       titleAction={<Button variant="link">All tasks</Button>}
     >
       <PanelBody>Rows sit inside the card's own padding.</PanelBody>
@@ -922,7 +903,7 @@ export const FlatHead: Story = {
   ),
   play: async ({ canvasElement }) => {
     const region = within(canvasElement).getByRole("region", {
-      name: "Also on your list",
+      name: "Other open tasks",
     });
     await expect(region.querySelector(".panel-head-flat")).not.toBeNull();
   },

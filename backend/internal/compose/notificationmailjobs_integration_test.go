@@ -28,12 +28,10 @@ import (
 	"time"
 
 	"github.com/riverqueue/river"
-	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -80,21 +78,14 @@ func (e *noticeMailEnv) pendingNotice(t *testing.T) ids.UUID {
 	return rows[0].id
 }
 
-// work hands the worker one job on its first rung, as River would.
+// work hands the worker one job, exactly as River would.
 func (e *noticeMailEnv) work(t *testing.T, notice ids.UUID) {
 	t.Helper()
-	if err := e.workRung(notice, 1); err != nil {
+	if err := e.worker.Work(context.Background(), &river.Job[SendNotificationEmailArgs]{
+		Args: SendNotificationEmailArgs{Workspace: e.e.WS, NoticeID: notice.String()},
+	}); err != nil {
 		t.Fatalf("the notification mail worker refused the job: %v", err)
 	}
-}
-
-// workRung hands the worker the job on one rung of its ladder.
-func (e *noticeMailEnv) workRung(notice ids.UUID, attempt int) error {
-	job := &river.Job[SendNotificationEmailArgs]{
-		JobRow: &rivertype.JobRow{Attempt: attempt, MaxAttempts: notificationMailJobAttempts},
-		Args:   SendNotificationEmailArgs{Workspace: e.e.WS, NoticeID: notice.String()},
-	}
-	return e.worker.Work(context.Background(), job)
 }
 
 // emailState is the claim and its cause as the row holds them.
@@ -250,19 +241,19 @@ func TestADeactivatedSeatIsNotMailedTheirNotice(t *testing.T) {
 	}
 }
 
-// A relay that may have taken the message spends the claim anyway, and says
-// why. SMTP reports no receipt, so a retry could not tell a refused message
-// from a delivered one. The cause is written onto the row, and the cancelled
-// job is what job health counts.
+// A relay that refuses the message spends the claim anyway, and says why.
+//
+// The trade the design accepts rather than a defect: SMTP reports no receipt,
+// so a retry could not tell a refused message from a delivered one and would
+// risk telling a colleague twice. What must not happen is the failure
+// vanishing — the cause is written onto the row, so a missing mail is
+// answerable, and the stamp is what stops the next delivery trying again.
 func TestARefusedNotificationMailSpendsTheClaimAndRecordsWhy(t *testing.T) {
 	e := setupNoticeMail(t)
 	e.relay.fail = errors.New("relay refused the recipient")
 	notice := e.pendingNotice(t)
 
-	var cancelled *river.JobCancelError
-	if err := e.workRung(notice, 1); !errors.As(err, &cancelled) {
-		t.Fatalf("a failed send answered %v, want the job cancelled so job health counts it", err)
-	}
+	e.work(t, notice)
 	e.work(t, notice)
 
 	if got := e.relay.count(); got != 1 {
@@ -429,52 +420,5 @@ func TestAWithdrawnApprovalIsNotMailedAsAPendingDecision(t *testing.T) {
 	e.work(t, notice)
 	if e.relay.count() != 0 {
 		t.Fatal("withdrawn decision was mailed as current")
-	}
-}
-
-// A relay that never took the message frees the claim, and the next rung
-// sends it once. A relay down for a few minutes then costs a delay, not the
-// mail.
-func TestAMailTheRelayNeverTookIsSentOnTheNextRung(t *testing.T) {
-	e := setupNoticeMail(t)
-	e.relay.fail = &mailer.NotTakenError{Err: errors.New("relay unreachable")}
-	notice := e.pendingNotice(t)
-
-	var cancelled *river.JobCancelError
-	err := e.workRung(notice, 1)
-	if err == nil || errors.As(err, &cancelled) {
-		t.Fatalf("an untaken send answered %v, want a failure River retries", err)
-	}
-	if stamp, cause := e.emailState(t, notice); stamp != nil || cause != nil {
-		t.Fatalf("an untaken send left claim %v and cause %v; the next rung could not send", stamp, cause)
-	}
-
-	e.relay.fail = nil
-	if err := e.workRung(notice, 2); err != nil {
-		t.Fatalf("the next rung with the relay back answered %v", err)
-	}
-	e.work(t, notice)
-	if got := e.relay.count(); got != 2 {
-		t.Fatalf("the relay was offered the mail %d times, want the failed try and one send", got)
-	}
-	if stamp, cause := e.emailState(t, notice); stamp == nil || cause != nil {
-		t.Fatalf("after the send the row holds claim %v and cause %v, want a clean claim", stamp, cause)
-	}
-}
-
-// On the last rung an untaken mail is final: the cause is on the row and the
-// cancelled job is counted dead.
-func TestTheLastRungOfAnUntakenMailRecordsWhyAndCountsAsDead(t *testing.T) {
-	e := setupNoticeMail(t)
-	e.relay.fail = &mailer.NotTakenError{Err: errors.New("relay unreachable")}
-	notice := e.pendingNotice(t)
-
-	var cancelled *river.JobCancelError
-	if err := e.workRung(notice, notificationMailJobAttempts); !errors.As(err, &cancelled) {
-		t.Fatalf("the last rung answered %v, want the job cancelled so job health counts it", err)
-	}
-	stamp, cause := e.emailState(t, notice)
-	if stamp == nil || cause == nil || !strings.Contains(*cause, "unreachable") {
-		t.Fatalf("the last rung left claim %v and cause %v, want both", stamp, cause)
 	}
 }

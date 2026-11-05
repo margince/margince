@@ -14,11 +14,7 @@ import { useT } from "../i18n";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
 import { useCompleteTask } from "./taskcomplete";
-import {
-  completeFailureKey,
-  refetchAfterWrite,
-  refreshMovedTask,
-} from "./taskwritefollowup";
+import { completeFailureKey, refetchAfterWrite } from "./taskwritefollowup";
 
 type TaskPatch = {
   id: string;
@@ -48,9 +44,6 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
         }),
         t,
       );
-      if (input.body.due_at && data) {
-        await refreshMovedTask(queryClient, invalidateKeys, data);
-      }
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as
       // skew by the very write it is undoing.
@@ -60,9 +53,7 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
     // Until then the row keeps the version it was fetched at. A second press
     // in that window would re-send it and be refused as skew.
     onSuccess: (_data, input) =>
-      input.body.due_at
-        ? undefined
-        : refetchAfterWrite(queryClient, invalidateKeys, input.id),
+      refetchAfterWrite(queryClient, invalidateKeys, input.id),
     // A stale press is not a failed one: the task moved on under it, so the
     // reads are refreshed to show where it is now.
     onError: (error, input) => {

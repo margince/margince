@@ -5,7 +5,7 @@ import type { Receipt } from "../features/worklist/worklist.queries";
 
 export const automaticStageReceipt: Receipt = {
   id: "01a00000-0000-7000-8000-000000000010",
-  kind: "deal_stage_move",
+  kind: "stage_progression",
   summary:
     "Moved PIM Rollout from Discovery to Proposal — the customer confirmed the scope and requested a quote.",
   occurred_at: "2026-09-13T07:15:00Z",
@@ -13,11 +13,6 @@ export const automaticStageReceipt: Receipt = {
     type: "deal",
     id: "01a00000-0000-7000-8000-000000000011",
     label: "PIM Rollout",
-  },
-  undo: {
-    audit_log_id: "01a00000-0000-7000-8000-000000000010",
-    version: 7,
-    reversed: false,
   },
   review: {
     kind: "stage",

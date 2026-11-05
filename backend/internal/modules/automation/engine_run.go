@@ -57,6 +57,12 @@ func isClockTrigger(h workflow.Handler) bool {
 // terminal reason on the `detail` column (rundetail.go) — a run history
 // that only shows successes hides exactly the runs a human needs to see.
 func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev workflow.Event) error {
+	if stop, err := e.stopIfSetterRevoked(ctx, ev); stop || err != nil {
+		if err != nil {
+			return err
+		}
+		return e.passedOverForRevokedSetter(ctx, h, ev)
+	}
 	matched, err := h.Match(ctx, ev)
 	if err != nil {
 		return e.recordFailedBeforeApply(ctx, h, ev, "matching the trigger: "+sanitizedReason(err), err)
@@ -124,6 +130,14 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		return e.recordBlocked(ctx, h, ev, plannedJSON, decision.reason)
 	}
 
+	// Again at the last moment, because Plan may take a while and a revocation can
+	// land during it. A firing already past this point runs to its end.
+	if stop, err := e.stopIfSetterRevoked(ctx, ev); stop || err != nil {
+		if err != nil {
+			return err
+		}
+		return e.passedOverForRevokedSetter(ctx, h, ev)
+	}
 	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, "applied", nil)
 	if err != nil || !claimed {
 		return err
@@ -404,17 +418,35 @@ func (d declinedFiring) Error() string { return d.reason }
 func declineFiring(reason string) error { return declinedFiring{reason: reason} }
 
 // sanitizedReason renders a client-safe failure reason for
-// workflow_run.detail, never the error's own message. Anyone with
-// automation:read reads that column, and a provider error can carry a
-// SQLSTATE, table or column name (T2). The raw error still reaches the bus
-// subscriber's failure log as this call's own return value.
+// workflow_run.detail — never the error's own message. A Match/Plan
+// failure or an Apply error a provider raises (provider.Create/Update/Read
+// → a module store → often a raw or wrapped pgx error) can carry a
+// SQLSTATE, table, or column name; that column is read verbatim by any
+// workspace user holding automation:read (GET /automations/{id}/runs,
+// handlers_automations.go's wireAutomationRun), so it must never repeat a
+// backend internal to a client (T2). A known apperrors sentinel still
+// renders a stable, specific phrase a human can act on; anything else
+// collapses to one generic phrase — the raw error is not discarded, it
+// is still this call's own return value, so it still reaches the bus
+// subscriber's failure log (platform/events/subscriber.go's "bus: handler
+// failed" warning) for a human debugging the failure server-side.
 func sanitizedReason(err error) string {
-	for _, r := range failureReasons {
-		if errors.Is(err, r.sentinel) {
-			return r.text
-		}
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound):
+		return "the target record could not be found"
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return "the action is no longer permitted"
+	case errors.Is(err, apperrors.ErrConflict):
+		return "the action conflicted with the record's current state"
+	case errors.Is(err, apperrors.ErrVersionSkew):
+		return "the record changed before this action could be applied"
+	case errors.Is(err, apperrors.ErrConsentNotGranted):
+		return "consent has not been granted for this action"
+	case errors.Is(err, apperrors.ErrBudgetExceeded):
+		return "the workspace's budget for this action has been exhausted"
+	default:
+		return "the action could not be completed"
 	}
-	return genericFailureText
 }
 
 // declinedReason bounds what a handler's decline may write to

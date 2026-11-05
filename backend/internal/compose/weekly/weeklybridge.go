@@ -35,6 +35,13 @@ const (
 	// BarSlipped is the mirror — pushed out of the period, downgraded, or
 	// repriced down. Named for what a rep would say happened.
 	BarSlipped = "slipped"
+	// BarExcluded and BarReinstated are a deal that left or rejoined the
+	// qualified number on its viability review alone. BarNotChecked is one that
+	// left because its review status became unknown. A review is neither a slip
+	// nor progress, so each has its own bar.
+	BarExcluded   = "excluded"
+	BarReinstated = "reinstated"
+	BarNotChecked = "not_checked"
 	// BarWon and BarLost are the two decided outcomes.
 	BarWon  = "won"
 	BarLost = "lost"
@@ -53,7 +60,7 @@ const (
 // and a caller summing this list must arrive at the closing anchor from the
 // opening one rather than finding both inside it.
 var barOrder = []string{
-	BarCreated, BarAdvanced, BarSlipped, BarWon, BarLost, BarOther,
+	BarCreated, BarAdvanced, BarSlipped, BarExcluded, BarReinstated, BarNotChecked, BarWon, BarLost, BarOther,
 }
 
 // BridgeBars is the set of bars, in drawing order.
@@ -82,6 +89,9 @@ var bucketBar = map[string]string{
 	forecasting.BucketAmount:      BarAdvanced,
 	forecasting.BucketCategory:    BarAdvanced,
 	forecasting.BucketStageWeight: BarAdvanced,
+	forecasting.BucketExcluded:    BarExcluded,
+	forecasting.BucketReinstated:  BarReinstated,
+	forecasting.BucketNotChecked:  BarNotChecked,
 	forecasting.BucketWon:         BarWon,
 	forecasting.BucketLost:        BarLost,
 	// An archived or reopened deal is neither won nor lost and nobody sold it.

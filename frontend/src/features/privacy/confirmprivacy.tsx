@@ -13,13 +13,6 @@ import {
   isAcquisitionKind,
 } from "../../lib/acquisitionkinds";
 import { labelOf } from "../../lib/preferences.logic";
-import {
-  BASIS_LABEL,
-  ControllerCard,
-  HeldCard,
-  ObjectionCard,
-  RetentionCard,
-} from "./confirmprivacyparts";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 
@@ -75,12 +68,9 @@ export function PrivacyNotice({
     ? SOURCE_LABEL[card.acquired_as]
     : "privacynotice.source.unknown";
   const keys = card.purpose_keys ?? [];
-  const purposes = (card.purposes ?? []).map((label, i) => ({
-    name: labelOf(t, { key: keys[i] ?? "", label }),
-    basis: card.purpose_bases[i],
-  }));
-  // The right to object has a card of its own, so the list leaves it out.
-  const rights = card.rights.filter((right) => right !== "objection");
+  const purposes = (card.purposes ?? []).map((label, i) =>
+    labelOf(t, { key: keys[i] ?? "", label }),
+  );
 
   return (
     <div className="pref-page">
@@ -88,8 +78,6 @@ export function PrivacyNotice({
         {t("privacynotice.title")}
       </Heading>
       <p className="t-body confirm-intro">{t("privacynotice.intro")}</p>
-
-      <ControllerCard controller={card.controller} />
 
       <Card>
         <Heading size="large" className="t-h3">
@@ -112,28 +100,20 @@ export function PrivacyNotice({
           </Heading>
           <ul className="confirm-fields">
             {purposes.map((purpose) => (
-              <li key={purpose.name} className="t-body">
-                {purpose.name}
-                {purpose.basis ? (
-                  <span className="t-caption confirm-basis">
-                    {t(BASIS_LABEL[purpose.basis])}
-                  </span>
-                ) : null}
+              <li key={purpose} className="t-body">
+                {purpose}
               </li>
             ))}
           </ul>
         </Card>
       ) : null}
 
-      <HeldCard card={card} />
-      <RetentionCard retention={card.retention} />
-
       <Card>
         <Heading size="large" className="t-h3">
           {t("privacynotice.rights.title")}
         </Heading>
         <ul className="confirm-fields">
-          {rights.map((right) => (
+          {card.rights.map((right) => (
             <li key={right} className="t-body">
               {t(RIGHT_LABEL[right] ?? "privacynotice.right.access")}
             </li>
@@ -141,10 +121,6 @@ export function PrivacyNotice({
         </ul>
         <p>{t("privacynotice.rights.how")}</p>
       </Card>
-
-      {card.rights.includes("objection") ? (
-        <ObjectionCard route={card.controller?.objection_route} />
-      ) : null}
     </div>
   );
 }

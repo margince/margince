@@ -28,6 +28,7 @@ import (
 type Store struct {
 	db             *database.DB
 	signalDecision SignalDecisionFunc
+	reviewCheck    ReviewCheckFunc
 }
 
 // NewStore wires the store to its pool.
@@ -79,9 +80,17 @@ const ExceptionSubjectDeparted = "subject_departed"
 const reopenableStatuses = `'` + ExceptionConditionCleared + `', '` + ExceptionSubjectDeparted + `'`
 
 // reopensSQL is the upsert's test that a re-detected finding starts a new
-// episode: a closing nobody answered reopens, as above. A resolution stays, and
-// re-detection must not un-ask it.
-const reopensSQL = `assurance_exception.status IN (` + reopenableStatuses + `)`
+// episode. A closing nobody answered reopens, as above. A REVIEW finding also
+// reopens after somebody resolved it, once no suppression is still running.
+// The deal was revived and then went silent again, which is a new question.
+// Every other type keeps its resolution, which re-detection must not un-ask.
+const reopensSQL = `(assurance_exception.status IN (` + reopenableStatuses + `)
+	OR (assurance_exception.type = '` + TypeDealViability + `'
+	    AND assurance_exception.status = 'resolved'
+	    AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
+	                     WHERE r.exception_id = assurance_exception.id
+	                       AND r.outcome IN ('` + OutcomeValueCorrect + `', '` + OutcomeNotRelevant + `')
+	                       AND r.expires_at > now())))`
 
 // Source coverage states.
 const (
@@ -224,12 +233,22 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
-		    -- Every SET reads the row as it was, so each tests the same old status.
+		    -- A reopened row is a new episode, and its task link belongs to the
+		    -- old one: the new episode's review is delivered afresh. Every SET
+		    -- reads the row as it was, so each tests the same old status.
 		    episode = CASE WHEN ` + reopensSQL + ` THEN assurance_exception.episode + 1
 		                   ELSE assurance_exception.episode END,
+		    task_activity_id = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                            ELSE assurance_exception.task_activity_id END,
+		    delivery_state = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                          ELSE assurance_exception.delivery_state END,
+		    delivery_attempts = CASE WHEN ` + reopensSQL + ` THEN 0
+		                             ELSE assurance_exception.delivery_attempts END,
+		    delivered_assignee_id = CASE WHEN ` + reopensSQL + ` THEN NULL
+		                                 ELSE assurance_exception.delivered_assignee_id END,
 		    status = CASE WHEN ` + reopensSQL + ` THEN 'open' ELSE assurance_exception.status END,
 		    -- The deal's owner tonight, not the one it had when first raised: a
-		    -- finding on a deal that changed hands belongs to the new owner.
+		    -- review of a deal that changed hands belongs to the new owner.
 		    owner_id = CASE WHEN assurance_exception.status = 'open' OR ` + reopensSQL + `
 		                    THEN EXCLUDED.owner_id ELSE assurance_exception.owner_id END,
 		    -- Only while it is still somebody's problem. A resolved row keeps
@@ -349,7 +368,10 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 		if err != nil {
 			return err
 		}
-		out.Freshness, err = readFreshness(ctx, tx)
+		if out.Freshness, err = readFreshness(ctx, tx); err != nil {
+			return err
+		}
+		out.Deliveries, err = reviewDeliveryCounts(ctx, tx)
 		return err
 	})
 	if err != nil {
@@ -371,7 +393,8 @@ type Run struct {
 	Readiness       *string
 	// Freshness is what changed after this reading. A reading the records
 	// moved past is never shown as current.
-	Freshness Freshness
+	Freshness  Freshness
+	Deliveries DeliveryCounts
 }
 
 // InTx runs fn inside one workspace transaction.

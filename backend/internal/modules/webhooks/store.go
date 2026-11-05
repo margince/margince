@@ -19,7 +19,6 @@ import (
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // rbacObject is the RBAC object type governing the fan-out config surface
@@ -41,9 +40,6 @@ type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
 	cipher *Cipher
-	// admitOwner admits the caller to make a member the owner a subscription
-	// runs as. Nil refuses every change of owner.
-	admitOwner OwnerAdmission
 }
 
 // NewStore wires the webhook tables over a pool; cipher may be nil when no
@@ -72,25 +68,18 @@ func (e *BadInputError) Error() string { return e.Field + ": " + e.Reason }
 
 // subscriptionColumns reads header names only: a sealed value never leaves
 // the delivery path, not even as ciphertext.
-//
-// owner_active reads app_user and writes nothing there: a deactivated owner
-// sees no record, so the subscription delivers nothing while it says active.
-var subscriptionColumns = `id, owner_id,
-	EXISTS (SELECT 1 FROM app_user u WHERE u.id = owner_id AND ` + workforce.LiveMemberSQL("u") + `),
-	target_url, event_types, state,
+const subscriptionColumns = `id, owner_id, target_url, event_types, state,
 	ARRAY(SELECT h->>'name' FROM jsonb_array_elements(custom_headers) WITH ORDINALITY AS e(h, n) ORDER BY n),
 	body_template, body_content_type, version, created_at, updated_at, archived_at`
 
 // Subscription is the metadata view of a subscription — the signing
 // secret is deliberately absent: it exists on the wire exactly once.
 type Subscription struct {
-	ID      ids.UUID
-	OwnerID ids.UUID
-	// OwnerActive is false once the owner left: nothing is delivered then.
-	OwnerActive bool
-	TargetURL   string
-	EventTypes  []string
-	State       string
+	ID         ids.UUID
+	OwnerID    ids.UUID
+	TargetURL  string
+	EventTypes []string
+	State      string
 	// HeaderNames lists the custom headers; their values stay sealed.
 	HeaderNames     []string
 	BodyTemplate    *string
@@ -103,7 +92,7 @@ type Subscription struct {
 
 func scanSubscription(r pgx.Row) (Subscription, error) {
 	var s Subscription
-	err := r.Scan(&s.ID, &s.OwnerID, &s.OwnerActive, &s.TargetURL, &s.EventTypes,
+	err := r.Scan(&s.ID, &s.OwnerID, &s.TargetURL, &s.EventTypes,
 		&s.State, &s.HeaderNames, &s.BodyTemplate, &s.BodyContentType, &s.Version, &s.CreatedAt, &s.UpdatedAt, &s.ArchivedAt)
 	return s, err
 }
@@ -282,7 +271,6 @@ func (s *Store) GetSubscription(ctx context.Context, id ids.UUID) (Subscription,
 // pause/resume lifecycle; event_types re-targets the fan-out.
 type UpdateSubscriptionInput struct {
 	State         *string
-	OwnerID       *ids.UserID
 	EventTypes    *[]string
 	CustomHeaders *[]CustomHeaderInput
 	// Body is nil when the request names neither body field.
@@ -294,8 +282,8 @@ type UpdateSubscriptionInput struct {
 // contract's minProperties:1, honored at runtime), an unknown state, or an
 // invalid event-type set.
 func validateUpdate(in UpdateSubscriptionInput) error {
-	if in.State == nil && in.OwnerID == nil && in.EventTypes == nil && in.CustomHeaders == nil && in.Body == nil {
-		return &BadInputError{Field: "body", Reason: "name at least one of state, owner_id, event_types, custom_headers, body_template or body_content_type"}
+	if in.State == nil && in.EventTypes == nil && in.CustomHeaders == nil && in.Body == nil {
+		return &BadInputError{Field: "body", Reason: "name at least one of state, event_types, custom_headers, body_template or body_content_type"}
 	}
 	if in.State != nil && *in.State != "active" && *in.State != "paused" {
 		return &BadInputError{Field: "state", Reason: "must be active or paused"}
@@ -337,9 +325,6 @@ func (s *Store) UpdateSubscription(ctx context.Context, id ids.UUID, in UpdateSu
 		p := storekit.NewPatch()
 		if in.State != nil {
 			p.Set("state", current.State, *in.State)
-		}
-		if err := setOwner(ctx, tx, p, current, in.OwnerID, s.ownerAdmission()); err != nil {
-			return err
 		}
 		if in.EventTypes != nil {
 			p.Set(fieldEventTypes, current.EventTypes, *in.EventTypes)

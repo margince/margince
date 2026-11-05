@@ -417,17 +417,9 @@ func TestRequireDecisionGrants(t *testing.T) {
 			perms: grants(map[string]principal.ObjectGrant{"deal": {Delete: true}}),
 		},
 		{
-			// The object half of the archive rule: an owner may archive their
-			// own deal with update alone. Whether this deal is theirs is the
-			// row half, which decidableRows asks.
-			name:  "archive_record of a deal passes the object grant with update",
-			a:     row{Kind: "archive_record", TargetType: &deal},
-			perms: grants(map[string]principal.ObjectGrant{"deal": {Update: true}}),
-		},
-		{
-			name:    "archive_record without update or delete on the target is denied",
+			name:    "archive_record without the target delete grant is denied",
 			a:       row{Kind: "archive_record", TargetType: &deal},
-			perms:   grants(map[string]principal.ObjectGrant{"deal": {Read: true}}),
+			perms:   grants(map[string]principal.ObjectGrant{"deal": {Update: true}}),
 			wantErr: true, denied: true,
 		},
 		{

@@ -9,9 +9,10 @@ import "maps"
 // any of them, so each needs a headline in every language but English.
 
 // withRouteVerbs is one language's verb words, the route-backed ones included.
-func withRouteVerbs(routes, own map[string]string) map[string]string {
+func withRouteVerbs(routes, setup, own map[string]string) map[string]string {
 	merged := maps.Clone(own)
 	maps.Copy(merged, routes)
+	maps.Copy(merged, setup)
 	return merged
 }
 
@@ -24,7 +25,6 @@ var routeVerbsGerman = map[string]string{
 	"accept_partner_lead":                "Lead für den Partner annehmen",
 	"accept_tag_suggestion":              "Vorgeschlagenes Tag vergeben",
 	"acknowledge_approval_failure":       "Fehlgeschlagene Freigabe zur Kenntnis nehmen",
-	"add_deal_line":                      "Produkt oder Position zu einem Deal hinzufügen",
 	"add_deal_room_document":             "Dokument in den Deal-Raum legen",
 	"add_team_member":                    "Mitglied einem Team hinzufügen",
 	"add_weekly_plan_commitment":         "Vorhaben in den Wochenplan schreiben",
@@ -95,11 +95,10 @@ var routeVerbsGerman = map[string]string{
 	"link_company_contacts":              "Kontakte mit einer Firma verknüpfen",
 	"link_lead_company":                  "Lead mit einer Firma verknüpfen",
 	"mark_all_notices_read":              "Alle Hinweise als gelesen markieren",
-	"mark_booking_page_shared":           "Buchungsseite als geteilt markieren",
+	"mark_worklist_rows_done":            "Zeilen als erledigt markieren",
 	"mark_brief_item_acted":              "Punkt im Morgenbericht als erledigt markieren",
 	"mark_brief_item_dismissed":          "Punkt im Morgenbericht verwerfen",
 	"mark_notice_read":                   "Hinweis als gelesen markieren",
-	"mark_worklist_rows_done":            "Zeilen als erledigt markieren",
 	"message_anchor_company_site_read":   "Frage zur gelesenen Website stellen",
 	"message_onboarding_company":         "Einrichtung der eigenen Firma fortsetzen",
 	"offer_ownership_transfer":           "Datensatz einem Kollegen anbieten",
@@ -121,15 +120,13 @@ var routeVerbsGerman = map[string]string{
 	"record_introduction":                "Erfolgte Vorstellung eines Kontakts erfassen",
 	"refresh_company_dossier":            "Firmendossier neu zusammenstellen",
 	"refresh_company_growth_fit":         "Wachstumspassung neu bewerten",
-	"refresh_offer_from_deal":            "Angebotsentwurf aus dem Deal aktualisieren",
 	"regenerate_company_brief":           "Firmenüberblick neu erstellen",
 	"regenerate_contact_brief":           "Kontaktüberblick neu erstellen",
 	"regenerate_offer":                   "Neue Angebotsfassung erstellen",
 	"reject_offer":                       "Ablehnung des Angebots erfassen",
-	"remove_deal_line":                   "Position eines Deals entfernen",
 	"remove_deal_room_document":          "Dokument aus dem Deal-Raum nehmen",
-	"remove_team_member":                 "Mitglied aus einem Team nehmen",
 	"remove_workspace_member":            "Mitglied entfernen",
+	"remove_team_member":                 "Mitglied aus einem Team nehmen",
 	"render_offer":                       "Angebot als PDF erstellen",
 	"renew_contract":                     "Vertrag verlängern",
 	"reopen_lead":                        "Disqualifizierten Lead wieder öffnen",
@@ -149,6 +146,7 @@ var routeVerbsGerman = map[string]string{
 	"restore_relationship_nudge":         "Zurückgestellten Kontakt zurückholen",
 	"restore_tag":                        "Archiviertes Tag wiederherstellen",
 	"resume_deal_room":                   "Pausierten Deal-Raum fortsetzen",
+	"revert_stage_progression":           "Automatischen Phasenwechsel zurücknehmen",
 	"revoke_deal_room_participant":       "Zugang zum Deal-Raum entziehen",
 	"revoke_record_share":                "Freigabe eines Datensatzes zurücknehmen",
 	"run_contact_research":               "Öffentliche Angaben zu einem Kontakt recherchieren",
@@ -178,7 +176,6 @@ var routeVerbsGerman = map[string]string{
 	"update_attachment_metadata":         "Angaben zu einem Dokument ändern",
 	"update_contact_case_settings":       "Einstellung zum Zusammenführen von Duplikaten ändern",
 	"update_contract":                    "Vertragsbedingungen ändern",
-	"update_deal_line":                   "Position eines Deals ändern",
 	"update_deal_room":                   "Titel und Begrüßung des Deal-Raums ändern",
 	"update_deal_room_document":          "Dokument im Deal-Raum umbenennen oder ordnen",
 	"update_deal_room_participant":       "Angaben eines Teilnehmers im Deal-Raum korrigieren",
@@ -194,7 +191,6 @@ var routeVerbsGerman = map[string]string{
 	"update_record_assignment":           "Zuständigkeit übergeben oder ändern",
 	"update_record_role":                 "Zuständigkeitsrolle ändern",
 	"update_team":                        "Team umbenennen, archivieren oder wiederherstellen",
-	"use_deal_estimate":                  "Deal wieder mit geschätztem Wert führen",
 	"withdraw_legal_review":              "Anfrage zur Rechtsprüfung zurückziehen",
 	"withdraw_ownership_offer":           "Angebot zur Übergabe zurückziehen",
 	"withdraw_ownership_request":         "Anfrage zur Übergabe zurückziehen",
@@ -284,6 +280,8 @@ var routeVerbsGerman = map[string]string{
 	"retry_reporting_execution":          "Berichtslauf wiederholen",
 	"start_forecast_assurance_run":       "Eingabeprüfung der Prognose starten",
 	"resolve_input_check":                "Befund der Eingabeprüfung beantworten",
+	"wait_input_check":                   "Kundentermin für eine Prüfung festhalten",
+	"close_lost_input_check":             "Deal aus einer Prüfung als verloren schließen",
 	"record_forecast_call":               "Prognoseeinschätzung erfassen",
 	"create_forecast_share":              "Prognose per Link teilen",
 	"revoke_forecast_share":              "Prognose-Link schließen",

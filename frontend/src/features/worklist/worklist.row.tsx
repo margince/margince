@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { Badge } from "../../design-system/atoms";
 import { PanelRow } from "../../design-system/panel";
+import { QuietVerbs } from "../../design-system/verbvolume";
 import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
@@ -36,7 +37,6 @@ import { WorklistMayBeDone } from "./worklist.maybedone";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
-import { isPinned } from "./worklist.pinmark";
 import type { WorklistItem } from "./worklist.queries";
 import { noticeDetail, sharedResponsibility } from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
@@ -198,11 +198,10 @@ export function WorklistRow({
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
   const responsibility = sharedResponsibility(item, locale, t);
-  const pinned = allowPin && isPinned(item);
-  // Whether the title line has a mark to show: overdue, a meeting the reader
-  // has not confirmed ready, or the reader's pin. They ride on the title line,
-  // which is why it is drawn on a row that has no title of its own to draw.
-  const badged = item.overdue === true || isUnprepared(item) || pinned;
+  // Whether the day put a state on this row: overdue, or a meeting the reader
+  // has not confirmed ready. They ride on the title line, which is why it is
+  // drawn on a row that has no title of its own to draw.
+  const badged = item.overdue === true || isUnprepared(item);
   // One brief write per row, shared by Act and the two set-asides. The hook
   // registers a mutation and reads nothing, so every row may call it. Two
   // writes would carry two settled flags, and one item could be answered twice.
@@ -223,7 +222,6 @@ export function WorklistRow({
     about,
     host,
     touch,
-    pinned,
   });
   const named = conditionOf(item, t);
   return (
@@ -310,26 +308,29 @@ export function WorklistRow({
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the
             work where the card has no column to spare for it, beside the work
-            where it has, so the answer keeps one x down the whole queue. */}
-        <RowActs
-          allowPin={allowPin}
-          onOpenEmail={onOpenEmail}
-          item={item}
-          title={title}
-          href={href}
-          owner={owner}
-          primary={answer.primary}
-          equals={answer.equals}
-          onReview={onReview}
-          context={context}
-          framed={framed}
-          titled={titleLinks(emailOpener, href, source.open)}
-        />
-        {/* An answer that is not a VERB: a duplicate pair, whose two buttons
+            where it has, so the answer keeps one x down the whole queue.
+            Outlined in a list; only the card in hand has a filled verb. */}
+        <QuietVerbs quiet={!framed}>
+          <RowActs
+            allowPin={allowPin}
+            onOpenEmail={onOpenEmail}
+            item={item}
+            title={title}
+            href={href}
+            owner={owner}
+            primary={answer.primary}
+            equals={answer.equals}
+            onReview={onReview}
+            context={context}
+            framed={framed}
+            titled={titleLinks(emailOpener, href, source.open)}
+          />
+          {/* An answer that is not a VERB: a duplicate pair, whose two buttons
             each name the record they keep and cannot leave the list that names
             it. It stays a block under the row, where it has the width to show
             both sides. */}
-        {answer.below}
+          {answer.below}
+        </QuietVerbs>
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>

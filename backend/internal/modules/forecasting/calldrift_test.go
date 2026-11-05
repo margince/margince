@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
 // called is a baseline side with everything a call's snapshot records.
@@ -19,17 +21,18 @@ func called(rows ...Contribution) snapshotSide {
 	return snapshotSide{
 		DefinitionVersion: DefinitionVersion, Contributions: rows, BaseCurrency: "EUR",
 		PopulationFingerprint: "team-a", InputFingerprint: InputFingerprint(rows),
+		QualifiedPolicy: viability.PolicyVersion,
 	}
 }
 
 func today(rows ...Contribution) snapshotSide {
-	return todayOf(rows, "team-a", "EUR")
+	return todayOf(rows, "team-a", "EUR", viability.PolicyVersion)
 }
 
-func todayOf(rows []Contribution, population, currency string) snapshotSide {
+func todayOf(rows []Contribution, population, currency, policy string) snapshotSide {
 	return TodaySide(Baseline{
 		Readings: Readings{Contributions: rows}, PopulationFingerprint: population,
-		BaseCurrency: currency,
+		BaseCurrency: currency, QualifiedPolicy: policy,
 	}, time.Date(2026, 10, 30, 9, 0, 0, 0, time.UTC))
 }
 
@@ -68,7 +71,7 @@ func TestADealThatMovedThreeWaysIsCountedOnce(t *testing.T) {
 func TestACallNothingMovedUnderIsCurrentHoweverOld(t *testing.T) {
 	t.Parallel()
 	rows := []Contribution{open("d1", 10_000), open("d2", 3_000)}
-	later := todayOf(rows, "team-a", "EUR")
+	later := todayOf(rows, "team-a", "EUR", viability.PolicyVersion)
 	later.TakenAt = time.Date(2029, 1, 1, 0, 0, 0, 0, time.UTC)
 	if drift := CompareWithBaseline(called(rows...), later); drift.Material() || drift.Limitation != "" {
 		t.Fatalf("an unchanged call reads as moved: %+v", drift)
@@ -91,16 +94,27 @@ func TestAnEditTheForecastDoesNotCountIsNotMaterial(t *testing.T) {
 	}
 }
 
-// Leaving the period is material.
-func TestLeavingThePeriodIsMaterial(t *testing.T) {
+// Leaving the period, and leaving or rejoining the qualified forecast, are
+// material even where the money in one reading stays the same.
+func TestLeavingThePeriodOrTheQualifiedForecastIsMaterial(t *testing.T) {
 	t.Parallel()
-	steady := open("d1", 10_000)
-	pushed := Contribution{DealID: "d2", Source: SourceStage}
+	was := open("d1", 10_000)
+	was.Qualification = viability.QualificationEligible
+	excluded := was
+	excluded.Qualification = viability.QualificationExcluded
+	pushed := Contribution{DealID: "d2", Source: SourceStage, Qualification: viability.QualificationEligible}
 	inPeriod := open("d2", 2_000)
+	inPeriod.Qualification = viability.QualificationEligible
 
-	drift := CompareWithBaseline(called(steady, inPeriod), today(steady, pushed))
-	if len(drift.Deals) != 1 || drift.Deals[0].Bucket != BucketPushedOut {
-		t.Fatalf("drift = %+v, want the deal that left the period, pushed out", drift.Deals)
+	drift := CompareWithBaseline(called(was, inPeriod), today(excluded, pushed))
+	if len(drift.Deals) != 2 || drift.QualificationChanges != 1 {
+		t.Fatalf("drift = %+v, want both deals and one qualification change", drift)
+	}
+	if !slices.Contains(drift.Deals[0].Causes, CauseQualification) {
+		t.Errorf("the excluded deal's causes are %v, want the qualification", drift.Deals[0].Causes)
+	}
+	if drift.Deals[1].Bucket != BucketPushedOut {
+		t.Errorf("the deal that left the period is in %q, want pushed out", drift.Deals[1].Bucket)
 	}
 }
 
@@ -115,8 +129,9 @@ func TestAChangedBasisIsALimitationNotADelta(t *testing.T) {
 		today snapshotSide
 		want  Limitation
 	}{
-		{"another team", todayOf(moved, "team-b", "EUR"), LimitationPopulation},
-		{"another base currency", todayOf(moved, "team-a", "USD"), LimitationCurrency},
+		{"another team", todayOf(moved, "team-b", "EUR", viability.PolicyVersion), LimitationPopulation},
+		{"another base currency", todayOf(moved, "team-a", "USD", viability.PolicyVersion), LimitationCurrency},
+		{"qualification switched off", todayOf(moved, "team-a", "EUR", ""), LimitationQualifiedPolicy},
 		{"another definition", func() snapshotSide { s := today(moved...); s.DefinitionVersion = "forecast_v1"; return s }(), LimitationDefinition},
 	} {
 		drift := CompareWithBaseline(called(rows...), tc.today)
@@ -127,11 +142,16 @@ func TestAChangedBasisIsALimitationNotADelta(t *testing.T) {
 }
 
 // The fingerprint is over what the deals contribute, in no particular order.
-func TestTheInputFingerprintIgnoresOrderAndSeesTheStage(t *testing.T) {
+func TestTheInputFingerprintIgnoresOrderAndSeesQualification(t *testing.T) {
 	t.Parallel()
 	a, b := open("d1", 10_000), open("d2", 3_000)
 	if InputFingerprint([]Contribution{a, b}) != InputFingerprint([]Contribution{b, a}) {
 		t.Fatal("the same contributions in another order have another fingerprint")
+	}
+	excluded := a
+	excluded.Qualification = viability.QualificationExcluded
+	if InputFingerprint([]Contribution{a, b}) == InputFingerprint([]Contribution{excluded, b}) {
+		t.Fatal("a deal leaving the qualified forecast left the fingerprint unchanged")
 	}
 	// The range draws one chance per stage, so a deal changing stage at the same
 	// chance changes what the forecast says.
@@ -142,11 +162,12 @@ func TestTheInputFingerprintIgnoresOrderAndSeesTheStage(t *testing.T) {
 	}
 }
 
-// A period whose first deal arrives, or whose last one leaves, compares on
-// the same basis.
+// The policy is the setting's, not the deals': a period whose first deal
+// arrives, or whose last one leaves, compares on the same policy.
 func TestAnEmptyPeriodGainingADealIsAChangeNotALimitation(t *testing.T) {
 	t.Parallel()
 	arrived := open("d1", 10_000)
+	arrived.Qualification = viability.QualificationEligible
 
 	gained := CompareWithBaseline(called(), today(arrived))
 	if gained.Limitation != "" || !gained.Material() {
@@ -183,13 +204,18 @@ func TestEveryReadingIsComparedForACall(t *testing.T) {
 					continue
 				}
 				declared++
+				// A qualified reading restricts a baseline one; its change reaches a
+				// call as QualificationChanges, not as a second net.
+				if _, qualified := baselineOf(Reading(strings.Trim(basic.Value, `"`))); qualified {
+					continue
+				}
 				if !slices.Contains(everyReading, Reading(strings.Trim(basic.Value, `"`))) {
 					t.Errorf("reading %s is declared and not compared for a call", basic.Value)
 				}
 			}
 		}
 	}
-	if declared < 3 {
-		t.Fatalf("found %d Reading constants in movement.go, want at least the three", declared)
+	if declared < 4 {
+		t.Fatalf("found %d Reading constants in movement.go, want at least the four", declared)
 	}
 }

@@ -8,8 +8,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -154,4 +157,27 @@ func (s storedActor) actAsRun(ctx context.Context, run migration.Run) (context.C
 		return nil, err
 	}
 	return principal.WithCorrelationID(principal.WithActor(ctx, actor), *run.AttemptCorrelationID), nil
+}
+
+// activationActor is who a reviewed data task's run writes as: the user or the
+// agent that activated it, with grants read live.
+func activationActor(ctx context.Context, pool *pgxpool.Pool, activation datatask.Activation) (principal.Principal, error) {
+	stored := migration.StoredActor{Type: principal.PrincipalAgent, ID: activation.Operator}
+	if agent := activation.Agent; agent != nil {
+		stored.UserID, stored.PassportID, stored.ConnectionID, stored.OnBehalfOf = agent.UserID, agent.PassportID, agent.ConnectionID, agent.OnBehalfOf
+		actor, err := (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, stored, principal.ScopeWrite)
+		if err != nil {
+			return principal.Principal{}, err
+		}
+		// A run writes, so a passport that no longer lends write ends it.
+		if stored.PassportID.IsZero() || !actor.Scopes.Has(principal.ScopeWrite) {
+			return principal.Principal{}, errActorPassportRevoked
+		}
+		return actor, nil
+	}
+	human, ok := principal.HumanUserID(activation.Operator)
+	if !ok {
+		return principal.Principal{}, apperrors.ErrPermissionDenied
+	}
+	return (storedActor{authority: identity.NewService(pool)}).rebuild(ctx, migration.StoredActor{Type: principal.PrincipalHuman, UserID: human})
 }

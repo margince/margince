@@ -40,6 +40,9 @@ func TestAReadOnlyPassportReachesNoRouteBackedWrite(t *testing.T) {
 		if v.Body {
 			args["request_body"], body = map[string]any{}, map[string]any{}
 		}
+		if v.UploadField != "" {
+			args["filename"], args["content_type"], args["content_base64"] = "sweep.txt", "text/plain", "c3dlZXA="
+		}
 		// The router turns away a call missing a required parameter before the
 		// gate, so 422 also means the route never ran.
 		if status := d.e.Call(t, v.Method, path, body, d.bearer, nil); status != http.StatusForbidden && status != http.StatusUnprocessableEntity {

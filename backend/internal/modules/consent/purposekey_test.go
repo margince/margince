@@ -3,8 +3,7 @@
 
 package consent
 
-// The claim on normalizedPurposeKey, held rather than asserted. It delegates
-// to commsauthz.NormalizedPurposeKey, the one spelling.
+// The claim on normalizedPurposeKey, held rather than asserted.
 //
 // A purpose key arrives from a request body or a public form, so its casing and
 // whitespace are the caller's, and it is then matched against
@@ -51,19 +50,10 @@ func TestThePurposeKeyIsNormalizedInExactlyOnePlace(t *testing.T) {
 			carriers = append(carriers, e.Name())
 		}
 	}
-	if len(carriers) != 0 {
-		t.Errorf("the purpose-key normalization is spelled in %v, want none in consent — "+
+	if len(carriers) != 1 || carriers[0] != "state.go" {
+		t.Errorf("the purpose-key normalization is spelled in %v, want exactly one spelling in state.go — "+
 			"a second copy resolves the same purpose to a different row, and the preference center's "+
 			"duplicate-key check reads it to decide whether a withdrawal and a grant name one purpose; "+
 			"call normalizedPurposeKey instead", carriers)
-	}
-	// The one spelling is commsauthz's, which a queued message's reader in
-	// activities shares with the engine.
-	owner, err := os.ReadFile(filepath.Clean("../../shared/ports/commsauthz/purpose.go"))
-	if err != nil {
-		t.Fatalf("reading the shared purpose rule: %v", err)
-	}
-	if n := strings.Count(string(owner), idiom); n != 1 {
-		t.Errorf("commsauthz/purpose.go spells the normalization %d times, want exactly 1", n)
 	}
 }

@@ -324,7 +324,7 @@ func TestEveryBucketNameIsDrawn(t *testing.T) {
 	}
 	for _, name := range []string{
 		BucketNew, BucketPulledIn, BucketPushedOut, BucketAmount, BucketCategory,
-		BucketStageWeight, BucketRecordChanged,
+		BucketStageWeight, BucketRecordChanged, BucketExcluded, BucketReinstated, BucketNotChecked,
 		BucketWon, BucketLost, BucketArchived, BucketFx, BucketDefinition, BucketModel,
 	} {
 		if !drawn[name] {
