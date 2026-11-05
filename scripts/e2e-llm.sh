@@ -449,9 +449,12 @@ restart_stack snapshot_world
 #   --permission-mode dontAsk    with the surface genuinely restricted, a global
 #                                bypass buys nothing.
 #   --max-turns                  hidden from --help on this version but present.
+#
+# e2e/llm/clean.py starts the CLI from an empty directory, with no settings,
+# memory or skills; check.py --clean stops a run whose init line says otherwise.
 run_claude() {
   local prompt_file="$1" out="$2" exited=0
-  claude -p "$(cat "$prompt_file")" \
+  python3 "$ROOT/e2e/llm/clean.py" -p "$(cat "$prompt_file")" \
     --model "$MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
     --allowedTools "mcp__${MCP_SERVER}__*" --tools "" \
@@ -727,6 +730,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
       else
         echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       fi
+      exit 2
+    fi
+    # A candidate that loaded the repository's rules or the operator's setup
+    # did not measure the copy, so its run is not scored.
+    if ! why="$(python3 "$ROOT/e2e/llm/check.py" --clean "$transcript")"; then
+      echo
+      echo "HARNESS: $name run $i did not start clean: $why"
+      echo "  This is not a use-case failure. Nothing was scored."
+      cp "$transcript" "$RECORD_DIR/" 2>/dev/null && echo "  the transcript is at $RECORD_DIR/$(basename "$transcript")"
       exit 2
     fi
     # A REQUIRED TOOL THE MODEL WAS NEVER OFFERED fails must_call for a reason
