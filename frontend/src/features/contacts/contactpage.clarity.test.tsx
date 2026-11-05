@@ -137,6 +137,7 @@ describe("a contact with little context", () => {
               purpose_label: "Business correspondence",
               channel: "email",
               verdict: recorded ? "allowed" : "unknown",
+              reason_code: recorded ? "said_we_may_write" : "no_consent",
             },
           ],
         });
@@ -161,7 +162,7 @@ describe("a contact with little context", () => {
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     // The left column and the Research tab's panel read the one guard.
     expect(
-      (await screen.findAllByText("Recent business contact recorded")).length,
+      (await screen.findAllByText("Permission to write recorded")).length,
     ).toBe(2);
   });
 

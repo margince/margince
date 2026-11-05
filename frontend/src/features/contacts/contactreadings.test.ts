@@ -13,25 +13,28 @@ const t = ((key: Parameters<typeof translate>[1]) =>
 type Entry = Parameters<typeof scopedConsentWord>[0];
 
 describe("scopedConsentWord", () => {
-  it.each<[string, Entry, string]>([
+  // Every reason the engine gives an allowed answer, each with its own words.
+  it.each<[Entry["reason_code"], Entry["purpose_class"], string]>([
+    ["consent_confirmed", "marketing", "Marketing permission recorded"],
+    ["existing_customer", "marketing", "Existing customer, marketing allowed"],
     [
-      "correspondence on a recorded exchange",
-      {
-        verdict: "allowed",
-        purpose_class: "business_correspondence",
-        reason_code: "qualifying_event",
-      },
+      "qualifying_event",
+      "business_correspondence",
       "Recent business contact recorded",
     ],
     [
-      "marketing with consent on file",
-      {
-        verdict: "allowed",
-        purpose_class: "marketing",
-        reason_code: "consent_confirmed",
-      },
-      "Marketing permission recorded",
+      "said_we_may_write",
+      "business_correspondence",
+      "Permission to write recorded",
     ],
+    ["contract_notice", "transactional", "Service messages allowed"],
+  ])("names an allowed %s answer", (reason_code, purpose_class, word) => {
+    expect(
+      scopedConsentWord({ verdict: "allowed", purpose_class, reason_code }, t),
+    ).toBe(word);
+  });
+
+  it.each<[string, Entry, string]>([
     [
       "marketing after an objection",
       {
@@ -81,12 +84,12 @@ describe("scopedConsentWord", () => {
     expect(scopedConsentWord(entry, t)).toBe(word);
   });
 
-  // A newer server's purpose class must not read as a recorded grant.
-  it("falls back to the plain word for a purpose class this build does not know", () => {
+  // A newer server's reason must not read as a recorded grant.
+  it("falls back to the plain word for a reason this build does not know", () => {
     const entry = {
       verdict: "allowed",
-      purpose_class: "sms_outreach",
-      reason_code: "consent_confirmed",
+      purpose_class: "marketing",
+      reason_code: "statutory_route",
     } as unknown as Entry;
     expect(scopedConsentWord(entry, t)).toBe("Allowed");
   });

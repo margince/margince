@@ -41,12 +41,16 @@ const STOP_REASONS: ReadonlySet<GuardEntry["reason_code"]> = new Set([
   "suppressed",
 ]);
 
-// What an allowed purpose has on record, by the class of message it covers.
-const ALLOWED_FACT: Record<GuardEntry["purpose_class"], MessageKey> = {
-  business_correspondence: "contact.consent.fact.businessContact",
-  transactional: "contact.consent.fact.serviceMessages",
-  marketing: "contact.consent.fact.marketingPermission",
-  phone_outreach: "contact.consent.fact.calls",
+// What an allowed answer has on record, by the reason the engine gave. The
+// reason, not the purpose class: a marketing purpose allowed on the
+// existing-customer route has no marketing permission on file, and saying so
+// would claim a consent nobody gave.
+const ALLOWED_FACT: Partial<Record<GuardEntry["reason_code"], MessageKey>> = {
+  consent_confirmed: "contact.consent.fact.marketingPermission",
+  existing_customer: "contact.consent.fact.existingCustomer",
+  qualifying_event: "contact.consent.fact.businessContact",
+  said_we_may_write: "contact.consent.fact.saidWeMayWrite",
+  contract_notice: "contact.consent.fact.serviceMessages",
 };
 
 /**
@@ -54,8 +58,8 @@ const ALLOWED_FACT: Record<GuardEntry["purpose_class"], MessageKey> = {
  * read as permission for every message: "Recent business contact recorded",
  * not "Allowed". Each message is still checked on its own when it is sent.
  *
- * A purpose class or reason off a newer server falls to the plain answer for
- * its verdict, so a gap never reads as a recorded stop or a recorded grant.
+ * A reason off a newer server falls to the plain answer for its verdict, so a
+ * gap never reads as a recorded stop or a recorded grant.
  */
 export function scopedConsentWord(
   entry: Pick<GuardEntry, "verdict" | "purpose_class" | "reason_code">,
@@ -65,7 +69,7 @@ export function scopedConsentWord(
   switch (entry.verdict) {
     case "allowed":
       return t(
-        ALLOWED_FACT[entry.purpose_class] ?? "contact.consent.allowedWord",
+        ALLOWED_FACT[entry.reason_code] ?? "contact.consent.allowedWord",
       );
     case "blocked":
       if (entry.reason_code === "suppressed_hard_bounce") {

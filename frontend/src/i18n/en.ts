@@ -17081,10 +17081,12 @@ export const en = {
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
+  "contact.consent.fact.existingCustomer":
+    "Existing customer, marketing allowed",
+  "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
   "contact.consent.fact.businessContact": "Recent business contact recorded",
   "contact.consent.fact.serviceMessages": "Service messages allowed",
   "contact.consent.fact.marketingPermission": "Marketing permission recorded",
-  "contact.consent.fact.calls": "Calls allowed",
   "contact.consent.fact.bounced": "Address does not accept mail",
   "contact.consent.fact.marketingOptOut": "Marketing opt-out recorded",
   "contact.consent.fact.stopped": "Stop recorded",
