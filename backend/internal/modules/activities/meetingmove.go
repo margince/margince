@@ -77,7 +77,7 @@ func moveCapturedMeetingTx(
 		       `+occupiesHostSlotSQL+` FROM activity a
 		 WHERE a.id = $1
 		   AND a.kind = 'meeting' AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		 FOR UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &stored.status, &stored.agenda, &holdsSlot)
+		 FOR NO KEY UPDATE`, id).Scan(&stored.start, &stored.duration, &stored.precision, &stored.status, &stored.agenda, &holdsSlot)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}

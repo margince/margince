@@ -103,7 +103,7 @@ func closeCapturedMeetingTx(
 		SELECT id, meeting_status FROM activity
 		 WHERE source_system = $1 AND source_id = $2
 		   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL
-		 FOR UPDATE`,
+		 FOR NO KEY UPDATE`,
 		key.SourceSystem, key.SourceID).Scan(&id, &status)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

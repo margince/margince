@@ -42,7 +42,7 @@ func CancelMeetingByIDTx(
 		SELECT meeting_status FROM activity
 		 WHERE id = $1
 		   AND kind = 'meeting' AND restricted_at IS NULL AND archived_at IS NULL
-		 FOR UPDATE`, id).Scan(&status)
+		 FOR NO KEY UPDATE`, id).Scan(&status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
