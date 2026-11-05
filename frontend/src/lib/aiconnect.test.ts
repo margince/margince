@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { type Locale, translate } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { type Locale, translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   AI_PLANS,
   AI_TOOLS,

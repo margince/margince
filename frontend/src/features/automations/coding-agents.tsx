@@ -8,8 +8,8 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
-import { CLI_NAMES, CLI_PATHS, type CliId } from "./aiconnect";
-import { useConnectorState } from "./connector-state";
+import { CLI_NAMES, CLI_PATHS, type CliId } from "../../lib/aiconnect";
+import { useConnectorState } from "../../lib/connector-state";
 import "./coding-agents.css";
 
 // One tool at a time, picked the way the main card picks an AI tool. Three

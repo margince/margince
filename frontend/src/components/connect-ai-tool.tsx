@@ -3,20 +3,15 @@
 
 import { Download } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { Button, SegmentedControl } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
-import {
-  CopyableText,
-  useClipboardCopy,
-} from "../../design-system/clipboardcopy";
-import { OffsiteLink } from "../../design-system/offsitelink";
-import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
-import { formatDate } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { downloadBytes } from "../../lib/download";
-import { useViewerZone } from "../../lib/viewerzone";
+import { Button, SegmentedControl } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
+import { CopyableText, useClipboardCopy } from "../design-system/clipboardcopy";
+import { OffsiteLink } from "../design-system/offsitelink";
+import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
+import { QueryGate } from "../design-system/querystates";
+import { formatDate } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   AI_PLANS,
   AI_TOOL_NAMES,
@@ -27,8 +22,10 @@ import {
   type ConnectPath,
   connectPath,
   STEPS_CHECKED_ON,
-} from "./aiconnect";
-import { useConnectorState } from "./connector-state";
+} from "../lib/aiconnect";
+import { useConnectorState } from "../lib/connector-state";
+import { downloadBytes } from "../lib/download";
+import { useViewerZone } from "../lib/viewerzone";
 import "./connect-ai-tool.css";
 
 // The page's first task for a reader who is not a developer: two questions,

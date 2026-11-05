@@ -7,7 +7,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
-} from "../../testing/story-utils";
+} from "../testing/story-utils";
 import { ConnectAiToolCard } from "./connect-ai-tool";
 
 function story(connectorEnabled = true) {

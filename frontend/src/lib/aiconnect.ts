@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 // How each AI tool reaches the hosted connector, one entry per tool and plan.
 // The picker and the admin guide read this module. A gate holds the skill README

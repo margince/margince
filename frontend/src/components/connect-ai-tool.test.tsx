@@ -9,8 +9,8 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../i18n";
-import * as download from "../../lib/download";
+import { LocaleProvider } from "../i18n";
+import * as download from "../lib/download";
 import { ConnectAiToolCard } from "./connect-ai-tool";
 
 const MCP_URL = "https://crm.acme.test/mcp";
