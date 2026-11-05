@@ -82,7 +82,7 @@ func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
 		if err := assignLead(rep, e, id, e.Rep1); err != nil {
 			t.Fatalf("a rep assigning an ownerless lead to themselves → %v, want allowed", err)
 		}
-		mustBeOwnedBy(t, rep, e, id, e.Rep1)
+		mustBeOwnedBy(rep, t, e, id, e.Rep1)
 	})
 
 	t.Run("a rep hands an ownerless lead to a teammate", func(t *testing.T) {
@@ -90,7 +90,7 @@ func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
 		if err := assignLead(rep, e, id, e.Rep2); err != nil {
 			t.Fatalf("a rep assigning an ownerless lead to a teammate → %v, want allowed", err)
 		}
-		mustBeOwnedBy(t, rep, e, id, e.Rep2)
+		mustBeOwnedBy(rep, t, e, id, e.Rep2)
 	})
 
 	t.Run("a rep hands their own lead to a colleague on another team", func(t *testing.T) {
@@ -99,7 +99,7 @@ func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
 		if err := assignLead(rep, e, id, e.Rep3); err != nil {
 			t.Fatalf("a rep handing their own lead across teams → %v, want allowed", err)
 		}
-		mustBeOwnedBy(t, rep, e, id, e.Rep3)
+		mustBeOwnedBy(rep, t, e, id, e.Rep3)
 	})
 
 	t.Run("a rep may not take a colleague's lead off them", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
 		if err := assignLead(rep, e, id, e.Rep2); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Fatalf("a rep reassigning a lead they may not change → %v, want ErrPermissionDenied", err)
 		}
-		mustBeOwnedBy(t, rep, e, id, e.Rep3)
+		mustBeOwnedBy(rep, t, e, id, e.Rep3)
 	})
 
 	t.Run("a Team Lead routes an ownerless lead outside their own team", func(t *testing.T) {
@@ -116,11 +116,11 @@ func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
 		if err := assignLead(manager, e, id, e.Rep3); err != nil {
 			t.Fatalf("a manager assigning an ownerless lead to another team → %v, want allowed", err)
 		}
-		mustBeOwnedBy(t, manager, e, id, e.Rep3)
+		mustBeOwnedBy(manager, t, e, id, e.Rep3)
 	})
 }
 
-func mustBeOwnedBy(t *testing.T, reader context.Context, e *Env, id ids.LeadID, want ids.UUID) {
+func mustBeOwnedBy(reader context.Context, t *testing.T, e *Env, id ids.LeadID, want ids.UUID) {
 	t.Helper()
 	got, err := e.Contacts.GetLead(reader, id, 0)
 	if err != nil {
@@ -447,8 +447,8 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 			t.Errorf("lead %s answered %q, want %q", outcome.LeadID, outcome.Outcome, want[outcome.LeadID])
 		}
 	}
-	mustBeOwnedBy(t, rep, e, ownerless, e.Rep2)
-	mustBeOwnedBy(t, rep, e, theirs, e.Rep3)
+	mustBeOwnedBy(rep, t, e, ownerless, e.Rep2)
+	mustBeOwnedBy(rep, t, e, theirs, e.Rep3)
 }
 
 // The contract says 1..500 and nothing between the wire and the store reads
