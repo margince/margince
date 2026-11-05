@@ -36,6 +36,8 @@ if [[ -z "$ROOT" ]]; then
   echo "==> DS spacing census: not a git checkout — skipped"
   exit 0
 fi
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$ROOT/scripts/lib-git-fixture.sh"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
