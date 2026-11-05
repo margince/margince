@@ -221,6 +221,7 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/deals:ArchiveOfferAt":                    "offer archive is ratified audit-only \u2014 events.md \u00a75.3 defines no offer.archived type and the closed-verb law forbids inventing one build-side",
 	"internal/modules/deals:SetPdfAssetRef":                    "persisting the rendered PDF's blob ref is ratified audit-only \u2014 events.md \u00a75.3 defines only lifecycle offer.* types, no offer.rendered, and the closed-verb law forbids inventing one build-side",
 	"internal/modules/deals:AddOfferLineItem":                  "draft line edits are ratified audit-only \u2014 events.md \u00a75.3 defines only lifecycle offer.* types, no offer.updated",
+	"internal/modules/deals:RefreshOfferFromDeal":              "a draft's lines taken again from its deal are a draft line edit, ratified audit-only like the others; no offer.updated is defined",
 	"internal/modules/deals:UpdateOfferLineItem":               "draft line edits are ratified audit-only \u2014 events.md \u00a75.3 defines only lifecycle offer.* types, no offer.updated",
 	"internal/modules/deals:RemoveOfferLineItem":               "draft line edits are ratified audit-only \u2014 events.md \u00a75.3 defines only lifecycle offer.* types, no offer.updated",
 	"internal/modules/deals:AcceptOfferLineItem":               "accepting a staged draft line (E03.21a) is a draft line edit \u2014 events.md \u00a75.3 defines only lifecycle offer.* types, no offer.updated",

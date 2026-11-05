@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // standInReason is the reason the stand-in model gives for the close date.
@@ -361,5 +362,160 @@ func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T
 	v.accept(t, v.deal, deals.VerdictAmountCorrection)
 	if err := v.holds(t, basis, now); !errors.Is(err, errSendBasisChanged) {
 		t.Fatalf("holding after an Accept on a listed deal = %v, want the morning read again", err)
+	}
+}
+
+// bundleLane moves the deal a stage on, then lowers its probability and sets
+// its close date. All three cite the note.
+type bundleLane struct {
+	move *stageMoveLane
+	date string
+}
+
+func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	moved, err := l.move.Complete(ctx, req)
+	if err != nil {
+		return moved, err
+	}
+	var answer struct {
+		Actions []map[string]any `json:"actions"`
+	}
+	if err := json.Unmarshal([]byte(moved.Text), &answer); err != nil {
+		return model.Response{}, err
+	}
+	answer.Actions = append(answer.Actions,
+		map[string]any{"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": "", "probability": 5,
+			"cited_activity_ids": []string{l.move.note}, "reason": "They hesitate", "confidence": 0.9},
+		map[string]any{"kind": "set_close_date", "date": l.date, "amount": 0, "currency": "", "quoted_words": "", "probability": 0,
+			"cited_activity_ids": []string{l.move.note}, "reason": standInReason, "confidence": 0.9})
+	text, err := json.Marshal(answer)
+	return model.Response{Text: string(text)}, err
+}
+
+// setupBundle is a deal Margince moved, re-dated and gave a probability in one
+// night.
+func setupBundle(t *testing.T) *stageMoveEnv {
+	t.Helper()
+	v := setupStageMove(t)
+	v.pass = newDealVerdictPass(v.Pool, bundleLane{move: v.move, date: v.lane.date}, slog.New(slog.DiscardHandler))
+	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
+	v.run(t)
+	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction WHERE deal_id = $1`, v.deal); n != 3 {
+		t.Fatalf("corrections = %d, want the move, the probability and the date (outcomes %s)", n, v.outcomes(t))
+	}
+	return v
+}
+
+// moveOn is a colleague moving the deal past the stage Margince moved it to.
+func (v *stageMoveEnv) moveOn(t *testing.T) {
+	t.Helper()
+	later := nextOpenStage(t, v.dealVerdictEnv, v.next)
+	if _, err := v.Deals.AdvanceDeal(v.owner(t), ids.From[ids.DealKind](v.deal), deals.AdvanceDealInput{ToStageID: later}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnUndoRefusedForTheStageLeavesTheWholeDealAsItWas(t *testing.T) {
+	v := setupBundle(t)
+	v.moveOn(t)
+	h := newMarginceChangeHandlers(v.Pool)
+	summary, err := h.deals.PendingChangesOwnedBy(v.owner(t), nil)
+	if err != nil || len(summary.Bundles) != 1 || len(summary.Bundles[0].AuditLogIDs) != 3 {
+		t.Fatalf("pending = %+v %v, want one bundle of three", summary, err)
+	}
+	before := v.WsScalar(t, `SELECT row_to_json(d)::text FROM (SELECT stage_id, expected_close_date, win_probability_override,
+		win_probability_set_by, version FROM deal WHERE id = $1) d`, v.deal)
+
+	result, err := h.undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{
+		DealId: openapi_types.UUID(v.deal), Version: summary.Bundles[0].Version, AuditLogIds: wireUUIDs(summary.Bundles[0].AuditLogIDs),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Outcome != crmcontracts.UndoMarginceChangeResultOutcomeRefused || len(result.Undone) != 0 || len(result.Kept) != 3 {
+		t.Fatalf("undo after a colleague moved the deal on = %+v, want every change kept", result)
+	}
+	for _, kept := range result.Kept {
+		if kept.Reason != crmcontracts.UndoMarginceChangeKeptReasonChangedSince {
+			t.Errorf("kept %v for %s, want changed_since: the deal moved since", kept.Kind, kept.Reason)
+		}
+	}
+	if after := v.WsScalar(t, `SELECT row_to_json(d)::text FROM (SELECT stage_id, expected_close_date, win_probability_override,
+		win_probability_set_by, version FROM deal WHERE id = $1) d`, v.deal); after != before {
+		t.Fatalf("deal after the refused Undo = %s, want it as it was %s", after, before)
+	}
+	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction WHERE deal_id = $1 AND reversed_at IS NOT NULL`, v.deal); n != 0 {
+		t.Fatalf("corrections stamped undone = %d, want none", n)
+	}
+}
+
+func TestAChangeKeptForItsOwnReasonKeepsItWhenTheDealIsHeld(t *testing.T) {
+	v := setupBundle(t)
+	v.accept(t, v.deal, deals.VerdictProbabilityCorrection)
+	v.moveOn(t)
+	version, err := strconv.ParseInt(v.field(t, "version"), 10, 64)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var audits []openapi_types.UUID
+	for _, id := range strings.Split(v.WsScalar(t, `SELECT string_agg(audit_log_id::text, ',') FROM deal_correction WHERE deal_id = $1`, v.deal), ",") {
+		audits = append(audits, openapi_types.UUID(ids.MustParse(id)))
+	}
+	result, err := newMarginceChangeHandlers(v.Pool).undoBundle(v.owner(t), crmcontracts.UndoMarginceChangeItem{
+		DealId: openapi_types.UUID(v.deal), Version: version, AuditLogIds: audits,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]crmcontracts.UndoMarginceChangeKeptReason{
+		deals.VerdictProbabilityCorrection: crmcontracts.UndoMarginceChangeKeptReasonAccepted,
+		deals.VerdictCloseDateCorrection:   crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
+		deals.VerdictStageMoveCorrection:   crmcontracts.UndoMarginceChangeKeptReasonChangedSince,
+	}
+	if result.Outcome != crmcontracts.UndoMarginceChangeResultOutcomeRefused || len(result.Kept) != len(want) {
+		t.Fatalf("undo = %+v, want all three kept", result)
+	}
+	for _, kept := range result.Kept {
+		if kept.Kind == nil || kept.Reason != want[*kept.Kind] {
+			t.Errorf("kept %v for %s, want %s", kept.Kind, kept.Reason, want[derefString(kept.Kind)])
+		}
+	}
+}
+
+// mailedMorning records a morning edition sent to the owner at at, through the
+// brief engine's own claim.
+func (v *dealVerdictEnv) mailedMorning(t *testing.T, at time.Time) {
+	t.Helper()
+	engine := briefs.NewBriefEngine(v.Pool, contacts.NewStore(InstallationDB(v.Pool)))
+	run, err := engine.SnapshotRun(v.owner(t), at)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, claimed, err := engine.ClaimMailAttempt(v.owner(t), run.ID, at); err != nil || !claimed {
+		t.Fatalf("claiming the earlier morning = %v %v", claimed, err)
+	}
+}
+
+func TestLastNightStartsWhenThePreviousMorningWasSent(t *testing.T) {
+	const counted = "Margince changed 1 of your deals last night"
+	for _, tc := range []struct {
+		name    string
+		sentAt  time.Duration
+		readAt  time.Duration
+		counted bool
+	}{
+		{"a morning sent after the changes", time.Hour, 2 * time.Hour, false},
+		{"a morning sent while a change could still commit", time.Minute, 2 * time.Hour, true},
+		{"a morning sent before the changes, read 30 hours later", -time.Hour, 30 * time.Hour, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			v := setupDealVerdict(t)
+			v.run(t)
+			v.mailedMorning(t, v.now.Add(tc.sentAt))
+			text, _ := v.morningBasis(t, v.now.Add(tc.readAt))
+			if strings.Contains(text, counted) != tc.counted {
+				t.Fatalf("morning:\n%s\nwant the changes counted = %t", text, tc.counted)
+			}
+		})
 	}
 }

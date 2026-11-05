@@ -796,6 +796,69 @@ func (e AddConsumerMailDomainRequestKind) Valid() bool {
 	}
 }
 
+// Defines values for AddDealLineRequestBillingIntervalMonths.
+const (
+	AddDealLineRequestBillingIntervalMonthsN1  AddDealLineRequestBillingIntervalMonths = 1
+	AddDealLineRequestBillingIntervalMonthsN12 AddDealLineRequestBillingIntervalMonths = 12
+	AddDealLineRequestBillingIntervalMonthsN3  AddDealLineRequestBillingIntervalMonths = 3
+	AddDealLineRequestBillingIntervalMonthsN6  AddDealLineRequestBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the AddDealLineRequestBillingIntervalMonths enum.
+func (e AddDealLineRequestBillingIntervalMonths) Valid() bool {
+	switch e {
+	case AddDealLineRequestBillingIntervalMonthsN1:
+		return true
+	case AddDealLineRequestBillingIntervalMonthsN12:
+		return true
+	case AddDealLineRequestBillingIntervalMonthsN3:
+		return true
+	case AddDealLineRequestBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddDealLineRequestBillingModel.
+const (
+	AddDealLineRequestBillingModelOneTime   AddDealLineRequestBillingModel = "one_time"
+	AddDealLineRequestBillingModelRecurring AddDealLineRequestBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the AddDealLineRequestBillingModel enum.
+func (e AddDealLineRequestBillingModel) Valid() bool {
+	switch e {
+	case AddDealLineRequestBillingModelOneTime:
+		return true
+	case AddDealLineRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddDealLineRequestTaxCategory.
+const (
+	AddDealLineRequestTaxCategoryExempt   AddDealLineRequestTaxCategory = "exempt"
+	AddDealLineRequestTaxCategoryReduced  AddDealLineRequestTaxCategory = "reduced"
+	AddDealLineRequestTaxCategoryStandard AddDealLineRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the AddDealLineRequestTaxCategory enum.
+func (e AddDealLineRequestTaxCategory) Valid() bool {
+	switch e {
+	case AddDealLineRequestTaxCategoryExempt:
+		return true
+	case AddDealLineRequestTaxCategoryReduced:
+		return true
+	case AddDealLineRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AdvanceDealRequestStatus.
 const (
 	AdvanceDealRequestStatusLost AdvanceDealRequestStatus = "lost"
@@ -10396,6 +10459,81 @@ func (e DealAdvancedWonWithoutContractReason) Valid() bool {
 	}
 }
 
+// Defines values for DealCommercialAmountBasis.
+const (
+	DealCommercialAmountBasisEstimate          DealCommercialAmountBasis = "estimate"
+	DealCommercialAmountBasisLinesNetCommitted DealCommercialAmountBasis = "lines_net_committed"
+	DealCommercialAmountBasisOfferGross        DealCommercialAmountBasis = "offer_gross"
+	DealCommercialAmountBasisUnknown           DealCommercialAmountBasis = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCommercialAmountBasis enum.
+func (e DealCommercialAmountBasis) Valid() bool {
+	switch e {
+	case DealCommercialAmountBasisEstimate:
+		return true
+	case DealCommercialAmountBasisLinesNetCommitted:
+		return true
+	case DealCommercialAmountBasisOfferGross:
+		return true
+	case DealCommercialAmountBasisUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealCommercialMissing.
+const (
+	DealCommercialMissingBillingModel  DealCommercialMissing = "billing_model"
+	DealCommercialMissingIntervalCount DealCommercialMissing = "interval_count"
+	DealCommercialMissingLines         DealCommercialMissing = "lines"
+	DealCommercialMissingQuantity      DealCommercialMissing = "quantity"
+	DealCommercialMissingTaxRate       DealCommercialMissing = "tax_rate"
+	DealCommercialMissingUnitPrice     DealCommercialMissing = "unit_price"
+)
+
+// Valid indicates whether the value is a known member of the DealCommercialMissing enum.
+func (e DealCommercialMissing) Valid() bool {
+	switch e {
+	case DealCommercialMissingBillingModel:
+		return true
+	case DealCommercialMissingIntervalCount:
+		return true
+	case DealCommercialMissingLines:
+		return true
+	case DealCommercialMissingQuantity:
+		return true
+	case DealCommercialMissingTaxRate:
+		return true
+	case DealCommercialMissingUnitPrice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealCommercialMode.
+const (
+	DealCommercialModeEstimate DealCommercialMode = "estimate"
+	DealCommercialModeLegacy   DealCommercialMode = "legacy"
+	DealCommercialModeLines    DealCommercialMode = "lines"
+)
+
+// Valid indicates whether the value is a known member of the DealCommercialMode enum.
+func (e DealCommercialMode) Valid() bool {
+	switch e {
+	case DealCommercialModeEstimate:
+		return true
+	case DealCommercialModeLegacy:
+		return true
+	case DealCommercialModeLines:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealCoverageSectionsOmitted.
 const (
 	DealCoverageSectionsOmittedOurSide      DealCoverageSectionsOmitted = "our_side"
@@ -10480,6 +10618,117 @@ func (e DealLastEmailDirection) Valid() bool {
 	}
 }
 
+// Defines values for DealLineBillingIntervalMonths.
+const (
+	DealLineBillingIntervalMonthsN1  DealLineBillingIntervalMonths = 1
+	DealLineBillingIntervalMonthsN12 DealLineBillingIntervalMonths = 12
+	DealLineBillingIntervalMonthsN3  DealLineBillingIntervalMonths = 3
+	DealLineBillingIntervalMonthsN6  DealLineBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the DealLineBillingIntervalMonths enum.
+func (e DealLineBillingIntervalMonths) Valid() bool {
+	switch e {
+	case DealLineBillingIntervalMonthsN1:
+		return true
+	case DealLineBillingIntervalMonthsN12:
+		return true
+	case DealLineBillingIntervalMonthsN3:
+		return true
+	case DealLineBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLineBillingModel.
+const (
+	DealLineBillingModelOneTime   DealLineBillingModel = "one_time"
+	DealLineBillingModelRecurring DealLineBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the DealLineBillingModel enum.
+func (e DealLineBillingModel) Valid() bool {
+	switch e {
+	case DealLineBillingModelOneTime:
+		return true
+	case DealLineBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLineComponentKind.
+const (
+	DealLineComponentKindImplementation DealLineComponentKind = "implementation"
+	DealLineComponentKindOther          DealLineComponentKind = "other"
+	DealLineComponentKindSoftware       DealLineComponentKind = "software"
+)
+
+// Valid indicates whether the value is a known member of the DealLineComponentKind enum.
+func (e DealLineComponentKind) Valid() bool {
+	switch e {
+	case DealLineComponentKindImplementation:
+		return true
+	case DealLineComponentKindOther:
+		return true
+	case DealLineComponentKindSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLineMissing.
+const (
+	DealLineMissingBillingModel  DealLineMissing = "billing_model"
+	DealLineMissingIntervalCount DealLineMissing = "interval_count"
+	DealLineMissingQuantity      DealLineMissing = "quantity"
+	DealLineMissingTaxRate       DealLineMissing = "tax_rate"
+	DealLineMissingUnitPrice     DealLineMissing = "unit_price"
+)
+
+// Valid indicates whether the value is a known member of the DealLineMissing enum.
+func (e DealLineMissing) Valid() bool {
+	switch e {
+	case DealLineMissingBillingModel:
+		return true
+	case DealLineMissingIntervalCount:
+		return true
+	case DealLineMissingQuantity:
+		return true
+	case DealLineMissingTaxRate:
+		return true
+	case DealLineMissingUnitPrice:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealLineTaxCategory.
+const (
+	DealLineTaxCategoryExempt   DealLineTaxCategory = "exempt"
+	DealLineTaxCategoryReduced  DealLineTaxCategory = "reduced"
+	DealLineTaxCategoryStandard DealLineTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the DealLineTaxCategory enum.
+func (e DealLineTaxCategory) Valid() bool {
+	switch e {
+	case DealLineTaxCategoryExempt:
+		return true
+	case DealLineTaxCategoryReduced:
+		return true
+	case DealLineTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealProductComponentKind.
 const (
 	DealProductComponentKindImplementation DealProductComponentKind = "implementation"
@@ -10503,6 +10752,7 @@ func (e DealProductComponentKind) Valid() bool {
 
 // Defines values for DealProductSource.
 const (
+	DealProductSourceLine   DealProductSource = "line"
 	DealProductSourceManual DealProductSource = "manual"
 	DealProductSourceOffer  DealProductSource = "offer"
 )
@@ -10510,6 +10760,8 @@ const (
 // Valid indicates whether the value is a known member of the DealProductSource enum.
 func (e DealProductSource) Valid() bool {
 	switch e {
+	case DealProductSourceLine:
+		return true
 	case DealProductSourceManual:
 		return true
 	case DealProductSourceOffer:
@@ -12087,9 +12339,11 @@ func (e ForecastLandingCaveat) Valid() bool {
 
 // Defines values for ForecastLandingMeasure.
 const (
-	ForecastLandingMeasureForwardMeasureLikely      ForecastLandingMeasure = "likely"
-	ForecastLandingMeasureForwardMeasureManagerCall ForecastLandingMeasure = "manager_call"
-	ForecastLandingMeasureForwardMeasureWeighted    ForecastLandingMeasure = "weighted"
+	ForecastLandingMeasureForwardMeasureLikely            ForecastLandingMeasure = "likely"
+	ForecastLandingMeasureForwardMeasureManagerCall       ForecastLandingMeasure = "manager_call"
+	ForecastLandingMeasureForwardMeasureQualifiedLikely   ForecastLandingMeasure = "qualified_likely"
+	ForecastLandingMeasureForwardMeasureQualifiedWeighted ForecastLandingMeasure = "qualified_weighted"
+	ForecastLandingMeasureForwardMeasureWeighted          ForecastLandingMeasure = "weighted"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingMeasure enum.
@@ -12098,6 +12352,10 @@ func (e ForecastLandingMeasure) Valid() bool {
 	case ForecastLandingMeasureForwardMeasureLikely:
 		return true
 	case ForecastLandingMeasureForwardMeasureManagerCall:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedLikely:
+		return true
+	case ForecastLandingMeasureForwardMeasureQualifiedWeighted:
 		return true
 	case ForecastLandingMeasureForwardMeasureWeighted:
 		return true
@@ -22795,6 +23053,69 @@ func (e UpdateDataSubjectRequestStatus) Valid() bool {
 	}
 }
 
+// Defines values for UpdateDealLineRequestBillingIntervalMonths.
+const (
+	UpdateDealLineRequestBillingIntervalMonthsN1  UpdateDealLineRequestBillingIntervalMonths = 1
+	UpdateDealLineRequestBillingIntervalMonthsN12 UpdateDealLineRequestBillingIntervalMonths = 12
+	UpdateDealLineRequestBillingIntervalMonthsN3  UpdateDealLineRequestBillingIntervalMonths = 3
+	UpdateDealLineRequestBillingIntervalMonthsN6  UpdateDealLineRequestBillingIntervalMonths = 6
+)
+
+// Valid indicates whether the value is a known member of the UpdateDealLineRequestBillingIntervalMonths enum.
+func (e UpdateDealLineRequestBillingIntervalMonths) Valid() bool {
+	switch e {
+	case UpdateDealLineRequestBillingIntervalMonthsN1:
+		return true
+	case UpdateDealLineRequestBillingIntervalMonthsN12:
+		return true
+	case UpdateDealLineRequestBillingIntervalMonthsN3:
+		return true
+	case UpdateDealLineRequestBillingIntervalMonthsN6:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateDealLineRequestBillingModel.
+const (
+	UpdateDealLineRequestBillingModelOneTime   UpdateDealLineRequestBillingModel = "one_time"
+	UpdateDealLineRequestBillingModelRecurring UpdateDealLineRequestBillingModel = "recurring"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDealLineRequestBillingModel enum.
+func (e UpdateDealLineRequestBillingModel) Valid() bool {
+	switch e {
+	case UpdateDealLineRequestBillingModelOneTime:
+		return true
+	case UpdateDealLineRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateDealLineRequestTaxCategory.
+const (
+	UpdateDealLineRequestTaxCategoryExempt   UpdateDealLineRequestTaxCategory = "exempt"
+	UpdateDealLineRequestTaxCategoryReduced  UpdateDealLineRequestTaxCategory = "reduced"
+	UpdateDealLineRequestTaxCategoryStandard UpdateDealLineRequestTaxCategory = "standard"
+)
+
+// Valid indicates whether the value is a known member of the UpdateDealLineRequestTaxCategory enum.
+func (e UpdateDealLineRequestTaxCategory) Valid() bool {
+	switch e {
+	case UpdateDealLineRequestTaxCategoryExempt:
+		return true
+	case UpdateDealLineRequestTaxCategoryReduced:
+		return true
+	case UpdateDealLineRequestTaxCategoryStandard:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateDealRequestCommercialMotion.
 const (
 	UpdateDealRequestCommercialMotionCrossSell        UpdateDealRequestCommercialMotion = "cross_sell"
@@ -29925,6 +30246,43 @@ type AddConsumerMailDomainRequest struct {
 
 // AddConsumerMailDomainRequestKind defines model for AddConsumerMailDomainRequest.Kind.
 type AddConsumerMailDomainRequestKind string
+
+// AddDealLineRequest With `product_id` the line copies the product's name, unit, price, tax category and billing;
+// anything sent here is used instead. A product priced in another currency needs an explicit
+// `unit_price_minor` (422 `product_currency_mismatch`). Without `product_id`, `description` is required.
+type AddDealLineRequest struct {
+	BillingIntervalMonths *AddDealLineRequestBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+	BillingModel          *AddDealLineRequestBillingModel          `json:"billing_model,omitempty"`
+
+	// Currency The currency of the lines. Defaults to the deal's; required on a deal with none. Every line of a deal shares one.
+	Currency         *string             `json:"currency,omitempty"`
+	Description      *string             `json:"description,omitempty"`
+	DiscountPct      *float64            `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
+	ExpectedRevision int64               `json:"expected_revision" minimum:"0"`
+	IntervalCount    *int                `json:"interval_count,omitempty" minimum:"1"`
+	ProductId        *openapi_types.UUID `json:"product_id,omitempty"`
+
+	// Quantity > 0, up to 3 decimal places. Omit while unknown.
+	Quantity *float64 `json:"quantity,omitempty"`
+
+	// ReplaceEstimate Replace the value a human typed with the lines. Required while the deal holds one.
+	ReplaceEstimate *bool                          `json:"replace_estimate,omitempty"`
+	TaxCategory     *AddDealLineRequestTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. Refused together with `tax_category`.
+	TaxRate        *float64 `json:"tax_rate,omitempty" minimum:"0"`
+	Unit           *string  `json:"unit,omitempty"`
+	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty" minimum:"0"`
+}
+
+// AddDealLineRequestBillingIntervalMonths defines model for AddDealLineRequest.BillingIntervalMonths.
+type AddDealLineRequestBillingIntervalMonths int
+
+// AddDealLineRequestBillingModel defines model for AddDealLineRequest.BillingModel.
+type AddDealLineRequestBillingModel string
+
+// AddDealLineRequestTaxCategory defines model for AddDealLineRequest.TaxCategory.
+type AddDealLineRequestTaxCategory string
 
 // AddDealRoomDocumentRequest defines model for AddDealRoomDocumentRequest.
 type AddDealRoomDocumentRequest struct {
@@ -42347,7 +42705,12 @@ type CreateOfferRequest struct {
 	// BuyerCompanyId Defaults to the deal's company.
 	BuyerCompanyId *openapi_types.UUID `json:"buyer_company_id,omitempty"`
 	Currency       string              `json:"currency"`
-	IntroText      *string             `json:"intro_text,omitempty"`
+
+	// FromDealRevision Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
+	// `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
+	// answers 409 `version_skew`. The currency must be the deal's.
+	FromDealRevision *int64  `json:"from_deal_revision,omitempty" minimum:"0"`
+	IntroText        *string `json:"intro_text,omitempty"`
 
 	// Language The language new lines take product names in. Unset is the entity's, else the template's.
 	Language *string `json:"language,omitempty"`
@@ -43160,6 +43523,12 @@ type Deal struct {
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
+	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
+	WinProbabilitySetByName *string `json:"win_probability_set_by_name,omitempty"`
+
+	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
+
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
 
@@ -43320,6 +43689,12 @@ type DealAdvanced struct {
 	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
+	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
+	WinProbabilitySetByName *string `json:"win_probability_set_by_name,omitempty"`
+
+	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
+	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
+
 	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
 	WinProbabilitySource *DealAdvancedWinProbabilitySource `json:"win_probability_source,omitempty"`
 
@@ -43354,6 +43729,47 @@ type DealAdvancedWinProbabilitySource string
 
 // DealAdvancedWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealAdvancedWonWithoutContractReason string
+
+// DealCommercial A deal's commercial state. In `lines` mode the deal's value is `committed_net_minor`: net,
+// excluding tax, with each recurring line counted for its committed periods. It is null until
+// every line is complete; `known_committed_net_minor` is the part already known.
+type DealCommercial struct {
+	// AmountBasis What the deal's amount means. Null while the deal has no amount.
+	AmountBasis *DealCommercialAmountBasis `json:"amount_basis,omitempty"`
+	ArrMinor    *int64                     `json:"arr_minor,omitempty"`
+
+	// CommercialRevision Counts the accepted changes to the lines. Send it back as `expected_revision`.
+	CommercialRevision     int64                   `json:"commercial_revision"`
+	CommittedNetMinor      *int64                  `json:"committed_net_minor,omitempty"`
+	Complete               bool                    `json:"complete"`
+	Currency               *string                 `json:"currency,omitempty"`
+	DealId                 openapi_types.UUID      `json:"deal_id"`
+	GrossMinor             *int64                  `json:"gross_minor,omitempty"`
+	KnownCommittedNetMinor *int64                  `json:"known_committed_net_minor,omitempty"`
+	Lines                  []DealLine              `json:"lines"`
+	Missing                []DealCommercialMissing `json:"missing"`
+
+	// Mode `estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.
+	Mode DealCommercialMode `json:"mode"`
+
+	// MoneyWithheld The deal's amount is masked from this reader, so every price and figure is null.
+	MoneyWithheld bool `json:"money_withheld"`
+
+	// TaxMinor Tax on the committed net, at today's rates. An offer takes the rate of its send day.
+	TaxMinor *int64 `json:"tax_minor,omitempty"`
+
+	// Writable Whether this reader may change the lines now.
+	Writable bool `json:"writable"`
+}
+
+// DealCommercialAmountBasis What the deal's amount means. Null while the deal has no amount.
+type DealCommercialAmountBasis string
+
+// DealCommercialMissing defines model for DealCommercial.Missing.
+type DealCommercialMissing string
+
+// DealCommercialMode `estimate` is a value a human typed, `lines` the sum of the lines, `legacy` a deal from before deals had lines.
+type DealCommercialMode string
 
 // DealCommitment defines model for DealCommitment.
 type DealCommitment struct {
@@ -43549,6 +43965,79 @@ type DealLegalReviewListResponse struct {
 	Data []LegalReviewSummary `json:"data"`
 }
 
+// DealLine One product or custom item a deal sells. A product line copies the product's name, unit, price,
+// tax and billing once, when it is added; a later catalogue edit does not change it. A figure is
+// null while an input it needs is unknown. A reader the deal's amount is masked from gets no
+// number at all: no quantity, price, discount, tax rate, billing period, term or figure.
+type DealLine struct {
+	ArrMinor              *int64                         `json:"arr_minor,omitempty"`
+	BillingIntervalMonths *DealLineBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+
+	// BillingModel Null means nobody has classified the line yet, which leaves the deal's value incomplete.
+	BillingModel *DealLineBillingModel `json:"billing_model,omitempty"`
+
+	// CatalogName The product's name when the line was added.
+	CatalogName *string `json:"catalog_name,omitempty"`
+
+	// CommittedNetMinor Net times the committed periods; one period for a one-time line.
+	CommittedNetMinor *int64                 `json:"committed_net_minor,omitempty"`
+	ComponentKind     *DealLineComponentKind `json:"component_kind,omitempty"`
+	CreatedAt         time.Time              `json:"created_at"`
+	Currency          string                 `json:"currency"`
+	Description       string                 `json:"description"`
+
+	// DiscountPct Null for a masked reader.
+	DiscountPct *float64           `json:"discount_pct"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// IntervalCount How many billing periods are committed. Recurring lines only.
+	IntervalCount *int `json:"interval_count,omitempty" minimum:"1"`
+
+	// LineNetMinor Net per billing period after the discount.
+	LineNetMinor *int64 `json:"line_net_minor,omitempty"`
+
+	// Missing What the line still needs before its figures are complete.
+	Missing  []DealLineMissing `json:"missing"`
+	Position int               `json:"position"`
+
+	// ProductId Null on a custom item.
+	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
+
+	// Quantity Up to 3 decimal places, greater than 0. Null while unknown.
+	Quantity    *float64             `json:"quantity,omitempty"`
+	Sku         *string              `json:"sku,omitempty"`
+	TaxCategory *DealLineTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate The typed rate, or the rate the tax rate sheet holds today for `tax_category`. Null when the sheet has none.
+	TaxRate *float64 `json:"tax_rate,omitempty"`
+	Unit    string   `json:"unit"`
+
+	// UnitPriceMinor The selling price in minor units of `currency`. Null while unknown, or masked.
+	UnitPriceMinor *int64    `json:"unit_price_minor,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// DealLineBillingIntervalMonths defines model for DealLine.BillingIntervalMonths.
+type DealLineBillingIntervalMonths int
+
+// DealLineBillingModel Null means nobody has classified the line yet, which leaves the deal's value incomplete.
+type DealLineBillingModel string
+
+// DealLineComponentKind defines model for DealLine.ComponentKind.
+type DealLineComponentKind string
+
+// DealLineMissing defines model for DealLine.Missing.
+type DealLineMissing string
+
+// DealLineTaxCategory defines model for DealLine.TaxCategory.
+type DealLineTaxCategory string
+
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
 	Data []Deal   `json:"data"`
@@ -43588,16 +44077,19 @@ type DealProbabilitySet struct {
 
 // DealProduct defines model for DealProduct.
 type DealProduct struct {
-	// AmountMinor The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it.
+	// AmountMinor The value allocated to the product in minor units of `currency`, or null while the deal is unpriced for it. For a `line` row, the committed net of its lines, null while one of them is incomplete.
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
 	// ComponentKind The classification of the product when the allocation was written.
 	ComponentKind *DealProductComponentKind `json:"component_kind,omitempty"`
 	Currency      *string                   `json:"currency,omitempty"`
-	ProductId     openapi_types.UUID        `json:"product_id"`
-	ProductName   string                    `json:"product_name"`
 
-	// Source `offer` is derived from the accepted offer; `manual` was set by hand on the deal.
+	// KnownAmountMinor For a `line` row, the part of the value already known. Null on other rows.
+	KnownAmountMinor *int64             `json:"known_amount_minor,omitempty"`
+	ProductId        openapi_types.UUID `json:"product_id"`
+	ProductName      string             `json:"product_name"`
+
+	// Source `offer` is derived from the accepted offer; `manual` was set by hand on the deal; `line` is the sum of the deal's own lines for the product.
 	Source    DealProductSource `json:"source"`
 	UpdatedAt time.Time         `json:"updated_at"`
 }
@@ -43605,7 +44097,7 @@ type DealProduct struct {
 // DealProductComponentKind The classification of the product when the allocation was written.
 type DealProductComponentKind string
 
-// DealProductSource `offer` is derived from the accepted offer; `manual` was set by hand on the deal.
+// DealProductSource `offer` is derived from the accepted offer; `manual` was set by hand on the deal; `line` is the sum of the deal's own lines for the product.
 type DealProductSource string
 
 // DealProductInput defines model for DealProductInput.
@@ -43618,6 +44110,12 @@ type DealProductInput struct {
 // DealProductListResponse defines model for DealProductListResponse.
 type DealProductListResponse struct {
 	Data []DealProduct `json:"data"`
+}
+
+// DealRevisionRequest defines model for DealRevisionRequest.
+type DealRevisionRequest struct {
+	// ExpectedRevision The deal's `commercial_revision` the caller last read.
+	ExpectedRevision int64 `json:"expected_revision" minimum:"0"`
 }
 
 // DealRoleProposalResult defines model for DealRoleProposalResult.
@@ -45983,7 +46481,7 @@ type ForecastLanding struct {
 	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
-	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
+	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
 	Measure ForecastLandingMeasure `json:"measure"`
 
 	// RemainingMinor The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
@@ -45999,7 +46497,7 @@ type ForecastLanding struct {
 // ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 type ForecastLandingCaveat string
 
-// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name.
+// ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
 type ForecastLandingMeasure string
 
 // ForecastMovement The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly.
@@ -52452,7 +52950,10 @@ type Offer struct {
 	LegalEntityId *openapi_types.UUID `json:"legal_entity_id,omitempty"`
 	LineItems     *[]OfferLineItem    `json:"line_items,omitempty"`
 
-	// NetMinor Σ line nets; derived, never client-set.
+	// MoneyWithheld True for a reader the deal's amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal's amount by another name.
+	MoneyWithheld *bool `json:"money_withheld,omitempty"`
+
+	// NetMinor Σ line nets; derived, never client-set. Absent when money_withheld.
 	NetMinor *int64 `json:"net_minor,omitempty"`
 
 	// NetTcvMinor The total the buyer commits to: one-off lines in full, plus each recurring line's per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.
@@ -52465,9 +52966,12 @@ type Offer struct {
 	PdfAssetRef *string `json:"pdf_asset_ref,omitempty"`
 
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
-	Revision *int        `json:"revision,omitempty"`
-	Source   string      `json:"source"`
-	Status   OfferStatus `json:"status"`
+	Revision *int   `json:"revision,omitempty"`
+	Source   string `json:"source"`
+
+	// SourceCommercialRevision The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
+	SourceCommercialRevision *int64      `json:"source_commercial_revision,omitempty"`
+	Status                   OfferStatus `json:"status"`
 
 	// TaxMinor Σ line taxes; derived, never client-set.
 	TaxMinor *int64 `json:"tax_minor,omitempty"`
@@ -52531,6 +53035,9 @@ type OfferLineItem struct {
 
 	// Quantity Up to 3 decimal places (numeric 14,3); must be > 0.
 	Quantity float64 `json:"quantity"`
+
+	// SourceDealLineId The deal line this line was copied from.
+	SourceDealLineId *openapi_types.UUID `json:"source_deal_line_id,omitempty"`
 
 	// TaxCategory The category the line takes its rate from. Null on a line whose rate was typed, or copied from an unclassified product: that rate stays as it is, also when the offer is sent.
 	TaxCategory *OfferLineItemTaxCategory `json:"tax_category,omitempty"`
@@ -61359,6 +61866,34 @@ type UpdateDataSubjectRequestIdentityCheck string
 // UpdateDataSubjectRequestStatus defines model for UpdateDataSubjectRequest.Status.
 type UpdateDataSubjectRequestStatus string
 
+// UpdateDealLineRequest defines model for UpdateDealLineRequest.
+type UpdateDealLineRequest struct {
+	BillingIntervalMonths *UpdateDealLineRequestBillingIntervalMonths `json:"billing_interval_months,omitempty"`
+	BillingModel          *UpdateDealLineRequestBillingModel          `json:"billing_model,omitempty"`
+	Description           *string                                     `json:"description,omitempty"`
+	DiscountPct           *float64                                    `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
+	ExpectedRevision      int64                                       `json:"expected_revision" minimum:"0"`
+	IntervalCount         *int                                        `json:"interval_count,omitempty" minimum:"1"`
+	Quantity              *float64                                    `json:"quantity,omitempty"`
+
+	// TaxCategory Take the rate from the tax rate sheet. It drops a typed rate.
+	TaxCategory *UpdateDealLineRequestTaxCategory `json:"tax_category,omitempty"`
+
+	// TaxRate A typed rate. It drops the line's tax category.
+	TaxRate        *float64 `json:"tax_rate,omitempty" minimum:"0"`
+	Unit           *string  `json:"unit,omitempty"`
+	UnitPriceMinor *int64   `json:"unit_price_minor,omitempty" minimum:"0"`
+}
+
+// UpdateDealLineRequestBillingIntervalMonths defines model for UpdateDealLineRequest.BillingIntervalMonths.
+type UpdateDealLineRequestBillingIntervalMonths int
+
+// UpdateDealLineRequestBillingModel defines model for UpdateDealLineRequest.BillingModel.
+type UpdateDealLineRequestBillingModel string
+
+// UpdateDealLineRequestTaxCategory Take the rate from the tax rate sheet. It drops a typed rate.
+type UpdateDealLineRequestTaxCategory string
+
 // UpdateDealRequest defines model for UpdateDealRequest.
 type UpdateDealRequest struct {
 	// AcquisitionSource An active key from `/acquisition-sources`. A retired key is refused for a NEW assignment (422 `acquisition_source_retired`) but a deal already holding one keeps it through unrelated edits. Null clears it.
@@ -69507,6 +70042,11 @@ type ListDealDocumentsParams struct {
 // ListDealDocumentsParamsCategory defines parameters for ListDealDocuments.
 type ListDealDocumentsParamsCategory string
 
+// RemoveDealLineParams defines parameters for RemoveDealLine.
+type RemoveDealLineParams struct {
+	ExpectedRevision int64 `form:"expected_revision" json:"expected_revision" minimum:"0"`
+}
+
 // ListDealMarginceChangesParams defines parameters for ListDealMarginceChanges.
 type ListDealMarginceChangesParams struct {
 	// Cursor The `next_cursor` of the page before. A token this server did not mint is refused with 422.
@@ -70914,6 +71454,16 @@ type UpdateOfferParams struct {
 
 // AcceptOfferParams defines parameters for AcceptOffer.
 type AcceptOfferParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// RefreshOfferFromDealParams defines parameters for RefreshOfferFromDeal.
+type RefreshOfferFromDealParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
 	// the last-seen entity `version`. If the row's current `version` differs, the write is
 	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
@@ -74184,6 +74734,15 @@ type CorrectDealCloseDayJSONRequestBody = CorrectDealCloseDayRequest
 // RequestLegalReviewJSONRequestBody defines body for RequestLegalReview for application/json ContentType.
 type RequestLegalReviewJSONRequestBody = RequestLegalReviewRequest
 
+// AddDealLineJSONRequestBody defines body for AddDealLine for application/json ContentType.
+type AddDealLineJSONRequestBody = AddDealLineRequest
+
+// UseDealEstimateJSONRequestBody defines body for UseDealEstimate for application/json ContentType.
+type UseDealEstimateJSONRequestBody = DealRevisionRequest
+
+// UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
+type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
 // DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
 type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
 
@@ -74471,6 +75030,9 @@ type AddOfferLineItemJSONRequestBody = OfferLineItemInput
 
 // UpdateOfferLineItemJSONRequestBody defines body for UpdateOfferLineItem for application/json ContentType.
 type UpdateOfferLineItemJSONRequestBody = UpdateOfferLineItemRequest
+
+// RefreshOfferFromDealJSONRequestBody defines body for RefreshOfferFromDeal for application/json ContentType.
+type RefreshOfferFromDealJSONRequestBody = DealRevisionRequest
 
 // RejectOfferJSONRequestBody defines body for RejectOffer for application/json ContentType.
 type RejectOfferJSONRequestBody = RejectOfferRequest
@@ -80364,6 +80926,22 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "win_probability")
 	}
 
+	if raw, found := object["win_probability_set_by_name"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByName)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_name': %w", err)
+		}
+		delete(object, "win_probability_set_by_name")
+	}
+
+	if raw, found := object["win_probability_set_by_user_id"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_user_id': %w", err)
+		}
+		delete(object, "win_probability_set_by_user_id")
+	}
+
 	if raw, found := object["win_probability_source"]; found {
 		err = json.Unmarshal(raw, &a.WinProbabilitySource)
 		if err != nil {
@@ -80723,6 +81301,20 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["win_probability"], err = json.Marshal(a.WinProbability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByName != nil {
+		object["win_probability_set_by_name"], err = json.Marshal(a.WinProbabilitySetByName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_name': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByUserId != nil {
+		object["win_probability_set_by_user_id"], err = json.Marshal(a.WinProbabilitySetByUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_user_id': %w", err)
 		}
 	}
 
@@ -81172,6 +81764,22 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "win_probability")
 	}
 
+	if raw, found := object["win_probability_set_by_name"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByName)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_name': %w", err)
+		}
+		delete(object, "win_probability_set_by_name")
+	}
+
+	if raw, found := object["win_probability_set_by_user_id"]; found {
+		err = json.Unmarshal(raw, &a.WinProbabilitySetByUserId)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_probability_set_by_user_id': %w", err)
+		}
+		delete(object, "win_probability_set_by_user_id")
+	}
+
 	if raw, found := object["win_probability_source"]; found {
 		err = json.Unmarshal(raw, &a.WinProbabilitySource)
 		if err != nil {
@@ -81538,6 +82146,20 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["win_probability"], err = json.Marshal(a.WinProbability)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'win_probability': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByName != nil {
+		object["win_probability_set_by_name"], err = json.Marshal(a.WinProbabilitySetByName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_name': %w", err)
+		}
+	}
+
+	if a.WinProbabilitySetByUserId != nil {
+		object["win_probability_set_by_user_id"], err = json.Marshal(a.WinProbabilitySetByUserId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_probability_set_by_user_id': %w", err)
 		}
 	}
 
@@ -83529,6 +84151,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 		delete(object, "line_items")
 	}
 
+	if raw, found := object["money_withheld"]; found {
+		err = json.Unmarshal(raw, &a.MoneyWithheld)
+		if err != nil {
+			return fmt.Errorf("error reading 'money_withheld': %w", err)
+		}
+		delete(object, "money_withheld")
+	}
+
 	if raw, found := object["net_minor"]; found {
 		err = json.Unmarshal(raw, &a.NetMinor)
 		if err != nil {
@@ -83575,6 +84205,14 @@ func (a *Offer) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'source': %w", err)
 		}
 		delete(object, "source")
+	}
+
+	if raw, found := object["source_commercial_revision"]; found {
+		err = json.Unmarshal(raw, &a.SourceCommercialRevision)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_commercial_revision': %w", err)
+		}
+		delete(object, "source_commercial_revision")
 	}
 
 	if raw, found := object["status"]; found {
@@ -83742,9 +84380,11 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	object["gross_minor"], err = json.Marshal(a.GrossMinor)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'gross_minor': %w", err)
+	if a.GrossMinor != nil {
+		object["gross_minor"], err = json.Marshal(a.GrossMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'gross_minor': %w", err)
+		}
 	}
 
 	object["id"], err = json.Marshal(a.Id)
@@ -83787,9 +84427,18 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	object["net_minor"], err = json.Marshal(a.NetMinor)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'net_minor': %w", err)
+	if a.MoneyWithheld != nil {
+		object["money_withheld"], err = json.Marshal(a.MoneyWithheld)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'money_withheld': %w", err)
+		}
+	}
+
+	if a.NetMinor != nil {
+		object["net_minor"], err = json.Marshal(a.NetMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'net_minor': %w", err)
+		}
 	}
 
 	if a.NetTcvMinor != nil {
@@ -83821,14 +84470,23 @@ func (a Offer) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'source': %w", err)
 	}
 
+	if a.SourceCommercialRevision != nil {
+		object["source_commercial_revision"], err = json.Marshal(a.SourceCommercialRevision)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_commercial_revision': %w", err)
+		}
+	}
+
 	object["status"], err = json.Marshal(a.Status)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'status': %w", err)
 	}
 
-	object["tax_minor"], err = json.Marshal(a.TaxMinor)
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling 'tax_minor': %w", err)
+	if a.TaxMinor != nil {
+		object["tax_minor"], err = json.Marshal(a.TaxMinor)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'tax_minor': %w", err)
+		}
 	}
 
 	if a.TemplateId != nil {
@@ -88751,6 +89409,21 @@ type ServerInterface interface {
 	// Ask legal to review this deal.
 	// (POST /deals/{id}/legal-reviews)
 	RequestLegalReview(w http.ResponseWriter, r *http.Request, id Id)
+	// The products and services a deal sells, and the value they add up to.
+	// (GET /deals/{id}/lines)
+	GetDealLines(w http.ResponseWriter, r *http.Request, id Id)
+	// Add a product or a custom item to a deal; the deal's value follows its lines.
+	// (POST /deals/{id}/lines)
+	AddDealLine(w http.ResponseWriter, r *http.Request, id Id)
+	// Return a deal with no lines to a typed estimate.
+	// (POST /deals/{id}/lines/estimate)
+	UseDealEstimate(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode.
+	// (DELETE /deals/{id}/lines/{lineId})
+	RemoveDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID, params RemoveDealLineParams)
+	// Change one line of a deal; omit a field to leave it as it is, send null to clear it.
+	// (PATCH /deals/{id}/lines/{lineId})
+	UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID)
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
@@ -89480,6 +90153,9 @@ type ServerInterface interface {
 	// Download the offer's most recently rendered PDF.
 	// (GET /offers/{id}/pdf)
 	DownloadOfferPdf(w http.ResponseWriter, r *http.Request, id Id)
+	// Replace a draft offer's lines with the deal's current lines; the header stays.
+	// (POST /offers/{id}/refresh-from-deal)
+	RefreshOfferFromDeal(w http.ResponseWriter, r *http.Request, id Id, params RefreshOfferFromDealParams)
 	// Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal.
 	// (POST /offers/{id}/regenerate)
 	RegenerateOffer(w http.ResponseWriter, r *http.Request, id Id, params RegenerateOfferParams)
@@ -93233,6 +93909,36 @@ func (_ Unimplemented) RequestLegalReview(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The products and services a deal sells, and the value they add up to.
+// (GET /deals/{id}/lines)
+func (_ Unimplemented) GetDealLines(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a product or a custom item to a deal; the deal's value follows its lines.
+// (POST /deals/{id}/lines)
+func (_ Unimplemented) AddDealLine(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Return a deal with no lines to a typed estimate.
+// (POST /deals/{id}/lines/estimate)
+func (_ Unimplemented) UseDealEstimate(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode.
+// (DELETE /deals/{id}/lines/{lineId})
+func (_ Unimplemented) RemoveDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID, params RemoveDealLineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change one line of a deal; omit a field to leave it as it is, send null to clear it.
+// (PATCH /deals/{id}/lines/{lineId})
+func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Every change Margince made to this deal, newest first.
 // (GET /deals/{id}/margince-changes)
 func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
@@ -94688,6 +95394,12 @@ func (_ Unimplemented) UpdateOfferLineItem(w http.ResponseWriter, r *http.Reques
 // Download the offer's most recently rendered PDF.
 // (GET /offers/{id}/pdf)
 func (_ Unimplemented) DownloadOfferPdf(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace a draft offer's lines with the deal's current lines; the header stays.
+// (POST /offers/{id}/refresh-from-deal)
+func (_ Unimplemented) RefreshOfferFromDeal(w http.ResponseWriter, r *http.Request, id Id, params RefreshOfferFromDealParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118011,6 +118723,210 @@ func (siw *ServerInterfaceWrapper) RequestLegalReview(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// GetDealLines operation middleware
+func (siw *ServerInterfaceWrapper) GetDealLines(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealLines(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddDealLine operation middleware
+func (siw *ServerInterfaceWrapper) AddDealLine(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddDealLine(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UseDealEstimate operation middleware
+func (siw *ServerInterfaceWrapper) UseDealEstimate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UseDealEstimate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveDealLine operation middleware
+func (siw *ServerInterfaceWrapper) RemoveDealLine(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "lineId" -------------
+	var lineId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "lineId", chi.URLParam(r, "lineId"), &lineId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lineId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RemoveDealLineParams
+
+	// ------------- Required query parameter "expected_revision" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "expected_revision", r.URL.Query(), &params.ExpectedRevision, runtime.BindQueryParameterOptions{Type: "integer", Format: "int64"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expected_revision"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expected_revision", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveDealLine(w, r, id, lineId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDealLine operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "lineId" -------------
+	var lineId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "lineId", chi.URLParam(r, "lineId"), &lineId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "lineId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDealLine(w, r, id, lineId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
 
@@ -127227,6 +128143,64 @@ func (siw *ServerInterfaceWrapper) DownloadOfferPdf(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadOfferPdf(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefreshOfferFromDeal operation middleware
+func (siw *ServerInterfaceWrapper) RefreshOfferFromDeal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RefreshOfferFromDealParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefreshOfferFromDeal(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -141687,6 +142661,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/deals/{id}/legal-reviews", wrapper.RequestLegalReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/lines", wrapper.GetDealLines)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/lines", wrapper.AddDealLine)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/lines/estimate", wrapper.UseDealEstimate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/deals/{id}/lines/{lineId}", wrapper.RemoveDealLine)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/deals/{id}/lines/{lineId}", wrapper.UpdateDealLine)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
 	})
 	r.Group(func(r chi.Router) {
@@ -142414,6 +143403,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/offers/{id}/pdf", wrapper.DownloadOfferPdf)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/offers/{id}/refresh-from-deal", wrapper.RefreshOfferFromDeal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/offers/{id}/regenerate", wrapper.RegenerateOffer)

@@ -190,6 +190,11 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | Read records | at once |
 | `GET /deals/{id}/products` | listDealProducts | The products a deal sells, with the value allocated to each. | Read records | at once |
 | `PUT /deals/{id}/products` | replaceDealProducts | Set a deal's products by hand, replacing every allocation it had. | Change records | at once |
+| `GET /deals/{id}/lines` | getDealLines | The products and services a deal sells, and the value they add up to. | Read records | at once |
+| `POST /deals/{id}/lines` | addDealLine | Add a product or a custom item to a deal; the deal's value follows its lines. | Change records | at once |
+| `PATCH /deals/{id}/lines/{lineId}` | updateDealLine | Change one line of a deal; omit a field to leave it as it is, send null to clear it. | Change records | at once |
+| `DELETE /deals/{id}/lines/{lineId}` | removeDealLine | Remove one line of a deal. The last line removed leaves the deal unpriced, in `lines` mode. | Change records | at once |
+| `POST /deals/{id}/lines/estimate` | useDealEstimate | Return a deal with no lines to a typed estimate. | Change records | at once |
 | `POST /deals/{id}/applied-changes/{changeId}/accept` | acceptAppliedDealChange | Accept a recorded automatic deal change. | Change records | at once |
 | `GET /deals/{id}/margince-changes` | listDealMarginceChanges | Every change Margince made to this deal, newest first. | Read records | at once |
 | `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals that you have not accepted or undone. | Read records | at once |
@@ -775,6 +780,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /offers/{id}/line-items` | addOfferLineItem | Add a line item to a draft offer (position defaults to next; totals recomputed). | Change records | at once |
 | `PATCH /offers/{id}/line-items/{lineItemId}` | updateOfferLineItem | Update a draft offer's line item (totals recomputed; totals themselves are not settable). | Change records | at once |
 | `DELETE /offers/{id}/line-items/{lineItemId}` | removeOfferLineItem | Remove a line item from a draft offer (totals recomputed). | Change records | at once |
+| `POST /offers/{id}/refresh-from-deal` | refreshOfferFromDeal | Replace a draft offer's lines with the deal's current lines; the header stays. | Change records | at once |
 | `POST /offers/{id}/send` | sendOffer | Move a draft offer to sent — the transition that freezes its commercial terms (FX + buyer/issuer snapshot). | Change records | at once |
 | `POST /offers/{id}/accept` | acceptOffer | Record the buyer's acceptance — syncs the deal's amount from the offer's gross. | Change records | at once |
 | `POST /offers/{id}/reject` | rejectOffer | Record the buyer's decline (sent → rejected; emits offer.rejected). | Change records | at once |

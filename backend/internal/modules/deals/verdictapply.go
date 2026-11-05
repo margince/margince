@@ -52,6 +52,8 @@ const (
 	VerdictDroppedSwitch   = "dropped:switch_off"
 	VerdictDroppedHuman    = "dropped:human_edit"
 	VerdictDroppedNoChange = "dropped:unchanged"
+	// VerdictDroppedLines is an amount for a deal whose lines state its value.
+	VerdictDroppedLines = "dropped:priced_by_lines"
 	// VerdictDroppedMoved is a deal whose evidence moved between the read and
 	// the write. Nothing applies, and the deal is read again.
 	VerdictDroppedMoved = "dropped:evidence_moved"
@@ -105,12 +107,14 @@ type VerdictInput struct {
 	Allowed func(ctx context.Context, tx pgx.Tx, correction string) (bool, error)
 	// EvidenceHolds asks, under the deal row lock and before any write,
 	// whether the evidence the verdict read still holds. That is the
-	// checksum, the cited activities and the owner, none of them this
-	// module's.
+	// checksum and the cited activities, neither of them this module's.
 	EvidenceHolds func(ctx context.Context, tx pgx.Tx) (bool, error)
 	// Record writes the timeline entry for what applied, in the same
 	// transaction. It is not called when nothing applied.
 	Record func(ctx context.Context, tx pgx.Tx, applied []VerdictChange) error
+	// AsOwner binds the owner's agent as of the write's transaction. An
+	// owner who left or lost the deal grant since the read changes nothing.
+	AsOwner OwnerAuthorityTx
 }
 
 // VerdictResult is each change's outcome, in the order of the input, and
@@ -137,6 +141,14 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 		outcomes[i] = VerdictDroppedStale
 	}
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, held, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
+		if err != nil {
+			return err
+		}
+		if !held {
+			result.dropAsMoved()
+			return nil
+		}
 		lock, current, ok, err := lockVerdictDeal(ctx, tx, in)
 		if err != nil || !ok {
 			return err
@@ -146,10 +158,7 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 			return err
 		}
 		if !holds {
-			for i := range outcomes {
-				outcomes[i] = VerdictDroppedMoved
-			}
-			result.EvidenceMoved = true
+			result.dropAsMoved()
 			return nil
 		}
 		var applied []VerdictChange
@@ -186,6 +195,15 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 		return in.Record(ctx, tx, applied)
 	})
 	return result, err
+}
+
+// dropAsMoved drops every change because what the verdict rested on moved
+// since the read: its evidence, or the owner's authority. The deal is read again.
+func (r *VerdictResult) dropAsMoved() {
+	for i := range r.Outcomes {
+		r.Outcomes[i] = VerdictDroppedMoved
+	}
+	r.EvidenceMoved = true
 }
 
 // lockVerdictDeal locks the deal and re-asks what the decision rested on:
@@ -256,6 +274,12 @@ func applyVerdictChange(
 	}
 	if patch.Empty() {
 		return VerdictDroppedNoChange, nil
+	}
+	var owned *LineOwnedValueError
+	if err := refuseTypedMoneyOnLines(ctx, tx, in.DealID, patch); errors.As(err, &owned) {
+		return VerdictDroppedLines, nil
+	} else if err != nil {
+		return "", err
 	}
 	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)

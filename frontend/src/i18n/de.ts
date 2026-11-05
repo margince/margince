@@ -2121,6 +2121,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "home.receipt.dateUnconfirmed":
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
   "home.receipt.undated": "Kein Datum",
+  "home.receipt.verdictDate": "Abschlussdatum laut Kunde: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Rückgängig gemacht: Abschlussdatum wieder {before} (zuvor {after})",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
   "home.receipt.forecast": "Abschlusschance geändert",
   "home.task.yours": "Deine Aufgabe: {action}",
@@ -4214,6 +4217,48 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.products.alreadyListed": "Bereits aufgeführt",
   "deal.products.fromOffer": "Aus dem Angebot",
   "deal.products.setByHand": "Selbst festgelegt",
+  "deal.lines.empty":
+    "Noch keine Produkte. Füge ein Produkt oder eine eigene Position hinzu, um den Deal zu bepreisen.",
+  "deal.lines.edit": "Produkte bearbeiten",
+  "deal.lines.start": "Aus Produkten bepreisen",
+  "deal.lines.notWritable": "Du kannst die Produkte dieses Deals nicht ändern.",
+  "deal.lines.withheld": "Deine Rolle zeigt den Wert dieses Deals nicht.",
+  "deal.lines.committedNet": "Nettowert: {amount}, ohne Steuer",
+  "deal.lines.incomplete":
+    "Preis unvollständig. Bisher bekannt: {known}. Es fehlt noch: {missing}.",
+  "deal.lines.missing.lines": "ein Produkt",
+  "deal.lines.missing.quantity": "eine Menge",
+  "deal.lines.missing.unitPrice": "ein Preis",
+  "deal.lines.missing.billing": "einmalig oder wiederkehrend",
+  "deal.lines.missing.term": "die Anzahl der Zeiträume",
+  "deal.lines.missing.taxRate": "ein Steuersatz",
+  "deal.lines.description": "Beschreibung",
+  "deal.lines.quantity": "Menge",
+  "deal.lines.price": "Verkaufspreis",
+  "deal.lines.remove": "{name} entfernen",
+  "deal.lines.editTitle": "Produkte und Leistungen",
+  "deal.lines.save": "Produkte speichern",
+  "deal.lines.intro":
+    "Der Wert des Deals ist der Nettobetrag dieser Positionen, ohne Steuer. Ein Angebot übernimmt sie später.",
+  "deal.lines.replacesEstimate":
+    "Speichern ersetzt den eingegebenen Wert von {amount}. Der alte Wert bleibt im Verlauf.",
+  "deal.lines.partlySaved":
+    "{saved} von {total} Änderungen wurden gespeichert. Die nächste schlug fehl: {reason}",
+  "deal.lines.addProduct": "Produkt hinzufügen",
+  "deal.lines.customItem": "Eigene Position",
+  "deal.lines.addCustom": "Position hinzufügen",
+  "deal.offerNeedsCompleteLines":
+    "Gib zuerst jedem Produkt eine Menge und einen Preis. Ein Angebot übernimmt die Produkte des Deals.",
+  "offer.moneyWithheld":
+    "Deine Rolle zeigt den Wert dieses Deals nicht, daher sind die Preise des Angebots ausgeblendet.",
+  "offer.fromDeal.title": "Aus den Produkten des Deals erstellt",
+  "offer.fromDeal.stale": "Der Deal hat sich seit diesem Angebot geändert",
+  "offer.fromDeal.body":
+    "Ändere die Produkte im Deal. Die Positionen des Angebots folgen erst, wenn du den Entwurf aktualisierst.",
+  "offer.fromDeal.revise":
+    "Ein gesendetes Angebot bleibt, wie es war. Erstelle eine neue Fassung, um die neuen Bedingungen anzubieten.",
+  "offer.fromDeal.editDeal": "Produkte des Deals bearbeiten",
+  "offer.fromDeal.refresh": "Aus dem Deal aktualisieren",
   "deal.commitments.title": "Zusagen des Kunden",
   "deal.commitments.empty":
     "Der Kunde hat zu diesem Deal keine offenen Zusagen.",
@@ -5724,6 +5769,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.invalid": "Gib eine ganze Zahl von 0 bis 100 ein.",
   "deal.winProbability.source.stage": "aus der Phase",
   "deal.winProbability.source.human": "von Hand gesetzt",
+  "deal.winProbability.source.you": "von dir gesetzt",
+  "deal.winProbability.source.colleague": "von {name} gesetzt",
   "deal.winProbability.source.margince": "von Margince gesenkt",
   "deal.winProbability.stageValue": "Phase {percent}",
   "deal.winProbability.setByStage":
@@ -14534,6 +14581,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.basis.likely": "Gewonnen + wahrscheinliche Deals",
   "forecast.basis.weighted": "Gewonnen + gewichtete offene Deals",
   "forecast.basis.manager_call": "Einschätzung der Führungskraft",
+  "forecast.basis.qualified_likely":
+    "Gewonnen + gestützte wahrscheinliche Deals",
+  "forecast.basis.qualified_weighted": "Gewonnen + gestützte gewichtete Deals",
   "forecast.basis.unknown": "Grundlage nicht erfasst",
   "forecast.split": "{won} gewonnen + {remaining} erwartet",
   "forecast.callNotAdded":

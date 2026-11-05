@@ -370,8 +370,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `bulk_update_records` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
 | `read_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
-| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `change_lists` | 1.00 | 3 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
@@ -398,8 +398,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `read_analytics` | 1.00 | 2 | `case20_put_it_in_the_board_pack` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `change_attention` | 1.00 | 2 | `case70_clear_my_notices` |
-| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 4 | `case68_let_sofia_read_the_account`, `case69_set_up_the_fleet_team` |
 | `resolve_duplicates` | 1.00 | 6 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `update_record` | 1.00 | 5 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_tags` | 1.00 | 9 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |

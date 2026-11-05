@@ -69,6 +69,9 @@ type ReviveLostDealInput struct {
 	Arrival func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (EvidenceArrival, bool, error)
 	// Record writes the entry on the deal's timeline, in the same transaction.
 	Record func(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) error
+	// AsOwner binds the owner's agent as of the reopen's transaction, so a
+	// role change or suspension that committed before it stops the reopen.
+	AsOwner OwnerAuthorityTx
 }
 
 // ReviveLostDeal reopens the lost deal for its owner and reports whether it
@@ -84,6 +87,12 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 	}
 	var revived bool
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, may, err := actAsOwnerNow(ctx, tx, in.AsOwner, func(ctx context.Context) error {
+			return RequireSuggestionDecision(ctx, true)
+		})
+		if err != nil || !may {
+			return err
+		}
 		current, pipeline, ready, err := s.revivableDeal(ctx, tx, in)
 		if err != nil || !ready {
 			return err

@@ -77,3 +77,4 @@
 1793810030_the_qualified_forecast_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793810040_margince_judges_a_deals_date_amount_and_probability.down.sql | assurance_deal_receipt | runs only on a rollback and deletes only receipts a verdict wrote for a deal the input check had not walked; there is at most one receipt per open deal
 1793820813_a_booking_page_remembers_it_was_used.up.sql | booking_page | booking_page holds one live row per member, and only live rows of members who were booked through their page, erased bookings included, are stamped
+1793841400_a_deal_prices_itself_from_product_lines.down.sql | deal_product | runs only on a rollback and deletes only the line rows the deal-lines writer made, at most one per product of a deal priced from its lines

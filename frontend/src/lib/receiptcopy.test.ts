@@ -153,3 +153,44 @@ it("reports a decided approval by its sentence and the values it set", () => {
   );
   expect(result).toBe("Update record deal — Name: Acme, Inc.");
 });
+
+it.each(LOCALES)(
+  "names a close date the customer gave in its own words in %s, with no estimate basis",
+  (locale) => {
+    const receipt = {
+      id: "receipt",
+      kind: "deal_close_date",
+      summary: "server summary",
+      occurred_at: "2026-09-13T08:00:00Z",
+      close_date_change: {
+        date_changed: true,
+        forecast_changed: false,
+        before: "2026-09-12",
+        after: "2026-10-12",
+      },
+    };
+    const t = (
+      key: Parameters<typeof translate>[1],
+      values?: Record<string, string>,
+    ) => translate(locale, key, values);
+    const applied = receiptSummary(receipt, t, locale, browserZone());
+    const undone = receiptSummary(
+      { ...receipt, undo: { audit_log_id: "a", version: 2, reversed: true } },
+      t,
+      locale,
+      browserZone(),
+    );
+    expect(applied).toContain(t("home.receipt.verdictDate").split(":")[0]);
+    expect(undone).toContain(
+      t("home.receipt.verdictDateReverted").split(":")[0],
+    );
+    for (const estimate of [
+      t("home.receipt.dateUnconfirmed").split(":")[0],
+      t("home.receipt.dateReverted").split(";")[0],
+    ]) {
+      expect(applied).not.toContain(estimate);
+      expect(undone).not.toContain(estimate);
+    }
+    expect(receiptBasis(receipt, t, locale)).toBeNull();
+  },
+);

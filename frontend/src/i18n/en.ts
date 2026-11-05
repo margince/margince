@@ -2032,6 +2032,10 @@ export const en = {
   "home.receipt.dateUnconfirmed":
     "Estimated close date: {before} → {after} (needs confirmation)",
   "home.receipt.undated": "No date",
+  "home.receipt.verdictDate":
+    "Close date from what the customer said: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Undone: close date back to {before} (was {after})",
   "home.receipt.confidence": "Updated forecast confidence",
   "home.receipt.forecast": "Probability changed",
   "home.task.yours": "Your task: {action}",
@@ -4182,6 +4186,48 @@ export const en = {
   "deal.products.alreadyListed": "Already listed",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
+  "deal.lines.empty":
+    "No products yet. Add a product or a custom item to price this deal.",
+  "deal.lines.edit": "Edit products",
+  "deal.lines.start": "Price from products",
+  "deal.lines.notWritable": "You cannot change this deal’s products.",
+  "deal.lines.withheld": "Your role does not show this deal’s value.",
+  "deal.lines.committedNet": "Net value: {amount}, without tax",
+  "deal.lines.incomplete":
+    "Pricing incomplete. Known so far: {known}. Still missing: {missing}.",
+  "deal.lines.missing.lines": "a product",
+  "deal.lines.missing.quantity": "a quantity",
+  "deal.lines.missing.unitPrice": "a price",
+  "deal.lines.missing.billing": "one-time or recurring",
+  "deal.lines.missing.term": "the number of periods",
+  "deal.lines.missing.taxRate": "a tax rate",
+  "deal.lines.description": "Description",
+  "deal.lines.quantity": "Quantity",
+  "deal.lines.price": "Selling price",
+  "deal.lines.remove": "Remove {name}",
+  "deal.lines.editTitle": "Products and services",
+  "deal.lines.save": "Save products",
+  "deal.lines.intro":
+    "The deal’s value is the net of these lines, without tax. An offer copies them later.",
+  "deal.lines.replacesEstimate":
+    "Saving replaces the typed value of {amount}. The old value stays in the history.",
+  "deal.lines.partlySaved":
+    "{saved} of {total} changes were saved. The next one failed: {reason}",
+  "deal.lines.addProduct": "Add a product",
+  "deal.lines.customItem": "Custom item",
+  "deal.lines.addCustom": "Add item",
+  "deal.offerNeedsCompleteLines":
+    "Give every product a quantity and a price first. An offer copies the deal’s products.",
+  "offer.moneyWithheld":
+    "Your role does not show this deal’s value, so the offer’s prices are hidden.",
+  "offer.fromDeal.title": "Made from the deal’s products",
+  "offer.fromDeal.stale": "The deal changed since this offer was created",
+  "offer.fromDeal.body":
+    "Change the products on the deal. The offer’s lines follow only when you refresh the draft.",
+  "offer.fromDeal.revise":
+    "A sent offer stays as it was. Regenerate a revision to offer the new terms.",
+  "offer.fromDeal.editDeal": "Edit deal products",
+  "offer.fromDeal.refresh": "Refresh from deal",
   "deal.commitments.title": "Customer commitments",
   "deal.commitments.empty":
     "The customer has no open commitments on this deal.",
@@ -5706,6 +5752,8 @@ export const en = {
   "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
+  "deal.winProbability.source.you": "set by you",
+  "deal.winProbability.source.colleague": "set by {name}",
   "deal.winProbability.source.margince": "lowered by Margince",
   "deal.winProbability.stageValue": "stage {percent}",
   "deal.winProbability.setByStage":
@@ -14469,6 +14517,8 @@ export const en = {
   "forecast.basis.likely": "Won + Likely deals",
   "forecast.basis.weighted": "Won + weighted open deals",
   "forecast.basis.manager_call": "Manager’s call",
+  "forecast.basis.qualified_likely": "Won + supported Likely deals",
+  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",

@@ -140,10 +140,16 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Basis != "" {
 		summary += " — " + c.Basis
 	}
+	// A date the verdict read from the customer keeps its own kind, so its
+	// receipt does not read as the sweep's estimate.
+	kind := deals.CloseDateCorrectionKind
+	if c.Correction == deals.VerdictCloseDateCorrection {
+		kind = c.Correction
+	}
 	return attention.Receipt{
 		ID:              c.AuditLogID,
 		CloseDateChange: correctionValues(c),
-		Kind:            deals.CloseDateCorrectionKind,
+		Kind:            kind,
 		Summary:         summary,
 		OccurredAt:      c.AppliedAt,
 		TargetType:      approvalTargetDeal,
