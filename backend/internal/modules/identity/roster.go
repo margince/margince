@@ -87,6 +87,8 @@ type userRow struct {
 	// Assignable is whether the caller may make this member a record's owner;
 	// nil when the read did not ask.
 	Assignable *bool
+	// CanOwnRecords is the seat half of Assignable, without the caller's scope.
+	CanOwnRecords *bool
 	// ConnectedMailboxes counts live capture connections; nil when not read.
 	ConnectedMailboxes *int
 }

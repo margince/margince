@@ -150,22 +150,36 @@ export function pendingDecisions(
   return rows.filter((row) => row.mapping && row.pending_count > 0);
 }
 
+type LostDeal = Readonly<{
+  lost_reason?: string | null;
+  lost_reason_code?: string | null;
+}>;
+
 /**
- * How a lost deal says why: the label of its reason, retired ones included,
- * and its note when it has one. A code the list no longer holds reads as the
- * code. Undefined when the deal says nothing.
+ * Why a lost deal was lost, in its two parts: the label of its reason, retired
+ * ones included, and its note. A code the list no longer holds reads as the
+ * code. A part the deal does not carry is undefined.
  */
+export function lostReasonParts(
+  deal: LostDeal,
+  reasons: readonly LossReason[] | undefined,
+): Readonly<{ label?: string; note?: string }> {
+  const code = deal.lost_reason_code ?? undefined;
+  return {
+    label: code
+      ? (reasons?.find((reason) => reason.key === code)?.label ?? code)
+      : undefined,
+    note: deal.lost_reason?.trim() || undefined,
+  };
+}
+
+/** Both parts of `lostReasonParts` on one line; undefined when the deal says
+ *  nothing. */
 export function lostReasonWords(
-  deal: Readonly<{
-    lost_reason?: string | null;
-    lost_reason_code?: string | null;
-  }>,
+  deal: LostDeal,
   reasons: readonly LossReason[] | undefined,
 ): string | undefined {
-  const code = deal.lost_reason_code ?? undefined;
-  const label = code
-    ? (reasons?.find((reason) => reason.key === code)?.label ?? code)
-    : undefined;
-  const words = [label, deal.lost_reason?.trim() || undefined].filter(Boolean);
+  const { label, note } = lostReasonParts(deal, reasons);
+  const words = [label, note].filter(Boolean);
   return words.length > 0 ? words.join(" — ") : undefined;
 }

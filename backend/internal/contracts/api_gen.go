@@ -49451,6 +49451,9 @@ type Lead struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty"`
 
+	// WebFormName The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted.
+	WebFormName *string `json:"web_form_name,omitempty"`
+
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -62584,6 +62587,9 @@ type User struct {
 
 	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
 	Assignable *bool `json:"assignable,omitempty"`
+
+	// CanOwnRecords Whether this member's seat may own records at all: an active human seat that can write, asked without the caller's own write scope. A website form's owner of new leads is checked this way, because the installation writes those leads, so its picker offers these members. Present on `listUsers`; absent means not computed.
+	CanOwnRecords *bool `json:"can_own_records,omitempty"`
 
 	// ConnectedMailboxes How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture.
 	ConnectedMailboxes *int                `json:"connected_mailboxes,omitempty"`
@@ -83193,6 +83199,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["web_form_name"]; found {
+		err = json.Unmarshal(raw, &a.WebFormName)
+		if err != nil {
+			return fmt.Errorf("error reading 'web_form_name': %w", err)
+		}
+		delete(object, "web_form_name")
+	}
+
 	if raw, found := object["writable"]; found {
 		err = json.Unmarshal(raw, &a.Writable)
 		if err != nil {
@@ -83609,6 +83623,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WebFormName != nil {
+		object["web_form_name"], err = json.Marshal(a.WebFormName)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'web_form_name': %w", err)
 		}
 	}
 

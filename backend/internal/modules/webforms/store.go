@@ -162,6 +162,8 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 }
 
 // checkReferences refuses a lead origin or owner the lead writer would refuse.
+// The writer is the installation, so any colleague who may own a new record
+// qualifies, not only those inside the configurer's own scope.
 // A misconfigured form then fails when it is saved, not on a visitor's post.
 func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.UUID) error {
 	if origin != nil {
@@ -174,7 +176,7 @@ func checkReferences(ctx context.Context, tx pgx.Tx, origin *string, owner *ids.
 		}
 	}
 	if owner != nil {
-		return auth.EnsureNewRecordOwner(ctx, tx, *owner)
+		return auth.EnsureRoutedLeadOwner(ctx, tx, *owner)
 	}
 	return nil
 }
