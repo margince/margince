@@ -78,7 +78,7 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
 
-**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. A forecast label says whether the figure is a manager call, won sales plus confirmed committed deals, or a weighted estimate. A manager call shows its date.
+**Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its target when a matching target is available. The forecast’s label names its basis, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
 
 The modelled range is separate from that forecast. A chart under the readings shows sales won so far, with the target as a line across when there is one. While the period is still running and the forecast can be shown, the chart carries it on to the period's end as a broken line. With it, the modelled range shows as a band that opens from today to its low and high ends, when both are set.
 
@@ -194,7 +194,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
-**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target for each member sits beside them. **Filters** holds **Product**, **Sales initiative**, **Country · company address**, **Industry** and **Value basis**, and opens by itself when one of them is set. **View records**, at the foot of each chart with data, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
+**Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target for each member sits beside them. The **Filters** chip holds **Product**, **Sales initiative**, **Country · company address**, **Industry** and **Value basis**, and opens by itself when one of them is set. **View records**, at the foot of each chart with data, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 
