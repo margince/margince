@@ -1728,6 +1728,11 @@
         "capture_settings.read"
       ]
     },
+    "list_contact_stops": {
+      "checks": [
+        "contact.read"
+      ]
+    },
     "list_corpora": {
       "checks": [
         "knowledge_corpus.read"
@@ -2128,7 +2133,11 @@
     },
     "preview_account_send_authorization": {
       "checks": [
-        "activity.create"
+        "activity.create",
+        "company.create",
+        "company.read",
+        "contact.create",
+        "relationship.read"
       ]
     },
     "preview_connector_backfill": {
@@ -2820,8 +2829,10 @@
         "activity.create",
         "activity.read",
         "company.read",
+        "contact.create",
         "contact.read",
         "deal.read",
+        "lead.read",
         "project.read"
       ]
     },

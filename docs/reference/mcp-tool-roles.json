@@ -4980,7 +4980,10 @@
         "rep"
       ],
       "refused_for": [],
-      "unproven_for": []
+      "colleague_record": {
+        "manager": "ran",
+        "rep": "ran"
+      }
     },
     {
       "tool": "read_details",

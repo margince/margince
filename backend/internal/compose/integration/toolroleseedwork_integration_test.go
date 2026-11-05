@@ -160,9 +160,10 @@ func consentedContact(s sweepSeed) string {
 			}, nil, nil)
 		}
 	}
-	// Transactional consent holds where a live deal stakes the recipient and the
-	// message answered is filed on it.
+	// Transactional consent holds where a live deal stakes the recipient, the
+	// message answered is filed on it, and the recipient asked about it.
 	deal := apptest.StakeOnOpenDeal(s.t, s.e, "Sweep "+ids.NewV7().String(), apptest.DiscoverSeededPipeline(s.t, s.e), contact)
+	askedAboutTheDeal(s.t, s.e, contact, email, deal)
 	anchor := s.post("/v1/activities", AnyMap{
 		"kind": "email", "subject": "Role sweep", "direction": "inbound", "source": "manual",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}, {"entity_type": "deal", "entity_id": deal}},
