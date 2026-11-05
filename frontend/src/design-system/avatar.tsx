@@ -22,7 +22,7 @@ export function Avatar({
   // if it fails to load, and whenever no logo resolved. So a company is never
   // a broken image or an empty slot.
   src?: string | null;
-  // A person's own picture (a seat's), in place of `src`: it covers the whole
+  // A seat's own picture, in place of `src`: it covers the whole
   // circle inside a hairline, so a white picture still has an edge.
   photo?: string | null;
   /**

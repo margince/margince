@@ -188,13 +188,13 @@ export const KeyedOnTheRecord: Story = {
 export const SeatPhoto: Story = {
   render: () => (
     <div style={column}>
-      {[PORTRAIT, WHITE_PORTRAIT].map((photo, index) => (
+      {[PORTRAIT, WHITE_PORTRAIT].map((photo) => (
         <div key={photo} style={wall}>
           {SIZES.map((size) => (
             <Avatar
               key={size}
               name="Lena Hoffmann"
-              identity={`seat-${index}`}
+              identity={photo === PORTRAIT ? "seat-lena" : "seat-lena-white"}
               photo={photo}
               size={size}
             />

@@ -2245,6 +2245,7 @@ export const en = {
   "trust.relayForColleague": "Sent by Margince for a colleague",
   "trust.relaySent": "Sent by Margince",
   "trust.relayFrom": "From {address}",
+  "systemJob.provider_picture": "Google profile picture",
   "systemJob.public_record_preview": "Public record preview",
   "systemJob.agent_resume": "Agent run resume",
   "systemJob.agent_scheduler": "Scheduled agent runs",

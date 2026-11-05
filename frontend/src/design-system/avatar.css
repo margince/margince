@@ -110,7 +110,7 @@
   corner-shape: round;
 }
 
-/* A person's picture fills the circle inside a control's edge, the hairline
+/* A seat's own picture fills the circle inside a control's edge, the hairline
    strong enough that a white picture keeps its edge on any ground. */
 .avatar-photo {
   box-sizing: border-box;
