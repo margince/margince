@@ -138,7 +138,7 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	destPos := arg(dest)
 
-	// An owner a case admission names already holds a merged contact, so the
+	// An owner a case admission names already holds a merged contact. The
 	// run-as scope is not asked of them, and an invited seat is not admitted.
 	if admittedCaseGrantee(ctx, dest) {
 		eligible = recordOwnerSQL
