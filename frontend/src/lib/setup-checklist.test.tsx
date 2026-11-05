@@ -28,6 +28,7 @@ type Readiness = ConnectorsResult["providers"][number]["reason"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 type VoiceBuild = components["schemas"]["VoiceBuild"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
+type PassportSummary = components["schemas"]["PassportSummary"];
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
 const MAIL_PROVIDERS: readonly MailProvider[] = ["gmail", "graph", "imap"];
@@ -128,6 +129,31 @@ function scheduling(enabled: boolean): SchedulingProfile {
   };
 }
 
+// A passport an AI tool got by signing in, or one a reader minted by hand.
+function passport(
+  clientName: string | null,
+  revokedAt: string | null = null,
+  expiry: { at: string; renewable: boolean } | null = null,
+): PassportSummary {
+  return {
+    id: `00000000-0000-4000-8000-0000000000c${clientName ? 1 : 2}`,
+    label: clientName ?? "Nightly script",
+    scopes: ["read"],
+    created_at: "2026-11-01T08:00:00Z",
+    last_used_at: null,
+    expires_at: expiry?.at ?? null,
+    revoked_at: revokedAt,
+    ...(clientName && {
+      connection: {
+        client_id: "client-1",
+        client_name: clientName,
+        renewable: expiry?.renewable ?? true,
+        connected_at: "2026-11-01T08:00:00Z",
+      },
+    }),
+  };
+}
+
 function actsFor(allow: GrantSpec = VOICE_WRITER): ReadonlySet<SettingsPageId> {
   return new Set(settingsReach(meFixture({ allow })).acts.map((p) => p.id));
 }
@@ -138,6 +164,8 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     connectors: roster([]),
     voice: { profile: null },
     scheduling: scheduling(false),
+    passports: null,
+    now: Date.parse("2026-11-05T12:00:00Z"),
     ...overrides,
   };
 }
@@ -413,6 +441,36 @@ describe("deriveSetupSteps", () => {
     expect(steps.map((step) => step.id)).toEqual(["voice"]);
   });
 
+  it("asks to connect an AI tool after the calendar, once the connector is on", () => {
+    expect(summary(reads({ passports: [] })).map((s) => s.id)).toEqual([
+      "mail",
+      "calendar",
+      "ai",
+      "voice",
+      "booking",
+    ]);
+  });
+
+  it("counts an AI tool done only while its signed-in connection lasts", () => {
+    const aiStep = (passports: readonly PassportSummary[]) =>
+      deriveSetupSteps(reads({ passports })).find((s) => s.id === "ai");
+
+    expect(aiStep([passport(null)])?.state).not.toBe("done");
+    expect(
+      aiStep([passport("Claude", "2026-11-02T08:00:00Z")])?.state,
+    ).not.toBe("done");
+    // Past its expiry, a connection that cannot renew has ended; one that can
+    // is only between credentials.
+    const expired = (renewable: boolean) =>
+      passport("Claude", null, { at: "2026-11-04T12:00:00Z", renewable });
+    expect(aiStep([expired(false)])?.state).not.toBe("done");
+    expect(aiStep([expired(true)])?.state).toBe("done");
+    expect(aiStep([passport(null), passport("Claude")])).toMatchObject({
+      state: "done",
+      agent: { name: "Claude" },
+    });
+  });
+
   it("still counts a booking link that is on, whatever the roster says", () => {
     const steps = summary(
       reads({
@@ -443,8 +501,10 @@ function jsonResponse(body: unknown, status = 200) {
 function serve(answers: Readonly<Record<string, () => Response>>) {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (request: Request) => {
-      const path = new URL(request.url).pathname;
+    // The connector discovery read asks by URL string, the API client by Request.
+    vi.fn(async (request: Request | string) => {
+      const url = typeof request === "string" ? request : request.url;
+      const path = new URL(url, "https://crm.test").pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
     }),
