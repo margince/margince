@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 13,
-    "tool_catalog_bytes": 224771,
+    "tool_catalog_bytes": 226317,
     "resource_catalog_bytes": 5259,
-    "approx_wire_tokens_total": 57507,
+    "approx_wire_tokens_total": 57894,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 53765,
-      "input_schema_bytes": 111132,
+      "input_schema_bytes": 112678,
       "output_schema_bytes": 47766,
-      "description_plus_input_schema_bytes": 164897
+      "description_plus_input_schema_bytes": 166443
     }
   },
   "tools": {
@@ -1138,6 +1138,10 @@
             },
             "scope": {
               "description": "bring_back only",
+              "enum": [
+                "mine",
+                "thread"
+              ],
               "type": "string"
             },
             "source_activity_id": {
@@ -1214,7 +1218,6 @@
                 "mark_notice_read",
                 "mark_rows_done",
                 "pin_row",
-                "raise_notice",
                 "reopen_rows",
                 "resolve_signal",
                 "restore_company_suggestion",
@@ -1266,7 +1269,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, raise_notice, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "accept_deal_suggestion, acknowledge_failed_approval, add_commitment, answer_teammate, ask_for_help, create_signal, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_nudges, edit_commitment, mark_rows_done, pin_row, reopen_rows, set_commitment_state, set_weekly_plan, snooze_brief_item, update_signal only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "row_id": {
@@ -2505,7 +2508,6 @@
                 "archive_saved_view",
                 "archive_stage",
                 "archive_web_form",
-                "ask_company_setup",
                 "ask_site_read",
                 "confirm_site_read",
                 "control_data_task",
@@ -2623,7 +2625,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "activate_home_repair, apply_legacy_loss_reasons, ask_company_setup, ask_site_read, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "activate_home_repair, apply_legacy_loss_reasons, ask_site_read, confirm_site_read, control_data_task, create_acquisition_source, create_automation, create_custom_field, create_disqualify_reason, create_exit_criterion, create_lead_origin, create_lead_source, create_legal_entity, create_loss_reason, create_partner_stage, create_pipeline, create_saved_view, create_stage, decide_legacy_loss_reason, link_finance_customer, put_product_translation, record_tax_rate, rename_custom_field, reorder_pipelines, reorder_stages, save_booking_alias, save_booking_page, save_my_linkedin, save_own_company, set_ai_model_rate, set_ai_price_sync, set_fx_rate, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_duplicate_settings, update_exit_criterion, update_follow_up_settings, update_lead_origin, update_lead_settings, update_lead_source, update_legal_entity, update_legal_review_settings, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upsert_partner only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "text_hash": {
@@ -7631,7 +7633,6 @@
                 "tag_suggestion",
                 "team_board",
                 "team_exceptions",
-                "team_weekly_review",
                 "teammate_weekly_plan",
                 "voice_source_preview",
                 "weekly_plan",
@@ -7642,22 +7643,40 @@
             },
             "actor_type": {
               "description": "field_history only",
+              "enum": [
+                "human",
+                "agent",
+                "system",
+                "connector",
+                "buyer"
+              ],
               "type": "string"
             },
             "anchor_id": {
               "description": "mail_draft only",
+              "format": "uuid",
               "type": "string"
             },
             "anchor_type": {
               "description": "mail_draft only",
+              "enum": [
+                "activity",
+                "contact",
+                "company",
+                "deal",
+                "lead",
+                "project"
+              ],
               "type": "string"
             },
             "company_id": {
               "description": "deal_suggestions only",
+              "format": "uuid",
               "type": "string"
             },
             "contact_id": {
               "description": "meeting_proposals only",
+              "format": "uuid",
               "type": "string"
             },
             "create_company": {
@@ -7694,10 +7713,19 @@
             },
             "entity_id": {
               "description": "field_history only",
+              "format": "uuid",
               "type": "string"
             },
             "entity_type": {
               "description": "field_history only",
+              "enum": [
+                "contact",
+                "company",
+                "deal",
+                "lead",
+                "project",
+                "activity"
+              ],
               "type": "string"
             },
             "field": {
@@ -7706,6 +7734,7 @@
             },
             "from": {
               "description": "meeting_availability only",
+              "format": "date-time",
               "type": "string"
             },
             "history": {
@@ -7722,10 +7751,20 @@
             },
             "lang": {
               "description": "import_problems only",
+              "enum": [
+                "en",
+                "de",
+                "vi"
+              ],
               "type": "string"
             },
             "language": {
               "description": "controller_mail_preview only",
+              "enum": [
+                "de",
+                "en",
+                "vi"
+              ],
               "type": "string"
             },
             "limit": {
@@ -7738,14 +7777,17 @@
             },
             "owner_team_id": {
               "description": "deal_suggestions only",
+              "format": "uuid",
               "type": "string"
             },
             "pipeline_id": {
               "description": "deal_suggestions only",
+              "format": "uuid",
               "type": "string"
             },
             "project_id": {
               "description": "company_brief only",
+              "format": "uuid",
               "type": "string"
             },
             "provider": {
@@ -7774,26 +7816,48 @@
             },
             "since": {
               "description": "magic, magic_line_records only",
+              "format": "date-time",
               "type": "string"
             },
             "stage_id": {
               "description": "deal_suggestions only",
+              "format": "uuid",
               "type": "string"
             },
             "state": {
               "description": "job_health_history only",
+              "enum": [
+                "retryable",
+                "discarded",
+                "cancelled"
+              ],
               "type": "string"
             },
             "status": {
               "description": "company_contracts, legal_reviews, scheduled_sends only",
+              "enum": [
+                "active",
+                "cancelled",
+                "decided",
+                "draft",
+                "expired",
+                "held",
+                "open",
+                "released",
+                "scheduled",
+                "sent",
+                "superseded"
+              ],
               "type": "string"
             },
             "team": {
-              "description": "team_board, team_weekly_review only",
+              "description": "team_board only",
+              "format": "uuid",
               "type": "string"
             },
             "to": {
               "description": "meeting_availability only",
+              "format": "date-time",
               "type": "string"
             },
             "token": {
@@ -7809,7 +7873,8 @@
               "type": "boolean"
             },
             "week": {
-              "description": "latest_weekly_review, team_weekly_review only",
+              "description": "latest_weekly_review only",
+              "format": "date",
               "type": "string"
             }
           },
@@ -9157,6 +9222,7 @@
             },
             "deal_id": {
               "description": "sales_decisions only",
+              "format": "uuid",
               "type": "string"
             },
             "entity": {
@@ -9188,7 +9254,7 @@
               "type": "array"
             },
             "id": {
-              "description": "question_card_answer, question_card_records, reader_preview, report_revisions, sales_initiative, sales_initiative_members, standard only",
+              "description": "question_card_answer, question_card_records, report_revisions, sales_initiative, sales_initiative_members, standard only",
               "type": "string"
             },
             "kind": {
@@ -9201,7 +9267,6 @@
                 "evidence",
                 "question_card_answer",
                 "question_card_records",
-                "reader_preview",
                 "report_revisions",
                 "report_run",
                 "report_run_cell_records",
@@ -9241,6 +9306,12 @@
             },
             "period": {
               "description": "sdr_team only",
+              "enum": [
+                "this_week",
+                "last_week",
+                "this_month",
+                "last_month"
+              ],
               "type": "string"
             },
             "query": {
@@ -9250,6 +9321,10 @@
             },
             "record_type": {
               "description": "sales_initiative_members only",
+              "enum": [
+                "lead",
+                "deal"
+              ],
               "type": "string"
             },
             "reference": {
@@ -9299,16 +9374,12 @@
               "type": "object"
             },
             "revision": {
-              "description": "question_card_answer, question_card_records, reader_preview, standard only; at least 1 for standard.",
+              "description": "question_card_answer, question_card_records, standard only; at least 1 for standard.",
               "type": "integer"
             },
             "right_id": {
               "description": "standard only",
               "format": "uuid",
-              "type": "string"
-            },
-            "role": {
-              "description": "reader_preview only",
               "type": "string"
             },
             "run_id": {
@@ -9337,10 +9408,17 @@
             },
             "scope_id": {
               "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+              "format": "uuid",
               "type": "string"
             },
             "scope_kind": {
               "description": "company_coverage, sdr_handoffs, sdr_meetings, sdr_summary, sdr_team only",
+              "enum": [
+                "managed_teams",
+                "owner",
+                "team",
+                "workspace"
+              ],
               "type": "string"
             },
             "selection": {
@@ -9525,22 +9603,40 @@
             },
             "state": {
               "description": "sdr_handoffs only",
+              "enum": [
+                "waiting",
+                "returned"
+              ],
               "type": "string"
             },
             "status": {
               "description": "sales_decisions, sales_initiatives only",
+              "enum": [
+                "done",
+                "draft",
+                "ended",
+                "live",
+                "open"
+              ],
               "type": "string"
             },
             "view": {
               "description": "company_coverage only",
+              "enum": [
+                "single_threaded",
+                "untouched",
+                "silent"
+              ],
               "type": "string"
             },
             "window_end": {
               "description": "sdr_meetings only",
+              "format": "date-time",
               "type": "string"
             },
             "window_start": {
               "description": "sdr_meetings only",
+              "format": "date-time",
               "type": "string"
             }
           },
@@ -10036,6 +10132,7 @@
             },
             "batch_id": {
               "description": "audit_log only",
+              "format": "uuid",
               "type": "string"
             },
             "buildId": {
@@ -10044,6 +10141,7 @@
             },
             "contact_id": {
               "description": "confirm_submissions only",
+              "format": "uuid",
               "type": "string"
             },
             "country": {
@@ -10064,6 +10162,7 @@
             },
             "entity_id": {
               "description": "audit_log only",
+              "format": "uuid",
               "type": "string"
             },
             "entity_type": {
@@ -10072,6 +10171,22 @@
             },
             "filter": {
               "description": "worklist only",
+              "enum": [
+                "all",
+                "urgent",
+                "customer_waiting",
+                "leads",
+                "prospecting",
+                "deals_at_risk",
+                "meetings",
+                "tasks",
+                "decisions",
+                "relationships",
+                "system",
+                "except_decisions",
+                "changed_since_brief",
+                "upcoming"
+              ],
               "type": "string"
             },
             "from": {
@@ -10080,6 +10195,14 @@
             },
             "group": {
               "description": "ai_call_stats only",
+              "enum": [
+                "provider",
+                "model",
+                "served_model",
+                "served_provider",
+                "tier",
+                "task"
+              ],
               "type": "string"
             },
             "id": {
@@ -10100,6 +10223,11 @@
             },
             "kind": {
               "description": "data_subject_request_deadline only",
+              "enum": [
+                "access",
+                "rectify",
+                "erasure"
+              ],
               "type": "string"
             },
             "kinds": {
@@ -10115,6 +10243,11 @@
             },
             "locale": {
               "description": "onboarding_company_proposal only",
+              "enum": [
+                "en",
+                "de",
+                "vi"
+              ],
               "type": "string"
             },
             "location": {
@@ -10144,10 +10277,21 @@
             },
             "outcome": {
               "description": "ai_calls, automation_runs only",
+              "enum": [
+                "answered",
+                "blocked",
+                "declined",
+                "failed",
+                "fallback",
+                "fired",
+                "queued_for_approval",
+                "skipped"
+              ],
               "type": "string"
             },
             "owner": {
               "description": "worklist only",
+              "format": "uuid",
               "type": "string"
             },
             "provider": {
@@ -10164,10 +10308,15 @@
             },
             "received_at": {
               "description": "data_subject_request_deadline only",
+              "format": "date-time",
               "type": "string"
             },
             "relationships": {
               "description": "worklist only",
+              "enum": [
+                "include",
+                "omit"
+              ],
               "type": "string"
             },
             "resolved": {
@@ -10176,6 +10325,15 @@
             },
             "resource": {
               "description": "saved_views only",
+              "enum": [
+                "contacts",
+                "companies",
+                "deals",
+                "activities",
+                "leads",
+                "partners",
+                "projects"
+              ],
               "type": "string"
             },
             "router": {
@@ -10204,6 +10362,12 @@
             },
             "scope": {
               "description": "worklist only",
+              "enum": [
+                "mine",
+                "unassigned",
+                "team",
+                "all"
+              ],
               "type": "string"
             },
             "scopes": {
@@ -10232,6 +10396,12 @@
             },
             "status": {
               "description": "data_subject_requests only",
+              "enum": [
+                "open",
+                "in_progress",
+                "fulfilled",
+                "rejected"
+              ],
               "type": "string"
             },
             "task": {
@@ -10381,10 +10551,22 @@
             },
             "view": {
               "description": "import_runs, worklist only",
+              "enum": [
+                "decisions",
+                "drafts",
+                "history",
+                "system",
+                "today"
+              ],
               "type": "string"
             },
             "window": {
               "description": "ai_call_stats, ai_task_flow only",
+              "enum": [
+                "24h",
+                "30d",
+                "7d"
+              ],
               "type": "string"
             }
           },
@@ -10545,6 +10727,7 @@
             },
             "project_id": {
               "description": "refresh_company_brief only",
+              "format": "uuid",
               "type": "string"
             },
             "provider": {

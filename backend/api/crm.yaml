@@ -11736,7 +11736,6 @@ paths:
       operationId: previewAutomation
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: preview_automation, router: read_details, action: automation_preview, tier: auto_execute, scope: read, served_by: route }
-      x-settings-audience: member
       summary: Dry-run an automation's blast radius, writing nothing, sending nothing and staging no approval.
       description: |
         Powers the designer's live dry-run (ADR-0035 Am.1). Evaluates the recipe's trigger + filter and
@@ -14887,8 +14886,9 @@ paths:
       tags:
       - Reports
       operationId: previewReportingReportAsRole
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: preview_reporting_report_as_role, router: read_reports, action: reader_preview, tier: auto_execute, scope: read, served_by: route }
+      security: [ { cookieAuth: [] } ]   # human session only: an agent reads a report under its own user's grants
+      x-agent-access: human-only
+      x-human-only-reason: covered
       summary: Evaluate a saved report as a seat holding one role would see it.
       description: |
         The report evaluated under the caller's own permissions narrowed to the role's: an
@@ -17452,8 +17452,9 @@ paths:
         Uses the acting human's resumable onboarding state as the conversation and AI-run scope.
         The response may answer, clarify, or propose typed draft changes, but it never writes
         company truth. Off-topic input is redirected to the next unresolved company question.
-      x-mcp-tool: { verb: message_onboarding_company, router: change_settings, action: ask_company_setup, tier: auto_execute, scope: write, served_by: route }
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] } ]   # human session only: the setup conversation is its user's own, with its own model
+      x-agent-access: human-only
+      x-human-only-reason: security
       requestBody:
         required: true
         content:
@@ -18483,7 +18484,6 @@ paths:
         domain is captured again from the next message on; nothing already dropped comes back.
       x-mcp-tool: { verb: lift_capture_exclusion, router: change_capture, action: lift_exclusion, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-settings-audience: member
       responses:
         '204': { description: Lifted. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -21308,7 +21308,6 @@ paths:
       operationId: addConsumerMailDomain
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: add_consumer_mail_domain, router: change_capture, action: add_consumer_mail_domain, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
-      x-settings-audience: member
       summary: Add a consumer-mail domain, or carve one out.
       description: |
         It changes a workspace-wide capture posture, so an agent asks its user first. `kind:
@@ -55228,6 +55227,32 @@ components:
         html_body:
           type: [string, 'null']
           description: The editor's markup beside the plain body, so reopening restores the formatting.
+        attachment_ids:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uuid }
+          description: |
+            The files the rep chose, by the ids `/attachments` gave them. A save replaces the
+            whole draft, so omitting this clears the files; a client keeps them by sending back
+            the `id` of each entry in the draft's `attachments`.
+
+            Held to the send's own cap. A file the caller cannot see, or one the send would
+            refuse, is left out rather than refused, so a save never loses the words; the answer
+            counts it in `attachments_unavailable`.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: |
+            The reason for contact the rep chose, checked as the send checks it: a category
+            reserved for the installation's own notices is refused 422. Omit it for none.
+        scheduled_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            The moment the rep picked to send at, checked as the send checks it: with
+            `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
+        scheduled_tz:
+          type: [string, 'null']
+          description: The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`.
 
     MailDraft:
       type: object
@@ -55260,6 +55285,32 @@ components:
             An agent wrote these words for the author through `draft_email`, and the author has
             not saved over them yet. The screen says so before the message is sent. A save from
             the composer clears it.
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/ApprovalPreviewFile' }
+          description: |
+            The chosen files the author can still attach, in the order chosen, so the composer
+            draws each one without asking again. Resolved only by the draft read and the save
+            answer: absent elsewhere, so its absence there does not mean the draft has no files.
+        attachments_unavailable:
+          type: integer
+          minimum: 1
+          description: |
+            How many chosen files the send would now refuse: removed, out of the author's sight,
+            kept without bytes, or empty. Not named, because a file the author cannot see answers
+            404 everywhere else. Absent when every file resolves.
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          description: The reason for contact the author chose. Absent when none was.
+        scheduled_at:
+          type: string
+          format: date-time
+          description: |
+            The moment the author picked to send at, as saved. It may have passed since; the
+            draft schedules nothing. Absent when none was picked.
+        scheduled_tz:
+          type: string
+          description: The IANA zone `scheduled_at` was picked in. Present exactly when it is.
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 

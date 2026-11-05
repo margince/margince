@@ -706,7 +706,6 @@ idempotent
 identical
 identifier
 identity
-idle
 if
 ignore
 image
@@ -988,7 +987,6 @@ operational
 operator
 opinion
 opt
-optimization
 optimizes
 option
 optional
@@ -1226,7 +1224,6 @@ relink
 reload
 relocate
 remain
-remainder
 remember
 remote
 removal
@@ -1346,7 +1343,6 @@ separate
 separator
 sequence
 sequential
-serial
 series
 serious
 serve
@@ -1549,7 +1545,6 @@ today
 together
 token
 told
-tolerate
 tone
 too
 tool

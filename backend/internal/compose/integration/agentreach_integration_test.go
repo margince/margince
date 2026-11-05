@@ -27,7 +27,7 @@ func TestAReadOnlyPassportReachesNoRouteBackedWrite(t *testing.T) {
 			continue
 		}
 		if writes > 0 && writes%passportCallsPerBatch == 0 {
-			bearer, _ := passportWithID(t, d.e, fmt.Sprintf("agent-read-only %d", n), "read")
+			bearer, _ := apptest.PassportWithID(t, d.e, fmt.Sprintf("agent-read-only %d", n), "read")
 			d.bearer, d.mcp = bearer, apptest.NewMCPClient(d.e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))
 		}
 		writes++
@@ -77,7 +77,7 @@ func colleagueDoors(t *testing.T, d *twoDoors, adminEmail string) *twoDoors {
 		}
 	}
 	login(email)
-	bearer, _ := passportWithID(t, d.e, "colleague's agent", "read", "write", "send")
+	bearer, _ := apptest.PassportWithID(t, d.e, "colleague's agent", "read", "write", "send")
 	login(adminEmail)
 	return &twoDoors{e: d.e, bearer: bearer, mcp: apptest.NewMCPClient(d.e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))}
 }

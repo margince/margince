@@ -113,7 +113,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -441,6 +441,18 @@ test-db-up: composition ## (Re)build the migrated margince_test template the par
 test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
 
+# The MCP role sweep: every tool and action as every seeded role. Its test
+# carries `integration && rolesweep`, so no merge gate runs it; scheduled.yml
+# runs it weekly. The extension verbs are measured first, because the sweep
+# reads their measured.json. UPDATE_MCP_TOOL_ROLES=1 writes all three files.
+test-roles: composition ## The MCP role sweep, weekly in CI: make test-roles [UPDATE_MCP_TOOL_ROLES=1] (needs db-up)
+	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh backend/internal/compose/integration/extensionrole
+	@$(GOWORK_COMPOSED) IT_TAGS=integration,rolesweep INTEGRATION_TIMEOUT=$(ROLE_SWEEP_TIMEOUT) \
+	  bash ../scripts/test-integration-one.sh backend/internal/compose/integration/toolrole
+
+# A whole sweep takes minutes on a laptop and several times that on a runner.
+ROLE_SWEEP_TIMEOUT ?= 2700s
+
 # The lane's connection ceiling and budget, for a lane that runs ONE package at a
 # time. Declared in scripts/lib-testdb.sh like every other lane's, and evaluated
 # lazily (`=`, not `:=`) so a make invocation that never runs the serial lane
@@ -711,7 +723,12 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 config-gen: ## Regenerate the configuration docs, templates and schema from the settings registry
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 
-drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
+drift: ## Fail when a committed generated file drifted from what its generator produces
+	@# The generators rewrite every output, and Go replays a cached test result
+	@# only while the files it read keep their mtime; an unchanged output keeps it.
+	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/drift-mtimes
+	$(MAKE) gen perfdoc
+	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/drift-mtimes
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.

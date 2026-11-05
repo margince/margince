@@ -17,7 +17,6 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -36,14 +35,5 @@ func requireLeadTier(ctx context.Context) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	switch actor.Permissions.RowScope {
-	case principal.RowScopeTeam, principal.RowScopeAll:
-		return nil
-	default:
-		return apperrors.ErrPermissionDenied
-	}
+	return auth.RequireRowScope(ctx, principal.RowScopeTeam)
 }

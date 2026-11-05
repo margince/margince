@@ -84,9 +84,9 @@ func TestSystemHealthBudgets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	embedder := embedReindexRouter(t, "health-bench-embed-v1")
-	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(embedder, insertOnlyRunner(t)))
-	seedRouterBinding(t, e, embedder)
+	embedder := apptest.EmbedReindexRouter(t, "health-bench-embed-v1")
+	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(embedder, apptest.InsertOnlyRunner(t)))
+	apptest.SeedRouterBinding(t, e, embedder)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
 	seats := createDailySeats(t, e)

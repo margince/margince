@@ -1,0 +1,229 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package toolrole
+
+import (
+	"encoding/json"
+	"net/url"
+	"strings"
+	"sync"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// sweepSeed is what a state seed reaches: the app, the pool it notes facts in,
+// and the seeders of the kinds it builds on.
+type sweepSeed struct {
+	t      *testing.T
+	e      *apptest.AppEnv
+	pool   *recordPool
+	create map[string]func() string
+}
+
+// call sends one route as the signed-in admin and stops the sweep on any
+// failure. A seed that fails would leave its calls reading as measured.
+//
+//craft:ignore naked-any a request body is whichever JSON shape the route takes
+func (s sweepSeed) call(method, path string, body any, headers map[string]string, out any) {
+	s.t.Helper()
+	var raw json.RawMessage
+	if status := s.e.Call(s.t, method, path, body, headers, &raw); status < 200 || status >= 300 {
+		s.t.Fatalf("seeding %s %s → %d %s", method, path, status, raw)
+	}
+	if out != nil {
+		if err := json.Unmarshal(raw, out); err != nil {
+			s.t.Fatalf("seeding %s %s answered %s: %v", method, path, raw, err)
+		}
+	}
+}
+
+func (s sweepSeed) post(path string, body integration.AnyMap) string {
+	return seededID(s.t, s.e, path, body)
+}
+
+// ownerExec writes what no route writes, as the database owner: a state only
+// a connector, a job or another party's session reaches.
+//
+//craft:ignore naked-any SQL arguments take whichever Go type their column holds
+func (s sweepSeed) ownerExec(sql string, args ...any) {
+	s.t.Helper()
+	if _, err := s.e.Owner.Exec(s.t.Context(), sql, args...); err != nil {
+		s.t.Fatalf("seeding with %q: %v", sql, err)
+	}
+}
+
+func uniqueEmail() string { return "sweep-" + ids.NewV7().String() + "@role-sweep.test" }
+
+// memberSeeders make colleagues in the states the member and access calls
+// need: active, invited, deactivated, retiring, and on the admin's team.
+func memberSeeders(s sweepSeed) map[string]func() string {
+	invited := func(role string, teams ...string) string {
+		email := uniqueEmail()
+		body := integration.AnyMap{"email": email, "display_name": "Role Sweep", "role": role}
+		if len(teams) > 0 {
+			body["team_ids"] = teams
+		}
+		id := s.post("/v1/users", body)
+		s.pool.note(id, "email", email)
+		return id
+	}
+	// The password link also makes a seat active, and allows an admin 20 an
+	// hour, fewer than the sweep's colleagues. One who never signs in is made so.
+	active := func(role string, teams ...string) string {
+		id := invited(role, teams...)
+		s.ownerExec(`UPDATE app_user SET status = 'active' WHERE id = $1`, id)
+		var user struct {
+			UpdatedAt string `json:"updated_at"`
+		}
+		s.call("GET", "/v1/users/"+id, nil, nil, &user)
+		s.pool.note(id, "updated_at", user.UpdatedAt)
+		return id
+	}
+	deactivated := func() string {
+		id := invited("rep")
+		s.call("POST", "/v1/users/"+id+"/deactivate", integration.AnyMap{}, nil, nil)
+		return id
+	}
+	preview := func(source string, query url.Values) string {
+		var answer struct {
+			Token string `json:"token"`
+		}
+		s.call("GET", "/v1/users/"+source+"/retirement-preview?"+query.Encode(), nil, nil, &answer)
+		return answer.Token
+	}
+	return map[string]func() string{
+		"user": func() string { return active("rep") },
+		// A contact a colleague off the caller's team owns, which a seat short
+		// of all row scope may ask to be handed.
+		"stranger_contact": func() string {
+			return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep")})
+		},
+		"invited_user":     func() string { return invited("rep") },
+		"deactivated_user": deactivated,
+		"me":               func() string { return apptest.SessionUserID(s.t, s.e) },
+		"retiring_user": func() string {
+			id := deactivated()
+			s.pool.note(id, "token", preview(id, url.Values{"mode": {"remove"}}))
+			return id
+		},
+		"merge_source": func() string {
+			id, into := invited("rep"), active("rep")
+			s.pool.note(id, "to_user_id", into)
+			s.pool.note(id, "token", preview(id, url.Values{"mode": {"merge"}, "to_user_id": {into}}))
+			return id
+		},
+		"teammate": func() string { return teammate(s, active) },
+		"teammate_plan": func() string {
+			mate := teammate(s, active)
+			s.asColleague(mate).call("POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil)
+			return mate
+		},
+		"teammate_commitment": func() string {
+			colleague := s.asColleague(teammate(s, active))
+			colleague.call("POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil)
+			return colleague.post("/v1/weekly-plans/commitments", integration.AnyMap{"label": uniqueName()})
+		},
+		// A review is answered by someone other than the deal's owner, so the
+		// teammate owns the deal and asks.
+		"colleague_legal_review": func() string {
+			mate := teammate(s, active)
+			stages := apptest.DefaultPipeline(s.t, s.e)
+			deal := s.post("/v1/deals", integration.AnyMap{
+				"name": "Role Sweep", "amount_minor": 100, "currency": "EUR", "pipeline_id": stages.PipelineID,
+				"stage_id": stages.Open, "company_id": s.create["company"](), "source": "manual", "owner_id": mate,
+			})
+			return s.asColleague(mate).post("/v1/deals/"+deal+"/legal-reviews", integration.AnyMap{})
+		},
+		"intro_ask": func() string { return introAsk(s, active) },
+		"accepted_intro_ask": func() string {
+			ask := introAsk(s, active)
+			s.call("POST", "/v1/intro-requests/"+ask+"/decision", integration.AnyMap{"decision": "accepted", "version": 1}, nil, nil)
+			return ask
+		},
+	}
+}
+
+// teammate is an active manager on a team the admin is on.
+func teammate(s sweepSeed, active func(role string, teams ...string) string) string {
+	team := s.post("/v1/teams", integration.AnyMap{"name": "Sweep " + ids.NewV7().String()})
+	s.call("PUT", "/v1/teams/"+team+"/members/"+apptest.SessionUserID(s.t, s.e), integration.AnyMap{}, nil, nil)
+	id := active("manager", team)
+	s.pool.note(id, "team", team)
+	return id
+}
+
+// introAsk is a teammate's ask that the admin introduce them to a contact.
+func introAsk(s sweepSeed, active func(role string, teams ...string) string) string {
+	contact := s.create["contact"]()
+	return s.asColleague(teammate(s, active)).post("/v1/contacts/"+contact+"/intro-requests", integration.AnyMap{
+		"introducer_user_id": apptest.SessionUserID(s.t, s.e), "route_type": "direct", "internal_reason": "Role sweep",
+	})
+}
+
+// asColleague is the seed signed in as a colleague who set a password. Only
+// another seat files some records, such as an ask of the admin.
+func (s sweepSeed) asColleague(user string) sweepSeed {
+	s.t.Helper()
+	apptest.SetPasswordByLink(s.t, s.e, user, seatPassword)
+	s.e = s.e.AsSecondSeat(s.t, s.pool.fact(user, "email"), seatPassword)
+	return s
+}
+
+// installationSeeds is held by a seed of what the whole installation has one
+// of, such as the Telegram bot. It is held too by a seed the shared job queue
+// works, such as an import run. Each role's passes seed at once, and two such
+// seeds at once would race for the one record or take each other's jobs.
+var installationSeeds sync.Mutex
+
+// alone is seed run while no other role's seed of the installation runs.
+func (s sweepSeed) alone(seed func() string) func() string {
+	return func() string {
+		installationSeeds.Lock()
+		defer installationSeeds.Unlock()
+		return seed()
+	}
+}
+
+// asRoles gives the signed-in user these roles for a seed, and answers the
+// undo that gives back the roles they held.
+func (s sweepSeed) asRoles(keys ...string) func() {
+	user := apptest.SessionUserID(s.t, s.e)
+	email := s.ownerScalar(`SELECT email FROM app_user WHERE id = $1`, user)
+	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
+		WHERE a.team_id IS NULL AND a.user_id = $1`, user)
+	apptest.AssignRoleTo(s.t, s.e, email, keys...)
+	return func() { apptest.AssignRoleTo(s.t, s.e, email, strings.Split(held, ",")...) }
+}
+
+// accessSeeders make the shares and ownership asks the access calls act on.
+func accessSeeders(s sweepSeed) map[string]func() string {
+	return map[string]func() string{
+		"record_grant": func() string {
+			return s.post("/v1/record-grants", integration.AnyMap{
+				"record_type": "company", "record_id": s.create["company"](), "subject_type": "user",
+				"subject_id": s.create["user"](), "access": "read",
+			})
+		},
+		// Only the owner offers a record, so the admin owns this one whichever
+		// owner the pass seeds for.
+		"offered_company": func() string {
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": uniqueName(), "source": "manual", "owner_id": apptest.SessionUserID(s.t, s.e)})
+			s.call("POST", "/v1/records/company/"+company+"/ownership-offer", integration.AnyMap{"to_id": s.create["user"]()}, nil, nil)
+			return company
+		},
+		// Only a seat that may not already change the record asks for it. So
+		// the ask is filed on a colleague's company while the admin is a rep.
+		"requested_company": func() string {
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
+			defer s.asRoles("rep")()
+			s.call("POST", "/v1/records/company/"+company+"/ownership-request", integration.AnyMap{}, nil, nil)
+			return company
+		},
+	}
+}
