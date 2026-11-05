@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { formatMoneyCompact } from "../../format/format";
+import { formatAnalyticsMoney } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import {
@@ -27,7 +27,7 @@ function draw(node: ReactNode) {
 
 const landing = (over: Partial<Landing> = {}): Landing => ({
   amount_minor: 900_00,
-  measure: "commit_evidence",
+  measure: "likely",
   won_minor: 400_00,
   remaining_minor: 500_00,
   ...over,
@@ -44,14 +44,14 @@ const sufficiency = (over: Partial<Sufficiency> = {}): Sufficiency => ({
 });
 
 describe("the projected landing", () => {
-  const money = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+  const money = (minor: number) => formatAnalyticsMoney(minor, "EUR", "en");
 
   it("names its basis, then the sum it made, so a reader can check it", () => {
     draw(<LandingCard landing={landing()} currency="EUR" locale="en" />);
 
     // One label over every measure, with the basis leading the detail.
     expect(screen.getByText("Landing")).toBeTruthy();
-    expect(screen.getByText("Won + confirmed commit")).toBeTruthy();
+    expect(screen.getByText("Won + Likely deals")).toBeTruthy();
     expect(
       screen.getByText(`${money(400_00)} won + ${money(500_00)} to come`),
     ).toBeTruthy();
@@ -163,10 +163,10 @@ describe("whether the open deals support the reference", () => {
     );
 
     // Compact, because a slot is not as wide as an amount.
-    expect(screen.getByText("€2,400")).toBeTruthy();
+    expect(screen.getByText("2,400 EUR")).toBeTruthy();
     const detail = screen.getByText(/open ·/);
-    expect(detail.textContent).toBe("€1,200 open · to reach €1,000");
-    expect(detail.textContent).not.toContain("€2,400");
+    expect(detail.textContent).toBe("1,200 EUR open · to reach 1,000 EUR");
+    expect(detail.textContent).not.toContain("2,400 EUR");
   });
 
   it("renders coverage as a whole percent", () => {
@@ -221,14 +221,14 @@ describe("a manager's call beside the records", () => {
     );
     expect(screen.getByText(en["forecast.landingRecords"])).toBeTruthy();
     expect(
-      screen.getByText(formatMoneyCompact(650_00, "EUR", "en")),
+      screen.getByText(formatAnalyticsMoney(650_00, "EUR", "en")),
     ).toBeTruthy();
   });
 });
 
 describe("the modelled finish beside the landing", () => {
   const range = { lowMinor: 610_00, highMinor: 880_00 };
-  const money = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+  const money = (minor: number) => formatAnalyticsMoney(minor, "EUR", "en");
 
   function model(over: Partial<Parameters<typeof ModelRangeCard>[0]> = {}) {
     return (

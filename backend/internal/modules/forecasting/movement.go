@@ -18,10 +18,11 @@ import (
 // then what the machinery did. Two installations drawing the same movement in
 // different orders would be telling two different stories about one quarter.
 const (
-	BucketNew         = "new"
-	BucketPulledIn    = "pulled_in"
-	BucketPushedOut   = "pushed_out"
-	BucketAmount      = "amount"
+	BucketNew       = "new"
+	BucketPulledIn  = "pulled_in"
+	BucketPushedOut = "pushed_out"
+	BucketAmount    = "amount"
+	// BucketCategory is a deal's own probability moving; the wire keeps "category" for frozen movements.
 	BucketCategory    = "category"
 	BucketStageWeight = "stage_weight"
 	// BucketRecordChanged is a deal whose weight moved while its stage did
@@ -158,9 +159,7 @@ const (
 	ReadingOpen              Reading = "open"
 	ReadingWeighted          Reading = "weighted"
 	ReadingEvidence          Reading = "evidence"
-	ReadingBestCase          Reading = "best_case"
 	ReadingQualifiedEvidence Reading = "qualified_evidence"
-	ReadingQualifiedBestCase Reading = "qualified_best_case"
 	ReadingQualifiedWeighted Reading = "qualified_weighted"
 )
 
@@ -170,8 +169,6 @@ func baselineOf(reading Reading) (Reading, bool) {
 	switch reading {
 	case ReadingQualifiedEvidence:
 		return ReadingEvidence, true
-	case ReadingQualifiedBestCase:
-		return ReadingBestCase, true
 	case ReadingQualifiedWeighted:
 		return ReadingWeighted, true
 	default:
@@ -183,7 +180,7 @@ func baselineOf(reading Reading) (Reading, bool) {
 // each; a qualified reading's change reaches the call as QualificationChanges.
 //
 // Held by: TestEveryReadingIsComparedForACall (backend/internal/modules/forecasting/calldrift_test.go)
-var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence, ReadingBestCase}
+var everyReading = []Reading{ReadingOpen, ReadingWeighted, ReadingEvidence}
 
 // Classify explains the difference between two snapshots of one reading.
 func Classify(reading Reading, from, to snapshotSide) Movement {
@@ -316,7 +313,7 @@ func classifyRepricing(was, now Contribution) string {
 	switch {
 	case amountChanged(was, now):
 		return BucketAmount
-	case was.Category != now.Category:
+	case probabilitySetMoved(was, now):
 		return BucketCategory
 	case stageMoved(was, now) && was.StageProbability != now.StageProbability:
 		return BucketStageWeight
@@ -410,8 +407,6 @@ func inReading(reading Reading, c Contribution) bool {
 	switch reading {
 	case ReadingEvidence:
 		return c.InEvidence
-	case ReadingBestCase:
-		return c.InBestCase
 	case ReadingWeighted, ReadingOpen:
 		return c.InOpen
 	default:
@@ -471,6 +466,14 @@ func dealDelta(
 	return out
 }
 
+// probabilitySetMoved reports a deal taking, leaving or moving its own probability.
+func probabilitySetMoved(was, now Contribution) bool {
+	if was.Source != now.Source {
+		return true
+	}
+	return now.Source != "" && now.Source != SourceStage && was.StageProbability != now.StageProbability
+}
+
 // causesOf lists every change between two contributions of one deal, whatever
 // reading is drawn. A new deal has one cause: it arrived.
 func causesOf(was Contribution, existed bool, now Contribution) []string {
@@ -485,7 +488,7 @@ func causesOf(was Contribution, existed bool, now Contribution) []string {
 		{BucketPulledIn, !was.InOpen && now.InOpen},
 		{BucketPushedOut, was.InOpen && !now.InOpen && !now.InWon && !now.InLost},
 		{BucketAmount, amountChanged(was, now)},
-		{BucketCategory, was.Category != now.Category},
+		{BucketCategory, probabilitySetMoved(was, now)},
 		{BucketStageWeight, stageMoved(was, now) && was.StageProbability != now.StageProbability},
 		{BucketRecordChanged, weightRecordChanged(was, now)},
 		{BucketWon, now.InWon && !was.InWon},

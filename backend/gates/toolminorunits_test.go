@@ -62,18 +62,16 @@ func (p *minorUnitSources) toolResultRoots(dir string) []promptRoot {
 	return roots
 }
 
-// toolResultTypes collects the types the declared tool results are built from.
+// toolResultTypes is the declared tool results themselves. A type they only
+// nest stays out: sent to a model as its own root, it gets no display.
 func (p *minorUnitSources) toolResultTypes(dir string) map[promptTypeKey]bool {
-	reached := map[promptTypeKey]bool{}
-	walk := &toolWalk{packages: p, findings: map[string]bool{}}
+	declared := map[promptTypeKey]bool{}
 	for _, root := range p.toolResultRoots(dir) {
-		walk.seen = map[toolSeenKey]bool{}
-		walk.typeExpr(root.file, root.dir, root.typ, false)
-		for seen := range walk.seen {
-			reached[seen.key] = true
+		if decl, found := p.lookup(root.file, root.dir, heldType(root.typ)); found {
+			declared[promptTypeKey{decl.dir, decl.spec.Name.Name}] = true
 		}
 	}
-	return reached
+	return declared
 }
 
 // toolSeenKey visits a type once per scope: under an inherited currency, and
@@ -150,6 +148,9 @@ func (w *toolWalk) object(members []toolMember, inherited bool) {
 	own, base := false, false
 	for _, m := range members {
 		for _, name := range m.field.Names {
+			if !name.IsExported() || minorUnitJSONKey(m.field) == "-" || !w.packages.stringValued(m.file, m.dir, m.field.Type, 0) {
+				continue
+			}
 			switch toolJSONKey(m.field, name.Name) {
 			case "currency":
 				own = true
@@ -176,6 +177,17 @@ func (w *toolWalk) object(members []toolMember, inherited bool) {
 		}
 		w.typeExpr(m.file, m.dir, m.field.Type, childInherits)
 	}
+}
+
+// stringValued reports a type that encodes as a JSON string, the only value the
+// runtime pass reads a currency from.
+func (p *minorUnitSources) stringValued(file *ast.File, dir string, expr ast.Expr, depth int) bool {
+	expr = stripStars(expr)
+	if ident, isIdent := expr.(*ast.Ident); isIdent && ident.Name == "string" {
+		return true
+	}
+	decl, found := p.lookup(file, dir, expr)
+	return found && depth < 8 && p.stringValued(decl.file, decl.dir, decl.spec.Type, depth+1)
 }
 
 // toolJSONKey is the key encoding/json writes a field under.
@@ -253,11 +265,13 @@ func TestTheToolMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 		return parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
 	})
 	agents := filepath.Join(root, toolResultDir)
-	want := []string{agents + ".Bare.CostMinor", agents + ".Line.NetMinor", agents + ".Unspelled.FeeMinor"}
+	want := []string{agents + ".Bare.CostMinor", agents + ".Hidden.AmountMinor", agents + ".Line.NetMinor",
+		agents + ".Numbered.AmountMinor", agents + ".Unspelled.FeeMinor"}
 	if got := fmt.Sprint(findings); got != fmt.Sprint(want) {
 		t.Errorf("findings = %v, want %v", findings, want)
 	}
-	wantRoots := []string{agents + ".Bare", agents + ".Readings", agents + ".Row", agents + ".Unspelled"}
+	wantRoots := []string{agents + ".Bare", agents + ".Hidden", agents + ".Numbered", agents + ".Readings", agents + ".Row",
+		agents + ".Unspelled"}
 	if fmt.Sprint(resolved) != fmt.Sprint(wantRoots) || fmt.Sprint(unresolved) != "[Missing]" {
 		t.Errorf("resolved %v and missed %v, want %v and [Missing]", resolved, unresolved, wantRoots)
 	}
@@ -291,6 +305,16 @@ type Bare struct{ CostMinor **int64 ` + "`json:\"cost_minor\"`" + ` }
 
 type Cents int64
 
+type Hidden struct {
+	currency    string
+	AmountMinor int64 ` + "`json:\"amount_minor\"`" + `
+}
+
+type Numbered struct {
+	Currency    int   ` + "`json:\"currency\"`" + `
+	AmountMinor int64 ` + "`json:\"amount_minor\"`" + `
+}
+
 type Unspelled struct {
 	Currency string ` + "`json:\"currency\"`" + `
 	FeeMinor Cents  ` + "`json:\"fee\"`" + `
@@ -298,5 +322,5 @@ type Unspelled struct {
 
 func schemaFor[T any]() []byte { return nil }
 
-var shapes = [][]byte{schemaFor[Readings](), schemaFor[*Row](), schemaFor[Bare](), schemaFor[Unspelled](), schemaFor[Missing]()}
+var shapes = [][]byte{schemaFor[Readings](), schemaFor[*Row](), schemaFor[Bare](), schemaFor[Unspelled](), schemaFor[Hidden](), schemaFor[Numbered](), schemaFor[Missing]()}
 `

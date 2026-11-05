@@ -24,6 +24,22 @@ components:
       properties:
         object: { type: string }
         action: { type: string }
+    InternalEventExistingCustomerNoticeCreated:
+      type: object
+      x-event-type: existing_customer_notice.created
+      x-entity-type: existing_customer_notice
+      description: >-
+        An administrator declared that a group of customers was told at
+        collection that they may object to advertising.
+      required: [legal_entity_id]
+      properties:
+        legal_entity_id: { type: string, format: uuid }
+    InternalEventExistingCustomerNoticeWithdrawn:
+      type: object
+      x-event-type: existing_customer_notice.withdrawn
+      x-entity-type: existing_customer_notice
+      description: An administrator withdrew a collection-notice declaration.
+      properties: {}
     InternalEventLegalEntityCreated:
       type: object
       x-event-type: legal_entity.created

@@ -43,6 +43,9 @@ type CommitmentItem struct {
 	// DueAt is absent for a promise nobody dated, which is a different state
 	// from one that is late — see State.
 	DueAt *time.Time `json:"due_at,omitempty"`
+	// DueHasTime is true when due_at names an agreed time of day. Absent, the
+	// promise is due by the day due_at falls on in time_zone.
+	DueHasTime bool `json:"due_has_time,omitempty"`
 	// State is undated | overdue | upcoming, judged against the answer's own
 	// as_of instant. There is deliberately no "due today": see the note on the
 	// vocabulary in tools_commitments.go.
@@ -61,7 +64,9 @@ type CommitmentItem struct {
 // promises, oldest first, and the instant every state on them was judged
 // against.
 type ReviewCommitmentsResult struct {
-	AsOf        time.Time        `json:"as_of"`
+	AsOf time.Time `json:"as_of"`
+	// TimeZone is the installation's zone, the one a due date is a day in.
+	TimeZone    string           `json:"time_zone,omitempty"`
 	Commitments []CommitmentItem `json:"commitments"`
 }
 

@@ -307,7 +307,7 @@ func (p *minorUnitSources) rootsIn(file *ast.File, dir string) []promptRoot {
 			}
 			var value ast.Expr
 			switch {
-			case len(call.Args) == 1 && (isQualifiedCall(call, jsonName, "Marshal") || isEncode(fn, call, jsonName)):
+			case len(call.Args) == 1 && (isQualifiedCall(call, jsonName, "Marshal") || isEncode(call)):
 				value = call.Args[0]
 			case len(call.Args) == 3 && isQualifiedCall(call, jsonName, "MarshalIndent"):
 				value = call.Args[0]
@@ -361,36 +361,11 @@ func redecoded(fn *ast.FuncDecl, marshal *ast.CallExpr, jsonName string) ast.Exp
 	return target
 }
 
-// isEncode reports an Encode on a json.NewEncoder, called on the constructor
-// directly or on a name the function assigned it to.
-func isEncode(fn *ast.FuncDecl, call *ast.CallExpr, jsonName string) bool {
+// isEncode reports a one-value Encode, whatever holds the encoder. A parameter
+// or a field has no NewEncoder in sight, and no other Encode here takes one value.
+func isEncode(call *ast.CallExpr) bool {
 	sel, isSel := call.Fun.(*ast.SelectorExpr)
-	if !isSel || sel.Sel.Name != "Encode" {
-		return false
-	}
-	if made, isCall := sel.X.(*ast.CallExpr); isCall {
-		return isQualifiedCall(made, jsonName, "NewEncoder")
-	}
-	name, isIdent := sel.X.(*ast.Ident)
-	if !isIdent {
-		return false
-	}
-	encoder := false
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		assign, isAssign := n.(*ast.AssignStmt)
-		if !isAssign || len(assign.Lhs) != len(assign.Rhs) {
-			return !encoder
-		}
-		for i, lhs := range assign.Lhs {
-			ident, isLHS := lhs.(*ast.Ident)
-			made, isCall := assign.Rhs[i].(*ast.CallExpr)
-			if isLHS && ident.Name == name.Name && isCall && isQualifiedCall(made, jsonName, "NewEncoder") {
-				encoder = true
-			}
-		}
-		return !encoder
-	})
-	return encoder
+	return isSel && sel.Sel.Name == "Encode"
 }
 
 // valueType reads the type of an encoded value. It knows a composite literal,
@@ -501,9 +476,9 @@ func promptMinorUnitFindings(t *testing.T, moduleRoot string, parse func(string)
 	if err != nil {
 		t.Fatalf("walking %s for prompt encoders: %v", root, err)
 	}
-	// A value of a declared tool result's shape is judged by toolWalk, which
-	// knows the display the registry adds beside its amounts. The shapes come
-	// from what the tools declare, so a new tool joins that walk and leaves this one.
+	// A declared tool result is judged by toolWalk, which knows the display the
+	// registry adds beside its amounts, so a new tool joins that walk and leaves
+	// this one.
 	toolResults := packages.toolResultTypes(filepath.Join(moduleRoot, toolResultDir))
 	for _, dir := range dirs {
 		files := packages.load(dir)
@@ -516,7 +491,11 @@ func promptMinorUnitFindings(t *testing.T, moduleRoot string, parse func(string)
 					if toolResults[promptTypeKey{decl.dir, decl.spec.Name.Name}] {
 						continue
 					}
-					rootNames[decl.dir+"."+decl.spec.Name.Name] = true
+					name := decl.dir + "." + decl.spec.Name.Name
+					rootNames[name] = true
+					if name == renderedToolRow {
+						continue
+					}
 				}
 				walk.seen = map[promptTypeKey]bool{}
 				walk.typeExpr(root.file, root.dir, root.typ)
@@ -538,9 +517,15 @@ func importsPath(file *ast.File, importPath string) bool {
 	return false
 }
 
-// promptRootFloor names prompt roots the resolver must reach. Each is a brief
-// that once sent minor units to a model.
+// renderedToolRow is the one nested tool type a root reaches outside a prompt.
+// forecastContributionsToTool fills it by a JSON round trip through the HTTP
+// renderer, and it leaves inside a declared tool result, which toolWalk judges.
+const renderedToolRow = "internal/modules/agents.ForecastContributionResult"
+
+// promptRootFloor names prompt roots the resolver must reach. The briefs once
+// sent minor units to a model, and a stale renderedToolRow fails here too.
 var promptRootFloor = []string{
+	renderedToolRow,
 	"internal/compose/companybrief.Input",
 	"internal/compose/contactbrief.Input",
 	"internal/compose/meetingbrief.Input",
@@ -590,19 +575,19 @@ func TestThePromptMinorUnitDetectorSeesWhatItClaimsTo(t *testing.T) {
 	brief, money := filepath.Join(root, "internal/brief"), filepath.Join(root, "internal/money")
 	var want []string
 	for _, name := range []string{"Assigned.AssignedMinor", "Built.TaxMinor", "DealIn.AmountMinor", "Embedded.FeeMinor",
-		"Encoded.EncMinor", "Helper.ExtraMinor", "Indented.IndentMinor", "Input.Tagged", "Made.CostMinor",
-		"Variants.ByStageMinor", "Variants.DoubleMinor", "Variants.PriceMinor"} {
+		"Encoded.EncMinor", "Fielded.FieldedMinor", "Helper.ExtraMinor", "Indented.IndentMinor", "Input.Tagged",
+		"Made.CostMinor", "Passed.PassedMinor", "Variants.ByStageMinor", "Variants.DoubleMinor", "Variants.PriceMinor"} {
 		want = append(want, brief+"."+name)
 	}
-	want = append(want, money+".Line.TotalMinor", money+".Sum.SumMinor")
+	want = append(want, filepath.Join(root, toolResultDir)+".Inner.NetMinor", money+".Line.TotalMinor", money+".Sum.SumMinor")
 	if got := fmt.Sprint(findings); got != fmt.Sprint(want) {
 		t.Errorf("findings = %v, want %v", findings, want)
 	}
 	var wantRoots []string
-	for _, name := range []string{"Assigned", "Built", "Encoded", "Helper", "Indented", "Input", "Made", "Plan", "Variants"} {
+	for _, name := range []string{"Assigned", "Built", "Encoded", "Fielded", "Helper", "Indented", "Input", "Made", "Passed", "Plan", "Variants"} {
 		wantRoots = append(wantRoots, brief+"."+name)
 	}
-	wantRoots = append(wantRoots, money+".Sum")
+	wantRoots = append(wantRoots, filepath.Join(root, toolResultDir)+".Inner", money+".Sum")
 	if got := fmt.Sprint(resolved); got != fmt.Sprint(wantRoots) {
 		t.Errorf("resolved roots = %v, want %v", got, wantRoots)
 	}
@@ -687,6 +672,18 @@ type Assigned struct{ AssignedMinor int64 }
 
 type Converted struct{ RoundMinor int64 }
 
+type Passed struct{ PassedMinor int64 }
+
+type Fielded struct{ FieldedMinor int64 }
+
+type holder struct{ enc *json.Encoder }
+
+func (h holder) send() { h.enc.Encode(Fielded{}) }
+
+func encodeWith(enc *json.Encoder) { enc.Encode(Passed{}) }
+
+func nestedAlone() { json.Marshal(agents.Inner{}) }
+
 func encodeVariants(w io.Writer) {
 	json.Marshal(Variants{})
 	json.Marshal(build())
@@ -733,9 +730,16 @@ type Shape struct {
 	AmountMinor int64  ` + "`json:\"amount_minor\"`" + `
 }
 
+type Inner struct{ NetMinor int64 ` + "`json:\"net_minor\"`" + ` }
+
+type Result struct {
+	BaseCurrency string ` + "`json:\"base_currency\"`" + `
+	Inner        Inner
+}
+
 func schemaFor[T any]() []byte { return nil }
 
-var shapes = schemaFor[Shape]()
+var shapes = [][]byte{schemaFor[Shape](), schemaFor[Result]()}
 `
 
 func writePromptFixture(t *testing.T, path, source string) {

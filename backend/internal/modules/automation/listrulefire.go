@@ -39,6 +39,7 @@ const (
 	PausedListInvalid     = "list_invalid"
 	PausedListUnavailable = "list_unavailable"
 	PausedBurst           = "burst"
+	PausedPassportRevoked = "passport_revoked"
 )
 
 // rulePause is a rule's decision to stop, and how many records one check
@@ -281,6 +282,8 @@ func pauseSentence(pause rulePause) string {
 		return "The list this rule watches or adds to was archived. Restoring the list does not resume the rule; resume it in Settings."
 	case PausedListInvalid:
 		return "The filter of the Live List this rule watches no longer works. Fixing the filter does not resume the rule; resume it in Settings."
+	case PausedPassportRevoked:
+		return "The agent that set this rule up had its passport revoked, so the rule stopped. Resume it in Settings to keep it running as your own."
 	case PausedBurst:
 		return fmt.Sprintf("One check of the list moved %d records, more than the %d this rule acts on at once, so it acted on none of them. Resume it in Settings when you are ready.",
 			pause.count, burstCap)

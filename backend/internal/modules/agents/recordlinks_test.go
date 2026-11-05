@@ -113,6 +113,13 @@ func TestReadableAmountsDoNotInheritRowCurrency(t *testing.T) {
 	if got := own["amount_display"]; got != "300 JPY" {
 		t.Errorf("a child with its own currency reads %v, want 300 JPY", got)
 	}
+
+	inheriting := readableTree(t, `{"base_currency":"EUR","row":{"own":{"currency":"JPY","amount_minor":300}}}`)
+	row, _ := inheriting["row"].(map[string]any)
+	inner, _ := row["own"].(map[string]any)
+	if got := inner["amount_display"]; got != "300 JPY" {
+		t.Errorf("a child's own currency under an inherited base_currency reads %v, want 300 JPY", got)
+	}
 }
 
 func TestAResultWithNoAmountKeepsItsExactBytes(t *testing.T) {

@@ -85,9 +85,9 @@ func setupAccountSend(t *testing.T) *accountSendEnv {
 	return &accountSendEnv{preflightEnv: p, company: company, deal: openDealWithStakeholder(t, p.AppEnv, company, p.contactID)}
 }
 
-// openDealWithStakeholder plants a live opportunity on company with the recipient
-// staked on it, through the real endpoints — the shape resolveCategory's
-// live-deal arm looks for (backend/internal/modules/consent/authorizeevidence.go).
+// openDealWithStakeholder plants a live opportunity on company, with the
+// recipient staked on it and their enquiry filed on it. resolveCategory's
+// live-deal arm looks for this shape (consent/authorizeevidence.go).
 func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, contactID string) string {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -105,6 +105,7 @@ func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, contactID
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("stake the recipient on the deal → %d", status)
 	}
+	askedAboutTheDeal(t, e, contactID, "buyer@preflight.test", deal.ID)
 	return deal.ID
 }
 

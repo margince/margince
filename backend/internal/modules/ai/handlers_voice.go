@@ -4,9 +4,8 @@
 package ai
 
 // The voice-profile transport slice (B-E07.4/.5a): compose embeds
-// Handlers so the generated stubs are shadowed. Mutations are
-// contract-annotated human-only; the store re-gates on the
-// `voice_profile` RBAC object and the row-scope clause.
+// Handlers so the generated stubs are shadowed. The store gates each
+// mutation on the `voice_profile` RBAC object and the row-scope clause.
 
 import (
 	"context"
@@ -180,6 +179,22 @@ func (h Handlers) ListVoiceCorpusSources(w http.ResponseWriter, r *http.Request,
 		Summary crmcontracts.VoiceCorpusSummary  `json:"summary"`
 		Page    crmcontracts.PageInfo            `json:"page"`
 	}{Data: data, Summary: wireCorpusSummary(summary), Page: crmcontracts.PageInfo{HasMore: false}})
+}
+
+// LearnVoiceFromSentMail implements (POST /voice-profiles/{id}/sources/sent-mail).
+func (h Handlers) LearnVoiceFromSentMail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.LearnVoiceFromSentMailParams) {
+	learned, err := h.voice.LearnFromSentMail(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeVoiceErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VoiceSentMailLearned{
+		Read:           learned.Read,
+		Added:          learned.Added,
+		AlreadyPresent: learned.AlreadyPresent,
+		NoOwnWords:     learned.NoOwnWords,
+		Summary:        wireCorpusSummary(learned.Summary),
+	})
 }
 
 // IngestVoiceCorpusSource implements (POST /voice-profiles/{id}/sources).

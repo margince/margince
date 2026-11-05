@@ -371,6 +371,10 @@ func (s *Store) fillFromVCard(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 	if err != nil {
 		return cardStatement{}, err
 	}
+	corrected, err = keptFromAnAgent(ctx, tx, contactID, names, corrected)
+	if err != nil {
+		return cardStatement{}, err
+	}
 	st, err := applyObservedCard(ctx, tx, contactID, card, corrected)
 	if err != nil {
 		return cardStatement{}, err

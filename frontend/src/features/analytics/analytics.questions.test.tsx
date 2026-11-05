@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -294,7 +294,7 @@ describe("a saved question the reader cannot ask as saved", () => {
     stubServer({ "GET /analytics/runs/run-2": () => jsonResponse(foreign) });
     renderView();
     expect(
-      await screen.findByText("Converted amount is at least €5,000.00"),
+      await screen.findByText("Converted amount is at least 5,000 EUR"),
     ).toBeTruthy();
   });
 

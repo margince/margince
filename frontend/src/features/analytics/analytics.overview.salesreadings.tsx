@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Button } from "../../design-system/atoms";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { metricOf, readingValue } from "./analytics.overview.readings";
 import type {
@@ -47,7 +47,7 @@ export function OpenPipelineLine({
           count == null
             ? t("reporting.openPipelineAsOf", { at })
             : plural("reporting.openPipelineBasis", count, {
-                count: formatNumber(count, locale),
+                count: formatAnalyticsNumber(count, locale),
                 at,
               }),
           open.coverage.withheld && t("analytics.overview.partlyHidden"),

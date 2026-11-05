@@ -6,7 +6,7 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatBytes, formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { type Project360, stateOf } from "./projectsections";
 
 type Attachment = components["schemas"]["Attachment"];
@@ -53,7 +53,7 @@ function DocumentRow({
   doc: Attachment;
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   return (
     <PanelRow className="project-row">
       {/* The name is the download, as on the company page: one thing to find
@@ -69,7 +69,7 @@ function DocumentRow({
         {doc.byte_size != null && (
           <span className="t-num">{formatBytes(doc.byte_size, locale)}</span>
         )}
-        <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
+        <span>{formatDateAbbrev(doc.created_at, locale, readerZone)}</span>
       </span>
     </PanelRow>
   );

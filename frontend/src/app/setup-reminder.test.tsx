@@ -3,15 +3,25 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { act, cleanup, screen, within } from "@testing-library/react";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { parseHash } from "../lib/router";
-import { forgetSeat, readStored, STORAGE_KEYS } from "../lib/storage";
+import {
+  forgetSeat,
+  readStored,
+  STORAGE_KEYS,
+  writeStored,
+} from "../lib/storage";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
+import {
+  ignoreSearch,
+  newClient,
+  renderWith,
+  stubPhoneViewport,
+} from "../testing/shellharness";
 import { TopBar } from "./topbar";
 
 // The top bar's "Finish setup" chip: what it counts, what opening it shows, and
@@ -45,6 +55,8 @@ type World = Readonly<{
   providers?: readonly { provider: string; reason: string }[];
   voiceVersion?: number;
   bookingOn?: boolean;
+  /** Every read waits for it, so a test can answer them while a menu is open. */
+  answersAfter?: Promise<void>;
 }>;
 
 function serve(world: World = {}) {
@@ -80,6 +92,7 @@ function serve(world: World = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
+      await world.answersAfter;
       const path = new URL(request.url).pathname;
       const route = Object.keys(answers).find((end) => path.endsWith(end));
       return route ? answers[route]() : jsonResponse({}, 404);
@@ -276,5 +289,114 @@ describe("SetupReminder", () => {
     });
     await mountTopBar().answered();
     expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
+  });
+});
+
+describe("SetupReminder at phone width", () => {
+  const openAccount = async (user: UserEvent) => {
+    await user.click(screen.getByRole("button", { name: /Account/ }));
+    return screen.getAllByRole("menuitem").map((row) => row.textContent ?? "");
+  };
+
+  it("moves from the bar into the account menu, after Help and feedback", async () => {
+    stubPhoneViewport();
+    serve();
+    await mountTopBar().answered();
+    expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
+
+    const rows = await openAccount(userEvent.setup());
+    expect(rows.indexOf("Finish setup1 of 4")).toBe(
+      rows.indexOf("Help and feedback") + 1,
+    );
+    // The row leads where the panel's current step would.
+    expect(
+      screen
+        .getByRole("menuitem", { name: /Finish setup/ })
+        .getAttribute("href"),
+    ).toBe("/#/settings/connections");
+  });
+
+  it("stays out of the account menu on a wide screen", async () => {
+    serve();
+    await mountTopBar().answered();
+    expect(await trigger()).toBeTruthy();
+    expect((await openAccount(userEvent.setup())).join()).not.toContain(
+      "Finish setup",
+    );
+  });
+
+  it("stays out of the account menu after a hide on a wide screen", async () => {
+    const viewport = stubPhoneViewport({ wide: true });
+    serve();
+    const view = mountTopBar();
+    const user = userEvent.setup();
+    await user.click(await trigger());
+    await user.click(
+      screen.getByRole("button", { name: "Hide until next sign-in" }),
+    );
+    act(() => viewport.narrow());
+    await view.answered();
+    expect((await openAccount(user)).join()).not.toContain("Finish setup");
+  });
+
+  it("keeps focus and the tabstop on Sign out when the row arrives under it", async () => {
+    stubPhoneViewport();
+    let answer = () => {};
+    serve({ answersAfter: new Promise((resolve) => (answer = resolve)) });
+    const view = mountTopBar();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Account/ }));
+    await user.keyboard("{End}");
+    const signOut = screen.getByRole("menuitem", { name: "Sign out" });
+    expect(document.activeElement).toBe(signOut);
+
+    answer();
+    await view.answered();
+    await screen.findByRole("menuitem", { name: /Finish setup/ });
+    expect(document.activeElement).toBe(signOut);
+    expect(signOut.tabIndex).toBe(0);
+    await user.keyboard("{ArrowUp}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: /Finish setup/ }),
+    );
+  });
+
+  it("closes the account menu onto its trigger when the focused row is hidden elsewhere", async () => {
+    stubPhoneViewport();
+    serve();
+    await mountTopBar().answered();
+    const user = userEvent.setup();
+    const account = screen.getByRole("button", { name: /Account/ });
+    await user.click(account);
+    await user.keyboard("{End}{ArrowUp}");
+    expect(document.activeElement).toBe(
+      screen.getByRole("menuitem", { name: /Finish setup/ }),
+    );
+
+    // Another tab's hide reaches this one through the stored flag.
+    act(() => writeStored(STORAGE_KEYS.setupReminderHidden, "1"));
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(account);
+  });
+
+  it("leaves the account menu once every step is done", async () => {
+    stubPhoneViewport();
+    serve({
+      rows: [
+        gmail(),
+        {
+          ...gmail(),
+          id: "00000000-0000-4000-8000-000000000012",
+          provider: "gcal",
+          scopes: ["https://www.googleapis.com/auth/calendar.events"],
+        },
+      ],
+      voiceVersion: 2,
+      bookingOn: true,
+    });
+    await mountTopBar().answered();
+    expect((await openAccount(userEvent.setup())).join()).not.toContain(
+      "Finish setup",
+    );
   });
 });

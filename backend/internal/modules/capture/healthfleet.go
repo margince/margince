@@ -26,10 +26,10 @@ type FleetConcern struct {
 	Connection  ConnectionView
 }
 
-// FleetConcernsTx exposes connection state to human health readers, never correspondence.
+// FleetConcernsTx exposes connection state to health readers, never correspondence.
 func FleetConcernsTx(ctx context.Context, tx pgx.Tx, now time.Time) ([]FleetConcern, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return nil, apperrors.ErrPermissionDenied
 	}
 	if err := auth.Require(ctx, "job_health", principal.ActionRead); err != nil {

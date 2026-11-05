@@ -60,6 +60,9 @@ type restCommandDeps struct {
 	// written from. Same reason `stages` and `imports` are here: a human
 	// deciding "fold X into Y" cannot be shown the ids and asked to mean it.
 	tags agents.Tags
+	// leadReasons refuses a disqualify reason no rep could pick before a user is
+	// asked to release the call.
+	leadReasons agents.DisqualifyReasons
 	// language is the installation's base language, which every staged line
 	// is written in — this door's own and the one a command's resolver writes.
 	language baselanguage.Resolver

@@ -182,6 +182,7 @@ func (p *preflightEnv) stakeADeal(t *testing.T) {
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("relink the anchor onto the deal → %d", status)
 	}
+	askedAboutTheDeal(t, p.AppEnv, p.contactID, "buyer@preflight.test", p.dealID)
 }
 
 // send issues the authenticated send and returns the status plus the

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { itemTitle } from "./worklistcopy";
-import { conditionOf, eyebrowKeyFor } from "./worklisteyebrow";
+import { CATEGORY_LABEL, conditionOf, eyebrowKeyFor } from "./worklisteyebrow";
 import type { WorklistItem } from "./worklisttypes";
 
 const t = (key: MessageKey) => translate("en", key);
@@ -133,4 +133,27 @@ it("does not call a non-buyer request customer work", () => {
   });
   expect(eyebrowKeyFor(request)).toBe("worklist.source.awaiting_reply");
   expect(itemTitle(request, t, "en")).toBe(t("worklist.source.awaiting_reply"));
+});
+
+// Every row category reads as a word in every language, never as its key. The
+// map is typed by the contract's category enum, so a category added there
+// without a word here fails the type check; this asserts the words exist.
+describe("the category word on every row kind", () => {
+  it.each(Object.entries(CATEGORY_LABEL))(
+    "%s has a word in every language",
+    (_category, key) => {
+      for (const locale of ["en", "de", "vi"] as const) {
+        const word = translate(locale, key);
+        expect(word, `${locale} ${key}`).not.toBe(key);
+        expect(word.trim(), `${locale} ${key}`).not.toBe("");
+      }
+    },
+  );
+
+  // The Upcoming section's rows showed "worklist.category.upcoming".
+  it("names an upcoming row", () => {
+    expect(
+      t(eyebrowKeyFor(row({ source: "task", category: "upcoming" }))),
+    ).toBe("Upcoming");
+  });
 });

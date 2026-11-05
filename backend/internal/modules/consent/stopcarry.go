@@ -120,9 +120,10 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
 		   captured_by, carried_from, purpose_id)
-		SELECT @to_contact, @to_lead, address, kind, source, decided_by_level,
-		       @by, id, purpose_id FROM (`+stopCarryCandidates+`) candidates
-		RETURNING kind, decided_by_level`, carryAuthorityArgs(from, to, by))
+		SELECT @to_contact, @to_lead, address, kind,
+		       CASE WHEN starts_with(source, @carried_mark) THEN source ELSE @carried_mark || source END,
+		       decided_by_level, @by, id, purpose_id FROM (`+stopCarryCandidates+`) candidates
+		RETURNING kind, decided_by_level`, carriedStopArgs(from, to, by))
 	if err != nil {
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
 	}
@@ -264,4 +265,12 @@ func zeroAsNull(id ids.UUID) *ids.UUID {
 		return nil
 	}
 	return &id
+}
+
+// carriedStopArgs adds the mark every carried copy's source carries, so a copy
+// whose original was later deleted still reads as a copy (typedObjection).
+func carriedStopArgs(from, to commsauthz.StopSubject, by string) pgx.NamedArgs {
+	args := carryAuthorityArgs(from, to, by)
+	args["carried_mark"] = carriedSourceMark
+	return args
 }

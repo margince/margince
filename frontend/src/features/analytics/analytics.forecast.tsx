@@ -12,14 +12,14 @@ import { EvidenceReceipt } from "../../design-system/evidencereceipt";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
 import {
+  formatAnalyticsNumber,
   formatDateTime,
   formatDayRange,
-  formatNumber,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   currentParams,
   replaceDial,
@@ -173,22 +173,25 @@ export function ForecastView({
                   {
                     key: "eligible",
                     term: t("forecast.eligible"),
-                    value: formatNumber(data.eligible_count, locale),
+                    value: formatAnalyticsNumber(data.eligible_count, locale),
                   },
                   {
                     key: "priced",
                     term: t("forecast.priced"),
-                    value: formatNumber(data.priced_count, locale),
+                    value: formatAnalyticsNumber(data.priced_count, locale),
                   },
                   {
                     key: "confirmed",
                     term: t("forecast.confirmed"),
-                    value: formatNumber(data.confirmed_date_count, locale),
+                    value: formatAnalyticsNumber(
+                      data.confirmed_date_count,
+                      locale,
+                    ),
                   },
                   {
                     key: "fx",
                     term: t("forecast.fxMissing"),
-                    value: formatNumber(data.fx_missing_count, locale),
+                    value: formatAnalyticsNumber(data.fx_missing_count, locale),
                   },
                 ]}
               />
@@ -273,7 +276,7 @@ function forecastPeriod(
 export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const query = useQuery({
     queryKey: ["shared-forecast", token],
     queryFn: async () => {

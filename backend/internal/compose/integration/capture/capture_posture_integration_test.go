@@ -929,3 +929,39 @@ func setImportVerdictReason(
 		t.Fatalf("restoring the pre-translation verdict reason: %v", err)
 	}
 }
+
+// An agent holds a thread of its user's mailbox as its user does, and the ledger
+// names the same seat.
+func TestAnAgentHoldsAThreadOfItsUsersMailbox(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	allowSharedPosture(t, e)
+	setPosture(t, env, e.Rep1, capturemod.PostureShared)
+
+	sync(t, customerMail("agent-hold-open-1@acme.example"))
+	activityID := oneActivityID(t, e)
+	var threadKey string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activityID).Scan(&threadKey)
+	}); err != nil {
+		t.Fatalf("reading the thread to hold: %v", err)
+	}
+	seat := sharingContext(e, e.Rep1)
+	agent, ok := principal.Actor(seat)
+	if !ok {
+		t.Fatal("no actor")
+	}
+	agent.Type, agent.ID = principal.PrincipalAgent, "agent:"+ids.NewV7().String()
+	agent.PassportID, agent.OnBehalfOf = ids.NewV7(), agent.UserID
+	if _, err := compose.NewThreadAudienceSetter(e.Pool).Decide(principal.WithActor(seat, agent), threadKey, false); err != nil {
+		t.Fatalf("the agent holding the thread: %v", err)
+	}
+	held, err := capturemod.HeldThreadsFor(seatContext(e, e.Rep1), e.DB())
+	if err != nil {
+		t.Fatalf("listing held threads: %v", err)
+	}
+	if len(held) != 1 || !held[0].HasActivity {
+		t.Fatalf("held threads = %+v, want the one its agent held", held)
+	}
+}

@@ -59,6 +59,7 @@ function roster(
 ): ConnectorsResult {
   return {
     notConfigured: false,
+    captureAllowed: true,
     data: [...rows],
     providers: MAIL_PROVIDERS.map((provider) => ({
       provider,
@@ -395,10 +396,32 @@ describe("deriveSetupSteps", () => {
     ).toEqual(["mail", "calendar"]);
   });
 
+  it("asks a role that cannot capture to connect nothing", () => {
+    const steps = summary(
+      reads({
+        connectors: {
+          ...roster([connection("gmail", "error")], {
+            gmail: "role_cannot_capture",
+            graph: "role_cannot_capture",
+            imap: "role_cannot_capture",
+          }),
+          captureAllowed: false,
+        },
+      }),
+    );
+
+    expect(steps.map((step) => step.id)).toEqual(["voice"]);
+  });
+
   it("still counts a booking link that is on, whatever the roster says", () => {
     const steps = summary(
       reads({
-        connectors: { notConfigured: true, data: [], providers: [] },
+        connectors: {
+          notConfigured: true,
+          captureAllowed: true,
+          data: [],
+          providers: [],
+        },
         scheduling: scheduling(true),
       }),
     );
@@ -479,6 +502,38 @@ describe("useSetupChecklist", () => {
       voice: null,
     });
     expect([result.current.done, result.current.total]).toEqual([1, 4]);
+  });
+
+  it("is complete only once every read answered and every step is done", async () => {
+    const answers = {
+      "/voice-profiles": () => jsonResponse({ data: [{ profile_version: 1 }] }),
+      "/scheduling/profile": () => jsonResponse(scheduling(true)),
+    };
+    serve({
+      ...answers,
+      "/connectors": () =>
+        jsonResponse({ status: 500, code: "internal", title: "Down" }, 500),
+    });
+    const failed = renderHook(() => useSetupChecklist(REACH), { wrapper });
+    await waitFor(() => expect(failed.result.current.settled).toBe(true));
+    // The failed read dropped mail and calendar, so the rest counts as done.
+    expect(failed.result.current.done).toBe(failed.result.current.total);
+    expect(failed.result.current.complete).toBe(false);
+    failed.unmount();
+
+    serve({
+      ...answers,
+      "/connectors": () =>
+        jsonResponse({
+          data: [connection("gmail"), connection("gcal")],
+          providers: MAIL_PROVIDERS.map((provider) => ({
+            provider,
+            reason: "ready",
+          })),
+        }),
+    });
+    const answered = renderHook(() => useSetupChecklist(REACH), { wrapper });
+    await waitFor(() => expect(answered.result.current.complete).toBe(true));
   });
 
   it("hides the reminder until the seat is forgotten at sign-out", async () => {

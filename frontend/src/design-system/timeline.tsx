@@ -26,7 +26,7 @@ import {
   type TimelineGroup,
   TimelineWhen,
 } from "./timelineentry";
-import { TimelineText } from "./timelinetext";
+import { TimelineBody } from "./timelinetext";
 import { ThreadRow } from "./timelinethread";
 
 export function TimelineList({
@@ -156,7 +156,7 @@ function BulkGroupRow({
             {/* Never for a withheld entry: a summary row must not show a
                 reader words the row itself refuses. */}
             {newest.body && !newest.withheld && (
-              <TimelineText text={newest.body} entry={newest} />
+              <TimelineBody body={newest.body} entry={newest} />
             )}
           </>
         )}
@@ -372,7 +372,7 @@ export function TimelineRow({
             here; one without still needs the splitter, because a reader whose
             server has not caught up should not lose the fold. */}
         {entry.body && !entry.withheld && (
-          <TimelineText text={entry.body} entry={entry} />
+          <TimelineBody entry={entry} body={entry.body} />
         )}
         {entry.detail}
         <span className="tl-meta">
