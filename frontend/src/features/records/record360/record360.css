@@ -95,11 +95,3 @@
   min-width: 0;
   max-width: 100%;
 }
-
-/* A fact's provenance names its kind with a glyph before its words, on the
-   same line (`companyfactrow.tsx`). */
-.pe-source {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}

@@ -22,6 +22,8 @@
   margin-block-start: calc((1lh - var(--controlIcon)) / 2);
 }
 .source-link-name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
   text-decoration: underline dotted var(--borderStrong);
   text-underline-offset: 3px;
 }
