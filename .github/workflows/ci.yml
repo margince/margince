@@ -591,12 +591,12 @@ jobs:
         run: make check-static STATIC_LEGS="${{ matrix.legs }}"
       # A test read outside its module that skips the tree digest merges green
       # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On this job because it finishes minutes before
-      # deterministic-gates, so the census's uncached pass adds no wall clock.
+      # adds it. On the strict leg, the shorter golangci pass, so the census's
+      # uncached pass evens the two legs out instead of lengthening the longer.
       # Skipped into develop: it guards main's cache-warm, and the develop into
       # main pull request runs it.
       - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && matrix.pass == 'baseline' && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ !cancelled() && matrix.pass == 'strict' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census
 
