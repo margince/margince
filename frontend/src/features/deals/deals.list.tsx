@@ -20,7 +20,7 @@ import { RefusedFiltersNote } from "../../components/refusedfiltersnote";
 import { ErrorLine } from "../../design-system/errorline";
 import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
-import { translatePlural, useLocale, useT } from "../../i18n";
+import { type Locale, translatePlural, useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
 import { maskRefusedDialOf } from "../../lib/dealranges";
@@ -62,8 +62,8 @@ import {
 import { dealColumns } from "./deals.columns";
 import { partnerFields, usePartnerOptions } from "./deals.fields";
 import {
-  DealViewTools,
   dealRowSelection,
+  dealViewDials,
   savableDealQuery,
   useDealChips,
   useDealScreenDials,
@@ -201,6 +201,20 @@ function DealCreateAction({
   );
 }
 
+function boardCount(
+  locale: Locale,
+  count: number,
+  pipeline: Pipeline | undefined,
+): string {
+  const figure = formatNumber(count, locale);
+  return pipeline
+    ? translatePlural(locale, "deals.countInPipeline", count, {
+        count: figure,
+        pipeline: pipeline.name,
+      })
+    : translatePlural(locale, "board.count", count, { count: figure });
+}
+
 export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -332,16 +346,15 @@ export function DealsScreen({
   const pipelineId = effectivePipeline?.id ?? "";
   // The board/table switch and the pipeline picker are shared, so the reader
   // sees the same dials either way.
-  const tools = (
-    <DealViewTools
-      view={view}
-      setView={setView}
-      pipelines={pipelinesQuery.data ?? []}
-      pipelineId={pipelineId}
-      setPipelineId={setPipelineId}
-      setQuery={setQuery}
-    />
-  );
+  const { layout, viewRows } = dealViewDials({
+    view,
+    setView,
+    pipelines: pipelinesQuery.data ?? [],
+    pipelineId,
+    setPipelineId,
+    setQuery,
+    t,
+  });
   // Saving is not shared. A view holds a sort as well as its filters. The
   // board offers no way to see or change one: its order is the pipeline's
   // stage order. Saving from there would pin an ordering the reader never
@@ -414,16 +427,15 @@ export function DealsScreen({
             {createAction}
           </>
         }
-        tools={tools}
+        layout={layout}
+        viewRows={viewRows}
         saveView={saveView}
         body={boardBody}
         bodyOwnsPaging={boardBody !== undefined}
         bodyCount={
           view === "board" &&
           dealsQuery.data &&
-          translatePlural(locale, "board.count", loadedDeals.length, {
-            count: formatNumber(loadedDeals.length, locale),
-          })
+          boardCount(locale, loadedDeals.length, effectivePipeline)
         }
         // The pipeline picker is screen state, not a filter, so switching it
         // changes every row without touching `filters`. Naming it here is

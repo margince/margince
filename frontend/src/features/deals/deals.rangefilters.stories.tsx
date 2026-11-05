@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { ListSurface } from "../../design-system/listsurface";
 import { LocaleProvider, useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
@@ -52,6 +52,19 @@ function Bar({
   );
 }
 
+/** The Filters step of the View panel, open and drawn. */
+async function openFilters(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: /^View/ }),
+  );
+  const panel = await screen.findByRole("dialog");
+  await waitFor(() => expect(panel).toBeVisible());
+  await userEvent.click(
+    within(panel).getByRole("button", { name: /^Filters,/ }),
+  );
+  return panel;
+}
+
 // The close-date step open: "this fiscal quarter" as one press, or two days
 // typed or picked in the calendar.
 export const CloseDateStep: Story = {
@@ -61,14 +74,13 @@ export const CloseDateStep: Story = {
     </LocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
+    const panel = within(await openFilters(canvasElement));
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Filter" }),
+      await panel.findByRole("button", { name: "Close date" }),
     );
-    await userEvent.click(canvas.getByRole("button", { name: "Close date" }));
     await expect(
-      canvas.getByRole("radio", { name: "This fiscal quarter" }),
-    ).toBeTruthy();
+      await panel.findByRole("radio", { name: "This fiscal quarter" }),
+    ).toBeVisible();
     await expect(screen.getByRole("button", { name: "Apply" })).toBeTruthy();
   },
 };
@@ -105,15 +117,12 @@ export const AmountAndCompanyWithheld: Story = {
     </LocaleProvider>
   ),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Filter" }),
-    );
+    const panel = within(await openFilters(canvasElement));
     await expect(
-      canvas.getByRole("button", { name: "Close date" }),
-    ).toBeTruthy();
+      await panel.findByRole("button", { name: "Close date" }),
+    ).toBeVisible();
     for (const name of ["Value", "Currency", "Country"]) {
-      await expect(canvas.queryByRole("button", { name })).toBeNull();
+      await expect(panel.queryByRole("button", { name })).toBeNull();
     }
   },
 };

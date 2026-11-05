@@ -20,6 +20,7 @@ import {
   ListTable,
   useListQuery,
 } from "./listquery";
+import { openFilterValues } from "./listquery.testkit";
 
 // The server refuses owner_id, owner_team_id and unassigned together, so the
 // Owner and Team dials each clear the other's parameter when one is picked.
@@ -108,8 +109,7 @@ describe("the Owner and Team dials", () => {
     );
     await screen.findByRole("group", { name: "Owner: Anna Becker" });
 
-    await user.click(screen.getByRole("button", { name: "Add filter" }));
-    await user.click(screen.getByRole("button", { name: "Team" }));
+    await openFilterValues(user, "Team");
     await user.click(screen.getByRole("radio", { name: "Region West" }));
 
     await waitFor(() =>
@@ -130,8 +130,7 @@ describe("the Owner and Team dials", () => {
     );
     await screen.findByRole("group", { name: "Team: Region West" });
 
-    await user.click(screen.getByRole("button", { name: "Add filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.click(screen.getByRole("radio", { name: "Unassigned" }));
 
     await waitFor(() =>
@@ -145,8 +144,7 @@ describe("the Owner and Team dials", () => {
     const user = userEvent.setup();
     render(<Harness fetchPage={stubPage()} initialFilters={{}} />);
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.type(screen.getByPlaceholderText(/Owner/), "anna");
 
     expect(screen.getByRole("radio", { name: "Anna Becker" })).toBeTruthy();

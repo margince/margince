@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { showLayout } from "../../components/listquery.testkit";
 import { LocaleProvider, translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -529,7 +530,7 @@ describe("the deals table's company columns", () => {
   const toTable = async () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     return user;
   };
 

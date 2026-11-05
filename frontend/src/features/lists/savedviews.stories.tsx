@@ -140,9 +140,7 @@ export const ManagingViews: Story = {
 };
 
 export const TheRailFailedToLoad: Story = {
-  // The one place that says the saved-view rail did not load, and it says WHICH
-  // surface: the notice lands beside a list's Columns and Compact buttons, where
-  // an unnamed "this section did not load" could be any of the three.
+  // The notice names the saved views, since the panel holds many dials.
   render: () => {
     routes({
       "GET /views": () => jsonResponse({ title: "Server error" }, 500),

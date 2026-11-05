@@ -180,23 +180,8 @@ function SaveViewButton({
   );
 }
 
-/**
- * "Save this view" beside a list's own tools, and the one place that says the
- * saved-view rail failed to load.
- *
- * Saving is offered only when the list is actually narrowed. Saving the
- * unfiltered default would create a tab that does what the All tab already
- * does, and a rail of those is how a useful feature becomes clutter.
- *
- * The failure is reported here rather than on the rail because the rail is a
- * row of tabs: with no tabs there is nothing to hang the state on, and an empty
- * rail says "you have saved none" — a claim the screen cannot make when the
- * read failed. This is the control that manages saved views, so it is where a
- * reader looks, and it is `failed` rather than `unavailable` because a retry is
- * offered with it. It is NAMED, because it lands in the list's tools slot beside
- * Columns and Compact: "this section did not load" under a toolbar covering
- * three controls says which one only if the part is named.
- */
+/** Save view only for a narrowed list, since the default is the All tab; and
+ * the named failure of the views read, since an empty rail would claim none. */
 export function SaveViewAction({
   resource,
   query,

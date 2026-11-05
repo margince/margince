@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -32,12 +32,8 @@ const deal = {
   updated_at: "2026-06-01T00:00:00Z",
 };
 
-// The pipeline board as the list surface's BODY, which is the whole point of
-// this story: the saved-view rail, the count, the filter bar and the archived
-// toggle stand above the board exactly as they stand above the table, because
-// both views read one query. Rendered instead of the surface, the board took all
-// four off screen and left the reader unable to see — or undo — what had
-// narrowed the pipeline.
+// The board is the list surface's body, so the rail, count and dials stand
+// above it as above the table: both views read one query.
 const boardStages = [
   {
     id: "s1",
@@ -94,21 +90,26 @@ const boardDeals = [
   },
 ];
 
-function installBoardStub() {
+const sales = {
+  id: "pl",
+  name: "Sales",
+  is_default: true,
+  position: 0,
+  stages: boardStages,
+};
+
+const renewals = {
+  id: "pl2",
+  name: "Renewals",
+  is_default: false,
+  position: 1,
+  stages: boardStages,
+};
+
+function installBoardStub(pipelines: readonly (typeof sales)[] = [sales]) {
   installFetchStub({
     "GET /pipelines": () =>
-      jsonResponse({
-        data: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages: boardStages,
-          },
-        ],
-        page: { next_cursor: null },
-      }),
+      jsonResponse({ data: pipelines, page: { next_cursor: null } }),
     "GET /deals": () =>
       jsonResponse({
         data: boardDeals,
@@ -212,5 +213,87 @@ export const TableNarrowedByCloseDateAndCountry: Story = {
     await expect(
       canvas.getByRole("group", { name: "Country: Germany" }),
     ).toBeTruthy();
+  },
+};
+
+async function openView(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: /^View/ }),
+  );
+  const panel = await screen.findByRole("dialog");
+  await waitFor(() => expect(panel).toBeVisible());
+  return panel;
+}
+
+function boardWithTwoPipelines() {
+  installBoardStub([sales, renewals]);
+  return (
+    <StoryProviders>
+      <DealsScreen />
+    </StoryProviders>
+  );
+}
+
+// View opened over the board: Board or Table first, then the pipeline it
+// counts, which the count line names too.
+async function boardPanelOpen({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) {
+  await expect(
+    await within(canvasElement).findByText("3 deals in Sales"),
+  ).toBeVisible();
+  const panel = within(await openView(canvasElement));
+  await expect(panel.getByRole("button", { name: "Board" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Pipeline, Sales" }),
+  ).toBeVisible();
+}
+
+export const BoardViewPanel: Story = {
+  render: boardWithTwoPipelines,
+  play: boardPanelOpen,
+};
+
+export const BoardViewPanelPhone: Story = {
+  tags: ["uat-phone"],
+  render: boardWithTwoPipelines,
+  play: boardPanelOpen,
+};
+
+// The Pipeline row's step: every pipeline, the one counted marked.
+export const PipelineStep: Story = {
+  render: boardWithTwoPipelines,
+  play: async ({ canvasElement }) => {
+    const panel = within(await openView(canvasElement));
+    await userEvent.click(
+      panel.getByRole("button", { name: "Pipeline, Sales" }),
+    );
+    const step = within(await panel.findByRole("group", { name: "Pipeline" }));
+    await expect(step.getByRole("radio", { name: "Sales" })).toBeChecked();
+    await expect(step.getByRole("radio", { name: "Renewals" })).toBeVisible();
+  },
+};
+
+// One pipeline is no choice: View offers Board or Table and no Pipeline row,
+// and the count line still names the pipeline.
+export const OnePipelineViewPanel: Story = {
+  render: () => {
+    installBoardStub();
+    return (
+      <StoryProviders>
+        <DealsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText("3 deals in Sales"),
+    ).toBeVisible();
+    const panel = within(await openView(canvasElement));
+    await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
+    await expect(
+      panel.queryByRole("button", { name: /^Pipeline,/ }),
+    ).toBeNull();
   },
 };

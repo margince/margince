@@ -10,6 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { openFilterValues } from "../../components/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -34,21 +35,11 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-// The columns picker also offers a "Status" checkbox, because the column shares
-// its header text with the filter attribute's label. So a plain name match is
-// ambiguous. Each click is scoped to the filter menu as it stands at that
-// moment, which names the step it is on: "Filter", then the attribute.
+// A column shares its header text with the filter attribute's label, so the
+// value is picked from inside the step that lists it.
 async function pickFilter(attribute: string, value: string) {
-  await userEvent.click(
-    await screen.findByRole("button", { name: "Add filter" }),
-  );
-  const step = (name: string) => screen.getByRole("group", { name });
-  await userEvent.click(
-    within(step("Filter")).getByRole("button", { name: attribute }),
-  );
-  await userEvent.click(
-    within(step(attribute)).getByRole("radio", { name: value }),
-  );
+  const values = await openFilterValues(userEvent, attribute);
+  await userEvent.click(within(values).getByRole("radio", { name: value }));
 }
 
 describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => {

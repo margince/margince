@@ -478,10 +478,7 @@ function LeadsWorkbench({
         // was the one record list without them, while the contract has
         // carried `leads` in the saved-view vocabulary all along.
         dataViews={savedViews}
-        tools={
-          // Board or table is how the SAME rows are drawn, so it belongs with
-          // the drawing dials rather than above the surface — the slot the
-          // deals screen's pipeline picker already uses.
+        layout={
           <SegmentedControl
             options={["table", "board"] as const}
             value={view}

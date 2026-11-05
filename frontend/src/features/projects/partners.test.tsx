@@ -11,8 +11,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { openFilterValues } from "../../components/listquery.testkit";
 import { toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { PartnersScreen, PartnerTab } from "./partners";
 
@@ -374,23 +376,11 @@ describe("PartnerTab — the margin tier", () => {
   });
 });
 
-// The columns picker offers a checkbox per column under the header's text, so
-// a plain name match is ambiguous. Each click is scoped to the filter menu. The
-// menu is named "Filter" while it lists attributes, then by the attribute.
-async function openFilterMenu(): Promise<HTMLElement> {
-  await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-  return screen.getByRole("group", { name: "Filter" });
-}
-
+// A column's checkbox carries its header's text, so a value is picked from
+// inside the step that lists it.
 async function pickFilter(attribute: string, value: string) {
-  await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-  const step = (name: string) => screen.getByRole("group", { name });
-  await userEvent.click(
-    within(step("Filter")).getByRole("button", { name: attribute }),
-  );
-  await userEvent.click(
-    within(step(attribute)).getByRole("radio", { name: value }),
-  );
+  const values = await openFilterValues(userEvent, attribute);
+  await userEvent.click(within(values).getByRole("radio", { name: value }));
 }
 
 describe("PartnersScreen", () => {
@@ -428,8 +418,11 @@ describe("PartnersScreen", () => {
     await waitFor(() => expect(screen.getByText("o-1")).toBeTruthy());
 
     expect(screen.queryByPlaceholderText("Search")).toBeNull();
-    expect(screen.queryByLabelText("Show archived")).toBeNull();
-    const menu = await openFilterMenu();
+    const panel = await openView(userEvent);
+    expect(
+      within(panel).queryByRole("button", { name: "Show archived" }),
+    ).toBeNull();
+    const menu = await openViewStep(userEvent, "Filters");
     for (const name of [
       "Partner kinds",
       "Stage meaning",

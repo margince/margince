@@ -3,8 +3,12 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../../design-system/select-testing";
+import {
+  openFilterValues,
+  showLayout,
+} from "../../components/listquery.testkit";
 import { useMe } from "../../lib/session";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
 import {
@@ -51,7 +55,11 @@ describe("DealsScreen filters", () => {
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await pickOption(user, screen.getByLabelText("Pipeline"), "Renewals");
+    await user.click(
+      within(await openViewStep(user, "Pipeline")).getByRole("radio", {
+        name: "Renewals",
+      }),
+    );
     await waitFor(() =>
       expect(urls.some((u) => u.includes("pipeline_id=pl2"))).toBe(true),
     );
@@ -87,25 +95,18 @@ describe("DealsScreen filters", () => {
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
 
-    await user.click(screen.getByLabelText("Pipeline"));
+    const pipelines = await openViewStep(user, "Pipeline");
     expect(
-      within(screen.getByRole("listbox"))
-        .getAllByRole("option")
-        .map((option) => option.textContent),
+      within(pipelines)
+        .getAllByRole("radio")
+        .map((radio) => radio.closest("label")?.textContent),
     ).toEqual(["Sales", "Renewals"]);
-    await user.keyboard("{Escape}");
 
-    // Stage is a filter chip rather than a picker of its own, so its
-    // all-stages entry sits one step inside the Filter menu. It must still be
-    // there, because that entry is how a chosen stage is cleared.
-    // "Stage" also names a column header, so the attribute is picked from
-    // inside the menu that is open rather than by a plain name match.
-    await user.click(screen.getByRole("button", { name: "Table" }));
-    await user.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await user.click(within(menu).getByRole("button", { name: "Stage" }));
+    // "All stages" is how a chosen stage is cleared, so it must stay offered.
+    await showLayout(user, "Table");
+    const values = await openFilterValues(user, "Stage");
     expect(
-      within(menu).getByRole("radio", { name: "All stages" }),
+      within(values).getByRole("radio", { name: "All stages" }),
     ).toBeTruthy();
   });
 
@@ -117,20 +118,14 @@ describe("DealsScreen filters", () => {
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    // The stalled filter lives on the table view, not the board.
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
-    // The Filter button's attribute step and its value step both carry the
-    // "Stalled only" label, because the chip's option shares the attribute's
-    // name. So each step is picked from inside the menu that is open at that
-    // moment, rather than by a plain (ambiguous) name match.
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Stalled only" }),
-    );
-    await userEvent.click(
-      within(menu).getByRole("radio", { name: "Stalled only" }),
+    // The attribute and its one value share the label "Stalled only", so the
+    // value is picked from inside the step that lists it.
+    const values = await openFilterValues(user, "Stalled only");
+    await user.click(
+      within(values).getByRole("radio", { name: "Stalled only" }),
     );
 
     await waitFor(() =>
@@ -148,16 +143,11 @@ describe("DealsScreen filters", () => {
     );
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Probability" }),
-    );
-    await userEvent.click(
-      within(menu).getByRole("radio", { name: "60 to 89%" }),
-    );
+    const values = await openFilterValues(user, "Probability");
+    await user.click(within(values).getByRole("radio", { name: "60 to 89%" }));
 
     await waitFor(() =>
       expect(
@@ -192,16 +182,13 @@ describe("the partner filter", () => {
 
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Partner" }),
-    );
+    const values = await openFilterValues(user, "Partner");
     // The option is the company's name, resolved from the company list. It is
     // never the bare id, which names nothing to a reader.
-    await userEvent.click(within(menu).getByRole("radio", { name: "Acme" }));
+    await user.click(within(values).getByRole("radio", { name: "Acme" }));
 
     await waitFor(() =>
       expect(urls.some((u) => u.includes("partner_company_id=o1"))).toBe(true),
@@ -230,13 +217,11 @@ describe("the partner filter", () => {
 
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
     // The partner dial itself is the subject, so it is pressed, not addressed.
-    const menu = screen.getByRole("group", { name: "Filter" });
-    await userEvent.click(
-      within(menu).getByRole("button", { name: "Partner" }),
-    );
-    await userEvent.click(within(menu).getByRole("radio", { name: "Acme" }));
+    const values = await openFilterValues(user, "Partner");
+    await user.click(within(values).getByRole("radio", { name: "Acme" }));
 
     await waitFor(() =>
       expect(
@@ -262,11 +247,11 @@ describe("the partner filter", () => {
 
     render(<DealsScreen />);
     await screen.findByText("Fleet retrofit");
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const user = userEvent.setup();
+    await showLayout(user, "Table");
 
     // A picker with nothing in it asks a question that has no answers.
-    const menu = screen.getByRole("group", { name: "Filter" });
+    const menu = await openViewStep(user, "Filters");
     expect(within(menu).queryByRole("button", { name: "Partner" })).toBeNull();
   });
 });
@@ -325,11 +310,8 @@ describe("DealsScreen range dials the reader cannot use", () => {
     return useMe().data ? children : null;
   }
 
-  async function openFilterMenu() {
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Filter" }),
-    );
-    return screen.getByRole("group", { name: "Filter" });
+  function openFilterMenu() {
+    return openViewStep(userEvent, "Filters");
   }
 
   const ADDRESS = "#/deals?value=..5000000&country=DE";

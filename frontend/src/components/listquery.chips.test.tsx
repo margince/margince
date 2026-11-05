@@ -7,6 +7,7 @@ import type { ListQuery } from "./listquery";
 import {
   emptyPage,
   ListTableHarness,
+  openFilterValues,
   type Row,
   render,
 } from "./listquery.testkit";
@@ -45,8 +46,7 @@ describe("a data-driven chip narrows the list", () => {
     );
     await waitFor(() => expect(fetchPage).toHaveBeenCalled());
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.click(screen.getByRole("radio", { name: "Unassigned" }));
 
     // `unassigned=true`, not `owner=unassigned:true`. The server ignores a
@@ -95,8 +95,7 @@ describe("two chips on one list", () => {
     );
     await waitFor(() => expect(fetchPage).toHaveBeenCalled());
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.click(screen.getByRole("radio", { name: "Unassigned" }));
     await waitFor(() =>
       expect(fetchPage.mock.calls.at(-1)?.[0].filters.unassigned).toBe("true"),
@@ -106,7 +105,7 @@ describe("two chips on one list", () => {
     // surface (rather than only the chip being changed) would drop the owner
     // answer here. Picking a lifecycle would then silently widen the list back
     // to every owner, while the owner chip still showed "Unassigned".
-    await user.click(screen.getByRole("button", { name: "Lifecycle" }));
+    await openFilterValues(user, "Lifecycle");
     await user.click(screen.getByRole("radio", { name: "Customer" }));
 
     await waitFor(() =>

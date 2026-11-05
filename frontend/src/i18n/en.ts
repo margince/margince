@@ -6097,6 +6097,8 @@ export const en = {
   "deal.correctCloseDayConfirm": "Save close day",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal in {pipeline}",
+  "deals.countInPipeline_other": "{count} deals in {pipeline}",
   "deals.filterStalled": "Stalled only",
   // Both reasons say "loaded only" rather than naming the sum alone: with no
   // server aggregate the column's figure is the cards LOADED, and the board

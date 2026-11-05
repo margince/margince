@@ -10,10 +10,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { showLayout } from "../../components/listquery.testkit";
 import { pickOption } from "../../design-system/select-testing";
 import { formatMoneyCompact } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { openView } from "../../testing/listview.testkit";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
 import { deal, render, stubBackend } from "./deals.testkit";
@@ -67,7 +69,7 @@ describe("DealsScreen", () => {
         ).includes("/deals"),
       ).length;
     const before = dealFetches();
-    await userEvent.click(screen.getByRole("button", { name: "Table" }));
+    await showLayout(userEvent.setup(), "Table");
     expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(); // same set, table view
     expect(dealFetches()).toBe(before); // no reload
   });
@@ -95,7 +97,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     expect(
       await screen.findByRole("button", { name: "Slipping this quarter" }),
@@ -125,7 +127,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     await user.click(
       await screen.findByRole("button", { name: "My stalled deals" }),
     );
@@ -151,11 +153,13 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     // The save action appears only once something narrows the list; a sort is
     // the cheapest such narrowing to reach from here.
     await user.click(screen.getByRole("button", { name: "Sort by Value" }));
-    await user.click(await screen.findByRole("button", { name: "Save view" }));
+    await user.click(
+      within(await openView(user)).getByRole("button", { name: "Save view" }),
+    );
     await user.type(
       await screen.findByRole("textbox", { name: "Name" }),
       "Pipeline view",
@@ -177,9 +181,11 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
-    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
+    expect(
+      within(await openView(user)).queryByRole("button", { name: "Save view" }),
+    ).toBeNull();
   });
 
   // Owner and archive run as one preview and one change on the server. Each
@@ -198,7 +204,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     await user.click(
       await screen.findByRole("checkbox", { name: "Select First" }),
@@ -248,7 +254,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     await user.click(
       await screen.findByRole("checkbox", { name: "Select Already there" }),
@@ -280,7 +286,7 @@ describe("DealsScreen", () => {
     );
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
 
     expect(
       await screen.findByRole("checkbox", { name: "Select Open one" }),

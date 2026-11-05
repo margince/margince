@@ -20,6 +20,7 @@ import {
 import {
   emptyPage,
   ListTableHarness,
+  openFilterValues,
   type Row,
   render,
 } from "./listquery.testkit";
@@ -351,8 +352,7 @@ describe("the owner dial — one question the server answers three ways", () => 
     );
     await waitFor(() => expect(fetchPage).toHaveBeenCalled());
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Owner" }));
+    await openFilterValues(user, "Owner");
     await user.click(screen.getByRole("radio", { name: "Owned by you" }));
 
     // The option carries the parameter it sets, so the chip writes `owner_id`

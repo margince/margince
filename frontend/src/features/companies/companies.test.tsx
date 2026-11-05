@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { listFetchLimit } from "../../components/listquery";
+import { openFilterValues } from "../../components/listquery.testkit";
 import { pickOption } from "../../design-system/select-testing";
 import {
   company,
@@ -286,9 +287,10 @@ describe("CompaniesScreen — list dials reach the server (P-14)", () => {
     render(<CompaniesScreen />);
     await waitFor(() => expect(urls.length).toBeGreaterThan(0));
 
-    await user.click(await screen.findByRole("button", { name: "Filter" }));
-    await user.click(screen.getByRole("button", { name: "Employees" }));
-    await user.click(screen.getByRole("radio", { name: "51–200 employees" }));
+    const values = await openFilterValues(user, "Employees");
+    await user.click(
+      within(values).getByRole("radio", { name: "51–200 employees" }),
+    );
 
     // The wire's own parameter name and the band as written. A dial that sent
     // anything else would be ignored by the server, which answers the WHOLE

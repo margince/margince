@@ -6125,6 +6125,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Abschlusstag speichern",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "Deal in {pipeline}: {count}",
+  "deals.countInPipeline_other": "Deals in {pipeline}: {count}",
   "deals.filterStalled": "Nur stockende",
   "deals.totalsOwnerNotMeasurable":
     "Nur geladene Deals. Die Summen der verantwortlichen Person darfst du nicht auswerten.",

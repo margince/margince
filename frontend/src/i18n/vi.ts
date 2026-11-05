@@ -5969,6 +5969,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.correctCloseDayConfirm": "Lưu ngày chốt",
 
   "deals.pipeline": "Pipeline",
+  "deals.countInPipeline_one": "{count} deal trong {pipeline}",
+  "deals.countInPipeline_other": "{count} deal trong {pipeline}",
   "deals.filterStalled": "Chỉ deal đình trệ",
   "deals.totalsOwnerNotMeasurable":
     "Chỉ hiển thị deal đã tải. Tổng của người chịu trách nhiệm này nằm ngoài phạm vi số liệu bạn được xem.",

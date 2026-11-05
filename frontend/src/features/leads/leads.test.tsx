@@ -11,8 +11,10 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { showLayout } from "../../components/listquery.testkit";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -445,7 +447,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Board" }));
+    await showLayout(userEvent.setup(), "Board");
     const card = await screen.findByText("Jonas Petersen");
     const workingColumn = screen.getByRole("region", { name: "Contacted" });
 
@@ -486,13 +488,13 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     render(<LeadsScreen />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Board" }));
+    await showLayout(userEvent.setup(), "Board");
 
-    // The dials the board obeys are still on screen.
-    expect(screen.getByRole("button", { name: "Add filter" })).toBeTruthy();
     expect(screen.getByRole("searchbox")).toBeTruthy();
     // And it admits there is more than it is showing.
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+    // The dials the board obeys are still a press away.
+    expect(await openViewStep(userEvent, "Filters")).toBeTruthy();
   });
 
   it("edits a lead field from its row, sending If-Match", async () => {

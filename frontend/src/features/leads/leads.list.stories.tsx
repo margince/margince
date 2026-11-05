@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
@@ -13,18 +14,8 @@ import { LeadsScreen } from "./leads.list";
 
 type Lead = components["schemas"]["Lead"];
 
-// The lead queue. A lead is not a contact yet, and the screen's whole job is to
-// keep that true: the row opens the LEAD's own page, never the contact's, and
-// the owner column answers "whose lead is this" rather than "who typed it".
-//
-// Which leads a reader opens on is a ROLE question, not a filter the screen
-// remembers — an admin or manager runs the queue and opens on all of it, a rep
-// opens on their own. So the two are separate stories with different `/me`
-// identities rather than one story with a control pressed.
-//
-// The score is the figure a reader scans down the column, and it is a magnitude
-// like any other: `HighScores` carries four digits, which is the only width at
-// which de-DE grouping is visible at all.
+// Which leads a reader opens on follows the role, so a manager and a rep are
+// separate stories with their own `/me`, not one story with a control pressed.
 
 function lead(overrides: Partial<Lead> = {}): Lead {
   return {
@@ -55,13 +46,7 @@ const ROSTER = {
   page: { next_cursor: null },
 };
 
-// `/me` and the list are routed explicitly; everything else this screen reads —
-// the roster, the custom fields, the SoR posture — falls through to the stub's
-// own empty page, which is a legitimate answer for each of them and keeps the
-// story about the queue rather than about its chrome.
-// Hoisted rather than written inline as a default: a literal in the parameter
-// list is a fresh object on every call, and the stories that pass nothing would
-// each get one of their own.
+// Hoisted, since a literal default is a fresh object on every call.
 const MANAGER: { roles?: string[]; seat?: "full" | "read" } = {
   roles: ["manager"],
 };
@@ -127,11 +112,8 @@ export const RepOpensOnTheirOwn: Story = {
  *  so, rather than drawing a table with no rows. */
 export const EmptyQueue: Story = { render: leads([]) };
 
-/**
- * Scores wide enough to be written in a notation. A score column is read DOWN,
- * so a figure grouped in one row and bare in the next is the defect at its most
- * visible — and four digits is where de-DE first groups.
- */
+/** Four-digit scores: the width at which de-DE first groups, read down one
+ *  column. */
 export const HighScores: Story = {
   render: leads([
     lead({ score: 1204 }),
@@ -162,11 +144,8 @@ export const HighScoresGerman: Story = {
   },
 };
 
-/**
- * A score somebody overrode by hand. The row says it was overridden rather than
- * quietly showing a number the model did not produce — the reason is the point,
- * and a bare figure would pass a human's judgement off as the system's.
- */
+/** A score overridden by hand says so, so a person's figure never reads as
+ *  the model's. */
 export const OverriddenScore: Story = {
   render: leads([
     lead({
@@ -272,4 +251,34 @@ export const MorePages: Story = {
       </StoryProviders>
     );
   },
+};
+
+async function openView(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", { name: /^View/ }),
+  );
+  const panel = await screen.findByRole("dialog");
+  await waitFor(() => expect(panel).toBeVisible());
+  return panel;
+}
+
+// Table or Board stands at the top of View, above the list's dials.
+async function layoutInView({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) {
+  const panel = within(await openView(canvasElement));
+  await expect(panel.getByRole("button", { name: "Table" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Board" })).toBeVisible();
+  await expect(panel.getByRole("button", { name: /^Filters,/ })).toBeVisible();
+}
+
+export const ViewPanel: Story = {
+  render: leads([lead(), lead({ id: "l-2", status: "contacted" })]),
+  play: layoutInView,
+};
+
+export const ViewPanelPhone: Story = {
+  tags: ["uat-phone"],
+  render: leads([lead(), lead({ id: "l-2", status: "contacted" })]),
+  play: layoutInView,
 };

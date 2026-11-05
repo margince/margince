@@ -5,11 +5,13 @@ import {
   fireEvent,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../lib/problem";
+import { openView, toggleArchived } from "../testing/listview.testkit";
 import {
   LIST_PAGE_SIZES,
   type ListPage,
@@ -19,6 +21,7 @@ import {
 import {
   emptyPage,
   ListTableHarness,
+  openFilterValues,
   type Row,
   render,
 } from "./listquery.testkit";
@@ -146,6 +149,8 @@ describe("ListTable: query vocabulary", () => {
     );
     render(<ListTableHarness fetchPage={fetchPage} />);
     const search = await screen.findByPlaceholderText("Search");
+    // Opened on real timers: the press below must land inside the debounce.
+    const panel = await openView(userEvent.setup());
 
     vi.useFakeTimers();
     try {
@@ -154,8 +159,9 @@ describe("ListTable: query vocabulary", () => {
       await act(async () => {
         vi.advanceTimersByTime(100);
       });
-      const archived = screen.getByLabelText("Show archived");
-      fireEvent.click(archived);
+      fireEvent.click(
+        within(panel).getByRole("button", { name: "Show archived" }),
+      );
 
       await act(async () => {
         vi.advanceTimersByTime(250);
@@ -192,8 +198,7 @@ describe("ListTable: query vocabulary", () => {
     );
     render(<ListTableHarness fetchPage={fetchPage} />);
 
-    const archived = await screen.findByLabelText("Show archived");
-    await userEvent.click(archived);
+    await toggleArchived(userEvent);
 
     expect(
       fetchPage.mock.calls.some(([query]) => query.includeArchived === true),
@@ -221,10 +226,7 @@ describe("ListTable: query vocabulary", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Filter" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Status" }));
+    await openFilterValues(userEvent, "Status");
     await userEvent.click(screen.getByRole("radio", { name: "New" }));
 
     expect(
@@ -310,10 +312,7 @@ describe("removing an applied filter", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Filter" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Status" }));
+    await openFilterValues(userEvent, "Status");
     await userEvent.click(screen.getByRole("radio", { name: "Contacted" }));
     await waitFor(() =>
       expect(fetchPage.mock.calls.some(([query]) => query.filters.status)).toBe(

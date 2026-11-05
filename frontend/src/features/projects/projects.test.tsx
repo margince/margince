@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { openFilterValues } from "../../components/listquery.testkit";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { COMPANY, project } from "../../testing/projects.fixtures";
@@ -78,20 +79,8 @@ describe("ProjectsScreen", () => {
     render(<ProjectsScreen />);
     await screen.findByText("CRM rollout");
 
-    await user.click(screen.getByRole("button", { name: "Filter" }));
-    // The menu names its step: the attribute list first, then that
-    // attribute's values under its own heading.
-    await user.click(
-      within(screen.getByRole("group", { name: "Filter" })).getByRole(
-        "button",
-        { name: "Phase" },
-      ),
-    );
-    await user.click(
-      within(screen.getByRole("group", { name: "Phase" })).getByRole("radio", {
-        name: "Delivering",
-      }),
-    );
+    const values = await openFilterValues(user, "Phase");
+    await user.click(within(values).getByRole("radio", { name: "Delivering" }));
 
     await waitFor(() =>
       expect(urls.some((url) => url.includes("phase=delivering"))).toBe(true),
