@@ -145,8 +145,8 @@ export const HighScoresGerman: Story = {
   },
 };
 
-/** A score overridden by hand says so, so a person's figure never reads as
- *  the model's. */
+/** A score overridden by hand says so, so a rep's figure never reads as the
+ *  model's. */
 export const OverriddenScore: Story = {
   render: leads([
     lead({

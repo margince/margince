@@ -218,7 +218,9 @@ describe("the Sort step", () => {
       </LocaleProvider>,
     );
     expect(
-      panel.getByRole("button", { name: "Sort, Value, descending" }),
+      panel.getByRole("button", {
+        name: "Sort, Value, descending, changed",
+      }),
     ).toBeTruthy();
   });
 

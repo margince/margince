@@ -133,7 +133,10 @@ it("reads every dial's value on its row, in the order the panel holds them", asy
     .getAllByRole("button")
     .filter((row) => row.dataset.viewRow !== undefined)
     .map((row) => row.getAttribute("aria-label"));
-  expect(rows).toEqual(["Filters, Status", "Sort, Created, descending"]);
+  expect(rows).toEqual([
+    "Filters, Status, changed",
+    "Sort, Created, descending, changed",
+  ]);
   const archived = within(panel).getByRole("button", { name: "Show archived" });
   const save = within(panel).getByRole("button", { name: "Save view" });
   expect(precedes(archived, save)).toBe(true);
@@ -148,7 +151,9 @@ it("flips the sort from its step and says so on the row", async () => {
   await user.click(within(step).getByRole("button", { name: /^Sort Back/ }));
 
   expect(
-    screen.getByRole("button", { name: "Sort, Created, ascending" }),
+    screen.getByRole("button", {
+      name: "Sort, Created, ascending, changed",
+    }),
   ).toBeTruthy();
 });
 
@@ -217,7 +222,9 @@ it("applies a picked value, returns to the rows, and stands the filter under the
   await user.click(within(menu).getByRole("button", { name: "Status" }));
   await user.click(screen.getByRole("radio", { name: "Open" }));
 
-  const filters = screen.getByRole("button", { name: "Filters, Status" });
+  const filters = screen.getByRole("button", {
+    name: "Filters, Status, changed",
+  });
   expect(filters).toHaveFocus();
   const applied = screen.getByRole("group", { name: "Status: Open" });
   expect(

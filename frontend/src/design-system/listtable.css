@@ -145,15 +145,8 @@
   border-bottom: 1px solid var(--borderSubtle);
 }
 
-/* The toolbar's own field shell, and a text field is ONE box: it stands at
-   --inputHeight like the field in a form and like the palette this toolbar's
-   magnifier promises, because 30px here and 40px there was the same control
-   twice. A floor rather than a height, so the box cannot clip what it holds.
-   Nothing on the row has to be re-aligned for it — the select triggers beside
-   this are the same box (`.select-control` in atoms.css), and the buttons that
-   are shorter sit on the middle line `.lt-tools` centres them on. It grows
-   into the row beside View; a verb from `tools` that does not fit wraps under
-   it rather than squeezing it shut. */
+/* The toolbar's field, as tall as View beside it at every pointer (the coarse
+   floor ends this sheet). A `tools` verb that does not fit wraps under it. */
 .lt-search {
   display: inline-flex;
   flex: 1 1 10rem;
@@ -161,7 +154,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
-  min-block-size: var(--inputHeight);
+  min-block-size: var(--controlHeight);
   background: var(--bgElevated);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
@@ -254,12 +247,21 @@
   gap: var(--space-2);
 }
 
-/* THE VIEW PANEL: the menu anatomy's inset and rows, in a popover from the
-   fold up and in the drawer below it. */
+/* THE VIEW PANEL: the menu anatomy's rows, in a popover from the fold up and
+   in the drawer below it. The surface pays only the block inset and each band
+   pays the inline one, so a band's rule runs the panel's whole width. */
 .popover-panel.lt-vpopover {
+  --vpanel-inset: var(--controlGap);
   inline-size: 20rem;
   max-inline-size: calc(100vw - var(--space-4));
-  padding: var(--controlGap);
+  padding: var(--controlGap) 0;
+}
+.modal-drawer:has(> .lt-vpanel) {
+  --vpanel-inset: var(--space-4);
+  padding-inline: 0;
+}
+.modal-drawer:has(> .lt-vpanel) > .modal-title {
+  padding-inline-start: var(--vpanel-inset);
 }
 .lt-vstep {
   min-inline-size: 0;
@@ -267,8 +269,13 @@
   padding: 0;
   border: 0;
 }
+.lt-vrows,
+.lt-vgroup,
+.lt-vpanel .lt-vstep {
+  padding-inline: var(--vpanel-inset);
+}
 .lt-vlayout {
-  padding: var(--controlGap) var(--space-2) var(--space-2);
+  padding: var(--controlGap) calc(var(--vpanel-inset) + var(--space-2));
 }
 /* On the pressed chip fill the value takes the row's ink, the pair measured. */
 .lt-vtoggle[aria-pressed="true"] .lt-vrow-value {
@@ -284,6 +291,9 @@
 }
 .lt-vrow-label {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--controlGap);
 }
 .lt-vrow-value {
   flex: 1 1 auto;
@@ -302,7 +312,7 @@
 }
 .lt-vfoot {
   display: flex;
-  padding-inline: var(--space-2);
+  padding-inline: calc(var(--vpanel-inset) + var(--space-2));
   flex-wrap: wrap;
   gap: var(--space-2);
 }
@@ -644,7 +654,8 @@
   gap: var(--space-1);
   border-radius: var(--r-sm);
 }
-.lt-mcols.is-sorting {
+.lt-mcols.is-sorting,
+.lt-mcols.is-sorting .lt-mi {
   cursor: grabbing;
   user-select: none;
 }
@@ -1723,10 +1734,12 @@
 }
 
 /* The coarse-pointer floor (WCAG 2.2 AA), the way `.segmented button` takes it
-   in atoms.css: the View trigger and the panel's rows under a thumb. */
+   in atoms.css: the View trigger, the search beside it, and the panel's rows
+   and way back under a thumb. */
 @media (pointer: coarse) {
+  .lt-search,
   .lt-vtrigger,
-  .lt-vpanel .lt-mi,
+  .lt-vpanel :is(.lt-mi, .lt-mback),
   .lt-vfoot .btn {
     min-block-size: max(var(--controlHeight), 44px);
   }

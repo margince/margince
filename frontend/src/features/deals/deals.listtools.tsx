@@ -39,6 +39,7 @@ import {
   VIEW_PARAM,
 } from "../../lib/deals.queries";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
+import { defaultPipelineOf } from "../../lib/pipelines.queries";
 import { heldRefusedDials } from "../../lib/refusedfilters";
 import { useMe } from "../../lib/session";
 import { useInstallationSettings } from "../../lib/uploadlimit";
@@ -158,6 +159,7 @@ export function dealViewDials({
         key: "pipeline",
         label: t("deals.pipeline"),
         value: pipelines.find((each) => each.id === pipelineId)?.name ?? "",
+        changed: pipelineId !== defaultPipelineOf(pipelines)?.id,
         step: () => (
           <PipelineStep
             pipelines={pipelines}
@@ -284,8 +286,7 @@ export function useDealScreenDials({
   const setPipelineId = (next: string) => replaceDial(PIPELINE_PARAM, next);
   const effectivePipeline: Pipeline | undefined =
     pipelines?.find((p) => p.id === pipelineId) ??
-    pipelines?.find((p) => p.is_default) ??
-    pipelines?.[0];
+    defaultPipelineOf(pipelines ?? []);
   const dealFilters: DealFilters = {
     pipelineId: effectivePipeline?.id ?? "",
     q: query.q,

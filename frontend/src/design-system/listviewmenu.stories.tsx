@@ -58,9 +58,13 @@ const CHIPS: readonly ListChip[] = [
 
 function Surface({
   initialFilters = {},
-}: Readonly<{ initialFilters?: Record<string, string> }>) {
+  initialSort = "-created_at",
+}: Readonly<{
+  initialFilters?: Record<string, string>;
+  initialSort?: string;
+}>) {
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("-created_at");
+  const [sort, setSort] = useState(initialSort);
   const [chosen, setChosen] = useState(initialFilters);
   const [archived, setArchived] = useState(false);
   const [layout, setLayout] = useState<"table" | "board">("table");
@@ -73,7 +77,7 @@ function Surface({
       activeView={changed ? -1 : view}
       onViewChange={setView}
       search={{ value: search, onChange: setSearch }}
-      sort={{ value: sort, onChange: setSort }}
+      sort={{ value: sort, onChange: setSort, initial: "-created_at" }}
       sortOptions={[
         { field: "name", label: "Name" },
         { field: "created_at", label: "Created" },
@@ -120,6 +124,61 @@ export const AppliedAndChanged: Story = {
       name: "View, 2 filters, changed",
     });
     await expect(view).toBeVisible();
+  },
+};
+
+// The search and View stand at one height.
+async function expectOneHeight(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  const search = await canvas.findByRole("searchbox", { name: "Search" });
+  const view = await canvas.findByRole("button", { name: /^View/ });
+  await waitFor(() => expect(view).toBeVisible());
+  const field = search.closest(".lt-search");
+  await expect(field?.getBoundingClientRect().height).toBe(
+    view.getBoundingClientRect().height,
+  );
+}
+
+export const OneHeight: Story = {
+  render: () => <Surface />,
+  play: async ({ canvasElement }) => expectOneHeight(canvasElement),
+};
+
+export const PhoneOneHeight: Story = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Surface />,
+  play: async ({ canvasElement }) => expectOneHeight(canvasElement),
+};
+
+// A dial off its default carries a dot, and its name says "changed".
+export const ChangedRows: Story = {
+  render: () => <Surface initialFilters={{ owner: "u1" }} initialSort="name" />,
+  play: async ({ canvasElement }) => {
+    const panel = within(await playOpenView(canvasElement));
+    await expect(
+      panel.getByRole("button", { name: "Filters, Owner, changed" }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "Sort, Name, ascending, changed" }),
+    ).toBeVisible();
+    await expect(
+      panel.getByRole("button", { name: "Pipeline, Sales" }),
+    ).toBeVisible();
+  },
+};
+
+export const PhoneSheetChanged: Story = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <Surface initialFilters={{ owner: "u1" }} initialSort="name" />,
+  play: async ({ canvasElement }) => {
+    const sheet = within(await playOpenView(canvasElement));
+    await expect(
+      sheet.getByRole("button", { name: "Filters, Owner, changed" }),
+    ).toBeVisible();
   },
 };
 

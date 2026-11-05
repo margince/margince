@@ -8,7 +8,7 @@ import {
   showLayout,
 } from "../../components/listquery.testkit";
 import { useMe } from "../../lib/session";
-import { openViewStep } from "../../testing/listview.testkit";
+import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen } from "./deals";
 import {
@@ -27,6 +27,11 @@ afterEach(() => {
   localStorage.clear();
 });
 
+const TWO_PIPELINES = [
+  { id: "pl", name: "Sales", is_default: true, position: 0, stages },
+  { id: "pl2", name: "Renewals", is_default: false, position: 1, stages },
+];
+
 describe("DealsScreen filters", () => {
   it("switching pipeline scopes the deals fetch to that pipeline_id", async () => {
     const user = userEvent.setup();
@@ -35,22 +40,7 @@ describe("DealsScreen filters", () => {
       "fetch",
       stubBackend([deal({})], {
         onDealsUrl: (u) => urls.push(u),
-        pipelines: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages,
-          },
-          {
-            id: "pl2",
-            name: "Renewals",
-            is_default: false,
-            position: 1,
-            stages,
-          },
-        ],
+        pipelines: TWO_PIPELINES,
       }),
     );
     render(<DealsScreen />);
@@ -65,6 +55,30 @@ describe("DealsScreen filters", () => {
     );
   });
 
+  it("marks the Pipeline row while a pipeline other than the default shows", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { pipelines: TWO_PIPELINES }),
+    );
+    render(<DealsScreen />);
+    await screen.findByText("Fleet retrofit");
+    const panel = within(await openView(user));
+    expect(
+      panel
+        .getByRole("button", { name: "Pipeline, Sales" })
+        .querySelector(".lt-vdot"),
+    ).toBeNull();
+
+    const step = within(await openViewStep(user, "Pipeline"));
+    await user.click(step.getByRole("radio", { name: "Renewals" }));
+    await user.click(step.getByRole("button", { name: /^Pipeline/ }));
+
+    expect(
+      await panel.findByRole("button", { name: "Pipeline, Renewals, changed" }),
+    ).toBeTruthy();
+  });
+
   // The board always shows one pipeline, so an unset choice would fall straight
   // back to the default one. The pipeline list therefore offers pipelines
   // only. The stage filter's "all" entry clears a query filter, which the board
@@ -74,22 +88,7 @@ describe("DealsScreen filters", () => {
     vi.stubGlobal(
       "fetch",
       stubBackend([deal({})], {
-        pipelines: [
-          {
-            id: "pl",
-            name: "Sales",
-            is_default: true,
-            position: 0,
-            stages,
-          },
-          {
-            id: "pl2",
-            name: "Renewals",
-            is_default: false,
-            position: 1,
-            stages,
-          },
-        ],
+        pipelines: TWO_PIPELINES,
       }),
     );
     render(<DealsScreen />);

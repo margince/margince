@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { labelled, viewMenuName } from "../testing/listview.names";
 import { playOpenView, playOpenViewStep } from "../testing/listview.play";
 import type { ListColumn } from "./listcolumn";
 import { useDisplayRows } from "./listdisplaymenu";
@@ -18,7 +19,7 @@ type Deal = { name: string };
 
 const COLUMNS: readonly ListColumn<Deal>[] = [
   { key: "stage", header: "Stage", cell: () => null },
-  { key: "owner", header: "Owner", cell: () => null },
+  { key: "owner", header: "Owner", cell: () => null, initiallyHidden: true },
   { key: "amount", header: "Amount", cell: () => null },
 ];
 
@@ -31,6 +32,7 @@ function DisplayPanel({ columns }: Readonly<{ columns: readonly string[] }>) {
   const [dense, setDense] = useState(false);
   const rows = useDisplayRows({
     optional: order,
+    declared: columns,
     hidden,
     onToggleColumn: (key) =>
       setHidden((prev) => {
@@ -88,6 +90,33 @@ export const DensityStep: Story = {
     const compact = step.getByRole("checkbox", { name: "Compact" });
     await userEvent.click(compact);
     await waitFor(() => expect(compact).toBeChecked());
+  },
+};
+
+// Off their defaults, Columns and Density carry a dot, said as "changed".
+export const ChangedDials: Story = {
+  play: async ({ canvasElement }) => {
+    const columns = within(await playOpenViewStep(canvasElement, "Columns"));
+    await userEvent.click(columns.getByRole("checkbox", { name: "Owner" }));
+    await userEvent.click(columns.getByRole("button", { name: /^Columns/ }));
+    const panel = within(
+      await screen.findByRole("dialog", { name: viewMenuName() }),
+    );
+    await userEvent.click(
+      panel.getByRole("button", { name: labelled("Density") }),
+    );
+    const density = within(
+      await panel.findByRole("group", { name: "Density" }),
+    );
+    await userEvent.click(density.getByRole("checkbox", { name: "Compact" }));
+    await userEvent.click(density.getByRole("button", { name: /^Density/ }));
+    const changed = await panel.findByRole("button", {
+      name: "Columns, 3 of 3, changed",
+    });
+    await waitFor(() => expect(changed).toBeVisible());
+    await expect(
+      panel.getByRole("button", { name: "Density, Compact, changed" }),
+    ).toBeVisible();
   },
 };
 

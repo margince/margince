@@ -173,7 +173,9 @@ describe("the Filters step", () => {
     );
     const panel = await openView(userEvent);
     expect(
-      within(panel).getByRole("button", { name: "Filters, Status" }),
+      within(panel).getByRole("button", {
+        name: "Filters, Status, changed",
+      }),
     ).toBeTruthy();
     const step = within(await openViewStep(userEvent, "Filters"));
     // Status already carries its own row, so the step offers only what is not

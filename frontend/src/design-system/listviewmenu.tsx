@@ -30,6 +30,8 @@ export type ViewRow = Readonly<{
   step: (back: () => void) => ReactNode;
   /** The step draws its own `ViewStep`, because it has a level of its own. */
   ownHead?: boolean;
+  /** The dial is off its default, which the row marks with a dot. */
+  changed?: boolean;
 }>;
 
 /** Every dial of a list behind one View button. A row opens its dial's step in
@@ -120,26 +122,11 @@ export function ListViewMenu({
           ) : (
             <>
               {layout && <div className="lt-vlayout">{layout}</div>}
-              {rows.map((dial) => (
-                <button
-                  type="button"
-                  key={dial.key}
-                  className="lt-mi lt-vrow"
-                  data-view-row={dial.key}
-                  // The visible words in their order, with the pause between
-                  // them that two boxes side by side give the eye.
-                  aria-label={`${dial.label}, ${dial.value}`}
-                  onClick={() => enter(dial.key)}
-                >
-                  <span className="lt-vrow-label">{dial.label}</span>
-                  <span className="lt-vrow-value">{dial.value}</span>
-                  <ChevronRight
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                    className="lt-caret lt-mi-more"
-                  />
-                </button>
-              ))}
+              <div className="lt-vrows">
+                {rows.map((dial) => (
+                  <DialRow key={dial.key} dial={dial} onEnter={enter} />
+                ))}
+              </div>
               {archived && <ArchivedRow archived={archived} />}
               {footer && <div className="lt-vfoot">{footer}</div>}
             </>
@@ -147,6 +134,42 @@ export function ListViewMenu({
         </div>
       </PopoverSheet>
     </span>
+  );
+}
+
+function DialRow({
+  dial,
+  onEnter,
+}: Readonly<{ dial: ViewRow; onEnter: (key: string) => void }>) {
+  const t = useT();
+  const name = [
+    dial.label,
+    dial.value,
+    dial.changed ? t("list.viewMenuChanged") : null,
+  ]
+    .filter((part) => part !== null)
+    .join(", ");
+  return (
+    <button
+      type="button"
+      className="lt-mi lt-vrow"
+      data-view-row={dial.key}
+      // The visible words in their order, with the pause between them that two
+      // boxes side by side give the eye.
+      aria-label={name}
+      onClick={() => onEnter(dial.key)}
+    >
+      <span className="lt-vrow-label">
+        {dial.label}
+        {dial.changed && <span className="lt-vdot" />}
+      </span>
+      <span className="lt-vrow-value">{dial.value}</span>
+      <ChevronRight
+        strokeWidth={1.8}
+        aria-hidden="true"
+        className="lt-caret lt-mi-more"
+      />
+    </button>
   );
 }
 

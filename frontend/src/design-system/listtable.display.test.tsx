@@ -117,3 +117,55 @@ describe("the Columns and Density rows", () => {
     expect(panel.queryByRole("button", { name: /^Density/ })).toBeNull();
   });
 });
+
+describe("a display dial off its default", () => {
+  const more: readonly ListColumn<Row>[] = [
+    ...columns,
+    { key: "note", header: "Note", cell: () => "", initiallyHidden: true },
+  ];
+
+  it("marks Columns once a column is shown, hidden or moved, and only then", async () => {
+    const user = userEvent.setup();
+    grid(more);
+    const panel = within(await openView(user));
+    expect(
+      panel
+        .getByRole("button", { name: "Columns, 1 of 2" })
+        .querySelector(".lt-vdot"),
+    ).toBeNull();
+
+    let step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "Note" }));
+    await user.click(step.getByRole("button", { name: /^Columns/ }));
+    expect(
+      panel.getByRole("button", { name: "Columns, 2 of 2, changed" }),
+    ).toBeTruthy();
+
+    step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "Note" }));
+    await user.click(step.getByRole("button", { name: /^Columns/ }));
+    expect(panel.getByRole("button", { name: "Columns, 1 of 2" })).toBeTruthy();
+
+    step = within(await openViewStep(user, "Columns"));
+    step.getByRole("button", { name: "Move Value, 1 of 2" }).focus();
+    await user.keyboard("{ArrowDown}");
+    await user.click(step.getByRole("button", { name: /^Columns/ }));
+    expect(
+      panel.getByRole("button", { name: "Columns, 1 of 2, changed" }),
+    ).toBeTruthy();
+  });
+
+  it("marks Density while the rows are compact", async () => {
+    const user = userEvent.setup();
+    grid();
+    const step = within(await openViewStep(user, "Density"));
+    await user.click(step.getByRole("checkbox", { name: "Compact" }));
+    await user.click(step.getByRole("button", { name: /^Density/ }));
+
+    const panel = within(await openView(user));
+    const density = panel.getByRole("button", {
+      name: "Density, Compact, changed",
+    });
+    expect(density.querySelector(".lt-vdot")).not.toBeNull();
+  });
+});

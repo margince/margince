@@ -13,6 +13,7 @@ import {
   rangeQueryParams,
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
+import { defaultPipelineOf } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
@@ -38,8 +39,7 @@ export function usePipeline(pipelineId?: string | null) {
       const pipeline =
         (pipelineId &&
           data.data.find((candidate) => candidate.id === pipelineId)) ||
-        data.data.find((candidate) => candidate.is_default) ||
-        data.data[0];
+        defaultPipelineOf(data.data);
       if (!pipeline) {
         throw new Error("no pipeline");
       }

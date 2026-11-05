@@ -8,6 +8,8 @@ import { useSortableRows } from "./sortablelist";
 type ColumnDials<Row> = Readonly<{
   /** The optional columns in the order the grid draws them. */
   optional: readonly ListColumn<Row>[];
+  /** The optional columns' keys in the order the screen declares them. */
+  declared: readonly string[];
   hidden: ReadonlySet<string>;
   onToggleColumn: (key: string) => void;
   /** The reader moved a column; receives every optional key in its new order. */
@@ -29,6 +31,7 @@ export function useDisplayRows<Row>({
     key: "density",
     label: t("table.density"),
     value: dense ? t("table.compact") : t("table.comfortable"),
+    changed: dense,
     step: () => (
       // A choice the reader may turn back at once, so the step stays open.
       <Checkbox
@@ -43,6 +46,12 @@ export function useDisplayRows<Row>({
     return [density];
   }
   const shown = optional.filter((column) => !hidden.has(column.key)).length;
+  const moved = optional.some(
+    (column, index) => column.key !== columns.declared[index],
+  );
+  const toggled = optional.some(
+    (column) => hidden.has(column.key) !== (column.initiallyHidden ?? false),
+  );
   return [
     {
       key: "columns",
@@ -51,6 +60,7 @@ export function useDisplayRows<Row>({
         shown: formatNumber(shown, locale),
         total: formatNumber(optional.length, locale),
       }),
+      changed: moved || toggled,
       step: () => <ColumnsStep {...columns} />,
     },
     density,

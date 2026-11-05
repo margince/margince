@@ -260,9 +260,10 @@ const ACCEPTED = new Map<string, string>([
       "inside it keeps its own height, so a row of marks keeps one line",
   ],
   [
-    ".lt-vtrigger, .lt-vpanel .lt-mi, .lt-vfoot .btn",
-    "the list's View button, its panel rows and its footer verbs take the " +
-      "coarse-pointer 44px floor; at a fine pointer they are --controlHeight",
+    ".lt-search, .lt-vtrigger, .lt-vpanel :is(.lt-mi, .lt-mback), .lt-vfoot .btn",
+    "the list's search field and View button, the panel's rows, its way back " +
+      "and its footer verbs take the coarse-pointer 44px floor; at a fine " +
+      "pointer they are --controlHeight",
   ],
   [
     "worklist-rank-select",

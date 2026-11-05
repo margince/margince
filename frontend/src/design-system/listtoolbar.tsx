@@ -71,6 +71,7 @@ export function Toolbar({
         applied.length > 0
           ? applied.map((chip) => chip.label).join(", ")
           : t("list.viewMenuNone"),
+      changed: applied.length > 0,
       ownHead: true,
       step: (back) => (
         <FilterStep
@@ -88,6 +89,7 @@ export function Toolbar({
       key: "sort",
       label: t("table.sort"),
       value: sortSummary(sort, sortOptions, t),
+      changed: sort.value !== (sort.initial ?? ""),
       step: () => <SortStep sort={sort} options={sortOptions} />,
     });
   }

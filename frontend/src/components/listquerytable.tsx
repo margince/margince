@@ -397,6 +397,7 @@ export function ListTable<Row>({
       sort={{
         value: query.sort,
         onChange: (next) => setQuery((prev) => ({ ...prev, sort: next })),
+        initial: state.initialSort,
       }}
       chips={allChips}
       chosen={chosen}

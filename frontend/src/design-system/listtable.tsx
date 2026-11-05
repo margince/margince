@@ -356,6 +356,7 @@ export function ListTable<Row>({
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
   const displayRows = useDisplayRows({
     optional: placed.filter((column) => !column.fixed),
+    declared: columns.flatMap((column) => (column.fixed ? [] : [column.key])),
     onReorder: order.onReorder,
     ...display,
   });

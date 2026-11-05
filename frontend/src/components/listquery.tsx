@@ -304,6 +304,7 @@ export function useListQuery<Row>({
     rows,
     query,
     setQuery,
+    initialSort: opening.sort,
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
@@ -322,6 +323,8 @@ export type ListState<Row> = Readonly<{
   rows: Row[];
   query: ListQuery;
   setQuery: Dispatch<SetStateAction<ListQuery>>;
+  /** The order the list opens on; absent, the server's own. */
+  initialSort?: string;
   /**
    * The address prefix this list's dials carry, so the surface addresses the
    * rendered page under the same name the rest of the dials go by. Undefined for

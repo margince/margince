@@ -320,7 +320,11 @@ export function useSortableRows<T>(
     return (
       <button
         type="button"
-        className="iconbtn sortable-handle"
+        className={
+          draft?.key === key
+            ? "iconbtn sortable-handle is-carried"
+            : "iconbtn sortable-handle"
+        }
         aria-label={sort.labels.handle(
           item,
           keys.indexOf(key) - from + 1,

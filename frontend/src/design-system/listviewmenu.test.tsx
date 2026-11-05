@@ -138,6 +138,55 @@ describe("the View panel from the keyboard", () => {
   });
 });
 
+describe("a query dial off its default", () => {
+  function Dials({
+    sort,
+    chosen,
+  }: Readonly<{ sort: string; chosen: Record<string, string> }>) {
+    return (
+      <ListSurface
+        sort={{ value: sort, onChange: () => undefined, initial: "-created" }}
+        sortOptions={[
+          { field: "name", label: "Name" },
+          { field: "created", label: "Created" },
+        ]}
+        chips={[STATUS]}
+        chosen={chosen}
+      >
+        <p>rows</p>
+      </ListSurface>
+    );
+  }
+
+  it("marks no row while every dial is at its default", async () => {
+    const user = userEvent.setup();
+    render(<Dials sort="-created" chosen={{}} />);
+    const panel = await openView(user);
+
+    expect(
+      [...panel.querySelectorAll("[data-view-row]")].map((row) =>
+        row.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Filters, None", "Sort, Created, descending"]);
+    expect(panel.querySelector(".lt-vdot")).toBeNull();
+  });
+
+  it("marks Filters while one applies, and Sort off the list's own order", async () => {
+    const user = userEvent.setup();
+    render(<Dials sort="name" chosen={{ status: "open" }} />);
+    const panel = within(await openView(user));
+
+    for (const name of [
+      "Filters, Status, changed",
+      "Sort, Name, ascending, changed",
+    ]) {
+      expect(
+        panel.getByRole("button", { name }).querySelector(".lt-vdot"),
+      ).not.toBeNull();
+    }
+  });
+});
+
 describe("the View panel on a phone", () => {
   it("is a modal sheet headed View, and a press on its heading keeps it open", async () => {
     stubWidth(390);
