@@ -3017,6 +3017,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "contact.attachRefused":
+    "Du kannst diesen Kontakt nur lesen. Frage die verantwortliche Person nach Schreibzugriff.",
   "record.logActivityRefused":
     "Du hast keine Berechtigung, Aktivitäten zu diesem Datensatz zu erfassen.",
   "record.share": "Teilen",

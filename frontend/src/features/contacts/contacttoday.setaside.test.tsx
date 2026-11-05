@@ -10,7 +10,11 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../../testing/story-utils";
 import { useContact360 } from "./contact360";
 import { ContactToday } from "./contacttoday";
 
@@ -74,6 +78,7 @@ it("sets the moment aside, and the Undo puts it back", async () => {
   let setAside = false;
   const sent: unknown[] = [];
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /contacts/p-1/360": () =>
       jsonResponse(view(setAside ? undefined : MOMENT)),
     "POST /contacts/p-1/moment/dismiss": (body) => {

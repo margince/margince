@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { Breadcrumb } from "../../design-system/breadcrumb";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
@@ -57,6 +58,9 @@ export function BookingInviteScreen({
     ...contactQuery(selectedId || undefined),
     enabled: !!selectedId,
   });
+  const activity = useActivityGate(
+    contact.isError ? null : (contact.data ?? null),
+  );
   const saved = profile.data;
   const provider = saved?.provider ?? "";
   const { ready, connections } = useBookingCalendar(provider, false);
@@ -91,6 +95,7 @@ export function BookingInviteScreen({
         onClose={back}
       />
       <ErrorLine error={profile.error} />
+      <ErrorLine error={contact.error} />
       <ChoiceList
         legend={t("scheduling.method")}
         hideLegend
@@ -145,6 +150,10 @@ export function BookingInviteScreen({
           />
         )}
         <BookingReview
+          contactPending={activity.pending}
+          contactRefusal={
+            activity.refusalKey ? t(activity.refusalKey) : undefined
+          }
           mode={mode}
           draft={draft}
           onEdit={edit}

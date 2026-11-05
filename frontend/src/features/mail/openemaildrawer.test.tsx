@@ -350,6 +350,8 @@ it("books with the sender of an incoming email and carries the message as contex
       from: [{ address: "ana@brandt.example", contact_id: ANA }],
     },
     {
+      [`GET /contacts/${ANA}`]: () =>
+        jsonResponse({ id: ANA, attachable: true }),
       "GET /me": () =>
         jsonResponse(meFixture({ allow: { activity: ["read", "create"] } })),
     },
@@ -362,3 +364,34 @@ it("books with the sender of an incoming email and carries the message as contex
     `#/book/contact-${ANA}?activity=${MESSAGE}`,
   );
 });
+
+it.each([false, undefined, "forbidden"])(
+  "hides booking when the sender contact cannot take activities: %s",
+  async (attachable) => {
+    const { queryClient } = drawer(
+      {
+        ...PRESENTATION,
+        summary: { ...PRESENTATION.summary, direction: "inbound" },
+        from: [{ address: "ana@brandt.example", contact_id: ANA }],
+      },
+      {
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              allow: { contact: ["read"], activity: ["read", "create"] },
+            }),
+          ),
+        [`GET /contacts/${ANA}`]: () =>
+          attachable === "forbidden"
+            ? jsonResponse({ title: "Forbidden", status: 403 }, 403)
+            : jsonResponse({ id: ANA, attachable }),
+      },
+    );
+    await waitFor(() =>
+      expect(queryClient.getQueryState(["contact", ANA])?.status).toBe(
+        attachable === "forbidden" ? "error" : "success",
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Book a meeting" })).toBeNull();
+  },
+);
