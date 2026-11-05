@@ -111,12 +111,12 @@ UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 # the census over the same packages the cached pass replays.
 TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
-# TEST_COVERDIR=<absolute dir> instruments this module's tests, in both passes,
+# TEST_COVERDIR=<dir> instruments this module's tests, in both passes,
 # and writes their binary coverage pods there for SonarCloud. -coverpkg=./...
 # credits a line to every test that runs it, and links each test binary to every
 # package, so no result replays under it: one change reruns the whole module.
 TEST_COVER_FLAGS = $(if $(TEST_COVERDIR),-cover -coverpkg=./... -covermode=atomic)
-TEST_COVER_ARGS = $(if $(TEST_COVERDIR),-args -test.gocoverdir=$(TEST_COVERDIR))
+TEST_COVER_ARGS = $(if $(TEST_COVERDIR),-args -test.gocoverdir=$(abspath $(TEST_COVERDIR)))
 
 .DEFAULT_GOAL := help
 

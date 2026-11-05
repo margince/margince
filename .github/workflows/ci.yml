@@ -760,7 +760,9 @@ jobs:
   # wider `backend` scope, so a rulebook-only change ran it and then discarded its
   # pods, because the fan-in that consumes them had skipped. The test input
   # census rides on that pass: a path in `backend` alone holds none of the tests
-  # the census runs, and cache-warm runs it again before each save.
+  # the census runs, and cache-warm runs it again before each save. A PR into
+  # develop skips the lane (full_lane), so its census runs on develop's PR into
+  # main.
   #
   # Runs in parallel with the Go gate, not behind it: gating the longest lane on
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.

@@ -460,8 +460,8 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-The `integration unit coverage + input census` job runs the census on each PR that changes Go code, so
-the PR that adds such a read fails. The same run writes the unit coverage for SonarCloud, so the unit
+The `integration unit coverage + input census` job runs the census on each PR in the `backend_db` scope,
+so the PR that adds such a read fails. The same run writes the unit coverage for SonarCloud, so the unit
 suite runs once without the cache per PR, not twice. A failing test there is not its verdict; that is
 the job of `deterministic-gates`. A PR into `develop` skips the lane, so the PR from `develop` into
 `main` runs the census. `cache-warm` runs it before it saves an entry, and a failing census holds back
