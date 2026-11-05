@@ -42,18 +42,17 @@ func roleSeats(t *testing.T, admin *apptest.AppEnv, roles []apptest.SeededRole) 
 	return seats
 }
 
-// signedInAs is a second session of the harness, as a new active admin. It has
-// the calendar and the send-capable mailbox the bootstrap admin has. No route
-// makes a seat active but the invitee's own password link. So the seat takes
-// the bootstrap admin's password, the way an accepted invite sets one.
+// seatPassword is the password every seat the sweep invites sets.
+const seatPassword = "role-sweep-seat-password"
+
+// signedInAs is a second session of the harness, as a new active admin who
+// accepted the invite. It has the calendar and the send-capable mailbox the
+// bootstrap admin has.
 func signedInAs(t *testing.T, admin *apptest.AppEnv, email string) *apptest.AppEnv {
 	t.Helper()
 	id := seededID(t, admin, "/v1/users", integration.AnyMap{"email": email, "display_name": "Role " + email, "role": "admin"})
-	if _, err := admin.Owner.Exec(t.Context(), `UPDATE app_user SET status = 'active',
-		password_hash = (SELECT password_hash FROM app_user WHERE id = $1) WHERE id = $2`, apptest.SessionUserID(t, admin), id); err != nil {
-		t.Fatalf("activating %s: %v", email, err)
-	}
-	seat := admin.AsSecondSeat(t, email, "correct-horse-battery")
+	apptest.SetPasswordByLink(t, admin, id, seatPassword)
+	seat := admin.AsSecondSeat(t, email, seatPassword)
 	apptest.EnableGoogleBookingPage(t, seat)
 	sendCapableMailbox(t, seat)
 	return seat
@@ -74,10 +73,11 @@ func eachSeat(t *testing.T, name string, seats []roleSeat, pass func(t *testing.
 
 // sweptCall is one call as one role made it, kept for the merge.
 type sweptCall struct {
-	call           toolRoleCall
-	got            apptest.MCPResult
-	run            auth.RecordedCall
-	ran            bool
+	call toolRoleCall
+	got  apptest.MCPResult
+	run  auth.RecordedCall
+	ran  bool
+	// releaseRefused is what refused the human the release of a staged call.
 	releaseRefused []string
 }
 
@@ -109,22 +109,40 @@ func sweepSeat(t *testing.T, seat roleSeat, recorded *toolCheckRecorder, calls [
 	return swept
 }
 
-// aloneVerbs act on what the installation has one of: the input check that
-// runs, the anchor company a site read proposes for, the review template. Each
-// role's call is made with its state seeded just before. No other role's such
-// call or seed runs meanwhile, or one role's write would be another's answer.
-//
-// gatekit:fixture the verbs whose state the whole installation shares: expected data, not a waived cost
+// aloneVerbs change what the installation has one of: the input check that
+// runs, the anchor company and its logos, a settings page, the review template.
+// No other role's such call or seed runs meanwhile, or one role's write would
+// be another's answer.
 var aloneVerbs = map[string]bool{
 	"start_forecast_assurance_run": true, "confirm_anchor_company_site_read": true,
 	"put_anchor_company": true, "update_activity_review_template": true,
+	"delete_anchor_company_logo": true, "delete_anchor_company_logo_icon": true, "delete_legal_entity_logo": true,
+	"update_contact_case_settings": true, "update_follow_up_settings": true, "update_lead_settings": true,
+	"update_legal_review_settings": true,
 }
 
-// callAsSeat makes one call as the seat's role. A call in aloneVerbs has its
+// runsAlone is whether call changes or reads what the installation has one of:
+// a verb in aloneVerbs, or a call taking a kind of installationKinds.
+func runsAlone(t *testing.T, call toolRoleCall) bool {
+	t.Helper()
+	if aloneVerbs[call.verb] {
+		return true
+	}
+	counting := countingPool(t)
+	call.args(counting)
+	for kind := range counting.wanted {
+		if installationKinds[kind] {
+			return true
+		}
+	}
+	return false
+}
+
+// callAsSeat makes one call as the seat's role. A call that runs alone has its
 // records seeded as the admin, under the installation's lock, and runs there.
 func callAsSeat(t *testing.T, seat roleSeat, client *apptest.MCPClient, call toolRoleCall, pool *recordPool) (apptest.MCPResult, []string) {
 	t.Helper()
-	if !aloneVerbs[call.verb] {
+	if !runsAlone(t, call) {
 		return callThroughApproval(t, seat.e, client, call.verb, call.args(pool))
 	}
 	installationSeeds.Lock()

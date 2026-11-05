@@ -42,7 +42,8 @@ func projectSeeders(s sweepSeed) map[string]func() string {
 			s.pool.note(assessment, "project", project)
 			return assessment
 		},
-		// A won partner deal accrues its commission in the ledger's own job.
+		// A won partner deal accrues its commission in the ledger's own job,
+		// which the insert-only queue never works.
 		"commission_entry": func() string {
 			return s.ownerScalar(`INSERT INTO commission_entry (id, deal_id, partner_company_id, attribution_at_accrual, rate_bps,
 				basis_amount_minor, currency, amount_minor, captured_by)

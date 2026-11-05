@@ -159,7 +159,7 @@ func measureEveryKind(t *testing.T, seats []roleSeat, recorded *toolCheckRecorde
 			adminRan = append(adminRan, variant)
 		}
 	})
-	ranFor := make([][]string, len(seats))
+	ranRows := make([][]string, len(seats))
 	eachSeat(t, "kinds", seats, func(t *testing.T, i int, seat roleSeat) {
 		refused := slices.DeleteFunc(slices.Clone(adminRan), func(variant toolRoleCall) bool {
 			return !slices.Contains(verdicts[baseRow(variant.row)].Refused, seat.role.Key)
@@ -169,12 +169,12 @@ func measureEveryKind(t *testing.T, seats []roleSeat, recorded *toolCheckRecorde
 		}
 		callVariants(t, seat, recorded, refused, func(variant toolRoleCall, got apptest.MCPResult, _ auth.RecordedCall, _ bool) {
 			if !got.IsError {
-				ranFor[i] = append(ranFor[i], baseRow(variant.row))
+				ranRows[i] = append(ranRows[i], baseRow(variant.row))
 			}
 		})
 	})
 	for i, seat := range seats {
-		for _, base := range ranFor[i] {
+		for _, base := range ranRows[i] {
 			row := verdicts[base]
 			if slices.Contains(row.Refused, seat.role.Key) {
 				row.Refused = slices.DeleteFunc(row.Refused, func(key string) bool { return key == seat.role.Key })

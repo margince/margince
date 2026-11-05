@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // complianceFixtures fill the consent, privacy and retention calls. Each acts
@@ -142,7 +143,7 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		"acquisition_contact": func() string {
 			contact := s.create["contact"]()
 			s.ownerExec(`INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
-				VALUES ($1, 'requested_quote_or_meeting', now(), 'system')`, contact)
+				VALUES ($1, 'requested_quote_or_meeting', $2, 'system')`, contact, clocktest.Now(s.t))
 			return contact
 		},
 		// A stop is lifted only by a level above the one it was recorded at.
@@ -186,7 +187,7 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		"confirm_submission": func() string {
 			contact := mailContact()
 			token := s.ownerScalar(`INSERT INTO confirm_token (contact_id, token_hash, delivered_to, expires_at)
-				VALUES ($1, $2, 'subject@role-sweep.test', now() + interval '14 days') RETURNING id::text`, contact, "role-sweep-"+contact)
+				VALUES ($1, $2, 'subject@role-sweep.test', $3) RETURNING id::text`, contact, "role-sweep-"+contact, clocktest.Now(s.t).Add(14*24*time.Hour))
 			return s.ownerScalar(`INSERT INTO contact_confirm_submission (contact_id, token_id, kind, field, proposed_value)
 				VALUES ($1, $2, 'correction', 'full_name', 'Role Sweep Corrected') RETURNING id::text`, contact, token)
 		},

@@ -9,10 +9,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,22 +157,23 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			return sweepMailbox
 		},
 		"silent_mailbox": func() string {
-			s.ownerExec(`UPDATE capture_connection SET connected_at = now() - interval '10 days', silence_dismissed_since = NULL
-				WHERE user_id = $1 AND provider = $2`, apptest.SessionUserID(s.t, s.e), sweepMailbox)
+			now := clocktest.Now(s.t)
+			s.ownerExec(`UPDATE capture_connection SET connected_at = $3, silence_dismissed_since = NULL
+				WHERE user_id = $1 AND provider = $2`, apptest.SessionUserID(s.t, s.e), sweepMailbox, now.Add(-10*24*time.Hour))
 			s.ownerExec(`INSERT INTO capture_sync_state (connection_id, last_success_at)
-				SELECT id, now() FROM capture_connection WHERE user_id = $1 AND provider = $2
-				ON CONFLICT (connection_id) DO UPDATE SET last_success_at = now(), last_error_class = NULL, last_delivery_at = NULL`,
-				apptest.SessionUserID(s.t, s.e), sweepMailbox)
+				SELECT id, $3 FROM capture_connection WHERE user_id = $1 AND provider = $2
+				ON CONFLICT (connection_id) DO UPDATE SET last_success_at = $3, last_error_class = NULL, last_delivery_at = NULL`,
+				apptest.SessionUserID(s.t, s.e), sweepMailbox, now)
 			return s.ownerScalar(`SELECT to_char(connected_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
 				FROM capture_connection WHERE user_id = $1 AND provider = $2`, apptest.SessionUserID(s.t, s.e), sweepMailbox)
 		},
-		"live_channel": s.alone(func() string {
+		"live_channel": func() string {
 			c := &apptest.ChannelConversation{AppEnv: s.e, User: apptest.SessionUserID(s.t, s.e)}
 			if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
 				c.ConnectBot(s.t)
 			}
 			return s.ownerScalar(`SELECT id::text FROM channel_connection WHERE archived_at IS NULL`)
-		}),
+		},
 		"draft_import_run": s.alone(func() string {
 			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK || profile.RunID == "" {
@@ -178,8 +181,8 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			}
 			return profile.RunID
 		}),
-		// No route finishes an import without its worker; the commit job's
-		// writer leaves the run complete.
+		// The run is tested, approved, and its commit job worked, as the
+		// worker leaves it complete.
 		"complete_import_run": s.alone(func() string {
 			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK {
@@ -189,7 +192,9 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			if status != http.StatusAccepted && status != http.StatusCreated {
 				s.t.Fatalf("starting the import → %d", status)
 			}
-			s.ownerExec(`UPDATE import_run SET status = 'complete', version = version + 1 WHERE id = $1`, run.ID)
+			importjobtest.Drain(s.t, s.e)
+			s.call("POST", "/v1/imports/"+run.ID+"/approve", nil, nil, nil)
+			importjobtest.Drain(s.t, s.e)
 			return run.ID
 		}),
 	}
@@ -206,8 +211,8 @@ func openDomainQuestion(s sweepSeed, reason string) string {
 		"kind": "email", "direction": "inbound", "subject": "Role sweep", "body": "Role sweep", "source": "manual",
 		"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
-	// The question is current against the store's own clock.
-	s.ownerExec(`UPDATE activity SET occurred_at = now() - interval '1 hour' WHERE id = $1`, mail)
+	// The question is current: its mail came an hour ago.
+	s.ownerExec(`UPDATE activity SET occurred_at = $2 WHERE id = $1`, mail, clocktest.Now(s.t).Add(-time.Hour))
 	s.ownerExec(`INSERT INTO activity_participant (activity_id, address, address_domain_folded, role) VALUES ($1, $2, $3, 'from')`, mail, sender, domain)
 	s.ownerExec(`INSERT INTO activity_participant (activity_id, address, role)
 		SELECT $1, email, 'to' FROM app_user WHERE id = $2`, mail, apptest.SessionUserID(s.t, s.e))

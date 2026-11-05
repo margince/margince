@@ -9,6 +9,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,4 +40,11 @@ func RecordChecksForTest(ctx context.Context) (context.Context, func() RecordedC
 		defer rec.mu.Unlock()
 		return RecordedCall{Checks: slices.Sorted(maps.Keys(rec.checks)), Refused: slices.Sorted(maps.Keys(rec.refused)), Human: human}
 	}
+}
+
+// RefusedInItsOwnWords reports whether a gate answers a recorded refusal with
+// its contract's status, not a 403. An all-scope seat asking for a record it
+// may change is a 409; a receiver outside the caller's scope is a 422.
+func RefusedInItsOwnWords(refusal string) bool {
+	return strings.HasPrefix(refusal, narrowerPrefix) || refusal == assigneeRefusal
 }

@@ -191,7 +191,7 @@ func ensureAssigneeWith(ctx context.Context, tx pgx.Tx, dest ids.UUID,
 	if seatOK, err := assigneeAdmitted(ctx, tx, seatPos, status, eligible(consentedAssigner(p), "u", seatArg), seatArgs); err != nil {
 		return err
 	} else if seatOK {
-		noteRefusal(ctx, rowRefusalPrefix+"assignee")
+		noteRefusal(ctx, assigneeRefusal)
 	}
 	return refuseIneligibleAssignee(false)
 }

@@ -27,7 +27,8 @@ import (
 // paths of a tool ask: a company create, and the installation settings read.
 // The last member holds rep and ops, whose grants merge to the widest.
 func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
-	d := toolRoleApp(t, "tool-role-listing")
+	recorded := newToolCheckRecorder()
+	d := toolRoleApp(t, "tool-role-listing", compose.WithToolChecksRecordedForTest(recorded.note))
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	calls := toolRoleCalls(specs, routeShapes())
 	calls = append(calls, kindVariants(t, calls, seedableKinds(t, d.E))...)
@@ -41,59 +42,68 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 	adminRows := publishedAdminAnswers(t)
 	holdings := [][]string{{"rep_tagger"}, {"rep_path_bound"}, {"rep", "ops"}}
 	seats := make([]*apptest.AppEnv, len(holdings))
+	emails := make([]string, len(holdings))
 	for i := range holdings {
-		seats[i] = signedInAs(t, d.E, fmt.Sprintf("tool-role-listing-%d@fable.test", i))
+		emails[i] = fmt.Sprintf("tool-role-listing-%d@fable.test", i)
+		seats[i] = signedInAs(t, d.E, emails[i])
 	}
 	for i, holding := range holdings {
 		t.Run(strings.Join(holding, "+"), func(t *testing.T) {
 			t.Parallel()
-			e := seats[i]
-			holdRoles(t, e, "admin")
+			e, email, human := seats[i], emails[i], apptest.SessionUserID(t, seats[i])
+			// A gate refused the call when the recorder saw it refuse and the
+			// call stopped on it.
+			refused := func(verb string, got apptest.MCPResult) bool {
+				run, _ := recorded.take(verb, human)
+				return apptest.VerdictOf(got, run.Refused) == apptest.VerdictRefused
+			}
+			apptest.AssignRoleTo(t, e, email, "admin")
 			clients := passportClients(t, e, strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
 			controls := passportClients(t, e, "control "+strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
 			pool := seedToolRoleRecords(t, e, calls, "")
-			holdRoles(t, e, holding...)
+			apptest.AssignRoleTo(t, e, email, holding...)
 			offered := offeredCalls(t, clients[0].ListedTools(t), specs)
 			answers := map[string]roleAnswer{}
 			for n, call := range calls {
 				pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
-				args := argsSeededAsAdmin(t, e, call, pool, holding)
-				got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
+				got, args := callHolding(t, e, email, clients[n/toolRoleCallsPerPassport], call, pool, holding)
+				roleRefused := refused(call.verb, got)
 				// A refusal the admin meets too is about the record, not the role.
 				// The published matrix says how the admin was answered; a kind
 				// variant it does not hold is asked of the admin on the same records.
 				adminAdmitted, published := adminRows[call.row]
 				if !published {
-					holdRoles(t, e, "admin")
-					adminAdmitted = !isRefusal(controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
-					holdRoles(t, e, holding...)
+					apptest.AssignRoleTo(t, e, email, "admin")
+					adminAdmitted = !refused(call.verb, controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
+					apptest.AssignRoleTo(t, e, email, holding...)
 				}
-				answers[call.row] = roleAnswer{ran: !got.IsError, refused: refusedAGrant(got) && adminAdmitted, text: got.Text}
+				answers[call.row] = roleAnswer{ran: !got.IsError, refused: roleRefused && adminAdmitted, text: got.Text}
 			}
 			for _, disagreement := range listingDisagreements(calls, specs, offered, answers) {
 				t.Error(disagreement)
 			}
-			holdRoles(t, e, holding...)
 			holdPathDependentTools(t, clients[0], offered, answers)
 		})
 	}
 }
 
-// argsSeededAsAdmin is call's arguments. A call in aloneVerbs has its state
-// seeded as it takes it, which only the admin may. So the user holds admin for
-// that, and holding again after.
+// callHolding makes call as the roles held, and answers its arguments too. A
+// call that runs alone has its state seeded as it takes it, which only the
+// admin may, and runs under the installation's lock.
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
-func argsSeededAsAdmin(t *testing.T, e *apptest.AppEnv, call toolRoleCall, pool *recordPool, holding []string) map[string]any {
+func callHolding(t *testing.T, e *apptest.AppEnv, email string, client *apptest.MCPClient, call toolRoleCall, pool *recordPool, holding []string) (apptest.MCPResult, map[string]any) {
 	t.Helper()
-	if !aloneVerbs[call.verb] {
-		return call.args(pool)
+	if !runsAlone(t, call) {
+		args := call.args(pool)
+		return client.Call(t, call.verb, args), args
 	}
 	installationSeeds.Lock()
 	defer installationSeeds.Unlock()
-	holdRoles(t, e, "admin")
-	defer holdRoles(t, e, holding...)
-	return call.args(pool)
+	apptest.AssignRoleTo(t, e, email, "admin")
+	args := call.args(pool)
+	apptest.AssignRoleTo(t, e, email, holding...)
+	return client.Call(t, call.verb, args), args
 }
 
 // publishedMatrix is docs/reference/mcp-tool-roles.json as committed.
@@ -320,19 +330,6 @@ func listingDisagreements(calls []toolRoleCall, specs []mcp.ToolSpec, offered ma
 	return out
 }
 
-func isRefusal(got apptest.MCPResult) bool {
-	return got.IsError && strings.Contains(got.Text, "permission denied")
-}
-
-// namedCheckRefusal matches a refusal that names the check the listing reads. A
-// bare "permission denied" is a gate on one record, such as its row scope. No
-// listing can know it before the call names the record.
-var namedCheckRefusal = regexp.MustCompile(`(([a-z_]+|\*)\.(create|read|update|delete)(\|(create|read|update|delete))*|scope:[a-z]+|admin-only operation): permission denied`)
-
-func refusedAGrant(got apptest.MCPResult) bool {
-	return isRefusal(got) && namedCheckRefusal.MatchString(got.Text)
-}
-
 // createRole adds an operator's role whose grants are rep's as changed by edit,
 // an SQL expression over rep's permissions document.
 func createRole(t *testing.T, e *apptest.AppEnv, key, edit string) {
@@ -348,19 +345,6 @@ func createRole(t *testing.T, e *apptest.AppEnv, key, edit string) {
 			t.Errorf("removing role %s: %v", key, err)
 		}
 	})
-}
-
-// holdRoles gives the signed-in user these workspace roles and no others.
-func holdRoles(t *testing.T, e *apptest.AppEnv, keys ...string) {
-	t.Helper()
-	user := apptest.SessionUserID(t, e)
-	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = $1`, user); err != nil {
-		t.Fatalf("clearing the roles of %s: %v", user, err)
-	}
-	if _, err := e.Owner.Exec(t.Context(), `
-		INSERT INTO role_assignment (user_id, role_id) SELECT $1, id FROM role WHERE key = ANY($2)`, user, keys); err != nil {
-		t.Fatalf("giving %s the roles %v: %v", user, keys, err)
-	}
 }
 
 // hiddenActionsNamed names each router whose listed schema speaks of an action

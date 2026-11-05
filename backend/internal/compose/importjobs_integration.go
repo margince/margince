@@ -8,6 +8,7 @@ package compose
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -72,6 +73,20 @@ func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.registryForTest = append(s.registryForTest, agents.WithChecksRecordedForTest(sink))
 		s.rebuildToolRegistry(pool)
+	}
+}
+
+// WithRouteChecksRecordedForTest hands sink, after each signed-in /v1 request,
+// its method and path and what the gates noted of its caller.
+func WithRouteChecksRecordedForTest(sink func(method, path string, call auth.RecordedCall)) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.routesForTest = func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx, checks := auth.RecordChecksForTest(r.Context())
+				next.ServeHTTP(w, r.WithContext(ctx))
+				sink(r.Method, r.URL.Path, checks())
+			})
+		}
 	}
 }
 

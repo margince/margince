@@ -158,7 +158,7 @@ func toolRoleBatchSeeders(t *testing.T, e *apptest.AppEnv) []batchSeed {
 		if _, err := e.Owner.Exec(t.Context(), `DELETE FROM brief_run WHERE user_id = $1`, me); err != nil {
 			t.Fatalf("clearing the day's brief: %v", err)
 		}
-		if _, err := e.Owner.Exec(t.Context(), `UPDATE deal SET archived_at = now() WHERE archived_at IS NULL AND owner_id = $1`, me); err != nil {
+		if _, err := e.Owner.Exec(t.Context(), `UPDATE deal SET archived_at = $2 WHERE archived_at IS NULL AND owner_id = $1`, me, clocktest.Now(t)); err != nil {
 			t.Fatalf("closing the seat's earlier deals: %v", err)
 		}
 		defer sweepSeed{t: t, e: e}.asRoles("rep")()
@@ -214,7 +214,7 @@ func companySeeders(s sweepSeed) map[string]func() string {
 		},
 		// Seeded as a call takes it, so as whichever role is being swept; only
 		// the admin uploads the company's own logo.
-		"anchor_logo": s.alone(func() string {
+		"anchor_logo": func() string {
 			defer s.asRoles("admin")()
 			upload(s, "/v1/company/logo")
 			upload(s, "/v1/company/logo/icon")
@@ -223,7 +223,7 @@ func companySeeders(s sweepSeed) map[string]func() string {
 			}
 			s.call("GET", "/v1/company", nil, nil, &company)
 			return company.CompanyID
-		}),
+		},
 		"entity_logo": func() string {
 			entity := s.create["legal_entity"]()
 			upload(s, "/v1/legal-entities/"+entity+"/logo")
@@ -256,7 +256,8 @@ func companySeeders(s sweepSeed) map[string]func() string {
 			s.call("POST", "/v1/company/site-reads", integration.AnyMap{"url": "https://example.test/role-sweep"}, nil, &read)
 			return read.ID
 		},
-		// A trace row is written as a mailbox's capture decides a message.
+		// A trace row is written as a mailbox's capture decides a message, and
+		// no capture runs in the sweep.
 		"capture_trace": func() string {
 			return s.ownerScalar(`INSERT INTO capture_trace (user_id, connector, source_system, source_id, stage, outcome, counterparty, subject)
 				VALUES ($1, 'gmail', 'gmail', $2, 'tier_ladder', 'captured', 'buyer@role-sweep.test', 'Role sweep') RETURNING id::text`,

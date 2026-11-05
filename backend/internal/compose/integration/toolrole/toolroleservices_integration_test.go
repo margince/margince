@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -67,7 +69,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	}
 	// The channel surface takes its vault from WithKeyvault, so it is composed first.
 	d := apptest.SetupTwoDoors(t, slug, append([]compose.Option{
-		compose.WithTrustedProxies(loopback), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
+		compose.WithRouteChecksRecordedForTest(releases.note), compose.WithTrustedProxies(loopback), compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
 		}, compose.CaptureConfig{}), compose.WithCaptureBackfill(jobs),
@@ -113,8 +115,8 @@ var stagedApprovalID = regexp.MustCompile(`repeats with "approval_id": "([0-9a-f
 // callThroughApproval calls a tool, and when the answer is a confirm-first
 // stage, releases it as the passport's human and repeats the call with the
 // approval. So a governed tool is measured where it runs, behind its gate,
-// rather than where it waits. It also names what refused the release: the
-// human's grants, or a row their inbox hides though the approval is there.
+// rather than where it waits. A release a gate refused the human, as a 403 or
+// a hidden row, answers what that gate noted; the stage is then the answer.
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPClient, verb string, args map[string]any) (apptest.MCPResult, []string) {
@@ -124,15 +126,13 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 	if !got.IsError || staged == nil {
 		return got, nil
 	}
-	switch status := e.Call(t, "POST", "/v1/approvals/"+staged[1]+"/approve", integration.AnyMap{}, nil, nil); status {
+	path := "/v1/approvals/" + staged[1] + "/approve"
+	status := e.Call(t, "POST", path, integration.AnyMap{}, nil, nil)
+	release := releases.take(path, apptest.SessionUserID(t, e))
+	switch status {
 	case http.StatusOK:
-	case http.StatusForbidden:
-		return got, []string{releaseRefusedByGrant}
-	case http.StatusNotFound:
-		if approvalExists(t, e, staged[1]) {
-			return got, []string{releaseRefusedByRow}
-		}
-		return got, nil
+	case http.StatusForbidden, http.StatusNotFound:
+		return got, release.Refused
 	default:
 		return got, nil
 	}
@@ -141,20 +141,29 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 	return client.Call(t, verb, released), nil
 }
 
-// What refused the release of a staged call, beside the refusals the gates
-// noted in the call itself.
-const (
-	releaseRefusedByGrant = "release:permission"
-	releaseRefusedByRow   = "release:row:approval"
-)
+// releases keeps what the gates noted of each human's last request to a
+// route. Every sweep app records into it, and each role's human is its own.
+var releases = &routeRecorder{last: map[routeKey]auth.RecordedCall{}}
 
-// approvalExists reads the approval past every gate, so a 404 is a hidden row
-// only for an approval that is there.
-func approvalExists(t *testing.T, e *apptest.AppEnv, id string) bool {
-	t.Helper()
-	var exists bool
-	if err := e.Owner.QueryRow(t.Context(), `SELECT EXISTS (SELECT 1 FROM approval WHERE id = $1)`, id).Scan(&exists); err != nil {
-		t.Fatalf("reading approval %s: %v", id, err)
-	}
-	return exists
+type routeKey struct{ route, human string }
+
+type routeRecorder struct {
+	mu   sync.Mutex
+	last map[routeKey]auth.RecordedCall
+}
+
+func (r *routeRecorder) note(method, path string, call auth.RecordedCall) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.last[routeKey{method + " " + path, call.Human}] = call
+}
+
+// take hands over what the human's last POST to path was asked, once.
+func (r *routeRecorder) take(path, human string) auth.RecordedCall {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	key := routeKey{"POST " + path, human}
+	call := r.last[key]
+	delete(r.last, key)
+	return call
 }

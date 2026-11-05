@@ -73,8 +73,8 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		s.pool.note(id, "email", email)
 		return id
 	}
-	// No route makes a seat active but the invitee's own password link, so
-	// the seed stands in for the colleague who accepted.
+	// The password link also makes a seat active, and allows an admin 20 an
+	// hour, fewer than the sweep's colleagues. One who never signs in is made so.
 	active := func(role string, teams ...string) string {
 		id := invited(role, teams...)
 		s.ownerExec(`UPDATE app_user SET status = 'active' WHERE id = $1`, id)
@@ -166,13 +166,12 @@ func introAsk(s sweepSeed, active func(role string, teams ...string) string) str
 	})
 }
 
-// asColleague is the seed signed in as a colleague, for what only another
-// seat files: an ask of the admin, a plan the admin leads. The colleague
-// shares the admin's password, as no route sets another seat's.
+// asColleague is the seed signed in as a colleague who set a password. Only
+// another seat files some records, such as an ask of the admin.
 func (s sweepSeed) asColleague(user string) sweepSeed {
 	s.t.Helper()
-	s.ownerExec(`UPDATE app_user SET password_hash = (SELECT password_hash FROM app_user WHERE id = $1) WHERE id = $2`, apptest.SessionUserID(s.t, s.e), user)
-	s.e = s.e.AsSecondSeat(s.t, s.pool.fact(user, "email"), "correct-horse-battery")
+	apptest.SetPasswordByLink(s.t, s.e, user, seatPassword)
+	s.e = s.e.AsSecondSeat(s.t, s.pool.fact(user, "email"), seatPassword)
 	return s
 }
 
@@ -194,16 +193,12 @@ func (s sweepSeed) alone(seed func() string) func() string {
 // asRoles gives the signed-in user these roles for a seed, and answers the
 // undo that gives back the roles they held.
 func (s sweepSeed) asRoles(keys ...string) func() {
-	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
-		WHERE a.team_id IS NULL AND a.user_id = $1`, apptest.SessionUserID(s.t, s.e))
-	s.setRoles(keys)
-	return func() { s.setRoles(strings.Split(held, ",")) }
-}
-
-func (s sweepSeed) setRoles(keys []string) {
 	user := apptest.SessionUserID(s.t, s.e)
-	s.ownerExec(`DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = $1`, user)
-	s.ownerExec(`INSERT INTO role_assignment (user_id, role_id) SELECT $1, id FROM role WHERE key = ANY($2)`, user, keys)
+	email := s.ownerScalar(`SELECT email FROM app_user WHERE id = $1`, user)
+	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
+		WHERE a.team_id IS NULL AND a.user_id = $1`, user)
+	apptest.AssignRoleTo(s.t, s.e, email, keys...)
+	return func() { apptest.AssignRoleTo(s.t, s.e, email, strings.Split(held, ",")...) }
 }
 
 // accessSeeders make the shares and ownership asks the access calls act on.

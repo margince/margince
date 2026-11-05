@@ -31,7 +31,9 @@ func (e *AppEnv) AsSecondSeat(t *testing.T, email, password string) *AppEnv {
 		t.Fatalf("the harness client cannot be copied for a second seat: %T, %v", base, err)
 	}
 	seat := *e
-	seat.Client = &http.Client{Transport: forwardedFor{next: transport.Clone(), addr: nextSeatAddr()}, Jar: jar}
+	own := transport.Clone()
+	t.Cleanup(own.CloseIdleConnections)
+	seat.Client = &http.Client{Transport: forwardedFor{next: own, addr: nextSeatAddr()}, Jar: jar}
 	seat.Owner = connectOwner(t, os.Getenv("MARGINCE_TEST_DSN"))
 	if status := seat.Call(t, "POST", "/v1/auth/login", map[string]any{"email": email, "password": password}, nil, nil); status != http.StatusOK {
 		t.Fatalf("signing in as %s → %d", email, status)

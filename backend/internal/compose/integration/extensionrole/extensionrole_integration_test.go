@@ -107,19 +107,18 @@ func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
 		tool, args := routedCall(t, verb)
 		var row measuredVerb
 		for _, role := range got.Roles {
-			assignRole(t, e, role)
+			apptest.AssignRoleTo(t, e, adminEmail, role)
 			answer := client.Call(t, tool, args)
 			mu.Lock()
 			call := recorded[verb]
 			delete(recorded, verb)
 			mu.Unlock()
-			// A refusal counts only where the recorder saw a gate make it.
-			switch {
-			case !answer.IsError:
+			switch apptest.VerdictOf(answer, call.Refused) {
+			case apptest.VerdictAllowed:
 				row.Allowed = append(row.Allowed, role)
-			case len(call.Refused) > 0:
+			case apptest.VerdictRefused:
 				row.Refused = append(row.Refused, role)
-			default:
+			case apptest.VerdictOpen:
 				t.Errorf("%s as %s reached no verdict: %s", verb, role, answer.Text)
 			}
 			if role == "admin" {
@@ -131,43 +130,20 @@ func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
 		}
 		got.Verbs[verb] = row
 	}
-	assignRole(t, e, "admin")
+	apptest.AssignRoleTo(t, e, adminEmail, "admin")
 	holdMeasuredFile(t, got)
 }
 
 func systemRoles(t *testing.T, e *apptest.AppEnv) []string {
 	t.Helper()
-	rows, err := e.Owner.Query(t.Context(), `SELECT key FROM role WHERE is_system ORDER BY key`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
 	var keys []string
-	for rows.Next() {
-		var key string
-		if err := rows.Scan(&key); err != nil {
-			t.Fatal(err)
-		}
-		keys = append(keys, key)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
+	for _, role := range apptest.SeededRoles(t, e) {
+		keys = append(keys, role.Key)
 	}
 	if len(keys) == 0 {
 		t.Fatal("the database seeds no role, so this measured nothing")
 	}
 	return keys
-}
-
-// assignRole gives the passport's user one seeded role. A passport reads its
-// user's live grants, so the next call is answered by that role alone.
-func assignRole(t *testing.T, e *apptest.AppEnv, key string) {
-	t.Helper()
-	if _, err := e.Owner.Exec(t.Context(), `
-		UPDATE role_assignment SET role_id = (SELECT id FROM role WHERE key = $1 AND is_system)
-		WHERE user_id = (SELECT id FROM app_user WHERE email = $2)`, key, adminEmail); err != nil {
-		t.Fatalf("assigning role %q: %v", key, err)
-	}
 }
 
 func holdMeasuredFile(t *testing.T, got measuredDoc) {

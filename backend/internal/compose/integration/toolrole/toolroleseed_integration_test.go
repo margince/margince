@@ -71,6 +71,13 @@ var lateKinds = map[string]bool{
 	"idle_input_check":               true, "finished_site_read": true, "review_template": true,
 }
 
+// installationKinds are the late kinds the installation has one of, so a call
+// taking one runs alone.
+var installationKinds = map[string]bool{
+	"anchor_logo": true, "live_channel": true, "channel_conversation": true,
+	"idle_input_check": true, "finished_site_read": true, "review_template": true,
+}
+
 // toolRoleSeeders makes one record of each kind a call can take. An owner, when
 // named, owns the records that carry one. Otherwise the session's user does: a
 // role is then measured on its own records, and its grants alone decide. A

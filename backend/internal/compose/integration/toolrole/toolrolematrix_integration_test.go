@@ -76,7 +76,11 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 				measured.add(c.call.verb, seat.role.Key == "admin", c.run, c.got)
 			}
 			row := verdicts[c.call.row]
-			row.record(seat.role.Key, c.got, append(c.run.Refused, c.releaseRefused...))
+			if len(c.releaseRefused) > 0 {
+				row.Refused = append(row.Refused, seat.role.Key)
+			} else {
+				row.record(seat.role.Key, c.got, c.run.Refused)
+			}
 			verdicts[c.call.row] = row
 		}
 	}
@@ -281,15 +285,15 @@ type toolRoleVerdicts struct {
 // refusal, which no listing can tell before the call.
 const unrecordedRefusal = "a 403 no gate recorded; make it an auth decision"
 
-// record sorts one answer. A refusal counts only where the recorder saw a gate
-// make it, whether the answer is a 403 or a row hidden as not found.
+// record sorts one answer as apptest.VerdictOf does, and names why an open
+// one stopped.
 func (v *toolRoleVerdicts) record(role string, got apptest.MCPResult, refusedBy []string) {
-	switch {
-	case !got.IsError:
+	switch apptest.VerdictOf(got, refusedBy) {
+	case apptest.VerdictAllowed:
 		v.Allowed = append(v.Allowed, role)
-	case len(refusedBy) > 0:
+	case apptest.VerdictRefused:
 		v.Refused = append(v.Refused, role)
-	default:
+	case apptest.VerdictOpen:
 		if v.open == nil {
 			v.open = map[string]string{}
 		}
@@ -333,9 +337,9 @@ var stopReasonMeanings = map[string]string{
 
 func stopReason(text string) string {
 	switch {
-	case strings.Contains(text, "No such record"):
+	case apptest.AnswerNotFound(text):
 		return stopNotFound
-	case strings.Contains(text, "permission denied"):
+	case apptest.AnswerRefused(text):
 		return stopRefused
 	case strings.Contains(text, "does not offer what this call needs"), strings.Contains(text, "cannot serve this tool"):
 		return stopUnsupported

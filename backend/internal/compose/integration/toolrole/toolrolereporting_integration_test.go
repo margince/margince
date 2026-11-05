@@ -194,6 +194,7 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 			s.t.Fatalf("keeping report editions → %d", status)
 		}
 	}
+	// An assurance run raises a finding, and the insert-only queue never works one.
 	finding := func(kind string) string {
 		deal := s.create["deal"]()
 		return s.ownerScalar(`INSERT INTO assurance_exception (logical_key, type, subject_kind, subject_id, severity, owner_id, captured_by)

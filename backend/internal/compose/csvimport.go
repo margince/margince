@@ -64,6 +64,9 @@ type importHandlers struct {
 	// registryForTest are tool registry options only the integration harness
 	// sets, such as how long preview_import waits for its test's report.
 	registryForTest []agents.RegistryOption
+	// routesForTest wraps the signed-in /v1 routes in the integration harness
+	// only, such as to record what their gates ask; nil serves them as they are.
+	routesForTest func(http.Handler) http.Handler
 }
 
 // UploadImportSource stores a file, describes it (IEM-WIRE-8) and opens its

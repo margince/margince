@@ -91,13 +91,21 @@ func SeededRoles(t *testing.T, e *AppEnv) []SeededRole {
 	return out
 }
 
-// AssignRoleTo makes the system role key the only role of the seat with email.
-func AssignRoleTo(t *testing.T, e *AppEnv, email, key string) {
+// AssignRoleTo makes keys the only workspace-wide roles of the seat with
+// email. A passport reads its user's live grants, so the next call is answered
+// by these roles alone.
+func AssignRoleTo(t *testing.T, e *AppEnv, email string, keys ...string) {
 	t.Helper()
-	if _, err := e.Owner.Exec(t.Context(), `
-		UPDATE role_assignment SET role_id = (SELECT id FROM role WHERE key = $1 AND is_system)
-		WHERE user_id = (SELECT id FROM app_user WHERE email = $2)`,
-		key, email); err != nil {
-		t.Fatalf("assigning role %q: %v", key, err)
+	user := `(SELECT id FROM app_user WHERE email = $1)`
+	if _, err := e.Owner.Exec(t.Context(), `DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = `+user, email); err != nil {
+		t.Fatalf("clearing the roles of %s: %v", email, err)
+	}
+	tag, err := e.Owner.Exec(t.Context(), `
+		INSERT INTO role_assignment (user_id, role_id) SELECT `+user+`, id FROM role WHERE key = ANY($2)`, email, keys)
+	if err != nil {
+		t.Fatalf("giving %s the roles %v: %v", email, keys, err)
+	}
+	if int(tag.RowsAffected()) != len(keys) {
+		t.Fatalf("giving %s the roles %v assigned %d; a key names no role or the seat is missing", email, keys, tag.RowsAffected())
 	}
 }

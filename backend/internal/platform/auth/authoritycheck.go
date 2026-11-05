@@ -41,7 +41,9 @@ const (
 	narrowerPrefix = "scope-narrower-than:"
 	// rowRefusalPrefix names a row a gate hid from the caller, as HideRow notes it.
 	rowRefusalPrefix = "row:"
-	oneOfSeparator   = ","
+	// assigneeRefusal is EnsureAssignee's refusal of a seat outside the caller's scope.
+	assigneeRefusal = rowRefusalPrefix + "assignee"
+	oneOfSeparator  = ","
 )
 
 // String is the check as the generated tool table stores it: "deal.update",

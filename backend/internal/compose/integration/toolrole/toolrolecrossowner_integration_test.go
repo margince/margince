@@ -48,7 +48,7 @@ func crossOwnerPass(t *testing.T, admin *apptest.AppEnv, seats []roleSeat, calls
 	}
 	byRole := make([]map[string]string, len(scoped))
 	eachSeat(t, "colleague", scoped, func(t *testing.T, i int, seat roleSeat) {
-		byRole[i] = colleagueAnswers(t, seat, owned, colleague)
+		byRole[i] = colleagueAnswers(t, admin, seat, owned, colleague)
 	})
 	answers := map[string]map[string]string{}
 	for i, seat := range scoped {
@@ -63,8 +63,9 @@ func crossOwnerPass(t *testing.T, admin *apptest.AppEnv, seats []roleSeat, calls
 }
 
 // colleagueAnswers calls each owned-record call as the seat's role on records
-// the colleague owns, and answers what each row was told.
-func colleagueAnswers(t *testing.T, seat roleSeat, owned []toolRoleCall, colleague string) map[string]string {
+// the colleague owns, and answers what each row was told. The admin reads the
+// records before and after, as the scoped seat may not see them at all.
+func colleagueAnswers(t *testing.T, admin *apptest.AppEnv, seat roleSeat, owned []toolRoleCall, colleague string) map[string]string {
 	t.Helper()
 	apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
 	clients := passportClients(t, seat.e, seat.role.Key+" colleague", 1+len(owned)/toolRoleCallsPerPassport)
@@ -75,13 +76,13 @@ func colleagueAnswers(t *testing.T, seat roleSeat, owned []toolRoleCall, colleag
 	for n, call := range owned {
 		pool.taken = map[string][]string{}
 		args := call.args(pool)
-		before := ownedRecordStates(t, seat.e, pool.taken)
+		before := ownedRecordStates(t, admin, pool.taken)
 		got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
 		if got.IsError && isBudgetRefusal(got.Text) {
 			t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, seat.role.Key, got.Text)
 		}
 		answer := colleagueAnswer(got)
-		if changed := changedRecord(before, ownedRecordStates(t, seat.e, pool.taken)); changed != "" {
+		if changed := changedRecord(before, ownedRecordStates(t, admin, pool.taken)); changed != "" {
 			answer = colleagueChanged
 			t.Errorf("%s as %s (row scope %s) changed %s, which a colleague owns: %.300s", call.row, seat.role.Key, seat.role.RowScope, changed, got.Text)
 		}
