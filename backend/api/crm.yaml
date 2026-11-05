@@ -74646,8 +74646,8 @@ components:
       description: |
         Margince's latest nightly reading of the deal, present on the first page only when that
         reading changed nothing. Every reader of the deal sees when it was and when the next one
-        is due. Only the owner it was made for reads why and which sources it read: for anyone
-        else `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+        is due. Only the owner it was made for, signed in as themselves, reads why and which
+        sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
         reasons come from the deal's mail and meetings.
       required: [checked_at, explained, outcomes, sources]
       properties:
@@ -74677,7 +74677,7 @@ components:
         why:
           type: string
           enum: [switched_off, kept_your_edit, not_sure, outside_limits, changed_while_checking, undo_hold,
-                 already_right, accepted_offer, no_rate, no_owner, stage_rules, other]
+                 already_right, accepted_offer, no_rate, no_owner, owner_cannot_edit, stage_rules, other]
 
     DealMarginceCheckSource:
       type: object
@@ -74707,10 +74707,10 @@ components:
         ownerless:
           type: array
           description: |
-            Open deals Margince leaves alone because nobody can act for them: no owner, or an
-            owner who left. Read under the caller's row scope, unowned deals and those a former
-            teammate still owns, the largest value first, at most 200. They wait for somebody to
-            assign an owner; this list does not follow `since`.
+            Open deals Margince leaves alone because they have no live owner: no owner, or an
+            owner who left, is invited, suspended or archived. Every such deal the nightly check
+            skips, read under the caller's row scope, the largest value first, at most 200. They
+            wait for somebody to assign an owner; this list does not follow `since`.
           items: { $ref: '#/components/schemas/TeamMarginceOwnerlessDeal' }
         ownerless_truncated: { type: boolean, description: True when more ownerless deals exist than were returned. }
 
@@ -74720,9 +74720,12 @@ components:
       properties:
         deal_id: { type: string, format: uuid }
         deal_name: { type: string }
-        reason: { type: string, enum: [no_owner, departed_owner] }
-        owner_id: { type: string, format: uuid, description: The owner who left; absent for an unowned deal. }
-        owner_name: { type: string, description: 'The name of the owner who left; absent for an unowned deal.' }
+        reason:
+          type: string
+          enum: [no_owner, departed_owner, inactive_owner]
+          description: '`departed_owner` left; `inactive_owner` is invited, suspended or archived.'
+        owner_id: { type: string, format: uuid, description: The owner who is not live; absent for an unowned deal. }
+        owner_name: { type: string, description: 'The name of the owner who is not live; absent for an unowned deal or an archived owner.' }
         value_base_minor:
           type: integer
           format: int64
@@ -74773,7 +74776,7 @@ components:
 
     TeamMarginceChangeGroup:
       type: object
-      required: [owner_id, owner_name, kind, deals, undone, value_base_minor, value_moved_base_minor]
+      required: [owner_id, owner_name, kind, deals, undone, value_base_minor, value_moved_base_minor, unvalued]
       properties:
         owner_id: { type: string, format: uuid }
         owner_name: { type: string }
@@ -74793,7 +74796,15 @@ components:
             An amount change moves its difference; a close as lost takes the deal's value out
             of the pipeline and an opened or revived deal puts it in; a probability change or a
             stage move moves the amount times the change in win probability; a close date moves
-            nothing. An undone change, a masked amount or a missing rate adds nothing.
+            nothing. Each move is valued from the deal as it stood when the change was made, so
+            a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+            cannot be valued adds nothing and counts in `unvalued`.
+        unvalued:
+          type: integer
+          description: |
+            Of these deals, how many moved a value this total leaves out: the amount is masked
+            for the caller, no exchange rate is stored, or a probability change was written
+            before Margince kept the amount it was valued from.
 
     TeamMarginceChangeRow:
       type: object

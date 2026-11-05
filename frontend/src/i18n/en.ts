@@ -18454,6 +18454,12 @@ export const en = {
   "changes.team.ownerless.no_owner": "No owner",
   "changes.team.ownerless.departed_owner": "{name} left",
   "changes.team.ownerless.departed_unnamed": "The owner left",
+  "changes.team.ownerless.inactive_owner": "{name} is not active",
+  "changes.team.ownerless.inactive_unnamed": "The owner is not active",
+  "changes.check.why.owner_cannot_edit":
+    "the owner may no longer change the deal",
+  "changes.team.unvalued":
+    "Value moved leaves out changes Margince could not price: an amount you may not see, a missing exchange rate, or an older probability change.",
   "changes.team.ownerless.truncated":
     "List truncated. More deals have no owner.",
   "changes.check.title":

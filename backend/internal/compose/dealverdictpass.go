@@ -153,7 +153,7 @@ func dueVerdictCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]verd
 		             AND `+deals.RateStoredSinceSQL("r.verdict_assessed_at")+`),
 		       r.verdict_actions
 		  FROM deal d LEFT JOIN assurance_deal_receipt r ON r.deal_id = d.id
-		 WHERE d.status = 'open' AND d.archived_at IS NULL AND NOT d.legal_hold AND NOT `+deals.NoActingOwnerSQL("d")+`
+		 WHERE d.status = 'open' AND d.archived_at IS NULL AND NOT d.legal_hold AND NOT `+deals.NoLiveOwnerSQL("d")+`
 		 ORDER BY r.verdict_assessed_at NULLS FIRST, d.id`, now, `[{"outcome":"`+dealverdict.DroppedNoRate+`"}]`)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals a verdict may read: %w", err)

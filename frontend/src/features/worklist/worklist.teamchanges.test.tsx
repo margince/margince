@@ -28,6 +28,7 @@ const team: Team = {
       undone: 0,
       value_base_minor: 4_500_000,
       value_moved_base_minor: 500_000,
+      unvalued: 1,
     },
   ],
   ownerless_truncated: false,
@@ -45,6 +46,13 @@ const team: Team = {
       owner_id: "00000000-0000-4000-8000-0000000000b2",
       owner_name: "Jonas Klein",
     },
+    {
+      deal_id: "00000000-0000-4000-8000-000000000003",
+      deal_name: "Waiting on an invite",
+      reason: "inactive_owner",
+      owner_id: "00000000-0000-4000-8000-0000000000c3",
+      owner_name: "Mia Roth",
+    },
   ],
 };
 
@@ -60,6 +68,7 @@ it("counts the value each kind of change moved, not the deals' value", async () 
   expect(within(changes).getByText("Value moved")).toBeTruthy();
   expect(within(changes).getByText(/5,000/)).toBeTruthy();
   expect(within(changes).queryByText(/45,000/)).toBeNull();
+  expect(screen.getByText(/Value moved leaves out changes/)).toBeTruthy();
 });
 
 it("lists the deals nobody can act for, each a link to give it an owner", async () => {
@@ -73,6 +82,7 @@ it("lists the deals nobody can act for, each a link to give it an owner", async 
   });
   expect(within(ownerless).getByText("No owner")).toBeTruthy();
   expect(within(ownerless).getByText("Jonas Klein left")).toBeTruthy();
+  expect(within(ownerless).getByText("Mia Roth is not active")).toBeTruthy();
   expect(
     within(ownerless).getByRole("link", { name: "Left behind" }),
   ).toBeTruthy();

@@ -84,6 +84,9 @@ function TeamChanges() {
               ]}
             />
           )}
+          {groups?.some((group) => group.unvalued > 0) && (
+            <p className="t-caption">{t("changes.team.unvalued")}</p>
+          )}
           {read.data?.truncated && (
             <p className="t-caption">{t("changes.team.truncated")}</p>
           )}
@@ -154,6 +157,11 @@ function OwnerlessDeals({
 export function ownerlessReason(row: Ownerless, t: Translator): string {
   if (row.reason === "no_owner") {
     return t("changes.team.ownerless.no_owner");
+  }
+  if (row.reason === "inactive_owner") {
+    return row.owner_name
+      ? t("changes.team.ownerless.inactive_owner", { name: row.owner_name })
+      : t("changes.team.ownerless.inactive_unnamed");
   }
   return row.owner_name
     ? t("changes.team.ownerless.departed_owner", { name: row.owner_name })

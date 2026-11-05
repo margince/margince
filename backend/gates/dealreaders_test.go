@@ -164,6 +164,7 @@ var lifecycleDealReads = gatekit.Waive(map[string]string{
 // Handlers.X.
 var calleeGatedDealReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/correctionreceipts.go:correctionReceiptSelect": "the SELECT list and joins every change report shares; it has no WHERE of its own. Its three callers, RecentCorrectionsOwnedBy, DealChanges and TeamChanges, ask auth.Require(ctx, \"deal\", read) first and add the row scope",
+	"internal/modules/deals/verdictapply.go:addProbabilityValuation":       "the amount, currency and stage probability a probability change is valued from, under the row lock ApplyVerdict took after auth.Require and auth.EnsureWritable. They go only into that change's audit evidence",
 	"internal/modules/deals/changemoves.go:teamMoves":                      "the value the team's changes moved. Its one caller, TeamChanges through addMoves, asks auth.Require(ctx, \"deal\", read) first and passes the row-scope filter its counts use. The amounts follow the reader's field mask",
 	"internal/modules/deals/changemoves.go:rowMoves":                       "the value each listed change moved, under the row-scope filter TeamChanges read the list with, behind auth.Require(ctx, \"deal\", read). The amounts follow the reader's field mask",
 	"internal/modules/deals/verdictapply.go:lockVerdictDeal":               "the status, owner, legal hold and the fields a verdict changes, under the deal's row lock. Its one caller, ApplyVerdict, asks auth.Require(ctx, \"deal\", update) first and then auth.EnsureWritable on the row",

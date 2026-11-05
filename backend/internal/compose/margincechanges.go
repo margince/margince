@@ -45,7 +45,6 @@ type marginceChangeHandlers struct {
 	deals     *deals.Store
 	teammates interface {
 		LiveTeammatesOfCaller(ctx context.Context) ([]attention.TeamMember, bool, error)
-		FormerTeammatesOfCaller(ctx context.Context) ([]ids.UUID, error)
 	}
 	seatNames *identity.Service
 	now       func() time.Time
@@ -162,6 +161,7 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		out.Groups = append(out.Groups, crmcontracts.TeamMarginceChangeGroup{
 			OwnerId: openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
 			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor, ValueMovedBaseMinor: g.ValueMovedBaseMinor,
+			Unvalued: g.Unvalued,
 		})
 	}
 	changes, err := h.changeReceipts(ctx, report.Rows)
@@ -182,14 +182,10 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// ownerless lists the open deals nobody can act for that the caller's team
-// view keeps, with the name of each owner who left.
+// ownerless lists the open deals with no live owner the caller may read,
+// naming each owner who is no longer live.
 func (h marginceChangeHandlers) ownerless(ctx context.Context) ([]crmcontracts.TeamMarginceOwnerlessDeal, bool, error) {
-	former, err := h.teammates.FormerTeammatesOfCaller(ctx)
-	if err != nil {
-		return nil, false, err
-	}
-	found, cut, err := h.deals.OwnerlessDeals(ctx, former)
+	found, cut, err := h.deals.OwnerlessDeals(ctx)
 	if err != nil {
 		return nil, false, err
 	}

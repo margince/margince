@@ -207,7 +207,8 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       CASE WHEN NOT %[1]s THEN '{}'::jsonb
 			            WHEN %[4]s THEN a.evidence
 			            ELSE a.evidence - ARRAY['quoted_words', 'quoted_amount', 'quoted_currency',
-			                                    'amount_currency', 'rate_from', 'rate_to', 'rate_date'] END,
+			                                    'amount_currency', 'rate_from', 'rate_to', 'rate_date',
+			                                    '%[6]s', '%[7]s'] END,
 			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
 			       %[2]s, %[3]s,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
@@ -219,7 +220,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-`, readable, before, after, amountShown, arg(VerdictAmountCorrection)), nil
+`, readable, before, after, amountShown, arg(VerdictAmountCorrection), valuedAmountKey, valuedCurrencyKey), nil
 }
 
 // BasisReadableSQL is when the reader at readerPos may read why Margince did

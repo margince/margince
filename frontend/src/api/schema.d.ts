@@ -55805,8 +55805,8 @@ export interface components {
         /**
          * @description Margince's latest nightly reading of the deal, present on the first page only when that
          *     reading changed nothing. Every reader of the deal sees when it was and when the next one
-         *     is due. Only the owner it was made for reads why and which sources it read: for anyone
-         *     else `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+         *     is due. Only the owner it was made for, signed in as themselves, reads why and which
+         *     sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
          *     reasons come from the deal's mail and meetings.
          */
         DealMarginceCheck: {
@@ -55832,7 +55832,7 @@ export interface components {
             /** @enum {string} */
             kind: "close_date" | "amount" | "probability" | "stage";
             /** @enum {string} */
-            why: "switched_off" | "kept_your_edit" | "not_sure" | "outside_limits" | "changed_while_checking" | "undo_hold" | "already_right" | "accepted_offer" | "no_rate" | "no_owner" | "stage_rules" | "other";
+            why: "switched_off" | "kept_your_edit" | "not_sure" | "outside_limits" | "changed_while_checking" | "undo_hold" | "already_right" | "accepted_offer" | "no_rate" | "no_owner" | "owner_cannot_edit" | "stage_rules" | "other";
         };
         /**
          * @description One source and what the reading made of it. `private` is a source whose only items on
@@ -55856,10 +55856,10 @@ export interface components {
             /** @description True when more rows exist than were returned. The groups are never cut. */
             truncated: boolean;
             /**
-             * @description Open deals Margince leaves alone because nobody can act for them: no owner, or an
-             *     owner who left. Read under the caller's row scope, unowned deals and those a former
-             *     teammate still owns, the largest value first, at most 200. They wait for somebody to
-             *     assign an owner; this list does not follow `since`.
+             * @description Open deals Margince leaves alone because they have no live owner: no owner, or an
+             *     owner who left, is invited, suspended or archived. Every such deal the nightly check
+             *     skips, read under the caller's row scope, the largest value first, at most 200. They
+             *     wait for somebody to assign an owner; this list does not follow `since`.
              */
             ownerless: components["schemas"]["TeamMarginceOwnerlessDeal"][];
             /** @description True when more ownerless deals exist than were returned. */
@@ -55869,14 +55869,17 @@ export interface components {
             /** Format: uuid */
             deal_id: string;
             deal_name: string;
-            /** @enum {string} */
-            reason: "no_owner" | "departed_owner";
+            /**
+             * @description `departed_owner` left; `inactive_owner` is invited, suspended or archived.
+             * @enum {string}
+             */
+            reason: "no_owner" | "departed_owner" | "inactive_owner";
             /**
              * Format: uuid
-             * @description The owner who left; absent for an unowned deal.
+             * @description The owner who is not live; absent for an unowned deal.
              */
             owner_id?: string;
-            /** @description The name of the owner who left; absent for an unowned deal. */
+            /** @description The name of the owner who is not live; absent for an unowned deal or an archived owner. */
             owner_name?: string;
             /**
              * Format: int64
@@ -55938,9 +55941,17 @@ export interface components {
              *     An amount change moves its difference; a close as lost takes the deal's value out
              *     of the pipeline and an opened or revived deal puts it in; a probability change or a
              *     stage move moves the amount times the change in win probability; a close date moves
-             *     nothing. An undone change, a masked amount or a missing rate adds nothing.
+             *     nothing. Each move is valued from the deal as it stood when the change was made, so
+             *     a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+             *     cannot be valued adds nothing and counts in `unvalued`.
              */
             value_moved_base_minor: number;
+            /**
+             * @description Of these deals, how many moved a value this total leaves out: the amount is masked
+             *     for the caller, no exchange rate is stored, or a probability change was written
+             *     before Margince kept the amount it was valued from.
+             */
+            unvalued: number;
         };
         TeamMarginceChangeRow: {
             /** Format: uuid */

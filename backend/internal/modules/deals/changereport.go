@@ -197,6 +197,8 @@ type TeamChangeGroup struct {
 	ValueBaseMinor int64
 	// ValueMovedBaseMinor sums the size of each deal's net move in this kind.
 	ValueMovedBaseMinor int64
+	// Unvalued counts the deals whose move could not be valued.
+	Unvalued int
 }
 
 // TeamChangeReport is what Margince changed on a team's deals in a window.
@@ -298,9 +300,10 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 	return out, nil
 }
 
-// ReaderOf is the seat reading; a caller with no seat reads no reason.
+// ReaderOf is the human reading, whom a reason may reach. An agent, even one
+// acting for that human, and a caller with no seat read none.
 func ReaderOf(ctx context.Context) ids.UUID {
-	if actor, ok := principal.Actor(ctx); ok {
+	if actor, ok := principal.Actor(ctx); ok && actor.Type == principal.PrincipalHuman {
 		return actor.UserID
 	}
 	return ids.Nil

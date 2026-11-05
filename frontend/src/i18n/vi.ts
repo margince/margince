@@ -18172,6 +18172,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.team.ownerless.no_owner": "Không có thành viên phụ trách",
   "changes.team.ownerless.departed_owner": "{name} đã rời đi",
   "changes.team.ownerless.departed_unnamed": "Thành viên phụ trách đã rời đi",
+  "changes.team.ownerless.inactive_owner": "{name} không còn hoạt động",
+  "changes.team.ownerless.inactive_unnamed":
+    "Thành viên phụ trách không còn hoạt động",
+  "changes.check.why.owner_cannot_edit":
+    "thành viên phụ trách không còn được sửa giao dịch",
+  "changes.team.unvalued":
+    "Giá trị đã dịch chuyển bỏ qua các thay đổi Margince không định giá được: giá trị bạn không được xem, thiếu tỷ giá, hoặc thay đổi xác suất cũ.",
   "changes.team.ownerless.truncated":
     "Danh sách đã bị cắt bớt. Vẫn còn giao dịch khác không có thành viên phụ trách.",
   "changes.check.title":

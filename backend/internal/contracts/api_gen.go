@@ -10782,6 +10782,7 @@ const (
 	DealMarginceCheckOutcomeWhyNotSure              DealMarginceCheckOutcomeWhy = "not_sure"
 	DealMarginceCheckOutcomeWhyOther                DealMarginceCheckOutcomeWhy = "other"
 	DealMarginceCheckOutcomeWhyOutsideLimits        DealMarginceCheckOutcomeWhy = "outside_limits"
+	DealMarginceCheckOutcomeWhyOwnerCannotEdit      DealMarginceCheckOutcomeWhy = "owner_cannot_edit"
 	DealMarginceCheckOutcomeWhyStageRules           DealMarginceCheckOutcomeWhy = "stage_rules"
 	DealMarginceCheckOutcomeWhySwitchedOff          DealMarginceCheckOutcomeWhy = "switched_off"
 	DealMarginceCheckOutcomeWhyUndoHold             DealMarginceCheckOutcomeWhy = "undo_hold"
@@ -10807,6 +10808,8 @@ func (e DealMarginceCheckOutcomeWhy) Valid() bool {
 	case DealMarginceCheckOutcomeWhyOther:
 		return true
 	case DealMarginceCheckOutcomeWhyOutsideLimits:
+		return true
+	case DealMarginceCheckOutcomeWhyOwnerCannotEdit:
 		return true
 	case DealMarginceCheckOutcomeWhyStageRules:
 		return true
@@ -22471,6 +22474,7 @@ func (e TeamExceptionKind) Valid() bool {
 // Defines values for TeamMarginceOwnerlessDealReason.
 const (
 	TeamMarginceOwnerlessDealReasonDepartedOwner TeamMarginceOwnerlessDealReason = "departed_owner"
+	TeamMarginceOwnerlessDealReasonInactiveOwner TeamMarginceOwnerlessDealReason = "inactive_owner"
 	TeamMarginceOwnerlessDealReasonNoOwner       TeamMarginceOwnerlessDealReason = "no_owner"
 )
 
@@ -22478,6 +22482,8 @@ const (
 func (e TeamMarginceOwnerlessDealReason) Valid() bool {
 	switch e {
 	case TeamMarginceOwnerlessDealReasonDepartedOwner:
+		return true
+	case TeamMarginceOwnerlessDealReasonInactiveOwner:
 		return true
 	case TeamMarginceOwnerlessDealReasonNoOwner:
 		return true
@@ -44210,8 +44216,8 @@ type DealMarginceChanges struct {
 
 	// LastCheck Margince's latest nightly reading of the deal, present on the first page only when that
 	// reading changed nothing. Every reader of the deal sees when it was and when the next one
-	// is due. Only the owner it was made for reads why and which sources it read: for anyone
-	// else `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+	// is due. Only the owner it was made for, signed in as themselves, reads why and which
+	// sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
 	// reasons come from the deal's mail and meetings.
 	LastCheck *DealMarginceCheck `json:"last_check,omitempty"`
 
@@ -44221,8 +44227,8 @@ type DealMarginceChanges struct {
 
 // DealMarginceCheck Margince's latest nightly reading of the deal, present on the first page only when that
 // reading changed nothing. Every reader of the deal sees when it was and when the next one
-// is due. Only the owner it was made for reads why and which sources it read: for anyone
-// else `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
+// is due. Only the owner it was made for, signed in as themselves, reads why and which
+// sources it read. For anyone else, an agent acting for the owner included, `explained` is false and `skipped`, `outcomes` and `sources` are empty, because the
 // reasons come from the deal's mail and meetings.
 type DealMarginceCheck struct {
 	CheckedAt time.Time `json:"checked_at"`
@@ -61105,6 +61111,11 @@ type TeamMarginceChangeGroup struct {
 	// Undone Of those deals, how many had the change undone.
 	Undone int `json:"undone"`
 
+	// Unvalued Of these deals, how many moved a value this total leaves out: the amount is masked
+	// for the caller, no exchange rate is stored, or a probability change was written
+	// before Margince kept the amount it was valued from.
+	Unvalued int `json:"unvalued"`
+
 	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
 	ValueBaseMinor int64 `json:"value_base_minor"`
 
@@ -61113,7 +61124,9 @@ type TeamMarginceChangeGroup struct {
 	// An amount change moves its difference; a close as lost takes the deal's value out
 	// of the pipeline and an opened or revived deal puts it in; a probability change or a
 	// stage move moves the amount times the change in win probability; a close date moves
-	// nothing. An undone change, a masked amount or a missing rate adds nothing.
+	// nothing. Each move is valued from the deal as it stood when the change was made, so
+	// a later edit does not rewrite it. An undone change adds nothing. A deal whose move
+	// cannot be valued adds nothing and counts in `unvalued`.
 	ValueMovedBaseMinor int64 `json:"value_moved_base_minor"`
 }
 
@@ -61137,10 +61150,10 @@ type TeamMarginceChanges struct {
 	BaseCurrency string                    `json:"base_currency"`
 	Groups       []TeamMarginceChangeGroup `json:"groups"`
 
-	// Ownerless Open deals Margince leaves alone because nobody can act for them: no owner, or an
-	// owner who left. Read under the caller's row scope, unowned deals and those a former
-	// teammate still owns, the largest value first, at most 200. They wait for somebody to
-	// assign an owner; this list does not follow `since`.
+	// Ownerless Open deals Margince leaves alone because they have no live owner: no owner, or an
+	// owner who left, is invited, suspended or archived. Every such deal the nightly check
+	// skips, read under the caller's row scope, the largest value first, at most 200. They
+	// wait for somebody to assign an owner; this list does not follow `since`.
 	Ownerless []TeamMarginceOwnerlessDeal `json:"ownerless"`
 
 	// OwnerlessTruncated True when more ownerless deals exist than were returned.
@@ -61157,18 +61170,20 @@ type TeamMarginceOwnerlessDeal struct {
 	DealId   openapi_types.UUID `json:"deal_id"`
 	DealName string             `json:"deal_name"`
 
-	// OwnerId The owner who left; absent for an unowned deal.
+	// OwnerId The owner who is not live; absent for an unowned deal.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
-	// OwnerName The name of the owner who left; absent for an unowned deal.
-	OwnerName *string                         `json:"owner_name,omitempty"`
-	Reason    TeamMarginceOwnerlessDealReason `json:"reason"`
+	// OwnerName The name of the owner who is not live; absent for an unowned deal or an archived owner.
+	OwnerName *string `json:"owner_name,omitempty"`
+
+	// Reason `departed_owner` left; `inactive_owner` is invited, suspended or archived.
+	Reason TeamMarginceOwnerlessDealReason `json:"reason"`
 
 	// ValueBaseMinor The deal's value in the base currency, in minor units. Absent when the deal has no amount or no rate, or the caller's mask withholds it.
 	ValueBaseMinor *int64 `json:"value_base_minor,omitempty"`
 }
 
-// TeamMarginceOwnerlessDealReason defines model for TeamMarginceOwnerlessDeal.Reason.
+// TeamMarginceOwnerlessDealReason `departed_owner` left; `inactive_owner` is invited, suspended or archived.
 type TeamMarginceOwnerlessDealReason string
 
 // TeamWeekReach Which teams' frozen weeks `GET /weekly-reviews/team` will open for this reader,

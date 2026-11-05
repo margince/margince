@@ -18644,6 +18644,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.team.ownerless.departed_owner": "{name} ist gegangen",
   "changes.team.ownerless.departed_unnamed":
     "Das zuständige Mitglied ist gegangen",
+  "changes.team.ownerless.inactive_owner": "{name} ist nicht aktiv",
+  "changes.team.ownerless.inactive_unnamed":
+    "Das zuständige Mitglied ist nicht aktiv",
+  "changes.check.why.owner_cannot_edit":
+    "das zuständige Mitglied darf den Deal nicht mehr ändern",
+  "changes.team.unvalued":
+    "Der bewegte Wert lässt Änderungen aus, die Margince nicht bewerten konnte: einen Betrag, den du nicht sehen darfst, einen fehlenden Wechselkurs oder eine ältere Änderung der Wahrscheinlichkeit.",
   "changes.team.ownerless.truncated":
     "Liste gekürzt. Für weitere Deals ist niemand zuständig.",
   "changes.check.title":
