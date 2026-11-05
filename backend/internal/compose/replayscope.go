@@ -345,7 +345,7 @@ var replayableOperations = map[string]replayTarget{
 	// retry must replay rather than re-execute into its own version_skew.
 	"PUT /v1/pipelines/{id}/stage-order": {object: objectPipeline, rowNote: "pipeline config, no owner column"},
 	"POST /v1/stages":                    {object: objectPipeline, rowNote: noOwnerStage},
-	"PATCH /v1/stages/{id}":              {object: objectPipeline, rowNote: noOwnerStage},
+	"PATCH /v1/stages/{id}":              {object: objectPipeline, rowNote: noOwnerStage}, //nolint:goconst // the replay gates read this map's keys as string literals
 	// A criterion is stage config one level down, governed by the same
 	// pipeline grant and carrying no owner column of its own.
 	"POST /v1/stages/{id}/exit-criteria": {object: objectPipeline, rowNote: noOwnerStage},
