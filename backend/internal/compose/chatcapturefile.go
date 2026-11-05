@@ -77,7 +77,7 @@ func bodyIsTheReading(read activities.ExtractionRead, body string) bool {
 	}
 	for _, f := range read.Fields {
 		if f.Field == chatFieldText && !f.Omitted {
-			return strings.TrimSpace(f.Value) == strings.TrimSpace(body)
+			return f.Value == body
 		}
 	}
 	return false

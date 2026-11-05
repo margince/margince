@@ -23953,8 +23953,9 @@ paths:
         `edits`. Only valid on a deal-scoped attachment (`entity_type == "deal"`) — 422
         `unsupported_entity_type` otherwise. `field_keys` is checked against the closed
         allowlist of deal-writable fields before any write lands — a key outside that
-        allowlist 422s the whole request (no partial acceptance). Requires deal UPDATE
-        authority on the target deal (object RBAC + row-scope visibility).
+        allowlist 422s the whole request (no partial acceptance). An `extraction_id` naming
+        a reading not read for deal facts 422s with `not_deal_facts` on `extraction_id`.
+        Requires deal UPDATE authority on the target deal (object RBAC + row-scope visibility).
 
         Needs the passport permission Change records.
 
@@ -23974,7 +23975,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422':
-          description: The attachment is not deal-scoped, or field_keys names a field outside the deal-update allowlist.
+          description: The attachment is not deal-scoped, field_keys names a field outside the deal-update allowlist, or extraction_id names a reading not read for deal facts.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -38874,7 +38875,7 @@ components:
             inferable: resolving "the newest reading" instead would let a reading started
             by someone else between the display and the click decide what gets written,
             which is precisely the divergence storing the fields exists to prevent. A reading belonging to another attachment, or one that never
-            existed, is a 404.
+            existed, is a 404. A reading not read for deal facts is a 422 `not_deal_facts`.
         field_keys:
           type: array
           items: {type: string}
@@ -50459,8 +50460,8 @@ components:
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
         net_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line nets; derived, never client-set. Zero when money_withheld.'}
-        tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set.'}
-        gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set.'}
+        tax_minor: {type: integer, format: int64, readOnly: true, description: 'Σ line taxes; derived, never client-set. Zero when money_withheld.'}
+        gross_minor: {type: integer, format: int64, readOnly: true, description: 'net + tax; derived, never client-set. Zero when money_withheld.'}
         arr_minor: {type: integer, format: int64, readOnly: true, description: 'The annualized NET value of this offer''s recurring lines — derived from the per-period price and its cadence, never client-set. Zero where the offer has no recurring line, including an offer whose lines are all unclassified: an unknown classification annualizes to nothing rather than to a guess.'}
         net_tcv_minor: {type: integer, format: int64, readOnly: true, description: 'The total the buyer commits to: one-off lines in full, plus each recurring line''s per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.'}
         fx_rate_to_base: {type: [string, 'null'], readOnly: true, description: 'Native→base, frozen at send. Decimal-as-string to avoid float rounding.'}
@@ -50488,7 +50489,7 @@ components:
           type: array
           readOnly: true
           items: {$ref: '#/components/schemas/OfferLineItem'}
-        money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets no totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
+        money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
         source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}

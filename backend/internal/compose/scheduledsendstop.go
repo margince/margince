@@ -59,15 +59,15 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 	if err != nil {
 		return err
 	}
-	wsCtx := principal.WithCorrelationID(principal.WithWorkspaceID(ctx, ws.UUID), env.EventID)
-	pending, err := s.store.PendingMarketingToContact(sendWorkerScope(wsCtx), ids.From[ids.ContactKind](env.Entity.ID), purpose)
+	wsCtx := principal.WithCausationEvent(principal.WithWorkspaceID(ctx, ws.UUID), env.EventID)
+	pending, err := s.store.PendingMarketingToContact(onStopTrace(sendWorkerScope(wsCtx), env), ids.From[ids.ContactKind](env.Entity.ID), purpose)
 	if err != nil {
 		return fmt.Errorf("scheduled send stop: %w", err)
 	}
 	for _, message := range pending {
 		// A stop is about the world now, so it holds the message whatever
 		// version a rep last moved it to.
-		if err := s.store.HoldScheduledSend(holdScopeFor(wsCtx, message.ScheduledBy), message.ID,
+		if err := s.store.HoldScheduledSend(onStopTrace(holdScopeFor(wsCtx, message.ScheduledBy), env), message.ID,
 			activities.HeldRecipientStopped, activities.UnobservedVersion); err != nil {
 			return fmt.Errorf("scheduled send stop: holding %s: %w", message.ID, err)
 		}
@@ -76,6 +76,12 @@ func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope
 		s.log.InfoContext(ctx, "held queued marketing to a contact who stopped it", "contact_id", env.Entity.ID, "held", len(pending))
 	}
 	return nil
+}
+
+// onStopTrace puts a system scope back on the stop's trace. The send worker's
+// scope mints a fresh correlation id, and a hold must read as part of the stop.
+func onStopTrace(scope context.Context, env events.Envelope) context.Context {
+	return principal.WithCorrelationID(scope, env.Trace.CorrelationID)
 }
 
 // stopOf reads whether an envelope stops marketing to a contact, and for which

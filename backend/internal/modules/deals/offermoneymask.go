@@ -14,8 +14,8 @@ import (
 
 // withholdOfferMoney applies the deal's amount mask to offers on their way
 // out. An offer's totals are the deal's amount by another name, and its lines
-// rebuild it. So a reader masked from the amount gets the header only, with no
-// totals, lines, rate or PDF. The legal-review pack follows the same rule.
+// rebuild it. So a reader masked from the amount gets the header, zero totals
+// and money_withheld, with no lines, other amounts, rate or PDF.
 func withholdOfferMoney(ctx context.Context, tx pgx.Tx, offers []crmcontracts.Offer) error {
 	readable := map[ids.UUID]bool{}
 	for i := range offers {

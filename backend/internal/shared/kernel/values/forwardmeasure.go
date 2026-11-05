@@ -50,6 +50,15 @@ func RetiredForwardMeasures() []string {
 	return []string{retiredQualifiedLikely, "qualified_weighted"}
 }
 
+// SavedForwardMeasure is what a settings patch stores for a sent measure: a
+// retired measure's base measure, and any other value as it came.
+func SavedForwardMeasure(sent string) string {
+	if slices.Contains(RetiredForwardMeasures(), sent) {
+		return string(legacyForwardMeasures[sent])
+	}
+	return sent
+}
+
 // RetiredForwardMeasure names the retired measure a stored spelling means, the
 // older qualified_commit_evidence included.
 func RetiredForwardMeasure(raw string) (string, bool) {

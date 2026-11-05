@@ -19,8 +19,8 @@ package gates
 // bodies someone remembered: the walk finds every request body with such a field
 // and requires each to be either PROBED (a mapping refuses it by name, proved in
 // the owning module's test) or WAIVED with a reason. A new required id upstream
-// fails here until someone decides which it is, and a waiver that stops being
-// true fails too — so the list of unguarded bodies can only shrink.
+// fails here until someone decides which it is. A waiver whose body no longer
+// declares a required id fails too.
 //
 // Where the guard goes: httperr.RequireBodyID is the one implementation, called
 // from the point where the decoded body becomes store input — a mapping where the
@@ -85,9 +85,10 @@ var probedRequiredIDBodies = map[string]bool{
 	"RaiseNoticeRequest":                true,
 }
 
-// unguardedRequiredIDBodies is what is left, and both entries are WAIVERS rather
-// than gaps: neither can produce the defect. Every body that could has a guard
-// and a probe.
+// unguardedRequiredIDBodies is what is left, and every entry is a WAIVER rather
+// than a gap: none can produce the defect. Every body that could has a guard and
+// a probe. A retired route's waiver rests on its 501, and the walk sees only the
+// body. Whoever restores the route owes that body a guard and a probe.
 //
 // The list is kept — rather than deleted along with the last real gap — because
 // the walk fails on a body it can neither find probed nor find waived. A required

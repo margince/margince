@@ -11,7 +11,6 @@ package compose
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 type installationSettingsHandlers struct {
@@ -175,10 +175,9 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	patch.DeadWorkBannerHours = req.DeadWorkBannerHours
 	patch.OAuthAccessTokenTTLMinutes = req.OauthAccessTokenTtlMinutes
 	// Same reasoning as the month above: the entry validates against the shared
-	// kernel's set, so an unknown measure comes back naming this field and
-	// quoting the value. Converted to a plain string because the patch carries
-	// what was ASKED for, and the generated enum type would claim it had already
-	// been checked against the vocabulary the projection enforces.
+	// kernel's set. An unknown measure comes back naming this field and quoting
+	// the value. The two qualified spellings map to their base measures. It is a
+	// plain string because the generated enum type would claim a check not yet run.
 	patch.ForecastForwardMeasure = savedForwardMeasure(req.ForecastForwardMeasure)
 	// Passed through unvalidated against the deployment's list on purpose. A key
 	// this deployment holds no credentials for enables nothing — the effective
@@ -334,10 +333,11 @@ func (h installationSettingsHandlers) clock() time.Time {
 
 // savedForwardMeasure keeps the two deprecated qualified measures sendable. The
 // qualified forecast is retired, so each saves as the measure it was built on.
+// Any other value stays as sent, for the entry's validator to judge.
 func savedForwardMeasure[T ~string](value *T) *string {
 	text := enumText(value)
 	if text != nil {
-		*text = strings.TrimPrefix(*text, "qualified_")
+		*text = values.SavedForwardMeasure(*text)
 	}
 	return text
 }
