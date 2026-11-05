@@ -19,9 +19,10 @@ import (
 )
 
 // The system sources that belong to one colleague. A mailbox is whoever connected
-// it, a booking page is its host's, and a notice is whoever it names. Both the
-// consequence switch and the ownership switch read these, so a typo in either
-// would move a row to the wrong answer.
+// it, a booking page is its host's, and a notice is whoever it names. The
+// ownership switch reads all three, so a typo would move a row to the wrong
+// answer. classifySystem's consequence reads the mailbox and the notice, and a
+// booking page takes its default.
 const (
 	sourceCaptureHealth = crmcontracts.AttentionItemSource("capture_health")
 	sourceBookingHealth = crmcontracts.AttentionItemSource("booking_health")
@@ -86,10 +87,10 @@ func classifySystem(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 
 // systemRowOwner separates the personal system rows from the workspace ones.
 //
-// classifySystem draws six sources and they do not agree about ownership. A
+// classifySystem draws five sources and they do not agree about ownership. A
 // notice, a mailbox and a booking page each belong to one colleague. Their lanes
-// read per-user, so the row is the reader's by construction. A failing sync, a
-// broken AI task and a stopped automation are the workspace's. Those services
+// read per-user, so the row is the reader's by construction. A broken AI task
+// and a stopped automation are the workspace's. Those services
 // read no user, several admins see the same row, and naming the reader would
 // make one shared failure look like several colleagues' problems.
 //

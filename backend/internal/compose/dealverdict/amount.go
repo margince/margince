@@ -4,7 +4,7 @@
 package dealverdict
 
 import (
-	"math/big"
+	"errors"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -41,9 +41,9 @@ func decideAmount(in Input, state State, action Action, rates Rates, change *dea
 	if target == currency {
 		return setAmount(state, change, quotedMinor), nil
 	}
-	converted, ok, err := convert(quotedMinor, currency, target, rates, change.Evidence)
-	if err != nil || !ok {
-		return DroppedNoRate, err
+	converted, why, err := convert(quotedMinor, currency, target, rates, change.Evidence)
+	if err != nil || why != "" {
+		return why, err
 	}
 	return setAmount(state, change, converted), nil
 }
@@ -68,31 +68,39 @@ func setAmount(state State, change *deals.VerdictChange, amountMinor int64) stri
 }
 
 // convert takes a quoted amount into the deal's currency through the deals
-// FX engine, then rounds half away from zero to whole units. The rates and
-// their dates go in evidence.
-func convert(amountMinor int64, from, to string, rates Rates, evidence map[string]any) (int64, bool, error) {
+// FX engine, rounded once to whole units. A missing rate or an amount no deal
+// can hold drops this action alone, and a rate that is not a number fails the
+// read. The rates and their dates go in evidence.
+func convert(amountMinor int64, from, to string, rates Rates, evidence map[string]any) (int64, string, error) {
 	fromRate, ok, err := rates.For(from)
-	if err != nil || !ok {
-		return 0, false, err
+	if err != nil {
+		return 0, "", err
+	}
+	if !ok {
+		return 0, DroppedNoRate, nil
 	}
 	toRate, ok, err := rates.For(to)
-	if err != nil || !ok {
-		return 0, false, err
-	}
-	converted, err := deals.ConvertBetween(amountMinor, fromRate.Rate, toRate.Rate, from, to)
 	if err != nil {
-		return 0, false, err
+		return 0, "", err
 	}
-	scale := values.MinorUnitScale(to)
-	whole := deals.DivRoundHalfAwayFromZero(big.NewInt(converted), big.NewInt(scale))
-	minor, ok := toMinor(whole.Int64(), scale)
 	if !ok {
-		return 0, false, nil
+		return 0, DroppedNoRate, nil
+	}
+	whole, err := deals.ConvertBetweenWhole(amountMinor, fromRate.Rate, toRate.Rate, from)
+	if errors.Is(err, deals.ErrAmountOutOfRange) {
+		return 0, DroppedOutOfRange, nil
+	}
+	if err != nil {
+		return 0, "", err
+	}
+	minor, ok := toMinor(whole, values.MinorUnitScale(to))
+	if !ok {
+		return 0, DroppedOutOfRange, nil
 	}
 	evidence["rate_from"] = rateText(fromRate)
 	evidence["rate_to"] = rateText(toRate)
 	evidence["rate_date"] = rateDate(fromRate, toRate).Format(time.DateOnly)
-	return minor, true, nil
+	return minor, "", nil
 }
 
 func rateText(rate deals.FXRate) string {

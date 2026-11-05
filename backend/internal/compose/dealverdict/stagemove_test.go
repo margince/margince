@@ -17,6 +17,7 @@ const (
 	demoHeldID    = "44444444-4444-4444-8444-444444444444"
 	mailID        = "66666666-6666-4666-8666-666666666666"
 	oursID        = "77777777-7777-4777-8777-777777777777"
+	undirectedID  = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 	demoID        = "88888888-8888-4888-8888-888888888888"
 	callID        = "99999999-9999-4999-8999-999999999999"
 )
@@ -35,10 +36,15 @@ func moveInput() Input {
 		{ID: askedID, StagePosition: 1, Stage: "Proposal", Label: "Buyer asked for the contract", Kind: "buyer_confirmed"},
 		{ID: demoHeldID, StagePosition: 2, Stage: "Negotiation", Label: "Demo held", Kind: "event_held"},
 	}
-	in.Activities = append(in.Activities,
+	in.Activities = append(
+		in.Activities,
 		Activity{
 			ID: oursID, Kind: "email", Direction: "outbound", OccurredAt: today.AddDate(0, 0, -2),
 			ArrivedAt: today.AddDate(0, 0, -2), Body: "They asked us for the contract draft.",
+		},
+		Activity{
+			ID: undirectedID, Kind: "email", OccurredAt: today.AddDate(0, 0, -2),
+			ArrivedAt: today.AddDate(0, 0, -2), Body: "We need the contract by Friday.",
 		},
 		Activity{
 			ID: callID, Kind: callID, OccurredAt: today.AddDate(0, 0, -1),
@@ -86,6 +92,8 @@ func TestAStageMoveNeedsEveryCriterionOfTheStagesItLeaves(t *testing.T) {
 		{"a skip missing the skipped stage's criterion", moveAction(contractID, buyerAsked), DroppedCriterionUnmet},
 		{"a buyer milestone resting on our own mail", moveAction(negotiationID,
 			CriterionCite{CriterionID: askedID, ActivityID: oursID, QuotedWords: "asked us for the contract draft"}), DroppedCriterionUnmet},
+		{"a buyer milestone on a mail with no direction", moveAction(negotiationID,
+			CriterionCite{CriterionID: askedID, ActivityID: undirectedID, QuotedWords: "need the contract"}), OutcomeApply},
 		{"a quote the cited activity does not hold", moveAction(negotiationID,
 			CriterionCite{CriterionID: askedID, ActivityID: mailID, QuotedWords: "we accept your terms"}), DroppedCriterionUnmet},
 		{"a held event resting on a call", moveAction(contractID, buyerAsked,
