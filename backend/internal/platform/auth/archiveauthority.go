@@ -80,7 +80,7 @@ var (
 )
 
 // ArchiveRuleFor answers the archive rule for a record type, and whether that
-// type has one: a type without one is archived with the delete grant alone.
+// type has one. A type without one is archived with the delete grant alone.
 func ArchiveRuleFor(table string) (ArchiveRule, bool) {
 	switch table {
 	case ActivityArchive.table:
