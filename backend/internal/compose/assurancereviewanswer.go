@@ -97,7 +97,8 @@ type reviewAnswerHandlers struct {
 // with the signal and review checks the answers need.
 func answeringAssuranceStore(pool *pgxpool.Pool) *assurance.Store {
 	return assurance.NewStore(InstallationDB(pool)).WithSignalDecision(DecideAssuranceSignal).
-		WithReviewCheck(AssuranceReviewCheck)
+		WithReviewCheck(AssuranceReviewCheck).
+		WithPreviewTx(EnforcementPreviewTx)
 }
 
 func newReviewAnswerHandlers(pool *pgxpool.Pool) reviewAnswerHandlers {

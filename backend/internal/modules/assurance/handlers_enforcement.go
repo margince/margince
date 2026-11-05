@@ -82,13 +82,18 @@ func (h Handlers) SetForecastAssuranceEnforcement(w http.ResponseWriter, r *http
 		httperr.Write(w, r, err)
 		return
 	}
+	// The digest reaches the writer, which checks it in the transaction it
+	// saves in. This door still refuses an absent one, because a caller that
+	// saw no preview has nothing to be stale against.
 	if req.Enabled {
-		if err := h.ensurePreviewCurrent(r.Context(), req.PreviewDigest); err != nil {
+		if err := h.ensurePreviewSeen(r.Context(), req.PreviewDigest); err != nil {
 			httperr.Write(w, r, err)
 			return
 		}
 	}
-	if err := h.store.SetQualifiedForecastEnforced(r.Context(), h.settings, req.Enabled); err != nil {
+	if err := h.store.SetQualifiedForecastEnforced(
+		r.Context(), h.settings, req.Enabled, req.PreviewDigest,
+	); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -135,10 +140,11 @@ func (h Handlers) enforcementState(ctx context.Context) (crmcontracts.ForecastAs
 	return out, nil
 }
 
-// ensurePreviewCurrent refuses switching on unless the caller saw the preview
-// that is true now. Switching on again while enforcing changes nothing, so it
-// needs no preview.
-func (h Handlers) ensurePreviewCurrent(ctx context.Context, seen *string) error {
+// ensurePreviewSeen refuses switching on with no digest at all. Whether the
+// one sent is still true is the writer's question, asked where it saves.
+//
+// Switching on again while enforcing changes nothing, so it needs no preview.
+func (h Handlers) ensurePreviewSeen(ctx context.Context, seen *string) error {
 	if h.preview == nil {
 		return nil
 	}
@@ -149,16 +155,12 @@ func (h Handlers) ensurePreviewCurrent(ctx context.Context, seen *string) error 
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return err
 	}
-	current, err := h.preview(ctx)
-	if err != nil {
-		return err
+	if seen != nil {
+		return nil
 	}
-	if seen == nil || *seen != current.Digest {
-		return &httperr.DetailedError{
-			Status: http.StatusConflict, Code: "preview_stale",
-			Detail: "The deals this would leave out changed since you looked. " +
-				"Check the new numbers, then switch it on again.",
-		}
+	return &httperr.DetailedError{
+		Status: http.StatusConflict, Code: "preview_stale",
+		Detail: "The deals this would leave out changed since you looked. " +
+			"Check the new numbers, then switch it on again.",
 	}
-	return nil
 }

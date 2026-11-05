@@ -43,7 +43,7 @@ func TestAVintageRecordsTheBasisItWasTakenUnder(t *testing.T) {
 		t.Fatalf("the input check enforcement waits on: %v", err)
 	}
 	if err := assurance.NewStore(InstallationDB(e.Pool)).SetQualifiedForecastEnforced(
-		e.Admin(), StoredConfig(e.Pool), true); err != nil {
+		e.Admin(), StoredConfig(e.Pool), true, nil); err != nil {
 		t.Fatalf("enforcing: %v", err)
 	}
 	e.freeze(t, e.second.AddDate(0, 0, 1))

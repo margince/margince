@@ -25,10 +25,28 @@ func EnforcementPreview(pool *pgxpool.Pool) assurance.PreviewFunc {
 		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 			return out, err
 		}
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-			var args []any
-			arg := func(v any) int { args = append(args, v); return len(args) }
-			query := fmt.Sprintf(`
+		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			var err error
+			out, err = EnforcementPreviewTx(ctx, tx)
+			return err
+		}); err != nil {
+			return out, err
+		}
+		return out, nil
+	}
+}
+
+// EnforcementPreviewTx is the count itself, in the caller's transaction.
+//
+// Two doors on one body. The read above opens its own transaction.
+//
+// A writer that binds a digest to a save reads it where it saves, so no deal
+// changes treatment between the count and the commit.
+func EnforcementPreviewTx(ctx context.Context, tx pgx.Tx) (assurance.EnforcementPreview, error) {
+	var out assurance.EnforcementPreview
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := fmt.Sprintf(`
 				WITH treated AS (
 				    SELECT d.id, %[1]s AS treatment FROM deal d
 				     WHERE d.status = 'open' AND d.archived_at IS NULL)
@@ -36,14 +54,12 @@ func EnforcementPreview(pool *pgxpool.Pool) assurance.PreviewFunc {
 				       count(*) FILTER (WHERE treatment = $%[4]d),
 				       md5($%[5]d || '|' || coalesce(string_agg(id::text || ':' || treatment, ',' ORDER BY id), ''))
 				  FROM treated`,
-				viabilityQualificationSQL("d", arg),
-				arg(string(viability.QualificationExcluded)), arg(string(viability.QualificationUnsupported)),
-				arg(string(viability.QualificationUnknown)), arg(viability.PolicyVersion))
-			return tx.QueryRow(ctx, query, args...).Scan(&out.LeftOut, &out.Unknown, &out.Digest)
-		})
-		if err != nil {
-			return out, fmt.Errorf("compose: previewing enforcement: %w", err)
-		}
-		return out, nil
+		viabilityQualificationSQL("d", arg),
+		arg(string(viability.QualificationExcluded)), arg(string(viability.QualificationUnsupported)),
+		arg(string(viability.QualificationUnknown)), arg(viability.PolicyVersion))
+	err := tx.QueryRow(ctx, query, args...).Scan(&out.LeftOut, &out.Unknown, &out.Digest)
+	if err != nil {
+		return out, fmt.Errorf("compose: previewing enforcement: %w", err)
 	}
+	return out, nil
 }
