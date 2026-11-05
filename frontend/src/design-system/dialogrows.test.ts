@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import ts from "typescript";
@@ -34,7 +34,11 @@ import {
   rowsAcross,
   SCOPE_CAP,
 } from "../../scripts/lib/dialogrows";
-import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import {
+  parseSource,
+  sourceFileAt,
+  sourceTextAt,
+} from "../../scripts/lib/source-tree";
 import { classVariants } from "../testing/classnames";
 
 // Whichever test asks first builds the tree's census, inside its own timeout.
@@ -50,9 +54,7 @@ const files = once(markupFiles);
 const sources = once(() => files().map((f) => sourceFileAt(f)));
 const owners = once(() => ownersIn(sheetTexts()));
 const tree = once(() => rowsAcross(sources(), owners(), dialogSet()));
-const census = once(() =>
-  textCensus(files().map((f) => readFileSync(f, "utf8"))),
-);
+const census = once(() => textCensus(files().map((f) => sourceTextAt(f))));
 
 const AT = join(srcDir, "design-system", "planted.tsx");
 const PRELUDE = `import { Modal } from "./modal";

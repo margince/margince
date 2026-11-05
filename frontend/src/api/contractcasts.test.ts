@@ -211,6 +211,11 @@ function bare(expression: ts.Expression): ts.Expression {
     : expression;
 }
 
+// `as`, then whitespace or comments, then `unknown`: the bridge however it is
+// spaced or annotated.
+const AS_UNKNOWN = /\bas(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*(?:\n|$))+unknown\b/;
+const castsToUnknown = (text: string) => AS_UNKNOWN.test(text);
+
 type Finding = { where: string; line: number; says: string };
 
 /** Every `x as unknown as T` in one module, with what it casts to. */
@@ -269,21 +274,19 @@ describe("a fixture is the shape the server sends", () => {
   it("finds no contract type cast through unknown", () => {
     const found: string[] = [];
     for (const path of modules) {
-      const text = readFileSync(path, "utf8");
-      // THE ONLY THING THIS SKIPS IS A FILE THAT CANNOT HOLD THE CONSTRUCT.
-      // `x as unknown as T` contains the token `unknown` whatever trivia sits
-      // between its parts, so a file without that word has no such cast to
-      // find — it is a necessary condition and not a heuristic, which is what
-      // separates it from a skip-list. It buys the census the headroom it
-      // needs: 619 of this tree's 2096 modules carry the word, and parsing the
-      // other 1477 is work whose answer is known before it starts.
-      if (!text.includes("unknown")) {
+      // A declaration file holds no expression, so no `as` cast, and the
+      // generated contract types are megabytes no run needs to read.
+      if (path.endsWith(".d.ts")) {
         continue;
       }
-      // Nor can a declaration file. It holds no expression, so no `as` cast,
-      // and the generated contract types are 4.4 MB of `unknown` that every
-      // run would parse to find nothing.
-      if (path.endsWith(".d.ts")) {
+      const text = readFileSync(path, "utf8");
+      // The only thing this skips is a file that cannot hold the construct.
+      // `x as unknown as T` holds the tokens `as` and `unknown` with nothing
+      // but trivia between them, so a file without that pair has no such cast
+      // to find. It is a necessary condition and not a heuristic, which is
+      // what separates it from a skip-list. Most modules say `unknown` and few
+      // cast to it, so the census parses only those few.
+      if (!castsToUnknown(text)) {
         continue;
       }
       const where = relative(frontendRoot, path).replaceAll("\\", "/");
@@ -377,6 +380,22 @@ describe("what counts as a contract type cast", () => {
         `${aliasing}// contract:cast \`{}\` is not a page, on purpose.\n// The case is about what the reader survives.\nconst w = {} as unknown as Worklist;`,
       ),
     ).toEqual([]);
+  });
+
+  // The census parses only the modules this admits, so every shape of the
+  // bridge the parser reads must pass it.
+  it("parses every module that spells the bridge, trivia and all", () => {
+    for (const bridge of [
+      "{} as unknown as Worklist",
+      "({} as\n  unknown) as Worklist",
+      "{} as /* the wire */ unknown as Worklist",
+      "{} as // the wire\n  unknown as Worklist",
+    ]) {
+      const code = `${aliasing}const w = ${bridge};`;
+      expect(castsToUnknown(code), bridge).toBe(true);
+      expect(found(code), bridge).toHaveLength(1);
+    }
+    expect(castsToUnknown("const u: unknown = value as Worklist;")).toBe(false);
   });
 
   // A marker with no reason says a check was skipped and not why.

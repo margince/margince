@@ -427,6 +427,9 @@ describe("the nesting ladder has one painter", () => {
     const dynamic = 'const d = "var(--" + name;';
     expect(scriptSpellings(join(here, "probe.ts"), dynamic)).toHaveLength(1);
     expect(
+      scriptSpellings(join(here, "probe.tsx"), 'const e = "\\u002d-pane";'),
+    ).toHaveLength(1);
+    expect(
       cssSpellings([
         probe(".probe", `border: 1px solid ${ref("--paneEdgeStrong")}`),
       ]),
