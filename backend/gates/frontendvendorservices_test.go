@@ -75,10 +75,10 @@ func TestTheFrontendVendorPairsMatchTheServersChain(t *testing.T) {
 		}
 	}
 	for mail, calendar := range inTS {
-		if oneConsent[mail] != compose.SharesConsent(mail) {
-			t.Errorf("%s's VENDOR_SERVICES says oneConsent: %t for %s, and compose.SharesConsent says %t: "+
+		if oneConsent[mail] != compose.OneConsent(mail) {
+			t.Errorf("%s's VENDOR_SERVICES says oneConsent: %t for %s, and compose.OneConsent says %t: "+
 				"the screen would promise a different number of consent screens than the vendor shows",
-				frontendVendorServices, oneConsent[mail], mail, compose.SharesConsent(mail))
+				frontendVendorServices, oneConsent[mail], mail, compose.OneConsent(mail))
 		}
 		if _, ok := inGo[mail]; !ok {
 			t.Errorf("%s's VENDOR_SERVICES pairs %s with %s, and compose.PairedCalendars() chains no "+
