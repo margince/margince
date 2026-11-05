@@ -85,17 +85,6 @@ func confirmLinkToken(t *testing.T, e *apptest.AppEnv) string {
 	return token
 }
 
-// discardingMailer is the relay boundary for a suite that reads the link from
-// the vault rather than from a message.
-//
-// It is still WIRED, and that is not incidental: a controller delivery resolves
-// its transport before any gate runs, so a harness with no relay would park the
-// message with "no mail relay configured" and the suite would be exercising the
-// unconfigured path instead of the one it is about.
-type discardingMailer struct{}
-
-func (discardingMailer) Send(context.Context, string, string, string) error { return nil }
-
 // TestTheConfirmMailIsWrittenInTheInstallationsLanguage is what the catalog was
 // wired in for, asserted through the REAL composition.
 //

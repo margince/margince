@@ -60,6 +60,7 @@ These target names are a stable interface: external tooling and its UAT guides c
 | `test-integration` | Real Postgres lane (`-tags integration`): isolation gates across tenants, governed-agent loop, HTTP end-to-end. See [The integration lane](#the-integration-lane) |
 | `test-db-up` | (Re)build the migrated `margince_test` template the parallel lane clones from |
 | `test-it` | Run one integration package on a throwaway clone (+ own MinIO bucket + Redis db 15): `make test-it DIR=backend/internal/modules/contacts [RUN=TestName]` |
+| `test-roles` | The MCP role sweep: every tool and action as every seeded role, held to `mcp-tool-roles.json` and `toolchecks.json`. `UPDATE_MCP_TOOL_ROLES=1` writes both files and the extension verbs' `measured.json` again. It measures the extension verbs first. The sweep test carries `//go:build integration && rolesweep`, so no merge gate runs it, while the other `toolrole` tests run in the integration lane; `scheduled.yml` runs it weekly. Needs `make db-up`. See [prove-a-tool-in-the-role-matrix.md](../how-to/prove-a-tool-in-the-role-matrix.md) |
 | `e2e-siteread` | (backend Makefile) Deep-read quality floor against the real `gradion.com` (`-tags e2e_llm`): paid, network, opt-in. Judge a candidate model with `MARGINCE_E2E_MODEL=provider:model` (+ its BYOK key). Every assertion is a floor: a different model must extract the same or better to pass |
 | `e2e-ai` | Certify AI tasks against the corpus (`-tags e2e_llm`, `TestE2ECertify`): paid, network, opt-in. Fails loudly, never skips, without a binding or a corpus match. Options: [`e2e-ai` options](#e2e-ai-options) |
 | `e2e-ai-report` | Print the certification readiness report, per shipped invocation site and per preset. `go run`-only dev tool (`internal/compose/aicert/reportcmd`), not a shipped binary and not a merge gate: it always exits 0. See [`e2e-ai-report`](#e2e-ai-report) |
@@ -167,6 +168,7 @@ The root `make check` runs the backend gate above and these deterministic root s
 | `test-golangci-guard` | Prove `scripts/run-golangci.sh` still tells a finding in this checkout from one the golangci cache remembers from another worktree. See [The golangci cache guard](#the-golangci-cache-guard) |
 | `go-file-length` | Hard 500-LOC cap on hand-written product Go, ratcheted via `scripts/go-file-length-waivers.txt`. Test and generated files are exempt here; the craft gate bounds `*_test.go` at 1000 lines |
 | `comment-budget` | A change may not add more comment lines than the code they explain. Diff-scoped against `origin/main`, Go and TypeScript; `doc.go` and generated files are exempt. The counterweight to the function ceiling, which does not count comment lines |
+| `test-keep-unchanged-mtimes` | Prove that `scripts/keep-unchanged-mtimes.sh`, which `drift` runs its generators through, gives back the old mtime only to a file rewritten with its own bytes. Go replays a cached test result while the files it read keep their mtime, so a changed file that kept an old time would replay a stale result |
 | `test-comment-budget` | Prove the budget gate fails an over-budget change, since a budget nothing can trip looks the same as a change within budget |
 | `test-docs-describing` | Prove the `docs-describing` report asks about a page whose code changed, and accepts only an answer it can read |
 | `comment-density` | Backend's comment-to-code ratio may fall and never rise, pinned in `scripts/comment-density-baseline.txt`. A change that brings it down re-pins it in the same commit |
@@ -184,6 +186,7 @@ The root `make check` runs the backend gate above and these deterministic root s
 | `test-dev-postgres-container` | Points the dev-database resolver at a stubbed `docker ps` and asserts the verdict sentence on each shape. One publisher resolves; none refuses rather than falling back to the compose project; two refuse, naming both (a developer has to know which stack to stop). The query filters on the port and the compose service label |
 | `test-migration-versions` | Points that gate at throwaway git repositories and asserts its verdict on ten planted cases. See [migration-versions](#migration-versions) |
 | `pkg-freeze` | Published-surface freeze: apidiff on every `backend/pkg` package against the merge target (`origin/$GITHUB_BASE_REF` in CI; locally the extensions integration branch, else `origin/main`). Advisory before the first `v1`+ release tag: incompatible changes print and never block. Enforcing from `v1.0.0`: incompatible changes and removed packages fail. A ratified change is its apidiff finding line in `scripts/pkg-freeze-allowlist.txt`, bound to the merge-base sha it was ratified against (superseded entries license nothing and warn); removals are never allowed by the allowlist. Overrides: `PKG_FREEZE_MODE=advisory\|enforce`, `PKG_FREEZE_BASE=<ref>` |
+| `embedded-binary-licenses` | Every file the three programs embed is named in `embedded-binaries.txt` with its source and a license the allow list carries. It runs here as well as in the license gate, because a file embedded under `backend/` changes no manifest. See [supply-chain.md](supply-chain.md) |
 
 ### `migration-versions`
 
@@ -218,13 +221,14 @@ The wrapper both lint lanes run through resolves every reported path and quarant
 
 Every green `make check` ends with a table of its phases, so whoever optimizes it next starts from a measurement on their own machine. Both halves report: the backend's four phases and the gate fan-out, and the frontend's composed typecheck, core suite and unit screens.
 
-The time is not spread evenly. On a quiet laptop the frontend's core legs measure `ds-gates` `12s`, drift `3s`, lint `2s`, unit `75s`, build `3s`. `fe-unit` alone is about 79% of those `95s`, and everything else together is `20s`. `fe-compiler-lint` adds about `31s` on a cold cache and about `1s` on a warm one. An optimization that does not touch the vitest suite works on the remainder.
+The time is not spread evenly. The frontend core suite is the largest phase, and `fe-unit` is most of it: vitest runs every test file on every run. In the backend, the `gates` package is the slowest leg. `UNCACHED_TEST_PKGS` in `backend/Makefile` keeps it out of the test cache, and says why.
+
+Every other Go package replays from the test cache when nothing it reads has changed. Go checks a file a test opened by its size, mode and mtime. `drift` regenerates every committed generated file. It runs `scripts/keep-unchanged-mtimes.sh` before and after the generators, so a file written back with the same bytes gets its old mtime again.
 
 ### Speed-ups measured and rejected
 
-- **`pool: threads` for vitest.** A loss on an idle machine: forks `73s` against threads `99s` measured quiet. It also shares one jsdom across the files of one worker, which two suites here cannot tolerate ([#2866](https://github.com/margince/margince/issues/2866)). The vitest 4 `forks` default is correct for this tree.
 - **Fanning out `frontend-check` under `-j`.** It has 7 legs. Five of them run `pnpm install --frozen-lockfile` into one `frontend/node_modules`, and four begin with it. Run together, they race the `.bin` symlink farm and leave the tree broken (`ENOENT ... chmod`, exit 2). CI runs them as parallel jobs only because each CI job has its own checkout. A working fan-out would save about `20s`.
-- **Running `check-backend` and `check-fe` concurrently.** The backend's last two phases (`drift`, `check-composition`) rewrite `build/composition/` and `*_gen.go` in place, and both frontend legs read `build/composition/`. The backend `check` recipe keeps its own phases serial to avoid that race.
+- **Running `check-backend` and `check-fe` concurrently.** Three steps write files that the other half reads. `drift` rewrites `*_gen.go`, `config/` and generated pages under `docs/reference/`. `contract-frontend-drift` and `fe-drift` rewrite `frontend/src/api/schema.d.ts` and `public-events.ts`. `composition` rewrites `build/composition/`, which `lint`, `fe-typecheck-composed` and `fe-test-ext` all read. Each rewrite is in place, so a reader can see a half-written file.
 
 ## Occasional
 

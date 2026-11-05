@@ -22,6 +22,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -73,7 +74,7 @@ func TestAMarkStoredTrimmedIsServedWithoutADecode(t *testing.T) {
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
 	base := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), "company_logo", companyID.String()+"/"+ids.NewV7().String())
-	key, err := contacts.PutLogo(ctx, blob, base, logoPNG(t))
+	key, err := contacts.PutLogo(ctx, blob, base, apptest.LogoPNG(t))
 	if err != nil {
 		t.Fatalf("PutLogo: %v", err)
 	}
@@ -97,13 +98,13 @@ func TestALegacyMarkIsDecodedOncePerProcess(t *testing.T) {
 	blob := blobstore.NewMemory()
 	handlers := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	ctx := e.Admin()
-	companyID := seedLoggedCompany(ctx, t, e, blob, logoPNG(t))
+	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 	key, err := e.Contacts.CompanyLogoKey(ctx, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("read the stored logo key: %v", err)
 	}
 
-	if !bytes.Equal(getLogo(ctx, t, handlers, companyID), logoPNG(t)) {
+	if !bytes.Equal(getLogo(ctx, t, handlers, companyID), apptest.LogoPNG(t)) {
 		t.Fatal("the first read of an already tight legacy mark changed its bytes")
 	}
 	letterboxed := letterboxedLogo(t)

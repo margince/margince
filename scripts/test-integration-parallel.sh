@@ -349,6 +349,9 @@ while IFS='|' read -r d rel; do
         # slice — does not apply, because `bench` is not built-in and nothing
         # in this lane defines it.
         'integration && bench') skip_file=1 ;;
+        # The weekly role sweep (make test-roles), kept out of the merge gate
+        # the same way and for the same reason as the benchmarks.
+        'integration && rolesweep') skip_file=1 ;;
         *)
           echo "FAIL: $f carries build constraint '$expr' — not one the static shard discovery knows" >&2
           echo "  teach the allowlist in scripts/test-integration-parallel.sh or simplify the constraint" >&2
