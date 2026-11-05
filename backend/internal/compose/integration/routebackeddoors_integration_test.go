@@ -100,7 +100,7 @@ func TestNoRouteBackedActionStillRefusesAnActingAgent(t *testing.T) {
 		// A passport's call budget is a per-credential window; a fresh one per
 		// batch keeps the sweep under it.
 		if n > 0 && n%passportCallsPerBatch == 0 {
-			bearer, _ := passportWithID(t, d.e, fmt.Sprintf("route-backed-sweep %d", n), "read", "write", "send", "enrich")
+			bearer, _ := apptest.PassportWithID(t, d.e, fmt.Sprintf("route-backed-sweep %d", n), "read", "write", "send", "enrich")
 			d.mcp = apptest.NewMCPClient(d.e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))
 		}
 		args, path := map[string]any{}, v.Pattern

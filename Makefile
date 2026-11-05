@@ -31,7 +31,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes test-release-bundle
+  test-release-notes test-release-bundle embedded-binary-licenses
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -1072,7 +1072,9 @@ test-sbom-license-parity:
 ## says nothing about compiled code it carries: a `.wasm` is a build output, so
 ## the SBOM sees the Go module and never what the wasm was built from. The
 ## corpus is the packages `go list -json -deps ./cmd/...` reports, so a new
-## dependency is covered the day it is added.
+## dependency is covered the day it is added. It is a root script gate as well:
+## the license gate runs only on a manifest change, and a file embedded under
+## backend/ changes no manifest.
 embedded-binary-licenses:
 	@./scripts/embedded-binary-licenses.sh
 

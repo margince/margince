@@ -30,7 +30,7 @@ type newAddressEnv struct {
 
 func setupNewAddress(t *testing.T) *newAddressEnv {
 	t.Helper()
-	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(discardingMailer{}))
+	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(apptest.DiscardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "New Address", "rep@newaddress.test", "Rep")
 	var company struct {
 		ID string `json:"id"`

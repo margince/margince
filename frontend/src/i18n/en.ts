@@ -1366,6 +1366,8 @@ export const en = {
   "reporting.industry": "Industry",
   "reporting.allIndustries": "All industries",
   "reporting.valueBasis": "Value basis",
+  "reporting.filtersMore": "Filters",
+  "reporting.filtersActive": "Filters · {active}",
   "reporting.basis.all": "All value",
   "reporting.basis.software": "Software only",
   "reporting.basis.implementation": "Implementation only",
@@ -7385,7 +7387,21 @@ export const en = {
   "compose.savedDraftGoneBody":
     "It was sent or deleted there. Saving keeps the text on screen as a new draft.",
   "compose.savedDraftFailed":
-    "The draft was not saved. Save again, or close again to discard the text.",
+    "The draft was not saved. Retry, or close again to discard the text.",
+  "compose.savedDraftAutosaveFailed":
+    "Saving the draft did not finish. It tries again when you keep writing or come back online.",
+  "compose.savedDraftAutosaveRefused":
+    "The draft was not saved. Retry, or keep writing to try again.",
+  "compose.savedDraftFilesUnavailable_one":
+    "{count} file could not be restored.",
+  "compose.savedDraftFilesUnavailable_other":
+    "{count} files could not be restored.",
+  "compose.sendWaitsForAddress":
+    "Correct or remove the text that is not an email address.",
+  "compose.notAnAddress_one":
+    "Not an email address: {parts}. Correct it or remove it.",
+  "compose.notAnAddress_other":
+    "Not email addresses: {parts}. Correct them or remove them.",
   "compose.savedDraftLoad": "Load saved version",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":
@@ -8004,6 +8020,7 @@ export const en = {
   "analytics.deliveryCoversAll":
     "These numbers cover every project you can read.",
   "analytics.attention": "Needs your attention",
+  "analytics.board.rail": "Outlook and next steps",
   "analytics.attentionNoOwner": "No owner",
   "analytics.attentionOutOfDate": "out of date, changed since the check",
   "analytics.attentionAtStake": "{amount} at stake",
@@ -14586,6 +14603,7 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
   "forecast.basis.likely": "Won + Likely deals",
@@ -14600,6 +14618,7 @@ export const en = {
   "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
+  "forecast.model.short": "Central 80% of outcomes",
   "forecast.model.month": "Modelled month finish",
   "forecast.model.week": "Modelled week finish",
   "forecast.model.value": "{low} to {high}",
@@ -17172,7 +17191,14 @@ export const en = {
   "richtext.bulletList": "Bulleted list",
   "richtext.numberList": "Numbered list",
   "richtext.link": "Link",
-  "richtext.linkPrompt": "Link URL (leave empty to remove the link)",
+  "richtext.linkAdd": "Add link",
+  "richtext.linkEdit": "Edit link",
+  "richtext.linkAddress": "Web or email address",
+  "richtext.linkPlaceholder": "example.com or name@example.com",
+  "richtext.linkApply": "Apply",
+  "richtext.linkRemove": "Remove link",
+  "richtext.linkRefused":
+    "This is not a web or email address. Enter one such as example.com or name@example.com.",
   "contact.composer.intentAgenda": "propose an agenda for the upcoming meeting",
   "contact.composer.intentReply": "reply to their last message",
   "contact.composer.intentCommitment": "deliver on a commitment",
@@ -20348,6 +20374,15 @@ export const en = {
   "analytics.hero.shortfall": "Projected shortfall {amount}",
   "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
+  "analytics.hero.ofTarget": "of {target} target",
+  "analytics.hero.short": "{amount} short of target",
+  "analytics.hero.over": "{amount} over target",
+  "analytics.trajectory.label": "Sales won through the period",
+  "analytics.trajectory.today": "Today · {date}",
+  "analytics.trajectory.through": "Through {date}",
+  "analytics.trajectory.target": "Target {amount}",
+  "analytics.trajectory.projection": "{amount} projected",
+  "analytics.trajectory.range": "Modelled finish",
   "analytics.overview.more": "More",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
@@ -20356,6 +20391,7 @@ export const en = {
   "analytics.outlook.team": "Team prospecting outlook",
   "analytics.outlook.prospecting": "Prospecting outlook",
   "analytics.outlook.records": "View supporting records",
+  "analytics.outlook.more": "Read the full outlook",
   "analytics.assessment.refresh": "Refresh assessment",
   "analytics.assessment.retry": "Retry",
   "analytics.assessment.evidenceTitle": "What the assessment rests on",
