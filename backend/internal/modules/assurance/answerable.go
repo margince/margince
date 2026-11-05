@@ -25,9 +25,9 @@ func AnswerableFindings(ctx context.Context, tx pgx.Tx, found []Exception) (map[
 	if err != nil {
 		return nil, err
 	}
-	// The answer routes take a human session only, so an agent reading the
-	// list is shown each finding to read.
-	if !allowed || actor.Type != principal.PrincipalHuman {
+	// An answer route takes a user or their agent, so automatic work reading
+	// the list is shown each finding to read.
+	if !allowed || !actor.HumanOrItsAgent() {
 		return out, nil
 	}
 	deals, err := answerableBesideDeals(ctx, tx, found, out)

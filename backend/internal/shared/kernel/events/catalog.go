@@ -73,6 +73,7 @@ var catalog = map[string]struct {
 	// about the installation, which names its own language in a setting and
 	// publishes nothing per reader.
 	"user_locale.changed":        {contactStreamEntity, 1},
+	"user_timezone.changed":      {contactStreamEntity, 1},
 	"user_display_name.changed":  {contactStreamEntity, 1},
 	"user_greeting_name.changed": {contactStreamEntity, 1},
 	// What a member wants DELIVERED rides the identity stream rather than the
@@ -123,10 +124,11 @@ var catalog = map[string]struct {
 	"deal.erased":        {dealStreamEntity, 1},
 	// The project rides the deal family stream: it is the body of work the
 	// deals hang off, and a consumer interested in one is interested in both.
-	"project.created":       {dealStreamEntity, 1},
-	"project.updated":       {dealStreamEntity, 1},
-	"project.phase_changed": {dealStreamEntity, 1},
-	"project.archived":      {dealStreamEntity, 1},
+	"project.created":         {dealStreamEntity, 1},
+	"project.updated":         {dealStreamEntity, 1},
+	"project.phase_changed":   {dealStreamEntity, 1},
+	"project.health_assessed": {dealStreamEntity, 1},
+	"project.archived":        {dealStreamEntity, 1},
 	// A commission entry rides the deal family stream for the same reason a
 	// contract does: it is what a WON deal produced, and a consumer following
 	// the commercial arc of one deal wants the money that came out of it on

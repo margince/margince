@@ -34,8 +34,8 @@ import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
@@ -268,7 +268,7 @@ export function ContactDetails({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const edit = useContactEdit(contact);
   const bought = boughtFields(contact);
   const linkedin =

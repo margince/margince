@@ -12,6 +12,9 @@
             "type": "string",
             "format": "uuid"
           },
+          "probability_note": {
+            "type": "string"
+          },
           "record_type": {
             "type": "string"
           },
@@ -4103,6 +4106,9 @@
                   "operand": {
                     "type": "string"
                   },
+                  "pattern": {
+                    "type": "string"
+                  },
                   "values": {
                     "type": "array",
                     "items": {
@@ -5946,9 +5952,6 @@
           "base_currency": {
             "type": "string"
           },
-          "best_case_minor": {
-            "type": "integer"
-          },
           "confirmed_date_count": {
             "type": "integer"
           },
@@ -5962,9 +5965,6 @@
                 },
                 "base_minor": {
                   "type": "integer"
-                },
-                "category": {
-                  "type": "string"
                 },
                 "chance_in_use": {
                   "type": "integer"
@@ -5984,9 +5984,6 @@
                 "exclusion_reason": {
                   "type": "string"
                 },
-                "in_best_case": {
-                  "type": "boolean"
-                },
                 "in_evidence": {
                   "type": "boolean"
                 },
@@ -5997,6 +5994,9 @@
                   "type": "boolean"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "probability_source": {
                   "type": "string"
                 },
                 "signals": {
@@ -6043,7 +6043,6 @@
                 "chance_in_use",
                 "deal_id",
                 "deal_name",
-                "in_best_case",
                 "in_evidence",
                 "in_open",
                 "in_won",
@@ -6099,6 +6098,9 @@
               "won_minor"
             ]
           },
+          "likely_threshold": {
+            "type": "integer"
+          },
           "open_minor": {
             "type": "integer"
           },
@@ -6119,9 +6121,6 @@
             "properties": {
               "amounts_partial": {
                 "type": "boolean"
-              },
-              "best_case_minor": {
-                "type": "integer"
               },
               "evidence_minor": {
                 "type": "integer"
@@ -6150,7 +6149,6 @@
             },
             "required": [
               "amounts_partial",
-              "best_case_minor",
               "evidence_minor",
               "excluded_count",
               "excluded_minor",
@@ -6214,11 +6212,11 @@
         "required": [
           "as_of",
           "base_currency",
-          "best_case_minor",
           "confirmed_date_count",
           "eligible_count",
           "evidence_minor",
           "fx_missing_count",
+          "likely_threshold",
           "open_minor",
           "period_end",
           "period_start",
@@ -9808,6 +9806,9 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "due_has_time": {
+                  "type": "boolean"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -10637,6 +10638,9 @@
           "note_activity_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "probability_note": {
+            "type": "string"
           }
         },
         "required": [
@@ -11615,6 +11619,9 @@
                   "format": "date-time",
                   "type": "string"
                 },
+                "due_has_time": {
+                  "type": "boolean"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -11751,6 +11758,9 @@
           },
           "deals_scanned": {
             "type": "integer"
+          },
+          "time_zone": {
+            "type": "string"
           },
           "truncated": {
             "type": "boolean"
@@ -13122,9 +13132,6 @@
           "base_currency": {
             "type": "string"
           },
-          "best_case_minor": {
-            "type": "integer"
-          },
           "buckets": {
             "items": {
               "properties": {
@@ -13162,9 +13169,6 @@
                 "base_minor": {
                   "type": "integer"
                 },
-                "category": {
-                  "type": "string"
-                },
                 "chance_in_use": {
                   "type": "integer"
                 },
@@ -13183,9 +13187,6 @@
                 "exclusion_reason": {
                   "type": "string"
                 },
-                "in_best_case": {
-                  "type": "boolean"
-                },
                 "in_evidence": {
                   "type": "boolean"
                 },
@@ -13196,6 +13197,9 @@
                   "type": "boolean"
                 },
                 "owner_id": {
+                  "type": "string"
+                },
+                "probability_source": {
                   "type": "string"
                 },
                 "signals": {
@@ -13242,7 +13246,6 @@
                 "chance_in_use",
                 "deal_id",
                 "deal_name",
-                "in_best_case",
                 "in_evidence",
                 "in_open",
                 "in_won",
@@ -13497,6 +13500,9 @@
             ],
             "type": "object"
           },
+          "likely_threshold": {
+            "type": "integer"
+          },
           "open_minor": {
             "type": "integer"
           },
@@ -13519,9 +13525,6 @@
             "properties": {
               "amounts_partial": {
                 "type": "boolean"
-              },
-              "best_case_minor": {
-                "type": "integer"
               },
               "evidence_minor": {
                 "type": "integer"
@@ -13550,7 +13553,6 @@
             },
             "required": [
               "amounts_partial",
-              "best_case_minor",
               "evidence_minor",
               "excluded_count",
               "excluded_minor",
@@ -14366,6 +14368,9 @@
                     "due_at": {
                       "type": "string",
                       "format": "date-time"
+                    },
+                    "due_has_time": {
+                      "type": "boolean"
                     },
                     "quote": {
                       "type": "string"
@@ -15775,9 +15780,7 @@
     "properties": {
       "data": {
         "properties": {
-          "status": {
-            "type": "integer"
-          },
+          "status": {},
           "truncated": {
             "type": "boolean"
           }
@@ -15920,6 +15923,9 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "due_has_time": {
+                  "type": "boolean"
+                },
                 "quote": {
                   "type": "string"
                 },
@@ -15948,6 +15954,9 @@
                 "subject"
               ]
             }
+          },
+          "time_zone": {
+            "type": "string"
           }
         },
         "required": [

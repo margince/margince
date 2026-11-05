@@ -20,9 +20,9 @@ import { Modal } from "../../design-system/modal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import {
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
   formatDateTime,
-  formatMoneyOrAbsent,
-  formatNumber,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { useMemberNames } from "../../lib/membernames";
@@ -129,7 +129,7 @@ export function AccountCoverageView({
                 view === "single_threaded" && (
                   <p className="t-caption">
                     {plural("analytics.accounts.withheld", coverage.withheld, {
-                      count: formatNumber(coverage.withheld, locale),
+                      count: formatAnalyticsNumber(coverage.withheld, locale),
                     })}
                   </p>
                 )}
@@ -171,10 +171,10 @@ function thresholdsCaption(
 ): string {
   const limits = coverage.thresholds;
   return t("analytics.accounts.thresholds", {
-    seats: formatNumber(limits.max_engaged_seats ?? 1, locale),
-    untouched: formatNumber(limits.untouched_days ?? 21, locale),
-    silent: formatNumber(limits.silent_days ?? 30, locale),
-    won: formatNumber(limits.won_within_days ?? 180, locale),
+    seats: formatAnalyticsNumber(limits.max_engaged_seats ?? 1, locale),
+    untouched: formatAnalyticsNumber(limits.untouched_days ?? 21, locale),
+    silent: formatAnalyticsNumber(limits.silent_days ?? 30, locale),
+    won: formatAnalyticsNumber(limits.won_within_days ?? 180, locale),
   });
 }
 
@@ -188,16 +188,16 @@ function viewPurpose(
   switch (view) {
     case "single_threaded":
       return t("analytics.accounts.singleThreadedPurpose", {
-        seats: formatNumber(limits.max_engaged_seats ?? 1, locale),
+        seats: formatAnalyticsNumber(limits.max_engaged_seats ?? 1, locale),
       });
     case "untouched":
       return t("analytics.accounts.untouchedPurpose", {
-        days: formatNumber(limits.untouched_days ?? 21, locale),
+        days: formatAnalyticsNumber(limits.untouched_days ?? 21, locale),
       });
     case "silent":
       return t("analytics.accounts.silentPurpose", {
-        days: formatNumber(limits.silent_days ?? 30, locale),
-        won: formatNumber(limits.won_within_days ?? 180, locale),
+        days: formatAnalyticsNumber(limits.silent_days ?? 30, locale),
+        won: formatAnalyticsNumber(limits.won_within_days ?? 180, locale),
       });
   }
 }
@@ -251,7 +251,7 @@ function CoverageTable({
             key: "amount",
             header: t("reporting.dealValue"),
             render: (row: AccountCoverageRow) =>
-              formatMoneyOrAbsent(
+              formatAnalyticsMoneyOrAbsent(
                 row.deal?.amount_minor,
                 row.deal?.currency,
                 locale,
@@ -262,8 +262,8 @@ function CoverageTable({
             header: t("analytics.accounts.engagedSeats"),
             render: (row: AccountCoverageRow) =>
               t("analytics.accounts.seatsOf", {
-                engaged: formatNumber(row.engaged_seats ?? 0, locale),
-                named: formatNumber(row.named_seats ?? 0, locale),
+                engaged: formatAnalyticsNumber(row.engaged_seats ?? 0, locale),
+                named: formatAnalyticsNumber(row.named_seats ?? 0, locale),
               }),
           },
           owner,
@@ -275,7 +275,7 @@ function CoverageTable({
                 key: "open",
                 header: t("analytics.accounts.openDeals"),
                 render: (row: AccountCoverageRow) =>
-                  formatNumber(row.open_deals ?? 0, locale),
+                  formatAnalyticsNumber(row.open_deals ?? 0, locale),
               }
             : {
                 key: "won",
@@ -317,7 +317,7 @@ function lastExchange(
     ? formatDateTime(newest, locale, timezone)
     : t("analytics.accounts.daysAgo", {
         date: formatDateTime(newest, locale, timezone),
-        days: formatNumber(row.days_silent, locale),
+        days: formatAnalyticsNumber(row.days_silent, locale),
       });
 }
 
@@ -390,8 +390,8 @@ function evidenceFacts(
   if (view === "single_threaded") {
     facts.push(
       t("analytics.accounts.factSeats", {
-        engaged: formatNumber(row.engaged_seats ?? 0, locale),
-        named: formatNumber(row.named_seats ?? 0, locale),
+        engaged: formatAnalyticsNumber(row.engaged_seats ?? 0, locale),
+        named: formatAnalyticsNumber(row.named_seats ?? 0, locale),
       }),
     );
     if (row.deal?.stage) {
@@ -402,7 +402,7 @@ function evidenceFacts(
   if (view === "untouched") {
     facts.push(
       plural("analytics.accounts.factOpen", row.open_deals ?? 0, {
-        count: formatNumber(row.open_deals ?? 0, locale),
+        count: formatAnalyticsNumber(row.open_deals ?? 0, locale),
       }),
     );
   } else if (row.won_deal?.closed_at) {

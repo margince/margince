@@ -43,6 +43,8 @@ const (
 	TaskProposeRoles Task = "propose_roles"
 	// TaskRateExtract is extract foreign-exchange rates from a fetched rates page, evidence-gated; feeds the FX refresh proposal producer. Model prices are not extracted: a broker's catalogue states them.
 	TaskRateExtract Task = "rate_extract"
+	// TaskReaderRendering is activity_text — one note, email, meeting or call, written in one reader's language when that reader presses the button for it. It renders what the text means rather than its words: names, numbers, amounts, dates, addresses, links, commitments and questions are kept exactly, and a validator refuses a reply that lost a digit run, an email address or a link, or that is in another language than the target. A mail is rendered from its current message, without the quoted history. Nothing is stored and no payload is kept, because the text is a customer's correspondence and the rendering is for one reader. Text already in the target language is answered unchanged without a call; text past what one answer can carry is refused before the call. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic rendering to fall back to.
+	TaskReaderRendering Task = "reader_rendering"
 	// TaskReportInterpret is Read an evaluated report and write cited paragraphs for sales review, personal prospecting or team prospecting. Quantities must match supplied evidence, and action identifiers must come from the application. A proposed decision must name a supplied candidate deal. Without a supported explanation, measured figures and application actions remain usable.
 	TaskReportInterpret Task = "report_interpret"
 	// TaskReportSetup is Turn a manager's description into a typed, catalog-resolved proposal for a sales initiative or a custom report; nothing is written until the reader confirms. Every product, industry, metric, chart and objective the reply names is checked against the catalog the reader may use, and what fails is named back with a reason. Without a model the drawers offer no proposal.
@@ -101,6 +103,7 @@ var taskDisplayNames = map[Task]string{
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
 	TaskRateExtract:                   "Exchange rate extraction",
+	TaskReaderRendering:               "Showing a message in your language",
 	TaskReportInterpret:               "Assessing a sales report",
 	TaskReportSetup:                   "Setting up a report from a description",
 	TaskRequestSettlement:             "Checking whether the reply answered the request",
@@ -145,6 +148,7 @@ var taskSummaries = map[Task]string{
 	TaskOwedVerdict:                   "Decides whether an unanswered message actually asks us for something, or only informs us.",
 	TaskProposeRoles:                  "Suggests each contact's buying role — who signs, who champions, who can block.",
 	TaskRateExtract:                   "Reads exchange rates from a published rates page for the currency refresh.",
+	TaskReaderRendering:               "Shows a note, email or meeting in the reader's own language when they ask for it.",
 	TaskReportInterpret:               "Writes an assessment beside a report's leading chart, citing the figures it rests on.",
 	TaskReportSetup:                   "Turns a described sales initiative or custom report into a setup you check before saving.",
 	TaskRequestSettlement:             "Checks whether our reply actually answered what the other side asked for.",
@@ -190,7 +194,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "ce1210481a30f198f70183355a9dd4a27d15a297be2d7a42ac31cd587ec79776"
+const TaskContractHash = "421f5c2d027f0eaa49e44f137ab5e01451382e8d5ed81f61270a0397d40c47f0"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -216,6 +220,7 @@ func AllTasks() []Task {
 		TaskOwedVerdict,
 		TaskProposeRoles,
 		TaskRateExtract,
+		TaskReaderRendering,
 		TaskReportInterpret,
 		TaskReportSetup,
 		TaskRequestSettlement,
@@ -256,6 +261,7 @@ var taskLadders = map[Task][]Tier{
 	TaskOwedVerdict:                   {TierLocalSmall, TierCheapCloud},
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
+	TaskReaderRendering:               {TierCheapCloud, TierPremium},
 	TaskReportInterpret:               {TierPremium, TierCheapCloud},
 	TaskReportSetup:                   {TierCheapCloud, TierPremium},
 	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
@@ -305,6 +311,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskOwedVerdict:                   ExecutionModeBackground,
 	TaskProposeRoles:                  ExecutionModeInteractive,
 	TaskRateExtract:                   ExecutionModeBackground,
+	TaskReaderRendering:               ExecutionModeInteractive,
 	TaskReportInterpret:               ExecutionModeInteractive,
 	TaskReportSetup:                   ExecutionModeInteractive,
 	TaskRequestSettlement:             ExecutionModeBackground,
@@ -373,6 +380,7 @@ var taskStatus = map[Task]string{
 	TaskOwedVerdict:                   "shipped",
 	TaskProposeRoles:                  "shipped",
 	TaskRateExtract:                   "shipped",
+	TaskReaderRendering:               "shipped",
 	TaskReportInterpret:               "shipped",
 	TaskReportSetup:                   "shipped",
 	TaskRequestSettlement:             "shipped",
@@ -479,6 +487,9 @@ var taskSites = map[Task][]Site{
 	TaskRateExtract: {
 		{Name: "fx", Kind: "one_shot"},
 	},
+	TaskReaderRendering: {
+		{Name: "activity_text", Kind: "one_shot"},
+	},
 	TaskReportInterpret: {
 		{Name: "sales_assessment", Kind: "one_shot"},
 	},
@@ -570,6 +581,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskDocumentExtract:               true,
 	TaskOwedVerdict:                   true,
+	TaskReaderRendering:               true,
 	TaskReportInterpret:               true,
 	TaskRequestSettlement:             true,
 	TaskSignalExtract:                 true,
@@ -661,6 +673,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskOwedVerdict:                   {TokenBudget: 0, Conditional: false},
 	TaskProposeRoles:                  {TokenBudget: 0, Conditional: false},
 	TaskRateExtract:                   {TokenBudget: 0, Conditional: false},
+	TaskReaderRendering:               {TokenBudget: 0, Conditional: false},
 	TaskReportInterpret:               {TokenBudget: 0, Conditional: false},
 	TaskReportSetup:                   {TokenBudget: 0, Conditional: false},
 	TaskRequestSettlement:             {TokenBudget: 0, Conditional: false},

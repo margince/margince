@@ -877,6 +877,9 @@ export const en = {
     "No target is set yet. Team leads, management and admins set targets.",
   "reporting.periodYear": "Year",
   "reporting.periodMonth": "Month starting",
+  "reporting.expectedCloseOn": "Expected close",
+  "reporting.qualifiedOn": "Qualified on",
+  "reporting.owner": "Owner",
   "reporting.closedOn": "Closed on",
   "reporting.meetingOn": "Meeting date",
   "reporting.acceptedOn": "Accepted on",
@@ -976,6 +979,8 @@ export const en = {
   "reporting.pausedSchedules_other": "Paused schedules: {count}",
   "reporting.moreMetrics": "All metrics",
   "reporting.selectedValue": "Total",
+  "reporting.pageRecordsOf_one": "{count} of {total} records shown",
+  "reporting.pageRecordsOf_other": "{count} of {total} records shown",
   "reporting.pageRecords_one": "{count} record shown",
   "reporting.pageRecords_other": "{count} records shown",
   "reporting.currentState": "Current state",
@@ -1467,10 +1472,9 @@ export const en = {
   "reporting.compare.short": "Short of the {target} target",
   "reporting.compare.ahead": "Ahead of the {target} target",
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
-  "reporting.compare.basis.commit_evidence": "commit evidence",
+  "reporting.compare.basis.likely": "the Likely deals",
   "reporting.compare.basis.weighted": "the weighted pipeline",
-  "reporting.compare.basis.qualified_commit_evidence":
-    "supported commit evidence",
+  "reporting.compare.basis.qualified_likely": "the supported Likely deals",
   "reporting.compare.basis.qualified_weighted":
     "the supported weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
@@ -2040,7 +2044,7 @@ export const en = {
     "Estimated close date: {before} → {after} (needs confirmation)",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
-  "home.receipt.forecast": "Forecast category changed",
+  "home.receipt.forecast": "Probability changed",
   "home.task.yours": "Your task: {action}",
   "home.change.unknown": "Change author unknown.",
   "home.change.stageUnknown": "Unknown stage",
@@ -2182,7 +2186,6 @@ export const en = {
   "brief.week.lost_one": "{count} deal lost.",
   "brief.week.lost_other": "{count} deals lost.",
   "brief.row.details": "Details",
-  "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "forecast close {date} (unconfirmed)",
   "brief.readings.riskBasis": "Face value · not expected loss",
   "magic.action.forecast_changed": "Adjusted forecast",
@@ -2259,6 +2262,7 @@ export const en = {
   "systemJob.assign_owner_release": "Assignee release",
   "systemJob.assurance": "Forecast check",
   "systemJob.audience_rescope": "Audience update",
+  "systemJob.voice_copy_recheck": "Voice sample cleanup",
   "systemJob.authz_disagreement": "Send permission review",
   "systemJob.auto_apply": "Automatic approval",
   "systemJob.automation": "Automation",
@@ -2358,6 +2362,7 @@ export const en = {
   "agentJob.agent_task_retention": "Agent task cleanup",
   "agentJob.attachment_extractor": "Attachment reader",
   "agentJob.auto_apply": "Automatic approval",
+  "agentJob.margince": "Margince",
   "agentJob.capture_confidentiality_verdict": "Confidentiality check",
   "agentJob.capture_counterparty": "New contact from mail",
   "agentJob.capture_counterparty_verdict": "Mail sender check",
@@ -2374,6 +2379,7 @@ export const en = {
   "agentJob.lifecycle_change": "Lifecycle update",
   "agentJob.offer_drafting": "Offer drafting",
   "agentJob.overnight": "Overnight agent",
+  "agentJob.project_health": "Project health check",
   "agentJob.propose_roles": "Buying team reader",
   "agentJob.rate_refresh": "Exchange rate update",
   "agentJob.scrape": "Website capture",
@@ -2554,6 +2560,8 @@ export const en = {
   "history.field.filled": "Fields filled in",
   "history.field.guests_added": "Guests added from the calendar",
   "history.field.guest_links_added": "Guests linked from the calendar",
+  "history.field.meeting_documents_added":
+    "Meeting notes linked from the calendar",
   "history.field.guests_retired": "Guests removed by the calendar",
   "history.field.guest_answers_changed":
     "Guest answers updated from the calendar",
@@ -2590,8 +2598,10 @@ export const en = {
   "history.field.ended_at": "Ended",
   "history.field.expected_close_date": "Expected close",
   "history.field.first_name": "First name",
-  "history.field.forecast_category": "Forecast category",
   "history.field.full_name": "Name",
+  "history.field.win_probability": "Probability",
+  "history.field.win_probability_override": "Probability set on the deal",
+  "history.field.win_probability_set_by": "Probability set by",
   "history.field.fx_rate_date": "FX rate date",
   "history.field.fx_rate_to_base": "FX rate",
   "history.field.industry": "Industry",
@@ -2640,9 +2650,14 @@ export const en = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
   "history.field.qualifying_event": "Qualifying event",
+  "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
+  "history.field.acquisition_request_retracted":
+    "Acquisition request withdrawn",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
+  "history.field.due_has_time": "Due at a set time",
+  "history.field.call_outcome": "Call outcome",
   "history.field.remind_at": "Reminder",
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
@@ -3216,7 +3231,7 @@ export const en = {
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
-    "An administrator switched off individual performance. You can see your own figures, and totals that at least two other members contribute to.",
+    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -3351,6 +3366,8 @@ export const en = {
   "table.display": "Display",
   "table.density": "Density",
   "table.compact": "Compact",
+  "table.columnHandle": "Move {name}, {position} of {total}",
+  "table.columnMoved": "{name} moved to {position} of {total}",
   "table.sort": "Sort",
   "table.sortNamed": "Sort: {column}",
   "table.sortMenu": "Sort by",
@@ -3579,6 +3596,7 @@ export const en = {
   "stat.evidence": "Evidence",
   "stat.evidence.rests": "What this rests on",
   "stat.open": "Open",
+  "stat.forecast": "Forecast",
   "stat.records": "View records",
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
@@ -3658,6 +3676,7 @@ export const en = {
   "timeline.automatic.calendar": "Calendar invitation",
   "timeline.automatic.sending_system": "Sent by a system",
   "timeline.automatic.product": "Sent by Margince",
+  "timeline.automatic.bulk": "Sent to a mailing list",
   "timeline.group.bulk_other": "sent to {count} people",
   "timeline.group.bulk_one": "sent to {count} person",
   "timeline.group.expand": "Open",
@@ -3817,7 +3836,18 @@ export const en = {
   "standing.next.more_other": "+{count} tasks",
   "standing.exchange.them": "Waiting on them",
   "standing.exchange.us": "Your turn to answer",
-  "standing.exchange.open": "Open",
+  "standing.next.noTask": "No follow-up task recorded.",
+  "standing.next.addTask": "Add follow-up",
+  "standing.exchange.last.email": "Last email",
+  "standing.exchange.last.message": "Last message",
+  "standing.exchange.last.call": "Last call",
+  "standing.exchange.last.meeting": "Last meeting",
+  "standing.exchange.last.other": "Last activity",
+  "standing.exchange.view.email": "View email",
+  "standing.exchange.view.message": "View message",
+  "standing.exchange.view.call": "View call",
+  "standing.exchange.view.meeting": "View meeting",
+  "standing.exchange.view.other": "View activity",
   "record.tabs": "Record tabs",
   "record.panel.showDetails": "Show details",
   "record.panel.hideDetails": "Hide details",
@@ -4143,6 +4173,25 @@ export const en = {
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
+  "deal.products.emptyTakesOffer":
+    "Saving an empty list takes the products from an accepted offer, if there is one.",
+  "deal.products.title": "Products",
+  "deal.products.denied": "You may not see the products on this deal.",
+  "deal.products.empty":
+    "No products yet. The accepted offer sets them, or you can set them by hand.",
+  "deal.products.edit": "Set products",
+  "deal.products.editTitle": "Set the products this deal sells",
+  "deal.products.save": "Save products",
+  "deal.products.intro":
+    "Product reports count this deal under the products listed here.",
+  "deal.products.replacesOffer":
+    "The accepted offer set these products. Saving replaces them, and a later accepted offer leaves your list as it is.",
+  "deal.products.amount": "Amount for {name}",
+  "deal.products.remove": "Remove {name}",
+  "deal.products.add": "Add a product",
+  "deal.products.alreadyListed": "Already listed",
+  "deal.products.fromOffer": "From the offer",
+  "deal.products.setByHand": "Set by hand",
   "deal.commitments.title": "Customer commitments",
   "deal.commitments.empty":
     "The customer has no open commitments on this deal.",
@@ -4626,6 +4675,18 @@ export const en = {
   "email.detail.attachmentWithheld":
     "Not kept, because the message is private.",
   "email.detail.showQuoted": "Show quoted history",
+  "aiTask.name.reader_rendering": "Showing a message in your language",
+  "readerRendering.show": "Show in my language",
+  "readerRendering.pending": "Writing it in your language",
+  "readerRendering.showOriginal": "Show original",
+  "readerRendering.label": "In your language",
+  "readerRendering.disclaimer":
+    "Written by AI from the original, for you only. Nothing is saved.",
+  "readerRendering.alreadyYours": "This is already in your language.",
+  "readerRendering.noModel":
+    "Showing this in your language needs an AI model. An administrator can connect one under Settings → AI.",
+  "readerRendering.tooLong":
+    "This text is too long to show in your language in one go. Read the original.",
   "email.detail.withheldReason": "This message is not shared with you",
   "email.detail.from": "From",
   "email.detail.to": "To",
@@ -5132,6 +5193,14 @@ export const en = {
   "tags.catalogTruncatedTitle": "List shortened",
   "tags.catalogTruncated":
     "A tag may be missing. Search by name before requesting a new one.",
+  "tags.noMatchYouCanCreate": "No tag with that name.",
+  "tags.createNamed": "Create tag {name}",
+  "tags.shortlistInstead": "Add to a Shortlist instead",
+  "tags.manage": "Manage tags",
+  "tags.createdNotApplied":
+    "{name} was created but not added to this record: {reason} Pick it in the list to add it again.",
+  "tags.whoAdds":
+    "Need another tag? An administrator or operations user can add one in Settings → Tags.",
   "tags.noMatch":
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
@@ -5592,7 +5661,6 @@ export const en = {
   // and a form field carry no header to say it for them.
   "deal.companyWithheld": "Company withheld",
   "deal.partnerWithheld": "Partner withheld",
-  "deal.forecastCategory": "Forecast category",
   "deal.committee.title": "Buying committee",
   "deal.offers.rowTitle": "{number} · version {revision}",
   "deal.offers.rowSub": "Created {date} · net {net}",
@@ -5625,6 +5693,7 @@ export const en = {
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
   "deal.committee.card": "Committee",
+  "deal.committee.change": "Change or remove stakeholders",
   "deal.committee.legendEngaged": "Engaged",
   "deal.committee.legendQuiet": "Not engaged",
   "deal.committee.legendGap": "Missing seat",
@@ -5634,10 +5703,6 @@ export const en = {
   "deal.strip.close.overdue_other": "{days} days overdue",
   "deal.strip.close.provisional": "provisional, not confirmed by a human",
   "deal.strip.close.waiting": "buyer asked to wait until {date}",
-  "deal.forecast.commit": "commit",
-  "deal.forecast.bestCase": "best case",
-  "deal.forecast.pipeline": "pipeline",
-  "deal.forecast.omitted": "omitted from forecast",
   "deal.standing.dims": "Deal readings",
   "deal.standing.momentum": "Momentum",
   "deal.standing.momentum.active": "Active",
@@ -5661,7 +5726,20 @@ export const en = {
   "standing.daysNow_other": "{count} days · now",
   "deal.standing.baseValue": "Value in base currency",
   "deal.standing.figure.probability": "Probability",
-  "deal.standing.figure.stageDefault": "stage default",
+  "deal.winProbability": "Probability",
+  "deal.winProbability.hint": "Leave empty to use the stage’s probability.",
+  "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
+  "deal.winProbability.source.stage": "from the stage",
+  "deal.winProbability.source.human": "set by hand",
+  "deal.winProbability.source.margince": "lowered by Margince",
+  "deal.winProbability.stageValue": "stage {percent}",
+  "deal.winProbability.setByStage":
+    "Probability set to {percent} by the stage {stage}",
+  "deal.winProbability.band.90_plus": "90% or more",
+  "deal.winProbability.band.60_89": "60 to 89%",
+  "deal.winProbability.band.30_59": "30 to 59%",
+  "deal.winProbability.band.1_29": "1 to 29%",
+  "deal.winProbability.band.zero": "0%",
   "field.unset": "Not set",
   "deal.standing.figure.offer": "Offer {number} · version {revision}",
   "deal.standing.figure.next": "Next step",
@@ -5977,12 +6055,6 @@ export const en = {
   "deal.correctCloseDayHint":
     "Revenue by period follows this day, and the exchange rate is set again for it.",
   "deal.correctCloseDayConfirm": "Save close day",
-  "deal.fcCommit": "Commit",
-  "deal.fcBestCase": "Best case",
-  "deal.fcPipeline": "Pipeline",
-  "deal.fcOmitted": "Omitted",
-  "deal.fcSlipped": "Slipped",
-  "deal.fcUncategorised": "No category",
 
   "deals.pipeline": "Pipeline",
   "deals.filterStalled": "Stalled only",
@@ -6003,7 +6075,7 @@ export const en = {
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
   "deals.totalsNoRangeFilter":
-    "Loaded deals only. The stage totals cannot narrow by close date, value, currency or country, so none is shown.",
+    "Loaded deals only. The stage totals cannot narrow by close date, value, currency, country or a probability range other than a band, so none is shown.",
   "deals.filterCloseDate": "Close date",
   "deals.filterCloseDateAll": "Any close date",
   "deals.filterValue": "Value",
@@ -6027,8 +6099,8 @@ export const en = {
   "deals.filterPriorityAll": "Any priority",
   "deals.filterAcquisition": "Source",
   "deals.filterAcquisitionAll": "Any source",
-  "deals.filterForecast": "Forecast",
-  "deals.filterForecastAll": "Any forecast category",
+  "deals.filterProbability": "Probability",
+  "deals.filterProbabilityAll": "Any probability",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Any status",
   "deals.statusOpen": "Open",
@@ -6439,16 +6511,14 @@ export const en = {
   "brief.weekly.outlook.none":
     "No forecast snapshot is available for this period.",
   "brief.weekly.outlook.won": "Won value",
-  "brief.weekly.outlook.commit": "Commit remaining",
-  "brief.weekly.outlook.bestCase": "Best case",
-  "brief.weekly.outlook.bestCaseDetail": "Includes commit",
+  "brief.weekly.outlook.likely": "Likely",
   "brief.weekly.outlook.weighted": "Weighted deal value",
   "brief.weekly.outlook.landing": "Projected landing",
   "brief.weekly.outlook.open": "Open the forecast",
-  "brief.weekly.outlook.measure.commit_evidence": "From commit evidence",
+  "brief.weekly.outlook.measure.likely": "From Likely deals",
   "brief.weekly.outlook.measure.weighted": "From weighted deals",
-  "brief.weekly.outlook.measure.qualified_commit_evidence":
-    "From supported commit evidence",
+  "brief.weekly.outlook.measure.qualified_likely":
+    "From supported Likely deals",
   "brief.weekly.outlook.measure.qualified_weighted":
     "From supported weighted deals",
   "brief.weekly.outlook.measure.manager_call": "From the manager call",
@@ -7068,7 +7138,17 @@ export const en = {
     "The activity is logged, but {filename} was not attached. {reason}",
   "log.fileUncertain":
     "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
+  "log.callOutcome": "Outcome",
+  "log.callOutcomeNone": "No outcome",
+  "activity.callOutcome.reached": "Reached",
+  "activity.callOutcome.not_reached": "Not reached",
+  "activity.callOutcome.voicemail": "Left a voicemail",
+  "activity.callOutcome.call_back_later": "Call back later",
+  "activity.callOutcome.put_through": "Put through",
   "log.dueAt": "Due date",
+  "log.dueTime": "Time (optional)",
+  "log.dueTimeSkipped":
+    "The clocks go forward that day, so there is no {time}. The task is due at {actual}.",
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
@@ -7398,13 +7478,13 @@ export const en = {
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
+    "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent. Only an administrator can still send past this, one message at a time.",
+    "The recipient withdrew consent for this kind of message, so it cannot go to them.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. Only an administrator can still send past this, one message at a time.",
+    "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. Only an administrator can still send past this, one message at a time.",
+    "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.tooMany":
@@ -7594,9 +7674,6 @@ export const en = {
     "It may have been archived, or it is not shared with you. Choose a pipeline to see figures.",
   "analytics.overview.pipelineDefault": "Use the default pipeline",
   "analytics.overview.pipelineAll": "Use all pipelines",
-  "analytics.overview.quarterOnlyTitle": "Expected finish reads this quarter",
-  "analytics.overview.quarterOnlyBody":
-    "The expected finish and the gap to target are read for the current fiscal quarter. Show this quarter to see them.",
   "analytics.overview.setTarget": "Set targets",
   "analytics.overview.targetWho":
     "A colleague who manages targets, most often an admin or a sales manager, can set one.",
@@ -7639,7 +7716,6 @@ export const en = {
     "The count of unanswered leads is hidden from you",
   "analytics.prospect.unansweredFailed":
     "Unanswered leads could not be counted",
-  "analytics.prospect.tooFew": "Too few",
   "analytics.prospect.tooFewResponses":
     "Too few answered leads to give a typical time.",
   "analytics.prospect.upcoming": "Booked meetings",
@@ -7684,7 +7760,7 @@ export const en = {
   "analytics.team.todaysMembers":
     "These figures follow today’s team. A member who left takes their past work with them, and one who joined brings theirs.",
   "analytics.team.withheld":
-    "Individual performance is off, and these figures would show one colleague’s work.",
+    "Individual performance is off. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
   "analytics.team.submitted": "Submitted",
   "analytics.team.accepted": "Accepted",
   "analytics.team.returned": "Returned",
@@ -7707,6 +7783,8 @@ export const en = {
   "analytics.team.count": "Count",
   "analytics.team.membersWithheld":
     "Individual performance is off, so no member’s figures are shown.",
+  "analytics.team.viewMeetings": "View booked meetings",
+  "analytics.team.memberRecords": "{name}: view {metric} records",
   "analytics.team.members": "Members",
   "analytics.team.member": "Member",
   "analytics.team.meetings": "Meetings held",
@@ -7739,6 +7817,8 @@ export const en = {
     "{count} lead still waits for a first reply",
   "analytics.team.unansweredRow_other":
     "{count} leads still wait for a first reply",
+  "analytics.team.currentUnansweredBasis":
+    "Open leads awaiting a first reply now, regardless of arrival date",
   "analytics.team.unansweredBasis": "Wrote in during this period, no reply yet",
   "analytics.team.unansweredHidden":
     "Leads waiting for a reply are hidden from you.",
@@ -7764,7 +7844,7 @@ export const en = {
   "analytics.team.waitingListBasis":
     "Waiting now, oldest first. Each row names the prospect and who it waits on.",
   "analytics.team.qualified": "Qualified",
-  "analytics.team.unanswered": "Unanswered",
+  "analytics.team.unanswered": "Period arrivals awaiting reply",
   "analytics.team.target": "Monthly target",
   "analytics.team.targetOf": "{actual} of {target}",
   "analytics.team.noTarget": "No target",
@@ -7879,7 +7959,7 @@ export const en = {
   "analytics.field.days_in_stage": "Days in stage",
   "analytics.field.days_to_close": "Days to close",
   "analytics.field.direction": "Direction",
-  "analytics.field.forecast_category": "Forecast category",
+  "analytics.field.win_probability_band": "Probability band",
   "analytics.field.host_user_id": "Meeting host",
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
@@ -8184,12 +8264,10 @@ export const en = {
   "review.source.contracts": "contracts",
   "review.source.incumbent": "legacy system",
   "analytics.coverageNeverRun":
-    "No check has run yet. An unchecked installation is not the same as a healthy one.",
+    "Start the input check in Forecast to see source coverage.",
   "review.source.offers": "offers",
   "review.sourcesUnread":
     "Not checked: {sources}. Findings below cover only what was checked.",
-  "review.notCheckedYet":
-    "Nothing checked yet: the first check has not been run. The figures above reflect current records.",
   "review.firstCheck.title": "Start the input check",
   "review.firstCheck.body":
     "Starts nightly checks and creates a task for each affected deal.",
@@ -8239,7 +8317,7 @@ export const en = {
   "forecast.qualifiedUnknown_other":
     "{count} deals ({amount}) are not counted because the last check could not judge them.",
   "forecast.qualifiedAnswer":
-    "Won plus confirmed commits the customer still supports: {evidence}. Weighted: {weighted}.",
+    "Won plus Likely deals the customer still supports: {evidence}. Weighted: {weighted}.",
   "review.enforcementLabel": "Count only deals the customer supports",
   "review.enforcementHint":
     "A deal whose customer stopped answering leaves the line of deals the customer supports until someone reviews it. The other figures do not change.",
@@ -8302,23 +8380,26 @@ export const en = {
   "review.submit": "Save answer",
   "forecast.question": "Period forecast",
   "forecast.answerWithCall":
-    "Manager forecast: {call}. Won plus committed deals with confirmed close dates: {evidence}.",
+    "Manager forecast: {call}. Won plus Likely deals: {evidence}.",
   "forecast.answerNoCall":
-    "Won plus committed deals with confirmed close dates: {evidence}. No manager forecast submitted.",
+    "Won plus Likely deals: {evidence}. No manager forecast submitted.",
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
   "forecast.currentCall": "Manager forecast",
-  "forecast.currentCallDetailOver":
-    "Updated {date} · {gap} above won + confirmed commits",
+  "forecast.currentCallDetailOver": "Updated {date} · {gap} above won + Likely",
   "forecast.currentCallDetailUnder":
-    "Updated {date} · {gap} below won + confirmed commits",
+    "Updated {date} · {gap} below won + Likely",
   "forecast.callHistoryUnavailable":
     "This call was made before calls kept the pipeline they were made against, so what moved since cannot be said.",
-  "forecast.currentCallDetailEven":
-    "Updated {date} · matches won + confirmed commits",
-  "forecast.evidence": "Committed · confirmed dates",
-  "forecast.bestCaseAdds": "Best-case addition",
+  "forecast.currentCallDetailEven": "Updated {date} · matches won + Likely",
+  "forecast.likely": "Likely",
+  "forecast.likely.help":
+    "Open deals at {threshold} or more with a confirmed close date, counted in full",
+  "forecast.weighted": "Weighted",
+  "forecast.weighted.help": "Each open deal’s value times its probability",
+  "forecast.bySource":
+    "From stages {stage} · set by hand {human} · Margince {margince}",
   "forecast.makeup": "How the period adds up",
   "forecast.alreadyWon": "Already won",
   "forecast.updateCall": "Update forecast",
@@ -8347,7 +8428,7 @@ export const en = {
   "forecast.priced": "Priced",
   "forecast.confirmed": "Close date confirmed",
   "forecast.fxMissing": "Exchange rate missing",
-  "analytics.reportForecast": "Forecast categories",
+  "analytics.reportForecast": "Forecast by probability",
   "analytics.shareOfOpenPipeline": "Share of pipeline in this currency",
   "analytics.reportPipelineByCloseMonth": "Open pipeline by close month",
   "analytics.closeMonth": "Close month",
@@ -9694,6 +9775,7 @@ export const en = {
   "jobs.kind.list_evaluate": "Live list check",
   "jobs.kind.notification_email": "Notification email",
   "jobs.kind.privacy_retention": "Retention policy run",
+  "jobs.kind.project_health_scan": "Project health check",
   "jobs.kind.provider_lookup_sweep": "Enrichment of existing contacts",
   "jobs.kind.provider_run_poll_sweep": "Enrichment result check",
   "jobs.kind.provider_run_submit": "Enrichment provider request",
@@ -10143,6 +10225,9 @@ export const en = {
   "notifications.class.approval_pending.label": "Approvals waiting on you",
   "notifications.class.approval_pending.help":
     "Somebody needs your decision before their work can go on.",
+  "notifications.class.project_health.label": "Project health set by the AI",
+  "notifications.class.project_health.help":
+    "The AI marked a project of yours at risk, off track or back on track, with its reason and a way to undo it.",
   "notifications.class.automation.label": "Automations that ran",
   "notifications.class.automation.help":
     "A rule this company set fired, or could not.",
@@ -11050,8 +11135,20 @@ export const en = {
     "The provider’s change history expired. The next sync restarts from a new point.",
   "connectors.errInternal":
     "An internal error occurred. Capture stopped to avoid partial data.",
+  "connectors.errForbidden":
+    "Your role no longer lets Margince capture your mail, so capture is paused. It starts again by itself once an admin changes your role.",
   "connectors.errUnknown":
     "Capture failed for an unclassified reason. Retrying automatically.",
+  "connectors.roleCannotCapture":
+    "Your role does not let Margince capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.activity":
+    "Your role cannot create activities, so Margince cannot capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.contact":
+    "Your role cannot create contacts, so Margince cannot capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.lead":
+    "Your role cannot create leads, so Margince cannot capture your mail. Ask an admin to change your role.",
+  "connectors.roleCannotCapture.seat":
+    "Your seat is read-only, so Margince cannot capture your mail. Ask an admin for a full seat.",
 
   // The OAuth return outcome (Task 2): the callback lands back on
   // #/settings/connections/{outcome} — a dismissible inline note driven by
@@ -11068,6 +11165,8 @@ export const en = {
     "The provider declined the connection. Accept every requested permission, then connect again.",
   "connectors.oauthMisconfigured":
     "This installation cannot complete the connection because the provider’s API is not enabled. An administrator must enable it; the server log names the API.",
+  "connectors.oauthRoleCannotCapture":
+    "Your role does not let Margince capture your mail, so nothing was connected. Ask an admin to change your role.",
   "connectors.oauthBadClient":
     "The provider refused this installation’s app credentials. An administrator must check the client ID and secret in Settings under Sign-in and apps; reconnecting does not fix this.",
   "connectors.dismissOutcome": "Dismiss",
@@ -11198,6 +11297,7 @@ export const en = {
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
+  "blockedDomains.source.agent": "Agent",
   "blockedDomains.source.reservedDomain":
     "Reserved domain: company identification paused",
   "blockedDomains.source.forwardedIdentity":
@@ -11996,9 +12096,9 @@ export const en = {
   "setup.baseLanguage": "Base language",
   "setup.baseLanguageHint":
     "The language AI writes in when the whole team reads the text. Each person chooses their own display language, and customer replies follow the language of the thread.",
-  "setup.timezone": "Reporting timezone",
+  "setup.timezone": "Company time zone",
   "setup.timezoneHint":
-    "IANA timezone name. All reporting periods are computed in it. Guessed from this browser; change it if the team works elsewhere.",
+    "IANA time zone name. Report periods, scheduled jobs and documents sent out use it. Guessed from this browser; change it if the company works elsewhere. Everyone sets their own time zone for the times they see.",
   "setup.adminName": "Your name",
   "setup.adminEmail": "Your email",
   "setup.adminPassword": "Password",
@@ -12541,6 +12641,11 @@ export const en = {
   "cf.showInCreate": "In create forms",
   "cf.showInCreateHint":
     "Off keeps the field on the record page only, where it stays editable.",
+  "cf.activityKinds": "Shows on",
+  "cf.activityKindsHint": "Leave it empty to show the field on every type.",
+  "cf.activityKindsEvery": "Every type",
+  "cf.activityKindsFor": "Types “{label}” shows on",
+  "cf.activityKindsSaved": "“{label}” now shows on the types you chose",
   "cf.col.inCreate": "In create forms",
   "cf.showInCreateFor": "Show “{label}” in create forms",
   "cf.shownInCreate": "“{label}” shown in create forms",
@@ -12776,7 +12881,7 @@ export const en = {
   "jurisdiction.confirm.deadlines":
     "Request deadlines follow the new jurisdiction. A request type it sets no deadline for keeps the GDPR month.",
   "jurisdiction.confirm.messaging":
-    "Outgoing messages follow the new jurisdiction’s messaging rules.",
+    "Marketing rules follow each recipient’s country, so this change applies them to recipients in the new country.",
   "jurisdiction.floor.none": "no floor",
   "jurisdiction.floor.value": "{class}, {period}",
   "jurisdiction.floor.fromYearEnd":
@@ -12793,10 +12898,10 @@ export const en = {
   "jurisdiction.effects.carriedValue":
     "{floor}, for mail from before {before}, until {until}",
   "jurisdiction.effects.deadline": "Deadline: {kind}",
-  "jurisdiction.effects.messaging": "Messaging rules",
+  "jurisdiction.effects.messaging": "Marketing rules for recipients here",
   "jurisdiction.effects.messagingValue": "Rule set version {version}",
   "jurisdiction.effects.messagingNone":
-    "None. Every advertising message needs consent.",
+    "None. Advertising to recipients here needs consent.",
   "jurisdiction.effects.class": "Retention class",
   "jurisdiction.deadline.fromReceipt": "{period} from receipt",
   "jurisdiction.rule.gdpr": "GDPR, one calendar month",
@@ -13448,6 +13553,24 @@ export const en = {
   "settings.voice.exclusion.ownerRemoved": "Removed",
   "settings.voice.exclusion.corpusCleared":
     "Removed when the samples were cleared",
+  "settings.voice.sentMailLabel": "Learn from sent mail",
+  "settings.voice.sentMailConsent":
+    "Margince reads up to your 200 most recent sent mails, only from your own mailbox, only now and only because you press the button. Quoted replies, forwards and signatures are left out, and so is mail kept to its participants or marked confidential. Your own words are stored as writing samples and sent to the AI model when you build your Voice DNA. You can remove single mails or clear all samples at any time.",
+  "settings.voice.sentMailButton": "Learn from sent mail",
+  "settings.voice.sentMailReading": "Reading sent mail…",
+  "settings.voice.sentMailLearned_one":
+    "Learned from {count} of your sent mails. Build your Voice DNA to use it.",
+  "settings.voice.sentMailLearned_other":
+    "Learned from {count} of your sent mails. Build your Voice DNA to use them.",
+  "settings.voice.sentMailNothingNew":
+    "Nothing new to learn. Each sent mail found is already a sample or was removed by you.",
+  "settings.voice.sentMailNoOwnWords_one":
+    "{count} mail was left out: it holds only quoted text, a signature or too few words of your own.",
+  "settings.voice.sentMailNoOwnWords_other":
+    "{count} mails were left out: they hold only quoted text, a signature or too few words of your own.",
+  "settings.voice.sentMailNone":
+    "No sent mail to learn from. Only mail sent from your own connected mailbox counts, and mail kept private or marked confidential is left out.",
+  "settings.voice.sentMailFailed": "Sent mail was not read. {detail}",
   "settings.voice.addSource": "Add writing samples",
   "settings.voice.addFirstLabel": "First writing sample",
   "settings.voice.dropHint":
@@ -13524,6 +13647,8 @@ export const en = {
   "roles.system": "Built-in",
   "roles.archived": "Archived",
   "roles.custom": "Custom",
+  "roles.cannotCapture":
+    "Members with this role cannot connect a mailbox, and mailboxes already connected stop capturing.",
   "roles.members_one": "{count} member",
   "roles.members_other": "{count} members",
   "roles.empty": "No roles to show.",
@@ -13767,6 +13892,10 @@ export const en = {
     "This is the only admin. Make another member an admin first.",
   "users.role.own": "Another admin changes your role.",
   "users.role.outside": "This role is outside your access.",
+  "users.role.stopsCapture_one":
+    "Their {count} connected mailbox or calendar will stop capturing.",
+  "users.role.stopsCapture_other":
+    "Their {count} connected mailboxes and calendars will stop capturing.",
   "users.role.withheld": "Your role cannot change member roles.",
   "users.teamMemberCount_one": "{count} member",
   "users.teamMemberCount_other": "{count} members",
@@ -14241,9 +14370,9 @@ export const en = {
   "installationSettings.timeFormat.locale": "Use interface language",
   "installationSettings.timeFormat.24h": "24-hour · 17:30",
   "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
-  "installationSettings.timezone": "Reporting timezone",
+  "installationSettings.timezone": "Company time zone",
   "installationSettings.timezoneHint":
-    "IANA name, for example Europe/Berlin. Report periods and record dates use it for the whole team; each user keeps their own display timezone.",
+    "IANA name, for example Europe/Berlin. Report periods, scheduled jobs and documents sent out use it for the whole company. Everyone sees times in their own time zone, set under Settings → Account.",
   "installationSettings.fiscalYearStart": "Fiscal year starts",
   "installationSettings.fiscalYearStartHint":
     "Reports group by this year and quarter. Changing it relabels every report. A saved period such as 2026 keeps the months it covered.",
@@ -14265,30 +14394,32 @@ export const en = {
   "installationSettings.forwardMeasure": "Projection basis",
   "installationSettings.forwardMeasureHint":
     "Which open deals the projection adds to won revenue.",
-  "installationSettings.forwardMeasure.commit_evidence":
-    "Commit evidence: confirmed close dates only",
+  "installationSettings.forwardMeasure.likely":
+    "Likely: deals at the Likely threshold or above, with confirmed close dates",
   "installationSettings.forwardMeasure.weighted":
-    "Weighted: every open deal at its stage probability",
-  "installationSettings.forwardMeasure.qualified_commit_evidence":
-    "Supported commit evidence: confirmed close dates the customer still supports",
+    "Weighted: every open deal at its probability",
+  "installationSettings.forwardMeasure.qualified_likely":
+    "Supported Likely: Likely deals the customer still supports",
   "installationSettings.forwardMeasure.qualified_weighted":
-    "Supported weighted: open deals the customer still supports, at their stage probability",
+    "Supported weighted: open deals the customer still supports, at their probability",
   "installationSettings.forwardMeasure.manager_call":
     "Manager’s call: the number set for the period",
+  "installationSettings.likelyThreshold": "Likely threshold",
+  "installationSettings.likelyThreshold.help":
+    "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
-  "forecast.basis.commit_evidence": "Won + confirmed commit",
+  "forecast.basis.likely": "Won + Likely deals",
   "forecast.basis.weighted": "Won + weighted open deals",
-  "forecast.basis.qualified_commit_evidence":
-    "Won + supported confirmed commit",
+  "forecast.basis.qualified_likely": "Won + supported Likely deals",
   "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.manager_call": "Manager’s call",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
   "forecast.recordsProject": "Records alone project {amount}",
-  "forecast.callAbsentLine": "No call recorded, so commit is shown",
+  "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
   "forecast.model.month": "Modelled month finish",
@@ -14308,10 +14439,10 @@ export const en = {
   "forecast.model.basis":
     "Won money plus each priced open deal in this period, won or lost by its chance in use over many runs. 8 in 10 modelled outcomes fall in this range. It assumes the chances are right, and it is not a measured forecast accuracy.",
   "forecast.landingRecordsDetail":
-    "Won plus Commit deals with confirmed close dates, without the manager’s call",
+    "Won plus Likely deals, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
   "forecast.landing.caveat.call_absent":
-    "No call recorded for this period, so this shows commit evidence.",
+    "No call recorded for this period, so this shows the Likely deals.",
   "forecast.landing.caveat.qualified_unavailable":
     "The count of supported deals is off, so this shows all deals.",
   "forecast.landing.caveat.call_below_actual":
@@ -14842,7 +14973,12 @@ export const en = {
   // end polish: setup-popover
   "account.profileCard": "Profile",
   "account.signInCard": "Sign-in",
-  "account.languageCard": "Language",
+  "account.timezoneLabel": "Time zone",
+  "account.timezoneHelp":
+    "Times in Margince, your bookable hours and mail sent to you use this time zone. Saved to your account, so it follows you to every device you sign in on.",
+  "workingHours.zoneIs": "Your hours are read in {zone}.",
+  "workingHours.changeZone": "Change time zone",
+  "account.languageCard": "Language and time zone",
   "account.browserCard": "This browser",
   "account.passwordHelp":
     "For signing in as {email}. Changing it signs you out everywhere else and disconnects the apps and agents that act for you.",
@@ -15144,9 +15280,6 @@ export const en = {
   "workingHours.unsetTitle": "Not set yet",
   "workingHours.unset":
     "Customers are offered 09:00 to 17:00, Monday to Friday, in the installation timezone.",
-  "workingHours.timezone": "Timezone",
-  "workingHours.browserZone":
-    "Your browser is on {zone}. Availability uses the timezone chosen here.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
   "workingHours.narrowed": "Customers have fewer times to choose from.",
   "workingHours.day.1": "Monday",
@@ -15168,6 +15301,9 @@ export const en = {
   "autonomy.kind.close_date_correction.label": "Close dates",
   "autonomy.kind.close_date_correction.help":
     "Maintains deals overnight: estimates missing or overdue close dates from deal pace and reviews deals that have gone quiet. Turn off to stop this maintenance.",
+  "autonomy.kind.deal_close_lost.label": "Close silent deals as lost",
+  "autonomy.kind.deal_close_lost.help":
+    "Closes a deal as lost when the customer has not answered for 120 days (an admin can change the number), or at once when the customer declines. Each close shows on Home with an Undo.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -15969,6 +16105,9 @@ export const en = {
     "Project moved to another phase",
   "webhooks.event.project.phase_changed.when":
     "A project moves to a new phase.",
+  "webhooks.event.project.health_assessed.label": "Project health recorded",
+  "webhooks.event.project.health_assessed.when":
+    "A user or the AI records how a project is going, corrects a reading or undoes the AI’s.",
   "webhooks.event.project.archived.label": "Project archived",
   "webhooks.event.project.archived.when": "A project is archived.",
   "webhooks.eventGroup.contracts": "Contracts",
@@ -16172,6 +16311,9 @@ export const en = {
   "webhooks.event.user_greeting_name.changed.label": "Greeting name changed",
   "webhooks.event.user_greeting_name.changed.when":
     "A member’s greeting name is saved, or filled at their first provider sign-in.",
+  "webhooks.event.user_timezone.changed.label": "Time zone changed",
+  "webhooks.event.user_timezone.changed.when":
+    "A member’s own time zone is stored or changed.",
   "webhooks.event.user_locale.changed.label": "Interface language changed",
   "webhooks.event.user_locale.changed.when":
     "A member chooses the language of their own interface.",
@@ -17137,10 +17279,8 @@ export const en = {
   "filters.switch.body.leads":
     "The conditions are cleared, because they name lead fields.",
   "filters.switch.confirm": "Switch and clear",
-  "filters.showMore": "Show up to 100",
   "filters.save": "Save",
   "filters.unsavedFilter": "Unsaved filter",
-  "filters.footMore": "More for this filter",
   "filters.exporting": "Exporting…",
   "filters.saveAsNew": "Save as new view",
   "filters.saveTitle": "Save this filter",
@@ -17721,6 +17861,7 @@ export const en = {
   "projectHealth.state.offTrack": "Off track",
   "projectHealth.record": "Record reading",
   "projectHealth.correct": "Correct reading",
+  "projectHealth.undoAI": "Undo the AI reading",
   "projectHealth.recordTitle": "Record delivery health",
   "projectHealth.correctTitle": "Correct this reading",
   "projectHealth.stateLabel": "Health",
@@ -18131,6 +18272,8 @@ export const en = {
   "worklist.handled.hiddenRecord": "Record not available",
   "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
+  "worklist.handled.closeLostUndone":
+    "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check.",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
@@ -18257,6 +18400,8 @@ export const en = {
   "worklist.view.total.decisions_other": "{count} outstanding decisions",
   "worklist.view.total.system_one": "{count} unresolved issue",
   "worklist.view.total.system_other": "{count} unresolved issues",
+  "worklist.filter.linked.prospecting":
+    "Showing prospecting follow-ups and meeting work.",
   "worklist.filter.linked.urgent": "Showing urgent work only.",
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
@@ -18272,6 +18417,7 @@ export const en = {
   "worklist.category.deals_at_risk": "Deal at risk",
   "worklist.category.meetings": "Meeting",
   "worklist.category.tasks": "Task",
+  "worklist.category.upcoming": "Upcoming",
   "worklist.category.decisions": "Approval",
   "worklist.category.relationships": "Quiet relationship",
   "worklist.category.system": "System",
@@ -19167,6 +19313,7 @@ export const en = {
   "captureConcern.backfill": "History import failed",
   "captureConcern.stalled": "Sync has stopped",
   "captureConcern.silent": "No recent mail delivered",
+  "captureConcern.roleCannotCapture": "Role cannot capture mail",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Since {since}",
   "captureConcern.more_one": "{count} more connection needs attention",
@@ -20014,6 +20161,7 @@ export const en = {
   "analytics.overview.more": "More",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
+  "analytics.outlook.selectedSales": "Sales outlook",
   "analytics.outlook.sales": "Quarter outlook",
   "analytics.outlook.team": "Team prospecting outlook",
   "analytics.outlook.prospecting": "Prospecting outlook",

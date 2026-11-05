@@ -37,15 +37,14 @@ func TestAgentBearerIsRefusedOnHumanOnlyReads(t *testing.T) {
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	// One route per human-only class: the AI call log and routing, retention, the
-	// audit log and webhook subscriptions. Each
+	// One route per human-only class: the AI call log and routing, retention and
+	// webhook subscriptions. Each
 	// asserts 403, since the refusal comes before the handler looks for the row.
 	// A 404 would pass for the wrong reason.
 	for _, route := range []string{
 		"/v1/ai/calls",
 		"/v1/ai/routing",
 		"/v1/retention/settings",
-		"/v1/audit-log",
 		"/v1/webhook-subscriptions",
 		"/v1/passports",
 		// The consent screen's read model answers with the fixed

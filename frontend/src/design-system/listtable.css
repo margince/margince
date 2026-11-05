@@ -547,6 +547,25 @@
   display: flex;
 }
 
+/* A column row in the Display menu: the grip that moves it, then its tick.
+   The carried row lifts on a solid ground, since it passes over the others. */
+.lt-mcol {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  border-radius: var(--r-sm);
+}
+.lt-mcols.is-sorting {
+  cursor: grabbing;
+  user-select: none;
+}
+.lt-mcol.is-lifted {
+  position: relative;
+  z-index: 1;
+  background-color: var(--ground);
+  box-shadow: var(--shadow-pop);
+}
+
 /* WHAT THIS LIST IS SHOWING, where its picker would stand — the pipeline on the
  * deals board when an installation has only one of them. A control offering one
  * option refuses every press, so it is not drawn; the name it carried still is,

@@ -24,7 +24,7 @@ import (
 func TestARepWithNoDealsReadsCompanyTotalsAndIsToldTheirScopeIsEmpty(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
-	e.seedOpenDeal(t, "Colleague's", 20, &e.Rep3, &amount, nil)
+	e.seedOpenDeal(t, "Colleague's", 20, &e.Rep3, &amount)
 	rep := e.forecastReader(e.ownLensRepCtx(e.Rep1))
 
 	holds := func(scope forecasting.Scope) bool {

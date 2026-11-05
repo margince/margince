@@ -67,7 +67,7 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 		out = append(out, magic.DecidedReceipt{
 			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
-			Approval: receipt.Kind != deals.CloseDateCorrectionKind,
+			Approval: !deals.IsCorrectionReceiptKind(receipt.Kind),
 		})
 	}
 	return out, more, nil

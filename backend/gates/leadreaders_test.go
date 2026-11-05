@@ -57,6 +57,7 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/consent/ruleselectors.go:leadCountryCandidates":        "the marketing rule selector's lead arm: the country of the company a recipient lead is filed under picks which country's messaging rules judge the send. No lead column is selected beyond the join key; what leaves is a pack choice and the pack code a decision records",
 	"internal/modules/consent/gateaddress.go:AddressHasSubject":              "whether any contact or lead holds a calendar guest's address. A boolean that only ever sends the address to the consent gate; nothing of the lead is selected",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx": "An exact-address existence predicate only removes already held identities from a content-gated conversation suggestion. No lead id or column leaves the query, and a missing lead read grant must not suggest a duplicate contact.",
 	"internal/modules/contacts/leadorigin.go:DeleteLeadOrigin":               "`SELECT EXISTS (SELECT 1 FROM lead WHERE origin = $1)`: whether a lead still uses the origin being deleted, after the lead-vocabulary delete grant. One boolean that only refuses the delete as a conflict; nothing of a lead leaves",

@@ -72,7 +72,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-46 columns · primary key `(id)` · referenced by 29 foreign keys
+47 columns · primary key `(id)` · referenced by 29 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -81,7 +81,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `amount_minor` | `bigint` |  |  |
 | `amount_minor_base` | `bigint` |  |  |
 | `arr_source_offer_id` | `uuid` |  | The accepted offer `expected_arr_minor` came from, or null where a human set the figure. |
-| `close_date_provisional` | `boolean`, default `false` | yes | True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. |
+| `close_date_provisional` | `boolean`, default `false` | yes | True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. |
 | `closed_at` | `timestamp with time zone` |  |  |
 | `commercial_motion` | `text` |  | Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). |
 | `company_id` | `uuid` |  | Primary company; never a raw lead. |
@@ -90,7 +90,6 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `expected_arr_minor` | `bigint` |  | Expected annual recurring revenue in minor units of `currency`. |
 | `expected_close_date` | `date` |  | An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run. |
-| `forecast_category` | `text` |  | One of `commit`, `best_case`, `pipeline`, `omitted`. |
 | `fx_rate_date` | `date` |  |  |
 | `fx_rate_to_base` | `numeric(20,10)` |  | Native→base, frozen at close (null while open). |
 | `last_activity_at` | `timestamp with time zone` |  | The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. |
@@ -111,6 +110,8 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `stage_id` | `uuid` | yes | The deal's current stage; must belong to pipeline_id. |
 | `status` | `text`, default `'open'::text` | yes | One of `open`, `won`, `lost`. |
 | `wait_until` | `date` |  | 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag. |
+| `win_probability_override` | `smallint` |  |  |
+| `win_probability_set_by` | `text` |  | One of `human`, `margince`. |
 | `won_without_contract_detail` | `text` |  | Required when the reason is `other`, which explains nothing on its own. |
 | `won_without_contract_reason` | `text` |  | Why this deal was won with no contract behind it. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -148,7 +149,6 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_description_bounded`: `CHECK (((description IS NULL) OR (length(description) <= 20000)))`
 - `deal_expected_arr_minor_js_safe`: `CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint)))`
 - `deal_expected_arr_nonnegative`: `CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0)))`
-- `deal_forecast_category_check`: `CHECK (((forecast_category IS NULL) OR (forecast_category = ANY (ARRAY['commit', 'best_case', 'pipeline', 'omitted']))))`
 - `deal_lost_reason`: `CHECK (((status <> 'lost') OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL)))`
 - `deal_lost_reason_basis_check`: `CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded', 'mapped'])))))`
 - `deal_lost_reason_code_only_when_lost`: `CHECK (((lost_reason_code IS NULL) OR (status = 'lost')))`
@@ -162,6 +162,9 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `deal_status_check`: `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
 - `deal_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+- `deal_win_probability_override_range`: `CHECK (((win_probability_override IS NULL) OR ((win_probability_override >= 0) AND (win_probability_override <= 100))))`
+- `deal_win_probability_pairing`: `CHECK (((win_probability_override IS NULL) = (win_probability_set_by IS NULL)))`
+- `deal_win_probability_set_by_known`: `CHECK (((win_probability_set_by IS NULL) OR (win_probability_set_by = ANY (ARRAY['human', 'margince']))))`
 - `deal_won_without_contract_detail`: `CHECK (((won_without_contract_reason IS DISTINCT FROM 'other') OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''))))`
 - `deal_won_without_contract_only_when_won`: `CHECK (((won_without_contract_reason IS NULL) OR (status = 'won')))`
 - `deal_won_without_contract_reason`: `CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported', 'purchase_order', 'verbal', 'renewal_by_email', 'other']))))`
@@ -252,7 +255,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_correction
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -261,7 +264,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `applied_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `asking` | `text` | yes |  |
 | `audit_log_id` | `uuid` | yes | Points at `audit_log.id`. |
-| `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`. |
+| `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`, `close_lost`. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `fields` | `text[]` | yes |  |
 | `remaining_open_stages` | `text` | yes |  |
@@ -269,6 +272,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `reversed_at` | `timestamp with time zone` |  |  |
 | `reversed_by` | `text` |  |  |
 | `run_id` | `uuid` |  | Points at `close_date_run.id`. |
+| `stage_history_id` | `uuid` |  | Points at `deal_stage_history.id`. |
 | `standing_close_date` | `text` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -283,13 +287,14 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `deal_id` | `deal` | deleting the parent deletes this row |
 | `reversal_audit_id` | `audit_log` | deleting the parent keeps this row and clears the link |
 | `run_id` | `close_date_run` | deleting the parent keeps this row and clears the link |
+| `stage_history_id` | `deal_stage_history` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
 - `deal_correction_audit_once`: `UNIQUE (audit_log_id)`
 - `deal_correction_moves_something`: `CHECK ((cardinality(fields) > 0))`
 - `deal_correction_reversal_is_whole`: `CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))`
-- `deal_correction_tier_check`: `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review'])))`
+- `deal_correction_tier_check`: `CHECK ((correction = ANY (ARRAY['auto_apply', 'provisional_confirm', 'downgrade_and_review', 'close_lost'])))`
 - `deal_correction_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -299,6 +304,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_correction_pkey`: `unique, btree (id)`
 - `deal_correction_reversed`: `btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)`
 - `idx_deal_correction_deal`: `btree (deal_id)`
+- `idx_deal_correction_stage_history`: `btree (stage_history_id)`
 
 ## deal_loss_reason
 
@@ -514,7 +520,7 @@ The 28 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_stage_history
 
-25 columns · primary key `(id)` · referenced by 2 foreign keys
+25 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

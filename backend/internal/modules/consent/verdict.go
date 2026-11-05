@@ -107,7 +107,13 @@ const (
 // QualifyingEvent is the deterministic thing on the record that makes business
 // correspondence lawful.
 type QualifyingEvent struct {
-	Kind             string
+	// ID is set on an exchange recorded by hand, which is the one kind a
+	// caller may later retract.
+	ID   string
+	Kind string
+	// AsksForQuote and Retracted are read on a hand-recorded exchange only.
+	AsksForQuote     bool
+	Retracted        bool
 	OccurredAt       time.Time
 	SourceEntityType string
 	SourceEntityID   string

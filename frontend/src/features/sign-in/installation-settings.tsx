@@ -9,6 +9,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
+import { formatPercent } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -64,6 +65,7 @@ const EDITABLE_FACTS = [
   "time_format",
   "fiscal_year_start_month",
   "forecast_forward_measure",
+  "forecast_likely_threshold",
 ] as const;
 
 // Which fact the reader pressed Edit on. The dialog always edits all of them —
@@ -97,7 +99,8 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       // under the old answer may be drawn again.
       if (
         patch.individual_performance !== undefined ||
-        patch.forecast_self_correcting !== undefined
+        patch.forecast_self_correcting !== undefined ||
+        patch.forecast_likely_threshold !== undefined
       ) {
         void queryClient.invalidateQueries();
       }
@@ -326,6 +329,18 @@ function InstallationSettingsForm({
           control={editVerb(
             "forecast_forward_measure",
             t("installationSettings.forwardMeasure"),
+          )}
+        />
+        <SettingRow
+          label={t("installationSettings.likelyThreshold")}
+          description={t("installationSettings.likelyThreshold.help")}
+          value={formatPercent(
+            settings.forecast_likely_threshold / 100,
+            locale,
+          )}
+          control={editVerb(
+            "forecast_likely_threshold",
+            t("installationSettings.likelyThreshold"),
           )}
         />
       </SettingList>

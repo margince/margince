@@ -7,7 +7,7 @@ import { Disclosure } from "../../design-system/disclosure";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Claim = components["schemas"]["ConversationClaim"];
 
@@ -28,7 +28,7 @@ export function ContactClaimsReview({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const review = claimsForReview(claims);
   if (review.length === 0) return null;
   return (

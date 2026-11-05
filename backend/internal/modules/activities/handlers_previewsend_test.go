@@ -37,3 +37,21 @@ func TestThePreviewOffersAnOverrideOnlyWhereARecordedReasonIsAccepted(t *testing
 		}
 	}
 }
+
+// The preview carries the sender's claim beside the engine's reading. An
+// unproven active-deal claim never resolves, and the composer names the
+// missing deal from the claim.
+func TestThePreviewCarriesTheClaimBesideTheResolvedCategory(t *testing.T) {
+	t.Parallel()
+	out := previewResponse(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{{
+		Verdict: commsauthz.VerdictReview, ReasonCode: commsauthz.ReasonNoEvidence, Mode: commsauthz.ModeEnforce,
+		Requested: commsauthz.CategoryActiveDealFollowup, Resolved: commsauthz.CategoryRequestedFollowup,
+	}}})
+	got := out.Recipients[0]
+	if got.RequestedCategory == nil || *got.RequestedCategory != "active_deal_followup" {
+		t.Errorf("requested_category = %v, want active_deal_followup", got.RequestedCategory)
+	}
+	if got.ResolvedCategory == nil || *got.ResolvedCategory != "requested_followup" {
+		t.Errorf("resolved_category = %v, want it unchanged as requested_followup", got.ResolvedCategory)
+	}
+}

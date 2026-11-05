@@ -444,7 +444,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "deal.notYoursToChange",
     "history.field.lifted_by",
     "history.field.revoked_by",
-    "installationSettings.timezoneHint",
     "lead.bulkOutcomeConflict",
     "lead.notYoursToChange",
     "lists.members.addedBy",

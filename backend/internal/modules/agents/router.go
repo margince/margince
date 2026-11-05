@@ -356,6 +356,12 @@ func uniteArgument(seen, next argument) (argument, bool) {
 	// no bound takes any value, so the router sets none either.
 	loosest(united, next, schemaMinimum, func(a, b float64) float64 { return min(a, b) })
 	loosest(united, next, schemaMaximum, func(a, b float64) float64 { return max(a, b) })
+	// An enum unites the same way: a target that admits any word leaves the
+	// router admitting any word.
+	if seen[schemaEnum] == nil || next[schemaEnum] == nil {
+		delete(united, schemaEnum)
+		return united, true
+	}
 	var words, more []string
 	if json.Unmarshal(seen[schemaEnum], &words) != nil || json.Unmarshal(next[schemaEnum], &more) != nil {
 		return united, string(seen[schemaEnum]) == string(next[schemaEnum])

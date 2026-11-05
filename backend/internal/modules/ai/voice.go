@@ -47,6 +47,9 @@ type VoiceStore struct {
 	// knownSpeakers recognises a quoted speaker inside prose so their words leave
 	// the source; nil knows no one. Wired by WithKnownSpeakers.
 	knownSpeakers KnownSpeakers
+	// sentMail reads the owner's own sent mail when they ask to learn from
+	// it; nil reads none. Wired by WithSentMail.
+	sentMail SentMailReader
 }
 
 // NewVoiceStore opens the voice store on a handle already bound to the

@@ -53,13 +53,12 @@ const visitBaseline = `CASE WHEN v.visited_at >= now() - interval '30 minutes'
 // joinedCap bounds the members a list read names as joined since the visit.
 const joinedCap = 500
 
-// VisitList records that the signed-in user opened the list. Only a human
-// visits: an agent reading through a passport carries its human's user id,
-// and a visit written for it would spend that user's "since your last visit"
-// on a page they never opened.
+// VisitList records that the signed-in user opened the list. It spends their
+// "since your last visit", so an agent calls it only when they ask, and a read
+// through a passport writes no visit.
 func (s *Store) VisitList(ctx context.Context, id ids.ListID) (ListVisit, error) {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman || p.UserID == (ids.UUID{}) {
+	if !ok || !p.HumanOrItsAgent() || p.UserID == (ids.UUID{}) {
 		return ListVisit{}, fmt.Errorf("only a signed-in user visits a list: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.Require(ctx, listObject, principal.ActionRead); err != nil {

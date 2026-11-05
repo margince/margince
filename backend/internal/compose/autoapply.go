@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // autoApplyActorID names the machine in the audit trail. The row also carries
@@ -256,32 +255,7 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 // where an OnBehalfOf and a scope ceiling would mean nothing. This one must
 // carry both, because what it binds goes on to release a decision.
 func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("compose: applying under policy outside a bound workspace")
-	}
-	rbac, seat, err := a.users.EffectiveAuthority(ctx, wsID, owner)
-	if err != nil {
-		return nil, fmt.Errorf("compose: authority of the owner an apply would act for: %w", err)
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:       principal.PrincipalAgent,
-		ID:         autoApplyActorID,
-		UserID:     owner,
-		OnBehalfOf: owner,
-		SeatType:   seat,
-		TeamIDs:    rbac.TeamIDs,
-		// Write, and ONLY write. An agent credential's scopes are the ceiling
-		// its lender set, and deciding a staged action spends the write cap —
-		// so a credential carrying none is refused, which is what the empty
-		// zero value would have produced. Granting `send` here instead of
-		// leaving it out is what would matter: the eligible kinds change fields
-		// on one record and none of them puts a message on the wire, and a
-		// credential that could would be one an automatic pass could use to
-		// mail a customer.
-		Scopes:      principal.ScopeSet{principal.ScopeWrite: struct{}{}},
-		Permissions: rbac.Permissions,
-	}), nil
+	return ownersAgent(ctx, a.users, owner, autoApplyActorID)
 }
 
 // duePending lists pending proposals of the eligible kinds, oldest first.

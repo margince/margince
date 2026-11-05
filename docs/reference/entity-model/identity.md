@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-34 columns · primary key `(id)` · referenced by 153 foreign keys
+35 columns · primary key `(id)` · referenced by 153 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -36,6 +36,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `service_extension` | `text` |  |  |
 | `status` | `text`, default `'active'::text` | yes | One of `invited`, `active`, `suspended`, `deactivated`. |
 | `timezone` | `text` |  |  |
+| `timezone_chosen` | `boolean`, default `false` | yes |  |
 | `weekly_delivery` | `text` |  |  |
 | `weekly_delivery_day` | `integer` |  |  |
 | `work_days` | `smallint[]` |  |  |

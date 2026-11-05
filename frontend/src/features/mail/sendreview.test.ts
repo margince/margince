@@ -38,7 +38,8 @@ describe("sendReviewOf", () => {
           {
             address: "ben@example.test",
             reason_code: "no_compatible_evidence",
-            category: "active_deal_followup",
+            category: "requested_followup",
+            requested_category: "active_deal_followup",
             can_be_overruled: true,
           },
           { address: "ana@example.test", reason_code: "marketing_objection" },
@@ -51,7 +52,8 @@ describe("sendReviewOf", () => {
       {
         address: "ben@example.test",
         reasonCode: "no_compatible_evidence",
-        category: "active_deal_followup",
+        category: "requested_followup",
+        requestedCategory: "active_deal_followup",
         canBeOverruled: true,
       },
       {

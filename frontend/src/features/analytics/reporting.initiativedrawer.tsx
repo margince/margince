@@ -16,10 +16,14 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
-import { formatMoney, formatNumber } from "../../format/format";
+import {
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
+} from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
+import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { useAnalyticsContext } from "./analytics.context";
@@ -259,7 +263,7 @@ export function InitiativeDrawer({
     onSuccess: (next) => {
       setSaved(next);
       invalidate();
-      queryClient.invalidateQueries({ queryKey: ["reporting-evaluation"] });
+      queryClient.invalidateQueries({ queryKey: REPORTING_EVALUATION_KEY });
       if (live) onClose();
       else setStep("review");
     },
@@ -411,13 +415,13 @@ function Review({
       {members && (
         <p>
           {t("reporting.memberCounts", {
-            leads: formatNumber(members.leads, locale),
-            deals: formatNumber(members.deals, locale),
-            companies: formatNumber(members.companies, locale),
+            leads: formatAnalyticsNumber(members.leads, locale),
+            deals: formatAnalyticsNumber(members.deals, locale),
+            companies: formatAnalyticsNumber(members.companies, locale),
           })}
           {" · "}
           {t("reporting.knownDealValue", {
-            value: formatMoney(
+            value: formatAnalyticsMoney(
               value,
               context.data?.base_currency ?? "",
               locale,

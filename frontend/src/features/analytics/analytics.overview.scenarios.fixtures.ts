@@ -6,7 +6,7 @@
 // nothing. Stories and tests read this one map, so they describe one server.
 
 import type { ReportingFixtureFrame } from "../../testing/reporting.fixtures";
-import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import { jsonResponse } from "../../testing/story-utils";
 import {
   ADMIN_GRANTS,
   COVERAGE_GRANTS,
@@ -14,11 +14,8 @@ import {
   isMovement,
   landingBasis,
   metric,
-  overviewRoutes,
   teamHandoffs,
   teamReview,
-  twoPipelines,
-  upcomingWindow,
 } from "./analytics.overview.fixtures";
 import {
   isWeeks,
@@ -26,6 +23,11 @@ import {
   returnedHandoffs,
   upcomingMeetings,
 } from "./analytics.overview.prospectingdata";
+import {
+  type overviewRoutes,
+  twoPipelines,
+  upcomingWindow,
+} from "./analytics.overview.routes.fixtures";
 import {
   backlogList,
   boardCharts,
@@ -793,7 +795,7 @@ export const OVERVIEW_SCENARIOS = {
           comparison: {
             status: "target_reached",
             target_metric: "bookings_won",
-            basis: "commit_evidence",
+            basis: "likely",
             target: 80_000_000,
             landing: 96_000_000,
             won: 88_000_000,
@@ -808,7 +810,7 @@ export const OVERVIEW_SCENARIOS = {
     },
   },
   landingBases: {
-    about: "100 won, 40 confirmed commit and a call of 190 that is not added.",
+    about: "100 won, 40 Likely and a call of 190 that is not added.",
     views: {
       sales: sales(
         quarterSales({
@@ -967,33 +969,4 @@ export function scenarioStoryName(name: ScenarioName, view: OverviewView) {
 /** The address that opens a view, whatever a reader chose before. */
 export function overviewAddress(view: OverviewView): string {
   return `#/analytics/overview?overview=${view}`;
-}
-
-/**
- * Serves a setup to the app: its routes, and each evaluation answered by the
- * request it is, so the movement read gets its own answer.
- */
-export function installOverviewServer(setup: OverviewSetup): void {
-  installFetchStub(overviewRoutes(setup.routes));
-  const routed = globalThis.fetch;
-  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = new URL(
-      request ? request.url : String(input),
-      "http://localhost",
-    );
-    if (url.pathname.endsWith("/analytics/evaluate"))
-      return Promise.resolve(jsonResponse(setup.answer(url)));
-    // The returned list is the waiting route with a state; the stub's route
-    // map cannot see a query, so it is answered here.
-    if (
-      url.pathname.endsWith("/analytics/sdr-summary/handoffs") &&
-      url.searchParams.get("state") === "returned"
-    )
-      return Promise.resolve(
-        setup.returned?.() ??
-          jsonResponse({ as_of: url.searchParams.get("as_of"), rows: [] }),
-      );
-    return routed(input, init);
-  }) as typeof fetch;
 }

@@ -146,8 +146,8 @@ Anna" stops being true when Anna leaves:
 Resuming uses the held message again, so a resumed review stages one delivery and not a second copy
 of the message. A review can be read by the user who started it, or by a user who holds
 `communication_exception:read`. Any other user gets 404, not 403. The fact that a refused message
-about a named subject exists is itself something to keep private. A principal that is not human is
-refused before the query runs.
+about a named subject exists is itself something to keep private. A principal that is neither a user
+nor a user's agent is refused before the query runs.
 
 **An instruction overrides one refusal, by name.** It is a named user sending one refused message all
 the same. At times the installation has a reason the engine cannot see. It may be a contract clause, a legal
@@ -187,8 +187,11 @@ something that never happened:
 Directing a send answers to `communication_exception`, its own RBAC object, not a part of
 consent's settings. The two are different authorities. Consent's settings decide who may change the
 rules. This decides who may act against the answer those rules gave about one contact. An
-installation that handed over the first has not handed over the second with it. The check is
-`auth.RequireHuman` plus the grant, so a passport that holds an admin's grants cannot make one.
+installation that handed over the first has not handed over the second with it.
+
+The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
+carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
+`directed_by` names the user who took it on and `directed_by_agent` names the agent.
 
 Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
@@ -197,10 +200,15 @@ resolve it in `commsauthz.RemediesFor`.
 - A reason that lists the plain exception can be sent past by any holder of the grant. Examples are
   no evidence and no marketing consent.
 - A reason that lists only the admin exception can be sent past only by an admin. Examples are a
-  contact's own objection, withdrawal or stop request. A hard bounce and a frequency cap are two
-  more.
+  hard bounce and a frequency cap.
+- A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
+  objection, a withdrawal, a limit on processing and a request to stop.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
+The direction stores whether an admin gave it. Staging and the transmit check both ask
+`DecisionSet.ExceptionMayAnswer` again before the message goes. So a stop recorded later refuses
+the message, and so does a refusal only an admin may answer under a rep's direction. The direction
+is then not used.
 
 A contact can be written to about a thread when three things hold:
 
@@ -397,12 +405,13 @@ An installation runs under one jurisdiction, stored as `installation.country`. I
 `ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
 jurisdiction.
 
-The selected pack decides three things: the retention floor, the messaging rules and the request
-deadlines. A pack compiled in but not selected applies nothing.
+The selected pack is the jurisdiction of the installation's default legal entity. It decides the retention
+floor and the request deadlines. Messaging rules are chosen by two other selectors, one per message
+recipient (see [Which rules a send follows](#which-rules-a-send-follows)).
 
-- With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Messaging takes the
-  strict rules every jurisdiction shares. Retention keeps the longest floor of every compiled-in pack,
-  so a new release exposes no mail that was kept safe the day before.
+- With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Retention keeps the
+  longest floor of every compiled-in pack, so a new release exposes no mail that was kept safe the day
+  before.
 - A change to a weaker floor carries the old one. The change writes `privacy.retention_floor_carry`
   in the same transaction. Mail sent or received before the change keeps the old floor until its window
   closes. The carry is never lowered.
@@ -412,6 +421,30 @@ deadlines. A pack compiled in but not selected applies nothing.
 
 `privacy.ResolveFloorPolicy` resolves the floor once per decision. Every path that destroys data passes
 it down.
+
+### Which rules a send follows
+
+`consent/ruleselectors.go` holds two selectors. Each recipient of a message is put to them on their own.
+
+- **Marketing rules follow the recipient's jurisdiction.** They set the advertising cap, the
+  advertising label on the subject, how to object, the receipt for an opt-out, and the follow-up
+  windows. The jurisdiction is the first `address_country` the record states: the contact's own, then
+  that of their current primary employer. A lead takes the one of the company it is filed under. A
+  free-text value that is not a two-letter code is skipped.
+- **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
+  identity and privacy contact at the foot of the mail. The user who sends belongs to an entity
+  through their legal-entity membership. A user with no entity, and the installation's own mail, send
+  for the default entity, whose jurisdiction is `installation.country`. An installation with one
+  entity sets nothing more.
+
+A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
+duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
+adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
+and the least strict pack never stand in for the recipient's jurisdiction.
+
+Each decision row records the ruleset that judged its recipient (`ruleset_codes`, `ruleset_version`).
+`CheckMessage` reads those codes back, so the advertising label is owed if any recipient's pack asks
+for it. One message goes to every recipient, so its foot carries each recipient's marketing duties.
 
 ### Request deadlines
 

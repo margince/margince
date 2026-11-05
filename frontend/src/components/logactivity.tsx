@@ -22,6 +22,8 @@ import { useT } from "../i18n";
 import {
   type ActivityDraft,
   activityRequestBody,
+  draftHoldsWork,
+  draftSaysSomething,
   freshDraft,
   isActivityKind,
   KINDS_WITH_A_CONTACT,
@@ -38,14 +40,15 @@ import {
 import { useCanWrite } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
 import { useMe } from "../lib/session";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
 import "./logactivity.css";
-import { FollowUpTaskFields } from "./followuptaskfields";
+import { useViewerZone } from "../lib/viewerzone";
+import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
+import { CallOutcomeField } from "./logactivity.calloutcome";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
   type MeetingRecord,
@@ -130,7 +133,7 @@ export function LogActivityForm({
   const t = useT();
   const formId = useId();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
+  const recordZone = useViewerZone();
   const reportUnattached = useReportUnattached();
   const [draft, setDraft] = useState<ActivityDraft>(() =>
     freshDraft(recordZone, askedKind),
@@ -144,7 +147,7 @@ export function LogActivityForm({
     }
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
-  const custom = useActivityCustomFields();
+  const custom = useActivityCustomFields(draft.kind);
   // Who was in the room, asked for the kinds that are with a contact (see
   // KINDS_WITH_A_CONTACT). Only a company page cannot send one without a name.
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
@@ -230,7 +233,8 @@ export function LogActivityForm({
   });
 
   // The words are the work a reader would retype; the kind and day are a pick.
-  useUnsavedGuard(draft.subject.trim() !== "" || draft.body.trim() !== "");
+  // A call's outcome is what the rep came to record, so it counts too.
+  useUnsavedGuard(draftHoldsWork(draft));
 
   // Enter in a field submits past the Save button, so the form is latched too.
   const singlePress = useSinglePress(log.isPending);
@@ -248,7 +252,7 @@ export function LogActivityForm({
       // filing a meeting against somebody who was not there is worse.
       disabled={
         !log.isPending &&
-        (!draft.subject.trim() ||
+        (!draftSaysSomething(draft) ||
           (draft.kind !== "task" &&
             draft.followUp !== undefined &&
             !draft.followUp.subject.trim()) ||
@@ -324,6 +328,13 @@ export function LogActivityForm({
             />
           )}
         </Field>
+        {draft.kind === "task" && (
+          <TaskTimeField
+            day={draft.day}
+            value={draft.time}
+            onChange={(time) => setField({ time })}
+          />
+        )}
       </div>
       {recordOf.question}
       {/* WHO owes this task, asked beside when it is due. Only a task is held
@@ -347,7 +358,13 @@ export function LogActivityForm({
           disabled={log.isPending}
         />
       )}
-      <Field label={t("log.subject")} required>
+      {draft.kind === "call" && (
+        <CallOutcomeField
+          value={draft.callOutcome}
+          onChange={(callOutcome) => setField({ callOutcome })}
+        />
+      )}
+      <Field label={t("log.subject")} required={draft.kind !== "call"}>
         {(control) => (
           <TextInput
             {...control}

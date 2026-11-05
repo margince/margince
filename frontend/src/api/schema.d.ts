@@ -1736,8 +1736,8 @@ export interface paths {
          *     Anyone who can read the contact can read the recorded row. Both seats must be live
          *     members of the workspace and must differ.
          *
-         *     Recording the same pair for the same contact twice answers `409`. Recording is a
-         *     human's claim about two colleagues, so no agent tool does it.
+         *     Recording the same pair for the same contact twice answers `409`. Recording is a claim
+         *     about two colleagues, so an agent records one only when its user says it happened.
          */
         post: operations["recordIntroduction"];
         delete?: never;
@@ -3923,8 +3923,8 @@ export interface paths {
         put?: never;
         /**
          * Approve, pay, or void one entry.
-         * @description Human-only. Approving and paying commit money to a partner, and voiding takes it
-         *     back; none is a decision an assistant makes on someone's behalf.
+         * @description Approving and paying commit money to a partner, and voiding takes it back. An agent asks
+         *     its user first, and the audit row names it.
          *
          *     `void` requires a reason and writes a reversal row alongside the void, so the
          *     ledger records what was undone and why rather than losing the original.
@@ -4591,10 +4591,7 @@ export interface paths {
         /** The decisions recorded from a sales review, newest first, as tasks the reader may see. */
         get: operations["listSalesDecisions"];
         put?: never;
-        /**
-         * Record a decision from a sales review as a task on its deal. An open decision with the
-         *     same text on the same deal is returned instead of a second one.
-         */
+        /** Record a decision from a sales review as a task on its deal. An open decision with the same text on the same deal is returned instead of a second one. */
         post: operations["recordSalesDecision"];
         delete?: never;
         options?: never;
@@ -4628,13 +4625,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * The Sales review's assessment of one selection: a few sentences on what the measured
-         *     figures show, each citing the cells it rests on, and one next decision on a deal the
-         *     reader may see. Written by the model and kept per reader until the figures or the
-         *     recorded decisions move; without a model, or when the model's reply cannot be grounded,
-         *     it answers no sentences and `generated_by` says so, and the page shows its own summary.
-         */
+        /** The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary. */
         post: operations["assessSalesReview"];
         delete?: never;
         options?: never;
@@ -4651,13 +4642,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * A sales initiative or a custom report proposed from a description in plain words:
-         *     the filters, metrics and charts the words name, resolved against what the reader may
-         *     use, with the phrase each came from, the questions the words leave open and the phrases
-         *     nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without
-         *     a model it answers 409 `ai_not_configured`.
-         */
+        /** A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express. Nothing is saved; the reader reviews it in the drawer. Without a model it answers 409 `ai_not_configured`. */
         post: operations["proposeReportSetup"];
         delete?: never;
         options?: never;
@@ -4672,12 +4657,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * The accounts at risk in one population: single-threaded deals, accounts in pipeline
-         *     nobody has exchanged a word with, and won accounts gone silent. Each row carries the
-         *     facts behind its verdict. Counts for every view come with each answer; rows come for
-         *     the view asked for. The thresholds are the framework's, and the answer prints them.
-         */
+        /** The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them. */
         get: operations["getAccountCoverage"];
         put?: never;
         post?: never;
@@ -5102,6 +5082,35 @@ export interface paths {
          *     is refused, because two successors leave "which reading is current" with two answers.
          */
         post: operations["correctProjectHealthAssessment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{id}/health-assessments/{assessment_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a reading the health job wrote.
+         * @description Appends a successor with source `undo` that supersedes the AI reading. The reading that
+         *     stood before it stands again; when there was none, the project reads as not judged. An
+         *     undo row never counts as the current reading, and it keeps the health job from judging
+         *     the project again until new activity is filed on it. Only a current AI reading can be
+         *     undone: a user's reading, an undo row and a reading already superseded are refused
+         *     with 409.
+         */
+        post: operations["undoProjectHealthAssessment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6132,6 +6141,53 @@ export interface paths {
         get: operations["getMeetingBrief"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/reader-rendering": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show one note, mail or meeting in the reader's own language.
+         * @description Writes what one note, email, meeting or call says in the reader's language, for that
+         *     reader alone. It is not a word-for-word translation: names, numbers, amounts, dates,
+         *     addresses, links, commitments and questions are kept exactly, and the phrasing is
+         *     what a native speaker of the target language would write. Nothing is stored: no
+         *     copy, no audit row and no event, and the AI call keeps no payload. The original stays
+         *     where it is, one click away in the client.
+         *
+         *     The target is `locale` when sent, else the language the reader chose for their seat,
+         *     else the installation's base language. A mail is rendered from its current message,
+         *     without the quoted history below it.
+         *
+         *     The source language is read from the text as it stands; the stored `language` label
+         *     decides only when the text cannot be placed. When the text is already in the target
+         *     language the answer is `unchanged: true` and the original text, with no model call.
+         *     That holds for a known source language equal to the target, and for an unknown one the
+         *     model judges to be in the target already.
+         *
+         *     Answers 404 for an activity the caller cannot read the content of: missing, outside
+         *     their scope, outside its audience, held under a retention obligation, archived, or of
+         *     a kind with no text (`task`, a row with neither subject nor body). The activity is read
+         *     again after the model answers, and one that stopped being readable or whose text or
+         *     version changed meanwhile answers 404 too. With no AI model it answers 409
+         *     `ai_not_configured`. Text past the limit the model can write back in one answer is 422
+         *     `too_long`, also when it is already in the target language. A model that was asked
+         *     and did not answer is 503 `assistant_unavailable`.
+         */
+        post: operations["renderActivityForReader"];
         delete?: never;
         options?: never;
         head?: never;
@@ -9258,8 +9314,8 @@ export interface paths {
         put?: never;
         /**
          * Count and sample what a filter would select, before it is saved (LVS-EXT-9).
-         * @description The match count and a bounded first page for a candidate filter tree —
-         *     the filter a human is still editing, which nothing else in the contract
+         * @description The match count and one bounded page for a candidate filter tree —
+         *     the filter a user is still editing, which nothing else in the contract
          *     can evaluate. The object list operations take flat scalar parameters and
          *     cannot express a tree; membership needs a stored list; and the filtered
          *     export is audit-logged, so driving a live recount through it would write
@@ -9268,7 +9324,7 @@ export interface paths {
          *     POST because the filter tree is a structured body, not because anything
          *     is created. Nothing is: no row, no audit entry, no outbox event. That is
          *     the property that separates this from the export, and it is deliberate —
-         *     a preview a human triggers by typing must not be indistinguishable from
+         *     a preview a user triggers by typing must not be indistinguishable from
          *     an extraction they chose to perform.
          *
          *     Row-scoped like every read: the count and the page are what THIS caller
@@ -9276,6 +9332,10 @@ export interface paths {
          *     different numbers. `columns` and `rows` are the same projection the JSON
          *     filtered export writes for the same filter, so what you preview is what
          *     an export of it would contain.
+         *
+         *     Pages walk the matches in id order through `cursor` and `next_cursor`.
+         *     Every page applies the same row scope as the first, and carries the
+         *     same full `match_count`.
          */
         post: operations["previewFilter"];
         delete?: never;
@@ -9297,8 +9357,8 @@ export interface paths {
          * Propose filter clauses for a list described in plain words.
          * @description Reads a sentence ("companies in Germany with no activity in the last 45 days")
          *     and answers the filter tree it describes, for the builder to show as ordinary
-         *     editable clauses. Nothing is saved: a human reads the proposal, sees the match
-         *     count the preview answers for it, and presses Save themselves.
+         *     editable clauses. Nothing is saved: the reader looks at the proposal, sees the match
+         *     count the preview answers for it, and saves it themselves.
          *
          *     **The model proposes, the engine decides.** The model sees the record type,
          *     the sentence, this caller's own filter vocabulary (field names, types,
@@ -11795,8 +11855,8 @@ export interface paths {
         put?: never;
         /**
          * Keep an address or a domain out of capture.
-         * @description A `workspace` rule takes admin or ops; a `user` rule takes any human seat and names the
-         *     caller. Not retroactive: mail already captured stays. Idempotent on the folded value.
+         * @description A `workspace` rule takes admin or ops; a `user` rule takes any user or their agent and names
+         *     the caller. Not retroactive: mail already captured stays. Idempotent on the folded value.
          */
         post: operations["createCaptureExclusion"];
         delete?: never;
@@ -12072,7 +12132,7 @@ export interface paths {
         put?: never;
         /**
          * Keep one party's mail to the contacts on it.
-         * @description Any human seat, for their own mail only — the hold names the caller and binds their
+         * @description Any user or their agent, for their own mail only — the hold names the caller and binds their
          *     connections. A domain hold covers its subdomains.
          *
          *     Holds mail captured from here on. Narrowing what is ALREADY captured is a separate call:
@@ -12174,7 +12234,7 @@ export interface paths {
         put?: never;
         /**
          * Declare another address as your own.
-         * @description Takes a human seat and nothing more: claiming your own address needs no grant, and the claim
+         * @description Takes a user or their agent and nothing more: claiming your own address needs no grant, and the claim
          *     binds only your own mail. Not retroactive — mail already captured under the old reading
          *     stays, and a contact already minted from an alias stays until it is merged or removed.
          *     Idempotent on the folded value.
@@ -12448,7 +12508,8 @@ export interface paths {
          *     performed — the user removes the grant at the provider themselves. The stored credential
          *     IS deleted from the vault as part of this call, not merely retired for a later sweep.
          *     Idempotent. Already-captured activities are retained — they are real history; capture
-         *     simply stops. Human-only.
+         *     simply stops. Connecting again needs the provider's consent in a browser, so an agent asks
+         *     its user first.
          */
         post: operations["disconnectConnector"];
         delete?: never;
@@ -12487,7 +12548,7 @@ export interface paths {
          *
          *     Switched off, nothing from this mailbox is selected for the pass at all — the mail is
          *     not read for enrichment and then discarded, it is never read. Audited like every other
-         *     change to a connection. Human-only: an agent never changes a capture posture.
+         *     change to a connection.
          */
         put: operations["setConnectorSignatureEnrichment"];
         post?: never;
@@ -12572,7 +12633,7 @@ export interface paths {
         put?: never;
         /**
          * Dismiss the owner's current mailbox silence warning.
-         * @description Only the authenticated human owner's mailbox is changed. Dismissal lasts until
+         * @description Only the authenticated owner's mailbox is changed. Dismissal lasts until
          *     another mail delivery followed by three days of silence. Errors and stalled syncs
          *     cannot be dismissed. Repeating a dismissal of the same episode is harmless.
          *     The connection lifecycle audit records this setting without correspondence.
@@ -12620,8 +12681,8 @@ export interface paths {
          *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
          *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
          *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
-         *     separate, deliberate call. Human-only: an agent never decides what a contact's colleagues
-         *     may read of their correspondence.
+         *     separate, deliberate call. It decides what the owner's colleagues may read of their
+         *     correspondence, so an agent asks its user first.
          */
         put: operations["setConnectorMailPosture"];
         post?: never;
@@ -12670,7 +12731,7 @@ export interface paths {
          *
          *     A null `date` clears it. Setting, moving or clearing the date completes, archives and
          *     deletes nothing: it changes which new automatic suggestions are admitted. Audited like
-         *     every other change to a connection. Human-only, like every per-mailbox setting.
+         *     every other change to a connection.
          */
         put: operations["setConnectorHistoryBaseline"];
         post?: never;
@@ -12720,9 +12781,6 @@ export interface paths {
          *     It governs what this connector creates AFTERWARDS. Records already captured keep the
          *     filing they have — refiling a year of history under a word chosen today would claim
          *     they arrived with it.
-         *
-         *     Human-only: which word a source is filed under is a decision about a shared
-         *     vocabulary, not one an agent makes as a side effect of syncing.
          */
         put: operations["setConnectorContextTag"];
         post?: never;
@@ -14151,7 +14209,7 @@ export interface paths {
         put?: never;
         /**
          * Add a consumer-mail domain, or carve one out.
-         * @description Human session only — an agent never changes a workspace-wide capture posture. `kind:
+         * @description It changes a workspace-wide capture posture, so an agent asks its user first. `kind:
          *     extra` marks a domain the baseline missed as consumer mail; any seat holding
          *     `capture_settings:create` (every seeded role but read_only) may contribute a NEW one.
          *     `kind: never` takes a domain back out of the baseline and wins over it — the only way
@@ -14219,12 +14277,11 @@ export interface paths {
          *     same answer — so it stays open until new mail arrives or somebody here answers it. Without this list those rows are invisible, and a company that never
          *     appeared looks the same as one nobody ever asked about.
          *
-         *     Every role may read the list; changing an entry demands `company:update`
-         *     (admin/ops).
+         *     Every role may read the list; changing an entry demands `company:update`.
          */
         get: operations["listBlockedDomains"];
         /**
-         * Block a domain, or unblock one (admin/ops).
+         * Block a domain, or unblock one.
          * @description `admission: suppressed` refuses the domain a company; `admission: admitted` lets it in
          *     and KEEPS it in — a human decision is sticky, so no later verdict or heuristic may
          *     re-refuse a domain a contact deliberately admitted.
@@ -14360,7 +14417,7 @@ export interface paths {
          *     It does not destroy mail already captured. Purging what a rule matched is
          *     `POST /capture/exclusions/{id}/purge`, a separate and irreversible act.
          *
-         *     Takes a human seat and nothing more, because a personal exclusion is the caller's own
+         *     Takes a user or their agent and nothing more, because a personal exclusion is the caller's own
          *     boundary. Idempotent: pressing it twice answers the rule that already exists.
          */
         post: operations["discardDomainQuestion"];
@@ -15782,8 +15839,8 @@ export interface paths {
          * @description Every Art. 13 / Art. 14 duty the installation has not discharged, with who owns it and by
          *     when it falls due.
          *
-         *     Gated on `privacy_request` at `read` and human-only, the same gate the subject-request
-         *     queue uses. A notice case says how a named contact was obtained and whether we have told
+         *     Gated on `privacy_request` at `read`, for a user or their agent, the same gate the
+         *     subject-request queue uses. A notice case says how a named contact was obtained and whether we have told
          *     them, which is the same disclosure that queue makes about who exercised a right — so an
          *     installation that delegated its privacy inbox delegated this with it, and no second grant
          *     has to be handed out.
@@ -15916,7 +15973,7 @@ export interface paths {
         };
         /**
          * Disclosure duties this installation owes, soonest deadline first.
-         * @description Acquisition-source reviews and notice duties, under human privacy-request read authority.
+         * @description Acquisition-source reviews and notice duties, under privacy-request read authority.
          *     Unconfirmed sources have no deadline or sending route. Confirmed indirect sources stay owed;
          *     when their acquisition date is unknown, the deadline is labelled as a latest possible bound.
          *     Pages use due time for duties and recorded time for reviews, with id as the tie-breaker.
@@ -16026,7 +16083,7 @@ export interface paths {
          *     A caller holding neither door receives 404 rather than 403, because "forbidden" would
          *     confirm the id exists and disclose a message the caller may not see.
          *
-         *     Human-only. An agent that could read these would enumerate one seat's refused correspondence.
+         *     A connector is refused, because it would enumerate one seat's refused correspondence.
          */
         get: operations["getCommunicationReview"];
         put?: never;
@@ -16103,11 +16160,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     HUMAN-ONLY, AND THAT IS THE POINT. An agent running under somebody's passport inherits their
-         *     grants, so without this an agent could mint the very record that says a human decided. It
-         *     also needs the `communication_exception` object at `create`: directing a send is its own
-         *     authority, and a seat that may edit a contact has not thereby been given the right to act
-         *     against the engine's answer about them.
+         *     THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
+         *     row names that user as the one who took it on, and names the agent that acted for them. A
+         *     connector may not. It also needs the `communication_exception` object at `create`: directing
+         *     a send is its own authority, and a seat that may edit a contact has not thereby been given
+         *     the right to act against the engine's answer about them.
          *
          *     The acknowledgement is required and the explanation must say something. Both are frozen on
          *     the record once written: an account of an override that its author could improve afterwards
@@ -16502,7 +16559,8 @@ export interface paths {
         head?: never;
         /**
          * Rename a custom field or change whether create dialogs offer it (not a schema change).
-         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, or both;
+         * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, `reportable`
+         *     or `activity_kinds`;
          *     `column_name` never moves — the physical column identity is stable across rename.
          *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
          *     entirely, and a body with neither setting is refused with a 422. A retired field
@@ -16716,7 +16774,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Pin a record to the retention floor, restricting it. Requires a stated reason; audited. */
+        /** Pin an activity to the retention floor, restricting it. Requires a stated reason; audited. */
         post: operations["pinActivityToFloor"];
         delete?: never;
         options?: never;
@@ -17283,9 +17341,71 @@ export interface paths {
          *     whether an ordinary business email may be sent — which is the question the
          *     confirm-your-details flow has to answer before it can send anything at all.
          *
-         *     Human-only. An agent never asserts that a contact met somebody or rang up.
+         *     An agent asks its user first, and its row names it, because the row is evidence.
          */
         post: operations["recordQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/qualifying-events/{event_id}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back an exchange a colleague recorded by hand.
+         * @description Withdraws an `in_person` or `requested_by_subject` exchange that was recorded by mistake, or
+         *     that the contact took back. The row stays on the record with the moment and the seat that
+         *     withdrew it, and no send rests on it any more, including a message already queued on it.
+         *     A request has no age limit, so this is one of the two ways one stops counting. The other is
+         *     POST /contacts/{id}/acquisition-request/retract, for the request the contact's acquisition
+         *     records. Recording the same exchange again returns the withdrawn row and does not revive it.
+         *
+         *     Open to a user's agent as recording is, and the agent asks first: the exchange is the
+         *     user's statement about what a contact said.
+         */
+        post: operations["retractQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/acquisition-request/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back the request the contact's acquisition records.
+         * @description A contact acquired as `requested_quote_or_meeting` or `in_person_permission` counts as having
+         *     asked to hear from us, with no age limit. This withdraws that request, for one recorded by
+         *     mistake or one the contact took back. The acquisition rows stay as the record of how the
+         *     contact was obtained, with the moment and the seat that withdrew the request. No send rests
+         *     on them any more, including a message already queued on them.
+         *
+         *     Open to a user's agent as a hand-recorded request is, and the agent asks first: a request
+         *     is the user's statement about what a contact said.
+         */
+        post: operations["retractAcquisitionRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18114,9 +18234,10 @@ export interface paths {
         put?: never;
         /**
          * Mail an invited member a new set-password link. Admin-only, human-only.
-         * @description For an invited member whose invitation email the relay refused, and only then: the live
-         *     link's `invite_email_state` must be `failed`. Mints a new single-use
-         *     set-password link exactly as `issueUserPasswordLink` does (it supersedes the old one,
+         * @description For any invited human member, whatever became of the last invitation: a link that
+         *     expired, a mail that was sent or refused, or a member who was never mailed. Mints a new
+         *     single-use set-password link exactly as `issueUserPasswordLink` does (it supersedes any
+         *     older one,
          *     writes the same audit row and emits `user.password_link_issued`), then mails it instead
          *     of returning it. Shares that operation's rate limits per actor and per target. Nothing
          *     retries on its own: an admin sends again from the roster.
@@ -18569,6 +18690,42 @@ export interface paths {
          *     which speaker they are. Pure inspection - no persistence, no model call.
          */
         post: operations["previewVoiceCorpusSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/voice-profiles/{id}/sources/sent-mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Learn the owner's voice from their own most recent sent mail, once, on request.
+         * @description Reads up to the caller's 200 most recent sent mails and files the words they wrote
+         *     in each as an email source of their own voice profile. It reads only mail sent from
+         *     the caller's own connected mailbox: never a colleague's mail, a colleague's copy, or
+         *     a shared mailbox. Mail limited to its participants or to selected readers, and mail
+         *     whose subject marks it confidential, is left out.
+         *
+         *     Quoted replies, forwards, signatures and legal footers are cut before a mail is
+         *     stored. A mail that is already a source is left as it is, so a mail the owner removed
+         *     or excluded stays out. The call reads mail only when it is made; nothing reads sent
+         *     mail on a schedule. It makes no model call: the stored text reaches a model only in
+         *     the next build the owner starts.
+         *
+         *     Human-only for security: reading a mailbox into a voice profile is the owner's own
+         *     decision, made by pressing the button.
+         */
+        post: operations["learnVoiceFromSentMail"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20158,10 +20315,10 @@ export interface paths {
          *     `won` counts deals by the day they ACTUALLY closed, never by the day they were
          *     expected to: a deal expected in March and won in April belongs to April, and
          *     counting it in March reports money the quarter did not bring in. `evidence` is the
-         *     committed pipeline whose close dates somebody confirmed — a provisional date is a
-         *     guess, which is what that reading exists to exclude, though the deal stays in
-         *     `open`. `best_case` adds the best-case category. `weighted` applies each deal's
-         *     chance in use, with the strongest learned risk effect, rounded per deal. While
+         *     Likely reading: open deals at `likely_threshold` percent or more whose close dates
+         *     somebody confirmed, counted in full. A provisional date is a guess, which is what
+         *     that reading exists to exclude, though the deal stays in `open`. `weighted` applies
+         *     each deal's chance in use, with the strongest learned risk effect, rounded per deal. While
          *     `self_correcting` is true the chance in use is the stage's typed chance moved toward
          *     the outcomes of deals recorded entering that stage; with no such outcome, and while it
          *     is false, it is the typed chance.
@@ -22442,15 +22599,46 @@ export interface paths {
          *     colleague's working hours through this API, for the reason the setting
          *     exists at all.
          *
-         *     The times are read on the timezone sent with them, which is also stored:
-         *     it is the contact's own zone and the product had no author for it before
-         *     this. Sending the browser's zone is the expected first write.
+         *     The times are read on the caller's own time zone, which is set through
+         *     `saveMyTimezone` and is not part of this request.
          *
          *     Narrowing these hours narrows what a customer can book. A screen that
          *     does not say so at the moment of saving has built a trap rather than a
          *     setting.
          */
         put: operations["saveMyWorkingHours"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/timezone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the time zone your own times are shown in.
+         * @description Always the CALLER's own, never anybody else's. An admin does not set a
+         *     colleague's time zone through this API.
+         *
+         *     One zone per user. Booking reads your working hours on it, and mail
+         *     sent to you is timed by it.
+         *
+         *     `source` says who picked the zone. `browser` is the app's first guess
+         *     from the browser, and is stored only while no zone is stored. `chosen`
+         *     is the user's own pick: it is always stored and marks the zone as
+         *     chosen. Saving the zone already stored writes nothing.
+         *
+         *     Not open to agents: an agent acting for a user must not change the
+         *     clock that user's times, bookings and mail are read on.
+         */
+        put: operations["saveMyTimezone"];
         post?: never;
         delete?: never;
         options?: never;
@@ -23178,10 +23366,8 @@ export interface paths {
          *     that `version` changes nothing and answers 200.
          *
          *     Supersede and `import_source_busy` work as they do for
-         *     `createImportRun`. This call never answers `import_agent_busy`: only a
-         *     human session calls it, and the test it queues is that human's. That
-         *     409 holds an agent to one test at a time, and an agent tests through
-         *     `createImportRun`, which documents it.
+         *     `createImportRun`, including `import_agent_busy`, which holds an agent to
+         *     one test at a time.
          */
         post: operations["validateImportRun"];
         delete?: never;
@@ -23963,6 +24149,19 @@ export interface components {
              * @enum {string}
              */
             source: "manual" | "catalogue" | "seed";
+            long_context?: components["schemas"]["AiModelRateLongContext"];
+        };
+        /**
+         * @description The second price band of a model that charges more for a call whose prompt is longer than
+         *     `above_tokens`. Above that size every token of the call pays these prices. Absent for a
+         *     model with one flat price. Read-only: a price written without `clear_long_context` keeps it.
+         */
+        AiModelRateLongContext: {
+            above_tokens: number;
+            input_per_mtok: string;
+            output_per_mtok: string;
+            cache_read_per_mtok: string;
+            cache_write_per_mtok: string;
         };
         AiModelRateListResponse: {
             data: components["schemas"]["AiModelRate"][];
@@ -23997,6 +24196,11 @@ export interface components {
             models: string[];
             /** @description Bound model ids the catalogue does not name. */
             unlisted: string[];
+            /**
+             * @description Model ids whose price carries a long-context band the catalogue does not publish, and
+             *     whose catalogue price changed. The sync kept them as they were; an admin re-prices them.
+             */
+            review?: string[];
         };
         AiPriceSync: {
             locks?: components["schemas"]["SettingLocks"];
@@ -24041,6 +24245,11 @@ export interface components {
              * @description A UTC calendar day. Defaults to today's UTC date and must not be before it (append-forward).
              */
             effective_date?: string;
+            /**
+             * @description True drops the model's long-context band, so every call pays the prices above. Omitted
+             *     or false keeps the band the model already carries.
+             */
+            clear_long_context?: boolean;
         };
         /**
          * @description Who posts to the form and how a post is admitted. `browser`: a visitor's browser, from an
@@ -24421,6 +24630,11 @@ export interface components {
              */
             individual_performance: boolean;
             /**
+             * @description The win probability, in percent, from which an open deal with a confirmed close date
+             *     counts in the Likely forecast. 90 by default.
+             */
+            forecast_likely_threshold: number;
+            /**
              * @description Let the forecast correct itself. On by default. On, each open stage's chance moves
              *     toward the outcomes of deals recorded entering it in the last two years, weighted
              *     against the typed chance as if that were 20 deals; imported and older moves without
@@ -24509,25 +24723,24 @@ export interface components {
             /**
              * @description Which remaining-pipeline reading a projected landing is built from. A setting
              *     rather than a fixed choice, because it is a question about how this installation
-             *     SELLS rather than about the software: a team with a disciplined commit stage means
-             *     something by it, and one that commits everything does not — their weighted number
-             *     is the honest one.
+             *     SELLS rather than about the software: a team whose probabilities are honest at the
+             *     top means something by Likely, and one that rates everything high does not, so
+             *     their weighted number is the honest one.
              *
-             *     `commit_evidence` is the strictest baseline: committed deals whose close date
-             *     somebody confirmed, a provisional date being a guess that stays out.
-             *     `qualified_commit_evidence` and `qualified_weighted` are the same two readings over
-             *     the deals the customer still supports (the `qualified` block on `GET /forecast`).
-             *     `manager_call` takes the authored call as the whole period's landing and is not
-             *     added to what is already won; with no current call the read falls back to
-             *     `commit_evidence` and says so in the landing's `caveat`.
+             *     `likely` is the strictest baseline: open deals at `forecast_likely_threshold`
+             *     percent or more whose close date somebody confirmed, a provisional date being a
+             *     guess that stays out. `qualified_likely` and `qualified_weighted` are the same two
+             *     readings over the deals the customer still supports (the `qualified` block on
+             *     `GET /forecast`). `manager_call` takes the authored call as the whole period's
+             *     landing and is not added to what is already won; with no current call the read
+             *     falls back to `likely` and says so in the landing's `caveat`.
              *
-             *     With no measure saved, the landing uses `qualified_commit_evidence` while the
-             *     installation enforces viability reviews and `commit_evidence` otherwise; this field
-             *     then reads `commit_evidence`. A saved measure is used as saved. The set can grow, so a
+             *     With no measure saved, the landing uses `qualified_likely` while the installation
+             *     enforces viability reviews and `likely` otherwise; this field then reads `likely`. A saved measure is used as saved. The set can grow, so a
              *     client shows an unknown value by its name.
              * @enum {string}
              */
-            forecast_forward_measure: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            forecast_forward_measure: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
         };
         /** @description A sparse installation-settings patch (admin/ops, human-only). */
         UpdateInstallationSettingsRequest: {
@@ -24579,6 +24792,8 @@ export interface components {
             individual_performance?: boolean;
             /** @description Let the forecast correct itself. Omit to leave it unchanged. Each change is audited. */
             forecast_self_correcting?: boolean;
+            /** @description The probability from which a deal counts as Likely. Omit to leave it unchanged. Each change is audited. */
+            forecast_likely_threshold?: number;
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
@@ -24706,7 +24921,7 @@ export interface components {
              *     at once and re-means no stored row.
              * @enum {string}
              */
-            forecast_forward_measure?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            forecast_forward_measure?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
         };
         CaptureActivityResponse: {
             funnel: components["schemas"]["CaptureActivityFunnel"];
@@ -25932,7 +26147,8 @@ export interface components {
             company_name?: string;
             /**
              * @description What decided it, or — for an `undecided` domain — what stopped the machine deciding.
-             *     `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
+             *     `human` decisions outrank every other. `agent`, an agent deciding for its user, outranks
+             *     every machine one. `unevidenced` means nothing the crawl
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
@@ -25940,7 +26156,7 @@ export interface components {
              *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -26045,6 +26261,8 @@ export interface components {
             since: string | null;
             /** Format: date-time */
             last_success_at: string | null;
+            /** @description The class of the last failed sync (as `CaptureConnection.last_sync_error_class`), so a `forbidden` mailbox reads as a role problem and not a broken connection. Null while none failed. */
+            error_class?: string | null;
         };
         /**
          * @description A per-user mail/calendar capture connection + sync state (capture.md CAP-DDL-2). The
@@ -26098,7 +26316,7 @@ export interface components {
              * @description Last successful sync for this mailbox; null before one succeeds.
              */
             last_success_at?: string | null;
-            /** @description rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log. */
+            /** @description rate_limited | unreachable | auth | history_gone | forbidden | internal — class only, detail in system_log. `forbidden`: the member's role or seat no longer lets capture write; the connection is `error` at once and checked again at the normal mail interval. */
             last_sync_error_class?: string | null;
             /**
              * Format: date-time
@@ -26598,6 +26816,9 @@ export interface components {
              *     that is still the last word with them. A calendar invitation, update, cancellation
              *     or answer is `none` unless someone confirmed it asks us something. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
+             *     A message older than the waiting horizon that nobody kept is `none` too: it is
+             *     no longer current work, the same bound the waiting queue and `waiting_reply` apply.
+             *     The message stays on the timeline; `none` does not mean it was answered.
              * @enum {string}
              */
             move: "needs_reply" | "waiting_for_them" | "none";
@@ -26799,6 +27020,13 @@ export interface components {
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
             readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             thread_key?: string | null;
+            /**
+             * @description The language the message is written in, as `Activity.language` records it. Null
+             *     when withheld, and when it could not be told. A client offers the reader's own
+             *     language beside a message in another one or in an unknown one.
+             * @enum {string|null}
+             */
+            readonly language?: "de" | "en" | "vi" | null;
             from: components["schemas"]["EmailParty"][];
             to: components["schemas"]["EmailParty"][];
             cc: components["schemas"]["EmailParty"][];
@@ -27069,6 +27297,26 @@ export interface components {
              *     between, so the connect screen can say so before the click rather than after a 501.
              */
             providers?: components["schemas"]["CaptureProviderAvailability"][];
+            seat_capture?: components["schemas"]["SeatCapture"];
+        };
+        /**
+         * @description Whether the caller's own role and seat let capture write, asked by the same check connect
+         *     and every sync ask. False hides every connect button; a connected mailbox stops at its
+         *     next sync.
+         */
+        SeatCapture: {
+            allowed: boolean;
+            /**
+             * @description Why `allowed` is false; null when it is true.
+             * @enum {string|null}
+             */
+            reason?: "role_cannot_capture" | null;
+            /**
+             * @description What the caller lacks when `allowed` is false: create on `activity`, `contact` or
+             *     `lead`, or `seat` for a read seat. Null when `allowed` is true.
+             * @enum {string|null}
+             */
+            missing?: "activity" | "contact" | "lead" | "seat" | null;
         };
         /**
          * @description Whether a connect started right now would proceed, decided by the same predicate the connect
@@ -27087,10 +27335,11 @@ export interface components {
              * @description `ready`: a connect would start. `app_missing`: this installation has registered no OAuth
              *     app for the vendor. `app_unusable`: an app IS stored and its secret would not open, which
              *     is a different fix from registering one. `unsupported`: this deployment does not serve the
-             *     provider at all.
+             *     provider at all. `role_cannot_capture`: the caller's role or seat cannot record what
+             *     capture writes, for every provider alike (`seat_capture` says so once).
              * @enum {string}
              */
-            reason: "ready" | "app_missing" | "app_unusable" | "unsupported";
+            reason: "ready" | "app_missing" | "app_unusable" | "unsupported" | "role_cannot_capture";
         };
         /**
          * @description The address this installation puts in outgoing links, and whether it answered when last asked.
@@ -29306,7 +29555,7 @@ export interface components {
          *     raises is placed in one of them.
          * @enum {string}
          */
-        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system";
+        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system" | "project_health";
         /**
          * @description Where a class of notification reaches its reader.
          *
@@ -31881,6 +32130,8 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
+            /** @description True when `due_at` names an agreed time of day, as on the task itself. The snooze beside this row keeps that time. */
+            due_has_time?: boolean;
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
@@ -34227,6 +34478,8 @@ export interface components {
             claim_id?: string;
             days_overdue?: number;
             due_at?: string;
+            /** @description True when due_at is an agreed time of day. */
+            due_has_time?: boolean;
             quote?: string;
             source: string;
             /** Format: uuid */
@@ -34400,6 +34653,8 @@ export interface components {
         /** @description What `review_commitments` answers: the open promises, overdue first, as of one instant. */
         OpenCommitments: {
             as_of: string;
+            /** @description The installation zone, where a due date is a day. */
+            time_zone?: string;
             commitments: components["schemas"]["AgentCommitment"][];
         };
         /** @description What `intro_path_to` answers: the colleagues who know someone at the company, warmest first. */
@@ -34508,6 +34763,8 @@ export interface components {
             operand: "string" | "boolean" | "integer" | "number" | "array";
             /** @description The closed vocabulary the filter takes, when it has one. */
             values?: string[];
+            /** @description When present, the filter is every key this pattern matches rather than `name` alone: an activity list takes each custom field by its `cf_` key, matched exactly. A key no active field names is refused. */
+            pattern?: string;
         };
         /** @description What `describe_record_fields` answers. */
         RecordFieldsVocabulary: {
@@ -34633,6 +34890,8 @@ export interface components {
              * @description The note logged on the deal, absent when the call carried none.
              */
             note_activity_id?: string;
+            /** @description The probability the move set from the new stage, as one sentence. Absent when the move changed no stage. */
+            probability_note?: string;
         };
         /** @description What `qualify_lead` takes besides the lead, which the path names. */
         QualifyLeadRequest: {
@@ -34831,12 +35090,42 @@ export interface components {
             /** @description The days worked, as ISO-8601 weekday numbers — 1 is Monday. */
             days: number[];
             /**
-             * @description The IANA zone the two times are read on. A contact who has never
-             *     chosen one is read on the installation's reporting timezone, which
-             *     is what makes the unset case work rather than scheduling everybody
-             *     on UTC.
+             * @description The IANA zone the two times are read on: the caller's own time zone.
+             *     A contact with no stored zone is read on the installation's
+             *     reporting timezone, which is what makes the unset case work rather
+             *     than scheduling everybody on UTC. Read-only here; it is set through
+             *     `saveMyTimezone`.
              */
             timezone: string;
+        };
+        /**
+         * @description The hours and days to store. The zone they are read on is the caller's
+         *     own time zone, set through `saveMyTimezone`.
+         */
+        SaveWorkingHoursRequest: {
+            /**
+             * @deprecated
+             * @description An older client's way to set the caller's time zone with the hours. When
+             *     present it is stored as the caller's own chosen zone, in the same
+             *     transaction, exactly as `saveMyTimezone` with `source: chosen` stores it.
+             */
+            timezone?: string;
+            /** @description The first minute of the working day, `HH:MM` on the contact's own clock. */
+            start_time: string;
+            /** @description The minute the working day ends, exclusive. `24:00` means until midnight. */
+            end_time: string;
+            /** @description The days worked, as ISO-8601 weekday numbers — 1 is Monday. */
+            days: number[];
+        };
+        SaveMyTimezoneRequest: {
+            /** @description An IANA zone name, such as `Europe/Berlin`. */
+            timezone: string;
+            /**
+             * @description `browser` is the app's guess from the browser, stored only while no
+             *     zone is stored. `chosen` is the user's own pick, always stored.
+             * @enum {string}
+             */
+            source: "browser" | "chosen";
         };
         /** @description The caller's own working hours, and whether they are theirs or the fallback. */
         MyWorkingHoursResponse: {
@@ -35577,7 +35866,10 @@ export interface components {
             /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
             id: string;
             label: string;
+            /** @description Raw source quantity with its unit. */
             value: string;
+            /** @description Locale-formatted quantity for reader text. */
+            display?: string;
         };
         ReportSetupRequest: {
             /**
@@ -36036,14 +36328,21 @@ export interface components {
             readonly won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other" | null;
             /** @description Required when the reason is `other`, which explains nothing on its own. */
             readonly won_without_contract_detail?: string | null;
-            /** @enum {string|null} */
-            forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";
+            /** @description The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability. */
+            readonly win_probability?: number;
+            /**
+             * @description Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+             * @enum {string}
+             */
+            readonly win_probability_source?: "stage" | "human" | "margince";
+            /** @description The probability of the deal's current stage, so a client can show it beside a probability set on the deal. */
+            readonly stage_win_probability?: number;
             /**
              * Format: date
              * @description An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
              */
             expected_close_date?: string | null;
-            /** @description True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date. */
+            /** @description True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date. */
             readonly close_date_provisional?: boolean;
             /**
              * Format: date
@@ -36220,8 +36519,8 @@ export interface components {
              * @description Refused 422 `set_by_advance`; dated by the advance that closes the deal.
              */
             fx_rate_date?: string | null;
-            /** @enum {string|null} */
-            forecast_category?: null | "commit" | "best_case" | "pipeline" | "omitted";
+            /** @description The deal's own win probability in percent. Null sets it back to the stage's probability. Refused 422 `probability_fixed_when_closed` on a won or lost deal, whose probability its stage fixes. */
+            win_probability?: number | null;
             /**
              * Format: date
              * @description On an open deal a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11); a human setting it also clears close_date_provisional.
@@ -36231,6 +36530,16 @@ export interface components {
             wait_until?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** @description The deal after a stage move. A move to another stage sets the deal's win probability back to the new stage's, and `probability_set` says so; it is absent when the move changed no stage. */
+        DealAdvanced: components["schemas"]["Deal"] & {
+            probability_set?: components["schemas"]["DealProbabilitySet"];
+        };
+        DealProbabilitySet: {
+            win_probability: number;
+            stage_name: string;
+            /** @description The same fact as one English sentence, for a model or a log. A web client writes its own from the two fields. */
+            note: string;
         };
         CorrectDealCloseDayRequest: {
             /**
@@ -36746,7 +37055,7 @@ export interface components {
              * @description When the judgement APPLIES, which is not when it was written: a lead catching up on Monday records Friday's reading, and the timeline shows it on Friday.
              */
             assessed_at: string;
-            /** @description What recorded this assessment. */
+            /** @description What recorded this assessment: `human` for a user, `agent` for the agent acting for a user, `ai` for the health job, which judges from the project's quiet and overdue state and says why in `note`, and `undo` for a user undoing an AI reading. An `undo` row never counts as the current reading. */
             readonly source: string;
             /** @description Who is on record as having judged it, when that is not whoever typed it in. */
             readonly source_author?: string;
@@ -38257,7 +38566,7 @@ export interface components {
             subject?: string | null;
             body?: string | null;
             /**
-             * @description What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
+             * @description What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. Null on a message whose text was too short to tell, on a hand-logged email or task, and on every row written before this was recorded — all of which mean "not known", never "not any of these".
              *     A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
              *     Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
              * @enum {string|null}
@@ -38272,6 +38581,8 @@ export interface components {
              * @description Task only.
              */
             due_at?: string | null;
+            /** @description Task only. True when `due_at` names an agreed time of day, such as a callback hour. False means the task is due by the end of its day and a reader shows the date alone. Every task written before this field existed reads false. */
+            readonly due_has_time?: boolean;
             /**
              * Format: date-time
              * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
@@ -38317,7 +38628,8 @@ export interface components {
              * @description Present exactly when `kind=message` and the reader may read it. Whose move the chat
              *     message is, by the rules `email_summary.move` follows for mail: `needs_reply` on one
              *     still owed our answer, `waiting_for_them` on one a seat sent that is still the last
-             *     word with them, `none` otherwise.
+             *     word with them, `none` otherwise. Past the waiting horizon, unless someone kept it,
+             *     a message owed our answer is `none`, as for mail.
              * @enum {string}
              */
             readonly message_move?: "needs_reply" | "waiting_for_them" | "none";
@@ -38333,10 +38645,10 @@ export interface components {
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
             readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             /**
-             * @description What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+             * @description What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report, and `bulk` mail that carried a List-Unsubscribe header, such as a newsletter or a campaign. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
              * @enum {string|null}
              */
-            readonly automatic_kind?: "product" | "calendar" | "sending_system" | null;
+            readonly automatic_kind?: "product" | "calendar" | "sending_system" | "bulk" | null;
             /** @description Who wrote this activity and what part the page's contact had in it. Filled on list, detail and 360 reads. Withheld with the content: absent whenever `content_state` is `withheld`. */
             readonly voice?: components["schemas"]["ActivityVoice"] | null;
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
@@ -38344,10 +38656,15 @@ export interface components {
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
             readonly audience_reason?: string | null;
             /**
-             * @description Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
+             * @description Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
              * @enum {string}
              */
             readonly content_state?: "available" | "withheld";
+            /**
+             * @description How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+             * @enum {string|null}
+             */
+            call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /**
              * @description Set only when kind=meeting.
              * @enum {string|null}
@@ -38529,6 +38846,7 @@ export interface components {
             body?: string | null;
             /** Format: date-time */
             due_at?: string | null;
+            due_has_time?: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
         };
@@ -38554,6 +38872,8 @@ export interface components {
              * @description When it is due. Optional — a task without a date is still a task.
              */
             due_at?: string | null;
+            /** @description True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`. */
+            due_has_time?: boolean;
             /**
              * Format: uuid
              * @description Who owes it. Defaults to the caller.
@@ -38568,7 +38888,7 @@ export interface components {
             }[];
             source: string;
         };
-        /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
+        /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
             recommendation?: components["schemas"]["RecommendationReceipt"];
             /**
@@ -38600,6 +38920,8 @@ export interface components {
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
+            /** @description Task only. True: `due_at` is a time of day; `remind_at` defaults to it. */
+            due_has_time?: boolean;
             /**
              * Format: date-time
              * @description Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
@@ -38618,7 +38940,15 @@ export interface components {
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
-            /** @enum {string|null} */
+            /**
+             * @description How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
+             * @enum {string|null}
+             */
+            call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
+            /**
+             * @description Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
+             * @enum {string|null}
+             */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
             source_system?: string | null;
             /**
@@ -38801,7 +39131,7 @@ export interface components {
             /** @description The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set. */
             members?: components["schemas"]["AudienceMember"][];
         };
-        /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. */
+        /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
             subject?: string | null;
             body?: string | null;
@@ -38811,6 +39141,8 @@ export interface components {
             occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             due_at?: string | null;
+            /** @description Task only. True: `due_at` is a time of day, and the reminder moves to it unless `remind_at` is sent. A `due_at` sent without it is a day, which ends a reminder that sat on the old time. Sent only with `due_at`. */
+            due_has_time?: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
             /**
@@ -38820,6 +39152,11 @@ export interface components {
             remind_at?: string | null;
             /** @description Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family). */
             is_done?: boolean;
+            /**
+             * @description How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact. Sets or changes the outcome; a null removes it, and the call counts as contact again.
+             * @enum {string|null}
+             */
+            call_outcome?: null | "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
             /**
              * @description How the meeting went, set AFTER it happened. Meeting only, and 422 with a
              *     `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
@@ -39773,6 +40110,12 @@ export interface components {
             reason_code: string;
             /** @description What the engine worked out this message is, which may differ from the claim. */
             resolved_category?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description The reason for contact the sender claimed. An unproven claim never becomes
+             *     `resolved_category`, so a composer reads this one to name the gap the sender can
+             *     close: a refused `active_deal_followup` claim asks for the deal, not for consent.
+             */
+            requested_category?: components["schemas"]["CommunicationContext"];
             /** @description The lawful ground an allow would rest on. */
             basis?: string;
             /**
@@ -41375,11 +41718,27 @@ export interface components {
              * @description When the exchange happened, not when it was typed in.
              */
             occurred_at: string;
+            /**
+             * @description The contact asked for a quote or an offer. Only a `requested_by_subject` exchange may say so,
+             *     and only such a request bears out a quote sent before any deal exists. A request to be
+             *     called back supports a follow-up and not a quote.
+             * @default false
+             */
+            asks_for_quote: boolean;
         };
         /** @description A recorded exchange, as it now stands on the contact. */
         QualifyingEventRecord: {
+            /**
+             * Format: uuid
+             * @description The exchange's own id, which POST .../qualifying-events/{event_id}/retract takes.
+             */
+            id: string;
             /** @enum {string} */
-            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting";
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person" | "meeting" | "requested_by_subject";
+            /** @description The contact asked for a quote or an offer. */
+            asks_for_quote: boolean;
+            /** @description The exchange was withdrawn. Recording it again returns it withdrawn; no send rests on it. */
+            retracted: boolean;
             note: string | null;
             /** Format: date-time */
             occurred_at: string;
@@ -41847,11 +42206,16 @@ export interface components {
                 [key: string]: unknown;
             };
             /**
-             * @description How many rows to sample. The COUNT is unaffected by this — it is the
-             *     full match count for the caller, not the size of the page.
+             * @description The page size. The COUNT is unaffected by this — it is the full match
+             *     count for the caller on every page, not the size of the page.
              * @default 25
              */
             limit: number;
+            /**
+             * @description Opaque keyset cursor: a previous answer's `next_cursor`, to read the
+             *     page after it. Absent reads the first page.
+             */
+            cursor?: string;
         };
         /** @description What a candidate filter would select for this caller (LVS-EXT-9). */
         FilterPreview: {
@@ -41870,7 +42234,8 @@ export interface components {
              */
             columns: string[];
             /**
-             * @description Up to `limit` matching rows as column→value maps, ordered by id.
+             * @description Up to `limit` matching rows as column→value maps, ordered by id,
+             *     after the request's `cursor` when it names one.
              *     Deliberately the export's projection rather than a shape invented for
              *     this screen: a preview that showed different columns than the export
              *     of the same filter would be a preview of something else.
@@ -41879,10 +42244,49 @@ export interface components {
                 [key: string]: unknown;
             }[];
             /**
-             * @description Whether `match_count` exceeds the rows returned — so a caller can say
-             *     "showing 25 of 812" without comparing lengths and guessing.
+             * @description Whether more rows follow this page. It is true exactly when
+             *     `next_cursor` is set.
              */
             truncated: boolean;
+            /** @description Opaque cursor for the next page, or null if none. */
+            next_cursor?: string | null;
+        };
+        ActivityReaderRenderingRequest: {
+            /**
+             * @description The language to show the text in, normally the reader's interface language.
+             *     Absent means the language the reader chose for their seat, else the
+             *     installation's base language.
+             * @enum {string}
+             */
+            locale?: "en" | "de" | "vi";
+        };
+        /**
+         * @description One activity's text in one reader's language, written for this reader and stored
+         *     nowhere.
+         */
+        ActivityReaderRendering: {
+            /** Format: uuid */
+            activity_id: string;
+            /**
+             * @description The language the original is written in, null when it could not be told.
+             * @enum {string|null}
+             */
+            source_language?: "de" | "en" | "vi" | null;
+            /** @enum {string} */
+            target_language: "de" | "en" | "vi";
+            /** @description The subject in the target language, null when the activity has none. */
+            subject?: string | null;
+            /** @description The text in the target language, null when the activity has none. */
+            body?: string | null;
+            /**
+             * @description True when the original is already in the target language. `subject` and `body`
+             *     are then the original text.
+             */
+            unchanged: boolean;
+            /** @description The model that wrote the rendering, or judged the text unchanged. Absent when no model was asked. */
+            model_used?: string;
+            /** Format: date-time */
+            generated_at: string;
         };
         /** @description A list described in plain words, to be turned into filter clauses. */
         FilterProposalRequest: {
@@ -41892,7 +42296,8 @@ export interface components {
             text: string;
             /**
              * @description The reader's interface language, which the reasons in `unsupported` are
-             *     written in. Absent means the installation's base language.
+             *     written in. Absent means the language the reader chose for their seat, else the
+             *     installation's base language.
              * @enum {string}
              */
             locale?: "en" | "de" | "vi";
@@ -42261,7 +42666,7 @@ export interface components {
          */
         SavedViewResource: "contacts" | "companies" | "deals" | "activities" | "leads" | "partners" | "projects";
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -42927,7 +43332,7 @@ export interface components {
              * @description The forward measure the landing was projected with.
              * @enum {string}
              */
-            basis?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            basis?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
             /** Format: double */
             landing?: number;
             /** Format: double */
@@ -42954,6 +43359,12 @@ export interface components {
          *     `priced_count` and by `fx_missing_count`.
          */
         ReportingForecastBasis: {
+            /**
+             * Format: int64
+             * @description Open deals eligible for this forecast period.
+             */
+            open_count?: number;
+            open_evidence?: components["schemas"]["ReportingEvidenceRef"];
             /**
              * Format: int64
              * @description Open deal value eligible for the forecast period, in base minor units.
@@ -43292,6 +43703,8 @@ export interface components {
             occurred_at?: string;
             /** @description How to read `occurred_at` on an activity's row. `day` means only its date is known, its UTC date, so a client draws no time. Absent on a row that is not an activity's, whose time is an instant. */
             occurred_precision?: components["schemas"]["OccurredPrecision"];
+            owner_label?: string;
+            stage_label?: string;
             /** Format: uuid */
             owner_id?: string;
             source_type?: string;
@@ -43464,7 +43877,7 @@ export interface components {
              * @description Whether the invitation email was handed to the sender. The send runs after the answer,
              *     so a slow relay does not hold the invite. Deliberately not `delivered`: a relay that
              *     refuses the address is reported a moment later as the member's
-             *     `invite_email_state` on the roster, where `resend_invite` is offered.
+             *     `invite_email_state` on the roster.
              */
             queued: boolean;
         };
@@ -43477,11 +43890,10 @@ export interface components {
             display_name: string;
             /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
-            /**
-             * @description IANA name.
-             * @default UTC
-             */
-            timezone: string;
+            /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
+            timezone?: string;
+            /** @description Whether the user chose `timezone` themselves, rather than the app storing the browser's guess. Present on the caller's own seat; absent on the roster. */
+            timezone_chosen?: boolean;
             /**
              * @description The language this contact chose for their own interface, absent when they never chose one. Distinct from the installation's `base_language`, which is what AI writes in for the whole team: this one changes only what THIS contact sees.
              *     Absent is not the same as `en`. A contact who never chose follows their browser, and storing a choice they did not make would freeze whatever their browser said on the day they signed up.
@@ -43510,8 +43922,10 @@ export interface components {
             team_ids?: string[];
             /** @description Whether this unused member's sign-in email can still be corrected. Present only on the administration view. */
             email_editable?: boolean;
+            /** @description How many live mail and calendar connections this member has. Present only on the administration view, where the role dialog warns that they stop under a role that cannot capture. */
+            readonly connected_mailboxes?: number;
             /**
-             * @description What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it, where `resend_invite` is offered. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
+             * @description What became of the email that carries this invited member's live set-password link. `sending` while the send runs; a client polls the roster until it settles. `sent` once the relay took it, and `failed` once the relay refused it. Null for an active member, for a link an admin issued and passed on by hand, and for a send that never answered within a few minutes. Present only on the administration view. `resendUserInvite` mails a new link, which starts at `sending`.
              * @enum {string|null}
              */
             invite_email_state?: "sending" | "sent" | "failed" | null;
@@ -43519,7 +43933,7 @@ export interface components {
             invite_email?: components["schemas"]["InviteEmailHandoff"];
             /** @description Original account identities consolidated into this member, present only on the administration view. */
             merged_from?: components["schemas"]["SeatName"][];
-            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered only while `invite_email_state` is `failed` and this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
+            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
             allowed_actions?: ("change_role" | "issue_password_link" | "resend_invite" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over" | "edit" | "merge" | "remove")[];
             /**
              * Format: date-time
@@ -43825,11 +44239,12 @@ export interface components {
             won_minor: number;
             /**
              * Format: int64
-             * @description Committed pipeline whose close date somebody confirmed. A provisional date is a guess, so it is excluded here and included in open_minor.
+             * @description Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full. A provisional date is a guess, so it is excluded here and included in open_minor.
              */
             evidence_minor: number;
-            /** Format: int64 */
-            best_case_minor: number;
+            /** @description The installation setting `forecast_likely_threshold` this read used. */
+            likely_threshold: number;
+            by_source: components["schemas"]["ForecastBySource"];
             /** Format: int64 */
             open_minor: number;
             /**
@@ -43879,6 +44294,18 @@ export interface components {
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];
         };
+        /** @description The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`. */
+        ForecastBySource: {
+            stage: components["schemas"]["ForecastSourceTotal"];
+            human: components["schemas"]["ForecastSourceTotal"];
+            margince: components["schemas"]["ForecastSourceTotal"];
+        };
+        ForecastSourceTotal: {
+            /** Format: int64 */
+            open_minor: number;
+            /** Format: int64 */
+            weighted_minor: number;
+        };
         /** @description One deal's part in the forecast: what it adds to each reading and the chance it is weighted by. `weighted_minor` is `base_minor` at `applied_probability`, rounded once. */
         ForecastContribution: {
             /** Format: uuid */
@@ -43888,7 +44315,11 @@ export interface components {
             owner_id?: string;
             /** Format: uuid */
             stage_id?: string;
-            category?: string;
+            /**
+             * @description Where the deal's probability came from. A probability set on the deal is used as it is, never moved by self-correction.
+             * @enum {string}
+             */
+            probability_source?: "stage" | "human" | "margince";
             /**
              * Format: int64
              * @description The deal's amount in the base currency. Absent when unpriced, masked or unconvertible.
@@ -43903,9 +44334,9 @@ export interface components {
             weighted_minor: number;
             in_won: boolean;
             in_open: boolean;
+            /** @description Whether the deal counts in the Likely reading. */
             in_evidence: boolean;
-            in_best_case: boolean;
-            /** @description The chance typed on the deal's stage, in percent. */
+            /** @description The deal's own probability where one is set, else the chance typed on its stage, in percent. */
             typed_probability?: number;
             /** @description The stage chance the forecast uses, in percent: the typed chance moved toward the stage's recorded outcomes, weighted as if the typed chance were 20 deals. */
             chance_in_use: number;
@@ -44031,8 +44462,6 @@ export interface components {
             /** Format: int64 */
             evidence_minor: number;
             /** Format: int64 */
-            best_case_minor: number;
-            /** Format: int64 */
             weighted_minor: number;
             /**
              * Format: int64
@@ -44081,7 +44510,7 @@ export interface components {
              * @description Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`, and a qualified measure on a read with no qualified block falls back to its baseline with caveat `qualified_unavailable`. The set can grow, so a client shows an unknown value by its name.
              * @enum {string}
              */
-            measure: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            measure: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
             /**
              * Format: int64
              * @description The money already banked, the backward half of the sum.
@@ -44371,7 +44800,7 @@ export interface components {
         /** @description The classified difference between two snapshots. opening_minor plus every bucket equals closing_minor, exactly. */
         ForecastMovement: {
             /** @enum {string} */
-            reading: "open" | "weighted" | "evidence" | "best_case" | "qualified_evidence" | "qualified_best_case" | "qualified_weighted";
+            reading: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
             /** Format: int64 */
             opening_minor: number;
             /** Format: int64 */
@@ -45146,6 +45575,8 @@ export interface components {
             name: string;
             /** @description True for a role the product ships. */
             is_system: boolean;
+            /** @description Whether a full-seat member holding only this role may have a mailbox captured. False means their connected mailboxes stop, so the role dialog warns before the change. */
+            readonly captures_mail?: boolean;
         };
         CreateRoleRequest: {
             /** @description The key of the live role the new one starts as a copy of. */
@@ -46018,6 +46449,8 @@ export interface components {
             show_in_create: boolean;
             /** @description Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object. */
             reportable: boolean;
+            /** @description The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it. */
+            activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[] | null;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -46070,12 +46503,15 @@ export interface components {
              * @default true
              */
             show_in_create: boolean;
+            /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
+            activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create` and `reportable`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
         RenameCustomFieldRequest: {
             label?: string;
             show_in_create?: boolean;
             reportable?: boolean;
+            activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -46503,7 +46939,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "report_interpret" | "report_setup" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -46529,7 +46965,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -47609,8 +48045,12 @@ export interface components {
             activity_id: string;
             /** @enum {string} */
             status: "queued" | "running" | "done" | "failed";
-            /** @description Why it ended as it did, in words a rep can act on. Set on failure, and on a done reading that produced nothing so an empty result explains itself. */
+            /** @description The sentence stored when the reading finished, in the installation's base language and naming nobody. Kept for readings finished before `detail` existed; a client shows `detail` when it is set. */
             status_detail?: string | null;
+            /** @description What the reading did, phrased for the caller in their display language: tasks it added "for you" or for a named colleague, proposals waiting on the caller, proposals "sent to" a named colleague to confirm, commitments it withheld and why, or why it could not be used. Null while the reading runs, and on a reading finished before the outcome was kept as facts, where `status_detail` is the account. */
+            detail?: string | null;
+            /** @description The approvals this reading staged, each with the colleague it waits on. Empty on a reading finished before the outcome was kept as facts; `proposal_ids` still lists those. */
+            proposals: components["schemas"]["TranscriptReadProposal"][];
             /** @description How many lines the reading addressed, so a cited line can be shown against the size of what was read. It is the count at READ time; a later body edit re-normalizes and can change it, and each proposal's own evidence stays authoritative about what it saw. */
             line_count: number;
             /** @description The approvals this reading staged. Empty on a reading that found nothing to propose. */
@@ -47621,6 +48061,20 @@ export interface components {
             finished_at?: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        /** @description One approval a transcript reading staged, and who it waits on. */
+        TranscriptReadProposal: {
+            /** Format: uuid */
+            id: string;
+            asked_of: components["schemas"]["TranscriptReadAskedOf"];
+        };
+        /** @description The colleague a staged approval waits on. A client reads the approval's status only when `is_you` is true; one waiting on a colleague is theirs to decide, and its status is not the caller's to read. */
+        TranscriptReadAskedOf: {
+            /** Format: uuid */
+            seat_id: string;
+            /** @description The colleague as the roster names them; null for a seat with no name to show. */
+            name?: string | null;
+            is_you: boolean;
         };
         /** @description The 202 handle for a queued deep read. */
         SiteReadStarted: {
@@ -50106,6 +50560,18 @@ export interface components {
             included?: boolean;
             weight?: number;
         };
+        /**
+         * @description The outcome of one learnVoiceFromSentMail call. `read` counts the sent mails found;
+         *     each of them is `added`, `already_present` (a source already, left as it is), or
+         *     `no_own_words` (only quoted text, a signature, or too few words of the owner's own).
+         */
+        VoiceSentMailLearned: {
+            read: number;
+            added: number;
+            already_present: number;
+            no_own_words: number;
+            summary: components["schemas"]["VoiceCorpusSummary"];
+        };
         /** @description What the speaker filter did to one ingested source; kept words are the only words that count. */
         VoiceIngestStats: {
             input_words: number;
@@ -51965,6 +52431,12 @@ export interface components {
              *     the basis needs. Never true without a basis.
              */
             replan_recommended: boolean;
+            /**
+             * @description True when the standing call this coverage reads has an open input-check finding
+             *     because the pipeline moved since it was made. Present only beside the `manager_call`
+             *     basis.
+             */
+            call_needs_review?: boolean;
         };
         TeamWeeklyStaleDeal: {
             /** Format: uuid */
@@ -52327,16 +52799,14 @@ export interface components {
              *     said. Freezing an opinion as a measurement would make the record argue with itself.
              * @enum {string}
              */
-            forward_measure?: "commit_evidence" | "qualified_commit_evidence" | "weighted" | "qualified_weighted" | "manager_call";
+            forward_measure?: "likely" | "qualified_likely" | "weighted" | "qualified_weighted" | "manager_call";
             /** Format: int64 */
             won_minor: number;
-            /** Format: int64 */
-            commit_minor: number;
             /**
              * Format: int64
-             * @description Inclusive of commit, which is what the label on the surface must say.
+             * @description The Likely reading as the week closed.
              */
-            best_case_minor: number;
+            likely_minor: number;
             /** Format: int64 */
             weighted_minor: number;
             base_currency: string;
@@ -53223,6 +53693,8 @@ export interface components {
              * @description When this is due (tasks), or when it lapses (approvals).
              */
             due_at?: string;
+            /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
+            due_has_time?: boolean;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -53357,14 +53829,12 @@ export interface components {
         AttentionDealFacts: {
             /** @description True when the close date has not been confirmed by a colleague. */
             close_date_provisional?: boolean | null;
-            /** @description The recorded forecast category, including omitted. */
-            forecast_category?: string | null;
             /**
              * Format: uuid
              * @description The deal's current stage.
              */
             stage_id?: string | null;
-            /** @description The win probability recorded on the deal's current stage. A fact about the stage the deal sits in, never a weighting applied to `amount_minor`. */
+            /** @description The deal's win probability: its own where one is set, else its stage's. Never a weighting applied to `amount_minor`. */
             win_probability?: number | null;
             /** Format: int64 */
             amount_minor?: number | null;
@@ -53596,7 +54066,7 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
             /**
              * @description The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.
              * @enum {string}
@@ -53889,7 +54359,7 @@ export interface components {
         /** @description The recorded automatic change and its current review state. */
         AppliedDealChangeReview: {
             /** @enum {string} */
-            kind: "close_date" | "stage";
+            kind: "close_date" | "close_lost" | "stage";
             accepted: boolean;
             reversed: boolean;
             /** Format: int64 */
@@ -54863,6 +55333,8 @@ export interface components {
              * @description When this is due, or when the meeting starts.
              */
             due_at?: string;
+            /** @description On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows. */
+            due_has_time?: boolean;
             /** @description Past due at the read instant, resolved server-side so every surface agrees. */
             overdue?: boolean;
             /**
@@ -55573,15 +56045,13 @@ export interface components {
          *     `amount_minor` converted to the installation's base currency — the only figure by
          *     which two deals in different currencies may be compared. It is not weighted by
          *     `win_probability`: the two are independent facts, one the deal's own money and the
-         *     other a property of the stage it sits in, rather than one computed from the other.
+         *     other the chance it is won, rather than one computed from the other.
          *     A reader must not multiply them together expecting the product to equal a
          *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
             /** @description True when the close date has not been confirmed by a colleague. */
             close_date_provisional?: boolean | null;
-            /** @description The recorded forecast category, including omitted. */
-            forecast_category?: string | null;
             /** Format: uuid */
             stage_id?: string | null;
             /** Format: int64 */
@@ -55794,6 +56264,20 @@ export interface components {
         };
         /** @description Authenticated but not permitted (RBAC row/field scope, or 🟡 approval missing). */
         Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /**
+         * @description The caller's role or seat cannot record what capture writes (activities, and the contacts
+         *     and leads a mailbox brings in), so no mailbox of theirs can be captured
+         *     (`code: role_cannot_capture`). Nothing is stored. An admin changes their role.
+         *     `details.missing` names what is lacking, as `SeatCapture.missing` does.
+         */
+        RoleCannotCapture: {
             headers: {
                 [name: string]: unknown;
             };
@@ -62242,14 +62726,13 @@ export interface operations {
                 q?: string;
                 status?: "open" | "won" | "lost";
                 /**
-                 * @description One of the forecast's named buckets. The same `deal.forecast_category` the forecast
-                 *     reads, so a tile's figure and the list behind it are one answer rather than two
-                 *     derivations that can disagree.
-                 *
-                 *     A deal carrying no category is in no bucket and is returned by none of the four —
-                 *     the buckets partition the CATEGORISED pipeline, not the pipeline.
+                 * @description Deals whose win probability is at least this percent (inclusive). The same
+                 *     `deal.win_probability` the forecast weights by: the deal's own probability where one
+                 *     is set, else its stage's. A `win_probability_min` above `win_probability_max` is `422`.
                  */
-                forecast_category?: "commit" | "best_case" | "pipeline" | "omitted";
+                win_probability_min?: number;
+                /** @description Deals whose win probability is at most this percent (inclusive). See `win_probability_min`. */
+                win_probability_max?: number;
                 /** @description Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead). */
                 stalled?: boolean;
                 /** @description Filter to the deals belonging to one body of work. */
@@ -62670,13 +63153,13 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The deal at its new stage. */
+            /** @description The deal at its new stage, and the probability the move set. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Deal"];
+                    "application/json": components["schemas"]["DealAdvanced"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -64089,6 +64572,57 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    undoProjectHealthAssessment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The undo row. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHealthAssessment"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listProjectStakeholders: {
         parameters: {
             query?: never;
@@ -65377,6 +65911,8 @@ export interface operations {
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
                 kind?: "email" | "call" | "meeting" | "note" | "task" | "message";
+                /** @description Calls that ended this way. Matches calls only. */
+                call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
                 /**
                  * @description Filter to messages carried by one transport. Since `kind=message` no longer names
                  *     the transport, this is the only way to ask the question `kind=telegram` used to
@@ -65828,6 +66364,47 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    renderActivityForReader: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityReaderRenderingRequest"];
+            };
+        };
+        responses: {
+            /** @description The text in the reader's language, or the original marked unchanged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityReaderRendering"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     readActivityPipelineTrace: {
@@ -66402,7 +66979,8 @@ export interface operations {
              * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
              *     When the refusal opened a review, `details` carries `review_id`, the
              *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             *     the caller named, with the engine's `reason_code`, resolved `category` and the
+             *     `requested_category` the caller claimed.
              */
             409: {
                 headers: {
@@ -66503,7 +67081,8 @@ export interface operations {
              * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
              *     When the refusal opened a review, `details` carries `review_id`, the
              *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             *     the caller named, with the engine's `reason_code`, resolved `category` and the
+             *     `requested_category` the caller claimed.
              */
             409: {
                 headers: {
@@ -66870,7 +67449,8 @@ export interface operations {
              * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
              *     When the refusal opened a review, `details` carries `review_id`, the
              *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code` and resolved `category`.
+             *     the caller named, with the engine's `reason_code`, resolved `category` and the
+             *     `requested_category` the caller claimed.
              */
             409: {
                 headers: {
@@ -70424,6 +71004,14 @@ export interface operations {
             query?: never;
             header?: {
                 /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+                /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
                  *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
@@ -70548,6 +71136,14 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
                 /**
                  * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
                  *     create (API-CC-6). **Scope:** the key is unique within
@@ -71786,7 +72382,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The count and first page. */
+            /** @description The count and one page. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -76488,6 +77084,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -76966,6 +77563,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             /** @description Provider unreachable — the estimate needs the provider (`code: provider_unreachable`). */
@@ -77052,6 +77650,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["RoleCannotCapture"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
@@ -77253,7 +77852,7 @@ export interface operations {
                  *     A filter sent with a view it does not belong to returns
                  *     `422 code: filter_outside_view`, whose message names the filter's view.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "prospecting" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief" | "upcoming";
                 /**
                  * @description Which work view to answer. `today` is work a seller executes: every category
                  *     except `decisions` and `system`. `decisions` is judgements somebody owes, and
@@ -82573,6 +83172,76 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    retractQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rest on this exchange. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /**
+             * @description No live hand-recorded exchange with this id is on this contact: none exists, it is
+             *     derived rather than recorded by hand, or it was already withdrawn.
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retractAcquisitionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rest on the acquisition request. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The contact holds no live acquisition request, or it was already withdrawn. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     claimRecord: {
         parameters: {
             query?: never;
@@ -83915,7 +84584,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Refused, with the reason distinguished by the problem `code`: `mail_unavailable` (this installation has no outbound relay or no link origin, so nothing can be mailed; `issueUserPasswordLink` is the way then), `invite_email_not_failed` (the member's live link was never mailed, or its mail is still `sending` or was `sent`; a resend would supersede a link that may still arrive), `member_not_invited` (the member has already set a password, or is suspended or deactivated), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
+            /** @description Refused, with the reason distinguished by the problem `code`: `mail_unavailable` (this installation has no outbound relay or no link origin, so nothing can be mailed; `issueUserPasswordLink` is the way then), `member_not_invited` (the member has already set a password, or is suspended or deactivated), or `archived_role_held` (the member holds an archived role; an admin gives them a live role first). */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -84746,6 +85415,55 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    learnVoiceFromSentMail: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What this call learned, and the meter after it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSentMailLearned"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteVoiceCorpusSource: {
@@ -88238,7 +88956,7 @@ export interface operations {
                 /** @description The closing snapshot. */
                 to: string;
                 /** @description Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The `qualified_` readings are the baseline ones over the deals the customer still supports. Against a snapshot frozen with no viability policy, or under another one, a qualified movement puts its whole difference in `definition`. */
-                reading?: "open" | "weighted" | "evidence" | "best_case" | "qualified_evidence" | "qualified_best_case" | "qualified_weighted";
+                reading?: "open" | "weighted" | "evidence" | "qualified_evidence" | "qualified_weighted";
             };
             header?: never;
             path?: never;
@@ -90382,7 +91100,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkingHours"];
+                "application/json": components["schemas"]["SaveWorkingHoursRequest"];
             };
         };
         responses: {
@@ -90393,6 +91111,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyWorkingHoursResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveMyTimezone: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveMyTimezoneRequest"];
+            };
+        };
+        responses: {
+            /** @description The caller's seat, with the zone as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             401: components["responses"]["Unauthorized"];

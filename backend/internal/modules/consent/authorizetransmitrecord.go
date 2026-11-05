@@ -28,7 +28,7 @@ import (
 // exists so a later reader can tell whether the message that went is the
 // message that was authorized, and storing the words themselves would make the
 // decision a second copy of the mail.
-func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, ruleset rulesetStampValue) ([]commsauthz.Decision, error) {
+func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, setID ids.UUID, set commsauthz.DecisionSet, countries []RecipientCountry) ([]commsauthz.Decision, error) {
 	var written []commsauthz.Decision
 	sum := SendingDigest(req.Subject, req.Body, req.HTMLBody)
 	by, err := storekit.CapturedBy(ctx)
@@ -47,7 +47,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 	if err != nil {
 		return nil, err
 	}
-	for _, d := range set.Decisions {
+	for i, d := range set.Decisions {
 		// Both or neither, which the table's own CHECK also demands: a
 		// subject_kind naming a row with no id describes nothing.
 		subjectKind := nullableText(d.SubjectKind)
@@ -56,6 +56,9 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			id := d.SubjectID
 			subjectID = &id
 		}
+		// The country this recipient was decided under, so the row names the
+		// pack that judged it.
+		ruleset := rulesetStamp(countries[i])
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
@@ -240,6 +243,21 @@ func deliveryAuthorityTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (s
 		return "", nil, fmt.Errorf("consent: reading the authority this delivery goes out under: %w", err)
 	}
 	return authority, instruction, nil
+}
+
+// exceptionGivenByAdminTx answers whether the exception this delivery goes out
+// under was given by an admin. A delivery with no exception answers false.
+func exceptionGivenByAdminTx(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (bool, error) {
+	var byAdmin bool
+	err := tx.QueryRow(ctx, `
+		SELECT coalesce(bool_or(i.given_by_admin), false)
+		  FROM comms_outbound o
+		  JOIN communication_instruction i ON i.id = o.instruction_id
+		 WHERE o.id = $1`, deliveryID).Scan(&byAdmin)
+	if err != nil {
+		return false, fmt.Errorf("consent: reading who gave the exception this delivery goes out under: %w", err)
+	}
+	return byAdmin, nil
 }
 
 // authorityFor names the instruction on a refused row and the engine's own

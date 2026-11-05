@@ -370,10 +370,9 @@ func (h importHandlers) staged(r *http.Request, id openapi_types.UUID) (migratio
 // nothing, and the run store still answers not-found for another workspace's
 // run.
 //
-// Two operations keep RequireHuman, each for its own reason. uploadImportSource
-// is multipart and has no agent-shaped door at all. undoImportRun reverses a
-// committed estate-wide write, and reversing is not something a caller should
-// reach without a contact present.
+// uploadImportSource keeps RequireHuman because it is multipart and has no
+// agent-shaped door at all. undoImportRun is open: it removes only the rows nobody
+// has touched since, and its tool asks the user first.
 func (h importHandlers) stagedFor(ctx context.Context, id openapi_types.UUID) (migration.Run, error) {
 	run, err := migration.NewRunStore(h.db).GetStaged(ctx, migration.RunID(id))
 	if err != nil {

@@ -112,14 +112,14 @@ func TestTheMeasureSiteListCoversEveryForwardMeasureEnum(t *testing.T) {
 // forward measure, by the one value that is unambiguously ours.
 //
 // `weighted` and `manager_call` are words other schemas could reasonably use;
-// `commit_evidence` names this specific reading and nothing else in the
+// `qualified_likely` names this specific reading and nothing else in the
 // contract spells it.
 //
 //craft:ignore naked-any a decoded YAML document is untyped by nature — mappings, sequences and scalars arrive as any, and the switch below is the narrowing
 func walkForwardMeasureEnums(node any, at []string, found map[string]bool) {
 	switch shape := node.(type) {
 	case map[string]any:
-		if slices.Contains(enumOf(shape), "commit_evidence") {
+		if slices.Contains(enumOf(shape), "qualified_likely") {
 			found[strings.Join(measureSitePath(at), "/")] = true
 			return
 		}
@@ -183,7 +183,7 @@ func measureEnumUnder(schema map[string]any) []string {
 		if !ok {
 			continue
 		}
-		if values := enumOf(field); slices.Contains(values, "commit_evidence") {
+		if values := enumOf(field); slices.Contains(values, "qualified_likely") {
 			return values
 		}
 	}

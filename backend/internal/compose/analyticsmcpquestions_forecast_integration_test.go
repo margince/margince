@@ -56,29 +56,28 @@ func (e *forecastEnv) freezeForecast(
 }
 
 // frozenContribution is one deal as a snapshot holds it.
-func frozenContribution(deal, owner ids.UUID, baseMinor int64, category string) forecasting.Contribution {
+func frozenContribution(deal, owner ids.UUID, baseMinor int64, likely bool) forecasting.Contribution {
 	return forecasting.Contribution{
 		DealID: deal.String(), Owner: owner.String(), AmountMinor: &baseMinor, Currency: "EUR",
-		BaseMinor: &baseMinor, Category: category, StageProbability: 50, WeightedMinor: baseMinor / 2,
-		InOpen: true, InEvidence: category == "commit", InBestCase: category != "pipeline",
+		BaseMinor: &baseMinor, Source: forecasting.SourceStage, StageProbability: 50, WeightedMinor: baseMinor / 2,
+		InOpen: true, InEvidence: likely,
 	}
 }
 
-// F01: what the quarter is expected to close, and how much of it is committed.
+// F01: what the quarter is expected to close, and how much of it is Likely.
 // A colleague's deal on another team and a deal due in a later year stay out.
 func proveF01QuarterForecast(t *testing.T) {
 	e := setupForecast(t)
 	today, later := new(0), new(500)
-	seedMany(3, func() { e.seedDealClosing(t, e.Rep1, "commit", today) })
-	seedMany(2, func() { e.seedDealClosing(t, e.Rep1, "best_case", today) })
-	seedMany(4, func() { e.seedDealClosing(t, e.Rep1, "pipeline", today) })
-	seedMany(2, func() { e.seedDealClosing(t, e.Rep3, "commit", today) })
-	seedMany(1, func() { e.seedDealClosing(t, e.Rep1, "commit", later) })
+	seedMany(3, func() { e.seedDealClosing(t, e.Rep1, 95, today) })
+	seedMany(2, func() { e.seedDealClosing(t, e.Rep1, 60, today) })
+	seedMany(4, func() { e.seedDealClosing(t, e.Rep1, 20, today) })
+	seedMany(2, func() { e.seedDealClosing(t, e.Rep3, 95, today) })
+	seedMany(1, func() { e.seedDealClosing(t, e.Rep1, 95, later) })
 
 	var got struct {
 		OpenMinor     int64  `json:"open_minor"`
 		WeightedMinor int64  `json:"weighted_minor"`
-		BestCaseMinor int64  `json:"best_case_minor"`
 		EvidenceMinor int64  `json:"evidence_minor"`
 		Eligible      int    `json:"eligible_count"`
 		ScopeKind     string `json:"scope_kind"`
@@ -88,12 +87,11 @@ func proveF01QuarterForecast(t *testing.T) {
 		t.Errorf("open %d over %d deals, want 900000 over 9. Another team's deal or a later year's leaked in",
 			got.OpenMinor, got.Eligible)
 	}
-	if got.WeightedMinor != 540_000 {
-		t.Errorf("weighted %d, want 540000: the open value at its stage probability", got.WeightedMinor)
+	if got.WeightedMinor != 485_000 {
+		t.Errorf("weighted %d, want 485000: each open deal at its own probability", got.WeightedMinor)
 	}
-	if got.EvidenceMinor != 300_000 || got.BestCaseMinor != 500_000 {
-		t.Errorf("committed %d and best case %d, want 300000 and 500000. The commit deals are 3 of the 5 in best case",
-			got.EvidenceMinor, got.BestCaseMinor)
+	if got.EvidenceMinor != 300_000 {
+		t.Errorf("Likely %d, want 300000: the three deals at 95%%", got.EvidenceMinor)
 	}
 }
 
@@ -111,10 +109,10 @@ func proveF02ForecastMovement(t *testing.T) {
 	at := time.Date(2038, 2, 1, 9, 0, 0, 0, time.UTC)
 	scope := forecasting.Scope{Kind: forecasting.ScopeOwner, ID: &e.Rep1}
 	from := e.freezeForecast(t, at, scope, []forecasting.Contribution{
-		frozenContribution(grew, e.Rep1, 100_000, "commit"), frozenContribution(left, e.Rep1, 50_000, "pipeline"),
+		frozenContribution(grew, e.Rep1, 100_000, true), frozenContribution(left, e.Rep1, 50_000, false),
 	})
 	to := e.freezeForecast(t, at.Add(7*24*time.Hour), scope, []forecasting.Contribution{
-		frozenContribution(grew, e.Rep1, 140_000, "commit"), frozenContribution(arrived, e.Rep1, 70_000, "best_case"),
+		frozenContribution(grew, e.Rep1, 140_000, true), frozenContribution(arrived, e.Rep1, 70_000, false),
 	})
 
 	var got struct {
