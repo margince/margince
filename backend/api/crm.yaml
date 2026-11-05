@@ -60734,13 +60734,16 @@ components:
           description: The projection itself, in the installation's base currency.
         measure:
           type: string
-          enum: [likely, weighted, manager_call]
-          x-enum-varnames: [ForwardMeasureLikely, ForwardMeasureWeighted, ForwardMeasureManagerCall]
+          enum: [likely, weighted, manager_call, qualified_likely, qualified_weighted]
+          x-enum-varnames: [ForwardMeasureLikely, ForwardMeasureWeighted, ForwardMeasureManagerCall, ForwardMeasureQualifiedLikely, ForwardMeasureQualifiedWeighted]
           description: >-
             Which reading the forward half was built from — the one ACTUALLY used, which
             is not always the one configured: a manager-call installation with no current
             call falls back to commit evidence and says so in `caveat`. The set can grow, so a
             client shows an unknown value by its name.
+            `qualified_likely` and `qualified_weighted` appear only on a shared snapshot
+            frozen under the retired qualified forecast. Their forward half counts only the
+            open deals that snapshot froze as still supported by their customer.
         won_minor:
           type: integer
           format: int64

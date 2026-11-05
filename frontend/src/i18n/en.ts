@@ -14456,6 +14456,8 @@ export const en = {
   "forecast.basis.likely": "Won + Likely deals",
   "forecast.basis.weighted": "Won + weighted open deals",
   "forecast.basis.manager_call": "Manager’s call",
+  "forecast.basis.qualified_likely": "Won + supported Likely deals",
+  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
