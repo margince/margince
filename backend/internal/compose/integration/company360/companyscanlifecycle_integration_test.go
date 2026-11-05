@@ -66,7 +66,8 @@ func databaseClock(t *testing.T) func() time.Time {
 
 func nowOn(t *testing.T, db interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
-}) time.Time {
+},
+) time.Time {
 	t.Helper()
 	var now time.Time
 	if err := db.QueryRow(t.Context(), `SELECT now()`).Scan(&now); err != nil {
