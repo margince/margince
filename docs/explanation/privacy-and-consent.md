@@ -459,19 +459,19 @@ it down.
   that of their current primary employer. A lead takes the one of the company it is filed under. A
   free-text value that is not a two-letter code is skipped.
 - **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
-  identity and privacy contact at the foot of the mail. The user who sends belongs to an entity
-  through their legal-entity membership. A user with no entity, and the installation's own mail, send
-  for the default entity, whose jurisdiction is `installation.country`. An installation with one
-  entity sets nothing more.
+  identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. A further entity
+  puts its own legal name and address in the foot. Staging stores the entity.
 
 A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
 duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
 adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
 and the least strict pack never stand in for the recipient's jurisdiction.
 
-Each decision row records the ruleset that judged its recipient (`ruleset_codes`, `ruleset_version`).
-`CheckMessage` reads those codes back, so the advertising label is owed if any recipient's pack asks
-for it. One message goes to every recipient, so its foot carries each recipient's marketing duties.
+Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`) and the
+`data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
+owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+each recipient's marketing duties.
 
 ### Request deadlines
 

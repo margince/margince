@@ -136,7 +136,7 @@ func TestWhatsSlippingAsksAtTheWindowTheCallerNames(t *testing.T) {
 	RegisterSlippingTools(registry, func(_ context.Context, quietDays int) ([]SlippingDeal, error) {
 		asked = append(asked, quietDays)
 		return nil, nil
-	}, nil, testStalledDays)
+	}, nil, testStalledDays, testStalledDays)
 	ctx := scopedAgentCtx(principal.ScopeRead)
 
 	for _, args := range []string{`{}`, `{"quiet_days":19}`, `{"quiet_days":365}`} {
@@ -153,6 +153,28 @@ func TestWhatsSlippingAsksAtTheWindowTheCallerNames(t *testing.T) {
 		if _, ok := errors.AsType[*BadArgsError](err); !ok {
 			t.Errorf("Invoke with %s = %v, want *BadArgsError naming the bound", args, err)
 		}
+	}
+}
+
+// Inside a scheduled run an omitted window asks at the sweep's window, the one
+// its preflight read. A window the run names is still the run's.
+func TestAScheduledRunsOmittedWindowIsTheSweepsWindow(t *testing.T) {
+	const sweepDays = 14
+	var asked []int
+	registry := NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	RegisterSlippingTools(registry, func(_ context.Context, quietDays int) ([]SlippingDeal, error) {
+		asked = append(asked, quietDays)
+		return nil, nil
+	}, nil, testStalledDays, sweepDays)
+	run := principal.WithAgentRunID(scopedAgentCtx(principal.ScopeRead), ids.NewV7())
+
+	for _, args := range []string{`{}`, `{"quiet_days":30}`} {
+		if _, err := registry.Invoke(run, "whats_slipping_this_week", json.RawMessage(args)); err != nil {
+			t.Fatalf("Invoke with %s = %v, want the tool to run", args, err)
+		}
+	}
+	if want := []int{sweepDays, 30}; !slices.Equal(asked, want) {
+		t.Errorf("the lister was asked at %v, want %v", asked, want)
 	}
 }
 
@@ -224,7 +246,7 @@ func TestDraftFollowUpsForRefusesAnUnknownSegment(t *testing.T) {
 
 func TestRegisterSlippingToolsWithoutAListerRegistersNothing(t *testing.T) {
 	r := NewRegistry(nil, nil)
-	RegisterSlippingTools(r, nil, nil, testStalledDays)
+	RegisterSlippingTools(r, nil, nil, testStalledDays, testStalledDays)
 	if got := len(r.Specs()); got != 0 {
 		t.Fatalf("a surface without a lister must stay empty, got %d tools", got)
 	}

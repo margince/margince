@@ -309,8 +309,7 @@ A held message also adds an approval card that never runs out. See [Approvals](a
 
 ## What the recipient controls
 
-Every marketing message carries a footer with two links: unsubscribe, and
-manage preferences. Both are the recipient's own private links.
+Every marketing message carries a footer with two links: unsubscribe, and manage preferences. Both are the recipient's own private links.
 
 **The preference centre** says that each purpose is separate. The recipient
 cannot switch off messages they need for something they did, such as an order note. All other purposes are theirs to control.
@@ -320,8 +319,7 @@ because they did not say no, or off because they asked you to stop. Only a clear
 "no" from them counts as off.
 
 **Security and service messages are always on**, and the page says why. They
-are needed for something the recipient asked for, such as a password reset or a
-confirmation.
+are needed for something the recipient asked for, such as a password reset or a confirmation.
 
 **Stop all marketing** switches off every marketing purpose at once and leaves
 the rest alone. Replies to their own questions, and anything they asked for, go
@@ -360,6 +358,8 @@ The record does not say where the contact's details come from, so no notice dead
 A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy**.
 If the details come from the contact, the review ends. Data from someone else may still need a notice.
 **Due no later than** is the last possible date. The duty may already be due.
+
+**Met face to face** asks for the day of the meeting. It allows personal follow-up mail, never marketing or a newsletter. No privacy notice is owed, because they learned at the meeting who you are. A meeting you record when a send is refused also allows follow-up mail.
 
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.

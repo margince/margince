@@ -80,6 +80,11 @@ func (capturedTextPurger) PurgeTextCopiesTx(ctx context.Context, tx pgx.Tx, acti
 	return ai.EraseSamplesCopiedFromTx(ctx, tx, activityIDs, time.Now().UTC())
 }
 
+// PurgeTextNamingTx empties the voice samples that name an erased subject.
+func (capturedTextPurger) PurgeTextNamingTx(ctx context.Context, tx pgx.Tx, fullName string, emails []string) error {
+	return ai.EraseSamplesNamingTx(ctx, tx, fullName, emails, time.Now().UTC())
+}
+
 //nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.
 func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 	if vault == nil {

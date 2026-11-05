@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"testing"
 	"time"
@@ -130,5 +131,85 @@ func TestAnErasureScrubsASampleTheOwnerRemovedFirst(t *testing.T) {
 	if n := l.o.count(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'voice_corpus_source'
 		AND entity_id = $1 AND action = 'erase'`, sourceID); n != 0 {
 		t.Errorf("%d erase records for a sample the owner had already emptied, want 0", n)
+	}
+}
+
+// pastedSamples is a built voice that also holds pasted samples, keyed by
+// their text.
+func pastedSamples(t *testing.T, texts ...string) (*voiceBuildEnv, map[string]ids.UUID) {
+	t.Helper()
+	const quote = "Naming quote."
+	env := builtVoiceEnv(t, quote)
+	samples := map[string]ids.UUID{}
+	for i, text := range texts {
+		source, _, _, err := env.store.IngestSource(env.owner, env.profile.ID, ai.IngestSourceInput{
+			Kind: "email", Register: "email", SourceLabel: fmt.Sprintf("pasted-%d", i+1), Content: text,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		samples[text] = source.ID
+	}
+	return env, samples
+}
+
+// sampleEmptied reports whether the sample lost its text to an erasure that
+// recorded doing so.
+func sampleEmptied(t *testing.T, o *owedEnv, sample ids.UUID) bool {
+	t.Helper()
+	return o.count(t, `SELECT count(*) FROM voice_corpus_source v WHERE id = $1
+		AND content IS NULL AND content_hash = '' AND archived_at IS NOT NULL
+		AND EXISTS (SELECT 1 FROM audit_log a WHERE a.entity_type = 'voice_corpus_source'
+		            AND a.entity_id = v.id AND a.action = 'erase')`, sample) == 1
+}
+
+// A pasted sample is no copy of any mail, yet a greeting in it names the contact
+// it was written to. Their erasure empties it, by full name or by whole
+// address. A sample greeting another Anna, or naming a longer address, stays.
+func TestErasingAContactEmptiesEverySampleThatNamesThem(t *testing.T) {
+	const (
+		byName      = "Hallo ANNA  BERG, danke für das Gespräch."
+		byAddress   = "Bitte an anna@customer.example weiterleiten."
+		bracketed   = "Antwort an <ANNA@customer.example>, danke."
+		italic      = "Schreib an _anna@customer.example_ bitte."
+		bold        = "Schreib an *anna@customer.example* bitte."
+		sentenceEnd = "Die Adresse war anna@customer.example."
+		annabelle   = "Hallo Annabelle Bergmann, danke für das Gespräch."
+		anotherAnna = "Hallo Anna, bis bald und danke für das Gespräch."
+		longerLocal = "Bitte an joanna@customer.example weiterleiten."
+		longerHost  = "Bitte an anna@customer.example.invalid weiterleiten."
+	)
+	env, samples := pastedSamples(t, byName, byAddress, bracketed, italic, bold, sentenceEnd, annabelle, anotherAnna, longerLocal, longerHost)
+	o := &owedEnv{e: env.e, owner: env.e.Rep1, now: clocktest.Now(t)}
+	anna := o.contact(t, "Anna Berg", "anna@customer.example")
+
+	if err := ComposedEraser(env.e.Pool, nil, nil).EraseContact(env.e.Admin(), anna, "Subject requested erasure"); err != nil {
+		t.Fatalf("erasing the contact: %v", err)
+	}
+	for _, text := range []string{byName, byAddress, bracketed, italic, bold, sentenceEnd} {
+		if !sampleEmptied(t, o, samples[text]) {
+			t.Errorf("sample %q still holds its text after the contact it names was erased", text)
+		}
+	}
+	for _, text := range []string{annabelle, anotherAnna, longerLocal, longerHost} {
+		if n := o.count(t, `SELECT count(*) FROM voice_corpus_source WHERE id = $1 AND content = $2
+			AND archived_at IS NULL`, samples[text], text); n != 1 {
+			t.Errorf("the erasure emptied %q, which names somebody else", text)
+		}
+	}
+}
+
+// A one-word name fits too many contacts, so only an address finds a sample.
+func TestASingleWordNameEmptiesNoSampleByName(t *testing.T) {
+	const greeting = "Viele Grüße an Madonna und danke für das Gespräch."
+	env, samples := pastedSamples(t, greeting)
+	o := &owedEnv{e: env.e, owner: env.e.Rep1, now: clocktest.Now(t)}
+	madonna := o.contact(t, "Madonna", "madonna@customer.example")
+
+	if err := ComposedEraser(env.e.Pool, nil, nil).EraseContact(env.e.Admin(), madonna, "Subject requested erasure"); err != nil {
+		t.Fatalf("erasing the contact: %v", err)
+	}
+	if sampleEmptied(t, o, samples[greeting]) {
+		t.Error("a one-word name emptied a sample that may greet somebody else")
 	}
 }

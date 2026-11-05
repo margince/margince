@@ -57316,8 +57316,12 @@ components:
           type: string
           enum: [in_person, requested_by_subject]
           description: |
-            How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-            contact asking us to write to them by phone or across a counter.
+            How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+            included; `requested_by_subject` is the contact asking us to write to them by phone or
+            across a counter. `in_person` supports personal one-to-one follow-up mail, never
+            marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+            settles the contact's open source reviews as information given at the meeting, as a
+            source review answered "met face to face" does; for anyone else they stay open.
         note:
           type: string
           minLength: 1
@@ -68240,6 +68244,10 @@ components:
         obtained_at: { type: [string, 'null'], format: date-time }
         timezone: { type: string, default: UTC, description: 'IANA timezone used for the acquisition calendar and its monthly deadline.' }
         note: { type: string, minLength: 1, maxLength: 500 }
+        met_in_person:
+          type: boolean
+          default: false
+          description: 'The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.'
 
     AssignNoticeCase:
       type: object

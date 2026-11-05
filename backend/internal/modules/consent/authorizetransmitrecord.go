@@ -48,6 +48,12 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 	if err != nil {
 		return nil, err
 	}
+	// The data-protection country is copied from staging, not resolved again:
+	// the footer that goes out was rendered under the staged one.
+	claims, err := stagedClaims(ctx, tx, req.DeliveryID)
+	if err != nil {
+		return nil, err
+	}
 	for i, d := range set.Decisions {
 		// Both or neither, which the table's own CHECK also demands: a
 		// subject_kind naming a row with no id describes nothing.
@@ -60,16 +66,8 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 		// The country this recipient was decided under, so the row names the
 		// pack that judged it.
 		ruleset := rulesetStamp(countries[i])
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO communication_decision
-			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
-			   phase, resolved_category, verdict, reason_code, basis, suppression,
-			   content_fingerprint, legacy_verdict, mode, actor,
-			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
-			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
-			   existing_customer_sold_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
-			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`,
+		protection := claims[decisionRecipientKey(d.Recipient)].dataProtection
+		values := []any{
 			req.DeliveryID, req.Attempt, setID, decisionRecipientKey(d.Recipient),
 			subjectKind, subjectID, string(d.Phase), string(d.Resolved), string(d.Verdict),
 			d.ReasonCode, nullableBasis(d.Basis), nullableText(d.Suppression),
@@ -79,7 +77,18 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			// somebody's decision for both.
 			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
 			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
-			groundNotice(d), groundOffer(d), groundSoldAt(d))
+			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+		}
+		tag, err := tx.Exec(ctx, `
+			INSERT INTO communication_decision
+			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
+			   phase, resolved_category, verdict, reason_code, basis, suppression,
+			   content_fingerprint, legacy_verdict, mode, actor,
+			   execution_authority, instruction_id, ruleset_version, ruleset_codes,
+			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
+			   existing_customer_sold_at, data_protection_country)
+			VALUES (`+storekit.Placeholders(values)+`)
+			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`, values...)
 		if err != nil {
 			return nil, fmt.Errorf("consent: record the transmit decision: %w", err)
 		}

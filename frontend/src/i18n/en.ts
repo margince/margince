@@ -10254,6 +10254,8 @@ export const en = {
     "For example: their first email, or who introduced you.",
   "notice.source.effect":
     "Saving records where their details came from. If that source means a privacy notice is owed, the notice duty opens with its deadline. Saving sends no email and does not change whether you may email them.",
+  "notice.source.metEffect":
+    "Saving records the meeting. It lets you send them personal follow-up mail, never marketing or a newsletter. No privacy notice is owed: they learned at the meeting who you are. Saving sends no email. Give the day you met.",
   "notice.source.whyUnknown":
     "Nothing on record says where this contact’s details came from.",
   "notice.source.whyUnconfirmed":

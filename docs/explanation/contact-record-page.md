@@ -83,9 +83,10 @@ claimed. Only readers with privacy access see it. A reader who may change privac
 and no button.
 
 The drawer says why the source is asked and what is on record. Then it asks "How did you receive
-their contact details?". Each answer maps to one existing source kind. The answer for a meeting keeps
-the privacy notice duty open, even if they agreed to be contacted. **Another source** opens the
-seven other kinds, including the one that says the notice was given at the meeting.
+their contact details?". Each answer maps to one existing source kind. The answer for a meeting
+settles the review with no notice duty, because they learned at the meeting who holds their details.
+It also records the meeting, which allows personal follow-up mail inside the reply window.
+**Another source** opens the six other kinds.
 
-**Not sure** saves nothing, and the review stays open. Saving sends no mail and does not change
-whether the contact may be emailed.
+**Not sure** saves nothing, and the review stays open. Saving sends no mail. Only the meeting answer
+changes whether the contact may be emailed.

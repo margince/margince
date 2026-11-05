@@ -42,6 +42,9 @@ type scheduledPayload struct {
 	MarketingPurpose string         `json:"marketing_purpose,omitempty"`
 	OperatorReason   string         `json:"operator_reason,omitempty"`
 	Evidence         frozenEvidence `json:"evidence,omitzero"`
+	// SendingEntity is the legal entity the scheduling resolved. A payload
+	// written before it was frozen has none, and the fire resolves one.
+	SendingEntity string `json:"sending_entity,omitempty"`
 }
 
 // frozenEvidence is the evidence block as it sits on a scheduled row. Ids as
@@ -140,6 +143,7 @@ func freezePayload(in SendEmailInput) scheduledPayload {
 		MarketingPurpose: in.MarketingPurpose,
 		OperatorReason:   in.OperatorReason,
 		Evidence:         freezeEvidence(in.Evidence),
+		SendingEntity:    idText(in.SendingEntity),
 	}
 }
 
@@ -155,6 +159,12 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 	evidence, err := p.Evidence.thaw()
 	if err != nil {
 		return SendEmailInput{}, err
+	}
+	var entity ids.UUID
+	if p.SendingEntity != "" {
+		if entity, err = ids.Parse(p.SendingEntity); err != nil {
+			return SendEmailInput{}, fmt.Errorf("scheduled send: sending entity %q: %w", p.SendingEntity, err)
+		}
 	}
 	// A category reserved for the installation's own notices can never
 	// legitimately be in a scheduled payload: the door that wrote it refuses
@@ -181,5 +191,6 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		MarketingPurpose: p.MarketingPurpose,
 		OperatorReason:   p.OperatorReason,
 		Evidence:         evidence,
+		SendingEntity:    entity,
 	}, nil
 }

@@ -196,7 +196,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterChannelProviderTools(r, inertChannelProviderDirectory{})
 	RegisterSlippingTools(r,
 		func(context.Context, int) ([]SlippingDeal, error) { return nil, nil },
-		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil }, testStalledDays)
+		func(context.Context, SlippingDeal) (ids.UUID, string, error) { return ids.UUID{}, "", nil }, testStalledDays, testStalledDays)
 	RegisterCommitmentTool(r, func(context.Context, CommitmentQuery) (CommitmentSweep, error) {
 		return CommitmentSweep{}, nil
 	})

@@ -33226,9 +33226,12 @@ type ApproveRequest struct {
 
 // AssessNoticeSource defines model for AssessNoticeSource.
 type AssessNoticeSource struct {
-	Kind       AssessNoticeSourceKind `json:"kind"`
-	Note       string                 `json:"note"`
-	ObtainedAt *time.Time             `json:"obtained_at,omitempty"`
+	Kind AssessNoticeSourceKind `json:"kind"`
+
+	// MetInPerson The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.
+	MetInPerson *bool      `json:"met_in_person,omitempty"`
+	Note        string     `json:"note"`
+	ObtainedAt  *time.Time `json:"obtained_at,omitempty"`
 
 	// Timezone IANA timezone used for the acquisition calendar and its monthly deadline.
 	Timezone *string `json:"timezone,omitempty"`
@@ -56168,8 +56171,12 @@ type RecordClaimRecordType string
 
 // RecordCommunicationContextRequest One rep's statement about one contact, answering one refusal.
 type RecordCommunicationContextRequest struct {
-	// Kind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-	// contact asking us to write to them by phone or across a counter.
+	// Kind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+	// included; `requested_by_subject` is the contact asking us to write to them by phone or
+	// across a counter. `in_person` supports personal one-to-one follow-up mail, never
+	// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+	// settles the contact's open source reviews as information given at the meeting, as a
+	// source review answered "met face to face" does; for anyone else they stay open.
 	Kind RecordCommunicationContextRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence there is.
@@ -56184,8 +56191,12 @@ type RecordCommunicationContextRequest struct {
 	SubjectId openapi_types.UUID `json:"subject_id"`
 }
 
-// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room; `requested_by_subject` is the
-// contact asking us to write to them by phone or across a counter.
+// RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
+// included; `requested_by_subject` is the contact asking us to write to them by phone or
+// across a counter. `in_person` supports personal one-to-one follow-up mail, never
+// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
+// settles the contact's open source reviews as information given at the meeting, as a
+// source review answered "met face to face" does; for anyone else they stay open.
 type RecordCommunicationContextRequestKind string
 
 // RecordConfirmationPage One contact's own view of what the workspace holds about them, for the no-login confirm page.

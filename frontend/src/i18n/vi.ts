@@ -9980,6 +9980,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ví dụ: email đầu tiên của họ, hoặc ai đã giới thiệu họ.",
   "notice.source.effect":
     "Khi lưu, hệ thống ghi lại thông tin của họ đến từ đâu. Nếu nguồn đó cần thông báo về quyền riêng tư, nghĩa vụ thông báo sẽ được mở cùng thời hạn. Việc lưu không gửi email và không thay đổi việc bạn có được gửi email cho họ hay không.",
+  "notice.source.metEffect":
+    "Khi lưu, hệ thống ghi lại cuộc gặp. Bạn được gửi email theo dõi cá nhân cho họ, nhưng không bao giờ gửi tiếp thị hay bản tin. Không cần gửi thông báo về quyền riêng tư: họ đã biết bạn là ai khi gặp mặt. Việc lưu không gửi email. Hãy nhập ngày gặp.",
   "notice.source.whyUnknown":
     "Không có ghi nhận nào cho biết thông tin của liên hệ này đến từ đâu.",
   "notice.source.whyUnconfirmed":
