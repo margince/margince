@@ -198,6 +198,7 @@ func stricter(a, b Rules) Rules {
 		out.SubjectPrefix = b.SubjectPrefix
 	}
 	out.FrequencyCap = tighterCap(a.FrequencyCap, b.FrequencyCap)
+	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
 	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
 	// An exception only where BOTH grant it: a route to advertising without

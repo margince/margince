@@ -1,0 +1,343 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package consent
+
+// Correcting a stop recorded by mistake, and the list that offers it.
+//
+// A marketing objection is stamped at the subject's level whoever types it. An
+// admin may take back one a colleague typed, with a reason; a rep may not, and
+// nobody takes back one the contact pressed themselves.
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+)
+
+// repOwnedContact seeds a contact the bounded rep owns, so the rep's own
+// write gates pass and only the lift rule is under test.
+func repOwnedContact(t *testing.T, e *channelConsentEnv) ids.ContactID {
+	t.Helper()
+	own := ids.New[ids.ContactKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
+		VALUES ($1, 'Rita Customer', 'test', 'human:x', 'workspace', $2)`,
+		own, e.user); err != nil {
+		t.Fatal(err)
+	}
+	return own
+}
+
+// systemCtx is the principal the public preference edge binds: the product
+// acting on the contact's own press.
+func systemCtx(ws ids.UUID) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system"})
+}
+
+func onlyStop(t *testing.T, e *channelConsentEnv, ctx context.Context, contact ids.ContactID) crmcontracts.ContactStop {
+	t.Helper()
+	stops, err := e.store.ListStops(ctx, contact)
+	if err != nil {
+		t.Fatalf("listing the stops: %v", err)
+	}
+	if len(stops) != 1 {
+		t.Fatalf("listed %d stops, want 1: %+v", len(stops), stops)
+	}
+	return stops[0]
+}
+
+func TestAnAdminCorrectsAnObjectionAColleagueTyped(t *testing.T) {
+	e := setupChannelConsent(t)
+	contact := repOwnedContact(t, e)
+	rep := boundedRepCtx(e.ws, e.user)
+	if err := e.store.Suppress(rep, SuppressInput{
+		ContactID: contact, Kind: commsauthz.ReasonObjection, Reason: "said no newsletters",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+
+	asRep := onlyStop(t, e, rep, contact)
+	if asRep.MayLift || asRep.LiftBlockedBy == nil ||
+		*asRep.LiftBlockedBy != crmcontracts.ContactStopLiftBlockedBySubjectDecision {
+		t.Errorf("the rep is offered %+v, want no lift and subject_decision", asRep)
+	}
+	asAdmin := onlyStop(t, e, e.ctx, contact)
+	if !asAdmin.MayLift || !asAdmin.Correction || asAdmin.LiftBlockedBy != nil {
+		t.Errorf("the admin is offered %+v, want a correction", asAdmin)
+	}
+	if asAdmin.Authority != crmcontracts.ContactStopAuthoritySubject || !asAdmin.RecordedByColleague ||
+		asAdmin.RecordedByName == nil || *asAdmin.RecordedByName != "Rep" ||
+		asAdmin.Reason == nil || *asAdmin.Reason != "said no newsletters" {
+		t.Errorf("the stop reads %+v, want subject authority typed by Rep with its reason", asAdmin)
+	}
+
+	err := e.store.Lift(rep, LiftInput{ContactID: contact, SuppressionID: ids.UUID(asRep.Id), Reason: "mistake"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a rep correcting the objection answered %v, want ErrPermissionDenied", err)
+	}
+	err = e.store.Lift(e.ctx, LiftInput{ContactID: contact, SuppressionID: ids.UUID(asAdmin.Id)})
+	if _, ok := errors.AsType[*ValidationError](err); !ok {
+		t.Fatalf("a correction with no reason answered %v, want a validation error", err)
+	}
+	if err := e.store.Lift(e.ctx, LiftInput{
+		ContactID: contact, SuppressionID: ids.UUID(asAdmin.Id), Reason: "typed on the wrong contact",
+	}); err != nil {
+		t.Fatalf("the admin's correction: %v", err)
+	}
+	if stillLive(t, e, ids.UUID(asAdmin.Id)) {
+		t.Error("the corrected objection is still live")
+	}
+
+	var payload string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT after::text FROM audit_log
+		 WHERE entity_type = 'contact' AND entity_id = $1 AND after ? 'lifted_suppression'`,
+		contact).Scan(&payload); err != nil {
+		t.Fatalf("the correction left no audit entry: %v", err)
+	}
+	for _, want := range []string{liftBasisCorrection, "typed on the wrong contact"} {
+		if !strings.Contains(payload, want) {
+			t.Errorf("the audit entry omits %q: %s", want, payload)
+		}
+	}
+}
+
+func TestNobodyCorrectsAnObjectionTheContactPressed(t *testing.T) {
+	e := setupChannelConsent(t)
+	if _, err := e.store.PublicStop(systemCtx(e.ws), e.contact, StopAllMarketing, "No more ads."); err != nil {
+		t.Fatalf("the contact's own press: %v", err)
+	}
+	stop := onlyStop(t, e, e.ctx, e.contact)
+	if stop.MayLift || stop.RecordedByColleague {
+		t.Errorf("the admin is offered %+v, want no lift on the contact's own press", stop)
+	}
+	err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: ids.UUID(stop.Id), Reason: "resume"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an admin lifting the contact's press answered %v, want ErrPermissionDenied", err)
+	}
+}
+
+// A merge copies the contact's press onto the survivor and stamps the merger.
+// The copy is still the contact's.
+func TestACarriedPressStaysTheContacts(t *testing.T) {
+	e := setupChannelConsent(t)
+	origin, carried := ids.NewV7(), ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression
+		    (id, contact_id, kind, source, captured_by, decided_by_level, carried_from)
+		VALUES ($1, $3, 'marketing_objection', 'test', 'system', 'subject', NULL),
+		       ($2, $3, 'marketing_objection', 'test', 'human:merger', 'subject', $1)`,
+		origin, carried, e.contact); err != nil {
+		t.Fatalf("planting the carried press: %v", err)
+	}
+	err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: carried, Reason: "resume"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an admin lifting a carried press answered %v, want ErrPermissionDenied", err)
+	}
+}
+
+// No level lifts a restriction here: lifting one owes the contact notice first.
+func TestNoSeatLiftsARestriction(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression
+		    (id, contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, 'processing_restriction', 'test', 'human:x', 'user')`,
+		row, e.contact); err != nil {
+		t.Fatal(err)
+	}
+	stop := onlyStop(t, e, e.ctx, e.contact)
+	if stop.MayLift || stop.LiftBlockedBy == nil ||
+		*stop.LiftBlockedBy != crmcontracts.ContactStopLiftBlockedByRestriction {
+		t.Errorf("the admin is offered %+v, want the restriction refusal", stop)
+	}
+	err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "over"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an admin lifting a restriction answered %v, want ErrPermissionDenied", err)
+	}
+}
+
+// Only a seat typing through Suppress is correctable. Every other first
+// recorder counts as the contact's own act, and so does a copy whose original
+// is gone.
+func TestOnlyASeatTypedObjectionIsCorrectable(t *testing.T) {
+	cases := map[string]struct{ capturedBy, source string }{
+		"an agent recorded it":     {"agent:drafter", seatSourcePrefix + ": they said stop"},
+		"an import recorded it":    {"human:x", "import:legacy-crm"},
+		"a connector recorded it":  {"connector:telegram", seatSourcePrefix},
+		"its original was deleted": {"human:merger", carriedSourceMark + seatSourcePrefix + ": typed"},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupChannelConsent(t)
+			row := ids.NewV7()
+			if _, err := e.owner.Exec(context.Background(), `
+				INSERT INTO communication_suppression
+				    (id, contact_id, kind, source, captured_by, decided_by_level)
+				VALUES ($1, $2, 'marketing_objection', $3, $4, 'subject')`,
+				row, e.contact, c.source, c.capturedBy); err != nil {
+				t.Fatal(err)
+			}
+			stop := onlyStop(t, e, e.ctx, e.contact)
+			if stop.MayLift || stop.LiftBlockedBy == nil ||
+				*stop.LiftBlockedBy != crmcontracts.ContactStopLiftBlockedBySubjectDecision {
+				t.Errorf("the admin is offered %+v, want subject_decision", stop)
+			}
+			err := e.store.Lift(e.ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "resume"})
+			if !errors.Is(err, apperrors.ErrPermissionDenied) {
+				t.Errorf("an admin correcting it answered %v, want ErrPermissionDenied", err)
+			}
+		})
+	}
+}
+
+// A merge marks the copy it writes, and the copy of a typed objection stays
+// correctable through its chain.
+func TestACarriedTypedObjectionIsMarkedAndCorrectable(t *testing.T) {
+	e := setupChannelConsent(t)
+	survivor := ids.New[ids.ContactKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Survivor', 'test', 'human:x')`,
+		survivor); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "typed by mistake",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return e.store.CarryStopsTx(e.ctx, tx,
+			commsauthz.ContactStopSubject(e.contact), commsauthz.ContactStopSubject(survivor))
+	}); err != nil {
+		t.Fatalf("carrying the stop: %v", err)
+	}
+	var source string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT source FROM communication_suppression WHERE contact_id = $1`, survivor).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(source, carriedSourceMark) {
+		t.Errorf("the carried copy's source is %q, want it marked as a copy", source)
+	}
+	stop := onlyStop(t, e, e.ctx, survivor)
+	if !stop.Correction || stop.Reason == nil || *stop.Reason != "typed by mistake" {
+		t.Errorf("the carried copy reads %+v, want a correction with the typed reason", stop)
+	}
+}
+
+// typedObjectionOnContact records an objection the way a seat types one, and
+// answers its row.
+func typedObjectionOnContact(t *testing.T, e *channelConsentEnv) ids.UUID {
+	t.Helper()
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "typed by mistake",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	return ids.UUID(onlyStop(t, e, e.ctx, e.contact).Id)
+}
+
+// The list offers a lift only where Lift would take it. An admin who may only
+// read contacts is offered nothing, and Lift refuses them too.
+func TestAReadOnlyAdminIsOfferedNoLift(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := typedObjectionOnContact(t, e)
+	readOnly := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	stop := onlyStop(t, e, readOnly, e.contact)
+	if stop.MayLift || stop.LiftBlockedBy == nil ||
+		*stop.LiftBlockedBy != crmcontracts.ContactStopLiftBlockedByPermission {
+		t.Errorf("a read-only admin is offered %+v, want no lift for want of permission", stop)
+	}
+	err := e.store.Lift(readOnly, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a read-only admin's lift answered %v, want ErrPermissionDenied", err)
+	}
+}
+
+// adminAgent is an agent lent an admin role over contacts. A passport makes it
+// an agent working on its user's passport.
+func adminAgent(e *channelConsentEnv, id string, passport ids.UUID) context.Context {
+	return principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: id, UserID: e.user,
+		PassportID: passport, OnBehalfOf: onBehalfOf(e, passport),
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+func onBehalfOf(e *channelConsentEnv, passport ids.UUID) ids.UUID {
+	if passport.IsZero() {
+		return ids.UUID{}
+	}
+	return e.user
+}
+
+// Only a human seat corrects an objection. The system principal and an agent
+// lent an admin role all read as LevelAdmin, and all are refused, an agent on
+// its user's passport included.
+func TestOnlyAHumanSeatCorrectsAnObjection(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := typedObjectionOnContact(t, e)
+	for name, ctx := range map[string]context.Context{
+		"system": systemCtx(e.ws),
+		"agent":  adminAgent(e, "agent:drafter", ids.UUID{}),
+		// An id that spells a seat, so the principal type alone refuses it.
+		"agent spelled as a seat":      adminAgent(e, "human:"+e.user.String(), ids.UUID{}),
+		"agent on its user's passport": adminAgent(e, "agent:drafter", ids.NewV7()),
+	} {
+		err := e.store.Lift(ctx, LiftInput{ContactID: e.contact, SuppressionID: row, Reason: "mistake"})
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("the %s principal's correction answered %v, want ErrPermissionDenied", name, err)
+		}
+	}
+	if !stillLive(t, e, row) {
+		t.Error("a refused correction revoked the objection")
+	}
+}
+
+// An agent on its user's passport lifts what its user may lift.
+func TestAnAgentOnItsUsersPassportLiftsARepsStop(t *testing.T) {
+	e := setupChannelConsent(t)
+	contact := repOwnedContact(t, e)
+	if err := e.store.Suppress(boundedRepCtx(e.ws, e.user), SuppressInput{
+		ContactID: contact, Kind: commsauthz.ReasonSubjectRequest, Reason: "asked on the phone",
+	}); err != nil {
+		t.Fatalf("recording the rep's stop: %v", err)
+	}
+	stop := onlyStop(t, e, e.ctx, contact)
+	agent := adminAgent(e, "agent:drafter", ids.NewV7())
+	if err := e.store.Lift(agent, LiftInput{
+		ContactID: contact, SuppressionID: ids.UUID(stop.Id), Reason: "they asked us to carry on",
+	}); err != nil {
+		t.Fatalf("the agent's lift: %v", err)
+	}
+	if stillLive(t, e, ids.UUID(stop.Id)) {
+		t.Error("the agent's lift left the stop live")
+	}
+}

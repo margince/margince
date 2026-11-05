@@ -16,8 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func namePtr(s string) *string { return &s }
-
 // A display name that is the plain join of the parts follows a change to them.
 // One somebody typed differently, or one the update itself changes, stays.
 func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
@@ -27,23 +25,38 @@ func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
 		update       UpdateContactInput
 		wantFullName string
 	}{
-		{"a plain join follows the new first name", "Jonh Doe",
-			UpdateContactInput{FirstName: namePtr("John")}, "John Doe"},
-		{"a plain join follows a cleared last name", "Jonh Doe",
-			UpdateContactInput{Clear: []string{"last_name"}}, "Jonh"},
-		{"the edit form's unchanged display name is no choice", "Jonh Doe",
-			UpdateContactInput{FullName: namePtr("Jonh Doe"), FirstName: namePtr("John")}, "John Doe"},
-		{"a hand-typed display name stays", "Dr. Jonh Doe",
-			UpdateContactInput{FirstName: namePtr("John")}, "Dr. Jonh Doe"},
-		{"a display name the update sends stays", "Jonh Doe",
-			UpdateContactInput{FullName: namePtr("Johnny D."), FirstName: namePtr("John")}, "Johnny D."},
+		{
+			"a plain join follows the new first name", "Jonh Doe",
+			UpdateContactInput{FirstName: new("John")},
+			"John Doe",
+		},
+		{
+			"a plain join follows a cleared last name", "Jonh Doe",
+			UpdateContactInput{Clear: []string{"last_name"}},
+			"Jonh",
+		},
+		{
+			"the edit form's unchanged display name is no choice", "Jonh Doe",
+			UpdateContactInput{FullName: new("Jonh Doe"), FirstName: new("John")},
+			"John Doe",
+		},
+		{
+			"a hand-typed display name stays", "Dr. Jonh Doe",
+			UpdateContactInput{FirstName: new("John")},
+			"Dr. Jonh Doe",
+		},
+		{
+			"a display name the update sends stays", "Jonh Doe",
+			UpdateContactInput{FullName: new("Johnny D."), FirstName: new("John")},
+			"Johnny D.",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupDedupe(t)
 			ctx := e.as()
 			created, err := e.store.CreateContact(ctx, CreateContactInput{
-				FullName: tc.storedFull, FirstName: namePtr("Jonh"), LastName: namePtr("Doe"), Source: "manual",
+				FullName: tc.storedFull, FirstName: new("Jonh"), LastName: new("Doe"), Source: "manual",
 			})
 			if err != nil {
 				t.Fatalf("create: %v", err)
@@ -66,7 +79,7 @@ func TestRenamingThroughTheNamePartsQueuesThePair(t *testing.T) {
 	ctx := e.as()
 	first := e.plainContact(ctx, t, "Gerhard Sahner", "info@gerhard-sahner.test")
 	second, err := e.store.CreateContact(ctx, CreateContactInput{
-		FullName: "Max Mustermann", FirstName: namePtr("Max"), LastName: namePtr("Mustermann"), Source: "manual",
+		FullName: "Max Mustermann", FirstName: new("Max"), LastName: new("Mustermann"), Source: "manual",
 		Emails: []ContactEmailInput{{Email: "sahner@innoscripta.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
@@ -78,7 +91,7 @@ func TestRenamingThroughTheNamePartsQueuesThePair(t *testing.T) {
 	}
 
 	if _, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](secondID), UpdateContactInput{
-		FirstName: namePtr("Gerhard"), LastName: namePtr("Sahner"),
+		FirstName: new("Gerhard"), LastName: new("Sahner"),
 	}); err != nil {
 		t.Fatalf("rename through the parts: %v", err)
 	}
@@ -95,7 +108,7 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{
-		FullName: "Jonh Doe", FirstName: namePtr("Jonh"), LastName: namePtr("Doe"), Source: "manual",
+		FullName: "Jonh Doe", FirstName: new("Jonh"), LastName: new("Doe"), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -125,7 +138,7 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 	}
 	done := make(chan result, 1)
 	go func() {
-		got, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](id), UpdateContactInput{FirstName: namePtr("John")})
+		got, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](id), UpdateContactInput{FirstName: new("John")})
 		done <- result{got.FullName, err}
 	}()
 	if _, finished := waitUntilBlocked(t, holder, pid, done); finished {

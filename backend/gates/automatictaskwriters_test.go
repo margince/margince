@@ -73,6 +73,8 @@ var taskSourceWriters = map[string][]string{
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
 	"compose/dealcloselost.go:recordOnTimeline":                           {writesNoTask},
+	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
+	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
 	"compose/dealverdictjudge.go:recordOnTimeline":                        {writesNoTask},
 	"compose/webformleads.go:Land":                                        {writesNoTask},
 	"compose/assurancebundletask.go:writeBundleTask":                      {provenance.AssuranceTaskSource},

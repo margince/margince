@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch, requireVersion } from "../api/version";
 import { useT } from "../i18n";
 import { throwProblem } from "./problem";
 import { withShippedLabels } from "./shippedlabels";
@@ -61,10 +62,14 @@ export function useUpdateLossReason() {
   return useMutation({
     mutationFn: async (args: {
       id: string;
+      version: number | undefined;
       body: components["schemas"]["UpdateLossReasonRequest"];
     }) => {
       const { data, error, response } = await api.PATCH("/loss-reasons/{id}", {
-        params: { path: { id: args.id } },
+        params: {
+          path: { id: args.id },
+          ...ifMatch(requireVersion(args.version)),
+        },
         body: args.body,
       });
       if (error || !response.ok) {

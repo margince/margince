@@ -37,9 +37,9 @@ export function useCanChangeNoticeCase(): boolean {
 }
 
 /**
- * The source question for one review, as a drawer: why it is asked, what is
- * on record, "How did you receive their contact details?", and what saving
- * does. The privacy queue and the contact page both open it.
+ * The source question for one review, as a drawer. It says why it is asked
+ * and what is on record, asks "How did you receive their contact details?",
+ * and says what saving does. The privacy queue and the contact page open it.
  */
 export function SourceReviewDialog({
   caseId,

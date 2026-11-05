@@ -58,6 +58,7 @@ const DECIDER_LABEL: Partial<Record<BlockedDomain["source"], MessageKey>> = {
   verdict: "blockedDomains.source.verdict",
   heuristic: "blockedDomains.source.heuristic",
   human: "blockedDomains.source.human",
+  agent: "blockedDomains.source.agent",
 };
 
 // Why the domain stands where it does, in the reader's language. `stated`

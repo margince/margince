@@ -14,18 +14,12 @@ package compose
 import (
 	"context"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/compose/company360"
-	"github.com/margince/margince/backend/internal/compose/companybrief"
-	"github.com/margince/margince/backend/internal/compose/companydossier"
-	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -43,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // newContactsHandlers builds the contact/company/lead transport with the
@@ -355,104 +348,6 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 			rollout: companyContextRolloutOnboarding,
 		},
 	}
-}
-
-// wireSystemOfRecordReads builds the reads over this system of record — the
-// company view and its grounded prose.
-func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
-	// The contacts store carries the SAME fieldcatalog seam contactsHandlers
-	// gets: the 360 serves the company object, and without it the
-	// company view would silently omit the cf_* columns GET
-	// /companies/{id} returns for the same record.
-	// The brief reads THROUGH the 360 service, so it inherits every gate the
-	// page itself applies and can only describe what this caller may see.
-	// The model lane is nil here: WithCompanyBrief binds the api role's
-	// summarize lane, and without it the brief serves its deterministic
-	// floor.
-	s.contactsStore = newContactsStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
-	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
-	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
-	// Both stores, because answering a domain question is two different acts:
-	// keeping it settles the triage ledger, discarding it writes the caller's
-	// own capture exclusion.
-	s.domainQuestionHandlers = domainQuestionHandlers{
-		contacts:   s.contactsStore,
-		exclusions: capture.NewExclusionStore(InstallationDB(pool)),
-	}
-	s.threadAudience = NewThreadAudienceSetter(pool)
-	s.captureSenderHandlers = captureSenderHandlers{
-		db:         InstallationDB(pool),
-		store:      capture.NewSenderOverrideStore(InstallationDB(pool)),
-		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
-	}
-	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}
-	suggestionSink := sync.OnceValue(func() *capture.Sink { return newCaptureSink(pool, s.captureConfig) })
-	s.conversationSuggestionHandlers = conversationSuggestionHandlers{read: func(ctx context.Context, anchor datasource.EntityRef) (capture.ConversationSuggestions, error) {
-		return suggestionSink().ConversationSuggestions(ctx, anchor)
-	}}
-	s.captureCounterpartyHoldHandlers = captureCounterpartyHoldHandlers{
-		store:     capture.NewCounterpartyHoldStore(InstallationDB(pool)),
-		recompute: activities.RecomputeAudienceTx,
-		clearHold: activities.ClearCounterpartyHoldTx,
-	}
-	s.marginceChangeHandlers = newMarginceChangeHandlers(pool)
-	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
-	s.ownershipRequestHandlers = ownershipRequestHandlers{transfers: newOwnershipTransfers(pool)}
-	s.dealCommitmentHandlers = newDealCommitmentHandlers(pool, time.Now)
-	s.promiseTakeOverHandlers = newPromiseTakeOverHandlers(pool)
-	// The importer maps only core columns (see importTargets for why custom
-	// fields are not among them), so it needs no field catalog of its own.
-	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), NewApprovalsService(InstallationDB(pool)), time.Now).
-		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))).
-		WithSignalWords(signalSummaryWords)
-	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
-		WithEmailSummaries(emailRows(pool))
-	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc)
-	// The dossier reads the SAME contacts store the 360 and the brief read, so
-	// the three cannot drift about what a company's facts are. No model lane is
-	// wired yet: every assembly is the deterministic floor and says so.
-	// Both lanes are nil here: WithCompanyDossier and WithGrowthFit bind the
-	// api role's, and without them each surface serves its deterministic floor.
-	// The two floors differ in kind — the dossier's still describes the company,
-	// where growth fit's can only abstain — which is why they are separate
-	// options rather than one.
-	s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, nil, "", time.Now).
-		WithEmailSummaries(emailRows(pool))
-	s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
-		pool, s.contactsStore, offeringConfirmed(s.contactsStore), nil, "", time.Now,
-	).WithEmailSummaries(emailRows(pool))
-	s.companyDossierHandlers = companydossier.NewHandlers(
-		s.companyDossierSvc, s.companyGrowthFitSvc,
-	)
-	// The account scan over the same composite read and the same dismissals.
-	// No lane and no job runner here: an ensure on this role settles the
-	// rules' floor in-request, and WithAccountScan binds the api role's.
-	s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, nil, nil, nil, time.Now, s.log).
-		WithEmailSummaries(emailRows(pool))
-	s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc)
-	s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
-	// AFTER the dossier service exists: the drafter takes it as a dependency,
-	// and a nil *Service handed through the interface is not the nil INTERFACE
-	// the drafter guards against — it would pass the guard and panic on the
-	// first account draft.
-	//
-	// The account-started draft reads through the same 360 and writes nothing,
-	// so it needs no pool of its own. Nil lane here for the same reason as the
-	// brief's: WithAccountDraft binds the api role's, and without it the
-	// endpoint answers from its deterministic floor rather than 501-ing.
-	s.firstDrafts.account = accountdraft.NewService(s.company360Svc, nil).
-		WithEnvelope(draftEnvelope(pool, s.log)).
-		WithEmailSummaries(emailRows(pool)).
-		WithDossier(s.companyDossierSvc)
-	s.accountDraftHandlers = accountdraft.NewHandlers(s.firstDrafts.account)
-	s.company360Handlers = company360.NewHandlers(s.company360Svc)
-	// The contact page is the company page's sibling, so it is wired here
-	// rather than beside the handler sets.
-	s.wireContact360(pool)
-	s.wireReversal(pool)
-	s.wireProject360(pool)
-	s.wireSalesReview(pool)
 }
 
 // newConsentHandlers binds the consent surface to the four edges it cannot

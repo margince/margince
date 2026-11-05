@@ -53,13 +53,14 @@ func TestAStopSaysWhatCanStillGo(t *testing.T) {
 	}
 }
 
-// A request answering a reply, a follow-up or a quote is read with no age
-// limit, so the review form takes it at any age. Anything else keeps the
-// window.
+// A request answering a reply, a follow-up, a quote or a deal follow-up has no
+// age limit. So the review form takes it at any age. Anything else
+// keeps the window.
 func TestOnlyARequestForAClaimItAnswersSkipsTheWindow(t *testing.T) {
 	t.Parallel()
 	for _, claim := range []commsauthz.Category{
 		commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup, commsauthz.CategoryPrecontractQuote,
+		commsauthz.CategoryActiveDealFollowup,
 	} {
 		if !requestAnswersClaim(KindRequestedBySubject, claim) {
 			t.Errorf("a request answering %s is held to the window", claim)
@@ -68,7 +69,7 @@ func TestOnlyARequestForAClaimItAnswersSkipsTheWindow(t *testing.T) {
 	if requestAnswersClaim(kindInPerson, commsauthz.CategoryRequestedFollowup) {
 		t.Error("an exchange in person skips the window, though no request reader takes it")
 	}
-	if requestAnswersClaim(KindRequestedBySubject, commsauthz.CategoryActiveDealFollowup) {
-		t.Error("a request answering a deal follow-up skips the window, though that validator reads no request")
+	if requestAnswersClaim(KindRequestedBySubject, commsauthz.CategoryInvoiceOrPayment) {
+		t.Error("a request answering an invoice skips the window, though that validator reads no request")
 	}
 }

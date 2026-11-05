@@ -58,7 +58,6 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateContractRequest":             true,
 	"AdvanceDealRequest":                true,
 	"CreateStageRequest":                true,
-	"SetTransitionPolicyRequest":        true,
 	"ApplyTagRequest":                   true,
 	"ListMemberChangeRequest":           true,
 	"MergeTagsRequest":                  true,
@@ -96,6 +95,7 @@ var probedRequiredIDBodies = map[string]bool{
 // it is, which is the difference between having fixed eleven things and having
 // closed the class.
 var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
+	"DeclareExistingCustomerNoticeRequest": "DeclareNoticeInput.validate refuses a zero legal_entity_id as a 422 naming the field, before any lookup",
 	// Not a request body at all: the GDPR data-subject-request ENTITY, whose `id`
 	// is its own primary key rather than a caller-supplied reference. Waived
 	// because the name heuristic above cannot tell the two apart, and narrowing

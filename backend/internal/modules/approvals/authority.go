@@ -35,11 +35,6 @@ const kindArchiveRecord = "archive_record"
 // and a typo in any of them would silently ask for a grant nobody holds.
 const objectActivity = "activity"
 
-// objectDeal is the RBAC object a stage move is governed by. Spelled here
-// rather than imported, for targetImportRun's reason: approvals may not import
-// a module it governs.
-const objectDeal = "deal"
-
 // targetImportRun is the staged target a migrate-in commit names, and the RBAC
 // object the migration module admits on (migration.ImportRunObject). One word
 // for both, spelled here rather than imported: approvals may not import a
@@ -302,7 +297,6 @@ var decisionGrants = map[string][]grantRequirement{
 	// it performs the advance, so read is not enough: somebody who can see a
 	// deal but not steer it must not be able to release a move they could not
 	// have made by hand.
-	"stage_progression": {{objectDeal, principal.ActionUpdate}},
 	// An automation's request_approval stages under emit_flow_event, and that
 	// action IS the confirm-first act: approving it performs no downstream
 	// write, it finishes the asking. The grant is the one the action catalog
@@ -420,8 +414,8 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 	return nil
 }
 
-// mayArchiveOwnRecord is the object half of the archive rule the store asks:
-// an archive of a record type whose owner may archive it without delete takes
+// mayArchiveOwnRecord is the object half of the archive rule the store asks.
+// Archiving a record type whose owner may archive it without delete takes
 // update at the object level. Whether this row is the decider's own to archive
 // is the row half, which decidableRows asks with auth.EnsureArchivable.
 func mayArchiveOwnRecord(p principal.Principal, a row, g grantRequirement) bool {

@@ -146,10 +146,9 @@ const (
 
 // ListFieldHistory reads one record's per-field change timeline,
 // projected inside a single workspace tx from the audit spine. The gate
-// is threefold: a human session (the agent gate only fronts mutating
-// routes, so the human-only rule binds here), object-level read on the
-// entity type, and the row-scope visibility check — out of scope reads
-// as not-found, indistinguishable from not-there.
+// has three parts: a user or the agent on their passport, object-level read
+// on the entity type, and the row-scope visibility check. Out of scope
+// reads as not-found, indistinguishable from not-there.
 //
 // The page limit counts ENTRIES, but one audit row can yield several;
 // a row's entries never split across pages, so a page may overflow the
@@ -158,7 +157,7 @@ const (
 // filled the page may have been the true last one.
 func ListFieldHistory(ctx context.Context, db *database.DB, f FieldHistoryFilter) (FieldHistoryPage, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
+	if !ok || !actor.HumanOrItsAgent() {
 		return FieldHistoryPage{}, apperrors.ErrPermissionDenied
 	}
 	if !fieldHistoryEntityTypes[f.EntityType] {

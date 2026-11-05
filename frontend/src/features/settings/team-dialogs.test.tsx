@@ -63,9 +63,9 @@ it.each<[string, ReactNode, string]>([
   },
 );
 
-// A team of 120 is searched by name. The search narrows the rows, a removal
-// takes off the member on the pressed row, and focus lands on the next row the
-// reader can still see.
+// A team of 120 is searched by name, and the search narrows the rows. A
+// removal takes off the member on the pressed row. Focus lands on the next row
+// the reader can still see.
 const TEAM = { id: "t-dach", name: "DACH Sales" } as const;
 
 function teamOf(size: number): TeamUser[] {

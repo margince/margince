@@ -95,7 +95,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "confirm.done.body",
@@ -219,7 +218,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // group beside Company and Sales, not this record type.
     "settings.group.people",
     // "a person" here is a HUMAN BEING deciding, not the contact record.
-    "stageAutomation.noRules",
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",
@@ -288,6 +286,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
+    "sendPermission.reason.optedOutAfterRequest",
+    "sendPermission.reason.consentRequired",
+    "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
     // A human being on the committee, or who owns or sets something, not the record type.
@@ -517,6 +518,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
+    "sendPermission.reason.optedOutAfterRequest",
+    "sendPermission.reason.consentRequired",
+    "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
     "buyer.contact",

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { RecordNextBar } from "../../components/latestinbound";
 import { TaskCallAction } from "../../components/tasknextsteps";
 import { Button } from "../../design-system/atoms";
@@ -187,6 +188,7 @@ function MomentBar({
           <>
             <ActionVerb
               action={moment.recommended_action}
+              contact={view.contact}
               primary
               onAction={onAction}
             />
@@ -320,7 +322,11 @@ function AnswerBar({
         title={moment.headline}
         sub={t("contact.overview.coverage")}
         action={
-          <ActionVerb action={moment.recommended_action} onAction={onAction} />
+          <ActionVerb
+            action={moment.recommended_action}
+            contact={view.contact}
+            onAction={onAction}
+          />
         }
       />
     );
@@ -417,33 +423,44 @@ function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
   );
 }
 
-// One verb: the button, and under it what will happen when it is pressed.
 function ActionVerb({
   action,
+  contact,
   primary,
   onAction,
 }: Readonly<{
   action: ContactMomentAction;
+  contact: Contact360["contact"];
   primary?: boolean;
   onAction: (action: ContactMomentAction) => void;
 }>) {
   const t = useT();
+  const gate = useActivityGate(
+    contact,
+    action.kind === "schedule_meeting"
+      ? "scheduling.bookRefused"
+      : "record.logActivityRefused",
+  );
+  const attaches =
+    action.destination?.surface === "booking" ||
+    action.destination?.surface === "activity_log";
   const blocked = action.state === "blocked";
-  // A rule ladder picks the verb, not a model. Only a press that has the model
-  // write the mail wears indigo; the rest keep the accent.
+  // Only a verb that writes with a model uses the AI accent.
   const drafts = momentDrafts(action);
   const variant = drafts ? "ai" : primary ? "primary" : "ghost";
   return (
     <span className="today-verb">
-      {/* A blocked verb hands its sentence to the Button, whose `reason`
-          bars the press AND describes the control with it: a `title` on a
-          disabled button reaches no screen reader. A verb that will ask for
-          confirmation says nothing here; the confirmation IS the saying, and
-          a caption announcing it under the button was the same step twice. */}
       <Button
         variant={variant}
         onClick={() => onAction(action)}
-        reason={blocked ? blockedReason(action, t) : undefined}
+        disabled={attaches && gate.pending}
+        reason={
+          blocked
+            ? blockedReason(action, t)
+            : attaches && gate.refusalKey
+              ? t(gate.refusalKey)
+              : undefined
+        }
       >
         {drafts ? <Sparkles aria-hidden="true" /> : actionIcon(action.kind)}
         {action.label}
@@ -473,8 +490,6 @@ function actionIcon(kind: string): ReactNode {
   }
 }
 
-// Why this verb may not be pressed: the server's own reason when it sent one,
-// and the generic word for the rare blocked action that carries none.
 function blockedReason(
   action: ContactMomentAction,
   t: ReturnType<typeof useT>,

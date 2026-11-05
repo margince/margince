@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/consent"
 )
 
 // directed is the request body a designated human sends.
@@ -30,7 +32,7 @@ func directed() AnyMap {
 	return AnyMap{
 		"reason_code":     "contractual_necessity",
 		"explanation":     "The service agreement obliges us to send this notice.",
-		"warning_version": "override-v1",
+		"warning_version": consent.OverrideWarningVersion,
 		"acknowledged":    true,
 	}
 }

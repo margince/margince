@@ -107,9 +107,13 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealListResponse{Data: deals, Page: pageInfo(page)})
 }
 
+// amountIsJudged leaves the amount's lower bound to the store, whose refusal
+// answers amount_negative, the code the contract and the create form name.
+func amountIsJudged(path string) bool { return path == amountField }
+
 func (h Handlers) CreateDeal(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateDealParams) {
 	var req crmcontracts.CreateDealRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeJudged(w, r, &req, amountIsJudged) {
 		return
 	}
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
@@ -149,7 +153,7 @@ func (h Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 	var req crmcontracts.UpdateDealRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeJudged(w, r, &req, amountIsJudged) {
 		return
 	}
 

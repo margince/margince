@@ -4,6 +4,8 @@
 package commsauthz
 
 import (
+	"time"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -128,6 +130,19 @@ type Request struct {
 	// it when a recipient resolves to marketing. False makes no claim, for a
 	// caller that composes no such footer.
 	OmitsAdvertisingDuties bool
+	// SendingEntity is the legal entity the message goes out for. Staging
+	// resolves it from the sender; transmit reads the one staging stored, and
+	// never the principal the dispatcher runs as. Zero means unknown, and then
+	// nothing that is scoped to an entity can allow the message.
+	SendingEntity ids.UUID
+}
+
+// ExistingCustomerGround is the sale and the collection-notice declaration a
+// marketing message went out on without consent.
+type ExistingCustomerGround struct {
+	NoticeID ids.UUID
+	OfferID  ids.UUID
+	SoldAt   time.Time
 }
 
 // Decision is the engine's answer about ONE recipient at ONE phase.
@@ -174,6 +189,19 @@ type Decision struct {
 	// would otherwise have been discarded (aStopThatBindsTheMessage,
 	// consent/reviewcontext.go).
 	PurposeID *ids.UUID
+
+	// SendingEntity and PurposeKey are what this decision was taken for, and
+	// are stored on its row so transmit asks about the same entity and purpose.
+	SendingEntity ids.UUID
+	PurposeKey    string
+	// ExistingCustomer is set when the message is allowed on the
+	// existing-customer route.
+	ExistingCustomer *ExistingCustomerGround
+
+	// SupportedAlternatives are the reasons the record would carry when the
+	// claimed one fails. Only a preview fills them, and none is ever applied:
+	// the sender switches the reason and the engine is asked again.
+	SupportedAlternatives []Category
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.
@@ -274,6 +302,10 @@ type TransmitTicket struct {
 	// False on an allowed ticket, on a refusal about anything but consent, and
 	// on a refusal no exception answers (DecisionSet.ExceptionMayAnswer).
 	ConsentRefused bool
+	// Fingerprint digests everything the ticket was decided on: each
+	// recipient's decision, country and rule pack, and the ticket's answer. A
+	// recheck at the wire keeps the ticket only when its fingerprint is equal.
+	Fingerprint string
 }
 
 // Current reports whether this ticket authorizes THIS attempt of THIS

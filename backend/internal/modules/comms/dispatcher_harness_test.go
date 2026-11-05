@@ -224,6 +224,16 @@ type stubConsent struct {
 	// records the legacy gate's list. The dispatcher asks only the engine now,
 	// so this is the field a coverage case asserts on.
 	authzAsked []string
+	// recheck is what RecheckTransmit hands back; nil keeps the issued ticket.
+	recheck *commsauthz.TransmitTicket
+}
+
+// RecheckTransmit stands in for the second look at the wire.
+func (s *stubConsent) RecheckTransmit(_ context.Context, _ commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitTicket, error) {
+	if s.recheck != nil {
+		return *s.recheck, nil
+	}
+	return issued, nil
 }
 
 // RequireGrantedForRecipients satisfies the seam. The DISPATCHER no longer calls
@@ -371,6 +381,11 @@ func (f consentFunc) AuthorizeTransmit(_ context.Context, req commsauthz.Transmi
 		DecisionSetID: ids.NewV7(),
 		Allowed:       true,
 	}, nil
+}
+
+// RecheckTransmit keeps the issued ticket: this double answers the same both times.
+func (f consentFunc) RecheckTransmit(_ context.Context, _ commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitTicket, error) {
+	return issued, nil
 }
 
 func (f consentFunc) RequireGrantedForRecipients(ctx context.Context, r []connector.Recipient, p string) error {

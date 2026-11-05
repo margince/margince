@@ -397,11 +397,13 @@ func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
+	class := crmcontracts.ConsentPurposeClass(p.Class)
 	return crmcontracts.ConsentPurpose{
 		Id:                  openapi_types.UUID(p.ID.UUID),
 		Key:                 p.Key,
 		Label:               p.Label,
 		RequiresDoubleOptIn: &p.RequiresDoubleOptIn,
+		Class:               &class,
 		CreatedAt:           p.CreatedAt,
 	}
 }

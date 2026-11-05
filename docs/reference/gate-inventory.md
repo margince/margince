@@ -64,7 +64,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |
 | `docscodeofconduct_test.go` | H3 | CODE\_OF\_CONDUCT.md is the Contributor Covenant 2.1 as adopted, plus the project's enforcement contact. |
 | `dsrerasedsentinel_test.go` | H3 | The word an erasure leaves in place of a request's answer has two writers in two modules, and a module cannot import its sibling. |
-| `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `emaildesign_test.go` | H1 | Mail cannot read CSS variables, so emailview writes each design token in as its value. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `entitymodel_test.go` | H3 | The entity model pages say what the schema says. |
@@ -357,6 +356,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `maskedamountroots_test.go` | H2 | What the deal-amount census's roots are worth. |
 | `maskfacetcoverage_test.go` | H2 | Every object the maskable-field catalog offers is one some record's history withholds too. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on every surface that can reach it, including the ones it was not written for. |
+| `mcpparity_test.go` | H2 | docs/reference/mcp-parity.{json,md} match the contract, the web app and the handlers' grants, and give each operation one place. |
+| `mcpparitygrants_test.go` | H2 | The grants a handler checks, read from the Go source. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `meetingoverspelling_test.go` | H2 | When a meeting ENDS is spelled once, in occurredday.EndSQL. |
 | `meetingresponsibility_test.go` | H3 | Every reader of "whose meeting is this" asks storekit.MeetingResponsibilitySQL or UnclaimedMeetingSQL, or the meeting credit rule built on it. |
@@ -428,7 +429,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook, at the root and in any directory that needs one of its own. |
 | `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
-| `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |

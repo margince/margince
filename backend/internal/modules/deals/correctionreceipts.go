@@ -74,7 +74,7 @@ type CorrectionReceipt struct {
 // heldCorrections stay on Home until their owner accepts or undoes them.
 var heldCorrections = []string{
 	CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection, VerdictProbabilityCorrection,
-	VerdictStageMoveCorrection,
+	VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection,
 }
 
 // RecentCorrectionsOwnedBy reads what the sweep changed on THIS reader's deals
@@ -164,7 +164,7 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 // deal's owner whose grants composed them. The amounts follow the reader's
 // field mask. Each reader adds its own `WHERE` and `ORDER BY`.
 func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, error) {
-	readable := basisReadable(arg(readerOf(ctx)))
+	readable := BasisReadableSQL("a.evidence->>'basis_owner'", "d", arg(ReaderOf(ctx)))
 	amountShown, masked, err := auth.MaskExcludedClause(ctx, maskObject, "amount_minor", "d", arg)
 	if err != nil {
 		return "", err
@@ -207,7 +207,8 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       CASE WHEN NOT %[1]s THEN '{}'::jsonb
 			            WHEN %[4]s THEN a.evidence
 			            ELSE a.evidence - ARRAY['quoted_words', 'quoted_amount', 'quoted_currency',
-			                                    'amount_currency', 'rate_from', 'rate_to', 'rate_date'] END,
+			                                    'amount_currency', 'rate_from', 'rate_to', 'rate_date',
+			                                    '%[6]s', '%[7]s'] END,
 			       a.actor_type, a.actor_id, a.on_behalf_of, c.correction,
 			       %[2]s, %[3]s,
 			       (a.before->>'win_probability_override')::int, (a.after->>'win_probability_override')::int,
@@ -219,13 +220,14 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			  FROM deal_correction c
 			  JOIN deal d ON d.id = c.deal_id
 			  JOIN audit_log a ON a.id = c.audit_log_id
-`, readable, before, after, amountShown, arg(VerdictAmountCorrection)), nil
+`, readable, before, after, amountShown, arg(VerdictAmountCorrection), valuedAmountKey, valuedCurrencyKey), nil
 }
 
-// basisReadable is when the reader may read a correction's reason. The deal
-// is unowned, or the reader owns it and the reason was composed for them. A
-// colleague with row scope still sees what changed, never why.
-func basisReadable(readerPos int) string {
-	return storekit.SQLf(`(nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
-			                 AND (d.owner_id IS NULL OR d.owner_id = $%d))`, readerPos)
+// BasisReadableSQL is when the reader at readerPos may read why Margince did
+// something to the deal under alias. The deal is unowned, or the reader owns
+// it and basisOwner names them as the one the reason was composed for. A
+// colleague with row scope still sees what Margince did, never why.
+func BasisReadableSQL(basisOwner, deal string, readerPos int) string {
+	return storekit.SQLf(`(nullif(%[1]s, '') IS NOT DISTINCT FROM %[2]s.owner_id::text
+			                 AND (%[2]s.owner_id IS NULL OR %[2]s.owner_id = $%[3]d))`, basisOwner, deal, readerPos)
 }

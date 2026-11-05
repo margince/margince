@@ -22,6 +22,9 @@ type Relay struct {
 	// RejectMessage refuses the message at its final line, after the whole
 	// body was sent.
 	RejectMessage bool
+	// HoldAnswer, when set, holds the answer to the message's final line until
+	// the channel is closed: a relay that is slow to take the message.
+	HoldAnswer chan struct{}
 
 	mu   sync.Mutex
 	data string
@@ -77,6 +80,9 @@ func (r *Relay) serveOne() {
 		if inData {
 			if line == "." {
 				inData = false
+				if r.HoldAnswer != nil {
+					<-r.HoldAnswer
+				}
 				if r.RejectMessage {
 					say("554 message rejected")
 					continue

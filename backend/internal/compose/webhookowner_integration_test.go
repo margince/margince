@@ -85,8 +85,8 @@ func TestAWebhookWhoseOwnerLeftSaysSoAndCanBeHandedOn(t *testing.T) {
 
 // A delivery reaches whatever its owner may see, so naming an owner is acting
 // for that member. A caller who may manage webhooks but not members cannot
-// make an administrator the owner and so receive what only the administrator
-// sees; the owner stays as it was.
+// make an administrator the owner to receive what only the administrator
+// sees. The owner stays as it was.
 func TestAWebhookCannotBeMadeToRunAsSomeoneTheCallerMayNotActFor(t *testing.T) {
 	e := integration.Setup(t)
 	store := webhookStoreOver(e.DB(), nil)

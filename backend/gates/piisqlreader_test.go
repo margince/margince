@@ -100,6 +100,8 @@ var erasureCascadeFiles = []string{
 	// same seam's PurgeTextCopiesTx.
 	"internal/modules/ai/voicesentmailerase.go",
 	"internal/modules/privacy/partyprojections.go",
+	// The addresses a merge bound the subject's recorded requests to.
+	"internal/modules/privacy/requestaddresses.go",
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",

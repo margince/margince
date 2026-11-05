@@ -60,13 +60,14 @@ func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission stri
 		       next_attempt_at = CASE WHEN EXCLUDED.admission = 'suppressed'
 		                              THEN NULL ELSE company_domain_disposition.next_attempt_at END,
 		       updated_at = now()
-		 -- The sticky rule: an automatic caller may not overwrite a decision a
-		 -- HUMAN made, while a human may overwrite anything. Guarded on the
-		 -- source already stored, not on the value being written, because what
-		 -- must survive is the authority behind the row rather than which way
-		 -- it happened to point.
-		 WHERE company_domain_disposition.admission_source IS DISTINCT FROM @human
-		    OR EXCLUDED.admission_source = @human
+		 -- The sticky rule: a machine may not overwrite a decision a user or
+		 -- their agent made, an agent may not overwrite a user's, and a user may
+		 -- overwrite anything. Guarded on the source already stored, because what
+		 -- must survive is the authority behind the row.
+		 WHERE EXCLUDED.admission_source = @human
+		    OR (company_domain_disposition.admission_source IS DISTINCT FROM @human
+		        AND (EXCLUDED.admission_source = @agent
+		             OR company_domain_disposition.admission_source IS DISTINCT FROM @agent))
 		RETURNING (SELECT jsonb_build_object(
 		             'admission', was.admission,
 		             'admission_reason', coalesce(was.admission_reason, ''),
@@ -76,13 +77,13 @@ func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission stri
 		             FROM was WHERE was.admission IS NOT NULL)`,
 		pgx.NamedArgs{
 			admissionDomainArg: domain, "status": DomainPending, "admission": admission,
-			admissionReasonArg: reason.Text, auditKeySource: source, admissionHumanArg: AdmissionSourceHuman,
+			admissionReasonArg: reason.Text, auditKeySource: source, admissionHumanArg: AdmissionSourceHuman, "agent": AdmissionSourceAgent,
 			"reason_code": string(reason.Code), "sender_kind": string(reason.SenderKind),
 		}).Scan(&priorJSON)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		// The sticky rule declined this write: a machine may not overwrite a
-		// human's decision. Nothing moved, so there is no prior state to name.
+		// The sticky rule declined this write. Nothing moved, so there is no
+		// prior state to name.
 		return nil, false, nil
 	case err != nil:
 		return nil, false, fmt.Errorf("contacts: recording the admission of %s: %w", domain, err)

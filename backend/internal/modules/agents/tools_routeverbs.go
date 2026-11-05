@@ -35,6 +35,8 @@ type RouteVerb struct {
 	Query           []ViewQuery
 	// IfMatch is true when the route takes the record's version.
 	IfMatch bool
+	// IdempotencyKey is true when the route refuses a call with no key.
+	IdempotencyKey bool
 	// Body is true when the route takes a JSON body, whose schema BodySchema
 	// is, $refs resolved.
 	Body       bool
@@ -79,7 +81,13 @@ func writeAnswerSchema(answer json.RawMessage) json.RawMessage {
 	if err := json.Unmarshal(shape["properties"], &properties); err != nil || properties == nil {
 		properties = map[string]json.RawMessage{}
 	}
-	properties["status"] = json.RawMessage(`{"type":"integer"}`)
+	// A route's own status may be a word, and a cut answer's is the HTTP code. This
+	// surface refuses anyOf, so a status that may be either stays untyped.
+	if _, declared := properties["status"]; declared {
+		properties["status"] = json.RawMessage(`{}`)
+	} else {
+		properties["status"] = json.RawMessage(`{"type":"integer"}`)
+	}
 	properties[RouteAnswerTruncated] = json.RawMessage(`{"type":"boolean"}`)
 	shape["properties"] = mustMarshal(properties)
 	delete(shape, "required")

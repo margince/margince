@@ -78,9 +78,9 @@ func decidableRows(ctx context.Context, tx pgx.Tx, p principal.Principal, rows [
 	return out, nil
 }
 
-// narrowToOwnArchives keeps a staged archive decidable by a decider without the
-// target's delete grant only while the record is theirs to archive, by the rule
-// the archive itself asks. A decider holding delete is not narrowed.
+// narrowToOwnArchives keeps a staged archive decidable, for a decider without
+// the target's delete grant, only while the record is theirs to archive. It
+// asks the archive's own rule. A decider holding delete is not narrowed.
 func narrowToOwnArchives(ctx context.Context, tx pgx.Tx, p principal.Principal, rows []row, out []bool) error {
 	for i, a := range rows {
 		if !out[i] || a.Kind != kindArchiveRecord || a.TargetType == nil || a.TargetID == nil ||
