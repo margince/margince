@@ -160,7 +160,9 @@ describe("a contact with little context", () => {
     expect(within(dialog).queryByTestId("confirm-details-ask")).toBeNull();
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     // The left column and the Research tab's panel read the one guard.
-    expect((await screen.findAllByText("Allowed")).length).toBe(2);
+    expect(
+      (await screen.findAllByText("Recent business contact recorded")).length,
+    ).toBe(2);
   });
 
   it("does not offer a confirmation send on a read-only record", async () => {

@@ -272,7 +272,7 @@ describe("consent and channels", () => {
     // Named by the directory and carrying the correspondence verdict, which the
     // send gate answers per purpose and not per transport.
     expect(await rail.findByText("Zalo OA")).toBeTruthy();
-    expect(rail.getByText("Allowed")).toBeTruthy();
+    expect(rail.getByText("Recent business contact recorded")).toBeTruthy();
   });
 
   it("keeps the row when the identity can no longer be delivered to", async () => {
@@ -286,7 +286,7 @@ describe("consent and channels", () => {
     expect(await rail.findByText("Zalo OA")).toBeTruthy();
     expect(rail.getByText("Not deliverable")).toBeTruthy();
     // A blocked channel must not read as a granted one.
-    expect(rail.queryByText("Allowed")).toBeNull();
+    expect(rail.queryByText("Recent business contact recorded")).toBeNull();
   });
 
   it("still reports the verdict for a contact who has an address", () => {
@@ -294,7 +294,7 @@ describe("consent and channels", () => {
       viewWith({ emails: true, activities: [anActivity({})] }),
     );
 
-    expect(rail.getByText("Allowed")).toBeTruthy();
+    expect(rail.getByText("Recent business contact recorded")).toBeTruthy();
     expect(rail.queryByText("No address on file")).toBeNull();
     // The column states the verdict; the reason behind it is the Research
     // tab's consent panel's to give.
@@ -315,7 +315,7 @@ describe("consent and channels", () => {
     expect(
       await screen.findByText("They agreed to be written to"),
     ).toBeTruthy();
-    expect(screen.getByText("Allowed")).toBeTruthy();
+    expect(screen.getByText("Recent business contact recorded")).toBeTruthy();
   });
 });
 

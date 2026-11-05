@@ -16774,6 +16774,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strip.today": "Hôm nay",
   "contact.strip.yesterday": "Hôm qua",
   "contact.strip.days": "{count} ngày",
+  "contact.consent.fact.businessContact":
+    "Đã ghi nhận liên lạc kinh doanh gần đây",
+  "contact.consent.fact.serviceMessages": "Được gửi thư dịch vụ",
+  "contact.consent.fact.marketingPermission": "Đã ghi nhận cho phép tiếp thị",
+  "contact.consent.fact.calls": "Được gọi điện",
+  "contact.consent.fact.bounced": "Địa chỉ không nhận thư",
+  "contact.consent.fact.marketingOptOut": "Đã ghi nhận từ chối tiếp thị",
+  "contact.consent.fact.stopped": "Đã yêu cầu dừng",
+  "contact.consent.fact.noMarketingPermission":
+    "Chưa ghi nhận cho phép tiếp thị",
+  "contact.consent.fact.notAllowed": "Không được phép cho mục đích này",
+  "contact.consent.fact.nothingRecorded": "Chưa có gì được ghi nhận",
   "contact.consent.allowedWord": "Được phép",
   "contact.consent.blockedWord": "Bị chặn",
   "contact.consent.unknownWord": "Chưa rõ",
