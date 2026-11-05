@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -74,102 +75,106 @@ var lateKinds = map[string]bool{
 func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *recordPool) map[string]func() string {
 	t.Helper()
 	seeded := apptest.DiscoverSeededPipeline(t, e)
-	owned := func(body AnyMap) AnyMap {
+	owned := func(body integration.AnyMap) integration.AnyMap {
 		if owner != "" {
 			body["owner_id"] = owner
 		}
 		return body
 	}
-	post := func(path string, body AnyMap) string { return seededID(t, e, path, body) }
+	post := func(path string, body integration.AnyMap) string { return seededID(t, e, path, body) }
 	unique := func(prefix string) string { return prefix + " " + ids.NewV7().String() }
 	create := map[string]func() string{}
 	create["company"] = func() string {
-		return post("/v1/companies", owned(AnyMap{"display_name": unique("Role Sweep"), "source": "manual"}))
+		return post("/v1/companies", owned(integration.AnyMap{"display_name": unique("Role Sweep"), "source": "manual"}))
 	}
 	create["contact"] = func() string {
-		return post("/v1/contacts", owned(AnyMap{"full_name": "Role Sweep", "source": "manual"}))
+		return post("/v1/contacts", owned(integration.AnyMap{"full_name": "Role Sweep", "source": "manual"}))
 	}
 	create["deal"] = func() string {
-		return post("/v1/deals", owned(AnyMap{
+		return post("/v1/deals", owned(integration.AnyMap{
 			"name": "Role Sweep", "amount_minor": 100, "currency": "EUR", "pipeline_id": seeded.PipelineID,
 			"stage_id": seeded.Open, "company_id": create["company"](), "source": "manual",
 		}))
 	}
 	create["lead"] = func() string {
-		return post("/v1/leads", owned(AnyMap{"full_name": "Role Sweep", "email": ids.NewV7().String() + "@lead.test", "source": "manual"}))
+		return post("/v1/leads", owned(integration.AnyMap{"full_name": "Role Sweep", "email": ids.NewV7().String() + "@lead.test", "source": "manual"}))
 	}
 	create["project"] = func() string {
-		return post("/v1/projects", owned(AnyMap{"name": "Role Sweep", "company_id": create["company"](), "source": "manual"}))
+		return post("/v1/projects", owned(integration.AnyMap{"name": "Role Sweep", "company_id": create["company"](), "source": "manual"}))
 	}
-	create["activity"] = func() string { return post("/v1/activities", AnyMap{"kind": "task", "subject": "Role sweep"}) }
+	create["activity"] = func() string {
+		return post("/v1/activities", integration.AnyMap{"kind": "task", "subject": "Role sweep"})
+	}
 	create["attachment"] = func() string {
-		status, raw := uploadAs(t, e, nil, "company", create["company"](), []byte("PDF"))
+		status, raw := apptest.UploadAs(t, e, nil, "company", create["company"](), []byte("PDF"))
 		if status != http.StatusCreated {
 			t.Fatalf("seeding an attachment → %d %s", status, raw)
 		}
-		return attachmentIDOf(t, raw)
+		return apptest.AttachmentIDOf(t, raw)
 	}
 	maps.Copy(create, configSeeders(post, unique, create))
 	maps.Copy(create, stateSeeders(sweepSeed{t: t, e: e, pool: pool, create: create}))
 	create["voice_profile"] = func() string { return liveVoiceProfile(t, e) }
 	create["commitment"] = func() string {
-		if status := e.Call(t, "POST", "/v1/weekly-plans/current", AnyMap{}, nil, nil); status >= http.StatusBadRequest && status != http.StatusConflict {
+		if status := e.Call(t, "POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil); status >= http.StatusBadRequest && status != http.StatusConflict {
 			t.Fatalf("starting the week's plan → %d", status)
 		}
-		return post("/v1/weekly-plans/commitments", AnyMap{"label": unique("Sweep")})
+		return post("/v1/weekly-plans/commitments", integration.AnyMap{"label": unique("Sweep")})
 	}
 	return create
 }
 
 // configSeeders make the workspace's own records: teams, vocabulary, settings
 // rows and the sales documents that hang off a deal.
-func configSeeders(post func(string, AnyMap) string, unique func(string) string, create map[string]func() string) map[string]func() string {
+func configSeeders(post func(string, integration.AnyMap) string, unique func(string) string, create map[string]func() string) map[string]func() string {
 	label := func(path string) func() string {
-		return func() string { return post(path, AnyMap{"label": unique("Role Sweep")}) }
+		return func() string { return post(path, integration.AnyMap{"label": unique("Role Sweep")}) }
 	}
 	return map[string]func() string{
-		"team":                   func() string { return post("/v1/teams", AnyMap{"name": unique("Role Sweep")}) },
-		"tag":                    func() string { return post("/v1/tags", AnyMap{"name": unique("Sweep")}) },
+		"team":                   func() string { return post("/v1/teams", integration.AnyMap{"name": unique("Role Sweep")}) },
+		"tag":                    func() string { return post("/v1/tags", integration.AnyMap{"name": unique("Sweep")}) },
 		"lead_source":            label("/v1/lead-sources"),
 		"lead_origin":            label("/v1/lead-origins"),
 		"lead_disqualify_reason": label("/v1/lead-disqualify-reasons"),
 		"acquisition_source":     label("/v1/acquisition-sources"),
 		"loss_reason":            label("/v1/loss-reasons"),
 		"record_role": func() string {
-			return post("/v1/record-roles", AnyMap{"label": unique("Sweep"), "record_types": []string{"company"}, "assignee_kinds": []string{"user"}})
+			return post("/v1/record-roles", integration.AnyMap{"label": unique("Sweep"), "record_types": []string{"company"}, "assignee_kinds": []string{"user"}})
 		},
 		"legal_entity": func() string {
-			return post("/v1/legal-entities", AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de"})
+			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de"})
 		},
-		"list": func() string { return post("/v1/lists", AnyMap{"name": unique("Sweep"), "entity_type": "company"}) },
+		"list": func() string {
+			return post("/v1/lists", integration.AnyMap{"name": unique("Sweep"), "entity_type": "company"})
+		},
 		"saved_view": func() string {
-			return post("/v1/views", AnyMap{"resource": "companies", "name": unique("Sweep"), "query": AnyMap{"columns": []string{"display_name"}}})
+			return post("/v1/views", integration.AnyMap{"resource": "companies", "name": unique("Sweep"), "query": integration.AnyMap{"columns": []string{"display_name"}}})
 		},
 		"web_form": func() string {
-			return post("/v1/web-forms", AnyMap{"name": unique("Sweep"), "sender": "browser", "allowed_origins": []string{"https://example.test"}})
+			return post("/v1/web-forms", integration.AnyMap{"name": unique("Sweep"), "sender": "browser", "allowed_origins": []string{"https://example.test"}})
 		},
 		"corpus": func() string {
-			return post("/v1/knowledge/corpora", AnyMap{"name": unique("Sweep"), "topic_statement": "Role sweep"})
+			return post("/v1/knowledge/corpora", integration.AnyMap{"name": unique("Sweep"), "topic_statement": "Role sweep"})
 		},
 		"deal_room": func() string {
-			return post("/v1/deal-rooms", AnyMap{"deal_id": create["deal"](), "title": "Role Sweep", "source": "manual"})
+			return post("/v1/deal-rooms", integration.AnyMap{"deal_id": create["deal"](), "title": "Role Sweep", "source": "manual"})
 		},
 		"offer": func() string {
-			return post("/v1/deals/"+create["deal"]()+"/offers", AnyMap{"currency": "EUR", "source": "manual"})
+			return post("/v1/deals/"+create["deal"]()+"/offers", integration.AnyMap{"currency": "EUR", "source": "manual"})
 		},
 		"contract": func() string {
-			return post("/v1/contracts", AnyMap{"company_id": create["company"](), "title": "Role Sweep", "value_basis": "total"})
+			return post("/v1/contracts", integration.AnyMap{"company_id": create["company"](), "title": "Role Sweep", "value_basis": "total"})
 		},
 		"intro_request": func() string {
-			return post("/v1/contacts/"+create["contact"]()+"/intro-requests", AnyMap{
+			return post("/v1/contacts/"+create["contact"]()+"/intro-requests", integration.AnyMap{
 				"introducer_user_id": create["user"](), "route_type": "direct", "internal_reason": "Role sweep",
 			})
 		},
 		"initiative": func() string {
-			return post("/v1/analytics/initiatives", AnyMap{"name": unique("Sweep"), "objective_metric": "bookings_won", "deadline": "2099-12-31"})
+			return post("/v1/analytics/initiatives", integration.AnyMap{"name": unique("Sweep"), "objective_metric": "bookings_won", "deadline": "2099-12-31"})
 		},
 		"assignment": func() string {
-			return post("/v1/records/company/"+create["company"]()+"/assignments", AnyMap{
+			return post("/v1/records/company/"+create["company"]()+"/assignments", integration.AnyMap{
 				"subject_kind": "user", "subject_id": create["user"](), "role_id": create["record_role"](),
 			})
 		},
@@ -196,12 +201,12 @@ func liveVoiceProfile(t *testing.T, e *apptest.AppEnv) string {
 	if len(live.Data) > 0 {
 		return live.Data[0].ID
 	}
-	return seededID(t, e, "/v1/voice-profiles", AnyMap{})
+	return seededID(t, e, "/v1/voice-profiles", integration.AnyMap{})
 }
 
 // seededID posts one record as the bootstrap admin and returns its id. A seed
 // that fails stops the sweep: the calls it feeds would read as measured.
-func seededID(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) string {
+func seededID(t *testing.T, e *apptest.AppEnv, path string, body integration.AnyMap) string {
 	t.Helper()
 	var created json.RawMessage
 	status := e.Call(t, "POST", path, body, nil, &created)

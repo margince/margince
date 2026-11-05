@@ -20,9 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
-func readImportRun(t *testing.T, e *apptest.AppEnv, id string) importRunDTO {
+func readImportRun(t *testing.T, e *apptest.AppEnv, id string) importjobtest.Run {
 	t.Helper()
-	var run importRunDTO
+	var run importjobtest.Run
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+id, nil, nil, &run); status != http.StatusOK {
 		t.Fatalf("GET /v1/imports/%s → %d, want 200", id, status)
 	}
@@ -31,7 +31,7 @@ func readImportRun(t *testing.T, e *apptest.AppEnv, id string) importRunDTO {
 
 func TestCreateImportRunAdvancesTheDraftOfItsSource(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	if profile.RunID == "" || profile.RowCount != 3 {
 		t.Fatalf("profile = %+v, want the draft's run_id and a row_count of 3", profile)
 	}
@@ -39,7 +39,7 @@ func TestCreateImportRunAdvancesTheDraftOfItsSource(t *testing.T) {
 		t.Fatalf("the upload's run = %+v, want a pending draft at version 1", draft)
 	}
 
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status != http.StatusAccepted || run.ID != profile.RunID || run.Status != "awaiting_approval" {
 		t.Fatalf("create → %d %+v, want 202 with the upload's own run awaiting approval", status, run)
 	}
@@ -50,10 +50,10 @@ func TestCreateImportRunAdvancesTheDraftOfItsSource(t *testing.T) {
 
 func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	tested, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	tested, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 
-	var saved importRunDTO
+	var saved importjobtest.Run
 	if status := e.Call(t, http.MethodPatch, "/v1/imports/"+tested.ID, AnyMap{
 		"version": tested.Version, "on_broken_link": "drop_link",
 	}, nil, &saved); status != http.StatusOK || saved.Status != "pending" || saved.Version != tested.Version+1 {
@@ -65,8 +65,8 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 		t.Fatalf("a save on the older version → %d, want 409", status)
 	}
 
-	var retested importRunDTO
-	if status := testCall(t, e, "/v1/imports/"+tested.ID+"/validate", AnyMap{
+	var retested importjobtest.Run
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports/"+tested.ID+"/validate", AnyMap{
 		"version": saved.Version,
 	}, &retested); status != http.StatusAccepted || retested.Status != "awaiting_approval" || retested.OnBrokenLink != "drop_link" {
 		t.Fatalf("validate → %d %+v, want 202, then awaiting approval with drop_link", status, retested)
@@ -92,8 +92,8 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 
 func TestASavedDraftTestedTwiceAtItsVersionStartsOneTest(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	var saved importRunDTO
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	var saved importjobtest.Run
 	if status := e.Call(t, http.MethodPatch, "/v1/imports/"+profile.RunID, AnyMap{
 		"version": 1, "object": "lead", "mapping": profile.SuggestedMapping,
 		"source_name": "saved-draft", "on_broken_link": "skip_row",
@@ -102,7 +102,7 @@ func TestASavedDraftTestedTwiceAtItsVersionStartsOneTest(t *testing.T) {
 	}
 
 	for i, want := range []int{http.StatusAccepted, http.StatusOK} {
-		var run importRunDTO
+		var run importjobtest.Run
 		status := e.Call(t, http.MethodPost, "/v1/imports/"+saved.ID+"/validate", AnyMap{"version": saved.Version}, nil, &run)
 		if status != want || run.Status != "validating" || run.Version != saved.Version {
 			t.Fatalf("validate %d → %d %+v, want %d validating at version %d", i+1, status, run, want, saved.Version)
@@ -119,8 +119,8 @@ func TestASavedDraftTestedTwiceAtItsVersionStartsOneTest(t *testing.T) {
 
 func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	tested, _ := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	tested, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	const clicks = 6
 	statuses, bodies := make([]int, clicks), make([]json.RawMessage, clicks)
 	var start, done sync.WaitGroup
@@ -137,7 +137,7 @@ func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
 
 	started := 0
 	for i, status := range statuses {
-		var answer importRunDTO
+		var answer importjobtest.Run
 		if status == http.StatusAccepted {
 			started++
 		}
@@ -160,19 +160,19 @@ func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
 
 func TestCancelReleasesTheSource(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 
-	var cancelled importRunDTO
+	var cancelled importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+profile.RunID+"/cancel", nil, nil, &cancelled); status != http.StatusOK ||
 		cancelled.Status != "cancelled" || !cancelled.Released {
 		t.Fatalf("cancel → %d %+v, want 200, cancelled with its file released", status, cancelled)
 	}
-	var again importRunDTO
+	var again importjobtest.Run
 	if status := e.Call(t, http.MethodPost, "/v1/imports/"+profile.RunID+"/cancel", nil, nil, &again); status != http.StatusOK ||
 		again.Status != "cancelled" {
 		t.Fatalf("a second cancel → %d %+v, want 200 with the run as it stands", status, again)
 	}
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
 	}, nil); status != http.StatusConflict {
 		t.Fatalf("testing a released upload → %d, want 409: its file is on its way out", status)
@@ -180,12 +180,12 @@ func TestCancelReleasesTheSource(t *testing.T) {
 }
 
 // testFairRun uploads the prospect file and tests it under one source name.
-func testFairRun(t *testing.T, e *apptest.AppEnv) importRunDTO {
+func testFairRun(t *testing.T, e *apptest.AppEnv) importjobtest.Run {
 	const sourceName = "Fair 2026"
 	t.Helper()
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	var run importRunDTO
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	var run importjobtest.Run
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead", "source_ref": profile.SourceRef,
 		"mapping": profile.SuggestedMapping, "source_name": sourceName,
 	}, &run); status != http.StatusAccepted || run.Status != "awaiting_approval" {
@@ -228,7 +228,7 @@ func TestApprovingAReplacedReportNamesTheRunThatReplacedIt(t *testing.T) {
 
 func TestAnAgentChangesTestsAndCancelsADraftImport(t *testing.T) {
 	e := setupImportApp(t)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	var minted struct {
 		Token string `json:"token"`
 	}
@@ -240,20 +240,20 @@ func TestAnAgentChangesTestsAndCancelsADraftImport(t *testing.T) {
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
 	path := "/v1/imports/" + profile.RunID
-	var saved importRunDTO
+	var saved importjobtest.Run
 	if status := e.Call(t, http.MethodPatch, path, AnyMap{"version": 1, "draft_step": "map"}, bearer, &saved); status != http.StatusOK || saved.DraftStep != "map" {
 		t.Fatalf("the agent's change → %d %+v, want 200 on the map step", status, saved)
 	}
-	var tested importRunDTO
+	var tested importjobtest.Run
 	if status := e.Call(t, http.MethodPost, path+"/validate", AnyMap{"version": saved.Version}, bearer, &tested); status != http.StatusAccepted || tested.Status != "validating" {
 		t.Fatalf("the agent's test → %d %+v, want 202 and validating", status, tested)
 	}
 	// The first cancel stops the test run, and the second closes the draft.
-	var stopped importRunDTO
+	var stopped importjobtest.Run
 	if status := e.Call(t, http.MethodPost, path+"/cancel", nil, bearer, &stopped); status != http.StatusOK || stopped.Status != "pending" {
 		t.Fatalf("the agent's first cancel → %d %+v, want 200 and back to pending", status, stopped)
 	}
-	var closed importRunDTO
+	var closed importjobtest.Run
 	if status := e.Call(t, http.MethodPost, path+"/cancel", nil, bearer, &closed); status != http.StatusOK ||
 		closed.Status != "cancelled" || !closed.Released {
 		t.Fatalf("the agent's second cancel → %d %+v, want cancelled with its file released", status, closed)

@@ -3,7 +3,11 @@
 
 //go:build integration
 
-package integration
+// Package toolrole holds the MCP role sweep and the tests that hold tools/list
+// to its answers. The sweep calls every tool and action as every seeded role,
+// which takes minutes. It is a test binary of its own, so that time counts
+// against its own per-package timeout in the integration lane.
+package toolrole
 
 import (
 	"encoding/json"
@@ -21,7 +25,7 @@ import (
 )
 
 const (
-	toolRolesFile = "../../../../docs/reference/mcp-tool-roles.json"
+	toolRolesFile = "../../../../../docs/reference/mcp-tool-roles.json"
 	toolRoleUser  = "tool-role-matrix@fable.test"
 	// toolRoleCallsPerPassport stays under a passport's per-window call budget.
 	toolRoleCallsPerPassport = 80
@@ -40,7 +44,7 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		t.Fatal("the registry serves no tool, so this measured nothing")
 	}
 	holdEveryFixtureNamesACall(t, calls)
-	roles := seededRoles(t, d.e)
+	roles := apptest.SeededRoles(t, d.E)
 	if len(roles) == 0 {
 		t.Fatal("the database seeds no role, so this measured nothing")
 	}
@@ -52,10 +56,10 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		measured.control[verb] = agents.ToolChecksRow{Checks: row.Checks}
 	}
 	for _, role := range roles {
-		assignRoleTo(t, d.e, toolRoleUser, "admin")
-		clients := passportClients(t, d.e, role.key, 1+len(calls)/toolRoleCallsPerPassport)
-		pool := seedToolRoleRecords(t, d.e, calls, "")
-		assignRoleTo(t, d.e, toolRoleUser, role.key)
+		apptest.AssignRoleTo(t, d.E, toolRoleUser, "admin")
+		clients := passportClients(t, d.E, role.Key, 1+len(calls)/toolRoleCallsPerPassport)
+		pool := seedToolRoleRecords(t, d.E, calls, "")
+		apptest.AssignRoleTo(t, d.E, toolRoleUser, role.Key)
 		for n, call := range calls {
 			if row, ok := elsewhere[call.verb]; ok {
 				verdicts[call.row] = row.toolRoleVerdicts
@@ -63,25 +67,25 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 			}
 			client := clients[n/toolRoleCallsPerPassport]
 			pool.caller = client.Bearer()
-			got, releaseRefused := callThroughApproval(t, d.e, client, call.verb, call.args(pool))
+			got, releaseRefused := callThroughApproval(t, d.E, client, call.verb, call.args(pool))
 			if got.IsError && strings.Contains(got.Text, "human-only operation") {
 				t.Errorf("%s is offered to agents and its route refuses every agent: %s", call.verb, got.Text)
 			}
 			if got.IsError && isBudgetRefusal(got.Text) {
-				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.key, got.Text)
+				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.Key, got.Text)
 			}
 			run, ran := recorded.take(call.verb)
 			if ran {
-				measured.add(call.verb, role.key == "admin", run, got)
+				measured.add(call.verb, role.Key == "admin", run, got)
 			}
 			row := verdicts[call.row]
-			row.record(role.key, got, append(run.Refused, releaseRefused...))
+			row.record(role.Key, got, append(run.Refused, releaseRefused...))
 			verdicts[call.row] = row
 		}
 	}
-	measureEveryKind(t, d.e, recorded, measured, kindVariants(t, withoutVerbs(calls, elsewhere), seedableKinds(t, d.e)))
-	colleague := crossOwnerPass(t, d.e, roles, calls)
-	assignRoleTo(t, d.e, toolRoleUser, "admin")
+	measureEveryKind(t, d.E, recorded, measured, kindVariants(t, withoutVerbs(calls, elsewhere), seedableKinds(t, d.E)))
+	colleague := crossOwnerPass(t, d.E, roles, calls)
+	apptest.AssignRoleTo(t, d.E, toolRoleUser, "admin")
 
 	holdTheMeasurementHasTeeth(t, roles, len(calls), verdicts)
 	doc, open := toolRolesDocument(roles, calls, verdicts, colleague)
@@ -106,14 +110,14 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 		t.Fatal(err)
 	}
 	if string(committed) != string(rendered) {
-		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration RUN=TestTheToolRoleMatrixIsPublished, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity", toolRolesFile)
+		t.Errorf("%s is not what the roles are refused. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/toolrole RUN=TestTheToolRoleMatrixIsPublished, then go test ./gates -run TestTheMCPParityCatalogIsPublished -update-mcp-parity", toolRolesFile)
 	}
 }
 
 // extensionRoleFile holds the verbs that need a composed extension unit. They
 // are measured in a test binary of their own. A registered unit holds for the
 // whole binary, and this one runs every other suite in the package.
-const extensionRoleFile = "extensionrole/measured.json"
+const extensionRoleFile = "../extensionrole/measured.json"
 
 // elsewhereRow is one verb's cells and checks as measured.json holds them.
 type elsewhereRow struct {
@@ -123,7 +127,7 @@ type elsewhereRow struct {
 
 // measuredElsewhere reads the verbs another binary measured. Its roles must be
 // this sweep's, or its cells would answer for roles nobody seeded.
-func measuredElsewhere(t *testing.T, roles []seededRole) map[string]elsewhereRow {
+func measuredElsewhere(t *testing.T, roles []apptest.SeededRole) map[string]elsewhereRow {
 	t.Helper()
 	raw, err := os.ReadFile(extensionRoleFile)
 	if err != nil {
@@ -138,7 +142,7 @@ func measuredElsewhere(t *testing.T, roles []seededRole) map[string]elsewhereRow
 	}
 	keys := make([]string, len(roles))
 	for i, role := range roles {
-		keys[i] = role.key
+		keys[i] = role.Key
 	}
 	if !slices.Equal(doc.Roles, keys) {
 		t.Fatalf("%s measured the roles %v and this database seeds %v. Run: UPDATE_MCP_TOOL_ROLES=1 make test-it DIR=backend/internal/compose/integration/extensionrole", extensionRoleFile, doc.Roles, keys)
@@ -156,7 +160,7 @@ func withoutVerbs(calls []toolRoleCall, elsewhere map[string]elsewhereRow) []too
 
 // holdTheMeasurementHasTeeth fails a sweep whose calls never reach a gate: such
 // a sweep would publish no role as refused anything.
-func holdTheMeasurementHasTeeth(t *testing.T, roles []seededRole, calls int, verdicts map[string]toolRoleVerdicts) {
+func holdTheMeasurementHasTeeth(t *testing.T, roles []apptest.SeededRole, calls int, verdicts map[string]toolRoleVerdicts) {
 	t.Helper()
 	perRole := map[string]int{}
 	for _, row := range verdicts {
@@ -165,8 +169,8 @@ func holdTheMeasurementHasTeeth(t *testing.T, roles []seededRole, calls int, ver
 		}
 	}
 	for _, role := range roles {
-		if role.key != "admin" && perRole[role.key] == 0 {
-			t.Errorf("role %s is refused none of %d calls, so the sweep did not reach the gates", role.key, calls)
+		if role.Key != "admin" && perRole[role.Key] == 0 {
+			t.Errorf("role %s is refused none of %d calls, so the sweep did not reach the gates", role.Key, calls)
 		}
 	}
 }
@@ -208,7 +212,7 @@ func passportClients(t *testing.T, e *apptest.AppEnv, role string, n int) []*app
 	t.Helper()
 	clients := make([]*apptest.MCPClient, n)
 	for i := range clients {
-		bearer, _ := passportWithID(t, e, fmt.Sprintf("tool-role %s %d", role, i), "read", "write", "send", "draft", "enrich")
+		bearer, _ := apptest.PassportWithID(t, e, fmt.Sprintf("tool-role %s %d", role, i), "read", "write", "send", "draft", "enrich")
 		clients[i] = apptest.NewMCPClient(e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))
 	}
 	return clients
@@ -366,7 +370,7 @@ type toolRolesFileShape struct {
 }
 
 // toolRolesNote is what the JSON says the sweep does, and the page prints it.
-const toolRolesNote = "Generated by TestTheToolRoleMatrixIsPublished (backend/internal/compose/integration). " +
+const toolRolesNote = "Generated by TestTheToolRoleMatrixIsPublished (backend/internal/compose/integration/toolrole). " +
 	"A passport on each seeded role calls every tool and action once. Each record a call names is one the sweep " +
 	"made through the app's own routes for that role. A 403 counts as a refusal where the admin passes the same " +
 	"call. Any other answer counts as one only where a gate was recorded refusing that role in that call, such as " +
@@ -375,10 +379,10 @@ const toolRolesNote = "Generated by TestTheToolRoleMatrixIsPublished (backend/in
 	"colleague owns, and reasons names its answers. Do not edit by hand."
 
 // toolRolesDocument is the published file, and each cell no gate decided.
-func toolRolesDocument(roles []seededRole, calls []toolRoleCall, verdicts map[string]toolRoleVerdicts, colleague map[string]map[string]string) (toolRolesFileShape, []string) {
+func toolRolesDocument(roles []apptest.SeededRole, calls []toolRoleCall, verdicts map[string]toolRoleVerdicts, colleague map[string]map[string]string) (toolRolesFileShape, []string) {
 	doc := toolRolesFileShape{Note: toolRolesNote, Reasons: stopReasonMeanings}
 	for _, role := range roles {
-		doc.Roles = append(doc.Roles, role.key)
+		doc.Roles = append(doc.Roles, role.Key)
 	}
 	var open []string
 	for _, call := range calls {

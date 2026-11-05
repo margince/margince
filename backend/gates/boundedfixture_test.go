@@ -83,6 +83,9 @@ var suitesWithNoBoundedActor = gatekit.Waive(map[string]string{
 	"schemaready": "the readiness probe over migration state, which runs before any principal is " +
 		"resolved and reads the migration ledger rather than a tenant row — /readyz is unauthenticated " +
 		"and a row scope would decide nothing about whether the schema is there",
+	"toolrole": "the MCP role sweep: a passport on each seeded role calls every tool, and the roles come " +
+		"from the database, so their row scopes (own and team among them) are the seeded ones, not a " +
+		"fixture's; the cross-owner pass calls each record tool as every role narrower than all",
 	"webhooks": "connector ingress, where the caller is the provider and the principal is the " +
 		"installation's own",
 })

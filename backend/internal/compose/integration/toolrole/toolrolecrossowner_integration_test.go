@@ -3,13 +3,14 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -33,42 +34,42 @@ const (
 // granted seat reads an identity record and may act on its own work beside it.
 // So a call may run, and it must not change the colleague's record. It answers
 // each call's row with what each such role was told.
-func crossOwnerPass(t *testing.T, e *apptest.AppEnv, roles []seededRole, calls []toolRoleCall) map[string]map[string]string {
+func crossOwnerPass(t *testing.T, e *apptest.AppEnv, roles []apptest.SeededRole, calls []toolRoleCall) map[string]map[string]string {
 	t.Helper()
 	owned := callsTakingOwnedRecords(t, calls)
 	if len(owned) == 0 {
 		t.Fatal("no call takes a record with an owner, so the cross-owner pass measured nothing")
 	}
-	assignRoleTo(t, e, toolRoleUser, "admin")
-	colleague := seededID(t, e, "/v1/users", AnyMap{"email": "colleague@role-sweep.test", "display_name": "Colleague", "role": "rep"})
+	apptest.AssignRoleTo(t, e, toolRoleUser, "admin")
+	colleague := seededID(t, e, "/v1/users", integration.AnyMap{"email": "colleague@role-sweep.test", "display_name": "Colleague", "role": "rep"})
 	answers := map[string]map[string]string{}
 	scoped := 0
 	for _, role := range roles {
-		if role.rowScope == "all" {
+		if role.RowScope == "all" {
 			continue
 		}
 		scoped++
-		assignRoleTo(t, e, toolRoleUser, "admin")
-		clients := passportClients(t, e, role.key+" colleague", 1+len(owned)/toolRoleCallsPerPassport)
+		apptest.AssignRoleTo(t, e, toolRoleUser, "admin")
+		clients := passportClients(t, e, role.Key+" colleague", 1+len(owned)/toolRoleCallsPerPassport)
 		pool := seedToolRoleRecords(t, e, owned, colleague)
-		assignRoleTo(t, e, toolRoleUser, role.key)
+		apptest.AssignRoleTo(t, e, toolRoleUser, role.Key)
 		for n, call := range owned {
 			pool.taken = map[string][]string{}
 			args := call.args(pool)
 			before := ownedRecordStates(t, e, pool.taken)
 			got := clients[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
 			if got.IsError && isBudgetRefusal(got.Text) {
-				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.key, got.Text)
+				t.Fatalf("%s as %s spent the call budget, so the rest would read as measured: %s", call.verb, role.Key, got.Text)
 			}
 			answer := colleagueAnswer(got)
 			if changed := changedRecord(before, ownedRecordStates(t, e, pool.taken)); changed != "" {
 				answer = colleagueChanged
-				t.Errorf("%s as %s (row scope %s) changed %s, which a colleague owns: %.300s", call.row, role.key, role.rowScope, changed, got.Text)
+				t.Errorf("%s as %s (row scope %s) changed %s, which a colleague owns: %.300s", call.row, role.Key, role.RowScope, changed, got.Text)
 			}
 			if answers[call.row] == nil {
 				answers[call.row] = map[string]string{}
 			}
-			answers[call.row][role.key] = answer
+			answers[call.row][role.Key] = answer
 		}
 	}
 	if scoped == 0 {

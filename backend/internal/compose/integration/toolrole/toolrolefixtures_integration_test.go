@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"encoding/json"

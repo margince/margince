@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -157,7 +159,7 @@ var reportingFixtures = map[string]func(p *recordPool) map[string]any{
 // reportingSeeders make the reports, targets, initiatives and findings above.
 func reportingSeeders(s sweepSeed) map[string]func() string {
 	report := func() string {
-		return s.post("/v1/analytics/reports", AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection()})
+		return s.post("/v1/analytics/reports", integration.AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection()})
 	}
 	versioned := func(id, path string) string {
 		var row struct {
@@ -176,12 +178,12 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		deal := s.create["deal"]()
 		return s.ownerScalar(`INSERT INTO assurance_exception (logical_key, type, subject_kind, subject_id, severity, owner_id, captured_by)
 			VALUES ($1, $2, 'deal', $3, 'medium', $4, 'system') RETURNING id::text`,
-			kind+":"+deal, kind, deal, sessionUserID(s.t, s.e))
+			kind+":"+deal, kind, deal, apptest.SessionUserID(s.t, s.e))
 	}
 	return map[string]func() string{
 		"revised_report": func() string {
 			id := report()
-			s.call("PATCH", "/v1/analytics/reports/"+id, AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection()}, pinned(1), nil)
+			s.call("PATCH", "/v1/analytics/reports/"+id, integration.AnyMap{"name": uniqueName(), "audience": "private", "selection": sweepSelection()}, pinned(1), nil)
 			return versioned(id, "/v1/analytics/reports/"+id)
 		},
 		"editioned_report": func() string {
@@ -190,7 +192,7 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		},
 		"report_schedule": func() string {
 			editionKept()
-			return s.post("/v1/analytics/reports/"+report()+"/schedules", AnyMap{
+			return s.post("/v1/analytics/reports/"+report()+"/schedules", integration.AnyMap{
 				"report_revision": 1, "frequency": "monthly", "day": 28, "local_time": "09:00", "enabled": true,
 			})
 		},
@@ -206,7 +208,7 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		},
 		"drafted_report": func() string {
 			id := report()
-			s.call("PUT", "/v1/analytics/reports/"+id+"/draft", AnyMap{"selection": sweepSelection()}, pinned(1), nil)
+			s.call("PUT", "/v1/analytics/reports/"+id+"/draft", integration.AnyMap{"selection": sweepSelection()}, pinned(1), nil)
 			return versioned(id, "/v1/analytics/reports/"+id)
 		},
 		"sales_target": func() string {
@@ -227,19 +229,19 @@ func reportingSeeders(s sweepSeed) map[string]func() string {
 		},
 		"staffed_initiative": func() string {
 			id := s.create["initiative"]()
-			s.call("PUT", "/v1/analytics/initiatives/"+id+"/members", AnyMap{
-				"picked": []AnyMap{{"record_type": "lead", "record_id": s.create["lead"]()}}, "excluded": []AnyMap{},
+			s.call("PUT", "/v1/analytics/initiatives/"+id+"/members", integration.AnyMap{
+				"picked": []integration.AnyMap{{"record_type": "lead", "record_id": s.create["lead"]()}}, "excluded": []integration.AnyMap{},
 			}, nil, nil)
 			return versioned(id, "/v1/analytics/initiatives/"+id)
 		},
 		"sales_decision": func() string {
-			return s.post("/v1/analytics/decisions", AnyMap{
-				"decision": "Offer the pilot at cost.", "deal_id": s.create["deal"](), "owner_id": sessionUserID(s.t, s.e),
+			return s.post("/v1/analytics/decisions", integration.AnyMap{
+				"decision": "Offer the pilot at cost.", "deal_id": s.create["deal"](), "owner_id": apptest.SessionUserID(s.t, s.e),
 				"review_on": s.pool.sweepStart.AddDate(0, 1, 0).Format(time.DateOnly),
 			})
 		},
 		"forecast_share_id": func() string {
-			return s.post("/v1/forecast/shares", AnyMap{"kind": "live", "target": "forecast"})
+			return s.post("/v1/forecast/shares", integration.AnyMap{"kind": "live", "target": "forecast"})
 		},
 		"deal_finding":      func() string { return finding("deal_viability") },
 		"next_step_finding": func() string { return finding("no_next_step") },

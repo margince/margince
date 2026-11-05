@@ -3,10 +3,9 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
-	"encoding/json"
 	"maps"
 	"net/http"
 	"regexp"
@@ -17,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/integrations"
@@ -28,9 +28,9 @@ import (
 // the test stack leaves off. Each is the fake another integration test starts,
 // so a call the installation serves reaches its gate here too. The job queue
 // only inserts, and the Google calendar answers from memory.
-func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *twoDoors {
+func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.TwoDoors {
 	t.Helper()
-	jobs, embeddings := insertOnlyRunner(t), embedReindexRouter(t, "tool-role-embed")
+	jobs, embeddings := apptest.InsertOnlyRunner(t), apptest.EmbedReindexRouter(t, "tool-role-embed")
 	models, err := compose.NewLocalModelPath(ai.FakeRoutingConfig(), ai.WithFakeClient(ai.NewFakeClient()), ai.WithoutResultCache())
 	if err != nil {
 		t.Fatalf("starting the fake model path: %v", err)
@@ -47,12 +47,12 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *twoDoors {
 		t.Fatalf("registering the offline data provider: %v", err)
 	}
 	vault := keyvault.NewMemory()
-	calendar := &bookingProviderTransport{fallback: sweepGmail{next: http.DefaultTransport}, calendar: "ada@example.com", events: map[string]json.RawMessage{}}
+	calendar := apptest.NewBookingProvider(sweepGmail{next: http.DefaultTransport})
 	previous := http.DefaultTransport
 	http.DefaultTransport = calendar
 	t.Cleanup(func() { http.DefaultTransport = previous })
 	// The channel surface takes its vault from WithKeyvault, so it is composed first.
-	d := newTwoDoorsWith(t, slug, append([]compose.Option{
+	d := apptest.SetupTwoDoors(t, slug, append([]compose.Option{
 		compose.WithChannelSurface(), compose.WithKeyvault(vault), compose.WithGmailCapture(compose.GmailConfig{
 			ClientID: "calendar-fixture", ClientSecret: "calendar-fixture",
 			StateKey: "0123456789abcdef0123456789abcdef", PublicBaseURL: "https://mail.example.test",
@@ -60,18 +60,18 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *twoDoors {
 		compose.WithTranscriptRead(jobs), compose.WithDocumentRead(jobs), compose.WithDeepRead(jobs, siteReads.ColdStart),
 		compose.WithRoleProposals(models.ProposeRoles), compose.WithEmbedReindex(embeddings, jobs),
 		compose.WithAssuranceRun(jobs), compose.WithKnowledgeIngest(jobs), compose.WithCaptureTrace(true),
-		compose.WithListsEnabled(true), compose.WithOperatorMail(discardingMailer{}),
-		compose.WithFilterProposals(sweepLane{reply: sweepFilterReply}), compose.WithCorpusAsk(askableEmbedder{}, nil, quietAskLog()), compose.WithReportSetup(sweepLane{reply: sweepSetupReply}), compose.WithVatChecking(jobs),
+		compose.WithListsEnabled(true), compose.WithOperatorMail(apptest.DiscardingMailer{}),
+		compose.WithFilterProposals(sweepLane{reply: sweepFilterReply}), compose.WithCorpusAsk(apptest.AskableEmbedder{}, nil, apptest.QuietAskLog()), compose.WithReportSetup(sweepLane{reply: sweepSetupReply}), compose.WithVatChecking(jobs),
 		compose.WithProvider(providers, vault, jobs),
 	}, more...), "read", "write", "send", "draft", "enrich")
 	// The VAT queue binds the stores compose builds anywhere in the process.
 	t.Cleanup(func() { compose.BindVatChecking(nil) })
 	// Boot binds the embedding model an installation runs; the harness does not boot.
-	seedRouterBinding(t, d.e, embeddings)
-	d.e.Vault = vault
-	d.e.DescribeCompany(t)
-	enableBookingPage(t, d.e)
-	sendCapableMailbox(t, d.e)
+	apptest.SeedRouterBinding(t, d.E, embeddings)
+	d.E.Vault = vault
+	d.E.DescribeCompany(t)
+	apptest.EnableGoogleBookingPage(t, d.E)
+	sendCapableMailbox(t, d.E)
 	return d
 }
 
@@ -85,7 +85,7 @@ func sendCapableMailbox(t *testing.T, e *apptest.AppEnv) {
 			VALUES ('gmail', $1, '{}', 'connected', $2, $3)
 			ON CONFLICT (user_id, provider) DO UPDATE SET status = 'connected',
 				provider_scopes = capture_connection.provider_scopes || EXCLUDED.provider_scopes`,
-			sessionUserID(t, e), []byte(`{"refresh_token":"r","granted":[]}`), []string{gmailReadonlyScope, gmailSendScope})
+			apptest.SessionUserID(t, e), []byte(`{"refresh_token":"r","granted":[]}`), []string{apptest.GmailReadonlyScope, apptest.GmailSendScope})
 		return err
 	}); err != nil {
 		t.Fatalf("granting the mailbox its send scope: %v", err)
@@ -110,7 +110,7 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 	if !got.IsError || staged == nil {
 		return got, nil
 	}
-	switch status := e.Call(t, "POST", "/v1/approvals/"+staged[1]+"/approve", AnyMap{}, nil, nil); status {
+	switch status := e.Call(t, "POST", "/v1/approvals/"+staged[1]+"/approve", integration.AnyMap{}, nil, nil); status {
 	case http.StatusOK:
 	case http.StatusForbidden:
 		return got, []string{releaseRefusedByGrant}

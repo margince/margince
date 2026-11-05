@@ -260,7 +260,7 @@ func TestEveryDeadCredentialReadsAlikeAndARoomSessionHoldsNoCRMAuthority(t *test
 // way a rep does, and returns the attachment id.
 func uploadDealFile(t *testing.T, e *apptest.AppEnv, dealID, filename string, data []byte) string {
 	t.Helper()
-	body, ctype := multipartAttachment(t, "deal", dealID, filename, data)
+	body, ctype := apptest.MultipartAttachment(t, "deal", dealID, filename, data)
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, e.TS.URL+"/v1/attachments", body)
 	if err != nil {
 		t.Fatal(err)

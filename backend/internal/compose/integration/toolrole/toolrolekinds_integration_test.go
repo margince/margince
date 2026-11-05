@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"encoding/json"
@@ -120,7 +120,7 @@ func measureEveryKind(t *testing.T, e *apptest.AppEnv, recorded *toolCheckRecord
 	if len(variants) == 0 {
 		t.Fatal("no call picks its record by a kind argument, so no path but the company's was measured")
 	}
-	assignRoleTo(t, e, toolRoleUser, "admin")
+	apptest.AssignRoleTo(t, e, toolRoleUser, "admin")
 	clients := passportClients(t, e, "admin kinds", 1+len(variants)/toolRoleCallsPerPassport)
 	pool := seedToolRoleRecords(t, e, variants, "")
 	for n, variant := range variants {

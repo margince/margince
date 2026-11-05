@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -43,8 +44,8 @@ func TestATagTheRoleCannotCreateIsAProblemAndTheCompaniesLandWithoutIt(t *testin
 	e := setupImportApp(t)
 	actWithGrant(t, e, "tag", readOnlyGrant)
 	tagsBefore := tagCount(t, e)
-	profile, _ := uploadCSV(t, e, "company", "Name,Tags\nFresh GmbH,Brand New\n")
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nFresh GmbH,Brand New\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}
@@ -68,8 +69,8 @@ func TestATagTheRoleCannotCreateIsAProblemAndTheCompaniesLandWithoutIt(t *testin
 func TestARoleWithoutTagReadStagesAndIsToldTheTagsAreNotImported(t *testing.T) {
 	e := setupImportApp(t)
 	actWithGrant(t, e, "tag", noGrant)
-	profile, _ := uploadCSV(t, e, "company", "Name,Tags\nUntagged GmbH,Partner\n")
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nUntagged GmbH,Partner\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202: a missing tag grant is a problem, not a refusal", status)
 	}
@@ -86,8 +87,8 @@ func TestARoleWithoutTagReadStagesAndIsToldTheTagsAreNotImported(t *testing.T) {
 func TestARoleThatCannotCreateLeadsHasEveryLeadRowSkipped(t *testing.T) {
 	e := setupImportApp(t)
 	actWithGrant(t, e, "lead", readOnlyGrant)
-	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	run, status := createRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
+	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}
@@ -112,8 +113,8 @@ func TestAnOwnerTheImporterCannotNameIsAProblemAndTheImporterOwnsTheRow(t *testi
 		ids.NewV7(), runner); err != nil {
 		t.Fatalf("seeding an agent seat: %v", err)
 	}
-	profile, _ := uploadCSV(t, e, "company", "Name,Owner\nRunner Owned GmbH,"+runner+"\n")
-	run, status := createRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Owner": "owner_email"})
+	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Owner\nRunner Owned GmbH,"+runner+"\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Owner": "owner_email"})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage → %d, want 202", status)
 	}

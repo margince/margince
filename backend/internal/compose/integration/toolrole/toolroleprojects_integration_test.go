@@ -3,10 +3,11 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 // projectFixtures fill the project, commission and input check calls.
@@ -37,7 +38,7 @@ func projectSeeders(s sweepSeed) map[string]func() string {
 	return map[string]func() string{
 		"project_assessment": func() string {
 			project := s.create["project"]()
-			assessment := s.post("/v1/projects/"+project+"/health-assessments", AnyMap{"state": "at_risk", "note": "Slipped."})
+			assessment := s.post("/v1/projects/"+project+"/health-assessments", integration.AnyMap{"state": "at_risk", "note": "Slipped."})
 			s.pool.note(assessment, "project", project)
 			return assessment
 		},

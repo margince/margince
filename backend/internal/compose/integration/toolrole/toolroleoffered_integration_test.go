@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"context"
@@ -34,22 +34,22 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 	d := toolRoleApp(t, "tool-role-listing")
 	specs := compose.NewRegistry(nil, compose.SendPath{}).Specs()
 	calls := toolRoleCalls(specs, routeShapes())
-	calls = append(calls, kindVariants(t, calls, seedableKinds(t, d.e))...)
-	createRole(t, d.e, "rep_tagger", `jsonb_set(jsonb_set(permissions,
+	calls = append(calls, kindVariants(t, calls, seedableKinds(t, d.E))...)
+	createRole(t, d.E, "rep_tagger", `jsonb_set(jsonb_set(permissions,
 		'{objects,tag}', coalesce(permissions->'objects'->'tag', '{}') || '{"create": true}'),
 		'{objects,deal}', coalesce(permissions->'objects'->'deal', '{}') || '{"update": false}')`)
-	createRole(t, d.e, "rep_path_bound", `jsonb_set(jsonb_set(permissions,
+	createRole(t, d.E, "rep_path_bound", `jsonb_set(jsonb_set(permissions,
 		'{objects,company}', coalesce(permissions->'objects'->'company', '{}') || '{"create": false}'),
 		'{objects,installation_settings}', coalesce(permissions->'objects'->'installation_settings', '{}') || '{"read": false}')`)
 
 	adminRows := publishedAdminAnswers(t)
 	for _, holding := range [][]string{{"rep_tagger"}, {"rep_path_bound"}, {"rep", "ops"}} {
 		t.Run(strings.Join(holding, "+"), func(t *testing.T) {
-			holdRoles(t, d.e, "admin")
-			clients := passportClients(t, d.e, strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
-			controls := passportClients(t, d.e, "control "+strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
-			pool := seedToolRoleRecords(t, d.e, calls, "")
-			holdRoles(t, d.e, holding...)
+			holdRoles(t, d.E, "admin")
+			clients := passportClients(t, d.E, strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
+			controls := passportClients(t, d.E, "control "+strings.Join(holding, "+"), 1+len(calls)/toolRoleCallsPerPassport)
+			pool := seedToolRoleRecords(t, d.E, calls, "")
+			holdRoles(t, d.E, holding...)
 			offered := offeredCalls(t, clients[0].ListedTools(t), specs)
 			answers := map[string]roleAnswer{}
 			for n, call := range calls {
@@ -61,20 +61,20 @@ func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 				// variant it does not hold is asked of the admin on the same records.
 				adminAdmitted, published := adminRows[call.row]
 				if !published {
-					holdRoles(t, d.e, "admin")
+					holdRoles(t, d.E, "admin")
 					adminAdmitted = !isRefusal(controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
-					holdRoles(t, d.e, holding...)
+					holdRoles(t, d.E, holding...)
 				}
 				answers[call.row] = roleAnswer{ran: !got.IsError, refused: refusedAGrant(got) && adminAdmitted, text: got.Text}
 			}
 			for _, disagreement := range listingDisagreements(calls, specs, offered, answers) {
 				t.Error(disagreement)
 			}
-			holdRoles(t, d.e, holding...)
+			holdRoles(t, d.E, holding...)
 			holdPathDependentTools(t, clients[0], offered, answers)
 		})
 	}
-	holdRoles(t, d.e, "admin")
+	holdRoles(t, d.E, "admin")
 }
 
 // publishedAdminAnswers is, per published row, whether the matrix has the
@@ -120,12 +120,12 @@ func holdPathDependentTools(t *testing.T, client *apptest.MCPClient, offered map
 // A role change reaches the next tools/list of a passport already issued: the
 // listing reads the grants afresh, as every call's admission does.
 func TestARoleChangeReachesTheNextToolsList(t *testing.T) {
-	d := newTwoDoors(t, "tool-role-change", "read", "write")
+	d := apptest.SetupTwoDoors(t, "tool-role-change", nil, "read", "write")
 	user := "tool-role-change@fable.test"
-	assignRoleTo(t, d.e, user, "rep")
-	asRep := len(offeredActions(t, d.mcp.ListedTools(t)))
-	assignRoleTo(t, d.e, user, "admin")
-	asAdmin := len(offeredActions(t, d.mcp.ListedTools(t)))
+	apptest.AssignRoleTo(t, d.E, user, "rep")
+	asRep := len(offeredActions(t, d.MCP.ListedTools(t)))
+	apptest.AssignRoleTo(t, d.E, user, "admin")
+	asAdmin := len(offeredActions(t, d.MCP.ListedTools(t)))
 	if asAdmin <= asRep {
 		t.Errorf("the same passport is offered %d tools and actions as an admin and %d as a rep; the role change did not reach the listing", asAdmin, asRep)
 	}

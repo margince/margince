@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -31,9 +32,9 @@ func weeklySeeders(s sweepSeed) map[string]func() string {
 		},
 		"finished_site_read": func() string { return finishedSiteRead(s) },
 		"review_team": func() string {
-			team := s.post("/v1/teams", AnyMap{"name": "Sweep " + ids.NewV7().String()})
-			admin := sessionUserID(s.t, s.e)
-			s.call("PUT", "/v1/teams/"+team+"/members/"+admin, AnyMap{}, nil, nil)
+			team := s.post("/v1/teams", integration.AnyMap{"name": "Sweep " + ids.NewV7().String()})
+			admin := apptest.SessionUserID(s.t, s.e)
+			s.call("PUT", "/v1/teams/"+team+"/members/"+admin, integration.AnyMap{}, nil, nil)
 			ctx := s.assembleWeek([]ids.UUID{ids.MustParse(team)})
 			members := []weekly.TeamMember{{UserID: ids.MustParse(admin), DisplayName: "Admin"}}
 			if _, _, err := s.weeklyEngine().AssembleTeamFor(ctx, ids.MustParse(team), "Sweep", members, clocktest.Now(s.t)); err != nil {
@@ -51,10 +52,10 @@ func (s sweepSeed) weeklyEngine() *weekly.Engine {
 // assembleWeek writes the admin's own review of the week that closed, as the
 // admin on the teams named, and answers that principal.
 func (s sweepSeed) assembleWeek(teams []ids.UUID) context.Context {
-	admin := ids.MustParse(sessionUserID(s.t, s.e))
+	admin := ids.MustParse(apptest.SessionUserID(s.t, s.e))
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
 	ctx := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7()), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + admin.String(), UserID: admin, TeamIDs: teams, Permissions: AdminPerms,
+		Type: principal.PrincipalHuman, ID: "human:" + admin.String(), UserID: admin, TeamIDs: teams, Permissions: integration.AdminPerms,
 	})
 	if _, _, err := s.weeklyEngine().AssembleFor(ctx, clocktest.Now(s.t)); err != nil {
 		s.t.Fatalf("writing the admin's week: %v", err)
@@ -66,7 +67,7 @@ func (s sweepSeed) assembleWeek(teams []ids.UUID) context.Context {
 // crawl job leaves it. It notes the version and hash a confirmation sends back.
 func finishedSiteRead(s sweepSeed) string {
 	read := s.create["site_read"]()
-	admin := ids.MustParse(sessionUserID(s.t, s.e))
+	admin := ids.MustParse(apptest.SessionUserID(s.t, s.e))
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), s.t, s.e.Pool)
 	ctx := principal.WithCorrelationID(principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
 		Type: principal.PrincipalSystem, ID: "agent:deepread", UserID: admin, OnBehalfOf: admin,

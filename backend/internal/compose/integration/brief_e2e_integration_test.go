@@ -26,8 +26,8 @@ func TestMorningBriefHTTPSurface(t *testing.T) {
 
 	// Two deals closing this week clear the §10 honest-short bar on timing
 	// alone: one to act on, one to snooze.
-	createdID := createDealClosingThisWeek(t, e, stages, "Closing this week")
-	snoozableID := createDealClosingThisWeek(t, e, stages, "Also closing, but not today's problem")
+	createdID := apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
+	snoozableID := apptest.CreateDealClosingThisWeek(t, e, stages, "Also closing, but not today's problem")
 
 	// Before any run, the home read is an honest 404 — no brief yet.
 	if status := e.Call(t, "GET", "/v1/brief", nil, nil, nil); status != http.StatusNotFound {
@@ -66,7 +66,7 @@ func TestMorningBriefHTTPSurface(t *testing.T) {
 
 	// The rep's own item marks acted; a second mark is a conflict, never a
 	// silent overwrite.
-	var acted briefItemResponse
+	var acted apptest.BriefItem
 	if status := e.Call(t, "POST", "/v1/brief/items/"+item.Id+"/act", nil, nil, &acted); status != http.StatusOK {
 		t.Fatalf("mark own item acted = %d, want 200", status)
 	}
@@ -80,29 +80,10 @@ func TestMorningBriefHTTPSurface(t *testing.T) {
 	assertSnoozeHidesItem(t, e, toSnooze)
 }
 
-// createDealClosingThisWeek seeds one open deal whose close date clears
-// the §10 timing bar, so it ranks into the rep's brief.
-func createDealClosingThisWeek(t *testing.T, e *apptest.AppEnv, stages apptest.SeededStages, name string) string {
-	t.Helper()
-	var created struct {
-		Id string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
-		"name":                name,
-		"pipeline_id":         stages.PipelineID,
-		"stage_id":            stages.Open,
-		"expected_close_date": time.Now().UTC().AddDate(0, 0, 3).Format("2006-01-02"),
-		"source":              "manual",
-	}, nil, &created); status != http.StatusCreated {
-		t.Fatalf("create deal %q status = %d", name, status)
-	}
-	return created.Id
-}
-
 // assertSnoozeHidesItem drives the snooze verb (A77/AC-home-6): a snooze
 // into the past is refused, a future one lands, and the home read hides
 // the item while snoozed_until lies ahead.
-func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze briefItemResponse) {
+func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze apptest.BriefItem) {
 	t.Helper()
 	past := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
 	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.Id+"/snooze",
@@ -111,7 +92,7 @@ func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze briefItemRe
 	}
 
 	until := time.Now().UTC().Add(48 * time.Hour).Format(time.RFC3339)
-	var snoozed briefItemResponse
+	var snoozed apptest.BriefItem
 	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.Id+"/snooze",
 		AnyMap{"snoozed_until": until}, nil, &snoozed); status != http.StatusOK {
 		t.Fatalf("snooze = %d, want 200", status)
@@ -140,9 +121,9 @@ func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze briefItemRe
 // claim. A generated stub carries the same method name as the real handler and
 // answers 501; which one the route resolves to is a property of the server
 // struct, not of the engine the unit lane exercises.
-func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed briefItemResponse) {
+func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed apptest.BriefItem) {
 	t.Helper()
-	var back briefItemResponse
+	var back apptest.BriefItem
 	if status := e.Call(t, "POST", "/v1/brief/items/"+snoozed.Id+"/unsnooze",
 		nil, nil, &back); status != http.StatusOK {
 		t.Fatalf("unsnooze = %d, want 200", status)
@@ -177,7 +158,7 @@ func assertUnsnoozeReturnsItem(t *testing.T, e *apptest.AppEnv, snoozed briefIte
 
 // findBriefItem resolves the queue entry for a deal — rank order between
 // equally-scored deals is not what this test proves.
-func findBriefItem(t *testing.T, items []briefItemResponse, dealID string) briefItemResponse {
+func findBriefItem(t *testing.T, items []apptest.BriefItem, dealID string) apptest.BriefItem {
 	t.Helper()
 	for _, item := range items {
 		if item.DealId == dealID {
@@ -185,20 +166,11 @@ func findBriefItem(t *testing.T, items []briefItemResponse, dealID string) brief
 		}
 	}
 	t.Fatalf("no brief item ranks deal %s", dealID)
-	return briefItemResponse{}
+	return apptest.BriefItem{}
 }
 
 type briefResponse struct {
 	Id             string              `json:"id"`
 	CandidateCount int                 `json:"candidate_count"`
-	Items          []briefItemResponse `json:"items"`
-}
-
-type briefItemResponse struct {
-	Id           string   `json:"id"`
-	DealId       string   `json:"deal_id"`
-	Rank         int      `json:"rank"`
-	EvidenceIds  []string `json:"evidence_ids"`
-	State        string   `json:"state"`
-	SnoozedUntil string   `json:"snoozed_until"`
+	Items          []apptest.BriefItem `json:"items"`
 }

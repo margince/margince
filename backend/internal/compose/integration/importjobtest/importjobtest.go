@@ -7,6 +7,9 @@
 // uses the workers the worker role registers, through River's test executor. The
 // River row moves as it would under a runner, so a dedupe and a snooze are real.
 //
+// It also starts the runs whose jobs it works: an upload, and a run over it
+// with its test job worked.
+//
 // It is its own package for the reason jobtest is. It builds on compose and
 // apptest, and a non-test file in package integration may not import them.
 package importjobtest

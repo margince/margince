@@ -104,7 +104,7 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Matrix", "seat@fable.test", "Admin")
 	fixtures := seedSeatFixtures(t, e)
-	roles := seededRoles(t, e)
+	roles := apptest.SeededRoles(t, e)
 	if len(roles) < 2 {
 		t.Fatalf("%d system roles seeded; the matrix needs the seeded set to say anything", len(roles))
 	}
@@ -115,7 +115,7 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 	// one side would fail here rather than quietly narrow what this proves.
 	var allowed, denied int
 	for _, role := range roles {
-		assignSoleRole(t, e, role.key)
+		assignSoleRole(t, e, role.Key)
 		for _, action := range seatActions() {
 			// Every cell acts on the same starting state. Without this the
 			// fixtures carry one role's successful write into the next
@@ -129,7 +129,7 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 			if status, code := action.call(t, e, fixtures); status != http.StatusForbidden ||
 				code != "seat_tier_insufficient" {
 				t.Errorf("read seat / role %q / %s → %d %q, want 403 seat_tier_insufficient",
-					role.key, action.class, status, code)
+					role.Key, action.class, status, code)
 			}
 			// A full seat falls through to RBAC, and what RBAC then says
 			// is read out of this role's own seeded grant document.
@@ -138,9 +138,9 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 			status, code := action.call(t, e, fixtures)
 			if code == "seat_tier_insufficient" {
 				t.Errorf("full seat / role %q / %s → %d %q — the ceiling refused a licensed seat",
-					role.key, action.class, status, code)
+					role.Key, action.class, status, code)
 			}
-			granted := role.grants(action.object, action.verb)
+			granted := role.Grants(action.object, action.verb)
 			if granted {
 				allowed++
 				// The granted leg has to SUCCEED, not merely avoid the
@@ -150,13 +150,13 @@ func TestTheSeatCeilingHoldsForEverySeededRoleAndAction(t *testing.T) {
 				// through" while proving nothing about the ceiling.
 				if status >= http.StatusBadRequest {
 					t.Errorf("full seat / role %q / %s → %d %q, but the seeded document grants %s.%s",
-						role.key, action.class, status, code, action.object, action.verb)
+						role.Key, action.class, status, code, action.object, action.verb)
 				}
 			} else {
 				denied++
 				if code != "permission_denied" {
 					t.Errorf("full seat / role %q / %s → %d %q, but the seeded document grants no %s.%s",
-						role.key, action.class, status, code, action.object, action.verb)
+						role.Key, action.class, status, code, action.object, action.verb)
 				}
 			}
 		}
@@ -291,64 +291,11 @@ func teamFixture(t *testing.T, e *apptest.AppEnv) string {
 	return id
 }
 
-// seededRole is one system role as the database holds it: the key the
-// matrix reports, and the grant document the expectation is read from.
-type seededRole struct {
-	key      string
-	objects  map[string]map[string]bool
-	rowScope string
-}
-
-func (r seededRole) grants(object, verb string) bool { return r.objects[object][verb] }
-
-// seededRoles reads the system roles the bootstrap laid down. This is the
-// derivation: the matrix's rows and its full-seat expectations both come
-// from here, so the test cannot disagree with the policy it is checking.
-func seededRoles(t *testing.T, e *apptest.AppEnv) []seededRole {
-	t.Helper()
-	rows, err := e.Owner.Query(t.Context(),
-		`SELECT key, permissions FROM role WHERE is_system ORDER BY key`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []seededRole
-	for rows.Next() {
-		var key string
-		var raw []byte
-		if err := rows.Scan(&key, &raw); err != nil {
-			t.Fatal(err)
-		}
-		var doc struct {
-			Objects  map[string]map[string]bool `json:"objects"`
-			RowScope string                     `json:"row_scope"`
-		}
-		if err := json.Unmarshal(raw, &doc); err != nil {
-			t.Fatalf("role %q carries an unreadable permission document: %v", key, err)
-		}
-		out = append(out, seededRole{key: key, objects: doc.Objects, rowScope: doc.RowScope})
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return out
-}
-
 // assignSoleRole makes the signed-in admin hold exactly the named role, so
 // the request that follows is answered by that role's grants alone.
 func assignSoleRole(t *testing.T, e *apptest.AppEnv, key string) {
 	t.Helper()
-	assignRoleTo(t, e, "seat@fable.test", key)
-}
-
-func assignRoleTo(t *testing.T, e *apptest.AppEnv, email, key string) {
-	t.Helper()
-	if _, err := e.Owner.Exec(t.Context(), `
-		UPDATE role_assignment SET role_id = (SELECT id FROM role WHERE key = $1 AND is_system)
-		WHERE user_id = (SELECT id FROM app_user WHERE email = $2)`,
-		key, email); err != nil {
-		t.Fatalf("assigning role %q: %v", key, err)
-	}
+	apptest.AssignRoleTo(t, e, "seat@fable.test", key)
 }
 
 // fullSeat holds the share recipient on a full seat whatever the acting

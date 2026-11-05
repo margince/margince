@@ -50,7 +50,7 @@ func TestAnnotateBriefLeavesTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "brief-write-doors", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	for _, name := range []string{"Brief deal one", "Brief deal two", "Brief deal three"} {
-		createDealClosingThisWeek(t, d.e, stages, name)
+		apptest.CreateDealClosingThisWeek(t, d.e, stages, name)
 	}
 	if status := d.e.Call(t, "POST", "/v1/brief", nil, nil, nil); status != http.StatusCreated {
 		t.Fatalf("generating the brief → %d", status)

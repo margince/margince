@@ -3,13 +3,16 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -100,20 +103,20 @@ func onDomain(kind string) func(*recordPool) map[string]any {
 func captureSeeders(s sweepSeed) map[string]func() string {
 	return map[string]func() string{
 		"consumer_mail_domain": func() string {
-			return s.post("/v1/capture/consumer-mail-domains", AnyMap{"domain": uniqueDomain(), "kind": "extra"})
+			return s.post("/v1/capture/consumer-mail-domains", integration.AnyMap{"domain": uniqueDomain(), "kind": "extra"})
 		},
 		"counterparty_hold": func() string {
-			return s.post("/v1/capture/counterparty-holds", AnyMap{"kind": "domain", "value": uniqueDomain()})
+			return s.post("/v1/capture/counterparty-holds", integration.AnyMap{"kind": "domain", "value": uniqueDomain()})
 		},
 		"capture_exclusion": func() string {
-			return s.post("/v1/capture/exclusions", AnyMap{"scope": "user", "kind": "domain", "value": uniqueDomain()})
+			return s.post("/v1/capture/exclusions", integration.AnyMap{"scope": "user", "kind": "domain", "value": uniqueDomain()})
 		},
 		"owner_identity": func() string {
-			return s.post("/v1/capture/owner-identities", AnyMap{"kind": "address", "value": uniqueEmail()})
+			return s.post("/v1/capture/owner-identities", integration.AnyMap{"kind": "address", "value": uniqueEmail()})
 		},
 		"workspace_email_domain": func() string {
 			domain := uniqueDomain()
-			s.call("POST", "/v1/capture/email-domains", AnyMap{"domain": domain}, nil, nil)
+			s.call("POST", "/v1/capture/email-domains", integration.AnyMap{"domain": domain}, nil, nil)
 			return domain
 		},
 		"domain_question": func() string { return openDomainQuestion(s, "unevidenced") },
@@ -131,7 +134,7 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 		"agent_sender_decision": func() string {
 			address := uniqueEmail()
 			s.ownerExec(`INSERT INTO capture_sender_override (user_id, address, decision, captured_by) VALUES ($1, $2, 'business', 'agent:role-sweep')`,
-				sessionUserID(s.t, s.e), address)
+				apptest.SessionUserID(s.t, s.e), address)
 			return address
 		},
 		// Only the one who withdrew an identity restores it, so it is withdrawn
@@ -140,7 +143,7 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			var identity struct {
 				ID string `json:"id"`
 			}
-			s.call("POST", "/v1/capture/owner-identities", AnyMap{"kind": "address", "value": uniqueEmail()}, s.pool.caller, &identity)
+			s.call("POST", "/v1/capture/owner-identities", integration.AnyMap{"kind": "address", "value": uniqueEmail()}, s.pool.caller, &identity)
 			s.call("DELETE", "/v1/capture/owner-identities/"+identity.ID, nil, s.pool.caller, nil)
 			return identity.ID
 		},
@@ -148,28 +151,28 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 		// disconnect earlier in the sweep took it off.
 		// A backfill to cancel. One the sweep's own start left running stands.
 		"running_backfill": func() string {
-			s.e.Call(s.t, "POST", "/v1/connectors/"+sweepMailbox+"/backfill", AnyMap{"window": "3m"}, nil, nil)
+			s.e.Call(s.t, "POST", "/v1/connectors/"+sweepMailbox+"/backfill", integration.AnyMap{"window": "3m"}, nil, nil)
 			return sweepMailbox
 		},
 		"silent_mailbox": func() string {
 			s.ownerExec(`UPDATE capture_connection SET connected_at = now() - interval '10 days', silence_dismissed_since = NULL
-				WHERE user_id = $1 AND provider = $2`, sessionUserID(s.t, s.e), sweepMailbox)
+				WHERE user_id = $1 AND provider = $2`, apptest.SessionUserID(s.t, s.e), sweepMailbox)
 			s.ownerExec(`INSERT INTO capture_sync_state (connection_id, last_success_at)
 				SELECT id, now() FROM capture_connection WHERE user_id = $1 AND provider = $2
 				ON CONFLICT (connection_id) DO UPDATE SET last_success_at = now(), last_error_class = NULL, last_delivery_at = NULL`,
-				sessionUserID(s.t, s.e), sweepMailbox)
+				apptest.SessionUserID(s.t, s.e), sweepMailbox)
 			return s.ownerScalar(`SELECT to_char(connected_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
-				FROM capture_connection WHERE user_id = $1 AND provider = $2`, sessionUserID(s.t, s.e), sweepMailbox)
+				FROM capture_connection WHERE user_id = $1 AND provider = $2`, apptest.SessionUserID(s.t, s.e), sweepMailbox)
 		},
 		"live_channel": func() string {
-			c := &channelSendEnv{AppEnv: s.e, user: sessionUserID(s.t, s.e)}
+			c := &apptest.ChannelConversation{AppEnv: s.e, User: apptest.SessionUserID(s.t, s.e)}
 			if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
-				c.connectBot(s.t)
+				c.ConnectBot(s.t)
 			}
 			return s.ownerScalar(`SELECT id::text FROM channel_connection WHERE archived_at IS NULL`)
 		},
 		"draft_import_run": func() string {
-			profile, status := uploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
+			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK || profile.RunID == "" {
 				s.t.Fatalf("uploading an import's file → %d %+v", status, profile)
 			}
@@ -178,11 +181,11 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 		// No route finishes an import without its worker; the commit job's
 		// writer leaves the run complete.
 		"complete_import_run": func() string {
-			profile, status := uploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
+			profile, status := importjobtest.UploadCSV(s.t, s.e, "company", "display_name\nSweep "+ids.NewV7().String()+"\n")
 			if status != http.StatusOK {
 				s.t.Fatalf("uploading an import's file → %d", status)
 			}
-			run, status := createRunWithMapping(s.t, s.e, "company", profile.SourceRef, map[string]string{"display_name": "display_name"})
+			run, status := importjobtest.CreateRunWithMapping(s.t, s.e, "company", profile.SourceRef, map[string]string{"display_name": "display_name"})
 			if status != http.StatusAccepted && status != http.StatusCreated {
 				s.t.Fatalf("starting the import → %d", status)
 			}
@@ -198,10 +201,10 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 func openDomainQuestion(s sweepSeed, reason string) string {
 	domain := uniqueDomain()
 	sender := "contact@" + domain
-	contact := s.post("/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []AnyMap{{"email": sender}}})
-	mail := s.post("/v1/activities", AnyMap{
+	contact := s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []integration.AnyMap{{"email": sender}}})
+	mail := s.post("/v1/activities", integration.AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Role sweep", "body": "Role sweep", "source": "manual",
-		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+		"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
 	// The question is current against the store's own clock.
 	s.ownerExec(`UPDATE activity SET occurred_at = now() - interval '1 hour' WHERE id = $1`, mail)
@@ -222,9 +225,9 @@ func (g sweepGmail) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 	switch {
 	case strings.HasSuffix(r.URL.Path, "/labels"):
-		return bookingProviderResponse(r, `{"labels":[{"id":"INBOX","name":"INBOX","type":"system"}]}`), nil
+		return apptest.BookingProviderResponse(r, `{"labels":[{"id":"INBOX","name":"INBOX","type":"system"}]}`), nil
 	case strings.HasSuffix(r.URL.Path, "/messages"):
-		return bookingProviderResponse(r, `{"messages":[],"resultSizeEstimate":12}`), nil
+		return apptest.BookingProviderResponse(r, `{"messages":[],"resultSizeEstimate":12}`), nil
 	}
 	return nil, fmt.Errorf("unexpected Gmail fixture request: %s %s", r.Method, r.URL.Path)
 }

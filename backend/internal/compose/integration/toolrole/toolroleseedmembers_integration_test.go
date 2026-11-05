@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,7 +44,9 @@ func (s sweepSeed) call(method, path string, body any, headers map[string]string
 	}
 }
 
-func (s sweepSeed) post(path string, body AnyMap) string { return seededID(s.t, s.e, path, body) }
+func (s sweepSeed) post(path string, body integration.AnyMap) string {
+	return seededID(s.t, s.e, path, body)
+}
 
 // ownerExec writes what no route writes, as the database owner: a state only
 // a connector, a job or another party's session reaches.
@@ -63,7 +66,7 @@ func uniqueEmail() string { return "sweep-" + ids.NewV7().String() + "@role-swee
 func memberSeeders(s sweepSeed) map[string]func() string {
 	invited := func(role string, teams ...string) string {
 		email := uniqueEmail()
-		body := AnyMap{"email": email, "display_name": "Role Sweep", "role": role}
+		body := integration.AnyMap{"email": email, "display_name": "Role Sweep", "role": role}
 		if len(teams) > 0 {
 			body["team_ids"] = teams
 		}
@@ -85,7 +88,7 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 	}
 	deactivated := func() string {
 		id := invited("rep")
-		s.call("POST", "/v1/users/"+id+"/deactivate", AnyMap{}, nil, nil)
+		s.call("POST", "/v1/users/"+id+"/deactivate", integration.AnyMap{}, nil, nil)
 		return id
 	}
 	preview := func(source string, query url.Values) string {
@@ -100,11 +103,11 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		// A contact a colleague off the caller's team owns, which a seat short
 		// of all row scope may ask to be handed.
 		"stranger_contact": func() string {
-			return s.post("/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep")})
+			return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep")})
 		},
 		"invited_user":     func() string { return invited("rep") },
 		"deactivated_user": deactivated,
-		"me":               func() string { return sessionUserID(s.t, s.e) },
+		"me":               func() string { return apptest.SessionUserID(s.t, s.e) },
 		"retiring_user": func() string {
 			id := deactivated()
 			s.pool.note(id, "token", preview(id, url.Values{"mode": {"remove"}}))
@@ -119,29 +122,29 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		"teammate": func() string { return teammate(s, active) },
 		"teammate_plan": func() string {
 			mate := teammate(s, active)
-			s.asColleague(mate).call("POST", "/v1/weekly-plans/current", AnyMap{}, nil, nil)
+			s.asColleague(mate).call("POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil)
 			return mate
 		},
 		"teammate_commitment": func() string {
 			colleague := s.asColleague(teammate(s, active))
-			colleague.call("POST", "/v1/weekly-plans/current", AnyMap{}, nil, nil)
-			return colleague.post("/v1/weekly-plans/commitments", AnyMap{"label": uniqueName()})
+			colleague.call("POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil)
+			return colleague.post("/v1/weekly-plans/commitments", integration.AnyMap{"label": uniqueName()})
 		},
 		// A review is answered by someone other than the deal's owner, so the
 		// teammate owns the deal and asks.
 		"colleague_legal_review": func() string {
 			mate := teammate(s, active)
 			stages := apptest.DiscoverSeededPipeline(s.t, s.e)
-			deal := s.post("/v1/deals", AnyMap{
+			deal := s.post("/v1/deals", integration.AnyMap{
 				"name": "Role Sweep", "amount_minor": 100, "currency": "EUR", "pipeline_id": stages.PipelineID,
 				"stage_id": stages.Open, "company_id": s.create["company"](), "source": "manual", "owner_id": mate,
 			})
-			return s.asColleague(mate).post("/v1/deals/"+deal+"/legal-reviews", AnyMap{})
+			return s.asColleague(mate).post("/v1/deals/"+deal+"/legal-reviews", integration.AnyMap{})
 		},
 		"intro_ask": func() string { return introAsk(s, active) },
 		"accepted_intro_ask": func() string {
 			ask := introAsk(s, active)
-			s.call("POST", "/v1/intro-requests/"+ask+"/decision", AnyMap{"decision": "accepted", "version": 1}, nil, nil)
+			s.call("POST", "/v1/intro-requests/"+ask+"/decision", integration.AnyMap{"decision": "accepted", "version": 1}, nil, nil)
 			return ask
 		},
 	}
@@ -149,8 +152,8 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 
 // teammate is an active manager on a team the admin is on.
 func teammate(s sweepSeed, active func(role string, teams ...string) string) string {
-	team := s.post("/v1/teams", AnyMap{"name": "Sweep " + ids.NewV7().String()})
-	s.call("PUT", "/v1/teams/"+team+"/members/"+sessionUserID(s.t, s.e), AnyMap{}, nil, nil)
+	team := s.post("/v1/teams", integration.AnyMap{"name": "Sweep " + ids.NewV7().String()})
+	s.call("PUT", "/v1/teams/"+team+"/members/"+apptest.SessionUserID(s.t, s.e), integration.AnyMap{}, nil, nil)
 	id := active("manager", team)
 	s.pool.note(id, "team", team)
 	return id
@@ -159,8 +162,8 @@ func teammate(s sweepSeed, active func(role string, teams ...string) string) str
 // introAsk is a teammate's ask that the admin introduce them to a contact.
 func introAsk(s sweepSeed, active func(role string, teams ...string) string) string {
 	contact := s.create["contact"]()
-	return s.asColleague(teammate(s, active)).post("/v1/contacts/"+contact+"/intro-requests", AnyMap{
-		"introducer_user_id": sessionUserID(s.t, s.e), "route_type": "direct", "internal_reason": "Role sweep",
+	return s.asColleague(teammate(s, active)).post("/v1/contacts/"+contact+"/intro-requests", integration.AnyMap{
+		"introducer_user_id": apptest.SessionUserID(s.t, s.e), "route_type": "direct", "internal_reason": "Role sweep",
 	})
 }
 
@@ -169,7 +172,7 @@ func introAsk(s sweepSeed, active func(role string, teams ...string) string) str
 // shares the admin's password, as no route sets another seat's.
 func (s sweepSeed) asColleague(user string) sweepSeed {
 	s.t.Helper()
-	s.ownerExec(`UPDATE app_user SET password_hash = (SELECT password_hash FROM app_user WHERE id = $1) WHERE id = $2`, sessionUserID(s.t, s.e), user)
+	s.ownerExec(`UPDATE app_user SET password_hash = (SELECT password_hash FROM app_user WHERE id = $1) WHERE id = $2`, apptest.SessionUserID(s.t, s.e), user)
 	transport, ok := s.e.Client.Transport.(*http.Transport)
 	jar, err := cookiejar.New(nil)
 	if !ok || err != nil {
@@ -178,7 +181,7 @@ func (s sweepSeed) asColleague(user string) sweepSeed {
 	colleague := *s.e
 	colleague.Client = &http.Client{Transport: transport.Clone(), Jar: jar}
 	s.e = &colleague
-	s.call("POST", "/v1/auth/login", AnyMap{"email": s.pool.fact(user, "email"), "password": "correct-horse-battery"}, nil, nil)
+	s.call("POST", "/v1/auth/login", integration.AnyMap{"email": s.pool.fact(user, "email"), "password": "correct-horse-battery"}, nil, nil)
 	return s
 }
 
@@ -186,13 +189,13 @@ func (s sweepSeed) asColleague(user string) sweepSeed {
 // undo that gives back the roles they held.
 func (s sweepSeed) asRoles(keys ...string) func() {
 	held := s.ownerScalar(`SELECT coalesce(string_agg(r.key, ','), '') FROM role r JOIN role_assignment a ON a.role_id = r.id
-		WHERE a.team_id IS NULL AND a.user_id = $1`, sessionUserID(s.t, s.e))
+		WHERE a.team_id IS NULL AND a.user_id = $1`, apptest.SessionUserID(s.t, s.e))
 	s.setRoles(keys)
 	return func() { s.setRoles(strings.Split(held, ",")) }
 }
 
 func (s sweepSeed) setRoles(keys []string) {
-	user := sessionUserID(s.t, s.e)
+	user := apptest.SessionUserID(s.t, s.e)
 	s.ownerExec(`DELETE FROM role_assignment WHERE team_id IS NULL AND user_id = $1`, user)
 	s.ownerExec(`INSERT INTO role_assignment (user_id, role_id) SELECT $1, id FROM role WHERE key = ANY($2)`, user, keys)
 }
@@ -201,7 +204,7 @@ func (s sweepSeed) setRoles(keys []string) {
 func accessSeeders(s sweepSeed) map[string]func() string {
 	return map[string]func() string{
 		"record_grant": func() string {
-			return s.post("/v1/record-grants", AnyMap{
+			return s.post("/v1/record-grants", integration.AnyMap{
 				"record_type": "company", "record_id": s.create["company"](), "subject_type": "user",
 				"subject_id": s.create["user"](), "access": "read",
 			})
@@ -209,16 +212,16 @@ func accessSeeders(s sweepSeed) map[string]func() string {
 		// Only the owner offers a record, so the admin owns this one whichever
 		// owner the pass seeds for.
 		"offered_company": func() string {
-			company := s.post("/v1/companies", AnyMap{"display_name": uniqueName(), "source": "manual", "owner_id": sessionUserID(s.t, s.e)})
-			s.call("POST", "/v1/records/company/"+company+"/ownership-offer", AnyMap{"to_id": s.create["user"]()}, nil, nil)
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": uniqueName(), "source": "manual", "owner_id": apptest.SessionUserID(s.t, s.e)})
+			s.call("POST", "/v1/records/company/"+company+"/ownership-offer", integration.AnyMap{"to_id": s.create["user"]()}, nil, nil)
 			return company
 		},
 		// Only a seat that may not already change the record asks for it. So
 		// the ask is filed on a colleague's company while the admin is a rep.
 		"requested_company": func() string {
-			company := s.post("/v1/companies", AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
 			defer s.asRoles("rep")()
-			s.call("POST", "/v1/records/company/"+company+"/ownership-request", AnyMap{}, nil, nil)
+			s.call("POST", "/v1/records/company/"+company+"/ownership-request", integration.AnyMap{}, nil, nil)
 			return company
 		},
 	}

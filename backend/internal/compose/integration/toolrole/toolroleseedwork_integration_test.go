@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -48,7 +49,7 @@ func (s sweepSeed) ownerScalar(sql string, args ...any) string {
 func workSeeders(s sweepSeed) map[string]func() string {
 	return map[string]func() string{
 		"inbound_email": func() string {
-			return s.post("/v1/activities", AnyMap{
+			return s.post("/v1/activities", integration.AnyMap{
 				"kind": "email", "direction": "inbound", "subject": "Role sweep", "body": "Role sweep",
 				"source": "manual", "rfc_message_id": "<sweep-" + ids.NewV7().String() + "@role-sweep.test>",
 			})
@@ -58,28 +59,28 @@ func workSeeders(s sweepSeed) map[string]func() string {
 			var draft struct {
 				ID string `json:"id"`
 			}
-			s.call("PUT", "/v1/mail-drafts", AnyMap{"anchor_type": "company", "anchor_id": company}, nil, &draft)
+			s.call("PUT", "/v1/mail-drafts", integration.AnyMap{"anchor_type": "company", "anchor_id": company}, nil, &draft)
 			s.pool.note(draft.ID, "anchor", company)
 			return draft.ID
 		},
 		// Only a mailbox's capture records which seat imported a thread.
 		"captured_thread": func() string {
 			key := "<sweep-" + ids.NewV7().String() + "@role-sweep.test>"
-			email := s.post("/v1/activities", AnyMap{
+			email := s.post("/v1/activities", integration.AnyMap{
 				"kind": "email", "direction": "inbound", "subject": "Role sweep", "source": "manual", "rfc_message_id": key,
 			})
-			s.ownerExec(`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, email, sessionUserID(s.t, s.e))
+			s.ownerExec(`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, email, apptest.SessionUserID(s.t, s.e))
 			return s.ownerScalar(`SELECT thread_key FROM activity WHERE id = $1`, email)
 		},
 		"deal_suggestion": func() string {
 			stem := ids.NewV7().String()[24:]
-			_, suggestion := seedScoutedNamed(s.t, s.e, "Sweep "+stem, "Buyer "+stem)
+			_, suggestion := apptest.SeedScoutedNamed(s.t, s.e, "Sweep "+stem, "Buyer "+stem)
 			return suggestion
 		},
 		"tag_suggestion": func() string { return tagSuggestion(s) },
 		"notice": func() string {
 			id, err := notices.NewStore(compose.InstallationDB(s.e.Pool)).Create(s.systemContext("system:role-sweep"), notices.NewNotice{
-				Recipient: ids.From[ids.UserKind](ids.MustParse(sessionUserID(s.t, s.e))), Kind: "automation",
+				Recipient: ids.From[ids.UserKind](ids.MustParse(apptest.SessionUserID(s.t, s.e))), Kind: "automation",
 				Subject: "Role sweep", DedupeKey: "role-sweep:" + ids.NewV7().String(),
 			})
 			if err != nil {
@@ -87,13 +88,13 @@ func workSeeders(s sweepSeed) map[string]func() string {
 			}
 			return id.String()
 		},
-		"approval_bundle": func() string { return stageBundleRows(s.t, s.e, s.create["company"](), 2).String() },
+		"approval_bundle": func() string { return apptest.StageBundleRows(s.t, s.e, s.create["company"](), 2).String() },
 		"approval":        func() string { return stagedApproval(s) },
 		// Only a released effect that errors fails, so the seed records the
 		// failure the release would have.
 		"failed_approval": func() string {
 			id := stagedApproval(s)
-			s.call("POST", "/v1/approvals/"+id+"/approve", AnyMap{}, nil, nil)
+			s.call("POST", "/v1/approvals/"+id+"/approve", integration.AnyMap{}, nil, nil)
 			s.pool.note(id, "failed_at", s.ownerScalar(`
 				UPDATE approval SET effect_failed_at = now(), effect_failure = 'the released work did not run'
 				 WHERE id = $1 RETURNING to_char(effect_failed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`, id))
@@ -101,28 +102,28 @@ func workSeeders(s sweepSeed) map[string]func() string {
 		},
 		"claim": func() string {
 			contact := s.create["contact"]()
-			activity := s.post("/v1/activities", AnyMap{
+			activity := s.post("/v1/activities", integration.AnyMap{
 				"kind": "note", "subject": "Role sweep", "body": "Role sweep", "source": "manual",
-				"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+				"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 			})
-			return s.post("/v1/contacts/"+contact+"/claims", AnyMap{
+			return s.post("/v1/contacts/"+contact+"/claims", integration.AnyMap{
 				"kind": "commitment_ours", "body": "Send the deck", "source_activity_id": activity, "source_quote": "Role sweep",
 			})
 		},
 		"routed_contact": func() string {
 			contact, colleague := s.create["contact"](), s.create["user"]()
-			seedRoute(s.t, s.e, ids.MustParse(colleague), ids.MustParse(contact))
+			apptest.SeedRoute(s.t, s.e, ids.MustParse(colleague), ids.MustParse(contact))
 			s.pool.note(contact, "via", colleague)
 			return contact
 		},
 		"owner_contact": func() string {
 			id := s.create["contact"]()
-			s.call("PATCH", "/v1/contacts/"+id, AnyMap{"visibility": "owner"}, nil, nil)
+			s.call("PATCH", "/v1/contacts/"+id, integration.AnyMap{"visibility": "owner"}, nil, nil)
 			return id
 		},
 		"dedupe_candidate": func() string {
 			stem := "Sweep" + ids.NewV7().String()[24:]
-			incumbent := seedCompanyPairHTTP(s.t, s.e, stem, strings.ToLower(stem)+".test", strings.ToLower(stem)+"-inc.test")
+			incumbent := apptest.SeedCompanyPair(s.t, s.e, stem, strings.ToLower(stem)+".test", strings.ToLower(stem)+"-inc.test")
 			var queue struct {
 				Data []json.RawMessage `json:"data"`
 			}
@@ -145,7 +146,7 @@ func workSeeders(s sweepSeed) map[string]func() string {
 // consent granted, and an inbound email from it to answer.
 func consentedContact(s sweepSeed) string {
 	email := uniqueEmail()
-	contact := s.post("/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []AnyMap{{"email": email}}})
+	contact := s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []integration.AnyMap{{"email": email}}})
 	var purposes struct {
 		Data []struct {
 			ID  string `json:"id"`
@@ -155,7 +156,7 @@ func consentedContact(s sweepSeed) string {
 	s.call("GET", "/v1/consent-purposes", nil, nil, &purposes)
 	for _, purpose := range purposes.Data {
 		if purpose.Key == "transactional" {
-			s.call("POST", "/v1/contacts/"+contact+"/consent", AnyMap{
+			s.call("POST", "/v1/contacts/"+contact+"/consent", integration.AnyMap{
 				"purpose_id": purpose.ID, "new_state": "granted", "lawful_basis": "consent", "wording": "Yes, you may contact me about this.",
 			}, nil, nil)
 		}
@@ -163,10 +164,10 @@ func consentedContact(s sweepSeed) string {
 	// Transactional consent holds where a live deal stakes the recipient, the
 	// message answered is filed on it, and the recipient asked about it.
 	deal := apptest.StakeOnOpenDeal(s.t, s.e, "Sweep "+ids.NewV7().String(), apptest.DiscoverSeededPipeline(s.t, s.e), contact)
-	askedAboutTheDeal(s.t, s.e, contact, email, deal)
-	anchor := s.post("/v1/activities", AnyMap{
+	apptest.AskedAboutTheDeal(s.t, s.e, contact, email, deal)
+	anchor := s.post("/v1/activities", integration.AnyMap{
 		"kind": "email", "subject": "Role sweep", "direction": "inbound", "source": "manual",
-		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}, {"entity_type": "deal", "entity_id": deal}},
+		"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}, {"entity_type": "deal", "entity_id": deal}},
 	})
 	s.pool.note(contact, "email", email)
 	s.pool.note(contact, "anchor", anchor)
@@ -199,7 +200,7 @@ func bookableSlot(p *recordPool) time.Time {
 // meeting is one the admin hosts, with its preparation's revision, and
 // confirmed ready at it when ready is asked.
 func meeting(s sweepSeed, ready bool) string {
-	id := s.post("/v1/activities", AnyMap{
+	id := s.post("/v1/activities", integration.AnyMap{
 		"kind": "meeting", "subject": "Role sweep", "source": "manual", "meeting_status": "booked",
 		"occurred_at": s.pool.sweepStart.Add(30 * 24 * time.Hour).Format(time.RFC3339),
 	})
@@ -210,7 +211,7 @@ func meeting(s sweepSeed, ready bool) string {
 	}
 	s.call("GET", "/v1/meeting-prep?record_type=activity&record_id="+id, nil, nil, &prep)
 	if ready {
-		s.call("PUT", "/v1/worklist/ready", AnyMap{"activity_id": id, "preparation_revision": prep.Preparation.Revision}, nil, nil)
+		s.call("PUT", "/v1/worklist/ready", integration.AnyMap{"activity_id": id, "preparation_revision": prep.Preparation.Revision}, nil, nil)
 	}
 	s.pool.note(id, "revision", prep.Preparation.Revision)
 	return id
@@ -265,7 +266,7 @@ func worklistRow(worklist json.RawMessage, source, record string) string {
 
 // stagedApproval is one approval an agent's pass staged for the admin.
 func stagedApproval(s sweepSeed) string {
-	bundle := stageBundleRows(s.t, s.e, s.create["company"](), 1)
+	bundle := apptest.StageBundleRows(s.t, s.e, s.create["company"](), 1)
 	return s.ownerScalar(`SELECT id::text FROM approval WHERE bundle_id = $1`, bundle)
 }
 
@@ -273,13 +274,13 @@ func stagedApproval(s sweepSeed) string {
 // a contact names.
 func tagSuggestion(s sweepSeed) string {
 	word := "Zq" + ids.NewV7().String()[24:]
-	tag := s.post("/v1/tags", AnyMap{"name": word, "description": strings.ToLower(word) + " pricing"})
-	s.call("PATCH", "/v1/tags/"+tag, AnyMap{"suggestible": true}, nil, nil)
+	tag := s.post("/v1/tags", integration.AnyMap{"name": word, "description": strings.ToLower(word) + " pricing"})
+	s.call("PATCH", "/v1/tags/"+tag, integration.AnyMap{"suggestible": true}, nil, nil)
 	contact := s.create["contact"]()
-	s.post("/v1/activities", AnyMap{
+	s.post("/v1/activities", integration.AnyMap{
 		"kind": "note", "subject": "Pricing", "body": "Asked about " + word + " pricing.", "source": "manual",
 		"occurred_at": clocktest.Now(s.t).Add(-time.Hour).UTC().Format(time.RFC3339),
-		"links":       []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+		"links":       []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
 	ctx := s.systemContext("agent:tag-scout")
 	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
@@ -303,7 +304,7 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 				ID      string `json:"id"`
 				Version int    `json:"version"`
 			}
-			s.call("POST", "/v1/scheduling/invitations", AnyMap{
+			s.call("POST", "/v1/scheduling/invitations", integration.AnyMap{
 				"contact_id": contact, "attendee_email": s.pool.fact(contact, "email"), "subject": "Role sweep",
 				"start": start.Format(time.RFC3339), "end": start.Add(30 * time.Minute).Format(time.RFC3339),
 			}, nil, &invited)
@@ -314,38 +315,38 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 			return invited.ID
 		},
 		"enrichment_run": func() string {
-			s.call("PUT", "/v1/provider-connections/surfe", AnyMap{"api_key": "role-sweep"}, nil, nil)
+			s.call("PUT", "/v1/provider-connections/surfe", integration.AnyMap{"api_key": "role-sweep"}, nil, nil)
 			contact := consentedContact(s)
 			var run struct {
 				ID string `json:"id"`
 			}
-			s.call("POST", "/v1/contacts/"+contact+"/enrichment-runs", AnyMap{"provider": "surfe"}, nil, &run)
+			s.call("POST", "/v1/contacts/"+contact+"/enrichment-runs", integration.AnyMap{"provider": "surfe"}, nil, &run)
 			s.pool.note(run.ID, "contact", contact)
 			return run.ID
 		},
 		// A Telegram conversation is one per bot and account, so each role
 		// replies on the one the first seed captured.
 		"channel_conversation": func() string {
-			c := &channelSendEnv{AppEnv: s.e, user: sessionUserID(s.t, s.e)}
+			c := &apptest.ChannelConversation{AppEnv: s.e, User: apptest.SessionUserID(s.t, s.e)}
 			// The bot may already be live, connected by an earlier seed or call.
 			connected := func() {
 				if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
-					c.connectBot(s.t)
+					c.ConnectBot(s.t)
 				}
 			}
-			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, channelSendThreadKey); existing != "0" {
+			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey); existing != "0" {
 				connected()
-				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, channelSendThreadKey)
+				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey)
 			}
-			c.contactID = s.create["contact"]()
-			c.bindIdentity(s.t)
-			c.seedInboundMessage(s.t)
-			c.grantConsent(s.t, "transactional")
+			c.ContactID = s.create["contact"]()
+			c.BindIdentity(s.t)
+			c.SeedInboundMessage(s.t)
+			c.GrantConsent(s.t, "transactional")
 			connected()
-			return c.activityID
+			return c.ActivityID
 		},
 		"transcript": func() string {
-			return s.post("/v1/activities", AnyMap{
+			return s.post("/v1/activities", integration.AnyMap{
 				"kind": "meeting", "subject": "Role sweep", "body": "We agreed to send the deck.", "source": "manual", "source_system": "transcript",
 			})
 		},
@@ -354,10 +355,10 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		// with Done.
 		"worklist_meeting": func() string {
 			contact := s.create["contact"]()
-			id := s.post("/v1/activities", AnyMap{
+			id := s.post("/v1/activities", integration.AnyMap{
 				"kind": "meeting", "subject": "Role sweep", "source": "manual", "occurred_precision": "day",
 				"occurred_at": clocktest.Now(s.t).UTC().Format(time.RFC3339),
-				"links":       []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+				"links":       []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 			})
 			var worklist json.RawMessage
 			s.call("GET", "/v1/worklist", nil, nil, &worklist)
@@ -371,9 +372,9 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		// delivery job records.
 		// A done line is an agent's work, so an agent's passport makes a company.
 		"magic_line": func() string {
-			bearer, _ := passportWithID(s.t, s.e, "role sweep magic "+ids.NewV7().String(), "read", "write")
+			bearer, _ := apptest.PassportWithID(s.t, s.e, "role sweep magic "+ids.NewV7().String(), "read", "write")
 			var created json.RawMessage
-			if status := s.e.Call(s.t, "POST", "/v1/companies", AnyMap{"display_name": uniqueName(), "source": "manual"}, bearer, &created); status != 201 {
+			if status := s.e.Call(s.t, "POST", "/v1/companies", integration.AnyMap{"display_name": uniqueName(), "source": "manual"}, bearer, &created); status != 201 {
 				s.t.Fatalf("an agent making a company → %d %s", status, created)
 			}
 			var magic json.RawMessage
@@ -392,13 +393,13 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 		},
 		"vcard_contact": func() string {
 			email := uniqueEmail()
-			contact := s.post("/v1/contacts", AnyMap{
+			contact := s.post("/v1/contacts", integration.AnyMap{
 				"full_name": "Rita Sweep", "source": "manual", "title": "CFO",
-				"emails": []AnyMap{{"email": email, "email_type": "work", "is_primary": true}},
+				"emails": []integration.AnyMap{{"email": email, "email_type": "work", "is_primary": true}},
 			})
 			card := "BEGIN:VCARD\nVERSION:3.0\nFN:Rita Sweep\nTITLE:VP Finance\nEMAIL;TYPE=WORK:" + email + "\nEND:VCARD\n"
-			form, contentType := multipartDocument(s.t, "rita.vcf", "text/vcard", []byte(card))
-			if status, raw := postUpload(s.t, s.e, "/v1/contacts/vcard-import", nil, form, contentType); status < 200 || status >= 300 {
+			form, contentType := apptest.MultipartDocument(s.t, "rita.vcf", "text/vcard", []byte(card))
+			if status, raw := apptest.PostUpload(s.t, s.e, "/v1/contacts/vcard-import", nil, form, contentType); status < 200 || status >= 300 {
 				s.t.Fatalf("importing a vCard → %d %s", status, raw)
 			}
 			return contact
@@ -410,7 +411,7 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 				ID      string `json:"id"`
 				Version int    `json:"version"`
 			}
-			s.call("POST", "/v1/activities/"+s.pool.fact(contact, "anchor")+"/send-email", AnyMap{
+			s.call("POST", "/v1/activities/"+s.pool.fact(contact, "anchor")+"/send-email", integration.AnyMap{
 				"subject": "Role sweep", "body": "Role sweep", "to": []string{s.pool.fact(contact, "email")},
 				"consent_purpose": "transactional", "scheduled_tz": "Europe/Berlin",
 				"scheduled_at": s.pool.sweepStart.Add(30 * 24 * time.Hour).Format(time.RFC3339),

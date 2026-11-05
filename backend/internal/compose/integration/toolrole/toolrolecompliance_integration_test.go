@@ -3,11 +3,14 @@
 
 //go:build integration
 
-package integration
+package toolrole
 
 import (
 	"net/http"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // complianceFixtures fill the consent, privacy and retention calls. Each acts
@@ -95,7 +98,7 @@ func pastInstant(p *recordPool) string { return p.sweepStart.Add(-48 * time.Hour
 // app's own routes where one makes them.
 func complianceSeeders(s sweepSeed) map[string]func() string {
 	mailContact := func() string {
-		return s.post("/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []AnyMap{{"email": uniqueEmail()}}})
+		return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []integration.AnyMap{{"email": uniqueEmail()}}})
 	}
 	purpose := func(doubleOptIn bool) func() string {
 		return func() string {
@@ -117,12 +120,12 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 	}
 	reviewCase := func() string {
 		contact := s.create["contact"]()
-		driveNoticeCase(s.t, s.e, contact)
+		apptest.DriveNoticeCase(s.t, s.e, contact)
 		return s.ownerScalar(`SELECT id::text FROM privacy_notice_case WHERE contact_id = $1`, contact)
 	}
 	qualifying := func() string {
 		contact := s.create["contact"]()
-		event := s.post("/v1/contacts/"+contact+"/consent/qualifying-events", AnyMap{
+		event := s.post("/v1/contacts/"+contact+"/consent/qualifying-events", integration.AnyMap{
 			"kind": "in_person", "note": "Met at the fair.",
 			"occurred_at": s.pool.sweepStart.Add(-48 * time.Hour).Format(time.RFC3339),
 		})
@@ -146,7 +149,7 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		// level every seat that may lift one reaches.
 		"suppression": func() string {
 			contact := s.create["contact"]()
-			s.call("POST", "/v1/contacts/"+contact+"/consent/suppress", AnyMap{"kind": "subject_request", "reason": "Asked on the phone."}, nil, nil)
+			s.call("POST", "/v1/contacts/"+contact+"/consent/suppress", integration.AnyMap{"kind": "subject_request", "reason": "Asked on the phone."}, nil, nil)
 			stop := s.ownerScalar(`UPDATE communication_suppression SET decided_by_level = 'user' WHERE contact_id = $1 RETURNING id::text`, contact)
 			s.pool.note(stop, "contact", contact)
 			return stop
@@ -156,23 +159,23 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 			var vouch struct {
 				ID string `json:"override_id"`
 			}
-			s.call("POST", "/v1/contacts/"+contact+"/consent/allow", AnyMap{"category": "marketing", "reason": "They asked at the fair."}, nil, &vouch)
+			s.call("POST", "/v1/contacts/"+contact+"/consent/allow", integration.AnyMap{"category": "marketing", "reason": "They asked at the fair."}, nil, &vouch)
 			s.pool.note(vouch.ID, "contact", contact)
 			return vouch.ID
 		},
 		"contact_note": func() string {
-			return s.post("/v1/activities", AnyMap{
+			return s.post("/v1/activities", integration.AnyMap{
 				"kind": "note", "subject": "A record worth keeping", "source": "manual",
-				"links": []AnyMap{{"entity_type": "contact", "entity_id": s.create["contact"]()}},
+				"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": s.create["contact"]()}},
 			})
 		},
 		"subject_request": func() string {
-			return s.post("/v1/data-subject-requests", AnyMap{"kind": "access", "subject_ref": uniqueEmail()})
+			return s.post("/v1/data-subject-requests", integration.AnyMap{"kind": "access", "subject_ref": uniqueEmail()})
 		},
 		"notice_case_review": reviewCase,
 		"notice_case": func() string {
 			review := reviewCase()
-			s.call("POST", "/v1/privacy/notice-case-reviews/"+review+"/source", AnyMap{
+			s.call("POST", "/v1/privacy/notice-case-reviews/"+review+"/source", integration.AnyMap{
 				"kind": "referral", "note": "Confirmed referral", "obtained_at": s.pool.sweepStart.Add(-48 * time.Hour).Format(time.RFC3339),
 			}, nil, nil)
 			return review
@@ -195,13 +198,13 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 // to a contact nothing on record connects to us.
 func refusedSendReview(s sweepSeed, purpose string) string {
 	email := uniqueEmail()
-	contact := s.post("/v1/contacts", AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []AnyMap{{"email": email}}})
+	contact := s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "emails": []integration.AnyMap{{"email": email}}})
 	// A note, not their mail: mail from them would be the evidence the send lacks.
-	anchor := s.post("/v1/activities", AnyMap{
+	anchor := s.post("/v1/activities", integration.AnyMap{
 		"kind": "note", "subject": "Role sweep", "source": "manual",
-		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+		"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
-	if status := s.e.Call(s.t, "POST", "/v1/activities/"+anchor+"/send-email", AnyMap{
+	if status := s.e.Call(s.t, "POST", "/v1/activities/"+anchor+"/send-email", integration.AnyMap{
 		"subject": "Re: Inbound question", "body": "answer", "to": []string{email}, "consent_purpose": purpose,
 	}, nil, nil); status != http.StatusConflict {
 		s.t.Fatalf("a %s send with no grant → %d, want the refusal that opens a review", purpose, status)

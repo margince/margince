@@ -94,14 +94,13 @@ internal/compose/integration/aiactivity_siteread_integration_test.go 2
 internal/compose/integration/aiactivity_transcript_integration_test.go 1
 internal/compose/integration/aiactivity_voicebuild_integration_test.go 1
 internal/compose/integration/aihealth_integration_test.go 18
-internal/compose/integration/analyticsreadroutes_integration_test.go 1
 internal/compose/integration/attentionfx_integration_test.go 1
 internal/compose/integration/audiencerescope_integration_test.go 2
 internal/compose/integration/auditlog_integration_test.go 1
 internal/compose/integration/basecurrencyscale_integration_test.go 1
 internal/compose/integration/booking_survives_marketing_integration_test.go 1
 internal/compose/integration/bouncestop_integration_test.go 1
-internal/compose/integration/brief_e2e_integration_test.go 3
+internal/compose/integration/brief_e2e_integration_test.go 2
 internal/compose/integration/canceledmeetingleadtouch_integration_test.go 1
 internal/compose/integration/capture/capture_providerrecovery_integration_test.go 2
 internal/compose/integration/capture/capture_syncstate_integration_test.go 1
@@ -140,7 +139,6 @@ internal/compose/integration/daily_seed_bench_test.go 2
 internal/compose/integration/daily_systemhealth_bench_test.go 1
 internal/compose/integration/dealfigures_integration_test.go 2
 internal/compose/integration/dealstatus_facts_integration_test.go 1
-internal/compose/integration/dealsuggestion_http_integration_test.go 1
 internal/compose/integration/decaylane_integration_test.go 4
 internal/compose/integration/deploymentsecretunseal_integration_test.go 2
 internal/compose/integration/dossier_e2e_integration_test.go 1
