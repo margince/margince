@@ -41,6 +41,15 @@
   transition: background-color var(--dur-state);
 }
 
+/* A card keeps the width of its row: the pill around it is the whole row. */
+.editable-value-block {
+  display: flex;
+  inline-size: calc(100% + var(--space-2));
+}
+.editable-value-block .editable-value-face {
+  flex: 1;
+}
+
 .editable-value-placeholder {
   color: var(--textSecondary);
 }
