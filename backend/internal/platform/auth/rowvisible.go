@@ -63,6 +63,24 @@ func HideRow(ctx context.Context, object string) error {
 	return apperrors.ErrNotFound
 }
 
+// refuseRow is a gate's answer to a row the caller sees and may not change.
+func refuseRow(ctx context.Context, table string) error {
+	return RefuseRow(ctx, table, apperrors.ErrPermissionDenied)
+}
+
+// RefuseRow is a store's refusal of a record the caller sees. The rule is one
+// the record holds rather than a grant, such as the level it was recorded at. It
+// notes the refusal as a gate's and answers refusal, so a recorder never meets
+// a 403 no gate made.
+func RefuseRow(ctx context.Context, object string, refusal error) error {
+	noteRefusal(ctx, rowRefusalPrefix+object)
+	if refusal == nil {
+		// A nil refusal would admit the caller this refuses, so it fails closed.
+		return apperrors.ErrPermissionDenied
+	}
+	return refusal
+}
+
 func probeVisible(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, mode rowProbe) error {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

@@ -13,7 +13,9 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -82,4 +84,30 @@ func TeamLeadReachOf(ctx context.Context) TeamWeekReach {
 		return ReachesTeamsLed
 	}
 	return ReachesNoTeam
+}
+
+// teamWeekChecks are the grants TeamLeadReachOf reads, as checks.
+func teamWeekChecks() []Check {
+	read := []principal.Action{principal.ActionRead}
+	return []Check{
+		{RowScope: principal.RowScopeTeam},
+		{Object: "deal", Actions: read},
+		{OneOf: []Check{{Object: objTeamOversight, Actions: read}, {Object: objTeamLead, Actions: read}}},
+	}
+}
+
+// RequireTeamWeekReach is TeamWeekReachOf for the store that serves a week. It
+// records the grants the answer read, and refuses a caller it reaches no team
+// for. A refusal the individual-performance switch made is the caller's to ask.
+func RequireTeamWeekReach(ctx context.Context) (TeamWeekReach, error) {
+	if p, ok := principal.Actor(ctx); ok {
+		for _, c := range teamWeekChecks() {
+			RecordDecision(ctx, c, c.HeldBy(p))
+		}
+	}
+	reach := TeamWeekReachOf(ctx)
+	if reach == ReachesNoTeam {
+		return reach, fmt.Errorf("a team's week: %w", apperrors.ErrPermissionDenied)
+	}
+	return reach, nil
 }

@@ -215,6 +215,10 @@ func (s *Store) requireLeadOf(ctx context.Context, owner ids.UUID) error {
 	if !ok {
 		return apperrors.ErrNotFound
 	}
+	// An own-scope seat leads nobody, so this is the row scope's question, and
+	// is recorded as the check it is.
+	teamScope := auth.Check{RowScope: principal.RowScopeTeam}
+	auth.RecordDecision(ctx, teamScope, teamScope.HeldBy(actor))
 	if actor.Permissions.RowScope == principal.RowScopeOwn {
 		return auth.HideRow(ctx, "weekly_plan")
 	}

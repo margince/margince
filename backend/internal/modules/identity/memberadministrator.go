@@ -18,6 +18,9 @@ import (
 func memberRetirementContext(ctx context.Context, actor Identity) (context.Context, error) {
 	p, ok := principal.Actor(ctx)
 	if ok && (p.Type == principal.PrincipalAgent || p.Type == principal.PrincipalHuman) {
+		// The acting human's admin role, read off their identity, decides; it
+		// is recorded as the admin check it is.
+		auth.RecordDecision(ctx, auth.Check{Admin: true}, actor.hasRole(roleAdmin))
 		if actingHuman(ctx) != actor.UserID.UUID || !actor.hasRole(roleAdmin) {
 			return ctx, apperrors.ErrPermissionDenied
 		}

@@ -321,6 +321,10 @@ func ownScope(p principal.Principal) ResolvedScope {
 	return ResolvedScope{Kind: ScopeKindOwner, ID: &me}
 }
 
+// measuredPopulation names, to a recorder, the records a measurement covers
+// when the caller's lens refuses them.
+const measuredPopulation = "measured_population"
+
 // resolveTeamScope accepts any team for totals; labelScope refuses an archived
 // or unknown one as absent.
 func resolveTeamScope(id ids.UUID) ResolvedScope {
@@ -343,7 +347,7 @@ func ResolveAssertionScope(
 		return ResolvedScope{}, errors.New("compose: no actor bound to context")
 	}
 	if err := assertionLensRefusal(p, requested, resolved); err != nil {
-		return ResolvedScope{}, err
+		return ResolvedScope{}, auth.RefuseRow(ctx, measuredPopulation, err)
 	}
 	return resolved, nil
 }

@@ -56,8 +56,9 @@ func refuseBuyer(p principal.Principal, what string) error {
 // policy must grant the action on the object type. The system principal
 // (workspace provisioning) is trusted by construction and has no role.
 func Require(ctx context.Context, object string, action principal.Action) error {
-	noteCheck(ctx, Check{Object: object, Actions: []principal.Action{action}})
-	return probe(ctx, object, action)
+	c := Check{Object: object, Actions: []principal.Action{action}}
+	noteCheck(ctx, c)
+	return refusedOn(ctx, c, probe(ctx, object, action))
 }
 
 // probe is Require recording nothing. A branch uses it, because its refusal is
@@ -108,7 +109,7 @@ func RequireAny(ctx context.Context, object string, actions ...principal.Action)
 	if c.HeldBy(p) {
 		return nil
 	}
-	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
 }
 
 // RequireAnyObject admits when the actor holds the action on AT LEAST ONE
@@ -141,7 +142,7 @@ func RequireAnyObject(ctx context.Context, action principal.Action) error {
 	if c.HeldBy(p) {
 		return nil
 	}
-	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
 }
 
 // UpsertAction names the grant an upsert actually demands once it knows
@@ -438,9 +439,10 @@ func RequireCoach(ctx context.Context) error {
 	if err := refuseBuyer(p, "coaching a colleague"); err != nil {
 		return err
 	}
-	noteCheck(ctx, Check{Object: objTeamLead, Actions: []principal.Action{principal.ActionCreate}})
+	c := Check{Object: objTeamLead, Actions: []principal.Action{principal.ActionCreate}}
+	noteCheck(ctx, c)
 	if !leads(p, principal.ActionCreate) {
-		return fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied)
+		return refusedOn(ctx, c, fmt.Errorf("coaching a colleague: %w", apperrors.ErrPermissionDenied))
 	}
 	return nil
 }
@@ -468,7 +470,7 @@ func RequireAdmin(ctx context.Context) error {
 	if c.HeldBy(p) {
 		return nil
 	}
-	return fmt.Errorf("admin-only operation: %w", apperrors.ErrPermissionDenied)
+	return refusedOn(ctx, c, fmt.Errorf("admin-only operation: %w", apperrors.ErrPermissionDenied))
 }
 
 // AdminGranted is RequireAdmin read as a boolean, for a branch that widens an
@@ -491,5 +493,5 @@ func RequireRowScope(ctx context.Context, least principal.RowScope) error {
 	if c.HeldBy(p) {
 		return nil
 	}
-	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
 }

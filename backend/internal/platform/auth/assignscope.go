@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -275,7 +274,7 @@ func ensureAssignableSource(ctx context.Context, tx pgx.Tx, table string, id ids
 		return nil
 	}
 	if !unowned {
-		return apperrors.ErrPermissionDenied
+		return refuseRow(ctx, table)
 	}
 	// RequireHuman rather than a type comparison: it also refuses a buyer
 	// principal, which is a seat the raw check would have admitted onto the

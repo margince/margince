@@ -159,7 +159,7 @@ func grantsAnyOf(perms principal.Permissions, object string, actions []principal
 type checkRecorderKey struct{}
 
 // checkRecorder collects the checks asked of one principal during one call,
-// and the refusals a gate answered with something other than 403. A note about
+// and every refusal a gate in this package answered. A note about
 // another principal on the same context is left out: a recipient a notice is
 // tested against is not the caller.
 type checkRecorder struct {
@@ -169,12 +169,31 @@ type checkRecorder struct {
 	refused map[string]bool
 }
 
+// RecordDecision notes that a store asked c and whether it held. A store uses
+// it for a rule it decides on grants it read itself, such as a granting
+// human's. A recorder then reads the check and any refusal as a gate's.
+func RecordDecision(ctx context.Context, c Check, held bool) {
+	noteCheck(ctx, c)
+	if !held {
+		noteRefusal(ctx, c.String())
+	}
+}
+
+// refusedOn notes c as refused when err is a refusal. A recorder then tells a
+// gate's 403 from one a store made up.
+func refusedOn(ctx context.Context, c Check, err error) error {
+	if err != nil {
+		noteRefusal(ctx, c.String())
+	}
+	return err
+}
+
 func noteCheck(ctx context.Context, c Check) {
 	note(ctx, func(rec *checkRecorder) { rec.checks[c.String()] = true })
 }
 
-// noteRefusal records that a gate refused the caller, for a refusal whose
-// answer does not say so: a hidden row reads as not found.
+// noteRefusal records that a gate refused the caller: a 403, or a hidden row
+// that reads as not found.
 func noteRefusal(ctx context.Context, name string) {
 	note(ctx, func(rec *checkRecorder) { rec.refused[name] = true })
 }

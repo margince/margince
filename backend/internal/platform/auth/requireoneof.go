@@ -25,5 +25,5 @@ func RequireOneOf(ctx context.Context, checks ...Check) error {
 	if c.HeldBy(p) {
 		return nil
 	}
-	return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+	return refusedOn(ctx, c, fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied))
 }

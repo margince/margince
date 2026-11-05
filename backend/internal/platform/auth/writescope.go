@@ -318,7 +318,7 @@ func ensureWriteAuthority(ctx context.Context, tx pgx.Tx, table string, id ids.U
 		return err
 	}
 	if !permitted {
-		return apperrors.ErrPermissionDenied
+		return refuseRow(ctx, table)
 	}
 	return nil
 }
@@ -409,7 +409,7 @@ func EnsureClaimable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) 
 		return err
 	}
 	if !permitted {
-		return apperrors.ErrPermissionDenied
+		return refuseRow(ctx, table)
 	}
 	return nil
 }
