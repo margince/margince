@@ -203,6 +203,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// read rather than answer anything at all.
 		jobHealthHandlers:             jobHealthHandlers{pool: pool},
 		captureHealthHandlers:         captureHealthHandlers{pool: pool, now: utcNow},
+		dealViabilityHandlers:         dealViabilityHandlers{pool: pool},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{pool: pool, now: utcNow},
 		automaticWorkHandlers:         automaticWorkHandlers{pool: pool, now: utcNow},
 		extensionSettingsHandlers:     extensionSettingsHandlers{store: NewSettingsStore(pool)},

@@ -95,7 +95,7 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 			return err
 		}
 		in.Language = &language
-		out, err = createOfferTx(ctx, tx, dealID, in, entity, by)
+		out, err = createOfferTx(ctx, tx, dealID, in, entity, s.draftTaxBasis(ctx, tx, &entity), by)
 		return err
 	})
 	return out, err
@@ -103,8 +103,8 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 
 // createOfferTx resolves the buyer company, mints the offer number, inserts
 // the offer and its lines, derives the totals, and runs the write shape. All
-// of it runs inside the caller's transaction. entity is the issuing legal entity.
-func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, entity ids.LegalEntityID, by string) (crmcontracts.Offer, error) {
+// of it runs inside the caller's transaction, for the issuing entity and its tax basis.
+func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, entity ids.LegalEntityID, basis lazyTaxBasis, by string) (crmcontracts.Offer, error) {
 	wsID := storekit.MustWorkspace(ctx)
 	var err error
 	in, err = admitOfferCreation(ctx, tx, dealID, in)
@@ -127,7 +127,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 		in.TemplateID, in.Source, by, entity, in.Language); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
-	if err := insertOfferLines(ctx, tx, id, in.Currency, languageOf(in.Language), in.LineItems); err != nil {
+	if err := insertOfferLines(ctx, tx, id, in.Currency, languageOf(in.Language), basis, in.LineItems); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	if _, err := recomputeOfferTotals(ctx, tx, id); err != nil {
@@ -261,7 +261,7 @@ func offerTotalsImage(f OfferFigures) map[string]any {
 //
 //craft:ignore naked-any a line image carries whatever SQL types its columns hold, exactly as the audit seam takes them
 func lineFieldEvidence(lineID ids.UUID, was, now map[string]any) map[string]any {
-	return map[string]any{"line_id": lineID, "line_before": was, "line_after": now}
+	return map[string]any{lineIDKey: lineID, "line_before": was, "line_after": now}
 }
 
 // recomputeOfferTotals re-derives net/tax/gross from the offer's live
@@ -441,8 +441,8 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, in.IfVersion); err != nil {
 			return fmt.Errorf("apply offer patch: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), p.After()); err != nil {
-			return fmt.Errorf("audit offer update: %w", err)
+		if err := s.auditHeaderEdit(ctx, tx, id, p, in.LegalEntityID); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read updated offer: %w", err)

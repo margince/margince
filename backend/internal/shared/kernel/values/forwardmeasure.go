@@ -21,8 +21,14 @@ const (
 	// MeasureCommitEvidence adds the commit-category deals with confirmed close
 	// dates. The strictest reading: a provisional date is a guess and stays out.
 	MeasureCommitEvidence ForwardMeasure = "commit_evidence"
+	// MeasureQualifiedCommitEvidence is commit evidence over the deals the
+	// customer still supports: the qualified forecast's strictest reading.
+	MeasureQualifiedCommitEvidence ForwardMeasure = "qualified_commit_evidence"
 	// MeasureWeighted adds every open deal at its stage probability.
 	MeasureWeighted ForwardMeasure = "weighted"
+	// MeasureQualifiedWeighted is the weighted reading over the deals the
+	// customer still supports.
+	MeasureQualifiedWeighted ForwardMeasure = "qualified_weighted"
 	// MeasureManagerCall takes the authored call as the whole period's landing.
 	// It is NOT added to what is already won: a manager calling the quarter is
 	// calling the finish line, not the distance left to run.
@@ -30,7 +36,7 @@ const (
 )
 
 // ForwardMeasures is every measure, in the order a chooser should offer them:
-// strictest first, then the two that soften it.
+// strictest first, each followed by its qualified form, then the manager call.
 //
 // Held by: TestEveryForwardMeasureIsOfferedOnTheWire (backend/gates/forwardmeasureparity_test.go),
 // which derives the contract's own enums and requires them to agree with this
@@ -40,7 +46,10 @@ const (
 // Returned as a fresh slice because a package-level array would let one caller
 // reorder every other caller's chooser.
 func ForwardMeasures() []ForwardMeasure {
-	return []ForwardMeasure{MeasureCommitEvidence, MeasureWeighted, MeasureManagerCall}
+	return []ForwardMeasure{
+		MeasureCommitEvidence, MeasureQualifiedCommitEvidence,
+		MeasureWeighted, MeasureQualifiedWeighted, MeasureManagerCall,
+	}
 }
 
 // ParseForwardMeasure turns a stored or wire value into a measure.

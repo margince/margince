@@ -1038,8 +1038,10 @@ jobs:
       # "became main".
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
-        # A CAP ON THE HANG, not on the scan. The scan itself runs in 72-125
-        # seconds; eight minutes is a hang, not a slow day.
+        # A CAP ON THE HANG, not on the scan. A whole scan, upload and
+        # dependency data included, runs well under twenty minutes, so twenty
+        # is a hang and not a slow day. It still ends inside the job's thirty
+        # with the step's own message.
         #
         # What it bounds is the action's signature verification of the scanner
         # download, which fetches SonarSource's key from a public keyserver. On
@@ -1052,7 +1054,7 @@ jobs:
         # NOT skipSignatureVerification. That would make the hang impossible by
         # not verifying the scanner binary at all, trading an occasional lost
         # scan for permanently trusting an unverified download.
-        timeout-minutes: 8
+        timeout-minutes: 20
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           # WHICH BRANCH THIS ANALYSIS IS FILED UNDER, said for every event

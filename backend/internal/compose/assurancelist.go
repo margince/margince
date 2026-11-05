@@ -136,9 +136,7 @@ func assuranceDealExceptionsOwnedBy(
 		FROM assurance_exception e
 		JOIN deal d ON d.id = e.subject_id
 		%s
-		WHERE e.status = 'open'
-		  AND e.subject_kind = 'deal'
-		  AND d.archived_at IS NULL
+		WHERE `+openFindingOnLiveDealSQL("e", "d")+`
 		  AND %s
 		ORDER BY `+findingRank+`, e.id`+bound,
 		exceptionSelect(money), findingPricedJoin(money.affected), scopeClause)

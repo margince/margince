@@ -77,8 +77,10 @@ type userRow struct {
 	LastActiveAt *time.Time
 	CreatedAt    time.Time
 	Unused       bool
-	UpdatedAt    time.Time
-	MergedFrom   []crmcontracts.SeatName
+	// InviteMailState is nil unless the read asked and an invitation was mailed.
+	InviteMailState *string
+	UpdatedAt       time.Time
+	MergedFrom      []crmcontracts.SeatName
 	// ServiceExtension names the extension unit a service member serves; nil
 	// for every other seat.
 	ServiceExtension *string
@@ -119,7 +121,8 @@ const lastActive = `CASE WHEN $1::boolean THEN
 	  ELSE NULL::timestamptz END`
 
 var userColumns = `id, email, display_name, status, is_agent, seat_type, ` +
-	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user")
+	roleKeys + `, ` + teamIDs + `, ` + lastActive + `, created_at, service_extension, updated_at, ` + mergedAccounts + `, ` + unusedMemberSQL("app_user") +
+	`, ` + inviteMailState
 
 // $1 is the "read role keys?" flag on every user query below, so the aggregate
 // stays inside ONE fixed query string instead of two the caller picks between.
@@ -188,7 +191,8 @@ var listUsersAllFilteredQuery = `
 func scanUser(r pgx.Row) (userRow, error) {
 	var u userRow
 	err := r.Scan(&u.ID, &u.Email, &u.DisplayName, &u.Status, &u.IsAgent, &u.SeatType,
-		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused)
+		&u.Roles, &u.TeamIDs, &u.LastActiveAt, &u.CreatedAt, &u.ServiceExtension, &u.UpdatedAt, &u.MergedFrom, &u.Unused,
+		&u.InviteMailState)
 	return u, err
 }
 

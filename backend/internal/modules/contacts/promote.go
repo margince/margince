@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -177,7 +178,9 @@ func carryLeadConsent(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contact
 // lead.promoted + contact.* events — all inside the caller's transaction,
 // still under the lead row lock taken by PromoteLead.
 func (s *Store) finalizeLeadPromotion(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLeadInput, lead crmcontracts.Lead, contactID ids.ContactID, merged bool, mergeFields map[string]any, active []fieldcatalog.Column, dealID *ids.UUID, carried []ids.UUID) (crmcontracts.Contact, error) {
-	now := s.clock().UTC()
+	// The column keeps microseconds. A finer stamp in the audit image reads as
+	// a later edit, and the undo refuses.
+	now := s.clock().UTC().Truncate(time.Microsecond)
 	setBy, err := statusSetByFor(ctx)
 	if err != nil {
 		return crmcontracts.Contact{}, err

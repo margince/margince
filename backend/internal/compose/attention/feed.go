@@ -221,6 +221,7 @@ type Service struct {
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked
+	reviews     reviewRead
 	followUps   followUpRead
 	// planCoverage is whose plans a team read looked at; nil under every other scope.
 	planCoverage *crmcontracts.WorklistPlanCoverage
@@ -241,7 +242,6 @@ type Service struct {
 	// taskScope narrows the task lane to whose work this read answers for. Set
 	// per read (Assemble keeps the lane feed's behaviour; the ranked queue's
 	// resolved scope sets it), because the same service answers both surfaces.
-	//
 	// A task carries an assignee and so has three answers available to it —
 	// anybody's, the reader's, nobody's — where a mailbox or a notice is
 	// per-reader by construction and has only one.

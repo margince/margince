@@ -114,14 +114,25 @@ it.each([false, true])(
 it("keeps a paused public page unavailable to visitors", async () => {
   installFetchStub({
     "GET /public/booking/ada-lovelace/profile": () =>
-      jsonResponse({ ...bookingProfile, enabled: false }),
+      // All a paused page tells its guest: whose page it is.
+      jsonResponse({
+        host_name: "Ada Lovelace",
+        company_name: "",
+        title: "",
+        location: "",
+        duration_minutes: 0,
+        enabled: false,
+        paused: true,
+      }),
   });
   render(
     <StoryProviders>
       <BookingScreen hostSlug="ada-lovelace" />
     </StoryProviders>,
   );
-  expect(await screen.findByText(/unavailable/i)).toBeTruthy();
+  expect(
+    await screen.findByText(/Ada Lovelace is not taking bookings/i),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
 });
 

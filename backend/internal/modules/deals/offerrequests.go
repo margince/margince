@@ -157,6 +157,7 @@ func updateLineInput(raw []byte) (UpdateOfferLineInput, error) {
 		Description:    req.Description,
 		Unit:           req.Unit,
 		UnitPriceMinor: req.UnitPriceMinor,
+		TaxCategory:    componentKindOf(req.TaxCategory),
 	}
 	if req.Quantity != nil {
 		v := wireDecimal(*req.Quantity)

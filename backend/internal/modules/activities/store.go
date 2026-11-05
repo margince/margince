@@ -125,6 +125,9 @@ type Store struct {
 	catalog FieldCatalog
 	// leadQualifyTasks commits the owner follow-up with a lead's booking.
 	leadQualifyTasks LeadQualifyTasks
+	// invitationAttention tells a host, in the parking transaction, that their
+	// invitations wait for them.
+	invitationAttention InvitationAttention
 }
 
 // LeadQualifyTasks writes the follow-up for a booking filed on a lead.

@@ -101,6 +101,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/outcome-reviews` | listDealOutcomeReviews | The reviews written about this deal's closings. | Read records | at once |
 | `GET /deals/{id}/status` | getDealStatus | Where the deal stands, what could lose it, and the one thing to do next. | Read records | at once |
 | `GET /deals/{id}/coverage` | getDealCoverage | Who covers this deal, and what is wrong with how it is covered. | Read records | at once |
+| `GET /deals/{id}/viability` | getDealViability | Whether the customer still supports this deal, and the review behind the answer. | Read records | at once |
 | `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | Read records | at once |
 
 ## Pipelines

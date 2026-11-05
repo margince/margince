@@ -83,14 +83,18 @@ var noticeClasses = []string{
 // vcardstagereview.go — and a module may not import compose, so this map is
 // where the two meet. A kind missing from it is refused by ClassFor rather than
 // delivered under whatever the fallback happened to be.
+// KindMeetingInvitationAttention tells a host an invitation of theirs waits for them.
+const KindMeetingInvitationAttention = "meeting_invitation_attention"
+
 var classByKind = map[string]string{
-	"data_task_failed":        classSystem,
-	"automation":              classAutomation,
-	"lead_sla":                classLeadSLA,
-	"capture_backlog_stalled": classCapture,
-	"vcard_staging_failed":    classSystem,
-	KindApprovalPending:       ClassApprovalPending,
-	KindExtension:             classSystem,
+	"data_task_failed":             classSystem,
+	"automation":                   classAutomation,
+	"lead_sla":                     classLeadSLA,
+	"capture_backlog_stalled":      classCapture,
+	"vcard_staging_failed":         classSystem,
+	KindMeetingInvitationAttention: classSystem,
+	KindApprovalPending:            ClassApprovalPending,
+	KindExtension:                  classSystem,
 	// The answer to a colleague's own request to be handed a record.
 	"ownership_request_accepted":  classSystem,
 	"ownership_request_declined":  classSystem,

@@ -85,6 +85,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
 | subscription | A webhook's setup: the address it sends to and the events it sends. |
+| systemd | The service manager of most Linux systems, which starts the api and the worker. |
 | Tally | An online form tool that can send each answer to a webhook address. |
 | Telegram | A chat app Margince can send messages through. |
 | Typeform | An online form tool that can send each answer to a webhook address. |

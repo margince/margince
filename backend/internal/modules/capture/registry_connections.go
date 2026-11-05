@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -75,6 +76,23 @@ func (r *Registry) GrantedScopesFor(ctx context.Context, userID ids.UserID, prov
 		return nil, fmt.Errorf("capture: reading the connection's granted scopes: %w", err)
 	}
 	return granted, nil
+}
+
+// ReconnectedSince reports whether the user's live connection to provider was
+// granted again after since. A grant restamps connected_at; a token refresh
+// does not, so only the human's own reconnect counts.
+func (r *Registry) ReconnectedSince(ctx context.Context, userID ids.UserID, provider string, since time.Time) (bool, error) {
+	var connected time.Time
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT connected_at FROM capture_connection`+sendableConnection, userID, provider).Scan(&connected)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("capture: reading when the connection was granted: %w", err)
+	}
+	return connected.After(since), nil
 }
 
 // SenderFor resolves the transmitting connection for one user and provider:

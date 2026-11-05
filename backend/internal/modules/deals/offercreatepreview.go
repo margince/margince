@@ -30,13 +30,13 @@ type OfferCreationPreview struct {
 	Recurring RecurringFigures
 }
 
-func planNewOfferLines(ctx context.Context, tx pgx.Tx, currency, language string, inputs []OfferLineInputRow) ([]OfferCreationLine, OfferFigures, error) {
+func planNewOfferLines(ctx context.Context, tx pgx.Tx, currency, language string, basis lazyTaxBasis, inputs []OfferLineInputRow) ([]OfferCreationLine, OfferFigures, error) {
 	var lines []OfferCreationLine
 	var amounts []OfferLineInput
 	positions := map[int]bool{}
 	highest := 0
 	for i, in := range inputs {
-		line, err := resolveOfferLine(ctx, tx, currency, language, in)
+		line, err := resolveOfferLine(ctx, tx, currency, language, basis, in)
 		if err != nil {
 			return nil, OfferFigures{}, fmt.Errorf("line %d: %w", i+1, err)
 		}
@@ -53,7 +53,7 @@ func planNewOfferLines(ctx context.Context, tx pgx.Tx, currency, language string
 		positions[position] = true
 		highest = max(highest, position)
 		in.Position, in.Description, in.Unit = &position, &line.Description, &line.Unit
-		in.UnitPriceMinor, in.DiscountPct, in.TaxRate = &line.Price, &line.Discount, &line.Tax
+		in.UnitPriceMinor, in.DiscountPct, in.TaxRate, in.TaxCategory = &line.Price, &line.Discount, &line.Tax, line.TaxCategory
 		in.BillingModel, in.BillingIntervalMonths, in.IntervalCount = line.BillingModel, line.IntervalMonths, line.IntervalCount
 		amount := OfferLineInput{Quantity: in.Quantity, UnitPriceMinor: line.Price, DiscountPct: line.Discount, TaxRate: line.Tax}
 		figures, err := LineTotals(amount)
@@ -104,7 +104,7 @@ func (s *Store) PreviewOfferCreation(ctx context.Context, dealID ids.DealID, in 
 			return err
 		}
 		in.Language = &language
-		lines, totals, err := planNewOfferLines(ctx, tx, in.Currency, language, in.LineItems)
+		lines, totals, err := planNewOfferLines(ctx, tx, in.Currency, language, s.draftTaxBasis(ctx, tx, &entity), in.LineItems)
 		if err != nil {
 			return err
 		}

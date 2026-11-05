@@ -60,6 +60,12 @@ type invitationRow struct {
 	Attempts       int
 	ManagementRef  string
 	PublicIntent   *publicBookingIntent
+	// AttentionReason and AttentionEpisode say why a needs_attention row
+	// waits, and which disconnect parked it; both are NULL otherwise.
+	AttentionReason  *string
+	AttentionEpisode *ids.UUID
+	// ClaimedAt is when this delivery attempt began, in memory only.
+	ClaimedAt time.Time
 }
 
 type schedulingArgs []any
@@ -98,13 +104,17 @@ func invitationView(row invitationRow) crmcontracts.MeetingInvitation {
 	if row.Receipt != nil && row.Receipt.VideoURL != "" {
 		out.VideoUrl = &row.Receipt.VideoURL
 	}
+	if row.AttentionReason != nil {
+		reason := crmcontracts.MeetingInvitationAttentionReason(*row.AttentionReason)
+		out.AttentionReason = &reason
+	}
 	return out
 }
 
 // guestInvitationView is what a management or proposal link may show: the
 // host's calendar link and provider describe the host's account, not the meeting.
 func guestInvitationView(out crmcontracts.MeetingInvitation) crmcontracts.MeetingInvitation {
-	out.CalendarUrl, out.Provider = nil, nil
+	out.CalendarUrl, out.Provider, out.AttentionReason = nil, nil, nil
 	return out
 }
 
@@ -161,7 +171,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 			return crmcontracts.MeetingInvitation{}, err
 		}
 	}
-	roster, err := s.invitationRoster(ctx, host, in, intent)
+	roster, err := s.resolveRoster(ctx, host, in, intent)
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
@@ -214,12 +224,12 @@ func reserveInvitation(ctx context.Context, tx pgx.Tx, host ids.UserID, start, e
 
 func readInvitation(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool) (invitationRow, error) {
 	args := schedulingArgs{}
-	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent FROM meeting_invitation WHERE activity_id=` + args.add(id)
+	query := `SELECT activity_id,host_user_id,provider,calendar_id,appointment,receipt,status,version,command,attempts,management_ref,reminder_status,public_intent,attention_reason,attention_episode FROM meeting_invitation WHERE activity_id=` + args.add(id)
 	if lock {
 		query += " FOR UPDATE"
 	}
 	var row invitationRow
-	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent)
+	err := tx.QueryRow(ctx, query, args...).Scan(&row.ID, &row.Host, &row.Provider, &row.Calendar, &row.Appointment, &row.Receipt, &row.Status, &row.Version, &row.Command, &row.Attempts, &row.ManagementRef, &row.ReminderStatus, &row.PublicIntent, &row.AttentionReason, &row.AttentionEpisode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, apperrors.ErrNotFound
 	}

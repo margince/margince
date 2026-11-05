@@ -307,7 +307,10 @@ function MemberIdentity({ member }: Readonly<{ member: User }>) {
           ) : (
             member.is_agent && <Badge tone="ai">{t("users.agentSeat")}</Badge>
           )}
-          <MemberStatus status={member.status} />
+          <MemberStatus
+            status={member.status}
+            mailFailed={member.invite_email_state === "failed"}
+          />
         </span>
         <span className="t-caption">
           {member.service_extension
@@ -351,8 +354,21 @@ const STATUS_KIND = {
   deactivated: "neutral",
 } as const satisfies Readonly<Record<string, StatusKind>>;
 
-function MemberStatus({ status }: Readonly<{ status: string }>) {
+// An invitation whose mail the relay refused reaches nobody until an admin
+// resends it, so it asks for action where a plain invitation does not.
+function MemberStatus({
+  status,
+  mailFailed,
+}: Readonly<{ status: string; mailFailed: boolean }>) {
   const t = useT();
+  if (status === "invited" && mailFailed) {
+    return (
+      <StatusBadge
+        kind="attention"
+        label={t("users.status.inviteMailFailed")}
+      />
+    );
+  }
   if (
     status !== "invited" &&
     status !== "suspended" &&

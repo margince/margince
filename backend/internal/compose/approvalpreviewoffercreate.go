@@ -110,6 +110,7 @@ func (r approvalPreviewReader) offerCreationLineDetails(ctx context.Context, cur
 		"product_id": in.ProductID, descriptionField: in.Description, previewFieldUnit: in.Unit,
 		"quantity": json.Number(in.Quantity), previewFieldUnitPriceMinor: in.UnitPriceMinor, dealTargetCurrency: currency,
 		"discount_pct": json.Number(*in.DiscountPct), "tax_rate": json.Number(*in.TaxRate),
+		"tax_category":  in.TaxCategory,
 		"billing_model": in.BillingModel, "billing_interval_months": in.BillingIntervalMonths, "interval_count": in.IntervalCount,
 		"line_net_minor": line.Figures.NetMinor, "line_tax_minor": line.Figures.TaxMinor, "line_total_minor": line.Figures.TotalMinor,
 	}

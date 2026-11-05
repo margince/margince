@@ -5888,6 +5888,9 @@
           "priced_count": {
             "type": "integer"
           },
+          "qualification_mode": {
+            "type": "string"
+          },
           "qualified": {
             "type": "object",
             "properties": {
@@ -5997,6 +6000,7 @@
           "period_end",
           "period_start",
           "priced_count",
+          "qualification_mode",
           "scope_kind",
           "snapshots",
           "timezone",
@@ -6484,6 +6488,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "attention_reason": {
+            "type": "string"
+          },
           "calendar_url": {
             "type": "string"
           },
@@ -13280,6 +13287,9 @@
           },
           "priced_count": {
             "type": "integer"
+          },
+          "qualification_mode": {
+            "type": "string"
           },
           "qualified": {
             "properties": {

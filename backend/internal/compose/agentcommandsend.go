@@ -139,5 +139,5 @@ func meetingInvitationCommand(_ agentPolicy, deps restCommandDeps, _ *http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return agents.NewMeetingInvitationCall(deps.records, deps.language, in), nil
+	return agents.NewMeetingInvitationCall(deps.records, deps.language, deps.invitations, in), nil
 }

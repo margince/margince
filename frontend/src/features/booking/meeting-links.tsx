@@ -19,7 +19,10 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
 import { navigate } from "../../lib/router";
-import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
+import {
+  bookingPagePaused,
+  usePatchSchedulingProfile,
+} from "../../lib/scheduling-profile-query";
 import {
   type CalendarStanding,
   calendarName,
@@ -62,13 +65,16 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
   const [replacing, setReplacing] = useState(false);
   const toHours = useRef(false);
   const refusal = profile.enabled ? undefined : ENABLE_REFUSAL[standing];
-  let status: Readonly<{ kind: StatusKind; key: MessageKey }> = {
-    kind: "neutral",
-    key: "scheduling.status.paused",
-  };
-  if (attention)
-    status = { kind: "attention", key: "scheduling.status.attention" };
-  else if (profile.enabled) status = { kind: "done", key: "scheduling.active" };
+  // Paused is the server's word for what every guest sees, the same rule the
+  // account menu and the guest page read. A switched-on page shows it as a
+  // warning, because the host did not choose it.
+  const paused = bookingPagePaused(profile) || attention;
+  const status: Readonly<{ kind: StatusKind; key: MessageKey }> = paused
+    ? {
+        kind: profile.enabled ? "attention" : "neutral",
+        key: "scheduling.status.paused",
+      }
+    : { kind: "done", key: "scheduling.active" };
   return (
     <Panel
       title={t("scheduling.linksTitle")}
@@ -133,9 +139,7 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
             {
               key: "status",
               header: t("scheduling.col.status"),
-              render: (row) => (
-                <RowStatus profile={row} attention={attention} />
-              ),
+              render: () => <RowStatus status={status} />,
             },
             {
               key: "actions",
@@ -228,19 +232,10 @@ function LengthCell({ minutes }: Readonly<{ minutes: number }>) {
 }
 
 function RowStatus({
-  profile,
-  attention,
-}: Readonly<{ profile: Profile; attention: boolean }>) {
+  status,
+}: Readonly<{ status: Readonly<{ kind: StatusKind; key: MessageKey }> }>) {
   const t = useT();
-  if (attention)
-    return (
-      <StatusBadge kind="attention" label={t("scheduling.row.noInvitations")} />
-    );
-  return profile.enabled ? (
-    <StatusBadge kind="done" label={t("scheduling.row.live")} />
-  ) : (
-    <StatusBadge kind="neutral" label={t("scheduling.status.paused")} />
-  );
+  return <StatusBadge kind={status.kind} label={t(status.key)} />;
 }
 
 function LinkActions({

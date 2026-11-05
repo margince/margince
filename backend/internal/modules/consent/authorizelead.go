@@ -233,7 +233,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	}
 
 	d.Resolved = categoryForClass(purpose.Class)
-	granted, err := grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
+	granted, err := grantedForLead(ctx, tx, leadID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}

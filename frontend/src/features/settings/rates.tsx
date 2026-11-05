@@ -51,7 +51,7 @@ function trimDecimal(value: string): string {
 
 // Withheld, not absent: a vanished sheet reads as "no rates here", not "not
 // yours to see". Callers skip the query, since fetching the 403 shows a Retry.
-function WithheldRateCard({
+export function WithheldRateCard({
   title,
   reason,
 }: Readonly<{ title: string; reason: string }>) {

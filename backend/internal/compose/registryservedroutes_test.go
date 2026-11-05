@@ -82,7 +82,7 @@ func TestEveryRegistryServedRouteRunsTheToolItDeclaresThroughInvoke(t *testing.T
 	}
 	router := crmcontracts.HandlerWithOptions(Server{toolRegistry: registry}, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
-		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(registry, nil, nil, nil, nil, nil, gate)},
+		Middlewares: []crmcontracts.MiddlewareFunc{agentGate(registry, nil, nil, nil, nil, nil, nil, gate)},
 	})
 	contract := operationsByID(t)
 

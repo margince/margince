@@ -130,6 +130,10 @@ type ForecastReadingsResult struct {
 	// reviews, which means no qualified reading exists, not that it equals the
 	// figures above.
 	Qualified *ForecastQualifiedResult `json:"qualified,omitempty"`
+	// QualificationMode is "enforcing" while viability reviews gate the
+	// qualified block, else "off". An enforced scope with no deals sends a zero
+	// block rather than none.
+	QualificationMode string `json:"qualification_mode"`
 
 	// Landing is where the period finishes, the answer GET /forecast gives. The
 	// range below sits beside it. Absent for managed teams, as on the endpoint.
@@ -245,7 +249,7 @@ func (t forecastMovement) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"from":{"type":"string","format":"uuid","description":"The opening snapshot."},
 			"to":{"type":"string","format":"uuid","description":"The closing snapshot."},
-			"reading":{"type":"string","enum":["open","weighted","evidence","best_case"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total."}},
+			"reading":{"type":"string","enum":["open","weighted","evidence","best_case","qualified_evidence","qualified_best_case","qualified_weighted"],"description":"Which money answer this movement explains. A waterfall is drawn for ONE of them; mixing two adds figures that do not belong in one total. The qualified_ readings count only deals the customer still supports."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ForecastMovementResult](),
 	}

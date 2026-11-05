@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
@@ -656,6 +657,11 @@ func absentIDArgs(t *testing.T, tool string, inputSchema json.RawMessage, omit s
 }
 
 type seamProbeInviter struct{}
+
+// InvitationRoster resolves nothing: the summary lists the plain addresses.
+func (seamProbeInviter) InvitationRoster(context.Context, crmcontracts.MeetingInvitationRequest) ([]connector.CalendarAttendee, error) {
+	return nil, nil
+}
 
 func (seamProbeInviter) InviteMeeting(context.Context, crmcontracts.MeetingInvitationRequest) (crmcontracts.MeetingInvitation, error) {
 	return crmcontracts.MeetingInvitation{}, errSeamReached

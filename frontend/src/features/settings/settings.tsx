@@ -73,6 +73,7 @@ import { StageAutomationCard } from "./settings.stageautomation";
 import { SystemHealthPage } from "./settings.systemhealth";
 import { AuditLogCard } from "./settings-audit";
 import { SharedMergeReviewsCard } from "./sharedmergereviews";
+import { TaxRatesCard } from "./taxrates";
 import { TeamsCard } from "./users-access";
 import { UsersAdminCard } from "./users-admin";
 import { WebFormsCard } from "./webforms";
@@ -153,6 +154,7 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
           <LegalEntitiesCard />
           <InstallationSettingsCard />
           <FxRatesCard />
+          <TaxRatesCard />
           <FollowUpSettingsCard />
           <SignatureTemplateCard />
         </>

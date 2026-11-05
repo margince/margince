@@ -61,34 +61,8 @@ type Deal struct {
 	// the caller from its viability receipt and any open review. NotApplied on
 	// every deal means enforcement is off and no qualified reading exists.
 	Qualification viability.Qualification
-}
-
-// QualifiedReadings are the readings restricted to deals whose customer still
-// supports them. Nil on Readings while enforcement is off.
-//
-// Excluded and unknown are counted apart. An excluded deal was judged and
-// found unsupported; an unknown one could not be judged. Counting it as
-// excluded would report a gap in the mailbox as a gap in the pipeline.
-type QualifiedReadings struct {
-	// OpenMinor is the open money of the deals the qualified readings keep, the
-	// qualified counterpart of Readings.OpenMinor.
-	OpenMinor     int64
-	EvidenceMinor int64
-	BestCaseMinor int64
-	WeightedMinor int64
-	// The baseline open money left out, and how many deals carry it.
-	ExcludedMinor int64
-	UnknownMinor  int64
-	ExcludedCount int
-	UnknownCount  int
-	// The part of the excluded money with no review behind it. Such a deal has a
-	// weak close date or no next step, and the customer still talks about it.
-	UnsupportedMinor int64
-	UnsupportedCount int
-	// AmountsPartial is true when an excluded or unknown deal had no amount
-	// the reader can see: unpriced, no exchange rate, or masked. The two
-	// subtotals are then lower than the money those deals carry.
-	AmountsPartial bool
+	// Basis is what the qualification rested on, nil while enforcement is off.
+	Basis *ViabilityBasis
 }
 
 // Readings are the four money answers plus the counts that say what they do not
@@ -120,8 +94,12 @@ type Readings struct {
 	// frozen as contributions, and what a drill-through reads.
 	Contributions []Contribution
 
-	// Qualified is nil unless the caller qualified the deals.
+	// Qualified is nil unless the caller qualified the deals, or set a policy.
 	Qualified *QualifiedReadings
+	// QualifiedPolicy is the viability policy enforced for this read, empty
+	// while enforcement is off. Carried apart from Qualified so an enforced
+	// read over no deals still answers with a zero block.
+	QualifiedPolicy string
 
 	// Range is the central 80% of finishes, set by the assembler; nil if not drawn.
 	Range *Range
@@ -170,6 +148,9 @@ type Contribution struct {
 	// Qualification is the deal's treatment in the qualified readings. A
 	// different question from ExclusionReason, which is about money.
 	Qualification viability.Qualification
+	// Basis is what the qualification rested on, frozen with it. Nil on a row
+	// frozen while enforcement was off or before the basis was recorded.
+	Basis *ViabilityBasis
 
 	// What changed this deal since the previous snapshot, recorded at write
 	// time. audit_log has no correlation column to join on later, so
@@ -268,64 +249,6 @@ func Compute(period Period, asOfDay time.Time, in []Deal) (Readings, error) {
 	return out, nil
 }
 
-// qualify adds one contribution to the qualified readings, starting them on
-// the first qualified deal. The baseline weight is reused, never recomputed, so
-// a qualified total is always a subset of the baseline it sits beside.
-func qualify(out *Readings, c Contribution, base int64) error {
-	if c.Qualification == viability.QualificationNotApplied {
-		return nil
-	}
-	if out.Qualified == nil {
-		out.Qualified = &QualifiedReadings{}
-	}
-	q := out.Qualified
-	if !c.InOpen {
-		return nil
-	}
-	adds := []struct {
-		into *int64
-		by   int64
-		when bool
-	}{
-		{&q.OpenMinor, base, c.Qualification == viability.QualificationEligible},
-		{&q.EvidenceMinor, base, c.InEvidence && c.Qualification == viability.QualificationEligible},
-		{&q.BestCaseMinor, base, c.InBestCase && c.Qualification == viability.QualificationEligible},
-		{&q.WeightedMinor, c.WeightedMinor, c.Qualification == viability.QualificationEligible},
-		{&q.ExcludedMinor, base, excluded(c.Qualification)},
-		{&q.UnsupportedMinor, base, c.Qualification == viability.QualificationUnsupported},
-		{&q.UnknownMinor, base, c.Qualification == viability.QualificationUnknown},
-	}
-	for _, add := range adds {
-		if !add.when {
-			continue
-		}
-		sum, err := addMinor(*add.into, add.by)
-		if err != nil {
-			return err
-		}
-		*add.into = sum
-	}
-	switch c.Qualification {
-	case viability.QualificationExcluded:
-		q.ExcludedCount++
-	case viability.QualificationUnsupported:
-		q.ExcludedCount++
-		q.UnsupportedCount++
-	case viability.QualificationUnknown:
-		q.UnknownCount++
-	}
-	if c.Qualification != viability.QualificationEligible && c.BaseMinor == nil {
-		q.AmountsPartial = true
-	}
-	return nil
-}
-
-// excluded reports a deal the qualified readings leave out, under review or
-// unsupported alike.
-func excluded(q viability.Qualification) bool {
-	return q == viability.QualificationExcluded || q == viability.QualificationUnsupported
-}
-
 // ErrReadingOutOfRange marks a total that cannot be represented. A refusal
 // rather than a wrapped number: a headline that wrapped still looks like money
 // and disagrees silently with the rows it claims to be the sum of.
@@ -362,6 +285,7 @@ func contribute(period Period, asOfDay time.Time, deal Deal) (Contribution, erro
 		Effect:           deal.Effect,
 		StageID:          deal.StageID,
 		Qualification:    deal.Qualification,
+		Basis:            deal.Basis,
 	}
 	switch {
 	case deal.AmountMinor == nil:
