@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 47 |
 | Resources | 13 |
-| Tool catalog | 207.1 KB |
+| Tool catalog | 207.3 KB |
 | Resource catalog | 5.1 KB |
-| Approx. wire tokens | 54336 |
+| Approx. wire tokens | 54371 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 46.3 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 48.2 KB | 23% | Yes, every step |
-| Input schemas | 101.0 KB | 48% | Yes, every step |
+| Input schemas | 101.2 KB | 48% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 5% | Partly |
-| **Description + input schema** | **149.2 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **149.4 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -93,7 +93,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1743 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 1778 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 901 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
@@ -8211,6 +8211,8 @@ fields.
         "my_linkedin_reach",
         "notice_case",
         "notice_case_review",
+        "notice_source_evidence",
+        "notice_source_preview",
         "notices",
         "offer_pdf",
         "offered_values",
@@ -8261,7 +8263,7 @@ fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notices only",
+      "description": "company_contracts, deal_margince_changes, deal_suggestions, field_history, handled_for_you, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
       "type": "string"
     },
     "days": {
@@ -8305,7 +8307,7 @@ fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
+      "description": "activity_pipeline, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, project_filing, relationship_nudge, scheduled_send, tag_suggestion, win_evidence only",
       "type": "string"
     },
     "kind": {
@@ -8357,7 +8359,7 @@ fields.
       "type": "string"
     },
     "request_body": {
-      "description": "backfill_preview, filter_preview only: The request body of previewConnectorBackfill",
+      "description": "backfill_preview, filter_preview, notice_source_preview only: The request body of previewConnectorBackfill",
       "type": "object"
     },
     "rule": {

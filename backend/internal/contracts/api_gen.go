@@ -16987,6 +16987,84 @@ func (e NoticeKind) Valid() bool {
 	}
 }
 
+// Defines values for NoticeSourceEvidenceKind.
+const (
+	NoticeSourceEvidenceKindAcquisition NoticeSourceEvidenceKind = "acquisition"
+	NoticeSourceEvidenceKindEmail       NoticeSourceEvidenceKind = "email"
+	NoticeSourceEvidenceKindMeeting     NoticeSourceEvidenceKind = "meeting"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceKind enum.
+func (e NoticeSourceEvidenceKind) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceKindAcquisition:
+		return true
+	case NoticeSourceEvidenceKindEmail:
+		return true
+	case NoticeSourceEvidenceKindMeeting:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourceEvidenceRecordType.
+const (
+	NoticeSourceEvidenceRecordTypeActivity NoticeSourceEvidenceRecordType = "activity"
+	NoticeSourceEvidenceRecordTypeContact  NoticeSourceEvidenceRecordType = "contact"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceRecordType enum.
+func (e NoticeSourceEvidenceRecordType) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceRecordTypeActivity:
+		return true
+	case NoticeSourceEvidenceRecordTypeContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourceEvidenceReferenceKind.
+const (
+	NoticeSourceEvidenceReferenceKindAcquisition NoticeSourceEvidenceReferenceKind = "acquisition"
+	NoticeSourceEvidenceReferenceKindActivity    NoticeSourceEvidenceReferenceKind = "activity"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourceEvidenceReferenceKind enum.
+func (e NoticeSourceEvidenceReferenceKind) Valid() bool {
+	switch e {
+	case NoticeSourceEvidenceReferenceKindAcquisition:
+		return true
+	case NoticeSourceEvidenceReferenceKindActivity:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSourcePreviewRule.
+const (
+	NoticeSourcePreviewRuleArt13 NoticeSourcePreviewRule = "art13"
+	NoticeSourcePreviewRuleArt14 NoticeSourcePreviewRule = "art14"
+	NoticeSourcePreviewRuleNone  NoticeSourcePreviewRule = "none"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSourcePreviewRule enum.
+func (e NoticeSourcePreviewRule) Valid() bool {
+	switch e {
+	case NoticeSourcePreviewRuleArt13:
+		return true
+	case NoticeSourcePreviewRuleArt14:
+		return true
+	case NoticeSourcePreviewRuleNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for NotificationClass.
 const (
 	NotificationClassApprovalPending NotificationClass = "approval_pending"
@@ -33229,9 +33307,15 @@ type AssessNoticeSource struct {
 	Kind AssessNoticeSourceKind `json:"kind"`
 
 	// MetInPerson The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.
-	MetInPerson *bool      `json:"met_in_person,omitempty"`
-	Note        string     `json:"note"`
-	ObtainedAt  *time.Time `json:"obtained_at,omitempty"`
+	MetInPerson *bool `json:"met_in_person,omitempty"`
+
+	// Note Evidence in the officer's words. Required when no existing evidence is selected.
+	Note       string     `json:"note"`
+	ObtainedAt *time.Time `json:"obtained_at,omitempty"`
+
+	// PreviewToken When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.
+	PreviewToken     *string                        `json:"preview_token,omitempty"`
+	SelectedEvidence *NoticeSourceEvidenceReference `json:"selected_evidence,omitempty"`
 
 	// Timezone IANA timezone used for the acquisition calendar and its monthly deadline.
 	Timezone *string `json:"timezone,omitempty"`
@@ -53344,6 +53428,59 @@ type NoticeOrigin struct {
 	} `json:"stage_change,omitempty"`
 }
 
+// NoticeSourceEvidence defines model for NoticeSourceEvidence.
+type NoticeSourceEvidence struct {
+	CapturedBy     *string                  `json:"captured_by,omitempty"`
+	CapturedByName *string                  `json:"captured_by_name,omitempty"`
+	Kind           NoticeSourceEvidenceKind `json:"kind"`
+	OccurredAt     *time.Time               `json:"occurred_at,omitempty"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision              `json:"occurred_precision"`
+	RecordId          openapi_types.UUID             `json:"record_id"`
+	RecordType        NoticeSourceEvidenceRecordType `json:"record_type"`
+	RecordedAt        time.Time                      `json:"recorded_at"`
+	Reference         NoticeSourceEvidenceReference  `json:"reference"`
+	Title             *string                        `json:"title,omitempty"`
+}
+
+// NoticeSourceEvidenceKind defines model for NoticeSourceEvidence.Kind.
+type NoticeSourceEvidenceKind string
+
+// NoticeSourceEvidenceRecordType defines model for NoticeSourceEvidence.RecordType.
+type NoticeSourceEvidenceRecordType string
+
+// NoticeSourceEvidencePage defines model for NoticeSourceEvidencePage.
+type NoticeSourceEvidencePage struct {
+	Items            []NoticeSourceEvidence         `json:"items"`
+	NextCursor       *string                        `json:"next_cursor,omitempty"`
+	Original         *NoticeSourceEvidence          `json:"original,omitempty"`
+	OriginalActivity *NoticeSourceEvidence          `json:"original_activity,omitempty"`
+	SelectedEvidence *NoticeSourceEvidenceReference `json:"selected_evidence,omitempty"`
+}
+
+// NoticeSourceEvidenceReference defines model for NoticeSourceEvidenceReference.
+type NoticeSourceEvidenceReference struct {
+	Id   openapi_types.UUID                `json:"id"`
+	Kind NoticeSourceEvidenceReferenceKind `json:"kind"`
+}
+
+// NoticeSourceEvidenceReferenceKind defines model for NoticeSourceEvidenceReference.Kind.
+type NoticeSourceEvidenceReferenceKind string
+
+// NoticeSourcePreview defines model for NoticeSourcePreview.
+type NoticeSourcePreview struct {
+	DeadlineIsUpperBound bool                    `json:"deadline_is_upper_bound"`
+	DueAt                *time.Time              `json:"due_at,omitempty"`
+	NoticeRequired       bool                    `json:"notice_required"`
+	PreviewToken         string                  `json:"preview_token"`
+	Rule                 NoticeSourcePreviewRule `json:"rule"`
+	Timezone             string                  `json:"timezone"`
+}
+
+// NoticeSourcePreviewRule defines model for NoticeSourcePreview.Rule.
+type NoticeSourcePreviewRule string
+
 // NotificationClass A class of notification a seat decides delivery about. Closed, and deliberately coarser
 // than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
 // is waiting on your approval", so the choice is made per class and every kind the product
@@ -72533,6 +72670,11 @@ type ListNoticeCaseReviewsParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// GetNoticeSourceEvidenceParams defines parameters for GetNoticeSourceEvidence.
+type GetNoticeSourceEvidenceParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListNoticeCasesParams defines parameters for ListNoticeCases.
 type ListNoticeCasesParams struct {
 	// State Repeat to ask for several. Omitted means every unresolved state.
@@ -75792,6 +75934,9 @@ type AssignNoticeCaseReviewJSONRequestBody = AssignNoticeCase
 
 // AssessNoticeSourceJSONRequestBody defines body for AssessNoticeSource for application/json ContentType.
 type AssessNoticeSourceJSONRequestBody = AssessNoticeSource
+
+// PreviewNoticeSourceJSONRequestBody defines body for PreviewNoticeSource for application/json ContentType.
+type PreviewNoticeSourceJSONRequestBody = AssessNoticeSource
 
 // AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
 type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
@@ -91032,9 +91177,15 @@ type ServerInterface interface {
 	// Give a disclosure duty an owner.
 	// (POST /privacy/notice-case-reviews/{id}/assign)
 	AssignNoticeCaseReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Read accessible evidence for a contact source assessment.
+	// (GET /privacy/notice-case-reviews/{id}/source)
+	GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams)
 	// Confirm the source of an unassessed contact.
 	// (POST /privacy/notice-case-reviews/{id}/source)
 	AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Preview the source assessment without changing the case.
+	// (POST /privacy/notice-case-reviews/{id}/source/preview)
+	PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
@@ -96393,9 +96544,21 @@ func (_ Unimplemented) AssignNoticeCaseReview(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read accessible evidence for a contact source assessment.
+// (GET /privacy/notice-case-reviews/{id}/source)
+func (_ Unimplemented) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetNoticeSourceEvidenceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Confirm the source of an unassessed contact.
 // (POST /privacy/notice-case-reviews/{id}/source)
 func (_ Unimplemented) AssessNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview the source assessment without changing the case.
+// (POST /privacy/notice-case-reviews/{id}/source/preview)
+func (_ Unimplemented) PreviewNoticeSource(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -130803,6 +130966,56 @@ func (siw *ServerInterfaceWrapper) AssignNoticeCaseReview(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// GetNoticeSourceEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetNoticeSourceEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetNoticeSourceEvidenceParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetNoticeSourceEvidence(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AssessNoticeSource operation middleware
 func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *http.Request) {
 
@@ -130828,6 +131041,40 @@ func (siw *ServerInterfaceWrapper) AssessNoticeSource(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AssessNoticeSource(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewNoticeSource operation middleware
+func (siw *ServerInterfaceWrapper) PreviewNoticeSource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewNoticeSource(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -144818,7 +145065,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/assign", wrapper.AssignNoticeCaseReview)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.GetNoticeSourceEvidence)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source", wrapper.AssessNoticeSource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/privacy/notice-case-reviews/{id}/source/preview", wrapper.PreviewNoticeSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)

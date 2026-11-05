@@ -3071,8 +3071,16 @@ func (stubs) AssignNoticeCaseReview(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "AssignNoticeCaseReview")
 }
 
+func (stubs) GetNoticeSourceEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.GetNoticeSourceEvidenceParams) {
+	httperr.NotImplemented(w, r, "GetNoticeSourceEvidence")
+}
+
 func (stubs) AssessNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "AssessNoticeSource")
+}
+
+func (stubs) PreviewNoticeSource(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "PreviewNoticeSource")
 }
 
 func (stubs) ListNoticeCases(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListNoticeCasesParams) {

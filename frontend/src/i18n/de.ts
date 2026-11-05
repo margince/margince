@@ -10228,6 +10228,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Erfassungsdatum ist unbekannt; die Pflicht kann bereits fällig sein.",
   "noticeDuty.observedOn": "Beobachtet am",
   "notice.source.more": "Für diesen Kontakt sind weitere Quellen zu prüfen.",
+  "notice.source.evidenceOnFile": "Vorhandene Nachweise",
+  "notice.source.original": "Ursprünglicher Quelldatensatz",
+  "notice.source.originalUnknown": "Dieser Datensatz nennt keine Quelle.",
+  "notice.source.happenedOn": "Am {date}",
+  "notice.source.recordedOn": "Erfasst am {date}",
+  "notice.source.describeEvidence": "Anderen Nachweis beschreiben",
+  "notice.source.openRecord": "Datensatz ansehen",
+  "notice.source.moreEvidence": "Weitere Nachweise anzeigen",
+  "notice.source.preview": "Vor der Bestätigung",
+  "notice.source.previewNone":
+    "Aus dieser Quelle folgt keine eigene Informationspflicht.",
+  "notice.source.previewOwed": "Ein Datenschutzhinweis ist bis {date} fällig.",
+  "notice.source.previewLatest":
+    "Ein Datenschutzhinweis ist spätestens bis {date} fällig. Das Erfassungsdatum ist unbestätigt.",
+  "notice.source.selectedHint":
+    "Der gewählte Datensatz bleibt als Nachweis erhalten. Bei Bedarf eine Erklärung ergänzen.",
   "notice.source.title": "Quelle prüfen",
   "notice.source.explanation":
     "Die Quelle ist unbestätigt. Eine Informationspflicht und eine gesetzliche Frist stehen noch nicht fest. Vor einem Datenschutzhinweis prüfen, wie der Kontakt erfasst wurde.",

@@ -14,13 +14,59 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import * as timezone from "../../format/timezone";
 import { en } from "../../i18n/en";
+import { SourceHost } from "../../testing/sourcehost";
 import {
   jsonResponse,
   StoryProviders,
-  stubWithSession,
+  stubWithSession as stubSession,
 } from "../../testing/story-utils";
 import type { NoticeCase } from "./noticecases.logic";
 import { NoticeDuty } from "./noticeduty";
+
+const PREVIEW_TOKEN = "a".repeat(64);
+const sourceEvidence = {
+  reference: { kind: "activity", id: "meeting-source" },
+  kind: "meeting",
+  title: "Original booking",
+  record_type: "activity",
+  record_id: "meeting-source",
+  occurred_at: "2026-01-01T10:00:00Z",
+  occurred_precision: "instant",
+  recorded_at: "2026-01-01T10:00:00Z",
+};
+function stubWithSession(
+  routes: Parameters<typeof stubSession>[0],
+  allow: Parameters<typeof stubSession>[1],
+) {
+  stubSession(
+    {
+      "GET /privacy/notice-case-reviews/case-source/source": () =>
+        jsonResponse({ items: [] }),
+      "POST /privacy/notice-case-reviews/case-source/source/preview": () =>
+        jsonResponse({
+          preview_token: PREVIEW_TOKEN,
+          rule: "art13",
+          notice_required: true,
+          due_at: "2026-01-01T10:00:00Z",
+          timezone: "Europe/Berlin",
+          deadline_is_upper_bound: false,
+        }),
+      ...routes,
+    },
+    allow,
+  );
+}
+
+async function confirmSource(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: ReturnType<typeof within>,
+) {
+  const confirm = dialog.getByRole("button", {
+    name: en["notice.source.confirm"],
+  });
+  await waitFor(() => expect(confirm).toBeEnabled());
+  await user.click(confirm);
+}
 
 const duty: NoticeCase = {
   id: "case-source",
@@ -37,6 +83,193 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+it("confirms an existing source record without retyping its contents", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  stubWithSession(
+    {
+      "GET /activities/meeting-source": () =>
+        jsonResponse({
+          id: "meeting-source",
+          kind: "meeting",
+          subject: "Original booking",
+          body: "The original booking request.",
+          content_state: "available",
+          occurred_at: "2026-01-01T10:00:00Z",
+          occurred_precision: "instant",
+          version: 1,
+        }),
+      "GET /privacy/notice-case-reviews/case-source": () => jsonResponse(duty),
+      "GET /privacy/notice-case-reviews/case-source/source": () =>
+        jsonResponse({ items: [sourceEvidence] }),
+      "POST /privacy/notice-case-reviews/case-source/source": (body) => {
+        writes.push(body);
+        return jsonResponse({ ...duty, state: "open", rule: "art13" });
+      },
+    },
+    {
+      privacy_request: ["read", "update"],
+      contact: ["read"],
+      activity: ["read"],
+    },
+  );
+  render(
+    <StoryProviders>
+      <SourceHost>
+        <NoticeDuty caseId={duty.id} />
+      </SourceHost>
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["notice.source.review"] }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await user.click(
+    await dialog.findByRole("radio", { name: /Original booking/ }),
+  );
+  await user.click(
+    dialog.getByRole("button", { name: en["notice.source.openRecord"] }),
+  );
+  await screen.findByText("The original booking request.");
+  await user.keyboard("{Escape}");
+  await waitFor(() =>
+    expect(screen.queryByText("The original booking request.")).toBeNull(),
+  );
+  await user.click(
+    dialog.getByRole("radio", { name: en["notice.source.answer.met"] }),
+  );
+  await user.type(
+    dialog.getByRole("textbox", { name: en["noticeDuty.obtainedOn"] }),
+    "01/01/2026",
+  );
+  await user.tab();
+  expect(
+    dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
+  ).toHaveValue("");
+  await confirmSource(user, dialog);
+  await waitFor(() =>
+    expect(writes).toEqual([
+      expect.objectContaining({
+        note: "",
+        selected_evidence: { kind: "activity", id: "meeting-source" },
+        preview_token: PREVIEW_TOKEN,
+      }),
+    ]),
+  );
+});
+
+it("requires a successful preview before confirmation and allows a failed preview to retry", async () => {
+  const user = userEvent.setup();
+  let refused = true;
+  const writes = vi.fn(() => jsonResponse(duty));
+  stubWithSession(
+    {
+      "GET /privacy/notice-case-reviews/case-source": () => jsonResponse(duty),
+      "POST /privacy/notice-case-reviews/case-source/source/preview": () =>
+        refused
+          ? jsonResponse({ title: "Source unavailable", status: 422 }, 422)
+          : jsonResponse({
+              preview_token: PREVIEW_TOKEN,
+              rule: "none",
+              notice_required: false,
+              due_at: null,
+              timezone: "Europe/Berlin",
+              deadline_is_upper_bound: false,
+            }),
+      "POST /privacy/notice-case-reviews/case-source/source": writes,
+    },
+    { privacy_request: ["read", "update"], contact: ["read"] },
+  );
+  render(
+    <StoryProviders>
+      <NoticeDuty caseId={duty.id} />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["notice.source.review"] }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await user.click(
+    dialog.getByRole("radio", { name: en["notice.source.answer.contacted"] }),
+  );
+  await user.type(
+    dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
+    "Original letter",
+  );
+  await dialog.findByRole("alert");
+  expect(
+    dialog.getByRole("button", { name: en["notice.source.confirm"] }),
+  ).toBeDisabled();
+  expect(writes).not.toHaveBeenCalled();
+  refused = false;
+  await user.click(dialog.getByRole("button", { name: en["common.retry"] }));
+  await confirmSource(user, dialog);
+  await waitFor(() => expect(writes).toHaveBeenCalledTimes(1));
+});
+
+it("keeps refused source details hidden when another evidence page arrives", async () => {
+  const user = userEvent.setup();
+  let pages = 0;
+  stubWithSession(
+    {
+      "GET /privacy/notice-case-reviews/case-source": () => jsonResponse(duty),
+      "GET /privacy/notice-case-reviews/case-source/source": () => {
+        pages += 1;
+        return jsonResponse(
+          pages === 1
+            ? { items: [sourceEvidence], next_cursor: "next-page" }
+            : {
+                items: [
+                  {
+                    ...sourceEvidence,
+                    title: "Another appointment",
+                    reference: { kind: "activity", id: "another-meeting" },
+                    record_id: "another-meeting",
+                  },
+                ],
+              },
+        );
+      },
+      "GET /activities/meeting-source": () =>
+        jsonResponse(
+          { code: "not_found", status: 404, title: "Not found" },
+          404,
+        ),
+    },
+    {
+      privacy_request: ["read", "update"],
+      contact: ["read"],
+      activity: ["read"],
+    },
+  );
+  render(
+    <StoryProviders>
+      <SourceHost>
+        <NoticeDuty caseId={duty.id} />
+      </SourceHost>
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: en["notice.source.review"] }),
+  );
+  const panel = within(screen.getByRole("dialog"));
+  await user.click(
+    await panel.findByRole("radio", { name: /Original booking/ }),
+  );
+  await user.click(
+    panel.getByRole("button", { name: en["notice.source.openRecord"] }),
+  );
+  await waitFor(() =>
+    expect(panel.queryByRole("radio", { name: /Original booking/ })).toBeNull(),
+  );
+  await user.keyboard("{Escape}");
+  await user.click(
+    panel.getByRole("button", { name: en["notice.source.moreEvidence"] }),
+  );
+  await panel.findByRole("radio", { name: /Another appointment/ });
+  expect(panel.queryByRole("radio", { name: /Original booking/ })).toBeNull();
 });
 
 it("offers source assessment without claiming a duty or offering a notice", async () => {
@@ -89,13 +322,13 @@ it("offers source assessment without claiming a duty or offering a notice", asyn
     within(dialog).getByRole("textbox", { name: en["notice.source.evidence"] }),
     "Incoming original",
   );
-  expect(confirm).toBeEnabled();
+  await waitFor(() => expect(confirm).toBeEnabled());
   await user.click(
     within(dialog).getByRole("radio", {
       name: en["notice.source.answer.contacted"],
     }),
   );
-  await user.click(confirm);
+  await confirmSource(user, within(dialog));
   await waitFor(() =>
     expect(writes).toEqual([
       {
@@ -104,6 +337,7 @@ it("offers source assessment without claiming a duty or offering a notice", asyn
         obtained_at: null,
         timezone: "Asia/Ho_Chi_Minh",
         met_in_person: false,
+        preview_token: PREVIEW_TOKEN,
       },
     ]),
   );
@@ -172,9 +406,7 @@ it("submits the entered acquisition date in the selected calendar timezone", asy
     dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
     "Original referral record",
   );
-  await user.click(
-    dialog.getByRole("button", { name: en["notice.source.confirm"] }),
-  );
+  await confirmSource(user, dialog);
   await waitFor(() =>
     expect(writes).toEqual([
       {
@@ -183,6 +415,7 @@ it("submits the entered acquisition date in the selected calendar timezone", asy
         obtained_at: "2020-01-30T17:00:00.000Z",
         timezone: "Asia/Ho_Chi_Minh",
         met_in_person: false,
+        preview_token: PREVIEW_TOKEN,
       },
     ]),
   );
@@ -260,7 +493,7 @@ it("records a face-to-face meeting with its day, which supports follow-up mail a
     "31/01/2020",
   );
   await user.tab();
-  await user.click(confirm);
+  await confirmSource(user, dialog);
 
   await waitFor(() =>
     expect(writes).toEqual([
@@ -270,6 +503,7 @@ it("records a face-to-face meeting with its day, which supports follow-up mail a
         obtained_at: "2020-01-30T23:00:00.000Z",
         timezone: "Europe/Berlin",
         met_in_person: true,
+        preview_token: PREVIEW_TOKEN,
       },
     ]),
   );
@@ -297,9 +531,7 @@ it("offers the remaining kinds behind Another source", async () => {
     dialog.getByRole("textbox", { name: en["notice.source.evidence"] }),
     "Bought list, spring fair",
   );
-  await user.click(
-    dialog.getByRole("button", { name: en["notice.source.confirm"] }),
-  );
+  await confirmSource(user, dialog);
 
   await waitFor(() =>
     expect(writes).toEqual([

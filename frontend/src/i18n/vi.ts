@@ -9955,6 +9955,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa rõ ngày nhận thông tin; nghĩa vụ có thể đã đến hạn.",
   "noticeDuty.observedOn": "Ghi nhận vào",
   "notice.source.more": "Liên hệ này còn nguồn khác cần xác minh.",
+  "notice.source.evidenceOnFile": "Bằng chứng đã có",
+  "notice.source.original": "Bản ghi nguồn ban đầu",
+  "notice.source.originalUnknown": "Bản ghi này chưa nêu rõ nguồn.",
+  "notice.source.happenedOn": "Ngày {date}",
+  "notice.source.recordedOn": "Ghi nhận ngày {date}",
+  "notice.source.describeEvidence": "Mô tả bằng chứng khác",
+  "notice.source.openRecord": "Xem bản ghi",
+  "notice.source.moreEvidence": "Xem thêm bằng chứng",
+  "notice.source.preview": "Trước khi xác nhận",
+  "notice.source.previewNone": "Nguồn này không tạo nghĩa vụ thông báo riêng.",
+  "notice.source.previewOwed": "Vẫn phải thông báo chậm nhất ngày {date}.",
+  "notice.source.previewLatest":
+    "Hạn thông báo muộn nhất là {date}. Chưa xác nhận ngày nhận thông tin.",
+  "notice.source.selectedHint":
+    "Bản ghi đã chọn được giữ làm bằng chứng. Có thể thêm lời giải thích nếu cần.",
   "notice.source.title": "Xem nguồn",
   "notice.source.explanation":
     "Nguồn chưa được xác nhận. Chưa xác định nghĩa vụ thông báo quyền riêng tư hay thời hạn pháp lý. Xác minh nguồn liên hệ trước khi gửi thông báo.",

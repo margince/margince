@@ -791,7 +791,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## privacy_notice_case
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+23 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -810,6 +810,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `resolution_note` | `text` |  | At most 500 characters. |
 | `resolved_by` | `uuid` |  | Points at `app_user.id`. |
 | `rule` | `text` | yes | One of `unassessed`, `none`, `art13`, `art14`. |
+| `source_evidence_id` | `uuid` |  |  |
+| `source_evidence_kind` | `text` |  |  |
 | `source_kind` | `text` |  |  |
 | `source_obtained_at` | `timestamp with time zone` |  |  |
 | `source_review_note` | `text` |  |  |
@@ -838,7 +840,8 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `privacy_notice_case_resolution_shape`: `CHECK (((state = ANY (ARRAY['exempt_with_reason', 'provided_elsewhere'])) = (resolution_note IS NOT NULL)))`
 - `privacy_notice_case_review_shape`: `CHECK ((((state = 'source_review') = (rule = 'unassessed')) AND ((state <> 'source_review') OR ((source_kind IS NULL) AND (due_at IS NULL) AND (cardinality(allowed_routes) = 0)))))`
 - `privacy_notice_case_rule`: `CHECK ((rule = ANY (ARRAY['unassessed', 'none', 'art13', 'art14'])))`
-- `privacy_notice_case_source_note`: `CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) >= 1) AND (char_length(btrim(source_review_note)) <= 500)))))`
+- `privacy_notice_case_source_evidence_shape`: `CHECK ((((source_evidence_kind IS NULL) AND (source_evidence_id IS NULL)) OR ((source_evidence_kind = ANY (ARRAY['acquisition', 'activity'])) AND (source_evidence_kind IS NOT NULL) AND (source_evidence_id IS NOT NULL))))`
+- `privacy_notice_case_source_note`: `CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) <= 500) AND ((char_length(btrim(source_review_note)) > 0) OR (source_evidence_id IS NOT NULL))))))`
 - `privacy_notice_case_state`: `CHECK ((state = ANY (ARRAY['source_review', 'open', 'assigned', 'queued', 'delivery_failed', 'completed', 'provided_elsewhere', 'exempt_with_reason', 'blocked', 'not_required'])))`
 
 **Indexes**

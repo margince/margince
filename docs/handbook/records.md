@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx -->
+<!-- describes: frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/components/sourcereviewevidence.tsx backend/internal/modules/consent/noticesource.go backend/internal/modules/consent/noticesourceevidence.go backend/internal/modules/consent/noticesourceprojection.go -->
 # Contacts, companies, leads, deals and projects
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
 
@@ -42,7 +42,7 @@ A lead's company is plain text until you link it, so imported leads do not creat
 
 ## Contacts
 
-A contact needs a name and a source. Everything else is up to you.
+A contact needs a name and a source. Everything else is up to you. To check its source, see [Review a contact source](source-review.md).
 
 ### How do I add a new contact?
 To add a new contact in Margince, open **Contacts** in the sidebar and choose **New contact**.

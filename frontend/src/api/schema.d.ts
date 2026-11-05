@@ -16140,10 +16140,30 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /** Read accessible evidence for a contact source assessment. */
+        get: operations["getNoticeSourceEvidence"];
         put?: never;
         /** Confirm the source of an unassessed contact. */
         post: operations["assessNoticeSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/notice-case-reviews/{id}/source/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview the source assessment without changing the case. */
+        post: operations["previewNoticeSource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -50061,12 +50081,56 @@ export interface components {
              * @default UTC
              */
             timezone: string;
-            note: string;
             /**
              * @description The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.
              * @default false
              */
             met_in_person: boolean;
+            /** @description Evidence in the officer's words. Required when no existing evidence is selected. */
+            note: string;
+            selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
+            /** @description When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview. */
+            preview_token?: string;
+        };
+        NoticeSourceEvidenceReference: {
+            /** @enum {string} */
+            kind: "acquisition" | "activity";
+            /** Format: uuid */
+            id: string;
+        };
+        NoticeSourceEvidence: {
+            reference: components["schemas"]["NoticeSourceEvidenceReference"];
+            /** @enum {string} */
+            kind: "acquisition" | "email" | "meeting";
+            title?: string;
+            /** Format: date-time */
+            occurred_at?: string | null;
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            /** Format: date-time */
+            recorded_at: string;
+            captured_by?: string;
+            captured_by_name?: string | null;
+            /** @enum {string} */
+            record_type: "contact" | "activity";
+            /** Format: uuid */
+            record_id: string;
+        };
+        NoticeSourceEvidencePage: {
+            original?: components["schemas"]["NoticeSourceEvidence"];
+            original_activity?: components["schemas"]["NoticeSourceEvidence"];
+            items: components["schemas"]["NoticeSourceEvidence"][];
+            next_cursor?: string;
+            selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
+        };
+        NoticeSourcePreview: {
+            preview_token: string;
+            /** @enum {string} */
+            rule: "none" | "art13" | "art14";
+            notice_required: boolean;
+            deadline_is_upper_bound: boolean;
+            /** Format: date-time */
+            due_at?: string | null;
+            timezone: string;
         };
         AssignNoticeCase: {
             /** Format: uuid */
@@ -82132,6 +82196,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getNoticeSourceEvidence: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accessible original evidence and a page of correspondence and meetings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeSourceEvidencePage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     assessNoticeSource: {
         parameters: {
             query?: never;
@@ -82154,6 +82246,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoticeCaseReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewNoticeSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssessNoticeSource"];
+            };
+        };
+        responses: {
+            /** @description The shared assessment result and a token binding the confirmation to it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeSourcePreview"];
                 };
             };
             401: components["responses"]["Unauthorized"];

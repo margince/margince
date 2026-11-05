@@ -10231,6 +10231,22 @@ export const en = {
     "The acquisition date is unknown; this duty may already be due.",
   "noticeDuty.observedOn": "Observed on",
   "notice.source.more": "More source reviews remain for this contact.",
+  "notice.source.evidenceOnFile": "Evidence on file",
+  "notice.source.original": "Original source record",
+  "notice.source.originalUnknown": "This record does not identify the source.",
+  "notice.source.happenedOn": "On {date}",
+  "notice.source.recordedOn": "Recorded {date}",
+  "notice.source.describeEvidence": "Describe other evidence",
+  "notice.source.openRecord": "View record",
+  "notice.source.moreEvidence": "Show more evidence",
+  "notice.source.preview": "Before you confirm",
+  "notice.source.previewNone":
+    "No separate notice duty follows from this source.",
+  "notice.source.previewOwed": "A notice is still owed by {date}.",
+  "notice.source.previewLatest":
+    "A notice is owed by {date} at the latest. The collection date is not confirmed.",
+  "notice.source.selectedHint":
+    "The selected record is kept as evidence. Add context if needed.",
   "notice.source.title": "Review source",
   "notice.source.explanation":
     "The source is unconfirmed. No privacy notice duty or legal deadline has been established. Review how the contact was obtained before sending a notice.",

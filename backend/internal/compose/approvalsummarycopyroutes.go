@@ -207,6 +207,7 @@ var routeVerbsGerman = map[string]string{
 	"assign_notice_case":                 "Informationspflicht zuweisen",
 	"assign_notice_case_review":          "Quellenprüfung zuweisen",
 	"confirm_notice_source":              "Quelle eines Kontakts bestätigen",
+	"preview_notice_source":              "Quellenprüfung vor dem Bestätigen ansehen",
 	"resolve_confirm_submission":         "Vorschlag eines Betroffenen entscheiden",
 	"suppress_contact":                   "Kontaktsperre für einen Kontakt erfassen",
 	"pin_activity_to_floor":              "Aktivität auf die Mindestaufbewahrung setzen",

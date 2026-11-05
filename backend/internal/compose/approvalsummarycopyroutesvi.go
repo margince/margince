@@ -192,6 +192,7 @@ var routeVerbsVietnamese = map[string]string{
 	"assign_notice_case":                 "Giao nghĩa vụ thông báo",
 	"assign_notice_case_review":          "Giao việc xem xét nguồn",
 	"confirm_notice_source":              "Xác nhận nguồn của liên hệ",
+	"preview_notice_source":              "Xem trước kết quả xác nhận nguồn",
 	"resolve_confirm_submission":         "Quyết định đề xuất của chủ thể dữ liệu",
 	"suppress_contact":                   "Ghi nhận yêu cầu dừng liên hệ",
 	"pin_activity_to_floor":              "Ghim hoạt động vào mức lưu giữ tối thiểu",

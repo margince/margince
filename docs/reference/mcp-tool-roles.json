@@ -5642,6 +5642,38 @@
     },
     {
       "tool": "read_details",
+      "action": "notice_source_evidence",
+      "verb": "get_notice_source_evidence",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "notice_source_preview",
+      "verb": "preview_notice_source",
+      "allowed_for": [],
+      "refused_for": [
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "unproven_for": [
+        "admin"
+      ]
+    },
+    {
+      "tool": "read_details",
       "action": "notices",
       "verb": "list_notices",
       "allowed_for": [

@@ -444,6 +444,8 @@
         "my_linkedin_reach": "get_my_linked_in_reach",
         "notice_case": "get_notice_case",
         "notice_case_review": "get_notice_case_review",
+        "notice_source_evidence": "get_notice_source_evidence",
+        "notice_source_preview": "preview_notice_source",
         "notices": "list_notices",
         "offer_pdf": "download_offer_pdf",
         "offered_values": "list_company_offered_values",

@@ -23864,6 +23864,24 @@ paths:
   /privacy/notice-case-reviews/{id}/source:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Compliance]
+      operationId: getNoticeSourceEvidence
+      x-mcp-tool: { verb: get_notice_source_evidence, router: read_details, action: notice_source_evidence, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Read accessible evidence for a contact source assessment.
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Accessible original evidence and a page of correspondence and meetings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoticeSourceEvidencePage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Compliance]
       operationId: assessNoticeSource
@@ -23881,6 +23899,30 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/NoticeCaseReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /privacy/notice-case-reviews/{id}/source/preview:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Compliance]
+      operationId: previewNoticeSource
+      x-mcp-tool: { verb: preview_notice_source, router: read_details, action: notice_source_preview, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Preview the source assessment without changing the case.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssessNoticeSource' }
+      responses:
+        '200':
+          description: The shared assessment result and a token binding the confirmation to it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NoticeSourcePreview' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -68243,11 +68285,62 @@ components:
           enum: [subject_initiated, customer_contract, requested_quote_or_meeting, in_person_permission, crm_migration, mailbox_history, event_or_form, referral, public_or_business_source, purchased_or_imported]
         obtained_at: { type: [string, 'null'], format: date-time }
         timezone: { type: string, default: UTC, description: 'IANA timezone used for the acquisition calendar and its monthly deadline.' }
-        note: { type: string, minLength: 1, maxLength: 500 }
         met_in_person:
           type: boolean
           default: false
           description: 'The source was a meeting face to face, a card handed over at a stand included. Needs kind `in_person_permission` and `obtained_at`. The meeting is recorded as an `in_person` exchange too, the same as the communication-context answer: inside the reply window it supports personal one-to-one follow-up mail, never marketing or a newsletter. It owes no notice: the case settles as information already given at the meeting.'
+        note: { type: string, maxLength: 500, description: 'Evidence in the officer''s words. Required when no existing evidence is selected.' }
+        selected_evidence: { $ref: '#/components/schemas/NoticeSourceEvidenceReference' }
+        preview_token:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+          description: 'When provided, refuses a confirmation if the case, selected evidence or proposed assessment changed since preview.'
+
+
+    NoticeSourceEvidenceReference:
+      type: object
+      required: [kind, id]
+      properties:
+        kind: { type: string, enum: [acquisition, activity] }
+        id: { type: string, format: uuid }
+
+    NoticeSourceEvidence:
+      type: object
+      required: [reference, kind, recorded_at, record_type, record_id, occurred_precision]
+      properties:
+        reference: { $ref: '#/components/schemas/NoticeSourceEvidenceReference' }
+        kind: { type: string, enum: [acquisition, email, meeting] }
+        title: { type: string }
+        occurred_at: { type: [string, 'null'], format: date-time }
+        occurred_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        recorded_at: { type: string, format: date-time }
+        captured_by: { type: string }
+        captured_by_name: { type: [string, 'null'] }
+        record_type: { type: string, enum: [contact, activity] }
+        record_id: { type: string, format: uuid }
+
+    NoticeSourceEvidencePage:
+      type: object
+      required: [items]
+      properties:
+        original: { $ref: '#/components/schemas/NoticeSourceEvidence' }
+        original_activity: { $ref: '#/components/schemas/NoticeSourceEvidence' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/NoticeSourceEvidence' }
+        next_cursor: { type: string }
+        selected_evidence: { $ref: '#/components/schemas/NoticeSourceEvidenceReference' }
+
+    NoticeSourcePreview:
+      type: object
+      required: [preview_token, rule, notice_required, timezone, deadline_is_upper_bound]
+      properties:
+        preview_token: { type: string }
+        rule: { type: string, enum: [none, art13, art14] }
+        notice_required: { type: boolean }
+        deadline_is_upper_bound: { type: boolean }
+        due_at: { type: [string, 'null'], format: date-time }
+        timezone: { type: string }
 
     AssignNoticeCase:
       type: object

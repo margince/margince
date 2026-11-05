@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4294 |
+| Columns | 4296 |
 | Foreign keys | 591 |
 | Owning areas | 38 |
 
@@ -385,7 +385,7 @@ erDiagram
 | [`passport`](identity.md#passport) | identity | 11 | 8 |
 | [`pipeline`](deals.md#pipeline) | deals | 8 | 7 |
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
-| [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 21 | 0 |
+| [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 23 | 0 |
 | [`privacy_request_proof`](consent.md#privacy_request_proof) | consent | 15 | 0 |
 | [`product`](deals.md#product) | deals | 20 | 5 |
 | [`product_translation`](deals.md#product_translation) | deals | 8 | 0 |
