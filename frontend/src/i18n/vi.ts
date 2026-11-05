@@ -6429,7 +6429,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.report.movedCount_other": "{count} deal đã chuyển",
   "brief.report.wonCount_one": "{count} giao dịch đã chốt",
   "brief.report.wonCount_other": "{count} giao dịch đã chốt",
-  "brief.report.wonPerWeek": "đã chốt mỗi tuần",
+  "brief.report.wonPerWeek": "Đã chốt mỗi tuần",
   "brief.weekly.activity.title": "Hoạt động tuần này",
   "brief.weekly.activity.total_one": "{count} việc bạn đã làm",
   "brief.weekly.activity.total_other": "{count} việc bạn đã làm",

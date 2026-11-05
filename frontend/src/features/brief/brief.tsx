@@ -53,7 +53,7 @@ import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
-import { WeeklyRail } from "./brief.weekly.rail";
+import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
 
@@ -184,21 +184,28 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  const t = useT();
-  if (address.view === "weekly")
-    return (
-      <PageZones
-        shape="aside"
-        panes
-        className="brief-weekly-page"
-        mainClassName="brief-main"
-        asideClassName="brief-rail"
-        asideLabel={t("brief.weekly.rail")}
-        main={<WeeklySection plan={<PlanSection withContract={false} />} />}
-        aside={<WeeklyRail constraints={<PlanConstraints />} />}
-      />
-    );
+  if (address.view === "weekly") return <WeeklyPage />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
+}
+
+function WeeklyPage() {
+  const t = useT();
+  // An aside handed over empty still draws its column and landmark.
+  const railShown = useWeeklyRailShown();
+  return (
+    <PageZones
+      shape="aside"
+      panes
+      className="brief-weekly-page"
+      mainClassName="brief-main"
+      asideClassName="brief-rail"
+      asideLabel={t("brief.weekly.rail")}
+      main={<WeeklySection plan={<PlanSection withContract={false} />} />}
+      aside={
+        railShown ? <WeeklyRail constraints={<PlanConstraints />} /> : undefined
+      }
+    />
+  );
 }
 
 function PersonalMorning({

@@ -731,6 +731,10 @@
   grid-row: auto;
   grid-column: 2 / -1;
 }
+/* A summary card's deals sit under its sentence, not in the mark column. */
+.brief-main .brief-agent-section .magic-line > .magic-lines {
+  grid-column: 2 / -1;
+}
 .brief-main .brief-agent-section .magic-line-controls {
   justify-content: flex-end;
   padding-block-start: var(--space-3);

@@ -233,7 +233,7 @@ export function Chip({
     | { icon?: never; lead: ReactNode }
   )
 >) {
-  const shape = ["chip", dense ? "chip-dense" : "", lead ? "chip-lead" : ""]
+  const shape = ["chip", dense ? "chip-dense" : "", Icon ? "" : "chip-lead"]
     .filter(Boolean)
     .join(" ");
   const body = (

@@ -14,6 +14,7 @@ import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useUrlParams } from "../../lib/urlstate";
+import { useWeeklyPlan } from "../worklist/weeklyplan.queries";
 import { weeklyNumericStatus } from "./brief.numeric";
 import {
   useWeeklyReview,
@@ -21,6 +22,21 @@ import {
   useWeeklyWins,
 } from "./brief.queries";
 import { HeadlineFigures } from "./brief.weekly.figures";
+
+/**
+ * Whether the rail has anything to draw. Held while a read is out, so the
+ * report does not widen and then narrow again.
+ */
+export function useWeeklyRailShown(): boolean {
+  const [params] = useUrlParams();
+  const review = useWeeklyReview(params.get("week") ?? undefined);
+  const weeks = useWeeklyReviewIndex();
+  const plan = useWeeklyPlan();
+  if (review.isLoading || weeks.isLoading || plan.isLoading) return true;
+  return (
+    Boolean(review.data) || listsWeeks(weeks.data ?? []) || Boolean(plan.data)
+  );
+}
 
 /**
  * Beside the report: the week in figures, the weeks to open, what the week
@@ -78,6 +94,11 @@ const LISTED_WEEKS = 4;
 const CHARTED_WEEKS = 8;
 const HOUR_MS = 3_600_000;
 
+// One week has nowhere to step to, so a list of it says nothing.
+function listsWeeks(weeks: readonly string[]): boolean {
+  return weeks.length >= 2;
+}
+
 /**
  * The newest weeks with a report: what each won as bars, then the weeks as a
  * list with the one shown marked. A press opens a week.
@@ -94,7 +115,7 @@ function WeeksPanel({
   const wins = new Map(
     (useWeeklyWins().data ?? []).map((entry) => [entry.week, entry.deals_won]),
   );
-  if (weeks.length < 2) return null;
+  if (!listsWeeks(weeks)) return null;
   return (
     <Panel
       flatHead

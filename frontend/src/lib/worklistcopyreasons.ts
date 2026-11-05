@@ -145,7 +145,7 @@ export function phrasedReasons(
 export function partyName(item: WorklistItem): string | undefined {
   const mail = item.email_summary;
   if (item.contact && mail?.counterparty_contact_id === item.contact.id)
-    return item.contact.label;
+    return item.contact.label ?? mail.counterparty ?? undefined;
   return mail?.counterparty ?? item.contact?.label ?? undefined;
 }
 

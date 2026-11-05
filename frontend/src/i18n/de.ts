@@ -6581,7 +6581,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.report.movedCount_other": "{count} Deals bewegt",
   "brief.report.wonCount_one": "{count} gewonnen",
   "brief.report.wonCount_other": "{count} gewonnen",
-  "brief.report.wonPerWeek": "gewonnen pro Woche",
+  "brief.report.wonPerWeek": "Gewonnen pro Woche",
   "brief.weekly.activity.title": "Aktivität dieser Woche",
   "brief.weekly.activity.total_one": "{count} Aktivität von dir",
   "brief.weekly.activity.total_other": "{count} Aktivitäten von dir",

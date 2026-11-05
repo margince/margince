@@ -20,10 +20,19 @@ it("dates a late task by its due day and the days it is late", () => {
     overdue: true,
   };
   const now = new Date("2026-09-13T09:00:00Z");
-  expect(cardWhen(late, english, "UTC", "UTC", now)).toMatch(/ · 3 days late$/);
+  expect(cardWhen(late, english, "UTC", "UTC", now)).toBe(
+    "10 Sept · 3 days late",
+  );
   expect(
     cardWhen(taskRow("task-2", "Call"), english, "UTC", "UTC", now),
   ).toBeNull();
+});
+
+it("dates a waiting message by when it arrived", () => {
+  const now = new Date("2026-09-13T09:00:00Z");
+  expect(cardWhen(waitingEmailRow(), english, "UTC", "UTC", now)).toMatch(
+    /^3 Sept, /,
+  );
 });
 
 it("names a reply after the sender, not another contact on the message", () => {
@@ -32,7 +41,11 @@ it("names a reply after the sender, not another contact on the message", () => {
   if (!mail) throw new Error("the waiting row carries its message");
   const sent: WorklistItem = {
     ...waiting,
-    email_summary: { ...mail, counterparty_contact_id: "contact-sonya" },
+    email_summary: {
+      ...mail,
+      counterparty: "A stale sender name",
+      counterparty_contact_id: "contact-sonya",
+    },
   };
   expect(taskName(sent, undefined, english.t, "en")).toBe(
     "Reply to Sonya Beck: Meet next Tues?",

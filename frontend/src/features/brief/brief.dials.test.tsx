@@ -6,8 +6,10 @@ import { formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
+  firstWeek,
   meetingRow,
   readingsDay,
+  type WeeklyReview,
   waitingRow,
 } from "../../testing/brief.fixtures";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
@@ -71,6 +73,7 @@ function stubBrief(
   teamWeek: Worklist["team_week"] = scopeOptions.includes("team")
     ? "teams_led"
     : "none",
+  review: WeeklyReview | null = null,
 ) {
   return stubApi({
     "GET /worklist": () => jsonResponse(worklist(scopeOptions, teamWeek)),
@@ -82,7 +85,7 @@ function stubBrief(
         truncated: false,
       }),
     "GET /weekly-reviews/latest": () =>
-      jsonResponse({ title: "Not Found" }, 404),
+      review ? jsonResponse(review) : jsonResponse({ title: "Not Found" }, 404),
     "GET /weekly-plans/current": () =>
       jsonResponse({ title: "Not Found" }, 404),
     "GET /teams": () =>
@@ -178,12 +181,14 @@ describe("the Brief's dials", () => {
   // is drawn once outside that branch and nothing asserted otherwise.
   it("gives the weekly its own rail, without the morning's", async () => {
     globalThis.location.hash = "#/home?view=weekly";
-    stubBrief(["mine"]);
+    stubBrief(["mine"], "none", firstWeek);
     render(<BriefScreen />);
 
     await screen.findByRole("group", { name: en["brief.view.label"] });
     await waitFor(() =>
-      expect(document.querySelector("#brief-weekly")).not.toBeNull(),
+      expect(
+        document.querySelector(".brief-weekly-page .brief-rail"),
+      ).not.toBeNull(),
     );
     // The morning's sections and its quiet line are the rail reporting on the
     // day, so none of them stands beside the week.
@@ -191,9 +196,24 @@ describe("the Brief's dials", () => {
       document.querySelectorAll(".page-zones-aside .brief-section"),
     ).toHaveLength(0);
     expect(document.querySelector("#brief-quiet")).toBeNull();
-    expect(
-      document.querySelector(".brief-weekly-page .brief-rail"),
-    ).not.toBeNull();
+  });
+
+  // A first week has no report, no weeks to step to and no plan, so no empty
+  // column or landmark stands beside it.
+  it("draws no weekly rail when the week has nothing to put in it", async () => {
+    globalThis.location.hash = "#/home?view=weekly";
+    stubBrief(["mine"]);
+    render(<BriefScreen />);
+
+    await waitFor(() =>
+      expect(document.querySelector("#brief-weekly")).not.toBeNull(),
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector(".brief-weekly-page .brief-rail"),
+      ).toBeNull(),
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
   });
 
   // THE READINGS AND THE LINE UNDER THEM BELONG TO THE MORNING TOO.

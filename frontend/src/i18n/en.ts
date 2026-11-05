@@ -6580,7 +6580,7 @@ export const en = {
   "brief.report.movedCount_other": "{count} deals moved",
   "brief.report.wonCount_one": "{count} won",
   "brief.report.wonCount_other": "{count} won",
-  "brief.report.wonPerWeek": "won per week",
+  "brief.report.wonPerWeek": "Won per week",
   "brief.weekly.activity.title": "Activity this week",
   "brief.weekly.activity.total_one": "{count} thing you did",
   "brief.weekly.activity.total_other": "{count} things you did",

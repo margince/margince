@@ -25,6 +25,7 @@ import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { IconAction } from "../../design-system/iconaction";
 import { Chip } from "../../design-system/readings";
+import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
 import {
   calendarDaysBetween,
   formatDayMonthNearYear,
@@ -258,6 +259,19 @@ export function cardWhen(
         formatDayMonthNearYear(item.due_at, locale, recordZone, now),
         plural("co.next.daysLate", late, { days: formatNumber(late, locale) }),
       ].join(" · ");
+  }
+  // A waiting message is dated by its arrival, as the row in the queue is.
+  const arrived = item.email_summary;
+  if (arrived) {
+    const { occurred_at: at, occurred_precision: precision } = arrived;
+    return [
+      activityDay(at, precision, locale, zone, (day, lang, read) =>
+        formatDayMonthNearYear(day, lang, read, now),
+      ),
+      activityTimeOfDay(at, precision, locale, zone),
+    ]
+      .filter(Boolean)
+      .join(", ");
   }
   return whenText(item, t, locale, zone, recordZone, now);
 }
