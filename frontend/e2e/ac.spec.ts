@@ -205,17 +205,14 @@ async function expectSettingsViewLanded(page: Page, view: string) {
     return;
   }
   const tab = view.slice("settings/".length);
-  // The trail rather than the settings nav level, because the nav level is not
-  // there at 390px — the rail becomes a phone bar and the tabs go with it, and
-  // an assertion that reads the rail passes vacuously on the one viewport this
-  // sweep exists for. The trail's current crumb names the tab at every width.
-  //
-  // The expected wording comes from the catalog under the SAME key the nav
-  // builds its label from, so this is not a second copy of the tab names.
+  // The page heading, because the nav level and the trail both leave a phone
+  // bar. The heading is named by the tab at every width, its switcher included.
+  // The expected wording comes from the catalog key the nav labels the tab with,
+  // so this is not a second copy of the tab names.
   await expect(
-    page.locator(".crumbs-current"),
+    page.locator(".pagetitle").getByRole("heading"),
     `#/${view} did not land on the ${tab} tab — the address fell back, so this sweep measured a page it never opened`,
-  ).toHaveText(de[`settings.tab.${tab}` as MessageKey]);
+  ).toHaveAccessibleName(de[`settings.tab.${tab}` as MessageKey]);
 }
 
 /**
@@ -445,12 +442,20 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
-    menu.getByRole("menuitem", { name: "Einstellungen" }),
+    menu.getByRole("menuitem", { name: "Einstellungen", exact: true }),
   ).toHaveAttribute("href", "/#/settings");
   await expect(
     menu.getByRole("menuitem", { name: de["scheduling.myLink"] }),
   ).toHaveAttribute("href", "/#/settings/meetings");
-  await expect(menu.locator("a[href]")).toHaveCount(2);
+  // The head is the third link: the seat's own page, named by who it is for.
+  await expect(
+    menu.getByRole("menuitem", {
+      name: new RegExp(
+        `^${de["shell.accountSettingsAria"].replace("{who}", ".+")}$`,
+      ),
+    }),
+  ).toHaveAttribute("href", "/#/settings/account");
+  await expect(menu.locator("a[href]")).toHaveCount(3);
   await expect(menu.getByRole("menuitem", { name: "Abmelden" })).toBeVisible();
 
   // Appearance is a submenu, not a control sitting open in the menu: three
@@ -1431,6 +1436,33 @@ test.describe("§3.8: 390px mobile", () => {
     await expectShellRendered(page);
     await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
     expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("the More menu opens above the bar and meets AA at 390px", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    const more = page.locator("nav.rail .railmore");
+    await more.click();
+    const menu = page.locator("nav.rail .railmenu");
+    await expect(menu).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await settleAnimations(page);
+    const menuBox = await menu.boundingBox();
+    const barBox = await page.locator("nav.rail").boundingBox();
+    expect(menuBox).not.toBeNull();
+    expect(barBox).not.toBeNull();
+    expect((menuBox?.y ?? 0) + (menuBox?.height ?? 0)).toBeLessThan(
+      barBox?.y ?? 0,
+    );
+    expect(await pageOverflow(page)).toEqual([]);
+    await expectNoAaViolations(page, "home, More menu open");
+
+    await more.click();
+    await expect(menu).toHaveCount(0);
+    await expect(more).toBeFocused();
   });
 
   // The palette is a full-height SHEET at this width — a 560px box floated at
