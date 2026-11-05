@@ -53,6 +53,7 @@ type dealVerdictRead struct {
 	// newestEvidenceAt is when the newest activity, offer or stage move
 	// arrived. An Undo holds until something arrives after it.
 	newestEvidenceAt time.Time
+	sources          []verdictSource
 }
 
 // readDealVerdict reads one deal's input in the caller's transaction.
@@ -65,16 +66,19 @@ func readDealVerdict(
 	}
 	steps := []func(context.Context, pgx.Tx, ids.UUID, *dealVerdictRead) error{
 		readVerdictActivities, readVerdictOffers, readVerdictStageMoves, readVerdictEdits,
+		readVerdictLaterStages, readVerdictExitCriteria,
 	}
 	for _, step := range steps {
 		if err := step(ctx, tx, deal, &read); err != nil {
 			return read, err
 		}
 	}
-	if len(prior) > 0 {
-		if err := json.Unmarshal(prior, &read.in.Prior); err != nil {
-			return read, fmt.Errorf("compose: decoding the deal's earlier verdict: %w", err)
-		}
+	earlier, err := decodeVerdictRecord(prior)
+	if err != nil {
+		return read, fmt.Errorf("compose: decoding the deal's earlier verdict: %w", err)
+	}
+	for _, action := range earlier.Actions {
+		read.in.Prior = append(read.in.Prior, dealverdict.PriorAction{Kind: action.Kind, Outcome: action.Outcome})
 	}
 	read.state.Held = dealverdict.Holds(read.undone, read.newestEvidenceAt)
 	return read, nil
@@ -83,13 +87,13 @@ func readDealVerdict(
 func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	seen := &read.state.Seen
 	err := tx.QueryRow(ctx, `
-		SELECT d.name, st.name, d.amount_minor, d.currency::text, d.expected_close_date, d.close_date_provisional,
+		SELECT d.name, st.name, st.position, d.stage_id, d.amount_minor, d.currency::text, d.expected_close_date, d.close_date_provisional,
 		       d.win_probability_override, d.win_probability_set_by,
 		       `+deals.WinProbabilitySQL("d")+`, `+deals.WinProbabilitySourceSQL("d")+`,
 		       `+deals.StageWinProbabilitySQL("d")+`, `+dealVerdictChecksumSQL("d")+`
 		  FROM deal d JOIN stage st ON st.id = d.stage_id
 		 WHERE d.id = $1`, deal).
-		Scan(&read.in.DealName, &read.in.Stage, &seen.AmountMinor, &seen.Currency, &seen.CloseDate,
+		Scan(&read.in.DealName, &read.in.Stage, &read.in.StagePosition, &seen.StageID, &seen.AmountMinor, &seen.Currency, &seen.CloseDate,
 			&seen.Provisional, &seen.Probability, &seen.ProbabilitySource,
 			&read.in.Probability, &read.in.ProbabilitySource, &read.in.StageProbability, &read.checksum)
 	if err != nil {
@@ -154,7 +158,7 @@ func readVerdictOffers(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *deal
 
 func readVerdictStageMoves(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
-		SELECT coalesce(fs.name, ''), coalesce(ts.name, ''), h.changed_at
+		SELECT coalesce(fs.name, ''), coalesce(ts.name, ''), h.changed_at, h.reversal_of IS NOT NULL
 		  FROM deal_stage_history h
 		  LEFT JOIN stage fs ON fs.id = h.from_stage_id
 		  LEFT JOIN stage ts ON ts.id = h.to_stage_id
@@ -165,11 +169,16 @@ func readVerdictStageMoves(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 	defer rows.Close()
 	for rows.Next() {
 		var move dealverdict.StageMove
-		if err := rows.Scan(&move.From, &move.To, &move.At); err != nil {
+		var undo bool
+		if err := rows.Scan(&move.From, &move.To, &move.At, &undo); err != nil {
 			return err
 		}
 		read.in.StageMoves = append(read.in.StageMoves, move)
-		read.newestEvidenceAt = laterOf(read.newestEvidenceAt, move.At)
+		// An Undo's own move back is no news about the deal, so it does not
+		// lift the hold the Undo set.
+		if !undo {
+			read.newestEvidenceAt = laterOf(read.newestEvidenceAt, move.At)
+		}
 	}
 	return rows.Err()
 }
@@ -182,15 +191,15 @@ func readVerdictEdits(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealV
 	rows, err := tx.Query(ctx, `
 		SELECT c.name, max(a.occurred_at)
 		  FROM (VALUES ($2, ARRAY['expected_close_date']), ($3, ARRAY['amount_minor', 'currency']),
-		               ($4, ARRAY['win_probability_override'])) c(name, cols)
+		               ($4, ARRAY['win_probability_override']), ($5, ARRAY['stage_id'])) c(name, cols)
 		  JOIN audit_log a ON a.entity_type = 'deal' AND a.entity_id = $1 AND a.actor_type = 'human'
 		                  AND a.after ?| c.cols
 		 GROUP BY c.name
 		UNION ALL
 		SELECT 'undone:' || correction, max(reversed_at) FROM deal_correction
-		 WHERE deal_id = $1 AND reversed_at IS NOT NULL AND correction IN ($2, $3, $4)
+		 WHERE deal_id = $1 AND reversed_at IS NOT NULL AND correction IN ($2, $3, $4, $5)
 		 GROUP BY correction`, deal, deals.VerdictCloseDateCorrection, deals.VerdictAmountCorrection,
-		deals.VerdictProbabilityCorrection)
+		deals.VerdictProbabilityCorrection, deals.VerdictStageMoveCorrection)
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's edits and undos: %w", err)
 	}
@@ -208,6 +217,51 @@ func readVerdictEdits(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealV
 		read.state.HumanEditedAt[name] = at
 	}
 	return rows.Err()
+}
+
+// readVerdictLaterStages reads the open stages after the deal's own in its
+// pipeline: the only stages a move may go to.
+func readVerdictLaterStages(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
+	rows, err := tx.Query(ctx, `
+		SELECT st.id::text, st.name, st.position, st.win_probability
+		  FROM deal d JOIN stage cur ON cur.id = d.stage_id
+		  JOIN stage st ON st.pipeline_id = d.pipeline_id AND st.position > cur.position
+		 WHERE d.id = $1 AND st.archived_at IS NULL AND st.semantic = $2
+		 ORDER BY st.position`, deal, string(deals.SemanticOpen))
+	if err != nil {
+		return fmt.Errorf("compose: reading the stages a deal may move to: %w", err)
+	}
+	read.in.Later, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealverdict.StageOption, error) {
+		var stage dealverdict.StageOption
+		return stage, row.Scan(&stage.ID, &stage.Name, &stage.Position, &stage.Probability)
+	})
+	if err != nil {
+		return fmt.Errorf("compose: reading the stages a deal may move to: %w", err)
+	}
+	return nil
+}
+
+// readVerdictExitCriteria reads the required exit criteria of the deal's
+// stage and of every later stage, in pipeline order.
+func readVerdictExitCriteria(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
+	rows, err := tx.Query(ctx, `
+		SELECT c.id::text, st.position, st.name, c.label, c.kind, coalesce(c.hint, '')
+		  FROM deal d JOIN stage cur ON cur.id = d.stage_id
+		  JOIN stage st ON st.pipeline_id = d.pipeline_id AND st.position >= cur.position
+		  JOIN stage_exit_criterion c ON c.stage_id = st.id
+		 WHERE d.id = $1 AND st.archived_at IS NULL AND c.archived_at IS NULL AND c.required
+		 ORDER BY st.position, c.position`, deal)
+	if err != nil {
+		return fmt.Errorf("compose: reading the deal's exit criteria: %w", err)
+	}
+	read.in.ExitCriteria, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealverdict.ExitCriterion, error) {
+		var c dealverdict.ExitCriterion
+		return c, row.Scan(&c.ID, &c.StagePosition, &c.Stage, &c.Label, &c.Kind, &c.Hint)
+	})
+	if err != nil {
+		return fmt.Errorf("compose: reading the deal's exit criteria: %w", err)
+	}
+	return nil
 }
 
 // laterOf is the later of two instants.

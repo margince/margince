@@ -202,7 +202,7 @@ func (h analyticsShareHandlers) serveSnapshot(
 	if frame.LandingMeasure == nil {
 		return nil
 	}
-	landing, err := frozenShareLanding(ctx, tx, share.Scope, shared.Readings, frame)
+	landing, err := frozenShareLanding(ctx, tx, share.Scope, shared, frame)
 	out.Readings.Landing = &landing
 	return err
 }

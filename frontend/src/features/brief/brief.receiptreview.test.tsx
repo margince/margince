@@ -68,15 +68,15 @@ it("draws no group at all when no change waits for a word", async () => {
       }),
   });
   const { container, client } = render(<BriefChanges />);
-  // It draws nothing while loading too, so the empty answer has to have come
-  // back before "nothing" says anything about it.
+  // It draws nothing while loading too. So both empty answers, the receipts
+  // and Margince's changes, have to come back before "nothing" means anything.
   await waitFor(() =>
     expect(
       client
         .getQueryCache()
         .getAll()
         .map((query) => query.state.status),
-    ).toEqual(["success"]),
+    ).toEqual(["success", "success"]),
   );
   // An empty section would be a heading over nothing.
   expect(container.innerHTML).toBe("");
@@ -111,22 +111,6 @@ it("dates a change from today by its hour and an older one by its day", async ()
     formatTimeOfDay(today.occurred_at, "en", zone),
     formatDayMonth(older.occurred_at, "en", zone),
   ]);
-});
-
-it("uses the stage reversal route rather than restoring a stage field", async () => {
-  const change = automaticStageReceipt;
-  const path = `/deals/${change.subject?.id}/stage-progressions/${change.id}/revert`;
-  const calls = stubApi({
-    "GET /me": () =>
-      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
-    [`POST ${path}`]: () => jsonResponse({}),
-  });
-  const user = userEvent.setup();
-  render(<ReceiptReview receipt={change} />);
-  await user.click(await screen.findByRole("button", { name: "Undo" }));
-  await waitFor(() =>
-    expect(writes(calls).map((call) => call.path)).toEqual([path]),
-  );
 });
 
 it("offers no write for a superseded change", () => {
@@ -167,4 +151,164 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
   render(<BriefChanges />);
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Keep date" })).toBeNull();
+});
+
+it("asks before an opened deal's receipt archives the team's work, as the change list does", async () => {
+  const opened = {
+    ...automaticStageReceipt,
+    kind: "deal_open",
+    review: automaticStageReceipt.review && {
+      ...automaticStageReceipt.review,
+      kind: "deal_open" as const,
+    },
+  };
+  let asked = 0;
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "POST /deal-corrections/undo": () => {
+      asked += 1;
+      return jsonResponse({
+        results: [
+          asked === 1
+            ? {
+                deal_id: opened.subject?.id,
+                outcome: "refused",
+                undone: [],
+                kept: [
+                  {
+                    audit_log_id: opened.undo?.audit_log_id,
+                    kind: "deal_open",
+                    reason: "needs_confirmation",
+                    team_notes: 1,
+                    team_tasks: 0,
+                    team_work: "w1",
+                  },
+                ],
+              }
+            : {
+                deal_id: opened.subject?.id,
+                outcome: "undone",
+                undone: ["deal_open"],
+                kept: [],
+              },
+        ],
+      });
+    },
+  });
+  const user = userEvent.setup();
+  render(<ReceiptReview receipt={opened} />);
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(
+    await screen.findByText(
+      "This deal now has 1 notes and 0 tasks from your team. Archive it anyway?",
+    ),
+  ).toBeTruthy();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(await screen.findByText(en["changes.undo.archived"])).toBeTruthy();
+  expect(
+    writes(calls)
+      .filter((call) => call.path === "/deal-corrections/undo")
+      .map((call) => call.body),
+  ).toEqual([
+    {
+      items: [
+        {
+          deal_id: opened.subject?.id,
+          version: 7,
+          audit_log_ids: [opened.undo?.audit_log_id],
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          deal_id: opened.subject?.id,
+          version: 7,
+          audit_log_ids: [opened.undo?.audit_log_id],
+          archive_confirmed_for: "w1",
+        },
+      ],
+    },
+  ]);
+});
+
+it("asks before a reopened deal's receipt closes the team's work as lost, then says it is lost again", async () => {
+  const reopened = {
+    ...automaticStageReceipt,
+    kind: "deal_revive",
+    review: automaticStageReceipt.review && {
+      ...automaticStageReceipt.review,
+      kind: "deal_revive" as const,
+    },
+  };
+  let asked = 0;
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "POST /deal-corrections/undo": () => {
+      asked += 1;
+      return jsonResponse({
+        results: [
+          asked === 1
+            ? {
+                deal_id: reopened.subject?.id,
+                outcome: "refused",
+                undone: [],
+                kept: [
+                  {
+                    audit_log_id: reopened.undo?.audit_log_id,
+                    kind: "deal_revive",
+                    reason: "needs_confirmation",
+                    team_notes: 1,
+                    team_tasks: 0,
+                    team_work: "w1",
+                  },
+                ],
+              }
+            : {
+                deal_id: reopened.subject?.id,
+                outcome: "undone",
+                undone: ["deal_revive"],
+                kept: [],
+              },
+        ],
+      });
+    },
+  });
+  const user = userEvent.setup();
+  render(<ReceiptReview receipt={reopened} />);
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(
+    await screen.findByText(
+      "This deal now has 1 notes and 0 tasks from your team. Close it as lost anyway?",
+    ),
+  ).toBeTruthy();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  expect(await screen.findByText(en["changes.undo.relost"])).toBeTruthy();
+  expect(
+    writes(calls)
+      .filter((call) => call.path === "/deal-corrections/undo")
+      .map((call) => call.body),
+  ).toEqual([
+    {
+      items: [
+        {
+          deal_id: reopened.subject?.id,
+          version: 7,
+          audit_log_ids: [reopened.undo?.audit_log_id],
+        },
+      ],
+    },
+    {
+      items: [
+        {
+          deal_id: reopened.subject?.id,
+          version: 7,
+          audit_log_ids: [reopened.undo?.audit_log_id],
+          archive_confirmed_for: "w1",
+        },
+      ],
+    },
+  ]);
 });

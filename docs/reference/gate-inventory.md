@@ -64,7 +64,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |
 | `docscodeofconduct_test.go` | H3 | CODE\_OF\_CONDUCT.md is the Contributor Covenant 2.1 as adopted, plus the project's enforcement contact. |
 | `dsrerasedsentinel_test.go` | H3 | The word an erasure leaves in place of a request's answer has two writers in two modules, and a module cannot import its sibling. |
-| `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `emaildesign_test.go` | H1 | Mail cannot read CSS variables, so emailview writes each design token in as its value. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `entitymodel_test.go` | H3 | The entity model pages say what the schema says. |
@@ -111,6 +110,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendproviders_test.go` | H3 | The routing form offers the adapters and profiles the server accepts, and no others. |
 | `frontendrolekeys_test.go` | H2 | The screens ask what a seat may do rather than which role it holds. |
 | `frontendrowtagcap_test.go` | H3 | The browser and the server must agree on how many tags one list row carries, or the chip strip's "+N" counts a number nobody has. |
+| `frontendrunreasons_test.go` | H2 | The browser puts a troubled run's reason code into words. |
 | `frontendschedulinglimits_test.go` | H3 | The Meetings settings screen stops a title or a location at the contract's length before the request is sent. |
 | `frontendsendpermissionreasons_test.go` | H3 | The composer has its own sentence for every code the send engine refuses with, and no other. |
 | `frontendsetupproviders_test.go` | H3 | Onboarding offers a first-time admin a provider and a model, and the server has to be able to price and serve whatever it offered. |
@@ -205,6 +205,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `teamweeklycopy_test.go` | H3 | The team week names coverage only against its basis. |
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
+| `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
 | `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
@@ -284,6 +285,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `declinedwrite_test.go` | H2 | A conditional by-id write that declines to happen says so. |
+| `decodejudged_test.go` | H3 | decodeJudgedCallers are the handlers that take number bounds out of the shared decode (httperr.DecodeJudged). |
 | `deliverysenderonerule_test.go` | H2 | The mail system's own sender names (mailer-daemon, postmaster) are spelled in platform/mailidentity and nowhere else. |
 | `detachedwrites_test.go` | H2 | A detached write says what bounds it. |
 | `directionowner_test.go` | H3 | Every reader of exchanges that asks "did they write" or "did we write" asks relstrength.TheyWroteSQL and WeWroteSQL. |
@@ -354,6 +356,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `maskedamountroots_test.go` | H2 | What the deal-amount census's roots are worth. |
 | `maskfacetcoverage_test.go` | H2 | Every object the maskable-field catalog offers is one some record's history withholds too. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on every surface that can reach it, including the ones it was not written for. |
+| `mcpparity_test.go` | H2 | docs/reference/mcp-parity.{json,md} match the contract, the web app and the handlers' grants, and give each operation one place. |
+| `mcpparitygrants_test.go` | H2 | The grants a handler checks, read from the Go source. |
 | `meetinghistorywriters_test.go` | H2 | Every statement that writes activity.meeting\_status also records the transition. |
 | `meetingoverspelling_test.go` | H2 | When a meeting ENDS is spelled once, in occurredday.EndSQL. |
 | `meetingresponsibility_test.go` | H3 | Every reader of "whose meeting is this" asks storekit.MeetingResponsibilitySQL or UnclaimedMeetingSQL, or the meeting credit rule built on it. |
@@ -370,6 +374,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `noticedutycensus_test.go` | H3 | Every way a contact can arrive has a decided disclosure duty. |
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
 | `nullsentinelindex_test.go` | H2 | A nullable column in a unique key is held by NULLS NOT DISTINCT rather than by a sentinel. |
+| `numberboundscontract_test.go` | H3 | untaggableBounds are the bounds no generated field carries: an array item, a map value, a oneOf branch, an inline response. |
 | `occurredatcompare_test.go` | H2 | Whether an activity has happened by a moment, or falls in a period, is asked of occurredday. |
 | `occurredprecisioncontract_test.go` | H2 | Every activity time on the wire says how precisely it is known. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the caller wrote is one number, declared in platform/database as CallerPredicateBudget. |
@@ -424,7 +429,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook, at the root and in any directory that needs one of its own. |
 | `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
-| `safetydefects_test.go` | H2 | Every declared stage-automation safety defect can actually stop a rule. |
 | `satellite_lifecycle_test.go` | H2 | Every table with a contact\_id column is reached by the retention anonymizer, the merge relink and the archive cascade, or says why not. |
 | `scrubbedentitytypes_test.go` | H2 | Which record types a scrub verb is ever written against. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |

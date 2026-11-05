@@ -109,6 +109,9 @@ func (s *Store) AddStagedOfferLines(ctx context.Context, offerID ids.OfferID, li
 		if err := ensureDraft(current); err != nil {
 			return err
 		}
+		if err := ensureOfferLinesTyped(current); err != nil {
+			return err
+		}
 
 		start, err := nextOfferLinePosition(ctx, tx, offerID)
 		if err != nil {

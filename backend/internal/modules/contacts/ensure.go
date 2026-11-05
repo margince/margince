@@ -67,7 +67,10 @@ var ErrCounterpartySuppressed = errors.New("contacts: counterparty address is on
 
 // EnsureCounterpartyInput is one captured message's counterparty.
 type EnsureCounterpartyInput struct {
-	Admission func(context.Context, pgx.Tx, bool) error
+	// HoldAuthority runs first in the transaction, before any row lock, and
+	// Admission runs last.
+	HoldAuthority func(context.Context, pgx.Tx) error
+	Admission     func(context.Context, pgx.Tx, bool) error
 	// Replied says this counterparty wrote to US, rather than merely having
 	// been written to. It decides which acquisition the created record
 	// carries, and the two are different facts about the contact.
@@ -182,6 +185,11 @@ func (s *Store) EnsureCounterparty(ctx context.Context, in EnsureCounterpartyInp
 // The caller is responsible for the workspace GUC; it is already set by the
 // WithWorkspaceTx that produced tx.
 func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput) (EnsureCounterpartyResult, error) {
+	if in.HoldAuthority != nil {
+		if err := in.HoldAuthority(ctx, tx); err != nil {
+			return EnsureCounterpartyResult{}, err
+		}
+	}
 	res, err := s.ensureCapturedCounterparty(ctx, tx, in)
 	if err != nil {
 		return EnsureCounterpartyResult{}, err
@@ -285,10 +293,10 @@ func (s *Store) CounterpartyLead(ctx context.Context, email string) (ids.LeadID,
 }
 
 func leadWithoutContact(holders storekit.IdentityHolders) ids.LeadID {
-	if len(holders.Leads) == 0 || len(holders.Contacts) > 0 {
+	if len(holders.Contacts) > 0 {
 		return ids.LeadID{}
 	}
-	return holders.Leads[0]
+	return holders.PreferredLead()
 }
 
 // ensureContact runs PO-F-1 and creates when it does not exactly match; a

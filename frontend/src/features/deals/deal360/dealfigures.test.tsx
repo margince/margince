@@ -30,6 +30,8 @@ type Activity = components["schemas"]["Activity"];
 const AS_OF = "2026-05-30T09:00:00Z";
 const ENGLISH: Locale = "en";
 
+const VIEWER = "u-reader";
+
 function show(over: Partial<DealStandingInputs>) {
   const inputs: DealStandingInputs = {
     deal: deal({ stage_id: "s2" }),
@@ -41,8 +43,10 @@ function show(over: Partial<DealStandingInputs>) {
     ladder: { advancing: false, advanceRefused: false, onAdvance: () => {} },
     ...over,
   };
+  const client = new QueryClient();
+  client.setQueryData(["me"], { user: { id: VIEWER } });
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ViewerZoneProvider zone={UTC_ZONE}>
           <DealFigures inputs={inputs} />
@@ -144,6 +148,36 @@ describe("an open deal's probability", () => {
         )}`,
       ),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["the reader", VIEWER, "Kim Reader", en["deal.winProbability.source.you"]],
+    [
+      "a colleague",
+      "u-colleague",
+      "Kim Colleague",
+      translate(ENGLISH, "deal.winProbability.source.colleague", {
+        name: "Kim Colleague",
+      }),
+    ],
+    [
+      "nobody the deal names",
+      undefined,
+      undefined,
+      en["deal.winProbability.source.human"],
+    ],
+  ])("says who set it when %s did", (_, setterId, setterName, label) => {
+    show({
+      deal: deal({
+        stage_id: "s2",
+        win_probability: 75,
+        win_probability_source: "human",
+        win_probability_set_by_user_id: setterId,
+        win_probability_set_by_name: setterName,
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText(new RegExp(`^${label} · `))).toBeInTheDocument();
   });
 
   it("names Margince when it lowered the probability", () => {

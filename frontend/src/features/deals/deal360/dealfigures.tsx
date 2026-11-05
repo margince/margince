@@ -33,6 +33,7 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
+import { useViewerId } from "../../../lib/session";
 import { activityMarks } from "../../../lib/standingmarks";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { probabilityWords } from "../dealprobability";
@@ -117,6 +118,7 @@ function ValueFigure({ inputs, words }: FigureProps) {
 // deal's outcome is settled, so it is certain either way.
 function ProbabilityFigure({ inputs, words }: FigureProps) {
   const { t, locale } = words;
+  const viewerId = useViewerId();
   const { status } = inputs.deal;
   const label = t("deal.standing.figure.probability");
   if (status !== "open") {
@@ -128,7 +130,7 @@ function ProbabilityFigure({ inputs, words }: FigureProps) {
       />
     );
   }
-  const probability = probabilityWords(inputs.deal, t, locale);
+  const probability = probabilityWords(inputs.deal, t, locale, viewerId);
   if (!probability) {
     return <StatCard label={label} value={t("field.unset")} />;
   }

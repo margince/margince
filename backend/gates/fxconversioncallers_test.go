@@ -43,6 +43,7 @@ import (
 	"go/token"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -188,12 +189,7 @@ func callNamesRateField(call *ast.CallExpr) bool {
 	if selector, ok := call.Fun.(*ast.SelectorExpr); ok && namesRateField(selector.X) {
 		return true
 	}
-	for _, arg := range call.Args {
-		if namesRateField(arg) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(call.Args, namesRateField)
 }
 
 // TestTheRateGateSeesAMethodCallMultiply holds the census to the big.Int

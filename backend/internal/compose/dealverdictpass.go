@@ -27,8 +27,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,11 +41,12 @@ const dealVerdictBatch = 50
 
 // dealVerdictRulesVersion moves when the rules in dealverdict change what
 // they let through, so every deal is read again under the new rules.
-const dealVerdictRulesVersion = "2"
+const dealVerdictRulesVersion = "3"
 
 // verdictCorrections are the corrections a verdict may make, in a fixed order.
 var verdictCorrections = []string{
 	deals.VerdictCloseDateCorrection, deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection,
+	deals.VerdictStageMoveCorrection,
 }
 
 // dealVerdictPass reads due deals and applies what the rules let through.
@@ -61,7 +64,8 @@ type dealVerdictPass struct {
 func newDealVerdictPass(pool *pgxpool.Pool, brain completer, log *slog.Logger) dealVerdictPass {
 	return dealVerdictPass{
 		pool: pool, brain: brain, log: log,
-		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()).
+			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}),
 		users:     identity.NewService(pool),
 		notes:     activities.NewStore(InstallationDB(pool)),
 		assurance: assurance.NewStore(InstallationDB(pool)),
@@ -86,11 +90,13 @@ func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 	}
 	now := p.now()
 	var due []verdictCandidate
-	var today time.Time
+	night := verdictNight{lang: identity.BaseLanguageForPrompt(ctx, p.pool)}
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
-		today, err = installationToday(ctx, tx, now)
-		if err != nil {
+		if night.today, err = installationToday(ctx, tx, now); err != nil {
+			return err
+		}
+		if night.mailRead, err = closeMailRead(ctx, tx, now, AssuranceCoverage(ctx, tx, now)); err != nil {
 			return err
 		}
 		due, err = dueVerdictCandidates(ctx, tx, now)
@@ -99,9 +105,8 @@ func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	lang := identity.BaseLanguageForPrompt(ctx, p.pool)
 	for _, candidate := range due {
-		err := p.judge(ctx, candidate, today, lang)
+		err := p.judge(ctx, candidate, night)
 		if errors.Is(err, ai.ErrBudgetDeferred) || isDeferred(err) {
 			p.log.InfoContext(ctx, "the deal verdicts stopped for tonight: the model budget is spent", "error", err)
 			return nil
@@ -111,6 +116,13 @@ func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// verdictNight is what every deal of one night's pass is judged against.
+type verdictNight struct {
+	today    time.Time
+	lang     string
+	mailRead mailReadFor
 }
 
 func isDeferred(err error) bool {
@@ -128,18 +140,20 @@ func installationToday(ctx context.Context, tx pgx.Tx, now time.Time) (time.Time
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC), nil
 }
 
-// dueVerdictCandidates is the open, owned deals not on hold whose input or
-// basis changed since their last verdict, or whose close date passed.
+// dueVerdictCandidates is the open deals with a live owner and no legal hold
+// that are due. A deal is due when its input or basis changed since its last
+// verdict, or its close date passed. A deal nobody can act for waits on the
+// team list for an owner.
 func dueVerdictCandidates(ctx context.Context, tx pgx.Tx, now time.Time) ([]verdictCandidate, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, d.owner_id, `+dealVerdictChecksumSQL("d")+`, r.verdict_input_checksum,
 		       r.verdict_basis_digest,
 		       r.verdict_next_due_at <= $1
-		         OR (r.verdict_actions @> $2::jsonb
+		         OR (`+verdictActionsSQL("r.verdict_actions")+` @> $2::jsonb
 		             AND `+deals.RateStoredSinceSQL("r.verdict_assessed_at")+`),
 		       r.verdict_actions
 		  FROM deal d LEFT JOIN assurance_deal_receipt r ON r.deal_id = d.id
-		 WHERE d.status = 'open' AND d.archived_at IS NULL AND NOT d.legal_hold AND d.owner_id IS NOT NULL
+		 WHERE d.status = 'open' AND d.archived_at IS NULL AND NOT d.legal_hold AND NOT `+deals.NoLiveOwnerSQL("d")+`
 		 ORDER BY r.verdict_assessed_at NULLS FIRST, d.id`, now, `[{"outcome":"`+dealverdict.DroppedNoRate+`"}]`)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals a verdict may read: %w", err)
@@ -199,6 +213,12 @@ func ownerVerdictSwitches(ctx context.Context, tx pgx.Tx, owner ids.UUID) (map[s
 		}
 		out[correction] = mode == approvals.ModeAuto
 	}
+	// An admin may stop every stage move for the installation.
+	moves, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.StageAutopilotEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading whether deals may move: %w", err)
+	}
+	out[deals.VerdictStageMoveCorrection] = out[deals.VerdictStageMoveCorrection] && moves
 	return out, nil
 }
 

@@ -71,7 +71,6 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   // Retired: nothing stages it, but decided cards still carry it.
   transcript_proposal: "approval.kind.transcript_proposal",
   commitment_task: "approval.kind.commitment_task",
-  stage_progression: "approval.kind.stage_progression",
   fx_rate_proposal: "approval.kind.fx_rate_proposal",
   disqualify_lead: "approval.kind.disqualify_lead",
   demote_lead: "approval.kind.demote_lead",

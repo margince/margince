@@ -21,7 +21,7 @@ func classifyDecision(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level, consequence, why := levelRoutine, crmcontracts.WorklistItemConsequence("data_drifts"), "routine"
 	if item.Kind != nil {
 		switch *item.Kind {
-		case "advance_deal", "progress_deal", "stage_progression":
+		case "advance_deal", "progress_deal":
 			level, consequence, why = levelAgreed, valueNone, ""
 		}
 	}

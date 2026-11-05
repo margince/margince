@@ -44,22 +44,29 @@ type recordedAction struct {
 // judge reads one deal, asks the model, applies what the rules let through
 // and records the verdict. A deal with every switch off or no readable
 // activity is recorded without a model call.
-func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, today time.Time, lang string) error {
+func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, night verdictNight) error {
 	var read dealVerdictRead
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
-		read, err = readDealVerdict(ctx, tx, c.deal, c.prior, today, p.now())
+		if read, err = readDealVerdict(ctx, tx, c.deal, c.prior, night.today, p.now()); err != nil {
+			return err
+		}
+		read.sources, err = readVerdictSources(ctx, tx, c, read, night.mailRead)
 		return err
 	})
 	if err != nil {
 		return err
 	}
 	read.state.SwitchedOn = c.switched
-	if !anySwitchOn(c.switched) || len(read.in.Activities) == 0 {
-		return p.record(ctx, c, read, nil, read.checksum)
+	if !anySwitchOn(c.switched) {
+		read.sources = nil
+		return p.record(ctx, c, read, nil, read.checksum, verdictSkippedSwitchOff)
+	}
+	if len(read.in.Activities) == 0 {
+		return p.record(ctx, c, read, nil, read.checksum, verdictSkippedNoEvidence)
 	}
 	about := ai.WithSubject(ctx, ids.From[ids.DealKind](c.deal).Ref(), "")
-	resp, err := ai.Ask(about, p.brain, dealverdict.Request(read.in, lang), dealverdict.Validator(read.in))
+	resp, err := ai.Ask(about, p.brain, dealverdict.Request(read.in, night.lang), dealverdict.Validator(read.in))
 	if err != nil {
 		return err
 	}
@@ -67,7 +74,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, today ti
 	if err != nil {
 		return fmt.Errorf("compose: the deal verdict answer: %w", err)
 	}
-	decisions, err := p.decide(ctx, read, payload, today)
+	decisions, err := p.decide(ctx, read, payload, night.today)
 	if err != nil {
 		return err
 	}
@@ -75,7 +82,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, today ti
 	if err != nil {
 		return err
 	}
-	return p.record(ctx, c, read, decisions, assessed)
+	return p.record(ctx, c, read, decisions, assessed, "")
 }
 
 func anySwitchOn(switched map[string]bool) bool {
@@ -163,7 +170,7 @@ func (p dealVerdictPass) applyAsOwner(
 }
 
 // applyAs writes as an owner's agent bound before the write. The owner may
-// leave in between, so the evidence check asks again under the lock.
+// leave or lose the deal grant in between, so the write binds them again.
 func (p dealVerdictPass) applyAs(
 	ownerCtx context.Context, c verdictCandidate, read dealVerdictRead, changes []deals.VerdictChange,
 ) ([]string, string, error) {
@@ -184,6 +191,7 @@ func (p dealVerdictPass) applyAs(
 			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL("d")+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
+		AsOwner: ownersAgentTx(p.users, c.owner, marginceActorID),
 	})
 	return result.Outcomes, written, err
 }
@@ -214,6 +222,8 @@ func verdictChangeLine(change deals.VerdictChange, seen deals.VerdictValues) str
 	switch change.Correction {
 	case deals.VerdictCloseDateCorrection:
 		return "Close date set to " + change.CloseDate.Format(time.DateOnly)
+	case deals.VerdictStageMoveCorrection:
+		return fmt.Sprintf("Moved to %v", change.Evidence["to_stage"])
 	case deals.VerdictAmountCorrection:
 		currency := change.Currency
 		if seen.Currency != nil {
@@ -226,18 +236,21 @@ func verdictChangeLine(change deals.VerdictChange, seen deals.VerdictValues) str
 }
 
 // record stores the verdict on the deal's receipt, with the checksum apply
-// counted as assessed.
+// counted as assessed. skipped says why no model was asked.
 func (p dealVerdictPass) record(
-	ctx context.Context, c verdictCandidate, read dealVerdictRead, decisions []dealverdict.Decision, assessed string,
+	ctx context.Context, c verdictCandidate, read dealVerdictRead, decisions []dealverdict.Decision, assessed, skipped string,
 ) error {
-	actions := make([]recordedAction, 0, len(decisions))
+	stored := verdictRecord{
+		For: c.owner.String(), Skipped: skipped, Sources: read.sources,
+		Actions: make([]recordedAction, 0, len(decisions)),
+	}
 	for _, d := range decisions {
-		actions = append(actions, recordedAction{
+		stored.Actions = append(stored.Actions, recordedAction{
 			Kind: d.Action.Kind, Outcome: d.Outcome, Confidence: float64(d.Action.Confidence),
 			Reason: d.Action.Reason, Cited: d.Action.Cited,
 		})
 	}
-	encoded, err := json.Marshal(actions)
+	encoded, err := json.Marshal(stored)
 	if err != nil {
 		return fmt.Errorf("compose: encoding the verdict: %w", err)
 	}

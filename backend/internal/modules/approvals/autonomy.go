@@ -140,54 +140,28 @@ const (
 	kindDealProbability = "deal_probability"
 )
 
+// kindDealStageMove is Margince moving a deal forward from the customer's
+// own words. Never staged; its Undo moves the deal back.
+const kindDealStageMove = "deal_stage_move"
+
+// kindDealOpen is Margince opening a deal from Deal Scout's evidence for the
+// company's owner. Its Undo archives the deal.
+const kindDealOpen = "deal_open"
+
+// kindDealRevive is Margince reopening a lost deal when new buying evidence
+// arrives at its company. Its Undo closes the deal as lost again.
+const kindDealRevive = "deal_revive"
+
 var AutoApplyKinds = map[string]bool{
 	closeDateCorrectionKind:  true,
 	kindDealCloseLost:        true,
 	kindDealAmount:           true,
 	kindDealProbability:      true,
+	kindDealStageMove:        true,
+	kindDealOpen:             true,
+	kindDealRevive:           true,
 	kindCompanyNamePromotion: true,
 	kindLifecycleChange:      true,
-}
-
-// AdminGovernedAutoKinds are the kinds that may apply without asking on an
-// ADMIN's authority rather than a rep's own.
-//
-// A SECOND set, not more members of AutoApplyKinds, and the split is the whole
-// design. AutoApplyKinds is what a rep may put on auto for themselves, and its
-// bound is that the product can put each one back through the restore path —
-// one Undo and the field is as it was. A stage move is not that: it writes
-// deal_stage_history and the ledger beside the field, so restoring the column
-// alone would leave the history saying the deal is somewhere it is not. It
-// carries its own revert instead.
-//
-// The authority is different too. Nobody's own history earns a stage move the
-// right to skip the question; a transition earns it, per pipeline, measured
-// against thresholds an admin set — which is why membership here grants
-// nothing on its own. The kind still has to pass the governing policy in the
-// transaction that would apply it.
-var AdminGovernedAutoKinds = map[string]bool{
-	"stage_progression": true,
-}
-
-// AutoAppliableKinds is every kind either ladder can apply, in a stable order.
-//
-// The sweep that looks for work and the check that admits it read this same
-// function, because they must agree: a scan over one set feeding a check
-// against the other either misses kinds it should apply or wakes on rows it
-// will always refuse.
-//
-// Held by: TestTheAutoApplySweepScansTheKindsTheApplierAdmits
-// (backend/gates/governedkindseams_test.go)
-func AutoAppliableKinds() []string {
-	kinds := make([]string, 0, len(AutoApplyKinds)+len(AdminGovernedAutoKinds))
-	for kind := range AutoApplyKinds {
-		kinds = append(kinds, kind)
-	}
-	for kind := range AdminGovernedAutoKinds {
-		kinds = append(kinds, kind)
-	}
-	sort.Strings(kinds)
-	return kinds
 }
 
 // SortedAutoApplyKinds is AutoApplyKinds in a stable order.
@@ -256,11 +230,15 @@ func (s *Service) AutoApplyMode(ctx context.Context, kind string) (AutonomyMode,
 }
 
 // AutoApplyModeTx is one rep's mode for a kind, read in the caller's
-// transaction. A pass that acts for the rep asks it under the lock it writes
-// under, so a switch turned off in between holds.
+// transaction. It holds the rep's policy until that transaction ends, so a
+// switch turned off after the read waits for the write it would have stopped.
+// Take it after the authority read and before the transaction locks a record.
 func AutoApplyModeTx(ctx context.Context, tx pgx.Tx, rep ids.UUID, kind string) (AutonomyMode, error) {
 	if !AutoApplyKinds[kind] {
 		return ModeManual, nil
+	}
+	if err := shareLockPersonalPolicy(ctx, tx, rep, kind); err != nil {
+		return ModeManual, fmt.Errorf("crmapprovals: holding the autonomy mode: %w", err)
 	}
 	var mode string
 	err := tx.QueryRow(ctx,

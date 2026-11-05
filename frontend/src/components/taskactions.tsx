@@ -19,14 +19,14 @@ import { DateInput } from "../design-system/dateinput";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { Markdown } from "../design-system/markdown";
+import { NoteMarkdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import { isoOrBlank } from "../format/datepattern";
 import { formatDue } from "../format/format";
-import { dueTimeOf } from "../format/timezone";
+import { dueTimeOf, startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
@@ -45,7 +45,7 @@ import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
-import { refetchAfterWrite } from "./taskwritefollowup";
+import { refetchAfterWrite, refreshMovedTask } from "./taskwritefollowup";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -88,6 +88,9 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
         }),
         t,
       );
+      if (input.body.due_at && data) {
+        await refreshMovedTask(queryClient, invalidateKeys, data);
+      }
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as
       // skew by the very write it is undoing.
@@ -98,7 +101,9 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
     // until then, and a second press in that window re-sends it and is
     // refused as skew by the write that has just succeeded.
     onSuccess: (_data, input) =>
-      refetchAfterWrite(queryClient, invalidateKeys, input.id),
+      input.body.due_at
+        ? undefined
+        : refetchAfterWrite(queryClient, invalidateKeys, input.id),
     // A stale press is not a failed one: the task moved on under it, so the
     // reads are refreshed to show where it is now.
     onError: (error, input) => {
@@ -109,39 +114,18 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   });
 }
 
-/**
- * The due fields one snooze away, or null for a task that has no date to
- * move. A task with a time of day keeps that time on the next day, so one
- * snooze does not drop the hour the rep agreed; a task due by a day stays a
- * day.
- *
- * A snooze moves the task to the NEXT CALENDAR DAY, which is not the same as
- * adding twenty-four hours. A local day is not always that long: on Europe's
- * spring-forward day, adding a day to the 28th at 23:59:59 lands at 00:59:59
- * on the 30th, so a rep pressing "tomorrow" skips the 29th entirely. The
- * accept path warns about exactly this arithmetic where it stamps a deadline;
- * this writer was doing it.
- *
- * Read and re-minted through the calendar helpers, in the zone the deadline
- * belongs to, so a snooze lands on the day it names for every colleague.
- */
+/** Keep the agreed wall time while moving at least as far as tomorrow. */
 export function snoozedDueAt(
   dueAt: string | null | undefined,
   hasTime: boolean | undefined,
   zone: string,
+  now = new Date(),
 ): { due_at: string; due_has_time: boolean } | null {
-  if (!dueAt) {
-    return null;
-  }
-  const today = calendarDay(new Date(dueAt), zone);
-  const [year = Number.NaN, month = Number.NaN, day = Number.NaN] = today
-    .split("-")
-    .map(Number);
-  // Through UTC parts, which is a pure calendar step: no zone reading happens
-  // here, so no DST transition can shorten or lengthen the day being counted.
-  const next = new Date(Date.UTC(year, month - 1, day + 1))
-    .toISOString()
-    .slice(0, "yyyy-mm-dd".length);
+  if (!dueAt) return null;
+  const dueDay = calendarDay(new Date(dueAt), zone);
+  const today = calendarDay(now, zone);
+  const base = dueDay > today ? dueDay : today;
+  const next = calendarDay(new Date(startOfDayInZone(base, zone, 1)), zone);
   return taskDueFields(next, dueTimeOf(dueAt, hasTime, zone), zone);
 }
 
@@ -207,7 +191,6 @@ export function TaskQuickActions({
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
-  const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
   const pending = update.isPending && update.variables?.id === activityId;
   const complete = useCompleteTask(update);
   return (
@@ -221,16 +204,14 @@ export function TaskQuickActions({
           {t("tasks.complete")}
         </Button>
       )}
-      {nextDue && (
+      {dueAt && (
         <Button
           disabled={pending}
-          onClick={() =>
-            update.mutate({
-              id: activityId,
-              version,
-              body: nextDue,
-            })
-          }
+          onClick={() => {
+            const nextDue = snoozedDueAt(dueAt, dueHasTime, readerZone);
+            if (nextDue)
+              update.mutate({ id: activityId, version, body: nextDue });
+          }}
         >
           {t("tasks.snooze")}
         </Button>
@@ -248,15 +229,7 @@ export function TaskQuickActions({
   );
 }
 
-// Moving a task to a day the reader names.
-//
-// Beside the snooze, not instead of it. Snooze adds a day to the task's own due
-// date, so a task three days overdue only moves to two days overdue.
-//
-// It is offered on an UNDATED task too, where the snooze is not. A task with no
-// day has nothing to move but is exactly the one a rep wants to put a date on,
-// and the button above is hidden for it — snoozedDueAt returns null, because
-// one day after nothing is nothing.
+// The picker also dates tasks that have no deadline to snooze.
 function TaskDueDatePick({
   activityId,
   version,
@@ -388,7 +361,7 @@ export function TaskDetailDialog({
               {/* Markdown, as the timeline draws the same body. */}
               {task.body && (
                 <div className="t-body task-detail-body">
-                  <Markdown source={task.body} autolink />
+                  <NoteMarkdown source={task.body} />
                 </div>
               )}
               <div className="t-caption task-detail-meta">

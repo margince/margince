@@ -22,12 +22,14 @@ import {
   render,
   stubApi,
 } from "../../testing/brief.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BriefScreen } from "./brief";
 import { BriefQueue, WorklistRedirect } from "./brief.queue";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   window.location.hash = "";
   removeStored(STORAGE_KEYS.worklistDrawerWide);
 });
@@ -508,4 +510,100 @@ it("reads optional reconnections only when the reader opens them", async () => {
   await userEvent.click(show);
   expect(await within(drawer).findByText("Quiet buyer")).toBeVisible();
   expect(asked.filter((value) => value === "include")).toHaveLength(1);
+});
+
+it("snoozes the Home task before a slow day refresh and pins the next click to its new version", async () => {
+  vi.setSystemTime(new Date("2026-11-05T09:00:00Z"));
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  let version = 1;
+  let dueAt = "2026-10-24T14:00:00Z";
+  let dayReads = 0;
+  let patches = 0;
+  let releasePatch: () => void = () => {};
+  const waitingPatch = new Promise<void>((resolve) => {
+    releasePatch = resolve;
+  });
+  const task = () => ({
+    id: "t",
+    kind: "task",
+    subject: "Call the buyer",
+    writable: true,
+    version,
+    due_at: dueAt,
+    due_has_time: true,
+    is_done: false,
+    occurred_at: "2026-10-24T09:00:00Z",
+  });
+  let releaseDay: (reply: Response) => void = () => {};
+  const waitingDay = new Promise<Response>((resolve) => {
+    releaseDay = resolve;
+  });
+  const row = {
+    ...taskRow("t", "Call the buyer"),
+    due_at: dueAt,
+    due_has_time: true,
+    version: 1,
+    overdue: true,
+  };
+  const day = readingsDay({}, [row]);
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { activity: ["read", "update"] } })),
+    "GET /worklist": () => (++dayReads === 1 ? jsonResponse(day) : waitingDay),
+    "GET /activities/t": () => jsonResponse(task()),
+    "PATCH /activities/t": async (body) => {
+      if (
+        typeof body !== "object" ||
+        body === null ||
+        !("due_at" in body) ||
+        typeof body.due_at !== "string"
+      ) {
+        throw new Error("Expected a due date patch");
+      }
+      patches += 1;
+      if (patches === 1) await waitingPatch;
+      version += 1;
+      dueAt = body.due_at;
+      return jsonResponse(task());
+    },
+  });
+  const { client } = render(<BriefScreen />);
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.focus.context"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const snooze = await within(dialog).findByRole("button", {
+    name: en["tasks.snooze"],
+  });
+  await user.click(snooze);
+  await user.click(snooze);
+  expect(patches).toBe(1);
+  expect(snooze).toBeDisabled();
+  releasePatch();
+  await waitFor(() => expect(snooze).toBeEnabled());
+  const card = screen.getByRole("article");
+  await waitFor(() =>
+    expect(within(card).queryByText(en["worklist.overdue"])).toBeNull(),
+  );
+  expect(dueAt).toBe("2026-11-06T14:00:00.000Z");
+  expect(client.isFetching({ queryKey: ["worklist"] })).toBeGreaterThan(0);
+  const cached = client.getQueryData<{
+    pages: components["schemas"]["Worklist"][];
+  }>(["worklist", "mine", "all", "", "today"]);
+  expect(cached?.pages[0]?.focus?.items[0]?.due_at).toBe(dueAt);
+  expect(cached?.pages[0]?.focus?.items[0]?.version).toBe(2);
+  await user.click(snooze);
+  await waitFor(() => expect(patches).toBe(2));
+  const sentVersions = vi
+    .mocked(fetch)
+    .mock.calls.flatMap(([request]) =>
+      request instanceof Request && request.method === "PATCH"
+        ? [request.headers.get("If-Match")]
+        : [],
+    );
+  expect(sentVersions).toEqual(["1", "2"]);
+  expect(dueAt).toBe("2026-11-07T14:00:00.000Z");
+  releaseDay(jsonResponse(day));
+  vi.useRealTimers();
 });

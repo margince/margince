@@ -246,14 +246,16 @@ The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
 
 ### How do I share a record with a colleague?
-To share one contact, company, lead, deal or project with a colleague or a team, open the record and choose **Share**. Then fill in **Share this record**.
 1. Open the record and choose **Share** in its header.
-2. Under **Grant access**, pick the colleague or team.
+2. Under **Grant access**, pick the colleague or team. A new team share starts at **Write** with **No expiry (until revoked)**. A new person share starts at **Read** for 7 days.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**.
 You cannot share more access than you hold.
-Also called: give access, grant access, collaborate on a deal.
+
+On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
+
+Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. People who no longer work there are left out. Being on the same team alone gives no new access.
 
 ### How do I stop sharing a record?
 To take back a share in Margince, open the record and choose **Share**. Find the colleague or team under **Shared with** and choose **Revoke**. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.

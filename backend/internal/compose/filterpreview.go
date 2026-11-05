@@ -18,10 +18,9 @@ package compose
 // are the ones the JSON export writes for the same filter, so somebody deciding
 // from a preview is deciding about the thing they would get.
 //
-// What this deliberately does NOT do is write: no row, no audit entry, no outbox
-// event. That is the property separating it from the export, and it is why the
-// operation is human-only — un-logged is right for somebody typing and wrong for
-// an agent reading records in bulk.
+// For somebody typing this writes nothing: no row, no audit entry, no outbox
+// event. That is the property separating it from the export. A user's agent may call it too, and its preview writes one system_log
+// row, because un-logged is wrong for an agent reading records in bulk.
 //
 // Why un-logged is defensible: GET /v1/contacts already returns the same
 // Contact projection, 200 rows a page with a cursor, and writes no ledger row.
@@ -45,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // logDetailFilter is the system_log detail key an agent's logged preview
@@ -83,11 +83,9 @@ type filterPreviewRequest struct {
 }
 
 func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Request) {
-	// The human-only class is enforced here as well as at the transport, the same
-	// pairing the bundle export and overlay's user-map reads use: this returns
-	// records in bulk and writes no ledger row, so it should not rest on
-	// route-pattern resolution alone.
-	if err := auth.RequireHuman(r.Context()); err != nil {
+	// Enforced here as well as at the transport: this returns records in bulk, so
+	// it should not rest on route-pattern resolution alone.
+	if err := auth.RequireHumanOrItsAgent(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -125,7 +123,8 @@ func (h filterPreviewHandlers) PreviewFilter(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	preview, err := h.preview(r.Context(), engine, *req.Filter, after, limit, false)
+	actor, _ := principal.Actor(r.Context())
+	preview, err := h.preview(r.Context(), engine, *req.Filter, after, limit, actor.Type == principal.PrincipalAgent)
 	if err != nil {
 		writeFilterPreviewError(w, r, err)
 		return

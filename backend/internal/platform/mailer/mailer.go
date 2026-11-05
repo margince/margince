@@ -145,24 +145,13 @@ func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, message
 		return err
 	}
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
-	client, err := s.connect(ctx, addr)
+	client, w, err := s.openMessage(ctx, addr, to)
 	if err != nil {
-		return err
+		return &NotTakenError{Err: err}
 	}
 	defer closeQuietly(client)
-
-	if err := client.Mail(s.FromAddress); err != nil {
-		return fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
-	}
-	if err := client.Rcpt(to); err != nil {
-		return fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
-	}
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
-	}
 	if _, err := w.Write(msg); err != nil {
-		return fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)
+		return &NotTakenError{Err: fmt.Errorf("mailer: relay %s dropped mid-message: %w", addr, err)}
 	}
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("mailer: relay %s did not accept the message: %w", addr, err)
@@ -172,6 +161,29 @@ func (s SMTP) send(ctx context.Context, to, subject, textBody, htmlBody, message
 			"relay", addr, "cause", err)
 	}
 	return nil
+}
+
+// openMessage runs the exchange up to the message body. On an error the
+// relay holds nothing of this message.
+func (s SMTP) openMessage(ctx context.Context, addr, to string) (*smtp.Client, io.WriteCloser, error) {
+	client, err := s.connect(ctx, addr)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := client.Mail(s.FromAddress); err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the sender: %w", addr, err)
+	}
+	if err := client.Rcpt(to); err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the recipient: %w", addr, err)
+	}
+	w, err := client.Data()
+	if err != nil {
+		closeQuietly(client)
+		return nil, nil, fmt.Errorf("mailer: relay %s refused the message: %w", addr, err)
+	}
+	return client, w, nil
 }
 
 // helloName is what this installation announces to the relay.
@@ -201,7 +213,7 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("mailer: relay %s unreachable: %w", addr, err)
 	}
-	if err := conn.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	if err := conn.SetDeadline(exchangeDeadline(ctx)); err != nil {
 		closeQuietly(conn)
 		return nil, fmt.Errorf("mailer: relay %s deadline setup failed: %w", addr, err)
 	}
@@ -238,6 +250,18 @@ func (s SMTP) connect(ctx context.Context, addr string) (*smtp.Client, error) {
 		}
 	}
 	return client, nil
+}
+
+// exchangeDeadline is when the relay exchange must end: 30 seconds from now,
+// or the caller's own deadline when that comes first. A caller that stops
+// waiting for the relay also stops the exchange. So the relay cannot take the
+// message after the caller reported it as not taken.
+func exchangeDeadline(ctx context.Context) time.Time {
+	deadline := time.Now().Add(30 * time.Second)
+	if callerDeadline, ok := ctx.Deadline(); ok && callerDeadline.Before(deadline) {
+		return callerDeadline
+	}
+	return deadline
 }
 
 // isLoopback reports whether the relay lives on this machine — the one

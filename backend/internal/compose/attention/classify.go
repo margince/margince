@@ -45,6 +45,7 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceUndelivered, day.Undelivered, asOf, classifyUndelivered)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceApproval, &day.NeedsYou, asOf, classifyDecision)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceCaptureHealth, day.CaptureHealth, asOf, classifySystem)
+	rows = appendLane(rows, crmcontracts.WorklistItemSourceBookingHealth, day.BookingHealth, asOf, classifySystem)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceDomainQuestion, day.DomainQuestions, asOf, classifyDomainQuestion)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceAiWorkHealth, day.AiWorkHealth, asOf, classifySystem)
 	rows = appendLane(rows, crmcontracts.WorklistItemSourceAutomationRun, day.AutomationHealth, asOf, classifySystem)
@@ -102,6 +103,7 @@ func base(
 		MayBeDone:         item.MayBeDone,
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
+		RunReasonCode:     item.RunReasonCode,
 		DomainContext:     item.DomainContext,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the

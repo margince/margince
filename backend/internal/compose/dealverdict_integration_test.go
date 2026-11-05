@@ -153,7 +153,7 @@ func (v *dealVerdictEnv) field(t *testing.T, column string) string {
 func (v *dealVerdictEnv) outcomes(t *testing.T) string {
 	t.Helper()
 	return v.WsScalar(t, `SELECT string_agg(a->>'kind' || '=' || (a->>'outcome'), ',' ORDER BY a->>'kind')
-		FROM assurance_deal_receipt r, jsonb_array_elements(r.verdict_actions) a WHERE r.deal_id = $1`, v.deal)
+		FROM assurance_deal_receipt r, jsonb_array_elements(r.verdict_actions->'actions') a WHERE r.deal_id = $1`, v.deal)
 }
 
 func (v *dealVerdictEnv) undo(t *testing.T, correction string) {
@@ -334,9 +334,19 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 	v.untouched(t)
 }
 
-// The owner leaves after Margince bound itself as their agent and before it
-// writes: the check under the deal's lock refuses the write.
+// The owner leaves, or loses the deal grant, after Margince bound itself as
+// their agent. The write binds them again and refuses.
 func TestAnOwnerWhoLeavesBeforeTheWriteGetsNoChange(t *testing.T) {
+	for name, revoke := range map[string]string{
+		"deactivated":  `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
+		"role removed": `DELETE FROM role_assignment WHERE user_id = $1`,
+	} {
+		t.Run(name, func(t *testing.T) { verdictAfterTheOwnerLeft(t, revoke) })
+	}
+}
+
+func verdictAfterTheOwnerLeft(t *testing.T, revoke string) {
+	t.Helper()
 	v := setupDealVerdict(t)
 	ctx := principal.SystemActing(v.Admin(), closeDateSweepActor)
 	c := verdictCandidate{deal: v.deal, owner: v.Rep1}
@@ -352,14 +362,14 @@ func TestAnOwnerWhoLeavesBeforeTheWriteGetsNoChange(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, v.Rep1)
+	v.WsExec(t, revoke, v.Rep1)
 	amount := deals.VerdictChange{Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000,
 		Evidence: map[string]any{"cited_activity_ids": []string{v.note}}}
 	if _, _, err := v.pass.applyAs(owner, c, read, []deals.VerdictChange{amount}); err != nil {
 		t.Fatal(err)
 	}
 	if got := v.field(t, "amount_minor") + "/" + v.field(t, "win_probability_override"); got != "4000000/" {
-		t.Fatalf("amount/probability = %s, want nothing written for an owner who left", got)
+		t.Fatalf("amount/probability = %s, want nothing written for an owner who left or lost the grant", got)
 	}
 }
 

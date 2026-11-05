@@ -115,6 +115,7 @@ export const en = {
   "users.clearSearch": "Clear search",
   "users.resultCount": "{matching} of {total} members",
   "users.noSearchResults": "No members match this search.",
+  "teams.searchMembers": "Search team members",
   "users.edit": "Edit member",
   "users.editTitle": "Edit {name}",
   "users.saved": "Member saved.",
@@ -2031,6 +2032,10 @@ export const en = {
   "home.receipt.dateUnconfirmed":
     "Estimated close date: {before} → {after} (needs confirmation)",
   "home.receipt.undated": "No date",
+  "home.receipt.verdictDate":
+    "Close date from what the customer said: {before} → {after}",
+  "home.receipt.verdictDateReverted":
+    "Undone: close date back to {before} (was {after})",
   "home.receipt.confidence": "Updated forecast confidence",
   "home.receipt.forecast": "Probability changed",
   "home.task.yours": "Your task: {action}",
@@ -2071,6 +2076,7 @@ export const en = {
   "brief.coverage.source.undelivered": "Unsent emails",
   "brief.coverage.source.bounce": "Undeliverable emails",
   "brief.coverage.source.ai_work_health": "Automation checks",
+  "brief.coverage.source.booking_health": "Booking page",
   "brief.coverage.source.capture_health": "Mailbox connections",
   "brief.coverage.source.failed_approval": "Failed approved actions",
   "brief.coverage.source.relationship_decay": "Quiet relationships",
@@ -2338,8 +2344,6 @@ export const en = {
   "systemJob.sign_in_policy_read": "Sign-in policy read",
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
-  "systemJob.stage_progression": "Deal stage progression",
-  "systemJob.stage_progression_outcome": "Deal stage outcome",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -2636,6 +2640,7 @@ export const en = {
   "history.field.partner_attribution": "Partner attribution",
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
+  "history.field.about_deal": "Deal it was about",
   "history.field.qualifying_event": "Qualifying event",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
@@ -2928,6 +2933,8 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "contact.attachRefused":
+    "You can only read this contact. Ask its owner for write access.",
   "record.logActivityRefused":
     "You do not have permission to log activities on this record.",
   "record.share": "Share",
@@ -2935,6 +2942,13 @@ export const en = {
   "record.moreActionsFor": "More actions for {subject}",
   "record.fullHistory": "Full history",
 
+  "share.bulkConfirmTitle": "Share these contacts?",
+  "share.bulkConfirmBody":
+    "This replaces {name}’s existing shares on these contacts with {access} and the chosen expiry. It can reduce or end their existing access.",
+  "share.companyContacts": "Share contacts",
+  "share.companyContactsNote":
+    "Share the current contacts you can read and share. Contacts you cannot share are skipped. Hidden contacts are not counted.",
+  "share.companyContactsResult": "{shared} shared · {skipped} skipped",
   "share.title": "Share this record",
   "share.ceiling.pre": "A grant changes who can see ",
   "share.ceiling.recordEmphasis": "exactly this one record",
@@ -3436,6 +3450,38 @@ export const en = {
   "consent.guardFailed": "Communication permissions could not be loaded.",
   "consent.permissionScope":
     "Permissions apply to the named purpose. Account and service notices do not authorize sales or marketing; each message is checked before sending.",
+  "consent.retractRequest": "Take back this request",
+  "consent.retractRequestTitle": "Take back this request?",
+  "consent.retractRequestBody":
+    "Sends stop resting on it, including a message already queued on it. The request stays on the record as withdrawn and cannot be restored.",
+  "consent.acquisitionRequest":
+    "When this contact was added, they asked for a quote or a meeting, or said face to face that they may be written to.",
+  "consent.stopsTitle": "Stops",
+  "consent.stopKind.subject_request": "Asked not to be contacted",
+  "consent.stopKind.marketing_objection": "Objected to marketing",
+  "consent.stopKind.processing_restriction": "Processing is restricted",
+  "consent.stopKind.hard_bounce": "Address does not accept mail",
+  "consent.stopKind.unknown": "Stop",
+  "consent.stopOnAddress": "For {address}",
+  "consent.stopOnPurpose": "Only for {purpose}",
+  "consent.stopRecordedBy": "Recorded by {name} on {date}",
+  "consent.stopRecordedByColleague": "Recorded by a colleague on {date}",
+  "consent.stopRecordedBySubject": "Set by the contact on {date}",
+  "consent.stopRecordedAutomatically": "Recorded by Margince on {date}",
+  "consent.stopBlocked.address":
+    "This clears when mail to the address works again.",
+  "consent.stopBlocked.restriction":
+    "Lifting a restriction means telling the contact first. Margince cannot send that notice yet, so the restriction stays.",
+  "consent.stopBlocked.subject_decision":
+    "The contact set this stop. Only they can change it.",
+  "consent.stopCorrect": "Correct this stop",
+  "consent.stopLift": "Take back this stop",
+  "consent.stopCorrectTitle": "Correct a stop recorded by mistake?",
+  "consent.stopLiftTitle": "Take back this stop?",
+  "consent.stopCorrectBody":
+    "Do this only if a colleague recorded the stop by mistake. If the contact asked for it, leave it. Mail this stop held back can be sent again.",
+  "consent.stopLiftBody": "Mail this stop held back can be sent again.",
+  "consent.stopReason": "Why (kept in the record history)",
   "consent.manage": "Manage consent and proof history",
   "contact.consent": "Consent",
   "consent.grant": "Record consent",
@@ -3514,8 +3560,10 @@ export const en = {
     "They gave consent, with the confirmation on file",
   "consent.reason.consent_withdrawn": "They withdrew consent for this purpose",
   "consent.reason.no_consent_exception_not_offered":
-    "No consent recorded, and the existing-customer exception is not offered",
+    "No consent recorded, and no purchase of theirs is covered by a declared notice",
   "consent.reason.no_consent": "No consent recorded",
+  "consent.reason.existing_customer":
+    "They bought from you and were told then that they may object to advertising",
   "consent.reason.qualifying.inbound_message": "They wrote to you on {date}",
   "consent.reason.qualifying.inquiry": "They made an inquiry on {date}",
   "consent.reason.qualifying.active_deal": "An open deal connects you",
@@ -3915,6 +3963,10 @@ export const en = {
   "access.state.signedInBadge": "Signed in",
   "access.state.invitedBadge": "Invited",
   "access.state.linkRequestedBadge": "Link requested",
+  "access.state.mailFailedBadge": "Email failed",
+  "access.mail.sent": "email sent",
+  "access.mail.failed":
+    "The invitation email failed. Issue a new link and send it yourself.",
   "access.lastSeen": "last seen {when}",
   "access.downloads_one": "{count} document downloaded",
   "access.downloads_other": "{count} documents downloaded",
@@ -4188,6 +4240,48 @@ export const en = {
   "deal.products.alreadyListed": "Already listed",
   "deal.products.fromOffer": "From the offer",
   "deal.products.setByHand": "Set by hand",
+  "deal.lines.empty":
+    "No products yet. Add a product or a custom item to price this deal.",
+  "deal.lines.edit": "Edit products",
+  "deal.lines.start": "Price from products",
+  "deal.lines.notWritable": "You cannot change this deal’s products.",
+  "deal.lines.withheld": "Your role does not show this deal’s value.",
+  "deal.lines.committedNet": "Net value: {amount}, without tax",
+  "deal.lines.incomplete":
+    "Pricing incomplete. Known so far: {known}. Still missing: {missing}.",
+  "deal.lines.missing.lines": "a product",
+  "deal.lines.missing.quantity": "a quantity",
+  "deal.lines.missing.unitPrice": "a price",
+  "deal.lines.missing.billing": "one-time or recurring",
+  "deal.lines.missing.term": "the number of periods",
+  "deal.lines.missing.taxRate": "a tax rate",
+  "deal.lines.description": "Description",
+  "deal.lines.quantity": "Quantity",
+  "deal.lines.price": "Selling price",
+  "deal.lines.remove": "Remove {name}",
+  "deal.lines.editTitle": "Products and services",
+  "deal.lines.save": "Save products",
+  "deal.lines.intro":
+    "The deal’s value is the net of these lines, without tax. An offer copies them later.",
+  "deal.lines.replacesEstimate":
+    "Saving replaces the typed value of {amount}. The old value stays in the history.",
+  "deal.lines.partlySaved":
+    "{saved} of {total} changes were saved. The next one failed: {reason}",
+  "deal.lines.addProduct": "Add a product",
+  "deal.lines.customItem": "Custom item",
+  "deal.lines.addCustom": "Add item",
+  "deal.offerNeedsCompleteLines":
+    "Give every product a quantity and a price first. An offer copies the deal’s products.",
+  "offer.moneyWithheld":
+    "Your role does not show this deal’s value, so the offer’s prices are hidden.",
+  "offer.fromDeal.title": "Made from the deal’s products",
+  "offer.fromDeal.stale": "The deal changed since this offer was created",
+  "offer.fromDeal.body":
+    "Change the products on the deal. The offer’s lines follow only when you refresh the draft.",
+  "offer.fromDeal.revise":
+    "A sent offer stays as it was. Regenerate a revision to offer the new terms.",
+  "offer.fromDeal.editDeal": "Edit deal products",
+  "offer.fromDeal.refresh": "Refresh from deal",
   "deal.commitments.title": "Customer commitments",
   "deal.commitments.empty":
     "The customer has no open commitments on this deal.",
@@ -4374,7 +4468,6 @@ export const en = {
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
-  "approval.kind.stage_progression": "Advance deal stage",
   "approval.preview.requiredCriterionMet": "Required criterion met",
   "approval.preview.requiredCriterionUnmet": "Required criterion not met",
   "approval.preview.optionalCriterionMet": "Optional criterion met",
@@ -4382,8 +4475,6 @@ export const en = {
   "approval.field.because": "Reason",
   "approval.field.lost_reason": "Why it was lost",
   "approval.field.note": "Note",
-  "approval.field.from_stage": "From",
-  "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
   "approval.kind.commitment_task": "Task commitment",
   "approval.kind.fx_rate_proposal": "Update exchange rates",
@@ -5715,6 +5806,8 @@ export const en = {
   "deal.winProbability.invalid": "Enter a whole number from 0 to 100.",
   "deal.winProbability.source.stage": "from the stage",
   "deal.winProbability.source.human": "set by hand",
+  "deal.winProbability.source.you": "set by you",
+  "deal.winProbability.source.colleague": "set by {name}",
   "deal.winProbability.source.margince": "lowered by Margince",
   "deal.winProbability.stageValue": "stage {percent}",
   "deal.winProbability.setByStage":
@@ -6022,6 +6115,10 @@ export const en = {
   "deal.fxBase": "Base {value} · rate {rate} as of {date}",
   "deal.archiveRefused":
     "Only the deal’s owner or a manager can archive this deal.",
+  "contact.archiveRefused":
+    "Only the contact’s owner or a manager can archive this contact.",
+  "company.archiveRefused":
+    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.archiveConfirm":
     "Archiving removes this deal from open deals. You can bring it back from its history.",
@@ -6969,6 +7066,31 @@ export const en = {
   "docs.reading.show": "Show extracted fields",
   "docs.reading.hide": "Hide extracted fields",
 
+  // Capturing a chat from a screenshot pasted on a contact.
+  "chatCapture.action": "Capture a chat",
+  "chatCapture.title": "Capture a chat",
+  "chatCapture.drop": "Screenshot",
+  "chatCapture.dropEmpty":
+    "Paste a screenshot of the chat, drop it here, or click to choose it",
+  "chatCapture.reading": "Reading the chat",
+  "chatCapture.startFailed": "The screenshot could not be read",
+  "chatCapture.storedUnread":
+    "The screenshot was stored, but the answer did not say which file it is. You find it under Documents.",
+  "chatCapture.discard": "Discard",
+  "chatCapture.discardFailed": "The screenshot could not be removed",
+  "chatCapture.unread": "The chat could not be read",
+  "chatCapture.nothingRead": "No chat was found to copy",
+  "chatCapture.header": "The chat header shows {who}.",
+  "chatCapture.otherCounterparty": "This chat shows {shows}, not {contact}.",
+  "chatCapture.confirmOther": "File it on {contact} anyway",
+  "chatCapture.text": "What was said",
+  "chatCapture.textHint":
+    "Type or paste what was said. You can also file the screenshot without text.",
+  "chatCapture.readBadge": "Copied from the screenshot by AI",
+  "chatCapture.channel": "Chat app",
+  "chatCapture.file": "File on this contact",
+  "chatCapture.fileFailed": "The chat could not be filed",
+
   // Adding one. The "About" wording is doing real work: it decides whether the
   // file becomes evidence in a deal or a paper about the account, and only the
   // first can be read for deal fields — so the hint says so rather than leaving
@@ -7257,8 +7379,11 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Record this reason",
-  "compose.reasonRecordFor": "Record this reason: {reason}, for {address}",
+  "compose.reasonRecord": "Keep as a standing reason",
+  "compose.reasonStanding":
+    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
+  "compose.reasonRecordFor":
+    "Keep as a standing reason: {reason}, for {address}",
   "compose.reasonLabel": "Why you may write to {address}",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
@@ -7317,6 +7442,12 @@ export const en = {
   "compose.relatedTo": "Related to",
   "compose.relatedToNone": "Nothing specific",
   "compose.relatedDeal": "Deal: {name}",
+  "compose.aboutDeal": "Deal this follow-up is about",
+  "compose.aboutDealNone": "No deal",
+  "compose.aboutDealUnavailable":
+    "The contact’s deals could not be loaded. Write from the deal’s page instead.",
+  "compose.aboutDealPartial":
+    "Not every deal is listed here. If yours is missing, write from the deal’s page.",
   "compose.draftNeedsRecipient":
     "To draft with AI, add a contact from this company to To.",
   "compose.project": "Project",
@@ -7464,10 +7595,16 @@ export const en = {
     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
+  "sendPermission.reason.optedOutAfterRequest":
+    "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+  "sendPermission.reason.consentRequired":
+    "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+  "sendPermission.reason.dealNotRequested":
+    "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":
     "The recipient has reached the marketing message limit for now. This clears automatically.",
   "sendPermission.reason.ambiguous":
-    "Several records share this address, so the recipient cannot be identified. Merge the records to resolve this.",
+    "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
   "sendPermission.reason.unconfirmed":
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
   "sendPermission.reason.noMarketingConsent":
@@ -7519,6 +7656,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
+  "directSend.sent": "Sent as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -7561,6 +7699,8 @@ export const en = {
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
   "compose.sharedUnsubscribeToken":
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
+  "compose.newContact":
+    "{address} is on no record yet. Sending adds it as your contact.",
   "compose.multiRecipientWarning":
     "This purpose adds an unsubscribe link, so a send to more than one recipient is refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
@@ -7579,6 +7719,10 @@ export const en = {
   "compose.missingSubject": "Enter a subject.",
   "compose.missingBody": "Enter a message before sending.",
   "compose.missingWhy": "Select the reason for contact.",
+  "compose.reasonSwitchText":
+    "The record already shows another reason for this message.",
+  "compose.reasonSwitch": "Use “{reason}” instead",
+  "compose.missingDeal": "Choose the deal this follow-up is about.",
   "compose.actionFailed": "The request failed. Retry.",
 
   "tasks.complete": "Done",
@@ -10072,8 +10216,6 @@ export const en = {
   "notice.acq.crmMigration": "CRM migration",
   "notice.acq.mailboxHistory": "Mailbox history",
   "notice.acq.unknownLegacy": "Source unknown",
-  "notice.source.contactExplanation":
-    "The acquisition source needs review. Open the privacy case to check the evidence.",
   "notice.source.zoneHint":
     "Choose the timezone of the acquisition, which can differ from your location.",
   "notice.rule.none": "No separate notice duty",
@@ -10094,6 +10236,28 @@ export const en = {
   "notice.source.dateHint":
     "Use the actual acquisition date if known. Otherwise a confirmed duty keeps a latest possible deadline.",
   "notice.source.noDeadline": "No confirmed deadline",
+  "notice.source.question": "How did you receive their contact details?",
+  "notice.source.answer.contacted": "They got in touch first",
+  "notice.source.answer.asked": "They asked for a quote or a meeting",
+  "notice.source.answer.met": "Met face to face",
+  "notice.source.answer.introduced": "Someone introduced them",
+  "notice.source.answer.other": "Another source",
+  "notice.source.answer.unsure": "Not sure",
+  "notice.source.unsureHint": "The source stays unconfirmed. Nothing is saved.",
+  "notice.source.otherQuestion": "Which source was it?",
+  "notice.source.leave": "Leave unconfirmed",
+  "notice.source.evidenceHint":
+    "For example: their first email, or who introduced you.",
+  "notice.source.effect":
+    "Saving records where their details came from. If that source means a privacy notice is owed, the notice duty opens with its deadline. Saving sends no email and does not change whether you may email them.",
+  "notice.source.whyUnknown":
+    "Nothing on record says where this contact’s details came from.",
+  "notice.source.whyUnconfirmed":
+    "Nobody has confirmed the recorded source of this contact’s details yet.",
+  "notice.source.onRecord": "On record",
+  "notice.source.needsConfirmation": "Source needs confirmation",
+  "notice.source.contactExplanation":
+    "A privacy officer confirms where their details came from.",
   "notice.rule.art13": "Art. 13 notice",
   "notice.rule.art14": "Art. 14 notice",
   "notice.ruleHint.art13":
@@ -10211,6 +10375,64 @@ export const en = {
     "Ask us to stop using it while something is disputed.",
   "privacynotice.right.objection": "Object to how we use it.",
   "privacynotice.right.complain": "Complain to your data protection authority.",
+  "privacynotice.controller.title": "Who is responsible",
+  "privacynotice.controller.contact": "Questions about your data: {contact}",
+  "privacynotice.categories.title": "What we hold",
+  "privacynotice.category.name": "Your name",
+  "privacynotice.category.jobTitle": "Your job title",
+  "privacynotice.category.employer": "The company you work for",
+  "privacynotice.category.email": "Your email address",
+  "privacynotice.category.phone": "Your phone number",
+  "privacynotice.category.correspondence":
+    "Emails, meetings and calls with you",
+  "privacynotice.basis.consent":
+    "Only with your agreement. You can withdraw it at any time.",
+  "privacynotice.basis.legitimateInterests":
+    "Our legitimate interest in business contact with you and the company you work for, weighed against your interests.",
+  "privacynotice.basis.contract":
+    "Needed for a contract with you or the company you work for.",
+  "privacynotice.basis.precontractRequest":
+    "You asked us for an offer or a meeting.",
+  "privacynotice.basis.subjectInitiated": "You wrote to us first.",
+  "privacynotice.basis.legalObligation": "A law requires it of us.",
+  "privacynotice.basis.vitalOrSecurity":
+    "Needed to keep you or your account safe.",
+  "privacynotice.basis.existingCustomer":
+    "You are our customer, and we tell you about products like the ones you bought. You can object at any time.",
+  "privacynotice.basis.vnAgreement": "You agreed to receive our advertising.",
+  "privacynotice.category.postalAddress": "Your postal address",
+  "privacynotice.category.socialProfile":
+    "Your profiles and accounts on social networks and chat services",
+  "privacynotice.category.customFields": "Other details we record about you",
+  "privacynotice.category.deals": "Deals you take part in",
+  "privacynotice.category.preferences": "Your choices about our messages",
+  "privacynotice.retention.keptByLaw":
+    "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
+  "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
+  "privacynotice.recipient.serviceProviders":
+    "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
+  "privacynotice.retention.title": "How long we keep it",
+  "privacynotice.retention.archive":
+    "{scope}: taken out of daily use after {days}.",
+  "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
+  "privacynotice.retention.erase": "{scope}: deleted after {days}.",
+  "privacynotice.retention.rest":
+    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+  "privacynotice.retention.scope.activity":
+    "Emails, meetings and calls with you",
+  "privacynotice.retention.scope.activityTranscript":
+    "Transcripts of calls with you",
+  "privacynotice.retention.scope.rawCapture":
+    "Copies of emails as they arrived",
+  "privacynotice.retention.scope.contactNoConsentNoDeal":
+    "Your record, if you have not asked for news and are part of no deal",
+  "privacynotice.retention.scope.leadUnconverted":
+    "Your details, if no further contact followed",
+  "privacynotice.objection.title": "Your right to object",
+  "privacynotice.objection.body":
+    "You can object at any time to our use of your data that rests on our legitimate interest. We then stop, unless we have compelling reasons to go on. If you object to advertising, we stop sending it, and you need not give a reason.",
+  "privacynotice.objection.how": "To object: {route}",
   "notice.ownerOf": "Owner of {duty}",
   "notice.excuse": "End without sending",
   "notice.excuseTitle": "End duty without sending disclosure",
@@ -10271,6 +10493,39 @@ export const en = {
   "privacy.purposeDoiBadge": "Double opt-in",
   "privacy.purposesLoading": "Loading purposes…",
   "privacy.purposesEmpty": "No purposes registered yet.",
+  "privacy.customerNotices": "Existing customers",
+  "privacy.customerNoticesSub":
+    "In Germany you may send advertising for similar products to a customer without consent, if they were told when you collected their address that they can object. Declare here where and when you told them. Customers who bought from that entity in that period then receive your newsletters with an opt-out link.",
+  "privacy.customerNoticesEmpty":
+    "No notice declared yet. Customers without consent receive no advertising.",
+  "privacy.customerNoticesLoading": "Loading notices…",
+  "privacy.customerNoticeDeclare": "Declare a notice",
+  "privacy.customerNoticeGroup": "Customers covered",
+  "privacy.customerNoticeGroupHint":
+    "For example: everyone who ordered in the web shop",
+  "privacy.customerNoticeChannel": "Where the address was collected",
+  "privacy.customerNoticeChannelHint": "For example: the web shop checkout",
+  "privacy.customerNoticeText": "The notice they saw",
+  "privacy.customerNoticeEntity": "Sending entity",
+  "privacy.customerNoticeFrom": "Shown from",
+  "privacy.customerNoticeUntil": "Shown until",
+  "privacy.customerNoticeUntilHint": "Leave empty while you still show it.",
+  "privacy.customerNoticeProof": "Where the proof is kept",
+  "privacy.customerNoticeProofHint":
+    "Needed for sales before today, for example an archived copy of the checkout page. Without it the notice counts from today.",
+  "privacy.customerNoticeProofDay": "Date on the proof",
+  "privacy.customerNoticePurposes": "Newsletters for similar products",
+  "privacy.customerNoticeNoPurposes": "Add a marketing purpose first.",
+  "privacy.customerNoticePeriod": "Period",
+  "privacy.customerNoticeOngoing": "since {from}",
+  "privacy.customerNoticeRange": "{from} to {until}",
+  "privacy.customerNoticeWithdrawn": "Withdrawn",
+  "privacy.customerNoticeWithdraw": "Withdraw",
+  "privacy.customerNoticeWithdrawTitle": "Withdraw this notice",
+  "privacy.customerNoticeWithdrawBody":
+    "From now on no advertising goes out on it. Mail already sent keeps its record.",
+  "privacy.customerNoticeWithdrawReason": "Why",
+  "privacy.customerNoticeSave": "Declare",
   "privacy.kind": "Kind",
   "privacy.contact": "Contact",
   "privacy.subjectRef": "Subject reference",
@@ -10284,6 +10539,12 @@ export const en = {
   "privacy.erasureIrreversible":
     "This permanently erases the contact across the whole system: record, captured activity and derived values. It cannot be undone. The erasure itself is audited.",
   "privacy.erasureConfirm": "Erase and suppress",
+  "privacy.resolutionErasureHint":
+    "Used only if you reject. Fulfilling records what the erasure found: Erased, or Nothing held.",
+  "privacy.erasureDraftReplaced":
+    "The answer you typed is not kept. Fulfilling records what the erasure found: Erased, or Nothing held.",
+  "privacy.erasureAnswer.erased": "Erased",
+  "privacy.erasureAnswer.nothing_held": "Nothing held (already erased)",
   "privacy.legalHoldTitle": "Blocked by legal hold",
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
@@ -11227,6 +11488,7 @@ export const en = {
   "blockedDomains.source.verdict": "Model result",
   "blockedDomains.source.heuristic": "Heuristic",
   "blockedDomains.source.human": "Person",
+  "blockedDomains.source.agent": "Agent",
   "blockedDomains.source.reservedDomain":
     "Reserved domain: company identification paused",
   "blockedDomains.source.forwardedIdentity":
@@ -12467,6 +12729,18 @@ export const en = {
   "auto.runs.outcomeBlocked": "Blocked",
   "auto.runs.outcomeSkipped": "Skipped",
   "auto.runs.outcomeQueued": "Queued for approval",
+  "auto.runs.reasonCode.target_missing":
+    "the record it acts on no longer exists",
+  "auto.runs.reasonCode.not_permitted": "its owner may no longer do this",
+  "auto.runs.reasonCode.conflict":
+    "the record was in a state that did not allow it",
+  "auto.runs.reasonCode.record_changed":
+    "the record changed before the rule could act",
+  "auto.runs.reasonCode.no_consent": "the contact has not agreed to this",
+  "auto.runs.reasonCode.budget_exhausted": "the budget for this has run out",
+  "auto.runs.reasonCode.not_completed": "something went wrong while it ran",
+  "auto.runs.reasonCode.blocked":
+    "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
 
   "auto.preview.open": "Preview",
@@ -12717,7 +12991,6 @@ export const en = {
   "settings.tab.teams": "Teams",
   "settings.tab.roles": "Roles and permissions",
   "settings.tab.seats": "Seats and license",
-  "settings.tab.stageautomation": "Stage automation",
   "settings.tab.pipelines": "Pipelines",
   "settings.tab.acquisition": "Acquisition sources",
   "settings.tab.lossreasons": "Loss reasons",
@@ -14340,6 +14613,8 @@ export const en = {
   "forecast.basis.likely": "Won + Likely deals",
   "forecast.basis.weighted": "Won + weighted open deals",
   "forecast.basis.manager_call": "Manager’s call",
+  "forecast.basis.qualified_likely": "Won + supported Likely deals",
+  "forecast.basis.qualified_weighted": "Won + supported weighted deals",
   "forecast.basis.unknown": "Basis not recorded",
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
@@ -15233,6 +15508,15 @@ export const en = {
   "autonomy.kind.deal_probability.label": "Win probabilities",
   "autonomy.kind.deal_probability.help":
     "Sets a deal’s win probability when the evidence clearly moves it, such as a verbal yes or a budget freeze. A probability you set yourself is never changed. Each change shows on Home with an Undo.",
+  "autonomy.kind.deal_stage_move.label": "Stage moves",
+  "autonomy.kind.deal_stage_move.help":
+    "Moves a deal to a later stage when the customer’s own words show it got there, such as a request for the contract draft. Never to Won and never back. Each move shows on Home with an Undo.",
+  "autonomy.kind.deal_open.label": "New deals",
+  "autonomy.kind.deal_open.help":
+    "Opens a deal for a company you own when the customer asks to buy, such as a request for an offer. It is yours, at the first stage. Each new deal shows on Home with an Undo.",
+  "autonomy.kind.deal_revive.label": "Reopened deals",
+  "autonomy.kind.deal_revive.help":
+    "Reopens a deal of yours that was lost when the customer comes back with new buying evidence, such as asking for a new offer. It goes back to the first stage. Each reopened deal shows on Home with an Undo, which closes it as lost again.",
   "autonomy.kind.company_name_promotion.label": "Company names",
   "autonomy.kind.company_name_promotion.help":
     "Accepts proposed company names from email signatures for companies named after their domain. Turn off to review these proposals yourself. Names confirmed by independent sources can still be updated automatically.",
@@ -16806,6 +17090,19 @@ export const en = {
   "contact.strip.today": "Today",
   "contact.strip.yesterday": "Yesterday",
   "contact.strip.days": "{count} days",
+  "contact.consent.fact.existingCustomer":
+    "Existing customer, marketing allowed",
+  "contact.consent.fact.saidWeMayWrite": "Permission to write recorded",
+  "contact.consent.fact.businessContact": "Recent business contact recorded",
+  "contact.consent.fact.serviceMessages": "Service messages allowed",
+  "contact.consent.fact.marketingPermission": "Marketing permission recorded",
+  "contact.consent.fact.bounced": "Address does not accept mail",
+  "contact.consent.fact.marketingOptOut": "Marketing opt-out recorded",
+  "contact.consent.fact.stopped": "Stop recorded",
+  "contact.consent.fact.noMarketingPermission":
+    "No marketing permission recorded",
+  "contact.consent.fact.notAllowed": "Not allowed for this purpose",
+  "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
   "contact.consent.allowedWord": "Allowed",
   "contact.consent.blockedWord": "Blocked",
   "contact.consent.unknownWord": "Unknown",
@@ -17710,6 +18007,10 @@ export const en = {
     "The request was answered or completed after scheduling. Review whether this follow-up is still needed.",
   "sched.held.meetingCanceled":
     "The meeting was canceled after scheduling. Review this message before sending it.",
+  "sched.held.recipientStopped":
+    "A recipient stopped marketing after you scheduled this. It will not send to them.",
+  "sched.held.recipientReplied":
+    "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
@@ -18000,6 +18301,7 @@ export const en = {
   "worklist.pair.stewardOnly":
     "Only a user who can edit both records can resolve this: an administrator or a sales lead.",
   "worklist.needsPrep": "Needs prep",
+  "worklist.pinnedMark": "Pinned by you",
   "worklist.ready.confirm": "I’m ready",
   "worklist.ready.badge": "Ready",
   "worklist.ready.done": "Marked you ready for this meeting.",
@@ -18057,6 +18359,8 @@ export const en = {
     "A privacy request has a legal deadline. Open it and answer it in time.",
   "worklist.ask.notice_case":
     "A privacy notice is owed to this contact. Send it, ask them to confirm their details, or end the duty.",
+  "worklist.ask.booking_health":
+    "Your booking page is paused, so guests cannot book. Open booking settings and connect a calendar Margince can add meetings to.",
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":
@@ -18208,7 +18512,122 @@ export const en = {
   "worklist.handled.closeLostUndone":
     "Undone. Add a note on why this deal is still alive, or Margince will close it again at the next check.",
   "worklist.handled.verdictUndone":
-    "Undone. Margince will not change this again until something new happens on this deal.",
+    "Undone. Margince will not change the {field} again until something new happens on this deal.",
+  "changes.field.closeDate": "close date",
+  "changes.field.amount": "amount",
+  "changes.field.probability": "probability",
+  "changes.field.status": "status",
+  "changes.field.stage": "stage",
+  "changes.fieldJoin": "{first} and {second}",
+  "changes.kind.close_lost": "Closed as lost",
+  "changes.kind.deal_close_date": "New close date",
+  "changes.kind.deal_amount": "New amount",
+  "changes.kind.deal_probability": "New probability",
+  "changes.kind.deal_open": "Opened from buying evidence",
+  "changes.kind.deal_revive": "Reopened from new buying evidence",
+  "changes.undo.relost":
+    "Closed as lost again, with its earlier reason. Margince reopens it only if newer buying evidence arrives.",
+  "changes.undo.confirmRelost":
+    "This deal now has {notes} notes and {tasks} tasks from your team. Close it as lost anyway?",
+  "changes.undo.confirmArchive":
+    "This deal now has {notes} notes and {tasks} tasks from your team. Archive it anyway?",
+  "changes.undo.archived":
+    "Archived. Margince will not open a deal for this again unless new buying evidence arrives.",
+  "changes.kind.stage_move": "Moved to a later stage",
+  "changes.summary_one": "Margince updated {count} of your deals: {parts}",
+  "changes.summary_other": "Margince updated {count} of your deals: {parts}",
+  "changes.part.closed_one": "{count} closed",
+  "changes.part.closed_other": "{count} closed",
+  "changes.part.redated_one": "{count} re-dated",
+  "changes.part.redated_other": "{count} re-dated",
+  "changes.part.revalued_one": "{count} re-valued",
+  "changes.part.revalued_other": "{count} re-valued",
+  "changes.part.probabilities_one": "{count} probability",
+  "changes.part.probabilities_other": "{count} probabilities",
+  "changes.part.moved_one": "{count} moved",
+  "changes.part.moved_other": "{count} moved",
+  "changes.part.opened_one": "{count} opened",
+  "changes.part.opened_other": "{count} opened",
+  "changes.part.revived_one": "{count} reopened",
+  "changes.part.revived_other": "{count} reopened",
+  "changes.viewAll": "View all",
+  "changes.undoAll": "Undo all",
+  "changes.undoAllDone_one": "Undone on {count} deal.",
+  "changes.undoAllDone_other": "Undone on {count} deals.",
+  "changes.undoAllPartly":
+    "Undone on {undone} deals. {kept} kept a change that was edited since Margince made it.",
+  "changes.partly":
+    "Undone, except the {field}, which was changed since Margince set it.",
+  "changes.refused":
+    "Not undone. The deal changed since you opened this page. Reload and try again.",
+  "changes.alreadyAccepted": "You already accepted this change, so it stays.",
+  "changes.deal.title": "Changes by Margince",
+  "changes.deal.loading": "Loading changes…",
+  "changes.team.title": "Changes by Margince on your team",
+  "changes.team.empty": "Margince changed no deals on your team this week.",
+  "changes.team.loading": "Loading team changes…",
+  "changes.team.owner": "Owner",
+  "changes.team.kind": "Change",
+  "changes.team.deals": "Deals",
+  "changes.team.undone": "Undone",
+  "changes.team.truncated": "List truncated. More changes exist.",
+  "changes.team.valueMoved": "Value moved",
+  "changes.team.ownerless.title":
+    "Deals Margince leaves alone until someone owns them",
+  "changes.team.ownerless.deal": "Deal",
+  "changes.team.ownerless.reason": "Why",
+  "changes.team.ownerless.value": "Value",
+  "changes.team.ownerless.no_owner": "No owner",
+  "changes.team.ownerless.departed_owner": "{name} left",
+  "changes.team.ownerless.departed_unnamed": "The owner left",
+  "changes.team.ownerless.inactive_owner": "{name} is not active",
+  "changes.team.ownerless.inactive_unnamed": "The owner is not active",
+  "changes.check.why.owner_cannot_edit":
+    "the owner may no longer change the deal",
+  "changes.team.unvalued":
+    "Value moved leaves out changes Margince could not price: an amount you may not see, a missing exchange rate, or an older probability change.",
+  "changes.team.ownerless.truncated":
+    "List truncated. More deals have no owner.",
+  "changes.check.title":
+    "Margince checked this deal on {date} and changed nothing",
+  "changes.check.ownerOnly": "Only the deal’s owner sees why",
+  "changes.check.next":
+    "Next check on {date}, or sooner when something new arrives",
+  "changes.check.nextOnNews": "Next check when something new arrives",
+  "changes.check.outcome": "{kind}: {why}",
+  "changes.check.sources": "Sources: {list}",
+  "changes.check.skipped.switched_off":
+    "Your switches are off, so Margince did not read the deal",
+  "changes.check.skipped.no_evidence":
+    "No mail, meeting, call or note that everyone may read",
+  "changes.check.kind.close_date": "Close date",
+  "changes.check.kind.amount": "Amount",
+  "changes.check.kind.probability": "Probability",
+  "changes.check.kind.stage": "Stage",
+  "changes.check.why.switched_off": "your switch is off",
+  "changes.check.why.kept_your_edit": "your own edit stays",
+  "changes.check.why.not_sure": "not sure enough",
+  "changes.check.why.outside_limits": "outside the limits Margince may set",
+  "changes.check.why.changed_while_checking":
+    "the deal changed during the check",
+  "changes.check.why.undo_hold":
+    "you undid the last change, so Margince waits for news",
+  "changes.check.why.already_right": "already right",
+  "changes.check.why.accepted_offer": "the accepted offer sets it",
+  "changes.check.why.priced_by_products": "the deal’s products set it",
+  "changes.check.why.no_rate": "no exchange rate for the currency",
+  "changes.check.why.no_owner": "the owner left",
+  "changes.check.why.stage_rules": "the stage’s exit criteria do not allow it",
+  "changes.check.why.other": "a rule held it back",
+  "changes.check.source.mail": "mail",
+  "changes.check.source.meetings": "meetings",
+  "changes.check.source.calls": "calls",
+  "changes.check.source.notes": "notes",
+  "changes.check.source.offers": "offers",
+  "changes.check.state.read": "{source} read",
+  "changes.check.state.private": "{source} private, left out",
+  "changes.check.state.unavailable": "{source} not read on time",
+  "changes.check.state.none": "no {source}",
   "worklist.handled.truncated": "List truncated. More items exist.",
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
@@ -18472,6 +18891,13 @@ export const en = {
   "noticeDuty.recorded": "Recorded",
   "noticeDuty.rule": "Rule",
   "worklist.untitled.notice_case": "Privacy notice owed",
+  "worklist.untitled.booking_health": "Your booking page is paused",
+  "worklist.untitled.booking_health_no_calendar":
+    "Your booking page is paused: it has no calendar to put meetings in",
+  "worklist.untitled.booking_health_calendar_read_only":
+    "Your booking page is paused: Margince may read your calendar but not add meetings",
+  "worklist.untitled.booking_health_calendar_unavailable":
+    "Your booking page is paused: Margince cannot reach your calendar",
   "worklist.untitled.capture_health": "Mailbox connection needs attention",
   "worklist.untitled.ai_work_health": "AI work needs review",
   "worklist.untitled.bounce": "Email bounced",
@@ -19017,60 +19443,6 @@ export const en = {
   "lead.readings.noCompany": "None",
   "lead.readings.owed": "Pending",
   "lead.readings.answered": "Answered",
-  "stageAutomation.record": "Track record",
-  "stageAutomation.pipeline": "Pipeline",
-  "stageAutomation.transition": "Transition",
-  "stageAutomation.reviewed": "Reviewed",
-  "stageAutomation.reviewedHint":
-    "Proposals someone decided. Every rate is a share of this number.",
-  "stageAutomation.open": "Still open",
-  "stageAutomation.expired": "Expired",
-  "stageAutomation.expiredHint":
-    "No one answered before the window closed. This is not a rejection.",
-  "stageAutomation.cleanAcceptance": "Accepted",
-  "stageAutomation.edits": "Edited",
-  "stageAutomation.rejections": "Rejected",
-  "stageAutomation.unsafe": "Undone or corrected",
-  "stageAutomation.unsafeHint":
-    "Moves someone reversed or whose evidence they marked wrong. A move counts once even if both happened.",
-  "stageAutomation.observationDays": "Days observed",
-  "stageAutomation.observationHint":
-    "From the first reviewed proposal to the last. A good rate from one afternoon is not a track record.",
-  "stageAutomation.glossary": "What the figures mean",
-  "stageAutomation.evidenceKinds": "By evidence",
-  "stageAutomation.emptyTitle": "No proposed moves yet",
-  "stageAutomation.empty":
-    "Each move Margince proposes on this pipeline is counted here, with how someone answered it.",
-  "stageAutomation.noPipelines": "No pipelines to report on yet.",
-  "stageAutomation.unreadable": "This report did not load",
-  "stageAutomation.rules": "Transition rules",
-  "stageAutomation.rulesIntro":
-    "Turning a transition on does not move deals yet. Margince keeps proposing until the track record above meets the threshold, then moves deals itself and tells you afterward.",
-  "stageAutomation.offTitle": "Stage automation is switched off",
-  "stageAutomation.offBody":
-    "No deal moves by itself while this is off, whatever a transition below is set to. Whoever runs this installation turns it on in the installation’s configuration.",
-  "stageAutomation.notEarnedYet": "Not qualified yet: {why}",
-  "stageAutomation.suspended": "Suspended by Margince",
-  "stageAutomation.suspendedSince": "Suspended {date}",
-  "stageAutomation.resume": "Resume",
-  "stageAutomation.resumeTitle": "Resume this transition?",
-  "stageAutomation.resumeBody":
-    "Margince suspended it (reason: {reason}). Resuming does not skip the threshold: the transition must meet the record above before it moves deals automatically.",
-  "stageAutomation.noRules":
-    "No transition on this pipeline has a rule yet, so every move is proposed for a person to review.",
-  "stageAutomation.undoWindow": "Undo for {hours} h",
-  "stageAutomation.rulesLoading": "Loading transition rules…",
-  "stageAutomation.saveFailed": "Change not saved",
-  "stageAutomation.nothingReviewed": "Proposed, but none reviewed yet.",
-  "stageAutomation.detail": "Details",
-  "stageAutomation.detailFor": "Details for {transition}",
-  "stageAutomation.evidenceShare":
-    "{accepted} of {reviewed} accepted as proposed",
-  "stageAutomation.acceptedHint": "Accepted as proposed, with nothing changed.",
-  "stageAutomation.editedHint": "Accepted after someone changed the proposal.",
-  "stageAutomation.rejectedHint": "Proposals someone turned down.",
-  "stageAutomation.openHint":
-    "Proposals no one has answered yet. They count in no rate.",
   "employment.importLoading": "Loading purchased employment history…",
   "employment.apply": "Link imported companies",
   "employment.status.current": "Current",
@@ -19212,7 +19584,8 @@ export const en = {
   "magic.action.send_email": "A message was sent",
   "magic.action.schedule": "A meeting was booked",
   "magic.action.disqualify": "A lead was disqualified",
-  "magic.action.automation_troubled": "{name} is in trouble: {outcome}",
+  "magic.action.automation_troubled":
+    "{name} could not finish ({outcome}): {reason}",
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
@@ -19847,7 +20220,8 @@ export const en = {
   "aiTask.name.cert_judge": "Certification judging",
   "aiTask.name.cold_start": "Onboarding read",
   "aiTask.name.corpus_ask": "Document corpus question",
-  "aiTask.name.deal_verdict": "Checking the dates, amount and chances of a deal",
+  "aiTask.name.deal_verdict":
+    "Checking the dates, amount and chances of a deal",
   "aiTask.name.deal_health": "Deal status card",
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",

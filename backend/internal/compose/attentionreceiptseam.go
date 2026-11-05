@@ -118,6 +118,15 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Correction == deals.CloseLostCorrection {
 		return closeLostReceipt(c)
 	}
+	if c.Correction == deals.VerdictStageMoveCorrection {
+		return stageMoveReceipt(c)
+	}
+	if c.Correction == deals.DealOpenCorrection {
+		return dealOpenReceipt(c)
+	}
+	if c.Correction == deals.DealReviveCorrection {
+		return dealReviveReceipt(c)
+	}
 	if c.Correction == deals.VerdictAmountCorrection || c.Correction == deals.VerdictProbabilityCorrection {
 		return verdictReceipt(c)
 	}
@@ -131,10 +140,16 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	if c.Basis != "" {
 		summary += " — " + c.Basis
 	}
+	// A date the verdict read from the customer keeps its own kind, so its
+	// receipt does not read as the sweep's estimate.
+	kind := deals.CloseDateCorrectionKind
+	if c.Correction == deals.VerdictCloseDateCorrection {
+		kind = c.Correction
+	}
 	return attention.Receipt{
 		ID:              c.AuditLogID,
 		CloseDateChange: correctionValues(c),
-		Kind:            deals.CloseDateCorrectionKind,
+		Kind:            kind,
 		Summary:         summary,
 		OccurredAt:      c.AppliedAt,
 		TargetType:      approvalTargetDeal,
@@ -236,7 +251,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []attention.Receipt) ([]attention.Receipt, error) {
 	keys := make([]deals.AppliedChangeKey, 0, len(receipts))
 	for _, receipt := range receipts {
-		if receipt.TargetType == approvalTargetDeal && (receipt.Kind == deals.StageProgressionKind || receipt.Undo != nil) {
+		if receipt.TargetType == approvalTargetDeal && receipt.Undo != nil {
 			keys = append(keys, deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipt.TargetID), ChangeID: receipt.ID})
 		}
 	}

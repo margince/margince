@@ -46,6 +46,7 @@ function show(refusedReasonId?: string) {
     <DealProductsCard
       dealId={DEAL}
       currency="EUR"
+      typedAmount={null}
       refusedReasonId={refusedReasonId}
     />,
   );

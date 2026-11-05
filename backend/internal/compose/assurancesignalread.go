@@ -23,6 +23,15 @@ import (
 // is also where each finding learns whether its inputs moved since the check,
 // so no surface can show a finding without that answer.
 func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int) ([]assurance.Exception, error) {
+	return assuranceExceptionsWith(ctx, tx, owners, requested, limit, nil)
+}
+
+// assuranceExceptionsWith is that read with findings the owner filter cannot
+// reach merged in before ranking, so the cap cuts one list.
+func assuranceExceptionsWith(
+	ctx context.Context, tx pgx.Tx, owners []ids.UUID, requested *RequestedScope, limit int,
+	extra []assurance.Exception,
+) ([]assurance.Exception, error) {
 	found, err := assuranceDealExceptionsOwnedBy(ctx, tx, owners, requested, 0)
 	if err != nil {
 		return nil, err
@@ -36,7 +45,12 @@ func assuranceExceptionsOwnedBy(ctx context.Context, tx pgx.Tx, owners []ids.UUI
 	if err != nil {
 		return nil, err
 	}
-	found = append(found, calls...)
+	return rankedWithin(ctx, tx, append(append(found, calls...), extra...), limit)
+}
+
+// rankedWithin is the end of every findings read: rank, cut to the cap, then
+// mark which of the kept ones have out-of-date inputs.
+func rankedWithin(ctx context.Context, tx pgx.Tx, found []assurance.Exception, limit int) ([]assurance.Exception, error) {
 	if err := rankFindings(ctx, tx, found); err != nil {
 		return nil, err
 	}

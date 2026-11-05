@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 54,
+    "sites": 55,
     "sites_best_current": 31,
     "sites_best_partial": 1,
     "sites_best_stale": 16,
-    "sites_absent": 6,
-    "scenarios": 292,
+    "sites_absent": 7,
+    "scenarios": 295,
     "records": 355,
     "bindings": 18,
     "self_judged_records": 0
@@ -286,7 +286,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -1234,7 +1234,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "gemini",
@@ -2294,7 +2294,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "gemini_vertex",
@@ -3426,7 +3426,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "ollama",
@@ -4365,7 +4365,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -5304,7 +5304,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -6243,7 +6243,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "openai_compatible",
@@ -7182,7 +7182,7 @@
         },
         {
           "task": "deal_verdict",
-          "label": "Checking a deal's dates, amount and chances",
+          "label": "Checking the dates, amount and chances of a deal",
           "tier": "local_small",
           "model": {
             "provider": "vllm",
@@ -7851,7 +7851,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 54,
+      "sites_shipped": 55,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
@@ -8555,7 +8555,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 54,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
@@ -9245,7 +9245,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 54,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 29,
       "usable_with_care": 14,
@@ -9928,7 +9928,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 54,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -10638,7 +10638,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 54,
+      "sites_shipped": 55,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -17097,6 +17097,12 @@
           "file": "backend/internal/compose/aicert/corpus/deal_verdict/a_verbal_yes_and_a_price_01.yaml"
         },
         {
+          "name": "the_buyer_asks_for_the_contract_and_the_deal_moves_on",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_verdict/the_buyer_asks_for_the_contract_01.yaml"
+        },
+        {
           "name": "the_customer_names_a_new_signing_date",
           "expects": "accepted",
           "graded_by": "judge",
@@ -17161,6 +17167,30 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "document_extract",
+      "site": "chat",
+      "key": "document_extract/chat",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "chat_screenshot_with_header",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/chat_screenshot_07.yaml"
+        },
+        {
+          "name": "picture_with_no_chat",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/document_extract/chat_no_chat_08.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "document_extract",

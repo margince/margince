@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -30,12 +31,16 @@ const (
 	VerdictCloseDateCorrection   = "deal_close_date"
 	VerdictAmountCorrection      = "deal_amount"
 	VerdictProbabilityCorrection = "deal_probability"
+	VerdictStageMoveCorrection   = "stage_move"
 )
 
 // VerdictSwitch is the owner's switch a verdict correction answers to.
 func VerdictSwitch(correction string) string {
-	if correction == VerdictCloseDateCorrection {
+	switch correction {
+	case VerdictCloseDateCorrection:
 		return CloseDateCorrectionKind
+	case VerdictStageMoveCorrection:
+		return DealStageMoveKind
 	}
 	return correction
 }
@@ -47,9 +52,14 @@ const (
 	VerdictDroppedSwitch   = "dropped:switch_off"
 	VerdictDroppedHuman    = "dropped:human_edit"
 	VerdictDroppedNoChange = "dropped:unchanged"
+	// VerdictDroppedLines is an amount for a deal whose lines state its value.
+	VerdictDroppedLines = "dropped:priced_by_lines"
 	// VerdictDroppedMoved is a deal whose evidence moved between the read and
 	// the write. Nothing applies, and the deal is read again.
 	VerdictDroppedMoved = "dropped:evidence_moved"
+	// VerdictDroppedOwnerCannotEdit is an owner who may no longer change the
+	// deal when the write runs.
+	VerdictDroppedOwnerCannotEdit = "dropped:owner_cannot_edit"
 )
 
 // VerdictValues are the deal fields a verdict may change, as one read saw them.
@@ -63,6 +73,7 @@ type VerdictValues struct {
 	// ProbabilitySource is who set Probability; nil while the deal follows
 	// its stage.
 	ProbabilitySource *string
+	StageID           ids.UUID
 }
 
 // VerdictChange is one change a verdict decided on.
@@ -74,6 +85,11 @@ type VerdictChange struct {
 	// currency the customer named.
 	Currency    string
 	Probability int
+	// ToStageID is where a stage move goes. CriteriaMet names the exit
+	// criteria the move's evidence covers; the lock asks again that they are
+	// every required one of each stage the deal leaves.
+	ToStageID   ids.StageID
+	CriteriaMet []CriterionCitation
 	// NewestCitedAt is the newest activity the change rests on. A human edit
 	// of the field after it wins.
 	NewestCitedAt time.Time
@@ -94,12 +110,14 @@ type VerdictInput struct {
 	Allowed func(ctx context.Context, tx pgx.Tx, correction string) (bool, error)
 	// EvidenceHolds asks, under the deal row lock and before any write,
 	// whether the evidence the verdict read still holds. That is the
-	// checksum, the cited activities and the owner, none of them this
-	// module's.
+	// checksum and the cited activities, neither of them this module's.
 	EvidenceHolds func(ctx context.Context, tx pgx.Tx) (bool, error)
 	// Record writes the timeline entry for what applied, in the same
 	// transaction. It is not called when nothing applied.
 	Record func(ctx context.Context, tx pgx.Tx, applied []VerdictChange) error
+	// AsOwner binds the owner's agent as of the write's transaction. An
+	// owner who left or lost the deal grant since the read changes nothing.
+	AsOwner OwnerAuthorityTx
 }
 
 // VerdictResult is each change's outcome, in the order of the input, and
@@ -116,12 +134,24 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return VerdictResult{}, err
 	}
+	active, err := s.activeColumns(ctx)
+	if err != nil {
+		return VerdictResult{}, err
+	}
 	result := VerdictResult{Outcomes: make([]string, len(in.Changes))}
 	outcomes := result.Outcomes
 	for i := range outcomes {
 		outcomes[i] = VerdictDroppedStale
 	}
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.Tx(ctx, func(tx pgx.Tx) error {
+		ctx, held, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
+		if err != nil {
+			return err
+		}
+		if !held {
+			result.dropAll(VerdictDroppedOwnerCannotEdit)
+			return nil
+		}
 		lock, current, ok, err := lockVerdictDeal(ctx, tx, in)
 		if err != nil || !ok {
 			return err
@@ -131,15 +161,29 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 			return err
 		}
 		if !holds {
-			for i := range outcomes {
-				outcomes[i] = VerdictDroppedMoved
-			}
-			result.EvidenceMoved = true
+			result.dropAsMoved()
 			return nil
 		}
 		var applied []VerdictChange
+		// Asked of the deal as locked, before a stage move resets its
+		// probability: that reset is ours, not a colleague's edit.
+		heldStill := make([]bool, len(in.Changes))
 		for i, change := range in.Changes {
-			outcome, err := applyVerdictChange(ctx, tx, lock, in, current, change)
+			_, heldStill[i] = verdictColumns(change.Correction, in.Seen, current)
+		}
+		for _, i := range stageMoveFirst(in.Changes) {
+			change := in.Changes[i]
+			var outcome string
+			switch {
+			case !heldStill[i]:
+				outcome = VerdictDroppedStale
+			case change.Correction == VerdictStageMoveCorrection:
+				outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
+			default:
+				now := in
+				now.Seen = current
+				outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
+			}
 			if err != nil {
 				return err
 			}
@@ -154,6 +198,20 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 		return in.Record(ctx, tx, applied)
 	})
 	return result, err
+}
+
+// dropAsMoved drops every change because what the verdict rested on moved
+// since the read: its evidence, or the owner's authority. The deal is read again.
+func (r *VerdictResult) dropAsMoved() {
+	r.dropAll(VerdictDroppedMoved)
+	r.EvidenceMoved = true
+}
+
+// dropAll drops every change for one reason.
+func (r *VerdictResult) dropAll(why string) {
+	for i := range r.Outcomes {
+		r.Outcomes[i] = why
+	}
 }
 
 // lockVerdictDeal locks the deal and re-asks what the decision rested on:
@@ -179,10 +237,10 @@ func lockVerdictDeal(ctx context.Context, tx pgx.Tx, in VerdictInput) (storekit.
 	var current VerdictValues
 	if err := tx.QueryRow(ctx, `
 		SELECT status, owner_id, legal_hold, expected_close_date, close_date_provisional, amount_minor, currency::text,
-		       win_probability_override, win_probability_set_by
+		       win_probability_override, win_probability_set_by, stage_id
 		  FROM deal WHERE id = $1`, in.DealID).
 		Scan(&status, &owner, &legalHold, &current.CloseDate, &current.Provisional, &current.AmountMinor, &current.Currency,
-			&current.Probability, &current.ProbabilitySource); err != nil {
+			&current.Probability, &current.ProbabilitySource, &current.StageID); err != nil {
 		return lock, VerdictValues{}, false, fmt.Errorf("deals: reading the deal a verdict changes: %w", err)
 	}
 	if DealStatus(status) != DealOpen || legalHold || owner == nil || *owner != in.Owner {
@@ -225,9 +283,18 @@ func applyVerdictChange(
 	if patch.Empty() {
 		return VerdictDroppedNoChange, nil
 	}
+	var owned *LineOwnedValueError
+	if err := refuseTypedMoneyOnLines(ctx, tx, in.DealID, patch); errors.As(err, &owned) {
+		return VerdictDroppedLines, nil
+	} else if err != nil {
+		return "", err
+	}
 	evidence := map[string]any{CorrectionKindEvidenceKey: change.Correction, "basis_owner": in.Owner.String()}
-	for key, value := range change.Evidence {
-		evidence[key] = value
+	maps.Copy(evidence, change.Evidence)
+	if change.Correction == VerdictProbabilityCorrection {
+		if err := addProbabilityValuation(ctx, tx, in.DealID, current, evidence); err != nil {
+			return "", err
+		}
 	}
 	_, err = commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
@@ -252,6 +319,8 @@ func verdictColumns(correction string, seen, current VerdictValues) ([]string, b
 	case VerdictProbabilityCorrection:
 		return []string{winProbabilityOverrideColumn},
 			sameInt(seen.Probability, current.Probability) && sameString(seen.ProbabilitySource, current.ProbabilitySource)
+	case VerdictStageMoveCorrection:
+		return []string{"stage_id"}, seen.StageID == current.StageID
 	}
 	return nil, false
 }
@@ -309,4 +378,26 @@ func sameDate(a, b *time.Time) bool {
 
 func sameInt64(a, b *int64) bool {
 	return (a == nil && b == nil) || (a != nil && b != nil && *a == *b)
+}
+
+// addProbabilityValuation stores what a probability change's move is valued
+// from: the deal's amount and currency and its win probability before, as the
+// write finds them. An amount set earlier the same night counts. A later edit
+// leaves them as they were.
+func addProbabilityValuation(ctx context.Context, tx pgx.Tx, deal ids.DealID, current VerdictValues, evidence map[string]any) error {
+	var amount *int64
+	var currency *string
+	var stage int
+	if err := tx.QueryRow(ctx, `SELECT amount_minor, currency::text FROM deal WHERE id = $1`, deal).Scan(&amount, &currency); err != nil {
+		return fmt.Errorf("deals: reading the amount a probability change is valued from: %w", err)
+	}
+	if err := tx.QueryRow(ctx, `SELECT win_probability FROM stage WHERE id = $1`, current.StageID).Scan(&stage); err != nil {
+		return fmt.Errorf("deals: reading the stage probability a change is valued from: %w", err)
+	}
+	before, _ := EffectiveWinProbability(current.Probability, current.ProbabilitySource, stage)
+	evidence[valuedProbabilityKey] = before
+	if amount != nil && currency != nil {
+		evidence[valuedAmountKey], evidence[valuedCurrencyKey] = *amount, *currency
+	}
+	return nil
 }
