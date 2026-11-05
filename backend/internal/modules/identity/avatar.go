@@ -28,8 +28,8 @@ import (
 type AvatarOrigin string
 
 const (
-	AvatarUploaded   AvatarOrigin = "upload"
-	AvatarFromGoogle AvatarOrigin = "google"
+	avatarUploaded   AvatarOrigin = "upload"
+	avatarFromGoogle AvatarOrigin = "google"
 )
 
 // avatarFillableSQL is the whole promise a provider fill keeps: it writes only
@@ -78,7 +78,7 @@ func (s *Service) SetMyAvatar(ctx context.Context, objectKey string) (Seat, *str
 	if objectKey == "" {
 		return Seat{}, nil, errors.New("identity: an uploaded picture needs the key its bytes were stored at")
 	}
-	origin := string(AvatarUploaded)
+	origin := string(avatarUploaded)
 	return s.writeMyAvatar(ctx, ids.From[ids.UserKind](human), avatarState{key: &objectKey, origin: &origin})
 }
 
@@ -161,7 +161,7 @@ func (s *Service) FillAvatarFromProvider(ctx context.Context, user ids.UserID, o
 			written = true
 			return storedobjects.Clear(ctx, tx, objectKey)
 		}
-		origin := string(AvatarFromGoogle)
+		origin := string(avatarFromGoogle)
 		tag, err := tx.Exec(ctx,
 			`UPDATE app_user SET avatar_object_key = $2, avatar_origin = $3
 			  WHERE id = $1 AND `+avatarFillableSQL+` AND `+LiveMemberSQL(""), user, objectKey, origin)

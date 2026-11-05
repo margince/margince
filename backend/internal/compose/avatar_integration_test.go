@@ -49,7 +49,7 @@ func newAvatarFixture(t *testing.T) avatarFixture {
 	}
 }
 
-func (f avatarFixture) upload(t *testing.T, ctx context.Context, content []byte) *httptest.ResponseRecorder {
+func (f avatarFixture) upload(ctx context.Context, t *testing.T, content []byte) *httptest.ResponseRecorder {
 	t.Helper()
 	body, contentType := multipartWith(t, "file", "me.png", content)
 	req := httptest.NewRequest(http.MethodPost, "/v1/me/avatar", body).WithContext(ctx)
@@ -105,7 +105,7 @@ func decodeUser(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts.User 
 
 func TestAColleagueStreamsTheUploadedPictureUnderItsRevision(t *testing.T) {
 	f := newAvatarFixture(t)
-	rec := f.upload(t, f.me, encodedPicture(t, pngOf, halvesImage(80, 40)))
+	rec := f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(80, 40)))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("upload = %d: %s", rec.Code, rec.Body)
 	}
@@ -138,9 +138,9 @@ func TestAColleagueStreamsTheUploadedPictureUnderItsRevision(t *testing.T) {
 
 func TestAReplacedOrDeletedPictureLeavesNoBytesBehind(t *testing.T) {
 	f := newAvatarFixture(t)
-	f.upload(t, f.me, encodedPicture(t, pngOf, halvesImage(40, 40)))
+	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(40, 40)))
 	first := *f.storedKey(t, f.e.Rep1)
-	f.upload(t, f.me, encodedPicture(t, jpegOf, halvesImage(50, 50)))
+	f.upload(f.me, t, encodedPicture(t, jpegOf, halvesImage(50, 50)))
 	second := *f.storedKey(t, f.e.Rep1)
 	if f.objectExists(t, first) || !f.objectExists(t, second) {
 		t.Errorf("after a replace: the old object exists %v, the new one %v", f.objectExists(t, first), f.objectExists(t, second))
@@ -163,13 +163,13 @@ func TestAReplacedOrDeletedPictureLeavesNoBytesBehind(t *testing.T) {
 func TestTheUploadRefusesWhatIsNotTheSeatsOwnPicture(t *testing.T) {
 	f := newAvatarFixture(t)
 	gifBytes := encodedPicture(t, gifOf, halvesImage(20, 20))
-	if rec := f.upload(t, f.me, gifBytes); rec.Code != http.StatusUnsupportedMediaType {
+	if rec := f.upload(f.me, t, gifBytes); rec.Code != http.StatusUnsupportedMediaType {
 		t.Errorf("a GIF = %d, want 415: %s", rec.Code, rec.Body)
 	}
 	agent := principal.WithActor(f.me, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", UserID: f.e.Rep1,
 	})
-	if rec := f.upload(t, agent, encodedPicture(t, pngOf, halvesImage(20, 20))); rec.Code != http.StatusForbidden {
+	if rec := f.upload(agent, t, encodedPicture(t, pngOf, halvesImage(20, 20))); rec.Code != http.StatusForbidden {
 		t.Errorf("an agent uploading its user's picture = %d, want 403", rec.Code)
 	}
 	if key := f.storedKey(t, f.e.Rep1); key != nil {
@@ -179,7 +179,7 @@ func TestTheUploadRefusesWhatIsNotTheSeatsOwnPicture(t *testing.T) {
 
 func TestTheStreamIsForMembersAndHidesWhichSeatsExist(t *testing.T) {
 	f := newAvatarFixture(t)
-	f.upload(t, f.me, encodedPicture(t, pngOf, halvesImage(20, 20)))
+	f.upload(f.me, t, encodedPicture(t, pngOf, halvesImage(20, 20)))
 	buyer := principal.WithActor(principal.WithWorkspaceID(context.Background(), f.e.WS),
 		principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:room-guest"})
 	if rec := f.stream(buyer, f.e.Rep1, "", ""); rec.Code != http.StatusForbidden {

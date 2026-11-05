@@ -110,7 +110,7 @@ func TestAnUploadWinsOverTheGooglePicture(t *testing.T) {
 		t.Error("a later Google picture replaced the one the member uploaded")
 	}
 	got := readAvatar(t, e, me)
-	if textOrNull(got.key) != "ws/avatar/upload-1.png" || textOrNull(got.origin) != string(AvatarUploaded) {
+	if textOrNull(got.key) != "ws/avatar/upload-1.png" || textOrNull(got.origin) != string(avatarUploaded) {
 		t.Errorf("app_user holds %s from %s, want the upload", textOrNull(got.key), textOrNull(got.origin))
 	}
 }
@@ -179,7 +179,7 @@ func TestTheGooglePictureRefreshesWhileItIsTheSeatsPicture(t *testing.T) {
 	if after := avatarAudits(t, e, me); after != before {
 		t.Errorf("the same Google picture again wrote %d audit rows", after-before)
 	}
-	if got := readAvatar(t, e, me); textOrNull(got.key) != "ws/avatar/google-2.png" || textOrNull(got.origin) != string(AvatarFromGoogle) {
+	if got := readAvatar(t, e, me); textOrNull(got.key) != "ws/avatar/google-2.png" || textOrNull(got.origin) != string(avatarFromGoogle) {
 		t.Errorf("app_user holds %s from %s, want the newer Google picture", textOrNull(got.key), textOrNull(got.origin))
 	}
 }
