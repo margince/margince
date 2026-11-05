@@ -18163,9 +18163,66 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.team.owner": "Phụ trách",
   "changes.team.kind": "Thay đổi",
   "changes.team.deals": "Giao dịch",
-  "changes.team.value": "Giá trị",
   "changes.team.undone": "Đã hoàn tác",
   "changes.team.truncated": "Danh sách đã bị cắt bớt. Vẫn còn thay đổi khác.",
+  "changes.team.valueMoved": "Giá trị đã dịch chuyển",
+  "changes.team.ownerless.title":
+    "Giao dịch Margince để yên cho đến khi có thành viên phụ trách",
+  "changes.team.ownerless.deal": "Giao dịch",
+  "changes.team.ownerless.reason": "Lý do",
+  "changes.team.ownerless.value": "Giá trị",
+  "changes.team.ownerless.no_owner": "Không có thành viên phụ trách",
+  "changes.team.ownerless.departed_owner": "{name} đã rời đi",
+  "changes.team.ownerless.departed_unnamed": "Thành viên phụ trách đã rời đi",
+  "changes.team.ownerless.inactive_owner": "{name} không còn hoạt động",
+  "changes.team.ownerless.inactive_unnamed":
+    "Thành viên phụ trách không còn hoạt động",
+  "changes.check.why.owner_cannot_edit":
+    "thành viên phụ trách không còn được sửa giao dịch",
+  "changes.team.unvalued":
+    "Giá trị đã dịch chuyển bỏ qua các thay đổi Margince không định giá được: giá trị bạn không được xem, thiếu tỷ giá, hoặc thay đổi xác suất cũ.",
+  "changes.team.ownerless.truncated":
+    "Danh sách đã bị cắt bớt. Vẫn còn giao dịch khác không có thành viên phụ trách.",
+  "changes.check.title":
+    "Margince đã kiểm tra giao dịch này vào {date} và không thay đổi gì",
+  "changes.check.ownerOnly": "Chỉ thành viên phụ trách giao dịch thấy lý do",
+  "changes.check.next":
+    "Lần kiểm tra tiếp theo vào {date}, hoặc sớm hơn khi có thông tin mới",
+  "changes.check.nextOnNews": "Lần kiểm tra tiếp theo khi có thông tin mới",
+  "changes.check.outcome": "{kind}: {why}",
+  "changes.check.sources": "Nguồn: {list}",
+  "changes.check.skipped.switched_off":
+    "Các công tắc của bạn đang tắt, nên Margince không đọc giao dịch",
+  "changes.check.skipped.no_evidence":
+    "Không có email, cuộc họp, cuộc gọi hay ghi chú nào mà mọi thành viên được đọc",
+  "changes.check.kind.close_date": "Ngày chốt",
+  "changes.check.kind.amount": "Giá trị",
+  "changes.check.kind.probability": "Xác suất",
+  "changes.check.kind.stage": "Giai đoạn",
+  "changes.check.why.switched_off": "công tắc của bạn đang tắt",
+  "changes.check.why.kept_your_edit": "giữ thay đổi của chính bạn",
+  "changes.check.why.not_sure": "chưa đủ chắc chắn",
+  "changes.check.why.outside_limits": "vượt quá giới hạn Margince được đặt",
+  "changes.check.why.changed_while_checking":
+    "giao dịch đã thay đổi trong lúc kiểm tra",
+  "changes.check.why.undo_hold":
+    "bạn đã hoàn tác thay đổi trước, nên Margince chờ thông tin mới",
+  "changes.check.why.already_right": "đã đúng",
+  "changes.check.why.accepted_offer":
+    "báo giá đã được chấp nhận quyết định giá trị này",
+  "changes.check.why.no_rate": "không có tỷ giá cho loại tiền này",
+  "changes.check.why.no_owner": "thành viên phụ trách đã rời đi",
+  "changes.check.why.stage_rules": "tiêu chí rời giai đoạn không cho phép",
+  "changes.check.why.other": "một quy tắc đã ngăn lại",
+  "changes.check.source.mail": "email",
+  "changes.check.source.meetings": "cuộc họp",
+  "changes.check.source.calls": "cuộc gọi",
+  "changes.check.source.notes": "ghi chú",
+  "changes.check.source.offers": "báo giá",
+  "changes.check.state.read": "đã đọc {source}",
+  "changes.check.state.private": "{source} riêng tư, đã bỏ qua",
+  "changes.check.state.unavailable": "{source} chưa được đọc kịp thời",
+  "changes.check.state.none": "không có {source}",
   "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "receipt.detail.summary": "Chi tiết",
   "receipt.detail.by": "Người làm",

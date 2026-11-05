@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -45,7 +46,8 @@ type marginceChangeHandlers struct {
 	teammates interface {
 		LiveTeammatesOfCaller(ctx context.Context) ([]attention.TeamMember, bool, error)
 	}
-	now func() time.Time
+	seatNames *identity.Service
+	now       func() time.Time
 }
 
 func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
@@ -53,6 +55,7 @@ func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
 		pool:      pool,
 		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		teammates: newTeammatesSeam(pool),
+		seatNames: identity.NewService(pool),
 		now:       func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -102,6 +105,12 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		return
 	}
 	out := crmcontracts.DealMarginceChanges{Changes: changes}
+	if after == nil {
+		if out.LastCheck, err = latestCheck(r.Context(), InstallationDB(h.pool), ids.UUID(id)); err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+	}
 	if more {
 		last := rows[len(rows)-1]
 		next := encodeChangeCursor(deals.ChangeCursor{AppliedAt: last.AppliedAt, AuditLogID: last.AuditLogID})
@@ -144,10 +153,15 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		Groups: make([]crmcontracts.TeamMarginceChangeGroup, 0, len(report.Groups)),
 		Rows:   make([]crmcontracts.TeamMarginceChangeRow, 0, len(report.Rows)),
 	}
+	if out.Ownerless, out.OwnerlessTruncated, err = h.ownerless(ctx); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	for _, g := range report.Groups {
 		out.Groups = append(out.Groups, crmcontracts.TeamMarginceChangeGroup{
 			OwnerId: openapi_types.UUID(g.OwnerID), OwnerName: names[g.OwnerID], Kind: g.Kind,
-			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor,
+			Deals: g.Deals, Undone: g.Undone, ValueBaseMinor: g.ValueBaseMinor, ValueMovedBaseMinor: g.ValueMovedBaseMinor,
+			Unvalued: g.Unvalued,
 		})
 	}
 	changes, err := h.changeReceipts(ctx, report.Rows)
@@ -159,9 +173,48 @@ func (h marginceChangeHandlers) GetTeamMarginceChanges(w http.ResponseWriter, r 
 		if row.OwnerID == nil {
 			continue
 		}
-		out.Rows = append(out.Rows, crmcontracts.TeamMarginceChangeRow{OwnerId: openapi_types.UUID(*row.OwnerID), Change: changes[i]})
+		wired := crmcontracts.TeamMarginceChangeRow{OwnerId: openapi_types.UUID(*row.OwnerID), Change: changes[i]}
+		if moved, ok := report.Moved[row.AuditLogID]; ok {
+			wired.ValueMovedBaseMinor = &moved
+		}
+		out.Rows = append(out.Rows, wired)
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// ownerless lists the open deals with no live owner the caller may read,
+// naming each owner who is no longer live.
+func (h marginceChangeHandlers) ownerless(ctx context.Context) ([]crmcontracts.TeamMarginceOwnerlessDeal, bool, error) {
+	found, cut, err := h.deals.OwnerlessDeals(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	var departed []ids.UserID
+	for _, d := range found {
+		if d.OwnerID != nil {
+			departed = append(departed, ids.From[ids.UserKind](*d.OwnerID))
+		}
+	}
+	names, err := h.seatNames.SeatNames(ctx, departed)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]crmcontracts.TeamMarginceOwnerlessDeal, 0, len(found))
+	for _, d := range found {
+		wired := crmcontracts.TeamMarginceOwnerlessDeal{
+			DealId: openapi_types.UUID(d.DealID.UUID), DealName: d.DealName,
+			Reason: crmcontracts.TeamMarginceOwnerlessDealReason(d.Reason), ValueBaseMinor: d.ValueBaseMinor,
+		}
+		if d.OwnerID != nil {
+			owner := openapi_types.UUID(*d.OwnerID)
+			wired.OwnerId = &owner
+			if name, ok := names[*d.OwnerID]; ok {
+				wired.OwnerName = &name
+			}
+		}
+		out = append(out, wired)
+	}
+	return out, cut, nil
 }
 
 // changeReceipts draws report rows as receipts with their review state. An
