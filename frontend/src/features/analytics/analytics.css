@@ -287,6 +287,10 @@
 .analytics-sheet > .panel:first-child {
   border-top: 0;
 }
+/* A plate of figures inside the sheet stands on the sheet's own ground. */
+.analytics-sheet .stat-strip[data-density="plate"] {
+  background: none;
+}
 .analytics-sheet > :where(:not(.panel, section, div)) {
   margin: 0;
   padding: var(--space-3) var(--padPanel);

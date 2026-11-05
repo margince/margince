@@ -262,9 +262,11 @@ export const OVERVIEW_SCENARIOS = {
         worklist: day(),
         summary: summary("handoff"),
         handoffs: handoffRows,
+        assessment: json(outlookFor("prospecting", prospectingOn(week))),
       }),
       team: team(teamOn(dstWeek), {
         team: json(teamReviewOn(dstWeek)),
+        assessment: json(outlookFor("team", teamOn(dstWeek))),
       }),
     },
   },

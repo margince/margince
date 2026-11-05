@@ -66,7 +66,14 @@ export function overviewRoutes(
     "GET /me": meRoute(over.grants ?? READS),
     "GET /analytics/context": () => jsonResponse(CONTEXTS[seat]),
     "GET /analytics/metrics": () =>
-      jsonResponse({ ...overviewCatalog, schedule_ready: true }),
+      jsonResponse({
+        ...overviewCatalog,
+        schedule_ready: true,
+        // A case that writes an outlook offers it on every view.
+        ...(over.assessment
+          ? { assessment_views: ["sales", "prospecting", "team"] }
+          : {}),
+      }),
     "GET /analytics/framework":
       over.framework ??
       (() =>

@@ -235,10 +235,10 @@ export function WaitingOnOthers({
   );
   const loaded = rows.data?.pages.flatMap((page) => page.rows) ?? [];
   return (
-    <Panel title={t("analytics.sdrWaiting")}>
+    <Panel title={t("analytics.sdrWaiting")} flatHead>
       <PanelBody>
         <PanelIntro>{t("analytics.sdrWaitingIntro")}</PanelIntro>
-        <StatStrip>
+        <StatStrip density="plate">
           <StatCard
             narrow="row"
             label={t("analytics.sdrWaitingCount")}

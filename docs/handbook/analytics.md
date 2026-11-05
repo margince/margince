@@ -92,7 +92,7 @@ A zero, a hidden figure, a failed one and a day that cannot be read each say so 
 
 Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the team outlook and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
 Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
 

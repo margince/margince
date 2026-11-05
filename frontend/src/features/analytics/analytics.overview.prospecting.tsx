@@ -17,6 +17,7 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { problemCodeOf } from "../../lib/problem";
 import { AssessmentPanel } from "./analytics.assessment";
+import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { scopeKey } from "./analytics.context";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
 import { DoNext } from "./analytics.overview.donext";
@@ -205,61 +206,62 @@ export function MyProspecting({
       {problemCodeOf(query.error) === "reporting_interval_invalid" && (
         <ErrorLine error={query.error} />
       )}
-      {/* The results and the first moves share the first screen; on a narrow
-          one the moves come straight after the results, before any history. */}
-      <div className="analytics-lead">
-        <div className="analytics-column">
-          <QueryGate
-            query={query}
-            pendingLabel={t("analytics.overview.prospecting")}
-          >
-            {(evaluation) => (
-              <>
-                <ProspectingResults
-                  evaluation={evaluation}
-                  outcome={outcome}
-                  workflowState={known ? "known" : workflow}
-                  weeks={weeks}
-                  onEvidence={openFrom}
-                  onRetryWorkflow={retryWorkflow}
-                  aside={
-                    <MonthlyTargets
-                      evaluation={evaluation}
-                      ownScope={scopeKey(self)}
-                    />
-                  }
-                />
-                <ProspectingReadings
-                  evaluation={evaluation}
-                  summary={summary}
-                  onEvidence={openFrom}
-                />
-              </>
-            )}
-          </QueryGate>
-        </div>
-        <DoNext />
-      </div>
-      <ProspectingWork
-        self={self.id}
-        workflow={workflow}
-        summary={summary}
-        week={query.data}
-        weeks={weeks}
-        onEvidence={openFrom}
-        outlook={
-          query.data &&
-          known &&
-          !query.isError && (
-            <AssessmentPanel
-              view="prospecting"
-              work={summary.data}
-              workPending={summary.isLoading}
-              selection={query.data.selection}
-              evaluation={query.data}
+      <AnalyticsBoard
+        railLabel={t("analytics.board.rail")}
+        main={
+          <AnalyticsSheet>
+            <QueryGate
+              query={query}
+              pendingLabel={t("analytics.overview.prospecting")}
+            >
+              {(evaluation) => (
+                <>
+                  <ProspectingResults
+                    evaluation={evaluation}
+                    outcome={outcome}
+                    workflowState={known ? "known" : workflow}
+                    weeks={weeks}
+                    onEvidence={openFrom}
+                    onRetryWorkflow={retryWorkflow}
+                    aside={
+                      <MonthlyTargets
+                        evaluation={evaluation}
+                        ownScope={scopeKey(self)}
+                      />
+                    }
+                  />
+                  <ProspectingReadings
+                    evaluation={evaluation}
+                    summary={summary}
+                    onEvidence={openFrom}
+                  />
+                </>
+              )}
+            </QueryGate>
+            <ProspectingWork
+              self={self.id}
+              workflow={workflow}
+              summary={summary}
+              week={query.data}
+              weeks={weeks}
               onEvidence={openFrom}
             />
-          )
+          </AnalyticsSheet>
+        }
+        rail={
+          <>
+            {query.data && known && !query.isError && (
+              <AssessmentPanel
+                view="prospecting"
+                work={summary.data}
+                workPending={summary.isLoading}
+                selection={query.data.selection}
+                evaluation={query.data}
+                onEvidence={openFrom}
+              />
+            )}
+            <DoNext />
+          </>
         }
       />
       {evidence && query.data && (
@@ -274,7 +276,8 @@ export function MyProspecting({
   );
 }
 
-// Meetings and waiting work precede interpretation; outcome history follows it.
+// The work around the outcome, each a section of the sheet: what waits on
+// others, the meetings ahead, then how the outcome developed.
 function ProspectingWork({
   self,
   workflow,
@@ -282,9 +285,7 @@ function ProspectingWork({
   week,
   weeks,
   onEvidence,
-  outlook,
 }: Readonly<{
-  outlook: ReactNode;
   self: string;
   workflow: WorkflowState;
   summary: ReturnType<typeof useSdrSummary>;
@@ -295,29 +296,24 @@ function ProspectingWork({
   const t = useT();
   return (
     <>
-      <div className="analytics-pair">
-        {workflow === "handoff" && <Waiting self={self} summary={summary} />}
-        <UpcomingMeetings
-          self={self}
-          summary={summary}
-          title={t(
-            workflow === "qualification"
-              ? "analytics.prospect.prepTitle"
-              : "analytics.prospect.upcomingTitle",
-          )}
-        />
-      </div>
-      {outlook}
+      {workflow === "handoff" && <Waiting self={self} summary={summary} />}
+      <UpcomingMeetings
+        self={self}
+        summary={summary}
+        title={t(
+          workflow === "qualification"
+            ? "analytics.prospect.prepTitle"
+            : "analytics.prospect.upcomingTitle",
+        )}
+      />
+      {workflow === "handoff" && week && (
+        <HandoffCohort self={self} evaluation={week} />
+      )}
       {workflow === "qualification" && <QualificationNote />}
       {week && (
-        <div className="analytics-pair">
-          <Disclosure summary={t("analytics.prospect.historyTitle")}>
-            <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
-          </Disclosure>
-          {workflow === "handoff" && (
-            <HandoffCohort self={self} evaluation={week} />
-          )}
-        </div>
+        <Disclosure summary={t("analytics.prospect.historyTitle")}>
+          <OutcomeHistory weeks={weeks} onEvidence={onEvidence} />
+        </Disclosure>
       )}
     </>
   );
