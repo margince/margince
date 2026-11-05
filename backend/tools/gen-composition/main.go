@@ -37,6 +37,8 @@ var (
 	rootPath     = flag.String("root", "..", "repository root (the directory holding extensions/ and build/)")
 	verify       = flag.Bool("verify", false, "regenerate in memory and compare against composition.json and the files on disk; write nothing")
 	verifyInputs = flag.Bool("verify-inputs", false, "recompute input digests only and compare against composition.json; write nothing")
+	instancePath = flag.String("instance", "", "an instance outside this repository (the directory holding its go.mod): put together the core tree it requires in -tree, then compose that tree; -root is ignored")
+	treePath     = flag.String("tree", ".margince/core", "with -instance: where the core tree goes, relative to the instance")
 )
 
 // genMode is the tool's three mutually exclusive operations; when both
@@ -59,7 +61,16 @@ func main() {
 	case *verifyInputs:
 		mode = modeVerifyInputs
 	}
-	if err := run(*rootPath, mode); err != nil {
+	root := *rootPath
+	if *instancePath != "" {
+		tree, err := prepareInstanceTree(*instancePath, *treePath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "gen-composition:", err)
+			os.Exit(1)
+		}
+		root = tree
+	}
+	if err := run(root, mode); err != nil {
 		fmt.Fprintln(os.Stderr, "gen-composition:", err)
 		os.Exit(1)
 	}
