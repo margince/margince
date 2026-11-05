@@ -600,6 +600,7 @@
     /* No grow: the room the tabs leave is the count's. */
     flex: 0 1 auto;
     min-width: 0;
+    position: relative;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -620,6 +621,7 @@
 .lt-scroll {
   flex: 1;
   min-height: 0;
+  position: relative;
   overflow: auto;
   /* The column widths are computed from this box's clientWidth, and with
    * classic (non-overlay) scrollbars a vertical bar takes part of that width.
