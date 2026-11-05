@@ -169,6 +169,9 @@ type callRuntime struct {
 	unattended bool
 	// systemReads admits Deals, Authority and Directory; see systemReaderFor.
 	systemReads bool
+	// deliversNotices lets Notices().Send run with nobody behind it. Only a
+	// bus delivery sets it; see deliveryRuntimeFor.
+	deliversNotices bool
 
 	// mu orders live: it is read and written under the same lock, so release
 	// and a handler-spawned goroutine cannot race the FLAG. It does not order

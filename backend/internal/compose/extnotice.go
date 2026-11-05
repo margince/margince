@@ -67,8 +67,10 @@ func validateNotice(in extension.NoticeRequest) error {
 // the record. The caller must be able to open it too, so a unit cannot use the
 // door to learn which records exist.
 func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeRequest) (extension.NoticeSent, error) {
-	if err := d.core.refuseUnattended(); err != nil {
-		return extension.NoticeSent{}, err
+	if !d.core.notifies {
+		if err := d.core.refuseUnattended(); err != nil {
+			return extension.NoticeSent{}, err
+		}
 	}
 	ctx, err := d.core.invocationCtx(ctx)
 	if err != nil {
@@ -81,23 +83,35 @@ func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeReques
 		return extension.NoticeSent{}, err
 	}
 	record, _ := ids.Parse(in.Record.ID)
-	// A caller without read on the type is told ErrNotFound, like one who cannot
-	// see the row. Either way the unit learns nothing about the record.
-	seen, err := auth.VisibleTo(ctx, d.core.tx, in.Record.Type, record)
-	if err != nil {
-		return extension.NoticeSent{}, portRefusal(err)
-	}
-	if !seen {
-		return extension.NoticeSent{}, extension.ErrNotFound
-	}
-	if err := auth.EnsureVisibleLive(ctx, d.core.tx, in.Record.Type, record); err != nil {
-		return extension.NoticeSent{}, portRefusal(err)
+	if !d.core.unattended {
+		if err := d.callerCanOpen(ctx, in.Record.Type, record); err != nil {
+			return extension.NoticeSent{}, err
+		}
 	}
 	sent, err := d.deliver(ctx, in, record)
 	if err != nil {
 		return extension.NoticeSent{}, portRefusal(err)
 	}
 	return extension.NoticeSent{Recipients: sent}, nil
+}
+
+// callerCanOpen refuses a record the caller may not see. A caller without read
+// on the type is told ErrNotFound, like one who cannot see the row. Either way
+// the unit learns nothing about the record. An unattended send has no caller to
+// ask. Each recipient's own rights are still judged in deliver, so a record
+// nobody may open reaches nobody and answers zero.
+func (d extensionNoticeDoor) callerCanOpen(ctx context.Context, recordType string, record ids.UUID) error {
+	seen, err := auth.VisibleTo(ctx, d.core.tx, recordType, record)
+	if err != nil {
+		return portRefusal(err)
+	}
+	if !seen {
+		return extension.ErrNotFound
+	}
+	if err := auth.EnsureVisibleLive(ctx, d.core.tx, recordType, record); err != nil {
+		return portRefusal(err)
+	}
+	return nil
 }
 
 func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeRequest, record ids.UUID) (int, error) {
