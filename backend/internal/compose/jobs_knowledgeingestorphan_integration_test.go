@@ -218,7 +218,7 @@ func TestAnIngestWhoseHoldingConnectionDiedDoesNotBlockTheNext(t *testing.T) {
 	}
 
 	// The holder's process dies: the server drops its connection and its lock.
-	// The 5 s wait returns once the backend is gone; without it the lock can
+	// The 5 s wait returns once the backend is gone. Without it the lock can
 	// outlive the call, and the next run reads a holder that is still dying.
 	var killed int
 	if err := o.e.Pool.QueryRow(ctx, `

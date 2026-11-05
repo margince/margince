@@ -469,10 +469,11 @@ func assertLastTask(t *testing.T, served []servedRow, id string) {
 
 // assertDoneTakesACardOff holds that Done on a waiting card past the lane's
 // scan succeeds, and the card leaves the reader's next walk. The Done check
-// finds it through the tail's own cards. served and frozen are Rep1's own walk.
-func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T, served []servedRow, frozen map[string]bool) {
+// finds it through the tail's own cards, on a walk of its own, so it runs alone.
+func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T) {
 	r := w.r
 	ctx := w.seat(r.e.Rep1)
+	served, _, frozen := walkWorklist(ctx, t, r, "mine", ids.Nil)
 	card := ""
 	for _, row := range served {
 		if row.source == crmcontracts.WorklistItemSourceCustomerWaiting && !frozen[row.id] {

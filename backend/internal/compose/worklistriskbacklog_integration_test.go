@@ -192,8 +192,6 @@ func TestABacklogPastEveryScanCapIsWalkedToItsEnd(t *testing.T) {
 		{"named owner", "mine", r.e.Admin(), r.e.Rep1, rep1, b.cards[r.e.Rep1]},
 		{"team", "team", b.seat(r.e.Rep1), ids.Nil, team, teamCards},
 	}
-	var mineServed []servedRow
-	var mineFrozen map[string]bool
 	for _, check := range checks {
 		t.Run(check.name, func(t *testing.T) {
 			served, first, frozen := walkWorklist(check.ctx, t, r, check.scope, check.owner)
@@ -216,17 +214,9 @@ func TestABacklogPastEveryScanCapIsWalkedToItsEnd(t *testing.T) {
 			if check.scope == "mine" {
 				assertLastTask(t, served, generated)
 			}
-			if check.name == "mine" {
-				mineServed, mineFrozen = served, frozen
-			}
 		})
 	}
-	t.Run("done on a waiting card below the ranked top takes it off", func(t *testing.T) {
-		if mineServed == nil {
-			t.Fatal("Rep1's own walk did not complete, so there is no card to mark done")
-		}
-		b.assertDoneTakesACardOff(t, mineServed, mineFrozen)
-	})
+	t.Run("done on a waiting card below the ranked top takes it off", b.assertDoneTakesACardOff)
 }
 
 // assertTailAdvised holds that each at-risk deal served below the ranked top
