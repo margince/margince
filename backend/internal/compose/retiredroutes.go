@@ -13,7 +13,7 @@ import (
 )
 
 // retiredRouteDetail answers the paths the contract keeps declared for one release
-// after their behaviour was retired, so a client reads a named refusal and not a 404.
+// after their behaviour was retired. A client reads a named refusal and not a 404.
 const retiredRouteDetail = "this endpoint is retired and its behaviour is gone"
 
 func (Server) RevertStageProgression(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id, _ openapi_types.UUID) {
