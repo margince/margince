@@ -172,12 +172,17 @@ jobs:
   # (the test-lanes gate enforces it), so this pass needs no services; it runs
   # beside the shards and the fan-in merges its pods with theirs.
   #
+  # The same uncached run is the test input census, so the unit suite runs
+  # uncached once per CI run, not twice. Its verdict is the census: a failing
+  # unit test is deterministic-gates' verdict, and this run reports it but
+  # does not repeat it.
+  #
   # It lives in this lane rather than beside it because the fan-in is what
   # consumes its pods: when the fan-in does not run, nothing ever reads them.
   # Split across two scopes — this job on `backend`, the shards on `backend_db` —
   # a rulebook-only change ran this job and then discarded its output.
   integration-unit-coverage:
-    name: integration unit coverage
+    name: integration unit coverage + input census
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -210,10 +215,9 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      - name: Unit tests with binary coverage
-        run: |
-          mkdir -p "$RUNNER_TEMP/covdata-unit"
-          go test ./... -cover -coverpkg=./... -covermode=atomic -args -test.gocoverdir="$RUNNER_TEMP/covdata-unit"
+      - name: Unit tests with binary coverage + the input census
+        working-directory: .
+        run: make test-input-census COVERDIR="$RUNNER_TEMP/covdata-unit"
       - name: Upload the unit coverage pods
         uses: ./.github/actions/upload-artifact-retried
         with:
@@ -252,7 +256,7 @@ jobs:
           UNIT_RESULT: ${{ needs.integration-unit-coverage.result }}
         run: |
           [ "$SHARDS_RESULT" = "success" ] || { echo "integration shards: $SHARDS_RESULT"; exit 1; }
-          [ "$UNIT_RESULT" = "success" ] || { echo "unit coverage pass: $UNIT_RESULT"; exit 1; }
+          [ "$UNIT_RESULT" = "success" ] || { echo "unit coverage pass + input census: $UNIT_RESULT"; exit 1; }
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod

@@ -514,15 +514,6 @@ jobs:
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static STATIC_LEGS="${{ matrix.legs }}"
-      # A test read outside its module that skips the tree digest merges green
-      # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On this job because it finishes minutes before
-      # deterministic-gates, so the census's uncached pass adds no wall clock.
-      # One leg runs it, since it reads no lint output.
-      - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() && matrix.pass == 'baseline' }}
-        working-directory: .
-        run: make test-input-census
 
   # The composed-build lane (ADR-0120): materialize the walking-skeleton
   # reference extension into extensions/, compose, and run the backend
@@ -767,7 +758,9 @@ jobs:
   # that differ (the agent rulebooks) cannot change what it proves. The whole
   # cluster moves together now — previously the unit-coverage pass hung off the
   # wider `backend` scope, so a rulebook-only change ran it and then discarded its
-  # pods, because the fan-in that consumes them had skipped.
+  # pods, because the fan-in that consumes them had skipped. The test input
+  # census rides on that pass: a path in `backend` alone holds none of the tests
+  # the census runs, and cache-warm runs it again before each save.
   #
   # Runs in parallel with the Go gate, not behind it: gating the longest lane on
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.

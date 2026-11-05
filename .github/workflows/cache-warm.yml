@@ -173,7 +173,7 @@ jobs:
       # tree digest (gatekit.DeclareInputs). The census reruns the cached pass
       # with Go's test log on and judges what every package really read. Only
       # an undeclared read withholds the entry, leaving readers on the last one
-      # that was honest. A PR's backend-lint job runs the same census, so a read
+      # that was honest. A PR's integration lane runs the same census, so a read
       # is caught before it merges rather than here.
       - name: Census the test cache's inputs (make test-input-census)
         id: census

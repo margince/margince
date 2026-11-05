@@ -111,6 +111,13 @@ UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 # the census over the same packages the cached pass replays.
 TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
+# TEST_COVERDIR=<absolute dir> instruments this module's tests, in both passes,
+# and writes their binary coverage pods there for SonarCloud. -coverpkg=./...
+# credits a line to every test that runs it, and links each test binary to every
+# package, so no result replays under it: one change reruns the whole module.
+TEST_COVER_FLAGS = $(if $(TEST_COVERDIR),-cover -coverpkg=./... -covermode=atomic)
+TEST_COVER_ARGS = $(if $(TEST_COVERDIR),-args -test.gocoverdir=$(TEST_COVERDIR))
+
 .DEFAULT_GOAL := help
 
 .PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
@@ -242,7 +249,7 @@ test-cached: composition
 	    exit 1; \
 	  fi; \
 	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
-	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
+	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(TEST_COVER_FLAGS) $$cached $(TEST_COVER_ARGS)
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
@@ -263,7 +270,7 @@ test-uncached: composition
 	# GOMEMLIMIT, because the gates binary peaked near 5 GB with no limit and
 	# check runs beside other legs. At 3GiB it peaked at 3.4 GB in the same
 	# wall time; 2GiB doubled its CPU, since the parse cache alone holds ~1.9 GB.
-	GOMEMLIMIT=3GiB $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
+	GOMEMLIMIT=3GiB $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_COVER_FLAGS) $(UNCACHED_TEST_PKGS) $(TEST_COVER_ARGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this

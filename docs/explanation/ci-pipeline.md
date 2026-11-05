@@ -2,10 +2,9 @@
 <!-- describes: .github/workflows/ci.yml .github/workflows/_lane-frontend.yml .github/workflows/_lane-integration.yml .github/workflows/cache-warm.yml .github/workflows/scheduled.yml .github/actions/go-build-cache .github/actions/gate-binaries .github/actions/golangci-cache-key scripts/ci-verdict.sh scripts/ci-stable-mtimes.sh -->
 # CI pipeline
 
-The merge gate as GitHub Actions. The workflow is
-[`.github/workflows/ci.yml`](../../.github/workflows/ci.yml). Below: how it is wired and why, the job
-graph, the change classifier that decides which jobs run, and how coverage flows into SonarCloud. The
-workflows that run beside the gate have their own page:
+The merge gate as GitHub Actions. The workflow is [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+Below: how it is wired and why, the job graph, the change classifier that decides which jobs run, and how
+coverage flows into SonarCloud. The workflows that run beside the gate have their own page:
 [the workflows beside the merge gate](../reference/ci-workflows.md).
 
 `make check` on its own runs only the lane with no database. So the fitness tests for tenant isolation
@@ -102,9 +101,8 @@ merge triggers neither. They keep their job groups for the case of two dispatch 
 cancel must reach the costly steps that generate output. It must never reach the step that publishes or
 signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 
-`scheduled.yml` groups without
-cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
-cancelled run saves no cache.
+`scheduled.yml` groups without cancelling, because nothing replaces a daily run. `cache-warm.yml` groups
+without cancelling, because a cancelled run saves no cache.
 
 A skipped required check counts as *passing* on GitHub. That is why the required checks are put together
 in one `ci` job that refuses a skip on `merge_group`; see
@@ -172,8 +170,7 @@ manifest, and decides which pnpm reads both.
 
 The `deps` scope holds `pnpm-workspace.yaml` for the same reason. It also holds `.github/workflows/**`,
 because syft lists a `uses:` as a package. So a workflow that adds a reference changes what the gate
-judges. A pinned action from outside brings its license, and a local workflow that others call brings
-none.
+judges. A pinned action from outside brings its license; a local workflow that others call brings none.
 
 What follows from this:
 
@@ -372,7 +369,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage + input census`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
@@ -463,10 +460,13 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-The `baseline` job of `backend-lint` runs the census on every PR, so the PR that adds such a read fails. `cache-warm`
-runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
-good one. The second kind is held by
-a gate: a cached test file that runs `git` or `go` must declare its inputs.
+The `integration unit coverage + input census` job runs the census on each PR that changes Go code, so
+the PR that adds such a read fails. The same run writes the unit coverage for SonarCloud, so the unit
+suite runs once without the cache per PR, not twice. A failing test there is not its verdict; that is
+the job of `deterministic-gates`. A PR into `develop` skips the lane, so the PR from `develop` into
+`main` runs the census. `cache-warm` runs it before it saves an entry, and a failing census holds back
+the entry, so readers stay on the last good one. The second kind is held by a gate: a cached test file
+that runs `git` or `go` must declare its inputs.
 
 ## The jobs
 
@@ -485,9 +485,9 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md).
   and the shard profiles cannot reach them.
 - **`INTEGRATION_JOBS=16`** fits tests that wait on Postgres, not on cores. It lets the shard that draws
   the slow `e2e` tests work through its part without running minutes past its siblings.
-- **`integration unit coverage`** exists because the shards run just the packages tagged for
-  integration. Without it, SonarCloud would see the packages with only unit tests at a false coverage
-  of about 0% for new code.
+- **`integration unit coverage + input census`** exists because the shards run just the packages
+  tagged for integration. Without it, SonarCloud would see the packages with only unit tests at a false
+  coverage of about 0% for new code. The same run is the test input census.
 - **A fan-in turns red, not skipped**, when a job in its lane fails. The aggregate reads a skip as "this
   part was out of scope". The `frontend` fan-in checks its jobs before the merge half. So a red shard
   ends the job, and does not hand the merge a partial set of blob reports.
