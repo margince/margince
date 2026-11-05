@@ -14,6 +14,8 @@
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$root/scripts/lib-git-fixture.sh"
 dev="$root/scripts/dev.sh"
 failures=0
 
