@@ -89,9 +89,9 @@ func document(language, preheader, card string) string {
 		card + `</table><!--[if mso]></td></tr></table><![endif]--></td></tr></table></body></html>`
 }
 
-// header names who the mail comes from, over a hairline. It shows the
-// company's logo when the send attaches one, the Margince mark when the mail
-// speaks as Margince and carries it, else a tile with the name's initials.
+// header names who the mail comes from, over a hairline. A company logo
+// the send attaches comes first. A mail that speaks as Margince shows the
+// Margince mark it carries. Any other shows a tile with the name's initials.
 // The attribution, when given, is a muted line under any of them.
 func header(head Letterhead) string {
 	name := letterheadName(head)
